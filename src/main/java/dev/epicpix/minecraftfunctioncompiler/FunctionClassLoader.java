@@ -89,11 +89,13 @@ public class FunctionClassLoader extends ClassLoader {
                 "(Lnet/minecraft/commands/CommandSourceStack;)I", null, null);
         mv.visitCode();
 
+        HashMap<String, Integer> locals = new HashMap<>();
+        locals.put("CommandSourceStack", 0);
         for(var entry : function.getEntries()) {
             if(entry instanceof CommandFunction.CommandEntry cmd) {
                 var context = cmd.parse.getContext();
                 String commandName = context.getNodes().get(0).getNode().getName();
-                CodeGenerator.generateCommand(commandName, cmd.parse.getReader(), context, mv);
+                CodeGenerator.generateCommand(commandName, cmd.parse.getReader(), context, locals, mv);
             }
         }
 
