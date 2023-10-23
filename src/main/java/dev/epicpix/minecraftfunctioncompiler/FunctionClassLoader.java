@@ -38,7 +38,11 @@ public class FunctionClassLoader extends ClassLoader {
                 var handle = MethodHandles.lookup().findStatic(clz, "run", MethodType.methodType(int.class, CommandSourceStack.class));
                 handles.put(function.getKey(), handle);
             } catch (NoSuchMethodException | IllegalAccessException | ClassNotFoundException | UnsupportedOperationException e) {
-                LOGGER.warn("Unable to compile function " + function.getKey() + " / " + e.getMessage());
+                if(e instanceof UnsupportedOperationException) {
+                    LOGGER.warn("Unable to compile function " + function.getKey() + " / " + e.getMessage());
+                }else {
+                    LOGGER.warn("Unable to compile function " + function.getKey(), e);
+                }
             }
         }
     }
@@ -89,7 +93,7 @@ public class FunctionClassLoader extends ClassLoader {
             if(entry instanceof CommandFunction.CommandEntry cmd) {
                 var context = cmd.parse.getContext();
                 String commandName = context.getNodes().get(0).getNode().getName();
-                CodeGenerator.generateCommand(commandName, context, mv);
+                CodeGenerator.generateCommand(commandName, cmd.parse.getReader(), context, mv);
             }
         }
 
@@ -101,11 +105,11 @@ public class FunctionClassLoader extends ClassLoader {
         cw.visitEnd();
 
         byte[] data = cw.toByteArray();
-//        try {
-//            Files.write(FabricLoader.getInstance().getGameDir().resolve("generated").resolve(name + ".class"), data);
-//        } catch (IOException e) {
-//            throw new RuntimeException(e);
-//        }
+        try {
+            Files.write(FabricLoader.getInstance().getGameDir().resolve("generated").resolve(name + ".class"), data);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         return defineClass(name, data, 0, data.length);
     }
 }
