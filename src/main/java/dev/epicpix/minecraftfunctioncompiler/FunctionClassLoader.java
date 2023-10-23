@@ -1,29 +1,66 @@
 package dev.epicpix.minecraftfunctioncompiler;
 
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandFunction;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.packs.PackType;
-import net.minecraft.server.packs.repository.Pack;
-import net.minecraft.server.packs.resources.IoSupplier;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.InputStream;
-import java.util.ArrayList;
+import java.io.IOException;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 
 public class FunctionClassLoader extends ClassLoader {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger("minecraftfunctioncompiler");
+
     private final Map<ResourceLocation, CommandFunction> functions;
+    private final Map<ResourceLocation, MethodHandle> handles = new HashMap<>();
 
     public FunctionClassLoader(ClassLoader parent, Map<ResourceLocation, CommandFunction> functions) {
         super(parent);
         this.functions = functions;
     }
 
+    public void loadFunctions() {
+        handles.clear();
+        for(var function : functions.entrySet()) {
+            try {
+                var clz = loadClass("function." + function.getKey().getNamespace() + "." + function.getKey().getPath().replace('/', '.'));
+                var handle = MethodHandles.lookup().findStatic(clz, "run", MethodType.methodType(int.class, CommandSourceStack.class));
+                handles.put(function.getKey(), handle);
+            } catch (NoSuchMethodException | IllegalAccessException | ClassNotFoundException e) {
+                LOGGER.warn("Unable to compile function " + function.getKey(), e);
+            }
+        }
+    }
+
+    public boolean hasFunctionLoaded(ResourceLocation location) {
+        return handles.containsKey(location);
+    }
+
+    public int runFunction(ResourceLocation location, CommandSourceStack stack) {
+        try {
+            return (int) handles.get(location).invoke(stack);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     protected Class<?> findClass(String name) throws ClassNotFoundException {
-        String n = name.replace('.', '/');
+        if(!name.startsWith("function.")) {
+            return super.findClass(name);
+        }
+        String n = name.substring("function.".length()).replace('.', '/');
         String[] parts = n.split("/", 2);
         var location = new ResourceLocation(parts[0], parts[1]);
 
@@ -38,21 +75,27 @@ public class FunctionClassLoader extends ClassLoader {
         }
 
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
-        cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, n, null, "java/lang/Object", null);
+        cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, name.replace('.', '/'), null, "java/lang/Object", null);
 
         MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "run",
-                "(Lnet/minecraft/commands/CommandSourceStack;)V", null, null);
+                "(Lnet/minecraft/commands/CommandSourceStack;)I", null, null);
         mv.visitCode();
-        mv.visitFieldInsn(Opcodes.GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
-        mv.visitLdcInsn("Hello, World!");
-        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", false);
-        mv.visitInsn(Opcodes.RETURN);
+
+        Arrays.stream(function.getEntries()).forEach((a) -> System.out.println(a.getClass() + " // " + a));
+
+        mv.visitIntInsn(Opcodes.BIPUSH, 10);
+        mv.visitInsn(Opcodes.IRETURN);
         mv.visitMaxs(0, 0);
         mv.visitEnd();
 
         cw.visitEnd();
 
         byte[] data = cw.toByteArray();
+//        try {
+//            Files.write(FabricLoader.getInstance().getGameDir().resolve("generated").resolve(name + ".class"), data);
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
         return defineClass(name, data, 0, data.length);
     }
 }

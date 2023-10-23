@@ -1,32 +1,38 @@
 package dev.epicpix.minecraftfunctioncompiler.mixin;
 
 import dev.epicpix.minecraftfunctioncompiler.FunctionClassLoader;
+import net.minecraft.commands.CommandFunction;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.ServerFunctionLibrary;
 import net.minecraft.server.ServerFunctionManager;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ServerFunctionManager.class)
 public class ServerFunctionManagerMixin {
 
     @Shadow private ServerFunctionLibrary library;
+    @Unique private FunctionClassLoader classLoader;
 
     @Inject(method = "postReload", at = @At("TAIL"))
     public void postReload(ServerFunctionLibrary serverFunctionLibrary, CallbackInfo ci) {
-        FunctionClassLoader classLoader = new FunctionClassLoader(getClass().getClassLoader(), library.getFunctions());
-        try {
-            var clz = classLoader.loadClass("test.abc");
-            var handle = MethodHandles.lookup().findStatic(clz, "run", MethodType.methodType(void.class, CommandSourceStack.class));
-            handle.invoke((Object) null);
-        } catch (Throwable e) {
-            e.printStackTrace();
+        classLoader = new FunctionClassLoader(getClass().getClassLoader(), library.getFunctions());
+        classLoader.loadFunctions();
+    }
+
+    @Inject(method = "execute(Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;Lnet/minecraft/nbt/CompoundTag;)I", at = @At("HEAD"), cancellable = true)
+    public void run(CommandFunction commandFunction, CommandSourceStack commandSourceStack, ServerFunctionManager.TraceCallbacks traceCallbacks, CompoundTag compoundTag, CallbackInfoReturnable<Integer> cir) {
+        if(classLoader != null) {
+            if(classLoader.hasFunctionLoaded(commandFunction.getId())) {
+                int res = classLoader.runFunction(commandFunction.getId(), commandSourceStack);
+                cir.setReturnValue(res);
+            }
         }
     }
 
