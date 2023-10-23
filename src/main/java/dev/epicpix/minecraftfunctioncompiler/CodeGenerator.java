@@ -4,6 +4,7 @@ import com.mojang.brigadier.ImmutableStringReader;
 import com.mojang.brigadier.context.CommandContextBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.ScoreHolderArgument;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
@@ -30,9 +31,38 @@ public class CodeGenerator {
                     }else {
                         var targetsRange = context.getArguments().get("targets").getRange();
                         if(targetsRange.getLength() == 1 && reader.getString().charAt(targetsRange.getStart()) == '*') {
-                            System.out.println("All");
-                        }else {
-                            load_getObjectiveScore(locals, mv, context.getArguments().get("objective").getResult().toString(), targetsRange.get(reader.getString()));
+                            load_getScoreboard(locals, mv);
+                            load_getObjective(locals, mv, context.getArguments().get("objective").getResult().toString(), false);
+
+                            mv.visitFieldInsn(Opcodes.GETFIELD, "net/minecraft/world/scores/Scoreboard", "playerScores", "Ljava/util/Map;");
+                            mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/Map", "keySet", "()Ljava/util/Set;", true);
+                            mv.visitMethodInsn(Opcodes.INVOKESTATIC, "com/google/common/collect/Lists", "newArrayList", "(Ljava/lang/Iterable;)Ljava/util/ArrayList;", false);
+                            locals.put("$Array", locals.size());
+                            mv.visitVarInsn(Opcodes.ASTORE, locals.get("$Array"));
+
+                            mv.visitVarInsn(Opcodes.ALOAD, locals.get("$Array"));
+                            locals.put("$ArrayLength", locals.size());
+                            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/util/ArrayList", "size", "()I", false);
+                            mv.visitVarInsn(Opcodes.ISTORE, locals.get("$ArrayLength"));
+
+                            locals.put("$ArrayIndex", locals.size());
+                            mv.visitLdcInsn(0);
+                            mv.visitVarInsn(Opcodes.ISTORE, locals.get("$ArrayIndex"));
+                            var beginLabel = new Label();
+                            var endLabel = new Label();
+                            mv.visitLabel(beginLabel);
+                            mv.visitVarInsn(Opcodes.ILOAD, locals.get("$ArrayIndex"));
+                            mv.visitVarInsn(Opcodes.ILOAD, locals.get("$ArrayLength"));
+                            mv.visitJumpInsn(Opcodes.IF_ICMPGE, endLabel);
+
+                            load_getScoreboard(locals, mv);
+                            mv.visitVarInsn(Opcodes.ALOAD, locals.get("$Array"));
+                            mv.visitVarInsn(Opcodes.ILOAD, locals.get("$ArrayIndex"));
+                            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/util/ArrayList", "get", "(I)Ljava/lang/Object;", false);
+                            mv.visitTypeInsn(Opcodes.CHECKCAST, "java/lang/String");
+
+                            load_getObjective(locals, mv, context.getArguments().get("objective").getResult().toString(), true);
+                            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;", false);
 
                             mv.visitInsn(Opcodes.DUP);
                             mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/scores/Score", "getScore", "()I", false);
@@ -40,7 +70,17 @@ public class CodeGenerator {
                             mv.visitInsn(Opcodes.IADD);
                             mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/scores/Score", "setScore", "(I)V", false);
 
-                            System.out.println("Specified");
+                            mv.visitIincInsn(locals.get("$ArrayIndex"), 1);
+                            mv.visitJumpInsn(Opcodes.GOTO, beginLabel);
+                            mv.visitLabel(endLabel);
+                        }else {
+                            load_getObjectiveScore(locals, mv, context.getArguments().get("objective").getResult().toString(), targetsRange.get(reader.getString()), true);
+
+                            mv.visitInsn(Opcodes.DUP);
+                            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/scores/Score", "getScore", "()I", false);
+                            mv.visitLdcInsn(context.getArguments().get("score").getResult());
+                            mv.visitInsn(Opcodes.IADD);
+                            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/scores/Score", "setScore", "(I)V", false);
                         }
                     }
                 }
@@ -100,33 +140,33 @@ public class CodeGenerator {
         }
     }
 
-    private static void load_getObjective(HashMap<String, Integer> locals, MethodVisitor mv, String objective) {
+    private static void load_getObjective(HashMap<String, Integer> locals, MethodVisitor mv, String objective, boolean keepStack) {
         if(locals.get("Objective-" + objective) == null) {
             load_getScoreboard(locals, mv);
             mv.visitLdcInsn(objective);
             mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/scores/Scoreboard", "getObjective", "(Ljava/lang/String;)Lnet/minecraft/world/scores/Objective;", false);
             int location = locals.size();
             locals.put("Objective-" + objective, location);
-            mv.visitInsn(Opcodes.DUP);
+            if(keepStack) mv.visitInsn(Opcodes.DUP);
             mv.visitVarInsn(Opcodes.ASTORE, location);
         }else {
-            mv.visitVarInsn(Opcodes.ALOAD, locals.get("Objective-" + objective));
+            if(keepStack) mv.visitVarInsn(Opcodes.ALOAD, locals.get("Objective-" + objective));
         }
     }
 
-    private static void load_getObjectiveScore(HashMap<String, Integer> locals, MethodVisitor mv, String objective, String holder) {
+    private static void load_getObjectiveScore(HashMap<String, Integer> locals, MethodVisitor mv, String objective, String holder, boolean keepStack) {
         if(locals.get("Objective-" + objective + ":" + holder) == null) {
             load_getScoreboard(locals, mv);
             mv.visitLdcInsn(holder);
-            load_getObjective(locals, mv, objective);
+            load_getObjective(locals, mv, objective, true);
             mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;", false);
 
             int location = locals.size();
             locals.put("Objective-" + objective + ":" + holder, location);
-            mv.visitInsn(Opcodes.DUP);
+            if (keepStack) mv.visitInsn(Opcodes.DUP);
             mv.visitVarInsn(Opcodes.ASTORE, location);
         }else {
-            mv.visitVarInsn(Opcodes.ALOAD, locals.get("Objective-" + objective + ":" + holder));
+            if(keepStack) mv.visitVarInsn(Opcodes.ALOAD, locals.get("Objective-" + objective + ":" + holder));
         }
     }
 
