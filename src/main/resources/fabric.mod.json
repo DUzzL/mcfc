@@ -7,6 +7,7 @@
   "authors": [ "EpicPix" ],
   "license": "LGPL-3.0",
   "environment": "*",
+  "accessWidener": ".accesswidener",
   "entrypoints": {
     "main": [
       "dev.epicpix.minecraftfunctioncompiler.MinecraftFunctionCompiler"
@@ -17,7 +18,6 @@
   ],
   "depends": {
     "fabricloader": ">=${loader_version}",
-    "fabric": "*",
     "minecraft": "${minecraft_version}"
   }
 }

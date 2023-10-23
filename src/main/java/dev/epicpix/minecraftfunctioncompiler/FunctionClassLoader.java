@@ -15,7 +15,6 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.nio.file.Files;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -38,8 +37,8 @@ public class FunctionClassLoader extends ClassLoader {
                 var clz = loadClass("function." + function.getKey().getNamespace() + "." + function.getKey().getPath().replace('/', '.'));
                 var handle = MethodHandles.lookup().findStatic(clz, "run", MethodType.methodType(int.class, CommandSourceStack.class));
                 handles.put(function.getKey(), handle);
-            } catch (NoSuchMethodException | IllegalAccessException | ClassNotFoundException e) {
-                LOGGER.warn("Unable to compile function " + function.getKey(), e);
+            } catch (NoSuchMethodException | IllegalAccessException | ClassNotFoundException | UnsupportedOperationException e) {
+                LOGGER.warn("Unable to compile function " + function.getKey() + " / " + e.getMessage());
             }
         }
     }
@@ -73,6 +72,11 @@ public class FunctionClassLoader extends ClassLoader {
         if(function == null) {
             return super.findClass(name);
         }
+        for(var entry : function.getEntries()) {
+            if(!(entry instanceof CommandFunction.CommandEntry)) {
+                return super.findClass(name);
+            }
+        }
 
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
         cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, name.replace('.', '/'), null, "java/lang/Object", null);
@@ -81,9 +85,15 @@ public class FunctionClassLoader extends ClassLoader {
                 "(Lnet/minecraft/commands/CommandSourceStack;)I", null, null);
         mv.visitCode();
 
-        Arrays.stream(function.getEntries()).forEach((a) -> System.out.println(a.getClass() + " // " + a));
+        for(var entry : function.getEntries()) {
+            if(entry instanceof CommandFunction.CommandEntry cmd) {
+                var context = cmd.parse.getContext();
+                String commandName = context.getNodes().get(0).getNode().getName();
+                CodeGenerator.generateCommand(commandName, context, mv);
+            }
+        }
 
-        mv.visitIntInsn(Opcodes.BIPUSH, 10);
+        mv.visitLdcInsn(function.getEntries().length);
         mv.visitInsn(Opcodes.IRETURN);
         mv.visitMaxs(0, 0);
         mv.visitEnd();
