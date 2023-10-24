@@ -46,7 +46,7 @@ public class CodeGenerator {
                             mv.visitVarInsn(Opcodes.ISTORE, locals.get("$ArrayLength"));
 
                             locals.put("$ArrayIndex", locals.size());
-                            mv.visitLdcInsn(0);
+                            pushInt(mv, 0);
                             mv.visitVarInsn(Opcodes.ISTORE, locals.get("$ArrayIndex"));
                             var beginLabel = new Label();
                             var endLabel = new Label();
@@ -66,19 +66,23 @@ public class CodeGenerator {
 
                             mv.visitInsn(Opcodes.DUP);
                             mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/scores/Score", "getScore", "()I", false);
-                            mv.visitLdcInsn(context.getArguments().get("score").getResult());
+                            pushInt(mv, (int)context.getArguments().get("score").getResult());
                             mv.visitInsn(Opcodes.IADD);
                             mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/scores/Score", "setScore", "(I)V", false);
 
                             mv.visitIincInsn(locals.get("$ArrayIndex"), 1);
                             mv.visitJumpInsn(Opcodes.GOTO, beginLabel);
                             mv.visitLabel(endLabel);
+
+                            locals.remove("$Array");
+                            locals.remove("$ArrayIndex");
+                            locals.remove("$ArrayLength");
                         }else {
                             load_getObjectiveScore(locals, mv, context.getArguments().get("objective").getResult().toString(), targetsRange.get(reader.getString()), true);
 
                             mv.visitInsn(Opcodes.DUP);
                             mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/scores/Score", "getScore", "()I", false);
-                            mv.visitLdcInsn(context.getArguments().get("score").getResult());
+                            pushInt(mv, (int)context.getArguments().get("score").getResult());
                             mv.visitInsn(Opcodes.IADD);
                             mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/scores/Score", "setScore", "(I)V", false);
                         }
@@ -120,8 +124,8 @@ public class CodeGenerator {
             mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/commands/CommandSourceStack", "getServer", "()Lnet/minecraft/server/MinecraftServer;", false);
             int location = locals.size();
             locals.put("MinecraftServer", location);
-            mv.visitInsn(Opcodes.DUP);
             mv.visitVarInsn(Opcodes.ASTORE, location);
+            mv.visitVarInsn(Opcodes.ALOAD, location);
         }else {
             mv.visitVarInsn(Opcodes.ALOAD, locals.get("MinecraftServer"));
         }
@@ -133,8 +137,8 @@ public class CodeGenerator {
             mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/server/MinecraftServer", "getScoreboard", "()Lnet/minecraft/server/ServerScoreboard;", false);
             int location = locals.size();
             locals.put("ServerScoreboard", location);
-            mv.visitInsn(Opcodes.DUP);
             mv.visitVarInsn(Opcodes.ASTORE, location);
+            mv.visitVarInsn(Opcodes.ALOAD, location);
         }else {
             mv.visitVarInsn(Opcodes.ALOAD, locals.get("ServerScoreboard"));
         }
@@ -147,8 +151,8 @@ public class CodeGenerator {
             mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/scores/Scoreboard", "getObjective", "(Ljava/lang/String;)Lnet/minecraft/world/scores/Objective;", false);
             int location = locals.size();
             locals.put("Objective-" + objective, location);
-            if(keepStack) mv.visitInsn(Opcodes.DUP);
             mv.visitVarInsn(Opcodes.ASTORE, location);
+            if (keepStack) mv.visitVarInsn(Opcodes.ALOAD, location);
         }else {
             if(keepStack) mv.visitVarInsn(Opcodes.ALOAD, locals.get("Objective-" + objective));
         }
@@ -163,10 +167,22 @@ public class CodeGenerator {
 
             int location = locals.size();
             locals.put("Objective-" + objective + ":" + holder, location);
-            if (keepStack) mv.visitInsn(Opcodes.DUP);
             mv.visitVarInsn(Opcodes.ASTORE, location);
+            if (keepStack) mv.visitVarInsn(Opcodes.ALOAD, location);
         }else {
             if(keepStack) mv.visitVarInsn(Opcodes.ALOAD, locals.get("Objective-" + objective + ":" + holder));
+        }
+    }
+
+    private static void pushInt(MethodVisitor mv, int value) {
+        if (value >= -1 && value <= 5) {
+            mv.visitInsn(Opcodes.ICONST_0 + value);
+        } else if (value >= Byte.MIN_VALUE && value <= Byte.MAX_VALUE) {
+            mv.visitIntInsn(Opcodes.BIPUSH, value);
+        } else if (value >= Short.MIN_VALUE && value <= Short.MAX_VALUE) {
+            mv.visitIntInsn(Opcodes.SIPUSH, value);
+        } else {
+            mv.visitLdcInsn(value);
         }
     }
 
