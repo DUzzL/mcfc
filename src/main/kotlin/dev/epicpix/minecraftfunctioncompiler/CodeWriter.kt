@@ -101,6 +101,13 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         methodVisitor.visitLdcInsn(str)
     }
 
+    fun newObject(owner: String, descriptor: String, argumentProvider: CodeWriter.() -> Unit) {
+        methodVisitor.visitTypeInsn(Opcodes.NEW, owner)
+        writeInstruction(Opcodes.DUP)
+        argumentProvider()
+        callFunction(owner, "<init>", descriptor)
+    }
+
     fun callFunction(owner: String, name: String, descriptor: String) {
         methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, owner, name, descriptor, false)
     }
@@ -176,6 +183,14 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
                 methodVisitor.visitJumpInsn(Opcodes.GOTO, beginLabel)
                 methodVisitor.visitLabel(endLabel)
             }
+        }
+    }
+
+    fun createStackArrayListForEachLoop(exec: (getter: () -> Unit) -> Unit) {
+        val baseName = "\$Array:${generatedLocals.size}"
+        defineLocal(baseName, "Ljava/lang/ArrayList;") {
+            storeLocal(baseName)
+            createArrayListForEachLoop(baseName, "${baseName}:Index", "${baseName}:Size", exec)
         }
     }
 

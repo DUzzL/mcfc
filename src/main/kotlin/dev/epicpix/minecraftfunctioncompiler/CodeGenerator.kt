@@ -26,30 +26,26 @@ object CodeGenerator {
                     } else {
                         val targetsRange = context.arguments["targets"]!!.range
                         if (targetsRange.length == 1 && reader.string[targetsRange.start] == '*') {
-                            load_getScoreboard(cw)
                             load_getObjective(cw, context.arguments["objective"]!!.result.toString())
-                            cw.executeIfElse(Opcodes.IFNONNULL, {
-                                cw.getObjectField("net/minecraft/world/scores/Scoreboard", "playerScores", "Ljava/util/Map;")
-                                cw.callInterfaceMethod("java/util/Map", "keySet", "()Ljava/util/Set;")
-                                cw.callFunction("com/google/common/collect/Lists", "newArrayList", "(Ljava/lang/Iterable;)Ljava/util/ArrayList;")
-                                cw.defineLocal("\$Array", "Ljava/util/ArrayList;") {
-                                    storeLocal("\$Array")
-
-                                    cw.createArrayListForEachLoop("\$Array", "\$ArrayIndex", "\$ArrayLength") { getter ->
-                                        load_getScoreboard(cw)
-                                        getter()
-                                        cw.castType("java/lang/String")
-                                        load_getObjective(cw, context.arguments["objective"]!!.result.toString())
-                                        cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
-                                        cw.writeInstruction(Opcodes.DUP)
-                                        cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                                        cw.writeInt(context.arguments["score"]!!.result as Int)
-                                        cw.writeInstruction(Opcodes.IADD)
-                                        cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
-                                    }
+                            cw.executeIf(Opcodes.IFNONNULL) {
+                                cw.newObject("java/util/ArrayList", "(Ljava/util/Collection;)V") {
+                                    load_getScoreboard(cw)
+                                    cw.getObjectField("net/minecraft/world/scores/Scoreboard", "playerScores", "Ljava/util/Map;")
+                                    cw.callInterfaceMethod("java/util/Map", "keySet", "()Ljava/util/Set;")
                                 }
-                            }) {
-                                cw.writeInstruction(Opcodes.POP)
+
+                                cw.createStackArrayListForEachLoop { getter ->
+                                    load_getScoreboard(cw)
+                                    getter()
+                                    cw.castType("java/lang/String")
+                                    load_getObjective(cw, context.arguments["objective"]!!.result.toString())
+                                    cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                                    cw.writeInstruction(Opcodes.DUP)
+                                    cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                    cw.writeInt(context.arguments["score"]!!.result as Int)
+                                    cw.writeInstruction(Opcodes.IADD)
+                                    cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                                }
                             }
                         } else {
                             load_getObjective(cw, context.arguments["objective"]!!.result.toString())
