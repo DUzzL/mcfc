@@ -1,3 +1,4 @@
 accessWidener v2 named
 accessible field net/minecraft/commands/CommandFunction$CommandEntry parse Lcom/mojang/brigadier/ParseResults;
 accessible field net/minecraft/world/scores/Scoreboard playerScores Ljava/util/Map;
+accessible field net/minecraft/commands/arguments/ScoreHolderArgument$SelectorResult selector Lnet/minecraft/commands/arguments/selector/EntitySelector;

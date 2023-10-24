@@ -125,17 +125,25 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, type)
     }
 
-    fun executeIfNotNull(exec: () -> Unit) {
+    fun executeIf(comparison: Int, exec: () -> Unit) {
         val endLabel = Label()
-        methodVisitor.visitJumpInsn(Opcodes.IFNULL, endLabel)
+        when (comparison) {
+            Opcodes.IFNONNULL -> methodVisitor.visitJumpInsn(Opcodes.IFNULL, endLabel)
+            Opcodes.IFNULL -> methodVisitor.visitJumpInsn(Opcodes.IFNONNULL, endLabel)
+            else -> throw UnsupportedOperationException("Unknown comparison: $comparison")
+        }
         exec()
         methodVisitor.visitLabel(endLabel)
     }
 
-    fun executeIfNotNullElse(exec: () -> Unit, execElse: () -> Unit) {
+    fun executeIfElse(comparison: Int, exec: () -> Unit, execElse: () -> Unit) {
         val elseLabel = Label()
         val exitLabel = Label()
-        methodVisitor.visitJumpInsn(Opcodes.IFNULL, elseLabel)
+        when (comparison) {
+            Opcodes.IFNONNULL -> methodVisitor.visitJumpInsn(Opcodes.IFNULL, elseLabel)
+            Opcodes.IFNULL -> methodVisitor.visitJumpInsn(Opcodes.IFNONNULL, elseLabel)
+            else -> throw UnsupportedOperationException("Unknown comparison: $comparison")
+        }
         exec()
         methodVisitor.visitJumpInsn(Opcodes.GOTO, exitLabel)
         methodVisitor.visitLabel(elseLabel)

@@ -10,7 +10,7 @@ import net.minecraft.resources.ResourceLocation
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import org.slf4j.LoggerFactory
-import java.io.IOException
+import java.lang.UnsupportedOperationException
 import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
@@ -25,13 +25,9 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                 val clz = loadClass("function." + key.namespace + "." + key.path.replace('/', '.'))
                 val handle = MethodHandles.lookup().findStatic(clz, "run", MethodType.methodType(Int::class.javaPrimitiveType, CommandSourceStack::class.java))
                 handles[key] = handle
-            } catch (e: NoSuchMethodException) {
-                LOGGER.warn("Unable to compile function " + key + " / " + e.message)
-            } catch (e: IllegalAccessException) {
-                LOGGER.warn("Unable to compile function $key", e)
-            } catch (e: ClassNotFoundException) {
-                LOGGER.warn("Unable to compile function $key", e)
             } catch (e: UnsupportedOperationException) {
+                LOGGER.warn("Unable to compile function " + key + " / " + e.message)
+            } catch (e: Exception) {
                 LOGGER.warn("Unable to compile function $key", e)
             }
         }
@@ -49,7 +45,6 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         }
     }
 
-    @Throws(ClassNotFoundException::class)
     override fun findClass(name: String): Class<*> {
         if (!name.startsWith("function.")) {
             return super.findClass(name)
@@ -96,11 +91,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         mv.visitEnd()
         cw.visitEnd()
         val data = cw.toByteArray()
-        try {
-            Files.write(FabricLoader.getInstance().gameDir.resolve("generated").resolve("$name.class"), data)
-        } catch (e: IOException) {
-            throw RuntimeException(e)
-        }
+        Files.write(FabricLoader.getInstance().gameDir.resolve("generated").resolve("$name.class"), data)
         return defineClass(name, data, 0, data.size)
     }
 
