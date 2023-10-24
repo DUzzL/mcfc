@@ -66,80 +66,44 @@ object CodeGenerator {
     private fun runScoreboardOperation(context: CommandContextBuilder<CommandSourceStack>, reader: ImmutableStringReader, cw: CodeWriter, run: () -> Unit) {
         val targets = context.arguments["targets"]!!.result
         if (targets is ScoreHolderArgument.SelectorResult) {
-            throw UnsupportedOperationException("Selectors are not implemented yet")
+            cw.visitGetObjective(context.arguments["objective"]!!.result.toString())
+            cw.executeIf(Opcodes.IFNONNULL) {
+                EntitySelectorCodeGenerator.generateForEachEntity(cw, targets.selector, context.arguments["targets"]!!.range.get(reader)) {
+                    cw.callFunction("net/minecraft/world/entity/Entity", "getScoreboardName", "()Ljava/lang/String;")
+                    cw.visitGetScoreboard()
+                    cw.writeInstruction(Opcodes.SWAP)
+                    cw.visitGetObjective(context.arguments["objective"]!!.result.toString())
+                    run()
+                }
+            }
         } else {
             val targetsRange = context.arguments["targets"]!!.range
             if (targetsRange.length == 1 && reader.string[targetsRange.start] == '*') {
-                load_getObjective(cw, context.arguments["objective"]!!.result.toString())
+                cw.visitGetObjective(context.arguments["objective"]!!.result.toString())
                 cw.executeIf(Opcodes.IFNONNULL) {
                     cw.newObject("java/util/ArrayList", "(Ljava/util/Collection;)V") {
-                        load_getScoreboard(cw)
+                        cw.visitGetScoreboard()
                         cw.getObjectField("net/minecraft/world/scores/Scoreboard", "playerScores", "Ljava/util/Map;")
                         cw.callInterfaceMethod("java/util/Map", "keySet", "()Ljava/util/Set;")
                     }
 
                     cw.createStackArrayListForEachLoop { getter ->
-                        load_getScoreboard(cw)
+                        cw.visitGetScoreboard()
                         getter()
                         cw.castType("java/lang/String")
-                        load_getObjective(cw, context.arguments["objective"]!!.result.toString())
+                        cw.visitGetObjective(context.arguments["objective"]!!.result.toString())
                         run()
                     }
                 }
             } else {
-                load_getObjective(cw, context.arguments["objective"]!!.result.toString())
+                cw.visitGetObjective(context.arguments["objective"]!!.result.toString())
                 cw.executeIf(Opcodes.IFNONNULL) {
-                    load_getScoreboard(cw)
+                    cw.visitGetScoreboard()
                     cw.writeString(targetsRange[reader.string])
-                    load_getObjective(cw, context.arguments["objective"]!!.result.toString())
+                    cw.visitGetObjective(context.arguments["objective"]!!.result.toString())
                     run()
                 }
             }
-        }
-    }
-
-    private fun generateOrGetLocal(cw: CodeWriter, name: String, descriptor: String, load: Boolean = true, getter: CodeWriter.() -> Unit) {
-        if (cw.getLocal(name) == null) {
-            getter(cw)
-            cw.defineGlobalLocal(name, descriptor)
-            cw.storeLocal(name)
-        }
-        if(load) cw.loadLocal(name)
-    }
-
-    private fun load_getServer(cw: CodeWriter) {
-        generateOrGetLocal(cw, "MinecraftServer", "Lnet/minecraft/server/MinecraftServer;") {
-            loadLocal("CommandSourceStack")
-            callMethod("net/minecraft/commands/CommandSourceStack", "getServer", "()Lnet/minecraft/server/MinecraftServer;")
-        }
-    }
-
-    private fun load_getScoreboard(cw: CodeWriter) {
-        generateOrGetLocal(cw, "ServerScoreboard", "Lnet/minecraft/server/ServerScoreboard;") {
-            load_getServer(cw)
-            callMethod("net/minecraft/server/MinecraftServer", "getScoreboard", "()Lnet/minecraft/server/ServerScoreboard;")
-        }
-    }
-
-    private fun load_getObjective(cw: CodeWriter, objective: String, load: Boolean = true) {
-        generateOrGetLocal(cw, "Objective-$objective", "Lnet/minecraft/world/scores/Objective;", load) {
-            load_getScoreboard(cw)
-            cw.writeString(objective)
-            callMethod("net/minecraft/world/scores/Scoreboard", "getObjective", "(Ljava/lang/String;)Lnet/minecraft/world/scores/Objective;")
-        }
-    }
-
-    private fun load_getObjectiveScore(cw: CodeWriter, objective: String, holder: String) {
-        load_getScoreboard(cw)
-        cw.writeString(holder)
-        load_getObjective(cw, objective)
-        cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
-    }
-
-    private fun load_getPlayerList(cw: CodeWriter) {
-        generateOrGetLocal(cw, "PlayerList", "Lnet/minecraft/server/players/PlayerList;") {
-            load_getServer(cw)
-            cw.callMethod("net/minecraft/server/MinecraftServer", "getPlayerList", "()Lnet/minecraft/server/players/PlayerList;")
         }
     }
 
