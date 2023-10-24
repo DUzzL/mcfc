@@ -76,17 +76,22 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         val mv = cw.visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "run",
                 "(Lnet/minecraft/commands/CommandSourceStack;)I", null, null)
         mv.visitCode()
-        val locals = HashMap<String, Int?>()
-        locals["CommandSourceStack"] = 0
-        for (entry in function.entries) {
-            if (entry is CommandEntry) {
-                val context: CommandContextBuilder<CommandSourceStack> = entry.parse.context
-                val commandName = context.nodes[0].node.name
-                generateCommand(commandName, entry.parse.reader, context, locals, mv)
+        val codeWriter = CodeWriter(mv)
+
+        codeWriter.defineLocal("CommandSourceStack", "Lnet/minecraft/commands/CommandSourceStack;") {
+            for (entry in function.entries) {
+                if (entry is CommandEntry) {
+                    val context: CommandContextBuilder<CommandSourceStack> = entry.parse.context
+                    val commandName = context.nodes[0].node.name
+                    generateCommand(commandName, entry.parse.reader, context, codeWriter)
+                }
             }
         }
+        codeWriter.end()
+
         mv.visitLdcInsn(function.entries.size)
         mv.visitInsn(Opcodes.IRETURN)
+        codeWriter.writeLocalVariables()
         mv.visitMaxs(0, 0)
         mv.visitEnd()
         cw.visitEnd()

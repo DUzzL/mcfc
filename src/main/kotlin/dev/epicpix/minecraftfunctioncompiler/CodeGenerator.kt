@@ -4,19 +4,17 @@ import com.mojang.brigadier.ImmutableStringReader
 import com.mojang.brigadier.context.CommandContextBuilder
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.arguments.ScoreHolderArgument
-import org.objectweb.asm.Label
-import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 
 object CodeGenerator {
-    fun generateCommand(commandName: String, reader: ImmutableStringReader, context: CommandContextBuilder<CommandSourceStack>, locals: HashMap<String, Int?>, mv: MethodVisitor) {
+    fun generateCommand(commandName: String, reader: ImmutableStringReader, context: CommandContextBuilder<CommandSourceStack>, cw: CodeWriter) {
         when (commandName) {
-            "scoreboard" -> generateCommandScoreboard(context, reader, locals, mv)
+            "scoreboard" -> generateCommandScoreboard(context, reader, cw)
             else -> throw UnsupportedOperationException("Cannot convert command: $commandName")
         }
     }
 
-    private fun generateCommandScoreboard(context: CommandContextBuilder<CommandSourceStack>, reader: ImmutableStringReader, locals: HashMap<String, Int?>, mv: MethodVisitor) {
+    private fun generateCommandScoreboard(context: CommandContextBuilder<CommandSourceStack>, reader: ImmutableStringReader, cw: CodeWriter) {
         val type = context.nodes[1].node.name
         if (type == "players") {
             val opType = context.nodes[2].node.name
@@ -28,51 +26,34 @@ object CodeGenerator {
                     } else {
                         val targetsRange = context.arguments["targets"]!!.range
                         if (targetsRange.length == 1 && reader.string[targetsRange.start] == '*') {
-                            load_getScoreboard(locals, mv)
-                            load_getObjective(locals, mv, context.arguments["objective"]!!.result.toString(), false)
-                            mv.visitFieldInsn(Opcodes.GETFIELD, "net/minecraft/world/scores/Scoreboard", "playerScores", "Ljava/util/Map;")
-                            mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "java/util/Map", "keySet", "()Ljava/util/Set;", true)
-                            mv.visitMethodInsn(Opcodes.INVOKESTATIC, "com/google/common/collect/Lists", "newArrayList", "(Ljava/lang/Iterable;)Ljava/util/ArrayList;", false)
-                            locals["\$Array"] = locals.size
-                            mv.visitVarInsn(Opcodes.ASTORE, locals["\$Array"]!!)
-                            mv.visitVarInsn(Opcodes.ALOAD, locals["\$Array"]!!)
-                            locals["\$ArrayLength"] = locals.size
-                            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/util/ArrayList", "size", "()I", false)
-                            mv.visitVarInsn(Opcodes.ISTORE, locals["\$ArrayLength"]!!)
-                            locals["\$ArrayIndex"] = locals.size
-                            pushInt(mv, 0)
-                            mv.visitVarInsn(Opcodes.ISTORE, locals["\$ArrayIndex"]!!)
-                            val beginLabel = Label()
-                            val endLabel = Label()
-                            mv.visitLabel(beginLabel)
-                            mv.visitVarInsn(Opcodes.ILOAD, locals["\$ArrayIndex"]!!)
-                            mv.visitVarInsn(Opcodes.ILOAD, locals["\$ArrayLength"]!!)
-                            mv.visitJumpInsn(Opcodes.IF_ICMPGE, endLabel)
-                            load_getScoreboard(locals, mv)
-                            mv.visitVarInsn(Opcodes.ALOAD, locals["\$Array"]!!)
-                            mv.visitVarInsn(Opcodes.ILOAD, locals["\$ArrayIndex"]!!)
-                            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/util/ArrayList", "get", "(I)Ljava/lang/Object;", false)
-                            mv.visitTypeInsn(Opcodes.CHECKCAST, "java/lang/String")
-                            load_getObjective(locals, mv, context.arguments["objective"]!!.result.toString(), true)
-                            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;", false)
-                            mv.visitInsn(Opcodes.DUP)
-                            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/scores/Score", "getScore", "()I", false)
-                            pushInt(mv, context.arguments["score"]!!.result as Int)
-                            mv.visitInsn(Opcodes.IADD)
-                            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/scores/Score", "setScore", "(I)V", false)
-                            mv.visitIincInsn(locals["\$ArrayIndex"]!!, 1)
-                            mv.visitJumpInsn(Opcodes.GOTO, beginLabel)
-                            mv.visitLabel(endLabel)
-                            locals.remove("\$Array")
-                            locals.remove("\$ArrayIndex")
-                            locals.remove("\$ArrayLength")
+                            load_getScoreboard(cw)
+                            load_getObjective(cw, context.arguments["objective"]!!.result.toString(), false)
+                            cw.getObjectField("net/minecraft/world/scores/Scoreboard", "playerScores", "Ljava/util/Map;")
+                            cw.callInterfaceMethod("java/util/Map", "keySet", "()Ljava/util/Set;")
+                            cw.callFunction("com/google/common/collect/Lists", "newArrayList", "(Ljava/lang/Iterable;)Ljava/util/ArrayList;")
+                            cw.defineLocal("\$Array", "Ljava/util/ArrayList;") {
+                                storeLocal("\$Array")
+
+                                cw.createArrayListForEachLoop("\$Array", "\$ArrayIndex", "\$ArrayLength") { getter ->
+                                    load_getScoreboard(cw)
+                                    getter()
+                                    cw.castType("java/lang/String")
+                                    load_getObjective(cw, context.arguments["objective"]!!.result.toString(), true)
+                                    cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                                    cw.writeInstruction(Opcodes.DUP)
+                                    cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                    cw.writeInt(context.arguments["score"]!!.result as Int)
+                                    cw.writeInstruction(Opcodes.IADD)
+                                    cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                                }
+                            }
                         } else {
-                            load_getObjectiveScore(locals, mv, context.arguments["objective"]!!.result.toString(), targetsRange[reader.string], true)
-                            mv.visitInsn(Opcodes.DUP)
-                            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/scores/Score", "getScore", "()I", false)
-                            pushInt(mv, context.arguments["score"]!!.result as Int)
-                            mv.visitInsn(Opcodes.IADD)
-                            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/scores/Score", "setScore", "(I)V", false)
+                            load_getObjectiveScore(cw, context.arguments["objective"]!!.result.toString(), targetsRange[reader.string])
+                            cw.writeInstruction(Opcodes.DUP)
+                            cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                            cw.writeInt(context.arguments["score"]!!.result as Int)
+                            cw.writeInstruction(Opcodes.IADD)
+                            cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
                         }
                     }
                 }
@@ -93,70 +74,49 @@ object CodeGenerator {
     }
 
     private fun findEntities() {}
-    private fun load_getServer(locals: HashMap<String, Int?>, mv: MethodVisitor) {
-        if (locals["MinecraftServer"] == null) {
-            mv.visitVarInsn(Opcodes.ALOAD, locals["CommandSourceStack"]!!)
-            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/commands/CommandSourceStack", "getServer", "()Lnet/minecraft/server/MinecraftServer;", false)
-            val location = locals.size
-            locals["MinecraftServer"] = location
-            mv.visitVarInsn(Opcodes.ASTORE, location)
-            mv.visitVarInsn(Opcodes.ALOAD, location)
-        } else {
-            mv.visitVarInsn(Opcodes.ALOAD, locals["MinecraftServer"]!!)
+    private fun load_getServer(cw: CodeWriter) {
+        if (cw.getLocal("MinecraftServer") == null) {
+            cw.loadLocal("CommandSourceStack")
+            cw.callMethod("net/minecraft/commands/CommandSourceStack", "getServer", "()Lnet/minecraft/server/MinecraftServer;")
+            cw.defineGlobalLocal("MinecraftServer", "Lnet/minecraft/server/MinecraftServer;")
+            cw.storeLocal("MinecraftServer")
         }
+        cw.loadLocal("MinecraftServer")
     }
 
-    private fun load_getScoreboard(locals: HashMap<String, Int?>, mv: MethodVisitor) {
-        if (locals["ServerScoreboard"] == null) {
-            load_getServer(locals, mv)
-            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/server/MinecraftServer", "getScoreboard", "()Lnet/minecraft/server/ServerScoreboard;", false)
-            val location = locals.size
-            locals["ServerScoreboard"] = location
-            mv.visitVarInsn(Opcodes.ASTORE, location)
-            mv.visitVarInsn(Opcodes.ALOAD, location)
-        } else {
-            mv.visitVarInsn(Opcodes.ALOAD, locals["ServerScoreboard"]!!)
+    private fun load_getScoreboard(cw: CodeWriter) {
+        if (cw.getLocal("ServerScoreboard") == null) {
+            load_getServer(cw);
+            cw.callMethod("net/minecraft/server/MinecraftServer", "getScoreboard", "()Lnet/minecraft/server/ServerScoreboard;")
+            cw.defineGlobalLocal("ServerScoreboard", "Lnet/minecraft/server/ServerScoreboard;")
+            cw.storeLocal("ServerScoreboard")
         }
+        cw.loadLocal("ServerScoreboard")
     }
 
-    private fun load_getObjective(locals: HashMap<String, Int?>, mv: MethodVisitor, objective: String, keepStack: Boolean) {
-        if (locals["Objective-$objective"] == null) {
-            load_getScoreboard(locals, mv)
-            mv.visitLdcInsn(objective)
-            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/scores/Scoreboard", "getObjective", "(Ljava/lang/String;)Lnet/minecraft/world/scores/Objective;", false)
-            val location = locals.size
-            locals["Objective-$objective"] = location
-            mv.visitVarInsn(Opcodes.ASTORE, location)
-            if (keepStack) mv.visitVarInsn(Opcodes.ALOAD, location)
-        } else {
-            if (keepStack) mv.visitVarInsn(Opcodes.ALOAD, locals["Objective-$objective"]!!)
+    private fun load_getObjective(cw: CodeWriter, objective: String, load: Boolean = true) {
+        val localName = "Objective-$objective"
+        if (cw.getLocal(localName) == null) {
+            load_getScoreboard(cw)
+            cw.writeString(objective)
+            cw.callMethod("net/minecraft/world/scores/Scoreboard", "getObjective", "(Ljava/lang/String;)Lnet/minecraft/world/scores/Objective;")
+            cw.defineGlobalLocal(localName, "Lnet/minecraft/world/scores/Objective;")
+            cw.storeLocal(localName)
         }
+        if(load) cw.loadLocal(localName)
     }
 
-    private fun load_getObjectiveScore(locals: HashMap<String, Int?>, mv: MethodVisitor, objective: String, holder: String, keepStack: Boolean) {
-        if (locals["Objective-$objective:$holder"] == null) {
-            load_getScoreboard(locals, mv)
-            mv.visitLdcInsn(holder)
-            load_getObjective(locals, mv, objective, true)
-            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;", false)
-            val location = locals.size
-            locals["Objective-$objective:$holder"] = location
-            mv.visitVarInsn(Opcodes.ASTORE, location)
-            if (keepStack) mv.visitVarInsn(Opcodes.ALOAD, location)
-        } else {
-            if (keepStack) mv.visitVarInsn(Opcodes.ALOAD, locals["Objective-$objective:$holder"]!!)
+    private fun load_getObjectiveScore(cw: CodeWriter, objective: String, holder: String, load: Boolean = true) {
+        val localName = "Objective-$objective:$holder";
+        if (cw.getLocal(localName) == null) {
+            load_getScoreboard(cw)
+            cw.writeString(holder)
+            load_getObjective(cw, objective)
+            cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+            cw.defineGlobalLocal(localName, "Lnet/minecraft/world/scores/Score;")
+            cw.storeLocal(localName)
         }
+        if(load) cw.loadLocal(localName)
     }
 
-    private fun pushInt(mv: MethodVisitor, value: Int) {
-        if (value >= -1 && value <= 5) {
-            mv.visitInsn(Opcodes.ICONST_0 + value)
-        } else if (value >= Byte.MIN_VALUE && value <= Byte.MAX_VALUE) {
-            mv.visitIntInsn(Opcodes.BIPUSH, value)
-        } else if (value >= Short.MIN_VALUE && value <= Short.MAX_VALUE) {
-            mv.visitIntInsn(Opcodes.SIPUSH, value)
-        } else {
-            mv.visitLdcInsn(value)
-        }
-    }
 }
