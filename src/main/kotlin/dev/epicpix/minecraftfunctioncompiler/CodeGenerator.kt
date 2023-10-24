@@ -87,12 +87,15 @@ object CodeGenerator {
                         cw.callInterfaceMethod("java/util/Map", "keySet", "()Ljava/util/Set;")
                     }
 
-                    cw.createStackArrayListForEachLoop { getter ->
-                        cw.visitGetScoreboard()
-                        getter()
-                        cw.castType("java/lang/String")
-                        cw.visitGetObjective(context.arguments["objective"]!!.result.toString())
-                        run()
+                    cw.defineLocal("\$Array", "Ljava/util/ArrayList;") {
+                        cw.storeLocal("\$Array")
+                        cw.createArrayListForEachLoop("\$Array") { getter ->
+                            cw.visitGetScoreboard()
+                            getter()
+                            cw.castType("java/lang/String")
+                            cw.visitGetObjective(context.arguments["objective"]!!.result.toString())
+                            run()
+                        }
                     }
                 }
             } else {

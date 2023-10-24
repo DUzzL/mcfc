@@ -158,39 +158,52 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         methodVisitor.visitLabel(exitLabel)
     }
 
-    fun createArrayListForEachLoop(arrayLocal: String, arrayIndexLocal: String, arraySizeLocal: String, exec: (getter: () -> Unit) -> Unit) {
-        defineLocal(arraySizeLocal, "I") {
-            loadLocal(arrayLocal)
-            callMethod("java/util/ArrayList", "size", "()I")
-            storeLocal(arraySizeLocal)
+    fun createWhileLoop(condition: (`break`: Label) -> Unit, exec: (`continue`: () -> Unit, `break`: () -> Unit) -> Unit) {
+        val beginLabel = Label()
+        val endLabel = Label()
+        methodVisitor.visitLabel(beginLabel)
+        condition(endLabel)
+        exec({
+            methodVisitor.visitJumpInsn(Opcodes.GOTO, beginLabel)
+        }) {
+            methodVisitor.visitJumpInsn(Opcodes.GOTO, endLabel)
+        }
+        methodVisitor.visitLabel(endLabel)
+    }
 
-            defineLocal(arrayIndexLocal, "I") {
+    fun createIndexedLoop(exec: (indexLocal: String) -> Unit) {
+        val baseName = "\$Indexer:${generatedLocals.size}"
+        val sizeName = "$baseName:Size"
+        val indexName = "$baseName:Index"
+        defineLocal(sizeName, "I") {
+            storeLocal(sizeName)
+
+            defineLocal(indexName, "I") {
                 writeInt(0)
-                storeLocal(arrayIndexLocal)
+                storeLocal(indexName)
 
-                val beginLabel = Label()
-                val endLabel = Label()
-                methodVisitor.visitLabel(beginLabel)
-                loadLocal(arrayIndexLocal)
-                loadLocal(arraySizeLocal)
-                methodVisitor.visitJumpInsn(Opcodes.IF_ICMPGE, endLabel)
-                exec {
-                    loadLocal(arrayLocal)
-                    loadLocal(arrayIndexLocal)
-                    callMethod("java/util/ArrayList", "get", "(I)Ljava/lang/Object;")
+                createWhileLoop({ brk ->
+                    loadLocal(indexName)
+                    loadLocal(sizeName)
+                    methodVisitor.visitJumpInsn(Opcodes.IF_ICMPGE, brk)
+                }) { cont, brk ->
+                    exec(indexName)
+                    methodVisitor.visitIincInsn(locals[indexName]!!.index, 1)
+                    cont()
                 }
-                methodVisitor.visitIincInsn(locals[arrayIndexLocal]!!.index, 1)
-                methodVisitor.visitJumpInsn(Opcodes.GOTO, beginLabel)
-                methodVisitor.visitLabel(endLabel)
             }
         }
     }
 
-    fun createStackArrayListForEachLoop(exec: (getter: () -> Unit) -> Unit) {
-        val baseName = "\$Array:${generatedLocals.size}"
-        defineLocal(baseName, "Ljava/lang/ArrayList;") {
-            storeLocal(baseName)
-            createArrayListForEachLoop(baseName, "${baseName}:Index", "${baseName}:Size", exec)
+    fun createArrayListForEachLoop(arrayLocal: String, exec: (getter: () -> Unit) -> Unit) {
+        loadLocal(arrayLocal)
+        callMethod("java/util/ArrayList", "size", "()I")
+        createIndexedLoop { indexLocal ->
+            exec {
+                loadLocal(arrayLocal)
+                loadLocal(indexLocal)
+                callMethod("java/util/ArrayList", "get", "(I)Ljava/lang/Object;")
+            }
         }
     }
 
