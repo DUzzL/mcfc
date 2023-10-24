@@ -27,33 +27,40 @@ object CodeGenerator {
                         val targetsRange = context.arguments["targets"]!!.range
                         if (targetsRange.length == 1 && reader.string[targetsRange.start] == '*') {
                             load_getScoreboard(cw)
-                            load_getObjective(cw, context.arguments["objective"]!!.result.toString(), false)
-                            cw.getObjectField("net/minecraft/world/scores/Scoreboard", "playerScores", "Ljava/util/Map;")
-                            cw.callInterfaceMethod("java/util/Map", "keySet", "()Ljava/util/Set;")
-                            cw.callFunction("com/google/common/collect/Lists", "newArrayList", "(Ljava/lang/Iterable;)Ljava/util/ArrayList;")
-                            cw.defineLocal("\$Array", "Ljava/util/ArrayList;") {
-                                storeLocal("\$Array")
+                            load_getObjective(cw, context.arguments["objective"]!!.result.toString())
+                            cw.executeIfNotNullElse({
+                                cw.getObjectField("net/minecraft/world/scores/Scoreboard", "playerScores", "Ljava/util/Map;")
+                                cw.callInterfaceMethod("java/util/Map", "keySet", "()Ljava/util/Set;")
+                                cw.callFunction("com/google/common/collect/Lists", "newArrayList", "(Ljava/lang/Iterable;)Ljava/util/ArrayList;")
+                                cw.defineLocal("\$Array", "Ljava/util/ArrayList;") {
+                                    storeLocal("\$Array")
 
-                                cw.createArrayListForEachLoop("\$Array", "\$ArrayIndex", "\$ArrayLength") { getter ->
-                                    load_getScoreboard(cw)
-                                    getter()
-                                    cw.castType("java/lang/String")
-                                    load_getObjective(cw, context.arguments["objective"]!!.result.toString(), true)
-                                    cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
-                                    cw.writeInstruction(Opcodes.DUP)
-                                    cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                                    cw.writeInt(context.arguments["score"]!!.result as Int)
-                                    cw.writeInstruction(Opcodes.IADD)
-                                    cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                                    cw.createArrayListForEachLoop("\$Array", "\$ArrayIndex", "\$ArrayLength") { getter ->
+                                        load_getScoreboard(cw)
+                                        getter()
+                                        cw.castType("java/lang/String")
+                                        load_getObjective(cw, context.arguments["objective"]!!.result.toString())
+                                        cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                                        cw.writeInstruction(Opcodes.DUP)
+                                        cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                        cw.writeInt(context.arguments["score"]!!.result as Int)
+                                        cw.writeInstruction(Opcodes.IADD)
+                                        cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                                    }
                                 }
+                            }) {
+                                cw.writeInstruction(Opcodes.POP)
                             }
                         } else {
-                            load_getObjectiveScore(cw, context.arguments["objective"]!!.result.toString(), targetsRange[reader.string])
-                            cw.writeInstruction(Opcodes.DUP)
-                            cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                            cw.writeInt(context.arguments["score"]!!.result as Int)
-                            cw.writeInstruction(Opcodes.IADD)
-                            cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                            load_getObjective(cw, context.arguments["objective"]!!.result.toString())
+                            cw.executeIfNotNull {
+                                load_getObjectiveScore(cw, context.arguments["objective"]!!.result.toString(), targetsRange[reader.string], store = false)
+                                cw.writeInstruction(Opcodes.DUP)
+                                cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                cw.writeInt(context.arguments["score"]!!.result as Int)
+                                cw.writeInstruction(Opcodes.IADD)
+                                cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                            }
                         }
                     }
                 }
@@ -106,7 +113,14 @@ object CodeGenerator {
         if(load) cw.loadLocal(localName)
     }
 
-    private fun load_getObjectiveScore(cw: CodeWriter, objective: String, holder: String, load: Boolean = true) {
+    private fun load_getObjectiveScore(cw: CodeWriter, objective: String, holder: String, load: Boolean = true, store: Boolean = true) {
+        if(!store) {
+            load_getScoreboard(cw)
+            cw.writeString(holder)
+            load_getObjective(cw, objective)
+            cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+            return
+        }
         val localName = "Objective-$objective:$holder";
         if (cw.getLocal(localName) == null) {
             load_getScoreboard(cw)

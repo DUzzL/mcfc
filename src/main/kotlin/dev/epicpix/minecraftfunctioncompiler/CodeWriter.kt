@@ -125,6 +125,24 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, type)
     }
 
+    fun executeIfNotNull(exec: () -> Unit) {
+        val endLabel = Label()
+        methodVisitor.visitJumpInsn(Opcodes.IFNULL, endLabel)
+        exec()
+        methodVisitor.visitLabel(endLabel)
+    }
+
+    fun executeIfNotNullElse(exec: () -> Unit, execElse: () -> Unit) {
+        val elseLabel = Label()
+        val exitLabel = Label()
+        methodVisitor.visitJumpInsn(Opcodes.IFNULL, elseLabel)
+        exec()
+        methodVisitor.visitJumpInsn(Opcodes.GOTO, exitLabel)
+        methodVisitor.visitLabel(elseLabel)
+        execElse()
+        methodVisitor.visitLabel(exitLabel)
+    }
+
     fun createArrayListForEachLoop(arrayLocal: String, arrayIndexLocal: String, arraySizeLocal: String, exec: (getter: () -> Unit) -> Unit) {
         defineLocal(arraySizeLocal, "I") {
             loadLocal(arrayLocal)
