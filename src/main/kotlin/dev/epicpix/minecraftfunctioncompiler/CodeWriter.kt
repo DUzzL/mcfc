@@ -105,7 +105,7 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         methodVisitor.visitTypeInsn(Opcodes.NEW, owner)
         writeInstruction(Opcodes.DUP)
         argumentProvider()
-        callFunction(owner, "<init>", descriptor)
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, owner, "<init>", descriptor, false)
     }
 
     fun callFunction(owner: String, name: String, descriptor: String) {
