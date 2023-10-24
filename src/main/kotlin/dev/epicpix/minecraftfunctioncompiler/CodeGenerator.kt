@@ -20,52 +20,39 @@ object CodeGenerator {
             val opType = context.nodes[2].node.name
             when (opType) {
                 "add" -> {
-                    val targets = context.arguments["targets"]!!.result
-                    if (targets is ScoreHolderArgument.SelectorResult) {
-                        throw UnsupportedOperationException("Selectors are not implemented yet")
-                    } else {
-                        val targetsRange = context.arguments["targets"]!!.range
-                        if (targetsRange.length == 1 && reader.string[targetsRange.start] == '*') {
-                            load_getObjective(cw, context.arguments["objective"]!!.result.toString())
-                            cw.executeIf(Opcodes.IFNONNULL) {
-                                cw.newObject("java/util/ArrayList", "(Ljava/util/Collection;)V") {
-                                    load_getScoreboard(cw)
-                                    cw.getObjectField("net/minecraft/world/scores/Scoreboard", "playerScores", "Ljava/util/Map;")
-                                    cw.callInterfaceMethod("java/util/Map", "keySet", "()Ljava/util/Set;")
-                                }
-
-                                cw.createStackArrayListForEachLoop { getter ->
-                                    load_getScoreboard(cw)
-                                    getter()
-                                    cw.castType("java/lang/String")
-                                    load_getObjective(cw, context.arguments["objective"]!!.result.toString())
-                                    cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
-                                    cw.writeInstruction(Opcodes.DUP)
-                                    cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                                    cw.writeInt(context.arguments["score"]!!.result as Int)
-                                    cw.writeInstruction(Opcodes.IADD)
-                                    cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
-                                }
-                            }
-                        } else {
-                            load_getObjective(cw, context.arguments["objective"]!!.result.toString())
-                            cw.executeIf(Opcodes.IFNONNULL) {
-                                load_getObjectiveScore(cw, context.arguments["objective"]!!.result.toString(), targetsRange[reader.string])
-                                cw.writeInstruction(Opcodes.DUP)
-                                cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                                cw.writeInt(context.arguments["score"]!!.result as Int)
-                                cw.writeInstruction(Opcodes.IADD)
-                                cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
-                            }
-                        }
+                    runScoreboardOperation(context, reader, cw) {
+                        cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                        cw.writeInstruction(Opcodes.DUP)
+                        cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                        cw.writeInt(context.arguments["score"]!!.result as Int)
+                        cw.writeInstruction(Opcodes.IADD)
+                        cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
                     }
                 }
-
-                "enable" -> {}
-                "operation" -> {}
-                "remove" -> {}
-                "reset" -> {}
-                "set" -> {}
+                "enable" -> throw UnsupportedOperationException("Unsupported operation: enable")
+                "operation" -> throw UnsupportedOperationException("Unsupported operation: operation")
+                "remove" -> {
+                    runScoreboardOperation(context, reader, cw) {
+                        cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                        cw.writeInstruction(Opcodes.DUP)
+                        cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                        cw.writeInt(context.arguments["score"]!!.result as Int)
+                        cw.writeInstruction(Opcodes.ISUB)
+                        cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                    }
+                }
+                "reset" -> {
+                    runScoreboardOperation(context, reader, cw) {
+                        cw.callMethod("net/minecraft/world/scores/Scoreboard", "resetPlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)V")
+                    }
+                }
+                "set" -> {
+                    runScoreboardOperation(context, reader, cw) {
+                        cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                        cw.writeInt(context.arguments["score"]!!.result as Int)
+                        cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                    }
+                }
                 "get", "list" -> {}
                 else -> throw UnsupportedOperationException("Unsupported scoreboard players type arguments: " + context.nodes)
             }
@@ -73,6 +60,41 @@ object CodeGenerator {
             throw UnsupportedOperationException("Unsupported scoreboard objectives arguments: " + context.nodes)
         } else {
             throw UnsupportedOperationException("Unsupported scoreboard operation type: $type")
+        }
+    }
+
+    private fun runScoreboardOperation(context: CommandContextBuilder<CommandSourceStack>, reader: ImmutableStringReader, cw: CodeWriter, run: () -> Unit) {
+        val targets = context.arguments["targets"]!!.result
+        if (targets is ScoreHolderArgument.SelectorResult) {
+            throw UnsupportedOperationException("Selectors are not implemented yet")
+        } else {
+            val targetsRange = context.arguments["targets"]!!.range
+            if (targetsRange.length == 1 && reader.string[targetsRange.start] == '*') {
+                load_getObjective(cw, context.arguments["objective"]!!.result.toString())
+                cw.executeIf(Opcodes.IFNONNULL) {
+                    cw.newObject("java/util/ArrayList", "(Ljava/util/Collection;)V") {
+                        load_getScoreboard(cw)
+                        cw.getObjectField("net/minecraft/world/scores/Scoreboard", "playerScores", "Ljava/util/Map;")
+                        cw.callInterfaceMethod("java/util/Map", "keySet", "()Ljava/util/Set;")
+                    }
+
+                    cw.createStackArrayListForEachLoop { getter ->
+                        load_getScoreboard(cw)
+                        getter()
+                        cw.castType("java/lang/String")
+                        load_getObjective(cw, context.arguments["objective"]!!.result.toString())
+                        run()
+                    }
+                }
+            } else {
+                load_getObjective(cw, context.arguments["objective"]!!.result.toString())
+                cw.executeIf(Opcodes.IFNONNULL) {
+                    load_getScoreboard(cw)
+                    cw.writeString(targetsRange[reader.string])
+                    load_getObjective(cw, context.arguments["objective"]!!.result.toString())
+                    run()
+                }
+            }
         }
     }
 
