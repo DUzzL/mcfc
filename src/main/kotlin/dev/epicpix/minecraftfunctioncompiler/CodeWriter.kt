@@ -158,20 +158,19 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         methodVisitor.visitLabel(exitLabel)
     }
 
-    fun createWhileLoop(condition: (`break`: Label) -> Unit, exec: (`continue`: () -> Unit, `break`: () -> Unit) -> Unit) {
+    fun createWhileLoop(condition: (`break`: Label) -> Unit, exec: (ControlFlowRun) -> Unit) {
         val beginLabel = Label()
         val endLabel = Label()
         methodVisitor.visitLabel(beginLabel)
         condition(endLabel)
-        exec({
-            methodVisitor.visitJumpInsn(Opcodes.GOTO, beginLabel)
-        }) {
-            methodVisitor.visitJumpInsn(Opcodes.GOTO, endLabel)
-        }
+        exec(ControlFlowRun(
+            { methodVisitor.visitJumpInsn(Opcodes.GOTO, beginLabel) },
+            { methodVisitor.visitJumpInsn(Opcodes.GOTO, endLabel) }
+        ))
         methodVisitor.visitLabel(endLabel)
     }
 
-    fun createIndexedLoop(exec: (indexLocal: String) -> Unit) {
+    fun createIndexedLoop(exec: (indexLocal: String, ControlFlowRun) -> Unit) {
         val baseName = "\$Indexer:${generatedLocals.size}"
         val sizeName = "$baseName:Size"
         val indexName = "$baseName:Index"
@@ -186,20 +185,25 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
                     loadLocal(indexName)
                     loadLocal(sizeName)
                     methodVisitor.visitJumpInsn(Opcodes.IF_ICMPGE, brk)
-                }) { cont, brk ->
-                    exec(indexName)
+                }) { controlFlow ->
+                    val contLabel = Label()
+                    exec(indexName, ControlFlowRun(
+                        { methodVisitor.visitJumpInsn(Opcodes.GOTO, contLabel) },
+                        controlFlow.brk
+                    ))
+                    methodVisitor.visitLabel(contLabel)
                     methodVisitor.visitIincInsn(locals[indexName]!!.index, 1)
-                    cont()
+                    controlFlow.cont()
                 }
             }
         }
     }
 
-    fun createArrayListForEachLoop(arrayLocal: String, exec: (getter: () -> Unit) -> Unit) {
+    fun createArrayListForEachLoop(arrayLocal: String, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
         loadLocal(arrayLocal)
         callMethod("java/util/ArrayList", "size", "()I")
-        createIndexedLoop { indexLocal ->
-            exec {
+        createIndexedLoop { indexLocal, controlFlow ->
+            exec(controlFlow) {
                 loadLocal(arrayLocal)
                 loadLocal(indexLocal)
                 callMethod("java/util/ArrayList", "get", "(I)Ljava/lang/Object;")
@@ -207,6 +211,32 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         }
     }
 
+    fun createIteratorForEachLoop(iteratorLocal: String, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
+        createWhileLoop({ brk ->
+            loadLocal(iteratorLocal)
+            callMethod("java/util/Iterator", "hasNext", "()Z")
+            methodVisitor.visitJumpInsn(Opcodes.IFEQ, brk)
+        }) { controlFlow ->
+            defineLocal("$iteratorLocal:Element", "Ljava/lang/Object;") {
+                loadLocal(iteratorLocal)
+                callMethod("java/util/Iterator", "next", "()Ljava/lang/Object;")
+                storeLocal("$iteratorLocal:Element")
+                exec(controlFlow) { loadLocal("$iteratorLocal:Element") }
+            }
+            controlFlow.cont()
+        }
+    }
+
+    fun createIterableForEachLoop(iterableLocal: String, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
+        defineLocal("$iterableLocal:Iterator", "Ljava/util/Iterator;") {
+            loadLocal(iterableLocal)
+            callMethod("java/lang/Iterable", "iterator", "()Ljava/util/Iterator;")
+            storeLocal("$iterableLocal:Iterator")
+            createIteratorForEachLoop("$iterableLocal:Iterator", exec)
+        }
+    }
+
 }
 
 data class Local(val name: String, val descriptor: String, val start: Label, var end: Label?, val index: Int)
+data class ControlFlowRun(val cont: () -> Unit, val brk: () -> Unit)

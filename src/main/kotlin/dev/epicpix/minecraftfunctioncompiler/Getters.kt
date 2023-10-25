@@ -44,3 +44,17 @@ fun CodeWriter.visitGetPlayerList() {
         callMethod("net/minecraft/server/MinecraftServer", "getPlayerList", "()Lnet/minecraft/server/players/PlayerList;")
     }
 }
+
+fun CodeWriter.visitForEachLevel(exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
+    defineLocal("\$Iterator", "Ljava/lang/Iterable;") {
+        visitGetServer()
+        callMethod("net/minecraft/server/MinecraftServer", "getAllLevels", "()Ljava/lang/Iterable;")
+        storeLocal("\$Iterator")
+        createIterableForEachLoop("\$Iterator") { controlFlow, getter ->
+            exec(controlFlow) {
+                getter()
+                castType("net/minecraft/server/level/ServerLevel")
+            }
+        }
+    }
+}

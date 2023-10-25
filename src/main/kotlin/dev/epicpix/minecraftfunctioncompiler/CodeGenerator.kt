@@ -68,7 +68,7 @@ object CodeGenerator {
         if (targets is ScoreHolderArgument.SelectorResult) {
             cw.visitGetObjective(context.arguments["objective"]!!.result.toString())
             cw.executeIf(Opcodes.IFNONNULL) {
-                EntitySelectorCodeGenerator.generateForEachEntity(cw, targets.selector, context.arguments["targets"]!!.range.get(reader)) {
+                EntitySelectorCodeGenerator.generateForEachEntity(cw, context.arguments["targets"]!!.range.get(reader), true, true) {
                     cw.callFunction("net/minecraft/world/entity/Entity", "getScoreboardName", "()Ljava/lang/String;")
                     cw.visitGetScoreboard()
                     cw.writeInstruction(Opcodes.SWAP)
@@ -89,7 +89,7 @@ object CodeGenerator {
 
                     cw.defineLocal("\$Array", "Ljava/util/ArrayList;") {
                         cw.storeLocal("\$Array")
-                        cw.createArrayListForEachLoop("\$Array") { getter ->
+                        cw.createArrayListForEachLoop("\$Array") { _, getter ->
                             cw.visitGetScoreboard()
                             getter()
                             cw.castType("java/lang/String")
