@@ -1,14 +1,18 @@
 package dev.epicpix.minecraftfunctioncompiler
 
+import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
+import java.util.*
 
-class CodeWriter(val methodVisitor: MethodVisitor) {
+class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
 
     private val locals: MutableMap<String, Local> = mutableMapOf()
     private val availableLocals: MutableSet<Int> = mutableSetOf()
     private val generatedLocals: MutableList<Local> = mutableListOf()
+
+    private val uuids: MutableSet<UUID> = mutableSetOf()
 
     fun defineLocal(local: String, descriptor: String, exec: (CodeWriter.() -> Unit)) {
         val localStart = Label()
@@ -101,6 +105,11 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         methodVisitor.visitLdcInsn(str)
     }
 
+    fun writeUUID(value: UUID) {
+        uuids.add(value)
+        getStaticField(className, "uuid$${value.toString().replace("-", "")}", "Ljava/util/UUID;")
+    }
+
     fun newObject(owner: String, descriptor: String, argumentProvider: CodeWriter.() -> Unit) {
         methodVisitor.visitTypeInsn(Opcodes.NEW, owner)
         writeInstruction(Opcodes.DUP)
@@ -122,6 +131,14 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
 
     fun getObjectField(owner: String, name: String, descriptor: String) {
         methodVisitor.visitFieldInsn(Opcodes.GETFIELD, owner, name, descriptor)
+    }
+
+    fun getStaticField(owner: String, name: String, descriptor: String) {
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, owner, name, descriptor)
+    }
+
+    fun setStaticField(owner: String, name: String, descriptor: String) {
+        methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, owner, name, descriptor)
     }
 
     fun writeInstruction(instr: Int) {
@@ -233,6 +250,24 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
             callMethod("java/lang/Iterable", "iterator", "()Ljava/util/Iterator;")
             storeLocal("$iterableLocal:Iterator")
             createIteratorForEachLoop("$iterableLocal:Iterator", exec)
+        }
+    }
+
+    fun writeClinit(methodVisitor: MethodVisitor) {
+        uuids.forEach {
+            methodVisitor.visitTypeInsn(Opcodes.NEW, "java/util/UUID")
+            methodVisitor.visitInsn(Opcodes.DUP)
+            methodVisitor.visitLdcInsn(it.mostSignificantBits)
+            methodVisitor.visitLdcInsn(it.leastSignificantBits)
+            methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/util/UUID", "<init>", "(JJ)V", false)
+            methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className, "uuid$${it.toString().replace("-", "")}", "Ljava/util/UUID;")
+        }
+        methodVisitor.visitInsn(Opcodes.RETURN)
+    }
+
+    fun generateFields(classVisitor: ClassVisitor) {
+        uuids.forEach {
+            classVisitor.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, "uuid$${it.toString().replace("-", "")}", "Ljava/util/UUID;", null, null)
         }
     }
 

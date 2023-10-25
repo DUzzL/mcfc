@@ -71,7 +71,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         val mv = cw.visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "run",
                 "(Lnet/minecraft/commands/CommandSourceStack;)I", null, null)
         mv.visitCode()
-        val codeWriter = CodeWriter(mv)
+        val codeWriter = CodeWriter(mv, name.replace('.', '/'))
 
         codeWriter.defineLocal("CommandSourceStack", "Lnet/minecraft/commands/CommandSourceStack;") {
             for (entry in function.entries) {
@@ -89,6 +89,17 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         codeWriter.writeLocalVariables()
         mv.visitMaxs(0, 0)
         mv.visitEnd()
+
+        codeWriter.generateFields(cw)
+
+        val cmv = cw.visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "<clinit>",
+            "()V", null, null)
+        cmv.visitCode()
+        codeWriter.writeClinit(cmv)
+        cmv.visitMaxs(0, 0)
+        cmv.visitEnd()
+
+
         cw.visitEnd()
         val data = cw.toByteArray()
         Files.write(FabricLoader.getInstance().gameDir.resolve("generated").resolve("$name.class"), data)
