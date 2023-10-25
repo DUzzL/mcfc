@@ -77,7 +77,20 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         codeWriter.defineLocal("CommandSourceStack", "Lnet/minecraft/commands/CommandSourceStack;") {
             for (entry in function.entries) {
                 if (entry is CommandEntry) {
-                    val context: CommandContextBuilder<CommandSourceStack> = entry.parse.context
+                    val nodes = mutableListOf<BrigadierNode>()
+
+                    var context: CommandContextBuilder<CommandSourceStack> = entry.parse.context
+                    while(true) {
+                        for(node in context.nodes) {
+                            nodes.add(BrigadierNode(entry.parse.reader, node.range, node.node.name, context.arguments[node.node.name] ?: node.node.name))
+                        }
+                        if(context.child == null) {
+                            break
+                        }
+                        context = context.child
+                    }
+                    println(nodes)
+
                     val commandName = context.nodes[0].node.name
                     generateCommand(commandName, entry.parse.reader, context, codeWriter)
                 }
