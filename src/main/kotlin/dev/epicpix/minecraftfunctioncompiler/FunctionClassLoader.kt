@@ -41,6 +41,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         return try {
             handles[location]!!.invoke(stack) as Int
         } catch (e: Throwable) {
+            LOGGER.error("Failed to run function $location", e)
             throw RuntimeException(e)
         }
     }

@@ -9,9 +9,13 @@ fun CodeWriter.generateOrGetLocal(name: String, descriptor: String, load: Boolea
     if(load) loadLocal(name)
 }
 
+fun CodeWriter.visitGetCommandSourceStack() {
+    loadLocal("CommandSourceStack")
+}
+
 fun CodeWriter.visitGetServer() {
     generateOrGetLocal("MinecraftServer", "Lnet/minecraft/server/MinecraftServer;") {
-        loadLocal("CommandSourceStack")
+        visitGetCommandSourceStack()
         callMethod("net/minecraft/commands/CommandSourceStack", "getServer", "()Lnet/minecraft/server/MinecraftServer;")
     }
 }

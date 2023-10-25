@@ -231,12 +231,12 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
     fun createIteratorForEachLoop(iteratorLocal: String, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
         createWhileLoop({ brk ->
             loadLocal(iteratorLocal)
-            callMethod("java/util/Iterator", "hasNext", "()Z")
+            callInterfaceMethod("java/util/Iterator", "hasNext", "()Z")
             methodVisitor.visitJumpInsn(Opcodes.IFEQ, brk)
         }) { controlFlow ->
             defineLocal("$iteratorLocal:Element", "Ljava/lang/Object;") {
                 loadLocal(iteratorLocal)
-                callMethod("java/util/Iterator", "next", "()Ljava/lang/Object;")
+                callInterfaceMethod("java/util/Iterator", "next", "()Ljava/lang/Object;")
                 storeLocal("$iteratorLocal:Element")
                 exec(controlFlow) { loadLocal("$iteratorLocal:Element") }
             }
@@ -247,7 +247,7 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
     fun createIterableForEachLoop(iterableLocal: String, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
         defineLocal("$iterableLocal:Iterator", "Ljava/util/Iterator;") {
             loadLocal(iterableLocal)
-            callMethod("java/lang/Iterable", "iterator", "()Ljava/util/Iterator;")
+            callInterfaceMethod("java/lang/Iterable", "iterator", "()Ljava/util/Iterator;")
             storeLocal("$iterableLocal:Iterator")
             createIteratorForEachLoop("$iterableLocal:Iterator", exec)
         }

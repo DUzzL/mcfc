@@ -9,8 +9,29 @@ import org.objectweb.asm.Opcodes
 object CodeGenerator {
     fun generateCommand(commandName: String, reader: ImmutableStringReader, context: CommandContextBuilder<CommandSourceStack>, cw: CodeWriter) {
         when (commandName) {
+            "kill" -> generateCommandKill(context, reader, cw)
             "scoreboard" -> generateCommandScoreboard(context, reader, cw)
             else -> throw UnsupportedOperationException("Cannot convert command: $commandName")
+        }
+    }
+
+    private fun generateCommandKill(context: CommandContextBuilder<CommandSourceStack>, reader: ImmutableStringReader, cw: CodeWriter) {
+        val range = context.arguments["targets"]?.range
+        if(range != null) {
+            EntitySelectorCodeGenerator.generateForEachEntity(cw, range.get(reader), allowEntities = true, allowMultiple = true) {
+                cw.callMethod("net/minecraft/world/entity/Entity", "kill", "()V")
+            }
+        }else {
+            cw.visitGetCommandSourceStack()
+            cw.callMethod("net/minecraft/commands/CommandSourceStack", "getEntity", "()Lnet/minecraft/world/entity/Entity;")
+            cw.defineLocal("\$Entity", "Lnet/minecraft/world/entity/Entity;") {
+                cw.storeLocal("\$Entity")
+                cw.loadLocal("\$Entity")
+                cw.executeIf(Opcodes.IFNONNULL) {
+                    cw.loadLocal("\$Entity")
+                    cw.callMethod("net/minecraft/world/entity/Entity", "kill", "()V")
+                }
+            }
         }
     }
 
@@ -68,7 +89,7 @@ object CodeGenerator {
         if (targets is ScoreHolderArgument.SelectorResult) {
             cw.visitGetObjective(context.arguments["objective"]!!.result.toString())
             cw.executeIf(Opcodes.IFNONNULL) {
-                EntitySelectorCodeGenerator.generateForEachEntity(cw, context.arguments["targets"]!!.range.get(reader), true, true) {
+                EntitySelectorCodeGenerator.generateForEachEntity(cw, context.arguments["targets"]!!.range.get(reader), allowEntities = true, allowMultiple = true) {
                     cw.callFunction("net/minecraft/world/entity/Entity", "getScoreboardName", "()Ljava/lang/String;")
                     cw.visitGetScoreboard()
                     cw.writeInstruction(Opcodes.SWAP)
