@@ -7,7 +7,7 @@ import java.util.*
 object EntitySelectorCodeGenerator {
     fun generateForEachEntity(cw: CodeWriter, stringSelector: String, allowEntities: Boolean, allowMultiple: Boolean, run: () -> Unit) {
         if(stringSelector[0] == '@') {
-            return
+            throw UnsupportedOperationException("Unsupported selector")
         }
         runCatching { UUID.fromString(stringSelector) }.fold({
             if(!allowEntities) throw UnsupportedOperationException("Invalid selector")
@@ -26,7 +26,7 @@ object EntitySelectorCodeGenerator {
                 }
             }
         }) {
-
+            throw UnsupportedOperationException("Unsupported selector")
         }
     }
 
