@@ -82,17 +82,17 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                     var context: CommandContextBuilder<CommandSourceStack> = entry.parse.context
                     while(true) {
                         for(node in context.nodes) {
-                            nodes.add(BrigadierNode(entry.parse.reader, node.range, node.node.name, context.arguments[node.node.name] ?: node.node.name))
+                            nodes.add(BrigadierNode(entry.parse.reader, node.range, node.node.name, context.arguments[node.node.name]?.result ?: node.node.name))
                         }
                         if(context.child == null) {
                             break
                         }
                         context = context.child
                     }
-                    println(nodes)
 
-                    val commandName = context.nodes[0].node.name
-                    generateCommand(commandName, entry.parse.reader, context, codeWriter)
+                    val nodeStorage = BrigadierNodeStorage(nodes)
+
+                    generateCommand(nodeStorage, codeWriter)
                 }
             }
         }

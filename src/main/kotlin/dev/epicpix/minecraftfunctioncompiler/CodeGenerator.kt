@@ -1,24 +1,22 @@
 package dev.epicpix.minecraftfunctioncompiler
 
-import com.mojang.brigadier.ImmutableStringReader
-import com.mojang.brigadier.context.CommandContextBuilder
-import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.arguments.ScoreHolderArgument
 import org.objectweb.asm.Opcodes
 
 object CodeGenerator {
-    fun generateCommand(commandName: String, reader: ImmutableStringReader, context: CommandContextBuilder<CommandSourceStack>, cw: CodeWriter) {
-        when (commandName) {
-            "kill" -> generateCommandKill(context, reader, cw)
-            "scoreboard" -> generateCommandScoreboard(context, reader, cw)
+    fun generateCommand(nodeStorage: BrigadierNodeStorage, cw: CodeWriter) {
+        val commandName = nodeStorage[0].name
+        when(commandName) {
+            "kill" -> generateCommandKill(nodeStorage, cw)
+            "scoreboard" -> generateCommandScoreboard(nodeStorage, cw)
             else -> throw UnsupportedOperationException("Cannot convert command: $commandName")
         }
     }
 
-    private fun generateCommandKill(context: CommandContextBuilder<CommandSourceStack>, reader: ImmutableStringReader, cw: CodeWriter) {
-        val range = context.arguments["targets"]?.range
-        if(range != null) {
-            EntitySelectorCodeGenerator.generateForEachEntity(cw, range.get(reader), allowEntities = true, allowMultiple = true) {
+    private fun generateCommandKill(nodeStorage: BrigadierNodeStorage, cw: CodeWriter) {
+        val targets = nodeStorage["targets"]
+        if(targets != null) {
+            EntitySelectorCodeGenerator.generateForEachEntity(cw, targets, allowEntities = true, allowMultiple = true) {
                 cw.callMethod("net/minecraft/world/entity/Entity", "kill", "()V")
             }
         }else {
@@ -35,17 +33,17 @@ object CodeGenerator {
         }
     }
 
-    private fun generateCommandScoreboard(context: CommandContextBuilder<CommandSourceStack>, reader: ImmutableStringReader, cw: CodeWriter) {
-        val type = context.nodes[1].node.name
+    private fun generateCommandScoreboard(nodeStorage: BrigadierNodeStorage, cw: CodeWriter) {
+        val type = nodeStorage[1].name
         if (type == "players") {
-            val opType = context.nodes[2].node.name
+            val opType = nodeStorage[2].name
             when (opType) {
                 "add" -> {
-                    runScoreboardOperation(context, reader, cw) {
+                    runScoreboardOperation(nodeStorage, cw) {
                         cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
                         cw.writeInstruction(Opcodes.DUP)
                         cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                        cw.writeInt(context.arguments["score"]!!.result as Int)
+                        cw.writeInt(nodeStorage["score"]!!.data as Int)
                         cw.writeInstruction(Opcodes.IADD)
                         cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
                     }
@@ -53,54 +51,54 @@ object CodeGenerator {
                 "enable" -> throw UnsupportedOperationException("Unsupported operation: enable")
                 "operation" -> throw UnsupportedOperationException("Unsupported operation: operation")
                 "remove" -> {
-                    runScoreboardOperation(context, reader, cw) {
+                    runScoreboardOperation(nodeStorage, cw) {
                         cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
                         cw.writeInstruction(Opcodes.DUP)
                         cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                        cw.writeInt(context.arguments["score"]!!.result as Int)
+                        cw.writeInt(nodeStorage["score"]!!.data as Int)
                         cw.writeInstruction(Opcodes.ISUB)
                         cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
                     }
                 }
                 "reset" -> {
-                    runScoreboardOperation(context, reader, cw) {
+                    runScoreboardOperation(nodeStorage, cw) {
                         cw.callMethod("net/minecraft/world/scores/Scoreboard", "resetPlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)V")
                     }
                 }
                 "set" -> {
-                    runScoreboardOperation(context, reader, cw) {
+                    runScoreboardOperation(nodeStorage, cw) {
                         cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
-                        cw.writeInt(context.arguments["score"]!!.result as Int)
+                        cw.writeInt(nodeStorage["score"]!!.data as Int)
                         cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
                     }
                 }
                 "get", "list" -> {}
-                else -> throw UnsupportedOperationException("Unsupported scoreboard players type arguments: " + context.nodes)
+                else -> throw UnsupportedOperationException("Unsupported scoreboard players type arguments: $nodeStorage")
             }
         } else if (type == "objectives") {
-            throw UnsupportedOperationException("Unsupported scoreboard objectives arguments: " + context.nodes)
+            throw UnsupportedOperationException("Unsupported scoreboard objectives arguments: $nodeStorage")
         } else {
             throw UnsupportedOperationException("Unsupported scoreboard operation type: $type")
         }
     }
 
-    private fun runScoreboardOperation(context: CommandContextBuilder<CommandSourceStack>, reader: ImmutableStringReader, cw: CodeWriter, run: () -> Unit) {
-        val targets = context.arguments["targets"]!!.result
+    private fun runScoreboardOperation(nodeStorage: BrigadierNodeStorage, cw: CodeWriter, run: () -> Unit) {
+        val targets = nodeStorage["targets"]!!.data
         if (targets is ScoreHolderArgument.SelectorResult) {
-            cw.visitGetObjective(context.arguments["objective"]!!.result.toString())
+            cw.visitGetObjective(nodeStorage["objective"]!!.data.toString())
             cw.executeIf(Opcodes.IFNONNULL) {
-                EntitySelectorCodeGenerator.generateForEachEntity(cw, context.arguments["targets"]!!.range.get(reader), allowEntities = true, allowMultiple = true) {
+                EntitySelectorCodeGenerator.generateForEachEntity(cw, nodeStorage["targets"]!!, allowEntities = true, allowMultiple = true) {
                     cw.callFunction("net/minecraft/world/entity/Entity", "getScoreboardName", "()Ljava/lang/String;")
                     cw.visitGetScoreboard()
                     cw.writeInstruction(Opcodes.SWAP)
-                    cw.visitGetObjective(context.arguments["objective"]!!.result.toString())
+                    cw.visitGetObjective(nodeStorage["objective"]!!.data.toString())
                     run()
                 }
             }
         } else {
-            val targetsRange = context.arguments["targets"]!!.range
-            if (targetsRange.length == 1 && reader.string[targetsRange.start] == '*') {
-                cw.visitGetObjective(context.arguments["objective"]!!.result.toString())
+            val targetsRange = nodeStorage["targets"]!!.range
+            if (targetsRange.length == 1 && nodeStorage["targets"]!!.source.string[targetsRange.start] == '*') {
+                cw.visitGetObjective(nodeStorage["objective"]!!.data.toString())
                 cw.executeIf(Opcodes.IFNONNULL) {
                     cw.newObject("java/util/ArrayList", "(Ljava/util/Collection;)V") {
                         cw.visitGetScoreboard()
@@ -114,17 +112,17 @@ object CodeGenerator {
                             cw.visitGetScoreboard()
                             getter()
                             cw.castType("java/lang/String")
-                            cw.visitGetObjective(context.arguments["objective"]!!.result.toString())
+                            cw.visitGetObjective(nodeStorage["objective"]!!.data.toString())
                             run()
                         }
                     }
                 }
             } else {
-                cw.visitGetObjective(context.arguments["objective"]!!.result.toString())
+                cw.visitGetObjective(nodeStorage["objective"]!!.data.toString())
                 cw.executeIf(Opcodes.IFNONNULL) {
                     cw.visitGetScoreboard()
-                    cw.writeString(targetsRange[reader.string])
-                    cw.visitGetObjective(context.arguments["objective"]!!.result.toString())
+                    cw.writeString(targetsRange[nodeStorage["targets"]!!.source])
+                    cw.visitGetObjective(nodeStorage["objective"]!!.data.toString())
                     run()
                 }
             }

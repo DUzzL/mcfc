@@ -5,11 +5,11 @@ import java.lang.UnsupportedOperationException
 import java.util.*
 
 object EntitySelectorCodeGenerator {
-    fun generateForEachEntity(cw: CodeWriter, stringSelector: String, allowEntities: Boolean, allowMultiple: Boolean, run: () -> Unit) {
-        if(stringSelector[0] == '@') {
+    fun generateForEachEntity(cw: CodeWriter, stringSelector: BrigadierNode, allowEntities: Boolean, allowMultiple: Boolean, run: () -> Unit) {
+        if(stringSelector.source.string[stringSelector.range.start] == '@') {
             throw UnsupportedOperationException("Unsupported selector")
         }
-        runCatching { UUID.fromString(stringSelector) }.fold({
+        runCatching { UUID.fromString(stringSelector.range[stringSelector.source.string]) }.fold({
             if(!allowEntities) throw UnsupportedOperationException("Invalid selector")
             cw.visitForEachLevel { controlFlowRun, getter ->
                 getter()
