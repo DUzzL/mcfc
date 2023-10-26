@@ -22,6 +22,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
 
         val definedFunctions = mutableMapOf<ResourceLocation, List<Command>>()
 
+        val startParse = System.currentTimeMillis()
         funcLoop@
         for ((key, value) in functions) {
             try {
@@ -31,15 +32,20 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                     }
                 }
                 definedFunctions[key] = CommandParser.parseFunctionCommands(value)
-                val clz = defineFunction(value, definedFunctions)
-                val handle = MethodHandles.lookup().findStatic(clz, "run", MethodType.methodType(Int::class.javaPrimitiveType, CommandSourceStack::class.java))
-                handles[key] = handle
             } catch (e: UnsupportedOperationException) {
                 LOGGER.warn("Unable to compile function " + key + " / " + e.message)
             } catch (e: Throwable) {
                 LOGGER.error("Unable to compile function $key", e)
             }
         }
+        LOGGER.info("Parsed ${definedFunctions.size} functions in ${System.currentTimeMillis()-startParse}ms")
+        val startLoader = System.currentTimeMillis()
+        for((key) in definedFunctions) {
+            val clz = defineFunction(key, definedFunctions)
+            val handle = MethodHandles.lookup().findStatic(clz, "run", MethodType.methodType(Int::class.javaPrimitiveType, CommandSourceStack::class.java))
+            handles[key] = handle
+        }
+        LOGGER.info("Loaded ${definedFunctions.size} functions in ${System.currentTimeMillis()-startLoader}ms")
     }
 
     fun hasFunctionLoaded(location: ResourceLocation): Boolean {
@@ -55,8 +61,8 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         }
     }
 
-    private fun defineFunction(func: CommandFunction, definedFunctions: Map<ResourceLocation, List<Command>>): Class<*> {
-        val className = "function/${func.id.namespace}/${func.id.path}"
+    private fun defineFunction(funcId: ResourceLocation, definedFunctions: Map<ResourceLocation, List<Command>>): Class<*> {
+        val className = "function/${funcId.namespace}/${funcId.path}"
 
         val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
         cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, className, null, "java/lang/Object", null)
@@ -65,14 +71,16 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         mv.visitCode()
         val codeWriter = CodeWriter(mv, className)
 
+        val commands = definedFunctions[funcId]!!
+
         codeWriter.defineLocal("CommandSourceStack", "Lnet/minecraft/commands/CommandSourceStack;") {
-            definedFunctions[func.id]!!.forEach {
+            commands.forEach {
                 generateCommand(it, codeWriter)
             }
         }
         codeWriter.end()
 
-        mv.visitLdcInsn(func.entries.size)
+        mv.visitLdcInsn(commands.size)
         mv.visitInsn(Opcodes.IRETURN)
         codeWriter.writeLocalVariables()
         mv.visitMaxs(0, 0)
