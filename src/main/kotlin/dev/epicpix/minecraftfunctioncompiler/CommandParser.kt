@@ -6,6 +6,7 @@ import dev.epicpix.minecraftfunctioncompiler.arguments.SelectorArgument
 import net.minecraft.commands.CommandFunction
 import net.minecraft.commands.CommandSourceStack
 import java.lang.UnsupportedOperationException
+import java.util.*
 
 object CommandParser {
 
@@ -91,6 +92,10 @@ object CommandParser {
     }
 
     private fun parseArgumentSelector(selector: String): SelectorArgument {
+        val entityUuid = runCatching { UUID.fromString(selector) }
+        if(entityUuid.isSuccess) {
+            return SelectorArgument(entityUuid.getOrThrow())
+        }
         throw UnsupportedOperationException("Cannot parse selector: $selector")
     }
 

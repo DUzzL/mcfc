@@ -1,19 +1,17 @@
 package dev.epicpix.minecraftfunctioncompiler
 
+import dev.epicpix.minecraftfunctioncompiler.arguments.SelectorArgument
 import org.objectweb.asm.Opcodes
 import java.lang.UnsupportedOperationException
-import java.util.*
 
 object EntitySelectorCodeGenerator {
-    fun generateForEachEntity(cw: CodeWriter, stringSelector: BrigadierNode, allowEntities: Boolean, allowMultiple: Boolean, run: () -> Unit) {
-        if(stringSelector.source.string[stringSelector.range.start] == '@') {
-            throw UnsupportedOperationException("Unsupported selector")
-        }
-        runCatching { UUID.fromString(stringSelector.range[stringSelector.source.string]) }.fold({
+
+    fun generateForEachEntity(cw: CodeWriter, selector: SelectorArgument, allowEntities: Boolean, allowMultiple: Boolean, run: () -> Unit) {
+        if(selector.entityUuid != null) {
             if(!allowEntities) throw UnsupportedOperationException("Invalid selector")
             cw.visitForEachLevel { controlFlowRun, getter ->
                 getter()
-                cw.writeUUID(it)
+                cw.writeUUID(selector.entityUuid)
                 cw.callMethod("net/minecraft/server/level/ServerLevel", "getEntity", "(Ljava/util/UUID;)Lnet/minecraft/world/entity/Entity;")
                 cw.defineLocal("\$Entity", "Lnet/minecraft/world/entity/Entity;") {
                     cw.storeLocal("\$Entity");
@@ -25,9 +23,10 @@ object EntitySelectorCodeGenerator {
                     }
                 }
             }
-        }) {
-            throw UnsupportedOperationException("Unsupported selector")
+            return
         }
+
+        throw UnsupportedOperationException("Unsupported selector")
     }
 
     fun checkEntityPredicate(cw: CodeWriter, stringSelector: String) {

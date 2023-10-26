@@ -1,3 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.arguments
 
-class SelectorArgument()
+import java.util.UUID
+
+data class SelectorArgument(
+    val entityUuid: UUID? = null,
+)

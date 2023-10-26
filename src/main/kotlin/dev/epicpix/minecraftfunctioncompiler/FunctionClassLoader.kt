@@ -1,6 +1,5 @@
 package dev.epicpix.minecraftfunctioncompiler
 
-import com.mojang.brigadier.context.CommandContextBuilder
 import dev.epicpix.minecraftfunctioncompiler.CodeGenerator.generateCommand
 import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.commands.CommandFunction
@@ -32,7 +31,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                     }
                 }
                 definedFunctions[key] = CommandParser.parseFunctionCommands(value)
-                val clz = defineFunction(value)
+                val clz = defineFunction(value, definedFunctions)
                 val handle = MethodHandles.lookup().findStatic(clz, "run", MethodType.methodType(Int::class.javaPrimitiveType, CommandSourceStack::class.java))
                 handles[key] = handle
             } catch (e: UnsupportedOperationException) {
@@ -56,7 +55,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         }
     }
 
-    private fun defineFunction(func: CommandFunction): Class<*> {
+    private fun defineFunction(func: CommandFunction, definedFunctions: Map<ResourceLocation, List<Command>>): Class<*> {
         val className = "function/${func.id.namespace}/${func.id.path}"
 
         val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
@@ -67,25 +66,8 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         val codeWriter = CodeWriter(mv, className)
 
         codeWriter.defineLocal("CommandSourceStack", "Lnet/minecraft/commands/CommandSourceStack;") {
-            for (entry in func.entries) {
-                if (entry is CommandEntry) {
-                    val nodes = mutableListOf<BrigadierNode>()
-
-                    var context: CommandContextBuilder<CommandSourceStack> = entry.parse.context
-                    while(true) {
-                        for(node in context.nodes) {
-                            nodes.add(BrigadierNode(entry.parse.reader, node.range, node.node.name, context.arguments[node.node.name]?.result ?: node.node.name))
-                        }
-                        if(context.child == null) {
-                            break
-                        }
-                        context = context.child
-                    }
-
-                    val nodeStorage = BrigadierNodeStorage(nodes)
-
-                    generateCommand(nodeStorage, codeWriter)
-                }
+            definedFunctions[func.id]!!.forEach {
+                generateCommand(it, codeWriter)
             }
         }
         codeWriter.end()
