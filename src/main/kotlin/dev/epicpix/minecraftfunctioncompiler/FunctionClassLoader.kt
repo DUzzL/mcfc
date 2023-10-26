@@ -69,7 +69,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         val mv = cw.visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "run",
                 "(Lnet/minecraft/commands/CommandSourceStack;)I", null, null)
         mv.visitCode()
-        val codeWriter = CodeWriter(mv, className)
+        val codeWriter = CodeWriter(mv, className, generateDebug = true)
 
         val commands = definedFunctions[funcId]!!
 

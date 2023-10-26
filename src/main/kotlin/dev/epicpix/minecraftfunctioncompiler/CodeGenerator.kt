@@ -10,18 +10,19 @@ object CodeGenerator {
             CommandType.KILL_SELF -> {
                 cw.visitGetCommandSourceStack()
                 cw.callMethod("net/minecraft/commands/CommandSourceStack", "getEntity", "()Lnet/minecraft/world/entity/Entity;")
-                cw.defineLocal("\$Entity", "Lnet/minecraft/world/entity/Entity;") {
-                    cw.storeLocal("\$Entity")
-                    cw.loadLocal("\$Entity")
+                val uidLocal = cw.generateUniqueLocal("\$Entity")
+                cw.storeLocal(uidLocal, "Lnet/minecraft/world/entity/Entity;") {
+                    cw.loadLocal(uidLocal)
                     cw.executeIf(Opcodes.IFNONNULL) {
-                        cw.loadLocal("\$Entity")
+                        cw.loadLocal(uidLocal)
                         cw.callMethod("net/minecraft/world/entity/Entity", "kill", "()V")
                     }
                 }
             }
 
             CommandType.KILL_SELECTOR -> {
-                EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], allowEntities = true, allowMultiple = true) {
+                EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], allowEntities = true, allowMultiple = true) { getter ->
+                    getter()
                     cw.callMethod("net/minecraft/world/entity/Entity", "kill", "()V")
                 }
             }
@@ -82,9 +83,9 @@ object CodeGenerator {
                         cw.callInterfaceMethod("java/util/Map", "keySet", "()Ljava/util/Set;")
                     }
 
-                    cw.defineLocal("\$Array", "Ljava/util/ArrayList;") {
-                        cw.storeLocal("\$Array")
-                        cw.createArrayListForEachLoop("\$Array") { _, getter ->
+                    val uidLocal = cw.generateUniqueLocal("\$Array")
+                    cw.storeLocal(uidLocal, "Ljava/util/ArrayList;") {
+                        cw.createArrayListForEachLoop(uidLocal) { _, getter ->
                             cw.visitGetScoreboard()
                             getter()
                             cw.castType("java/lang/String")
@@ -104,10 +105,10 @@ object CodeGenerator {
                 }
 
                 if (targets.selector != null) {
-                    EntitySelectorCodeGenerator.generateForEachEntity(cw, targets.selector, allowEntities = true, allowMultiple = true) {
-                        cw.callFunction("net/minecraft/world/entity/Entity", "getScoreboardName", "()Ljava/lang/String;")
+                    EntitySelectorCodeGenerator.generateForEachEntity(cw, targets.selector, allowEntities = true, allowMultiple = true) { getter ->
                         cw.visitGetScoreboard()
-                        cw.writeInstruction(Opcodes.SWAP)
+                        getter()
+                        cw.callFunction("net/minecraft/world/entity/Entity", "getScoreboardName", "()Ljava/lang/String;")
                         cw.visitGetObjective(command["objective"])
                         run()
                     }

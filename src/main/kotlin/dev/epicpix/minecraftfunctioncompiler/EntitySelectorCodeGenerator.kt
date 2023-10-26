@@ -6,19 +6,20 @@ import java.lang.UnsupportedOperationException
 
 object EntitySelectorCodeGenerator {
 
-    fun generateForEachEntity(cw: CodeWriter, selector: SelectorArgument, allowEntities: Boolean, allowMultiple: Boolean, run: () -> Unit) {
+    fun generateForEachEntity(cw: CodeWriter, selector: SelectorArgument, allowEntities: Boolean, allowMultiple: Boolean, run: (getter: () -> Unit) -> Unit) {
         if(selector.entityUuid != null) {
             if(!allowEntities) throw UnsupportedOperationException("Invalid selector")
             cw.visitForEachLevel { controlFlowRun, getter ->
                 getter()
                 cw.writeUUID(selector.entityUuid)
                 cw.callMethod("net/minecraft/server/level/ServerLevel", "getEntity", "(Ljava/util/UUID;)Lnet/minecraft/world/entity/Entity;")
-                cw.defineLocal("\$Entity", "Lnet/minecraft/world/entity/Entity;") {
-                    cw.storeLocal("\$Entity");
-                    cw.loadLocal("\$Entity")
+                val uidLocal = cw.generateUniqueLocal("\$Entity")
+                cw.storeLocal(uidLocal, "Lnet/minecraft/world/entity/Entity;") {
+                    cw.loadLocal(uidLocal)
                     cw.executeIf(Opcodes.IFNONNULL) {
-                        cw.loadLocal("\$Entity")
-                        run()
+                        run {
+                            cw.loadLocal(uidLocal)
+                        }
                         controlFlowRun.brk()
                     }
                 }

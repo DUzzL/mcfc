@@ -6,13 +6,13 @@ import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 import java.util.*
 
-class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
+class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val generateDebug: Boolean) {
 
     private val locals: MutableMap<String, Local> = mutableMapOf()
     private val availableLocals: MutableSet<Int> = mutableSetOf()
     private val generatedLocals: MutableList<Local> = mutableListOf()
 
-    private val uuids: MutableSet<UUID> = mutableSetOf()
+    private val uuids: MutableList<UUID> = mutableListOf()
 
     fun defineLocal(local: String, descriptor: String, exec: (CodeWriter.() -> Unit)) {
         val localStart = Label()
@@ -53,6 +53,13 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
         }
     }
 
+    fun storeLocal(local: String, descriptor: String, exec: (CodeWriter.() -> Unit)) {
+        defineLocal(local, descriptor) {
+            storeLocal(local)
+            exec()
+        }
+    }
+
     fun getLocal(local: String): Int? = locals[local]?.index
 
     fun end() {
@@ -66,8 +73,10 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
     }
 
     fun writeLocalVariables() {
-        generatedLocals.forEach {
-            methodVisitor.visitLocalVariable(it.name, it.descriptor, null, it.start, it.end, it.index)
+        if(generateDebug) {
+            generatedLocals.forEach {
+                methodVisitor.visitLocalVariable(it.name, it.descriptor, null, it.start, it.end, it.index)
+            }
         }
     }
 
@@ -106,8 +115,14 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
     }
 
     fun writeUUID(value: UUID) {
-        uuids.add(value)
-        getStaticField(className, "uuid$${value.toString().replace("-", "")}", "Ljava/util/UUID;")
+        if(!uuids.contains(value)) {
+            uuids.add(value)
+        }
+        if(generateDebug) {
+            getStaticField(className, "uuid$${value.toString().replace("-", "")}", "Ljava/util/UUID;")
+        }else {
+            getStaticField(className, "u${uuids.indexOf(value)}", "Ljava/util/UUID;")
+        }
     }
 
     fun newObject(owner: String, descriptor: String, argumentProvider: CodeWriter.() -> Unit) {
@@ -192,15 +207,13 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
     }
 
     fun createIndexedLoop(exec: (indexLocal: String, ControlFlowRun) -> Unit) {
-        val baseName = "\$Indexer:${generatedLocals.size}"
+        val baseName = generateUniqueLocal("\$Indexer")
         val sizeName = "$baseName:Size"
         val indexName = "$baseName:Index"
-        defineLocal(sizeName, "I") {
-            storeLocal(sizeName)
+        storeLocal(sizeName, "I") {
 
-            defineLocal(indexName, "I") {
-                writeInt(0)
-                storeLocal(indexName)
+            writeInt(0)
+            storeLocal(indexName, "I") {
 
                 createWhileLoop({ brk ->
                     loadLocal(indexName)
@@ -249,30 +262,41 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
     }
 
     fun createIterableForEachLoop(iterableLocal: String, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
-        defineLocal("$iterableLocal:Iterator", "Ljava/util/Iterator;") {
-            loadLocal(iterableLocal)
-            callInterfaceMethod("java/lang/Iterable", "iterator", "()Ljava/util/Iterator;")
-            storeLocal("$iterableLocal:Iterator")
+        loadLocal(iterableLocal)
+        callInterfaceMethod("java/lang/Iterable", "iterator", "()Ljava/util/Iterator;")
+        storeLocal("$iterableLocal:Iterator", "Ljava/util/Iterator;") {
             createIteratorForEachLoop("$iterableLocal:Iterator", exec)
         }
     }
 
     fun writeClinit(methodVisitor: MethodVisitor) {
-        uuids.forEach {
+        uuids.forEachIndexed { index, uuid ->
             methodVisitor.visitTypeInsn(Opcodes.NEW, "java/util/UUID")
             methodVisitor.visitInsn(Opcodes.DUP)
-            methodVisitor.visitLdcInsn(it.mostSignificantBits)
-            methodVisitor.visitLdcInsn(it.leastSignificantBits)
+            methodVisitor.visitLdcInsn(uuid.mostSignificantBits)
+            methodVisitor.visitLdcInsn(uuid.leastSignificantBits)
             methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/util/UUID", "<init>", "(JJ)V", false)
-            methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className, "uuid$${it.toString().replace("-", "")}", "Ljava/util/UUID;")
+            if(generateDebug) {
+                methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className, "uuid$${uuid.toString().replace("-", "")}", "Ljava/util/UUID;")
+            }else {
+                methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className, "u$index", "Ljava/util/UUID;")
+            }
         }
         methodVisitor.visitInsn(Opcodes.RETURN)
     }
 
     fun generateFields(classVisitor: ClassVisitor) {
-        uuids.forEach {
-            classVisitor.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, "uuid$${it.toString().replace("-", "")}", "Ljava/util/UUID;", null, null)
+        uuids.forEachIndexed { index, uuid ->
+            if(generateDebug) {
+                classVisitor.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, "uuid$${uuid.toString().replace("-", "")}", "Ljava/util/UUID;", null, null)
+            }else {
+                classVisitor.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, "u$index", "Ljava/util/UUID;", null, null)
+            }
         }
+    }
+
+    fun generateUniqueLocal(local: String): String {
+        return "$local:${generatedLocals.size}"
     }
 
 }

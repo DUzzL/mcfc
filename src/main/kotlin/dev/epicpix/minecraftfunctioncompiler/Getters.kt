@@ -28,7 +28,7 @@ fun CodeWriter.visitGetScoreboard() {
 }
 
 fun CodeWriter.visitGetObjective(objective: String, load: Boolean = true) {
-    generateOrGetLocal("Objective-$objective", "Lnet/minecraft/world/scores/Objective;", load) {
+    generateOrGetLocal("Objective:$objective", "Lnet/minecraft/world/scores/Objective;", load) {
         visitGetScoreboard()
         writeString(objective)
         callMethod("net/minecraft/world/scores/Scoreboard", "getObjective", "(Ljava/lang/String;)Lnet/minecraft/world/scores/Objective;")
@@ -50,11 +50,12 @@ fun CodeWriter.visitGetPlayerList() {
 }
 
 fun CodeWriter.visitForEachLevel(exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
-    defineLocal("\$Iterator", "Ljava/lang/Iterable;") {
+    val uidLocal = generateUniqueLocal("\$Iterator")
+    defineLocal(uidLocal, "Ljava/lang/Iterable;") {
         visitGetServer()
         callMethod("net/minecraft/server/MinecraftServer", "getAllLevels", "()Ljava/lang/Iterable;")
-        storeLocal("\$Iterator")
-        createIterableForEachLoop("\$Iterator") { controlFlow, getter ->
+        storeLocal(uidLocal)
+        createIterableForEachLoop(uidLocal) { controlFlow, getter ->
             exec(controlFlow) {
                 getter()
                 castType("net/minecraft/server/level/ServerLevel")
