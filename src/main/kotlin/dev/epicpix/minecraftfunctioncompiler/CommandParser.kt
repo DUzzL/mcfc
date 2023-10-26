@@ -53,6 +53,15 @@ object CommandParser {
                             "score" to context.arguments["score"]!!.result as Int
                         ), mutableListOf())
                     }
+                    "operation" -> {
+                        Command(CommandType.SCOREBOARD_PLAYERS_OPERATION, mapOf(
+                            "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),
+                            "targetObjective" to context.arguments["targetObjective"]!!.result as String,
+                            "operation" to context.arguments["operation"]!!.range[source] as String,
+                            "source" to parseArgumentScoreHolder(context.arguments["source"]!!.range[source]),
+                            "sourceObjective" to context.arguments["sourceObjective"]!!.result as String,
+                        ), mutableListOf())
+                    }
                     "remove" -> {
                         Command(CommandType.SCOREBOARD_PLAYERS_REMOVE, mapOf(
                             "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),

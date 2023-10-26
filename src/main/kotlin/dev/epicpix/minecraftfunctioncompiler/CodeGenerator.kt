@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler
 
+import com.mojang.datafixers.optics.Optics.getter
 import dev.epicpix.minecraftfunctioncompiler.arguments.ScoreHolderArgument
 import org.objectweb.asm.Opcodes
 
@@ -28,7 +29,7 @@ object CodeGenerator {
             }
 
             CommandType.SCOREBOARD_PLAYERS_ADD -> {
-                runScoreboardOperation(command, cw) {
+                runScoreboardOperation(command["targets"], command["objective"], cw) {
                     cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
                     cw.writeInstruction(Opcodes.DUP)
                     cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
@@ -39,7 +40,7 @@ object CodeGenerator {
             }
 
             CommandType.SCOREBOARD_PLAYERS_REMOVE -> {
-                runScoreboardOperation(command, cw) {
+                runScoreboardOperation(command["targets"], command["objective"], cw) {
                     cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
                     cw.writeInstruction(Opcodes.DUP)
                     cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
@@ -50,36 +51,70 @@ object CodeGenerator {
             }
 
             CommandType.SCOREBOARD_PLAYERS_RESET -> {
-                runScoreboardOperation(command, cw) {
+                runScoreboardOperation(command["targets"], command["objective"], cw) {
                     cw.callMethod("net/minecraft/world/scores/Scoreboard", "resetPlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)V")
                 }
             }
 
             CommandType.SCOREBOARD_PLAYERS_SET -> {
-                runScoreboardOperation(command, cw) {
+                runScoreboardOperation(command["targets"], command["objective"], cw) {
                     cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
                     cw.writeInt(command["score"])
                     cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
                 }
             }
 
-            else -> throw UnsupportedOperationException("Cannot compile command: ${command.type}")
+            CommandType.SCOREBOARD_PLAYERS_OPERATION -> {
+                cw.visitGetObjective(command["targetObjective"], load = false)
+                cw.visitGetObjective(command["sourceObjective"])
+                cw.executeIf(Opcodes.IFNONNULL) {
+                    cw.visitGetObjective(command["sourceObjective"])
+                    cw.callMethod("net/minecraft/world/scores/Objective", "getCriteria", "()Lnet/minecraft/world/scores/criteria/ObjectiveCriteria;")
+                    cw.callMethod("net/minecraft/world/scores/criteria/ObjectiveCriteria", "isReadOnly", "()Z")
+                    cw.executeIf(Opcodes.IFNE) {
+                        cw.visitGetObjective(command["targetObjective"])
+                        cw.executeIf(Opcodes.IFNONNULL) {
+                            visitForEachScoreHolder(cw, command["targets"]) { targetGetter ->
+                                visitForEachScoreHolder(cw, command["source"]) { sourceGetter ->
+                                    when(command.get<String>("operation")) {
+                                        "=" -> {
+                                            cw.visitGetScoreboard()
+                                            targetGetter()
+                                            cw.visitGetObjective(command["targetObjective"])
+                                            cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+
+                                            cw.visitGetScoreboard()
+                                            sourceGetter()
+                                            cw.visitGetObjective(command["sourceObjective"])
+                                            cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                                            cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+
+                                            cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                                        }
+                                        else -> throw UnsupportedOperationException("Unknown operation operator: ${command.get<String>("operation")}")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            else -> throw UnsupportedOperationException("Cannot compile command: ${command.type}: ${command.params}")
         }
     }
 
-    private fun runScoreboardOperation(command: Command, cw: CodeWriter, run: () -> Unit) {
-        val targets: ScoreHolderArgument = command["targets"]
-
-        cw.visitGetObjective(command["objective"])
+    private fun runScoreboardOperation(targets: ScoreHolderArgument, objective: String, cw: CodeWriter, run: () -> Unit) {
+        cw.visitGetObjective(objective)
         cw.executeIf(Opcodes.IFNONNULL) {
-            cw.visitGetObjective(command["objective"])
+            cw.visitGetObjective(objective)
             cw.callMethod("net/minecraft/world/scores/Objective", "getCriteria", "()Lnet/minecraft/world/scores/criteria/ObjectiveCriteria;")
             cw.callMethod("net/minecraft/world/scores/criteria/ObjectiveCriteria", "isReadOnly", "()Z")
             cw.executeIf(Opcodes.IFNE) condition@ {
                 visitForEachScoreHolder(cw, targets) { getter ->
                     cw.visitGetScoreboard()
                     getter()
-                    cw.visitGetObjective(command["objective"])
+                    cw.visitGetObjective(objective)
                     run()
                 }
             }
