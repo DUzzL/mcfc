@@ -71,41 +71,46 @@ object CodeGenerator {
 
         cw.visitGetObjective(command["objective"])
         cw.executeIf(Opcodes.IFNONNULL) {
-            if(targets.all) {
-                cw.newObject("java/util/ArrayList", "(Ljava/util/Collection;)V") {
-                    cw.visitGetScoreboard()
-                    cw.getObjectField("net/minecraft/world/scores/Scoreboard", "playerScores", "Ljava/util/Map;")
-                    cw.callInterfaceMethod("java/util/Map", "keySet", "()Ljava/util/Set;")
+            cw.visitGetObjective(command["objective"])
+            cw.callMethod("net/minecraft/world/scores/Objective", "getCriteria", "()Lnet/minecraft/world/scores/criteria/ObjectiveCriteria;")
+            cw.callMethod("net/minecraft/world/scores/criteria/ObjectiveCriteria", "isReadOnly", "()Z")
+            cw.executeIf(Opcodes.IFNE) condition@ {
+                if(targets.all) {
+                    cw.newObject("java/util/ArrayList", "(Ljava/util/Collection;)V") {
+                        cw.visitGetScoreboard()
+                        cw.getObjectField("net/minecraft/world/scores/Scoreboard", "playerScores", "Ljava/util/Map;")
+                        cw.callInterfaceMethod("java/util/Map", "keySet", "()Ljava/util/Set;")
+                    }
+
+                    cw.defineLocal("\$Array", "Ljava/util/ArrayList;") {
+                        cw.storeLocal("\$Array")
+                        cw.createArrayListForEachLoop("\$Array") { _, getter ->
+                            cw.visitGetScoreboard()
+                            getter()
+                            cw.castType("java/lang/String")
+                            cw.visitGetObjective(command["objective"])
+                            run()
+                        }
+                    }
+                    return@condition
                 }
 
-                cw.defineLocal("\$Array", "Ljava/util/ArrayList;") {
-                    cw.storeLocal("\$Array")
-                    cw.createArrayListForEachLoop("\$Array") { _, getter ->
+                if(targets.name != null) {
+                    cw.visitGetScoreboard()
+                    cw.writeString(targets.name)
+                    cw.visitGetObjective(command["objective"])
+                    run()
+                    return@condition
+                }
+
+                if (targets.selector != null) {
+                    EntitySelectorCodeGenerator.generateForEachEntity(cw, targets.selector, allowEntities = true, allowMultiple = true) {
+                        cw.callFunction("net/minecraft/world/entity/Entity", "getScoreboardName", "()Ljava/lang/String;")
                         cw.visitGetScoreboard()
-                        getter()
-                        cw.castType("java/lang/String")
+                        cw.writeInstruction(Opcodes.SWAP)
                         cw.visitGetObjective(command["objective"])
                         run()
                     }
-                }
-                return@executeIf
-            }
-
-            if(targets.name != null) {
-                cw.visitGetScoreboard()
-                cw.writeString(targets.name)
-                cw.visitGetObjective(command["objective"])
-                run()
-                return@executeIf
-            }
-
-            if (targets.selector != null) {
-                EntitySelectorCodeGenerator.generateForEachEntity(cw, targets.selector, allowEntities = true, allowMultiple = true) {
-                    cw.callFunction("net/minecraft/world/entity/Entity", "getScoreboardName", "()Ljava/lang/String;")
-                    cw.visitGetScoreboard()
-                    cw.writeInstruction(Opcodes.SWAP)
-                    cw.visitGetObjective(command["objective"])
-                    run()
                 }
             }
         }

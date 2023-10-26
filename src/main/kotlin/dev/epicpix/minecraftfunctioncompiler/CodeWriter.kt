@@ -154,6 +154,8 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
         when (comparison) {
             Opcodes.IFNONNULL -> methodVisitor.visitJumpInsn(Opcodes.IFNULL, endLabel)
             Opcodes.IFNULL -> methodVisitor.visitJumpInsn(Opcodes.IFNONNULL, endLabel)
+            Opcodes.IFNE -> methodVisitor.visitJumpInsn(Opcodes.IFNE, endLabel)
+            Opcodes.IFEQ -> methodVisitor.visitJumpInsn(Opcodes.IFEQ, endLabel)
             else -> throw UnsupportedOperationException("Unknown comparison: $comparison")
         }
         exec()
@@ -166,6 +168,8 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
         when (comparison) {
             Opcodes.IFNONNULL -> methodVisitor.visitJumpInsn(Opcodes.IFNULL, elseLabel)
             Opcodes.IFNULL -> methodVisitor.visitJumpInsn(Opcodes.IFNONNULL, elseLabel)
+            Opcodes.IFNE -> methodVisitor.visitJumpInsn(Opcodes.IFNE, elseLabel)
+            Opcodes.IFEQ -> methodVisitor.visitJumpInsn(Opcodes.IFEQ, elseLabel)
             else -> throw UnsupportedOperationException("Unknown comparison: $comparison")
         }
         exec()
