@@ -21,6 +21,8 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
     fun loadFunctions() {
         handles.clear()
 
+        val definedFunctions = mutableMapOf<ResourceLocation, List<Command>>()
+
         funcLoop@
         for ((key, value) in functions) {
             try {
@@ -29,13 +31,14 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                         continue@funcLoop
                     }
                 }
+                definedFunctions[key] = CommandParser.parseFunctionCommands(value)
                 val clz = defineFunction(value)
                 val handle = MethodHandles.lookup().findStatic(clz, "run", MethodType.methodType(Int::class.javaPrimitiveType, CommandSourceStack::class.java))
                 handles[key] = handle
             } catch (e: UnsupportedOperationException) {
                 LOGGER.warn("Unable to compile function " + key + " / " + e.message)
-            } catch (e: Exception) {
-                LOGGER.warn("Unable to compile function $key", e)
+            } catch (e: Throwable) {
+                LOGGER.error("Unable to compile function $key", e)
             }
         }
     }
