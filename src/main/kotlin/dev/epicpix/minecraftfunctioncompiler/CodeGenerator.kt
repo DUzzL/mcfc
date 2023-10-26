@@ -76,41 +76,51 @@ object CodeGenerator {
             cw.callMethod("net/minecraft/world/scores/Objective", "getCriteria", "()Lnet/minecraft/world/scores/criteria/ObjectiveCriteria;")
             cw.callMethod("net/minecraft/world/scores/criteria/ObjectiveCriteria", "isReadOnly", "()Z")
             cw.executeIf(Opcodes.IFNE) condition@ {
-                if(targets.all) {
-                    cw.newObject("java/util/ArrayList", "(Ljava/util/Collection;)V") {
-                        cw.visitGetScoreboard()
-                        cw.getObjectField("net/minecraft/world/scores/Scoreboard", "playerScores", "Ljava/util/Map;")
-                        cw.callInterfaceMethod("java/util/Map", "keySet", "()Ljava/util/Set;")
-                    }
-
-                    val uidLocal = cw.generateUniqueLocal("\$Array")
-                    cw.storeLocal(uidLocal, "Ljava/util/ArrayList;") {
-                        cw.createArrayListForEachLoop(uidLocal) { _, getter ->
-                            cw.visitGetScoreboard()
-                            getter()
-                            cw.castType("java/lang/String")
-                            cw.visitGetObjective(command["objective"])
-                            run()
-                        }
-                    }
-                    return@condition
-                }
-
-                if(targets.name != null) {
+                visitForEachScoreHolder(cw, targets) { getter ->
                     cw.visitGetScoreboard()
-                    cw.writeString(targets.name)
+                    getter()
                     cw.visitGetObjective(command["objective"])
                     run()
-                    return@condition
                 }
+            }
+        }
+    }
 
-                if (targets.selector != null) {
-                    EntitySelectorCodeGenerator.generateForEachEntity(cw, targets.selector, allowEntities = true, allowMultiple = true) { getter ->
-                        cw.visitGetScoreboard()
+    private fun visitForEachScoreHolder(cw: CodeWriter, scoreHolder: ScoreHolderArgument, run: (getter: () -> Unit) -> Unit) {
+        if(scoreHolder.all) {
+            cw.newObject("java/util/ArrayList", "(Ljava/util/Collection;)V") {
+                cw.visitGetScoreboard()
+                cw.getObjectField("net/minecraft/world/scores/Scoreboard", "playerScores", "Ljava/util/Map;")
+                cw.callInterfaceMethod("java/util/Map", "keySet", "()Ljava/util/Set;")
+            }
+
+            val uidLocal = cw.generateUniqueLocal("\$Array")
+            cw.storeLocal(uidLocal, "Ljava/util/ArrayList;") {
+                cw.createArrayListForEachLoop(uidLocal) { _, getter ->
+                    run {
                         getter()
-                        cw.callFunction("net/minecraft/world/entity/Entity", "getScoreboardName", "()Ljava/lang/String;")
-                        cw.visitGetObjective(command["objective"])
-                        run()
+                        cw.castType("java/lang/String")
+                    }
+                }
+            }
+            return
+        }
+
+        if(scoreHolder.name != null) {
+            run {
+                cw.writeString(scoreHolder.name)
+            }
+            return
+        }
+
+        if (scoreHolder.selector != null) {
+            EntitySelectorCodeGenerator.generateForEachEntity(cw, scoreHolder.selector, allowEntities = true, allowMultiple = true) { getter ->
+                val uidLocal = cw.generateUniqueLocal("\$Entity")
+                getter()
+                cw.callFunction("net/minecraft/world/entity/Entity", "getScoreboardName", "()Ljava/lang/String;")
+                cw.storeLocal(uidLocal, "net/minecraft/world/entity/Entity") {
+                    run {
+                        cw.loadLocal(uidLocal)
                     }
                 }
             }
