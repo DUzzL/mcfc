@@ -20,9 +20,16 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
     private val handles: MutableMap<ResourceLocation, MethodHandle> = HashMap()
     fun loadFunctions() {
         handles.clear()
-        for ((key) in functions) {
+
+        funcLoop@
+        for ((key, value) in functions) {
             try {
-                val clz = loadClass("function." + key.namespace + "." + key.path.replace('/', '.'))
+                for (entry in value.entries) {
+                    if (entry !is CommandEntry) {
+                        continue@funcLoop
+                    }
+                }
+                val clz = defineFunction(value)
                 val handle = MethodHandles.lookup().findStatic(clz, "run", MethodType.methodType(Int::class.javaPrimitiveType, CommandSourceStack::class.java))
                 handles[key] = handle
             } catch (e: UnsupportedOperationException) {
@@ -46,36 +53,18 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         }
     }
 
-    override fun findClass(name: String): Class<*> {
-        if (!name.startsWith("function.")) {
-            return super.findClass(name)
-        }
-        val n = name.substring("function.".length).replace('.', '/')
-        val parts = n.split("/".toRegex(), limit = 2).toTypedArray()
-        val location = ResourceLocation(parts[0], parts[1])
-        var function: CommandFunction? = null
-        for ((key, value) in functions) {
-            if (key == location) {
-                function = value
-            }
-        }
-        if (function == null) {
-            return super.findClass(name)
-        }
-        for (entry in function.entries) {
-            if (entry !is CommandEntry) {
-                return super.findClass(name)
-            }
-        }
+    private fun defineFunction(func: CommandFunction): Class<*> {
+        val className = "function/${func.id.namespace}/${func.id.path}"
+
         val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
-        cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, name.replace('.', '/'), null, "java/lang/Object", null)
+        cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, className, null, "java/lang/Object", null)
         val mv = cw.visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "run",
                 "(Lnet/minecraft/commands/CommandSourceStack;)I", null, null)
         mv.visitCode()
-        val codeWriter = CodeWriter(mv, name.replace('.', '/'))
+        val codeWriter = CodeWriter(mv, className)
 
         codeWriter.defineLocal("CommandSourceStack", "Lnet/minecraft/commands/CommandSourceStack;") {
-            for (entry in function.entries) {
+            for (entry in func.entries) {
                 if (entry is CommandEntry) {
                     val nodes = mutableListOf<BrigadierNode>()
 
@@ -98,7 +87,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         }
         codeWriter.end()
 
-        mv.visitLdcInsn(function.entries.size)
+        mv.visitLdcInsn(func.entries.size)
         mv.visitInsn(Opcodes.IRETURN)
         codeWriter.writeLocalVariables()
         mv.visitMaxs(0, 0)
@@ -116,8 +105,8 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
 
         cw.visitEnd()
         val data = cw.toByteArray()
-        Files.write(FabricLoader.getInstance().gameDir.resolve("generated").resolve("$name.class"), data)
-        return defineClass(name, data, 0, data.size)
+        Files.write(FabricLoader.getInstance().gameDir.resolve("generated").resolve("${className.replace('/', '.')}.class"), data)
+        return defineClass(className.replace('/', '.'), data, 0, data.size)
     }
 
     companion object {
