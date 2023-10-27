@@ -6,28 +6,28 @@ import org.objectweb.asm.Opcodes
 
 object CodeGenerator {
 
-    fun generateCommandLike(commandLike: CommandLike, cw: CodeWriter) {
+    fun generateCommandLike(commandLike: CommandLike, context: GeneratorCommandContext, cw: CodeWriter) {
         if(commandLike is Command) {
-            generateCommand(commandLike, cw)
+            generateCommand(commandLike, context, cw)
         }else if(commandLike is CommandBlock) {
-            generateCommandBlock(commandLike, cw)
+            generateCommandBlock(commandLike, context, cw)
         }
     }
 
-    fun generateCommandBlock(block: CommandBlock, cw: CodeWriter) {
+    fun generateCommandBlock(block: CommandBlock, context: GeneratorCommandContext, cw: CodeWriter) {
         val skipLabel = Label()
         block.requirements.forEach {
-            fulfillRequirement(it, skipLabel, cw)
+            fulfillRequirement(it, context, skipLabel, cw)
             cw.updateControlFlow(1)
         }
         for(commandLike in block.commands) {
-            generateCommandLike(commandLike, cw)
+            generateCommandLike(commandLike, context, cw)
         }
         cw.methodVisitor.visitLabel(skipLabel)
         cw.updateControlFlow(-block.requirements.size)
     }
 
-    fun fulfillRequirement(requirement: CommandRequirement, skipLabel: Label, cw: CodeWriter) {
+    fun fulfillRequirement(requirement: CommandRequirement, context: GeneratorCommandContext, skipLabel: Label, cw: CodeWriter) {
         when(requirement.type) {
             CommandRequirementType.OBJECTIVE_EXISTS -> {
                 cw.visitGetObjective(requirement.data["objective"] as String)
@@ -40,23 +40,23 @@ object CodeGenerator {
                 cw.methodVisitor.visitJumpInsn(Opcodes.IFNE, skipLabel)
             }
             CommandRequirementType.ENTITY_SELF_EXISTS -> {
-                cw.visitGetSelfEntity()
+                context.getEntity(cw)
                 cw.methodVisitor.visitJumpInsn(Opcodes.IFNULL, skipLabel)
             }
         }
     }
 
-    fun generateCommand(command: Command, cw: CodeWriter) {
+    fun generateCommand(command: Command, context: GeneratorCommandContext, cw: CodeWriter) {
         when(command.type) {
             CommandType.KILL -> {
-                EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], allowEntities = true, allowMultiple = true) { getter ->
+                EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], context, allowEntities = true, allowMultiple = true) { getter ->
                     getter()
                     cw.callMethod("net/minecraft/world/entity/Entity", "kill", "()V")
                 }
             }
 
             CommandType.SCOREBOARD_PLAYERS_ADD -> {
-                runScoreboardOperation(command["targets"], command["objective"], cw) {
+                runScoreboardOperation(command["targets"], command["objective"], context, cw) {
                     cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
                     cw.writeInstruction(Opcodes.DUP)
                     cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
@@ -67,7 +67,7 @@ object CodeGenerator {
             }
 
             CommandType.SCOREBOARD_PLAYERS_REMOVE -> {
-                runScoreboardOperation(command["targets"], command["objective"], cw) {
+                runScoreboardOperation(command["targets"], command["objective"], context, cw) {
                     cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
                     cw.writeInstruction(Opcodes.DUP)
                     cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
@@ -78,13 +78,13 @@ object CodeGenerator {
             }
 
             CommandType.SCOREBOARD_PLAYERS_RESET -> {
-                runScoreboardOperation(command["targets"], command["objective"], cw) {
+                runScoreboardOperation(command["targets"], command["objective"], context, cw) {
                     cw.callMethod("net/minecraft/world/scores/Scoreboard", "resetPlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)V")
                 }
             }
 
             CommandType.SCOREBOARD_PLAYERS_SET -> {
-                runScoreboardOperation(command["targets"], command["objective"], cw) {
+                runScoreboardOperation(command["targets"], command["objective"], context, cw) {
                     cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
                     cw.writeInt(command["score"])
                     cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
@@ -92,8 +92,8 @@ object CodeGenerator {
             }
 
             CommandType.SCOREBOARD_PLAYERS_OPERATION -> {
-                visitForEachScoreHolder(cw, command["targets"]) { targetGetter ->
-                    visitForEachScoreHolder(cw, command["source"]) { sourceGetter ->
+                visitForEachScoreHolder(cw, context, command["targets"]) { targetGetter ->
+                    visitForEachScoreHolder(cw, context, command["source"]) { sourceGetter ->
                         fun source() {
                             cw.visitGetScoreboard()
                             sourceGetter()
@@ -147,7 +147,7 @@ object CodeGenerator {
             }
 
             CommandType.TAG_ADD -> {
-                EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], allowEntities = true, allowMultiple = true) { getter ->
+                EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], context, allowEntities = true, allowMultiple = true) { getter ->
                     getter()
                     cw.writeString(command["name"])
                     cw.callMethod("net/minecraft/world/entity/Entity", "addTag", "(Ljava/lang/String;)Z")
@@ -156,7 +156,7 @@ object CodeGenerator {
             }
 
             CommandType.TAG_REMOVE -> {
-                EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], allowEntities = true, allowMultiple = true) { getter ->
+                EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], context, allowEntities = true, allowMultiple = true) { getter ->
                     getter()
                     cw.writeString(command["name"])
                     cw.callMethod("net/minecraft/world/entity/Entity", "removeTag", "(Ljava/lang/String;)Z")
@@ -168,8 +168,8 @@ object CodeGenerator {
         }
     }
 
-    private fun runScoreboardOperation(targets: ScoreHolderArgument, objective: String, cw: CodeWriter, run: () -> Unit) {
-        visitForEachScoreHolder(cw, targets) { getter ->
+    private fun runScoreboardOperation(targets: ScoreHolderArgument, objective: String, context: GeneratorCommandContext, cw: CodeWriter, run: () -> Unit) {
+        visitForEachScoreHolder(cw, context, targets) { getter ->
             cw.visitGetScoreboard()
             getter()
             cw.visitGetObjective(objective)
@@ -177,7 +177,7 @@ object CodeGenerator {
         }
     }
 
-    private fun visitForEachScoreHolder(cw: CodeWriter, scoreHolder: ScoreHolderArgument, run: (getter: () -> Unit) -> Unit) {
+    private fun visitForEachScoreHolder(cw: CodeWriter, context: GeneratorCommandContext, scoreHolder: ScoreHolderArgument, run: (getter: () -> Unit) -> Unit) {
         if(scoreHolder.all) {
             cw.newObject("java/util/ArrayList", "(Ljava/util/Collection;)V") {
                 cw.visitGetScoreboard()
@@ -205,7 +205,7 @@ object CodeGenerator {
         }
 
         if(scoreHolder.selector != null) {
-            EntitySelectorCodeGenerator.generateForEachEntity(cw, scoreHolder.selector, allowEntities = true, allowMultiple = true) { getter ->
+            EntitySelectorCodeGenerator.generateForEachEntity(cw, scoreHolder.selector, context, allowEntities = true, allowMultiple = true) { getter ->
                 val uidLocal = cw.generateUniqueLocal("\$EntityName")
                 getter()
                 cw.callMethod("net/minecraft/world/entity/Entity", "getScoreboardName", "()Ljava/lang/String;")

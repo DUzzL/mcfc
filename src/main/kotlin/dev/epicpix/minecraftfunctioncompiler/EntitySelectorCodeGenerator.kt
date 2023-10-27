@@ -6,7 +6,7 @@ import java.lang.UnsupportedOperationException
 
 object EntitySelectorCodeGenerator {
 
-    fun generateForEachEntity(cw: CodeWriter, selector: SelectorArgument, allowEntities: Boolean, allowMultiple: Boolean, run: (getter: () -> Unit) -> Unit) {
+    fun generateForEachEntity(cw: CodeWriter, selector: SelectorArgument, context: GeneratorCommandContext, allowEntities: Boolean, allowMultiple: Boolean, run: (getter: () -> Unit) -> Unit) {
         if(selector.entityUuid != null) {
             if(!allowEntities) throw UnsupportedOperationException("Invalid selector")
             cw.visitForEachLevel { controlFlowRun, getter ->
@@ -44,10 +44,10 @@ object EntitySelectorCodeGenerator {
         }
 
         if(selector.self) {
-            cw.visitGetSelfEntity()
+            context.getEntity(cw)
             cw.executeIf(Opcodes.IFNONNULL) {
                 run {
-                    cw.visitGetSelfEntity()
+                    context.getEntity(cw)
                 }
             }
             return

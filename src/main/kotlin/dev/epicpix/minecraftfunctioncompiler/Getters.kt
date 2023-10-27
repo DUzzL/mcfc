@@ -22,13 +22,6 @@ fun CodeWriter.visitGetCommandSourceStack() {
     loadLocal("CommandSourceStack")
 }
 
-fun CodeWriter.visitGetSelfEntity(load: Boolean = true) {
-    generateOrGetLocal("CurrentEntity", "Lnet/minecraft/world/entity/Entity;", load, save = !isInControlFlow()) {
-        visitGetCommandSourceStack()
-        callMethod("net/minecraft/commands/CommandSourceStack", "getEntity", "()Lnet/minecraft/world/entity/Entity;")
-    }
-}
-
 fun CodeWriter.visitGetServer(load: Boolean = true) {
     generateOrGetLocal("MinecraftServer", "Lnet/minecraft/server/MinecraftServer;", load, save = !isInControlFlow()) {
         visitGetCommandSourceStack()

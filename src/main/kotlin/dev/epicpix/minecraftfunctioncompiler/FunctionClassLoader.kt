@@ -76,9 +76,10 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
 
         val commands = definedFunctions[funcId]!!
 
+        val context = GeneratorCommandContext()
         codeWriter.defineLocal("CommandSourceStack", "Lnet/minecraft/commands/CommandSourceStack;") {
             commands.forEach {
-                generateCommandLike(it, codeWriter)
+                generateCommandLike(it, context, codeWriter)
             }
         }
         codeWriter.end()
