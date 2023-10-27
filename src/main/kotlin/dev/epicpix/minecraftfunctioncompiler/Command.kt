@@ -21,6 +21,19 @@ interface CommandLike
 
 data class CommandRequirement(val type: CommandRequirementType, val data: Map<String, Any>)
 
+
+enum class CommandType {
+
+    UNKNOWN,
+    KILL,
+    SCOREBOARD_PLAYERS_ADD,
+    SCOREBOARD_PLAYERS_OPERATION,
+    SCOREBOARD_PLAYERS_REMOVE,
+    SCOREBOARD_PLAYERS_RESET,
+    SCOREBOARD_PLAYERS_SET,
+
+}
+
 enum class CommandRequirementType {
     OBJECTIVE_EXISTS,
     OBJECTIVE_NOT_LOCKED,

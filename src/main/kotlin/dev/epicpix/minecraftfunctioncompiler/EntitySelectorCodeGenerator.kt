@@ -43,6 +43,16 @@ object EntitySelectorCodeGenerator {
             return
         }
 
+        if(selector.self) {
+            cw.visitGetSelfEntity()
+            cw.executeIf(Opcodes.IFNONNULL) {
+                run {
+                    cw.visitGetSelfEntity()
+                }
+            }
+            return
+        }
+
         throw UnsupportedOperationException("Unsupported selector")
     }
 

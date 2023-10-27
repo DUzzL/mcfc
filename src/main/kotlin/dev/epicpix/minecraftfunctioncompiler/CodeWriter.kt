@@ -14,6 +14,8 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
 
     private val uuids: MutableList<UUID> = mutableListOf()
 
+    private var inControlFlow: Int = 0
+
     fun defineLocal(local: String, descriptor: String, exec: (CodeWriter.() -> Unit)) {
         val localStart = Label()
         val localEnd = Label()
@@ -44,13 +46,13 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
         val localIndex: Int
         if(availableLocals.isEmpty()) {
             localIndex = locals.size
-            val genLocal = Local(local, descriptor, localStart, null, localIndex)
-            generatedLocals.add(genLocal)
-            locals[local] = genLocal
         }else {
             localIndex = availableLocals.first()
             availableLocals.remove(localIndex)
         }
+        val genLocal = Local(local, descriptor, localStart, null, localIndex)
+        generatedLocals.add(genLocal)
+        locals[local] = genLocal
     }
 
     fun storeLocal(local: String, descriptor: String, exec: (CodeWriter.() -> Unit)) {
@@ -164,6 +166,10 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
         methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, type)
     }
 
+    fun isInControlFlow(): Boolean {
+        return inControlFlow != 0
+    }
+
     fun executeIf(comparison: Int, exec: () -> Unit) {
         val endLabel = Label()
         when (comparison) {
@@ -173,7 +179,11 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
             Opcodes.IFEQ -> methodVisitor.visitJumpInsn(Opcodes.IFEQ, endLabel)
             else -> throw UnsupportedOperationException("Unknown comparison: $comparison")
         }
+        inControlFlow++
+        println("-- in")
         exec()
+        println("-- out")
+        inControlFlow--
         methodVisitor.visitLabel(endLabel)
     }
 
@@ -187,10 +197,14 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
             Opcodes.IFEQ -> methodVisitor.visitJumpInsn(Opcodes.IFEQ, elseLabel)
             else -> throw UnsupportedOperationException("Unknown comparison: $comparison")
         }
+        inControlFlow++
         exec()
+        inControlFlow--
         methodVisitor.visitJumpInsn(Opcodes.GOTO, exitLabel)
         methodVisitor.visitLabel(elseLabel)
+        inControlFlow++
         execElse()
+        inControlFlow--
         methodVisitor.visitLabel(exitLabel)
     }
 
@@ -198,11 +212,13 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
         val beginLabel = Label()
         val endLabel = Label()
         methodVisitor.visitLabel(beginLabel)
+        inControlFlow++
         condition(endLabel)
         exec(ControlFlowRun(
             { methodVisitor.visitJumpInsn(Opcodes.GOTO, beginLabel) },
             { methodVisitor.visitJumpInsn(Opcodes.GOTO, endLabel) }
         ))
+        inControlFlow--
         methodVisitor.visitLabel(endLabel)
     }
 
@@ -297,6 +313,10 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
 
     fun generateUniqueLocal(local: String): String {
         return "$local:${generatedLocals.size}"
+    }
+
+    fun updateControlFlow(count: Int) {
+        inControlFlow += count
     }
 
 }

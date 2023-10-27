@@ -18,11 +18,13 @@ object CodeGenerator {
         val skipLabel = Label()
         block.requirements.forEach {
             fulfillRequirement(it, skipLabel, cw)
+            cw.updateControlFlow(1)
         }
         for(commandLike in block.commands) {
             generateCommandLike(commandLike, cw)
         }
         cw.methodVisitor.visitLabel(skipLabel)
+        cw.updateControlFlow(-block.requirements.size)
     }
 
     fun fulfillRequirement(requirement: CommandRequirement, skipLabel: Label, cw: CodeWriter) {
@@ -46,15 +48,7 @@ object CodeGenerator {
 
     fun generateCommand(command: Command, cw: CodeWriter) {
         when(command.type) {
-            CommandType.KILL_SELF -> {
-                cw.visitGetSelfEntity()
-                cw.executeIf(Opcodes.IFNONNULL) {
-                    cw.visitGetSelfEntity()
-                    cw.callMethod("net/minecraft/world/entity/Entity", "kill", "()V")
-                }
-            }
-
-            CommandType.KILL_SELECTOR -> {
+            CommandType.KILL -> {
                 EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], allowEntities = true, allowMultiple = true) { getter ->
                     getter()
                     cw.callMethod("net/minecraft/world/entity/Entity", "kill", "()V")
@@ -90,6 +84,7 @@ object CodeGenerator {
             }
 
             CommandType.SCOREBOARD_PLAYERS_SET -> {
+                println(cw.isInControlFlow())
                 runScoreboardOperation(command["targets"], command["objective"], cw) {
                     cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
                     cw.writeInt(command["score"])
@@ -174,12 +169,12 @@ object CodeGenerator {
             return
         }
 
-        if (scoreHolder.selector != null) {
+        if(scoreHolder.selector != null) {
             EntitySelectorCodeGenerator.generateForEachEntity(cw, scoreHolder.selector, allowEntities = true, allowMultiple = true) { getter ->
-                val uidLocal = cw.generateUniqueLocal("\$Entity")
+                val uidLocal = cw.generateUniqueLocal("\$EntityName")
                 getter()
-                cw.callFunction("net/minecraft/world/entity/Entity", "getScoreboardName", "()Ljava/lang/String;")
-                cw.storeLocal(uidLocal, "net/minecraft/world/entity/Entity") {
+                cw.callMethod("net/minecraft/world/entity/Entity", "getScoreboardName", "()Ljava/lang/String;")
+                cw.storeLocal(uidLocal, "Ljava/lang/String;") {
                     run {
                         cw.loadLocal(uidLocal)
                     }

@@ -34,12 +34,9 @@ object CommandParser {
     private fun parseCommandKill(context: CommandContextBuilder<CommandSourceStack>, source: String): CommandLike {
         val targets = context.arguments["targets"]
         return if(targets != null) {
-            Command(CommandType.KILL_SELECTOR, mapOf("targets" to parseArgumentSelector(targets.range[source])), mutableListOf())
+            Command(CommandType.KILL, mapOf("targets" to parseArgumentSelector(targets.range[source])), mutableListOf())
         }else {
-            Command(CommandType.KILL_SELF, null, mutableListOf())
-                .withRequirements(
-                    CommandRequirement(CommandRequirementType.ENTITY_SELF_EXISTS, mapOf())
-                )
+            Command(CommandType.KILL, mapOf("targets" to SelectorArgument(self = true)), mutableListOf())
         }
     }
 
@@ -132,6 +129,9 @@ object CommandParser {
                 return SelectorArgument(entityUuid = entityUuid.getOrThrow())
             }
             return SelectorArgument(playerName = selector)
+        }
+        if(selector == "@s") {
+            return SelectorArgument(self = true)
         }
         throw UnsupportedOperationException("Cannot parse selector: $selector")
     }
