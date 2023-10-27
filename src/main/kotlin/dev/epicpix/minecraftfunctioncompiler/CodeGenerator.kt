@@ -131,6 +131,15 @@ object CodeGenerator {
                                 cw.writeInstruction(Opcodes.ISUB)
                                 cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
                             }
+                            "*=" -> {
+                                target()
+                                cw.writeInstruction(Opcodes.DUP)
+                                cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                source()
+                                cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                cw.writeInstruction(Opcodes.IMUL)
+                                cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                            }
                             else -> throw UnsupportedOperationException("Unknown operation operator: ${command.get<String>("operation")}")
                         }
                     }
