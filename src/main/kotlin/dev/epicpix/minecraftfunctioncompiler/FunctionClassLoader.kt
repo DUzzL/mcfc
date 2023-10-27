@@ -83,8 +83,14 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
 
         val context = GeneratorCommandContext()
         codeWriter.defineLocal("CommandSourceStack", "Lnet/minecraft/commands/CommandSourceStack;") {
-            commands.forEach {
-                generateCommandLike(it, context, codeWriter)
+            val entityUid = codeWriter.generateUniqueLocal("CurrentEntity")
+            loadLocal("CommandSourceStack")
+            callMethod("net/minecraft/commands/CommandSourceStack", "getEntity", "()Lnet/minecraft/world/entity/Entity;")
+            storeLocal(entityUid, "Lnet/minecraft/world/entity/Entity;") {
+                context.entityLocal = entityUid
+                commands.forEach {
+                    generateCommandLike(it, context, codeWriter)
+                }
             }
         }
         codeWriter.end()

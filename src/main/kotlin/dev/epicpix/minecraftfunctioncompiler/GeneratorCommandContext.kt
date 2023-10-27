@@ -1,12 +1,8 @@
 package dev.epicpix.minecraftfunctioncompiler
 
-class GeneratorCommandContext {
-
+class GeneratorCommandContext(var entityLocal: String? = null) {
     fun getEntity(cw: CodeWriter) {
-        cw.generateOrGetLocal("CurrentEntity", "Lnet/minecraft/world/entity/Entity;", save = !cw.isInControlFlow()) {
-            visitGetCommandSourceStack()
-            callMethod("net/minecraft/commands/CommandSourceStack", "getEntity", "()Lnet/minecraft/world/entity/Entity;")
-        }
+        cw.loadLocal(entityLocal!!)
     }
 
 }
