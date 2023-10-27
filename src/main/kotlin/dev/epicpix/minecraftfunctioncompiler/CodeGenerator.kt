@@ -98,49 +98,37 @@ object CodeGenerator {
             }
 
             CommandType.SCOREBOARD_PLAYERS_OPERATION -> {
-                cw.visitGetObjective(command["targetObjective"], load = false)
-                cw.visitGetObjective(command["sourceObjective"])
-                cw.executeIf(Opcodes.IFNONNULL) {
-                    cw.visitGetObjective(command["sourceObjective"])
-                    cw.callMethod("net/minecraft/world/scores/Objective", "getCriteria", "()Lnet/minecraft/world/scores/criteria/ObjectiveCriteria;")
-                    cw.callMethod("net/minecraft/world/scores/criteria/ObjectiveCriteria", "isReadOnly", "()Z")
-                    cw.executeIf(Opcodes.IFNE) {
-                        cw.visitGetObjective(command["targetObjective"])
-                        cw.executeIf(Opcodes.IFNONNULL) {
-                            visitForEachScoreHolder(cw, command["targets"]) { targetGetter ->
-                                visitForEachScoreHolder(cw, command["source"]) { sourceGetter ->
-                                    fun source() {
-                                        cw.visitGetScoreboard()
-                                        sourceGetter()
-                                        cw.visitGetObjective(command["sourceObjective"])
-                                        cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
-                                    }
-                                    fun target() {
-                                        cw.visitGetScoreboard()
-                                        targetGetter()
-                                        cw.visitGetObjective(command["targetObjective"])
-                                        cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
-                                    }
-                                    when(command.get<String>("operation")) {
-                                        "=" -> {
-                                            target()
-                                            source()
-                                            cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                                            cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
-                                        }
-                                        "+=" -> {
-                                            target()
-                                            cw.writeInstruction(Opcodes.DUP)
-                                            cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                                            source()
-                                            cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                                            cw.writeInstruction(Opcodes.IADD)
-                                            cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
-                                        }
-                                        else -> throw UnsupportedOperationException("Unknown operation operator: ${command.get<String>("operation")}")
-                                    }
-                                }
+                visitForEachScoreHolder(cw, command["targets"]) { targetGetter ->
+                    visitForEachScoreHolder(cw, command["source"]) { sourceGetter ->
+                        fun source() {
+                            cw.visitGetScoreboard()
+                            sourceGetter()
+                            cw.visitGetObjective(command["sourceObjective"])
+                            cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                        }
+                        fun target() {
+                            cw.visitGetScoreboard()
+                            targetGetter()
+                            cw.visitGetObjective(command["targetObjective"])
+                            cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                        }
+                        when(command.get<String>("operation")) {
+                            "=" -> {
+                                target()
+                                source()
+                                cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
                             }
+                            "+=" -> {
+                                target()
+                                cw.writeInstruction(Opcodes.DUP)
+                                cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                source()
+                                cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                cw.writeInstruction(Opcodes.IADD)
+                                cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                            }
+                            else -> throw UnsupportedOperationException("Unknown operation operator: ${command.get<String>("operation")}")
                         }
                     }
                 }
@@ -151,19 +139,11 @@ object CodeGenerator {
     }
 
     private fun runScoreboardOperation(targets: ScoreHolderArgument, objective: String, cw: CodeWriter, run: () -> Unit) {
-        cw.visitGetObjective(objective)
-        cw.executeIf(Opcodes.IFNONNULL) {
+        visitForEachScoreHolder(cw, targets) { getter ->
+            cw.visitGetScoreboard()
+            getter()
             cw.visitGetObjective(objective)
-            cw.callMethod("net/minecraft/world/scores/Objective", "getCriteria", "()Lnet/minecraft/world/scores/criteria/ObjectiveCriteria;")
-            cw.callMethod("net/minecraft/world/scores/criteria/ObjectiveCriteria", "isReadOnly", "()Z")
-            cw.executeIf(Opcodes.IFNE) condition@ {
-                visitForEachScoreHolder(cw, targets) { getter ->
-                    cw.visitGetScoreboard()
-                    getter()
-                    cw.visitGetObjective(objective)
-                    run()
-                }
-            }
+            run()
         }
     }
 

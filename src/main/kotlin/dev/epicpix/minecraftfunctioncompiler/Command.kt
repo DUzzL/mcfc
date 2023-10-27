@@ -6,6 +6,13 @@ data class Command(val type: CommandType, val params: Map<String, Any?>?, val si
         return params?.get(param) as T
     }
 
+    fun withRequirements(vararg requirements: CommandRequirement): CommandBlock {
+        return CommandBlock(
+            listOf(this),
+            requirements.toList()
+        )
+    }
+
 }
 
 data class CommandBlock(val commands: List<CommandLike>, val requirements: List<CommandRequirement>) : CommandLike

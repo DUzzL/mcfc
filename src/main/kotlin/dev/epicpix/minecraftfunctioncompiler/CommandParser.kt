@@ -51,49 +51,62 @@ object CommandParser {
                 when(opType) {
                     "add" -> {
                         val objective = context.arguments["objective"]!!.result as String
-                        CommandBlock(
-                            listOf(
-                                Command(CommandType.SCOREBOARD_PLAYERS_ADD, mapOf(
-                                    "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),
-                                    "objective" to objective,
-                                    "score" to context.arguments["score"]!!.result as Int
-                                ), mutableListOf())
-                            ),
-                            listOf(
-                                CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to objective)),
-                                CommandRequirement(CommandRequirementType.OBJECTIVE_NOT_LOCKED, mapOf("objective" to objective)),
-                            )
+                        Command(CommandType.SCOREBOARD_PLAYERS_ADD, mapOf(
+                            "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),
+                            "objective" to objective,
+                            "score" to context.arguments["score"]!!.result as Int
+                        ), mutableListOf()).withRequirements(
+                            CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to objective)),
+                            CommandRequirement(CommandRequirementType.OBJECTIVE_NOT_LOCKED, mapOf("objective" to objective)),
                         )
                     }
                     "operation" -> {
+                        val targetObjective = context.arguments["targetObjective"]!!.result as String
+                        val sourceObjective = context.arguments["sourceObjective"]!!.result as String
                         Command(CommandType.SCOREBOARD_PLAYERS_OPERATION, mapOf(
                             "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),
-                            "targetObjective" to context.arguments["targetObjective"]!!.result as String,
+                            "targetObjective" to targetObjective,
                             "operation" to context.arguments["operation"]!!.range[source] as String,
                             "source" to parseArgumentScoreHolder(context.arguments["source"]!!.range[source]),
-                            "sourceObjective" to context.arguments["sourceObjective"]!!.result as String,
-                        ), mutableListOf())
+                            "sourceObjective" to sourceObjective,
+                        ), mutableListOf()).withRequirements(
+                            CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to targetObjective)),
+                            CommandRequirement(CommandRequirementType.OBJECTIVE_NOT_LOCKED, mapOf("objective" to targetObjective)),
+                            CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to sourceObjective)),
+                        )
                     }
                     "remove" -> {
+                        val objective = context.arguments["objective"]!!.result as String
                         Command(CommandType.SCOREBOARD_PLAYERS_REMOVE, mapOf(
                             "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),
-                            "objective" to context.arguments["objective"]!!.result as String,
+                            "objective" to objective,
                             "score" to context.arguments["score"]!!.result as Int
-                        ), mutableListOf())
+                        ), mutableListOf()).withRequirements(
+                            CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to objective)),
+                            CommandRequirement(CommandRequirementType.OBJECTIVE_NOT_LOCKED, mapOf("objective" to objective)),
+                        )
                     }
                     "reset" -> {
+                        val objective = context.arguments["objective"]!!.result as String
                         Command(CommandType.SCOREBOARD_PLAYERS_RESET, mapOf(
                             "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),
-                            "objective" to context.arguments["objective"]!!.result as String,
+                            "objective" to objective,
                             "score" to context.arguments["score"]!!.result as Int
-                        ), mutableListOf())
+                        ), mutableListOf()).withRequirements(
+                            CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to objective)),
+                            CommandRequirement(CommandRequirementType.OBJECTIVE_NOT_LOCKED, mapOf("objective" to objective)),
+                        )
                     }
                     "set" -> {
+                        val objective = context.arguments["objective"]!!.result as String
                         Command(CommandType.SCOREBOARD_PLAYERS_SET, mapOf(
                             "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),
-                            "objective" to context.arguments["objective"]!!.result as String,
+                            "objective" to objective,
                             "score" to context.arguments["score"]!!.result as Int
-                        ), mutableListOf())
+                        ), mutableListOf()).withRequirements(
+                            CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to objective)),
+                            CommandRequirement(CommandRequirementType.OBJECTIVE_NOT_LOCKED, mapOf("objective" to objective)),
+                        )
                     }
                     else -> throw UnsupportedOperationException("Unsupported scoreboard players type arguments: $opType")
                 }
