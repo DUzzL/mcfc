@@ -31,7 +31,8 @@ enum class CommandType {
     SCOREBOARD_PLAYERS_REMOVE,
     SCOREBOARD_PLAYERS_RESET,
     SCOREBOARD_PLAYERS_SET,
-
+    TAG_ADD,
+    TAG_REMOVE,
 }
 
 enum class CommandRequirementType {

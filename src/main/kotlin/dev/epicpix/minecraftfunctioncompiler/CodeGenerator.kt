@@ -146,6 +146,24 @@ object CodeGenerator {
                 }
             }
 
+            CommandType.TAG_ADD -> {
+                EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], allowEntities = true, allowMultiple = true) { getter ->
+                    getter()
+                    cw.writeString(command["name"])
+                    cw.callMethod("net/minecraft/world/entity/Entity", "addTag", "(Ljava/lang/String;)Z")
+                    cw.methodVisitor.visitInsn(Opcodes.POP)
+                }
+            }
+
+            CommandType.TAG_REMOVE -> {
+                EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], allowEntities = true, allowMultiple = true) { getter ->
+                    getter()
+                    cw.writeString(command["name"])
+                    cw.callMethod("net/minecraft/world/entity/Entity", "removeTag", "(Ljava/lang/String;)Z")
+                    cw.methodVisitor.visitInsn(Opcodes.POP)
+                }
+            }
+
             else -> throw UnsupportedOperationException("Cannot compile command: ${command.type}: ${command.params}")
         }
     }

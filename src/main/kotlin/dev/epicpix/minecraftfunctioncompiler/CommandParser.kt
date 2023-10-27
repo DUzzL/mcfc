@@ -27,6 +27,7 @@ object CommandParser {
         return when(cmdName) {
             "kill" -> parseCommandKill(context, source)
             "scoreboard" -> parseCommandScoreboard(context, source)
+            "tag" -> parseCommandTag(context, source)
             else -> throw UnsupportedOperationException("Cannot parse command: $cmdName")
         }
     }
@@ -109,6 +110,26 @@ object CommandParser {
                 }
             }
             else -> throw UnsupportedOperationException("Invalid scoreboard command type: $type")
+        }
+    }
+
+    private fun parseCommandTag(context: CommandContextBuilder<CommandSourceStack>, source: String): CommandLike {
+        val targets = parseArgumentSelector(context.arguments["targets"]!!.range[source])
+        val type = context.nodes[2].node.name
+        return when(type) {
+            "add" -> {
+                Command(CommandType.TAG_ADD, mapOf(
+                    "targets" to targets,
+                    "name" to context.arguments["name"]!!.result as String
+                ), mutableListOf())
+            }
+            "remove" -> {
+                Command(CommandType.TAG_REMOVE, mapOf(
+                    "targets" to targets,
+                    "name" to context.arguments["name"]!!.result as String
+                ), mutableListOf())
+            }
+            else -> throw UnsupportedOperationException("Invalid tag command type: $type")
         }
     }
 
