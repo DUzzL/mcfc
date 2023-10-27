@@ -1,6 +1,5 @@
 package dev.epicpix.minecraftfunctioncompiler
 
-import dev.epicpix.minecraftfunctioncompiler.CodeGenerator.generateCommand
 import dev.epicpix.minecraftfunctioncompiler.CodeGenerator.generateCommandLike
 import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.commands.CommandFunction
@@ -10,11 +9,11 @@ import net.minecraft.resources.ResourceLocation
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import org.slf4j.LoggerFactory
-import java.lang.UnsupportedOperationException
 import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 import java.nio.file.Files
+import kotlin.UnsupportedOperationException
 
 class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<ResourceLocation, CommandFunction>) : ClassLoader(parent) {
     private val handles: MutableMap<ResourceLocation, MethodHandle> = HashMap()
@@ -34,21 +33,27 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                 }
                 definedFunctions[key] = CommandParser.parseFunctionCommands(value)
             } catch (e: UnsupportedOperationException) {
-                LOGGER.warn("Unable to compile function " + key + " / " + e.message)
+                LOGGER.warn("Unable to parse function " + key + " / " + e.message)
             } catch (e: Throwable) {
-                LOGGER.error("Unable to compile function $key", e)
+                LOGGER.error("Unable to parse function $key", e)
             }
         }
         LOGGER.info("Parsed ${definedFunctions.size} functions in ${System.currentTimeMillis()-startParse}ms")
+        println(definedFunctions)
+
         val startLoader = System.currentTimeMillis()
-        for((key) in definedFunctions) {
-            val clz = defineFunction(key, definedFunctions)
-            val handle = MethodHandles.lookup().findStatic(clz, "run", MethodType.methodType(Int::class.javaPrimitiveType, CommandSourceStack::class.java))
-            handles[key] = handle
+        try {
+            for((key) in definedFunctions) {
+                val clz = defineFunction(key, definedFunctions)
+                val handle = MethodHandles.lookup().findStatic(clz, "run", MethodType.methodType(Int::class.javaPrimitiveType, CommandSourceStack::class.java))
+                handles[key] = handle
+            }
+        }catch(e: Throwable) {
+            LOGGER.error("Failed to compile function, clearing compilation data", e)
+            definedFunctions.clear()
+            handles.clear()
         }
         LOGGER.info("Loaded ${definedFunctions.size} functions in ${System.currentTimeMillis()-startLoader}ms")
-
-        println(definedFunctions)
     }
 
     fun hasFunctionLoaded(location: ResourceLocation): Boolean {

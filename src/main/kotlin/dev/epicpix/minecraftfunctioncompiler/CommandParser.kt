@@ -5,8 +5,8 @@ import dev.epicpix.minecraftfunctioncompiler.arguments.ScoreHolderArgument
 import dev.epicpix.minecraftfunctioncompiler.arguments.SelectorArgument
 import net.minecraft.commands.CommandFunction
 import net.minecraft.commands.CommandSourceStack
-import java.lang.UnsupportedOperationException
 import java.util.*
+import kotlin.UnsupportedOperationException
 
 object CommandParser {
 
@@ -25,10 +25,24 @@ object CommandParser {
 
     private fun parseCommand(cmdName: String, context: CommandContextBuilder<CommandSourceStack>, source: String): CommandLike {
         return when(cmdName) {
+            "execute" -> parseCommandExecute(context, context.nodes[1].range[source], source)
             "kill" -> parseCommandKill(context, source)
             "scoreboard" -> parseCommandScoreboard(context, source)
             "tag" -> parseCommandTag(context, source)
             else -> throw UnsupportedOperationException("Cannot parse command: $cmdName")
+        }
+    }
+
+    private fun parseCommandExecute(context: CommandContextBuilder<CommandSourceStack>, type: String, source: String): CommandLike {
+        return when(type) {
+            "as" -> {
+                Command(CommandType.EXECUTE_AS, mapOf(
+                    "targets" to parseArgumentSelector(context.arguments["targets"]!!.range[source]),
+                    "command" to parseCommandExecute(context.child, context.child.nodes[0].range[source], source)
+                ), mutableListOf())
+            }
+            "run" -> parseCommand(context.child.nodes[0].range[source], context.child, source)
+            else -> throw UnsupportedOperationException("Invalid execute command type: $type")
         }
     }
 

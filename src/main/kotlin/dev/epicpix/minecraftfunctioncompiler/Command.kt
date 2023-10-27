@@ -25,6 +25,8 @@ data class CommandRequirement(val type: CommandRequirementType, val data: Map<St
 enum class CommandType {
 
     UNKNOWN,
+    EXECUTE_AS,
+    EXECUTE_RUN,
     KILL,
     SCOREBOARD_PLAYERS_ADD,
     SCOREBOARD_PLAYERS_OPERATION,
