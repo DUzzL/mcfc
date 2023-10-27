@@ -9,7 +9,7 @@ data class Command(val type: CommandType, val params: Map<String, Any?>?, val si
     fun withRequirements(vararg requirements: CommandRequirement): CommandBlock {
         return CommandBlock(
             listOf(this),
-            requirements.toList()
+            requirements.distinct()
         )
     }
 

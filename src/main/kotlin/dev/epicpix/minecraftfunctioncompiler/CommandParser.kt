@@ -36,10 +36,10 @@ object CommandParser {
         return if(targets != null) {
             Command(CommandType.KILL_SELECTOR, mapOf("targets" to parseArgumentSelector(targets.range[source])), mutableListOf())
         }else {
-            CommandBlock(
-                listOf(Command(CommandType.KILL_SELF, null, mutableListOf())),
-                listOf()
-            )
+            Command(CommandType.KILL_SELF, null, mutableListOf())
+                .withRequirements(
+                    CommandRequirement(CommandRequirementType.ENTITY_SELF_EXISTS, mapOf())
+                )
         }
     }
 
