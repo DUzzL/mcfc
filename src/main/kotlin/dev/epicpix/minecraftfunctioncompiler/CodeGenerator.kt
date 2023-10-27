@@ -84,7 +84,6 @@ object CodeGenerator {
             }
 
             CommandType.SCOREBOARD_PLAYERS_SET -> {
-                println(cw.isInControlFlow())
                 runScoreboardOperation(command["targets"], command["objective"], cw) {
                     cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
                     cw.writeInt(command["score"])
@@ -121,6 +120,15 @@ object CodeGenerator {
                                 source()
                                 cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
                                 cw.writeInstruction(Opcodes.IADD)
+                                cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                            }
+                            "-=" -> {
+                                target()
+                                cw.writeInstruction(Opcodes.DUP)
+                                cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                source()
+                                cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                cw.writeInstruction(Opcodes.ISUB)
                                 cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
                             }
                             else -> throw UnsupportedOperationException("Unknown operation operator: ${command.get<String>("operation")}")

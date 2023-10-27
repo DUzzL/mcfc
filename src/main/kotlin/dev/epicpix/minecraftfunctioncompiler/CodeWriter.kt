@@ -180,9 +180,7 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
             else -> throw UnsupportedOperationException("Unknown comparison: $comparison")
         }
         inControlFlow++
-        println("-- in")
         exec()
-        println("-- out")
         inControlFlow--
         methodVisitor.visitLabel(endLabel)
     }
