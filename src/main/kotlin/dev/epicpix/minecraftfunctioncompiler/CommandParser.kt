@@ -126,9 +126,12 @@ object CommandParser {
     }
 
     private fun parseArgumentSelector(selector: String): SelectorArgument {
-        val entityUuid = runCatching { UUID.fromString(selector) }
-        if(entityUuid.isSuccess) {
-            return SelectorArgument(entityUuid.getOrThrow())
+        if(!selector.startsWith("@")) {
+            val entityUuid = runCatching { UUID.fromString(selector) }
+            if (entityUuid.isSuccess) {
+                return SelectorArgument(entityUuid = entityUuid.getOrThrow())
+            }
+            return SelectorArgument(playerName = selector)
         }
         throw UnsupportedOperationException("Cannot parse selector: $selector")
     }

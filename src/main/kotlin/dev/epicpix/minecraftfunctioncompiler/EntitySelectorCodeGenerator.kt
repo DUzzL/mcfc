@@ -27,6 +27,22 @@ object EntitySelectorCodeGenerator {
             return
         }
 
+        if(selector.playerName != null) {
+            cw.visitGetPlayerList()
+            cw.writeString(selector.playerName)
+            cw.callMethod("net/minecraft/server/players/PlayerList", "getPlayerByName", "(Ljava/lang/String;)Lnet/minecraft/server/level/ServerPlayer;")
+            val uidLocal = cw.generateUniqueLocal("\$Player")
+            cw.storeLocal(uidLocal, "Lnet/minecraft/server/level/ServerPlayer;") {
+                cw.loadLocal(uidLocal)
+                cw.executeIf(Opcodes.IFNONNULL) {
+                    run {
+                        cw.loadLocal(uidLocal)
+                    }
+                }
+            }
+            return
+        }
+
         throw UnsupportedOperationException("Unsupported selector")
     }
 
