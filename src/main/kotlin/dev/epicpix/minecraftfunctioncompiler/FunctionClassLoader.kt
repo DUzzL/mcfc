@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler
 
 import dev.epicpix.minecraftfunctioncompiler.CodeGenerator.generateCommand
+import dev.epicpix.minecraftfunctioncompiler.CodeGenerator.generateCommandLike
 import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.commands.CommandFunction
 import net.minecraft.commands.CommandFunction.CommandEntry
@@ -20,7 +21,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
     fun loadFunctions() {
         handles.clear()
 
-        val definedFunctions = mutableMapOf<ResourceLocation, List<Command>>()
+        val definedFunctions = mutableMapOf<ResourceLocation, List<CommandLike>>()
 
         val startParse = System.currentTimeMillis()
         funcLoop@
@@ -46,6 +47,8 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
             handles[key] = handle
         }
         LOGGER.info("Loaded ${definedFunctions.size} functions in ${System.currentTimeMillis()-startLoader}ms")
+
+        println(definedFunctions)
     }
 
     fun hasFunctionLoaded(location: ResourceLocation): Boolean {
@@ -61,7 +64,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         }
     }
 
-    private fun defineFunction(funcId: ResourceLocation, definedFunctions: Map<ResourceLocation, List<Command>>): Class<*> {
+    private fun defineFunction(funcId: ResourceLocation, definedFunctions: Map<ResourceLocation, List<CommandLike>>): Class<*> {
         val className = "function/${funcId.namespace}/${funcId.path}"
 
         val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
@@ -75,7 +78,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
 
         codeWriter.defineLocal("CommandSourceStack", "Lnet/minecraft/commands/CommandSourceStack;") {
             commands.forEach {
-                generateCommand(it, codeWriter)
+                generateCommandLike(it, codeWriter)
             }
         }
         codeWriter.end()

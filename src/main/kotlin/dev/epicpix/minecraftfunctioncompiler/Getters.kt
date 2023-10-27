@@ -13,6 +13,13 @@ fun CodeWriter.visitGetCommandSourceStack() {
     loadLocal("CommandSourceStack")
 }
 
+fun CodeWriter.visitGetSelfEntity() {
+    generateOrGetLocal("CurrentEntity", "Lnet/minecraft/world/entity/Entity;") {
+        visitGetCommandSourceStack()
+        callMethod("net/minecraft/commands/CommandSourceStack", "getEntity", "()Lnet/minecraft/world/entity/Entity;")
+    }
+}
+
 fun CodeWriter.visitGetServer() {
     generateOrGetLocal("MinecraftServer", "Lnet/minecraft/server/MinecraftServer;") {
         visitGetCommandSourceStack()

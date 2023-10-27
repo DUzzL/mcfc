@@ -1,22 +1,56 @@
 package dev.epicpix.minecraftfunctioncompiler
 
 import dev.epicpix.minecraftfunctioncompiler.arguments.ScoreHolderArgument
+import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
 
 object CodeGenerator {
 
+    fun generateCommandLike(commandLike: CommandLike, cw: CodeWriter) {
+        if(commandLike is Command) {
+            generateCommand(commandLike, cw)
+        }else if(commandLike is CommandBlock) {
+            generateCommandBlock(commandLike, cw)
+        }
+    }
+
+    fun generateCommandBlock(block: CommandBlock, cw: CodeWriter) {
+        val skipLabel = Label()
+        block.requirements.forEach {
+            fulfillRequirement(it, skipLabel, cw)
+        }
+        for(commandLike in block.commands) {
+            generateCommandLike(commandLike, cw)
+        }
+        cw.methodVisitor.visitLabel(skipLabel)
+    }
+
+    fun fulfillRequirement(requirement: CommandRequirement, skipLabel: Label, cw: CodeWriter) {
+        when(requirement.type) {
+            CommandRequirementType.OBJECTIVE_EXISTS -> {
+                cw.visitGetObjective(requirement.data["objective"] as String)
+                cw.methodVisitor.visitJumpInsn(Opcodes.IFNULL, skipLabel)
+            }
+            CommandRequirementType.OBJECTIVE_NOT_LOCKED -> {
+                cw.visitGetObjective(requirement.data["objective"] as String)
+                cw.callMethod("net/minecraft/world/scores/Objective", "getCriteria", "()Lnet/minecraft/world/scores/criteria/ObjectiveCriteria;")
+                cw.callMethod("net/minecraft/world/scores/criteria/ObjectiveCriteria", "isReadOnly", "()Z")
+                cw.methodVisitor.visitJumpInsn(Opcodes.IFNE, skipLabel)
+            }
+            CommandRequirementType.ENTITY_SELF_EXISTS -> {
+                cw.visitGetSelfEntity()
+                cw.methodVisitor.visitJumpInsn(Opcodes.IFNULL, skipLabel)
+            }
+        }
+    }
+
     fun generateCommand(command: Command, cw: CodeWriter) {
         when(command.type) {
             CommandType.KILL_SELF -> {
-                cw.visitGetCommandSourceStack()
-                cw.callMethod("net/minecraft/commands/CommandSourceStack", "getEntity", "()Lnet/minecraft/world/entity/Entity;")
-                val uidLocal = cw.generateUniqueLocal("\$Entity")
-                cw.storeLocal(uidLocal, "Lnet/minecraft/world/entity/Entity;") {
-                    cw.loadLocal(uidLocal)
-                    cw.executeIf(Opcodes.IFNONNULL) {
-                        cw.loadLocal(uidLocal)
-                        cw.callMethod("net/minecraft/world/entity/Entity", "kill", "()V")
-                    }
+                cw.visitGetSelfEntity()
+                cw.executeIf(Opcodes.IFNONNULL) {
+                    cw.visitGetSelfEntity()
+                    cw.callMethod("net/minecraft/world/entity/Entity", "kill", "()V")
                 }
             }
 

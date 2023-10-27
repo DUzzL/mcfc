@@ -10,8 +10,8 @@ import java.util.*
 
 object CommandParser {
 
-    fun parseFunctionCommands(func: CommandFunction): List<Command> {
-        val commands = mutableListOf<Command>()
+    fun parseFunctionCommands(func: CommandFunction): List<CommandLike> {
+        val commands = mutableListOf<CommandLike>()
         for (entry in func.entries) {
             if (entry !is CommandFunction.CommandEntry) continue
 
@@ -23,7 +23,7 @@ object CommandParser {
         return commands
     }
 
-    private fun parseCommand(cmdName: String, context: CommandContextBuilder<CommandSourceStack>, source: String): Command {
+    private fun parseCommand(cmdName: String, context: CommandContextBuilder<CommandSourceStack>, source: String): CommandLike {
         return when(cmdName) {
             "kill" -> parseCommandKill(context, source)
             "scoreboard" -> parseCommandScoreboard(context, source)
@@ -31,27 +31,39 @@ object CommandParser {
         }
     }
 
-    private fun parseCommandKill(context: CommandContextBuilder<CommandSourceStack>, source: String): Command {
+    private fun parseCommandKill(context: CommandContextBuilder<CommandSourceStack>, source: String): CommandLike {
         val targets = context.arguments["targets"]
         return if(targets != null) {
             Command(CommandType.KILL_SELECTOR, mapOf("targets" to parseArgumentSelector(targets.range[source])), mutableListOf())
         }else {
-            Command(CommandType.KILL_SELF, null, mutableListOf())
+            CommandBlock(
+                listOf(Command(CommandType.KILL_SELF, null, mutableListOf())),
+                listOf()
+            )
         }
     }
 
-    private fun parseCommandScoreboard(context: CommandContextBuilder<CommandSourceStack>, source: String): Command {
+    private fun parseCommandScoreboard(context: CommandContextBuilder<CommandSourceStack>, source: String): CommandLike {
         val type = context.nodes[1].node.name
         return when(type) {
             "players" -> {
                 val opType = context.nodes[2].node.name
                 when(opType) {
                     "add" -> {
-                        Command(CommandType.SCOREBOARD_PLAYERS_ADD, mapOf(
-                            "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),
-                            "objective" to context.arguments["objective"]!!.result as String,
-                            "score" to context.arguments["score"]!!.result as Int
-                        ), mutableListOf())
+                        val objective = context.arguments["objective"]!!.result as String
+                        CommandBlock(
+                            listOf(
+                                Command(CommandType.SCOREBOARD_PLAYERS_ADD, mapOf(
+                                    "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),
+                                    "objective" to objective,
+                                    "score" to context.arguments["score"]!!.result as Int
+                                ), mutableListOf())
+                            ),
+                            listOf(
+                                CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to objective)),
+                                CommandRequirement(CommandRequirementType.OBJECTIVE_NOT_LOCKED, mapOf("objective" to objective)),
+                            )
+                        )
                     }
                     "operation" -> {
                         Command(CommandType.SCOREBOARD_PLAYERS_OPERATION, mapOf(
