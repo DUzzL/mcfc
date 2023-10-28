@@ -59,7 +59,9 @@ object CommandParser {
                                 "targetObjective" to context.arguments["targetObjective"]!!.result as String,
                                 "range" to IntRangeArgument(range.min.orElse(null), range.max.orElse(null)),
                                 "command" to parseCommandExecute(context.child, context.child.nodes, source)
-                            ), mutableListOf())
+                            ), mutableListOf()).withRequirements(
+                                CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to context.arguments["targetObjective"]!!.result as String)),
+                            )
                         }else {
                             Command(CommandType.EXECUTE_IF_SCORE_COMPARE, mapOf(
                                 "target" to parseArgumentScoreHolder(context.arguments["target"]!!.range[source]),
@@ -68,7 +70,10 @@ object CommandParser {
                                 "source" to parseArgumentScoreHolder(context.arguments["source"]!!.range[source]),
                                 "sourceObjective" to context.arguments["sourceObjective"]!!.result as String,
                                 "command" to parseCommandExecute(context.child, context.child.nodes, source)
-                            ), mutableListOf())
+                            ), mutableListOf()).withRequirements(
+                                CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to context.arguments["targetObjective"]!!.result as String)),
+                                CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to context.arguments["sourceObjective"]!!.result as String)),
+                            )
                         }
                     }
                     else -> throw UnsupportedOperationException("Invalid execute command if comparison type: $ifType")

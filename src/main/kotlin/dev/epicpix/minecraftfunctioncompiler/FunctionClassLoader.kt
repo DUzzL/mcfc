@@ -31,7 +31,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                         continue@funcLoop
                     }
                 }
-                definedFunctions[key] = CommandParser.parseFunctionCommands(value)
+                definedFunctions[key] = mergeCommandRequirements(CommandParser.parseFunctionCommands(value))
             } catch (e: UnsupportedOperationException) {
                 LOGGER.warn("Unable to parse function $key / ${e.message}")
             } catch (e: Throwable) {
