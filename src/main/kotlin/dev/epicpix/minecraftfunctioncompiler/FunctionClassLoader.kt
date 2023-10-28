@@ -33,7 +33,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                 }
                 definedFunctions[key] = CommandParser.parseFunctionCommands(value)
             } catch (e: UnsupportedOperationException) {
-                LOGGER.warn("Unable to parse function " + key + " / " + e.message)
+                LOGGER.warn("Unable to parse function $key / ${e.message}")
             } catch (e: Throwable) {
                 LOGGER.error("Unable to parse function $key", e)
             }

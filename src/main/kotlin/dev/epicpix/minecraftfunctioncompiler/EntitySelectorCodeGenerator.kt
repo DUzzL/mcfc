@@ -1,6 +1,5 @@
 package dev.epicpix.minecraftfunctioncompiler
 
-import dev.epicpix.minecraftfunctioncompiler.arguments.SelectorArgument
 import org.objectweb.asm.Opcodes
 import java.lang.UnsupportedOperationException
 

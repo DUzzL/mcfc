@@ -2,9 +2,6 @@ package dev.epicpix.minecraftfunctioncompiler
 
 import com.mojang.brigadier.context.CommandContextBuilder
 import com.mojang.brigadier.context.ParsedCommandNode
-import dev.epicpix.minecraftfunctioncompiler.arguments.IntRangeArgument
-import dev.epicpix.minecraftfunctioncompiler.arguments.ScoreHolderArgument
-import dev.epicpix.minecraftfunctioncompiler.arguments.SelectorArgument
 import net.minecraft.advancements.critereon.MinMaxBounds
 import net.minecraft.commands.CommandFunction
 import net.minecraft.commands.CommandSourceStack

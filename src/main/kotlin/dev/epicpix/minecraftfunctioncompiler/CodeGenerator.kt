@@ -1,8 +1,5 @@
 package dev.epicpix.minecraftfunctioncompiler
 
-import com.mojang.datafixers.optics.Optics.getter
-import dev.epicpix.minecraftfunctioncompiler.arguments.IntRangeArgument
-import dev.epicpix.minecraftfunctioncompiler.arguments.ScoreHolderArgument
 import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
 
