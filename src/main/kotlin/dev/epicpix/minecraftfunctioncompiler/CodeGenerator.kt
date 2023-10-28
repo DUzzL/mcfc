@@ -304,9 +304,10 @@ object CodeGenerator {
 
     private fun runScoreboardOperation(targets: ScoreHolderArgument, objective: String, context: GeneratorCommandContext, cw: CodeWriter, run: (context: GeneratorCommandContext) -> Unit) {
         visitForEachScoreHolder(cw, context, targets) { getter ->
-            context.runWithObjective(cw, objective) { _, context ->
+            context.runWithObjective(cw, objective) { obj, context ->
                 cw.visitGetScoreboard()
                 getter()
+                cw.loadLocal(obj)
                 run(context)
             }
         }
