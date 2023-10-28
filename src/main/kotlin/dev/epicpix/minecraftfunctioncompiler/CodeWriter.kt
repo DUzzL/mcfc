@@ -77,7 +77,7 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
     fun writeLocalVariables() {
         if(generateDebug) {
             generatedLocals.forEach {
-                methodVisitor.visitLocalVariable(it.name, it.descriptor, null, it.start, it.end, it.index)
+                methodVisitor.visitLocalVariable(it.name.replace(".", "_"), it.descriptor, null, it.start, it.end, it.index)
             }
         }
     }
