@@ -36,21 +36,6 @@ fun CodeWriter.visitGetScoreboard(load: Boolean = true) {
     }
 }
 
-fun CodeWriter.visitGetObjective(objective: String, load: Boolean = true) {
-    generateOrGetLocal("Objective:$objective", "Lnet/minecraft/world/scores/Objective;", load, save = !isInControlFlow()) {
-        visitGetScoreboard()
-        writeString(objective)
-        callMethod("net/minecraft/world/scores/Scoreboard", "getObjective", "(Ljava/lang/String;)Lnet/minecraft/world/scores/Objective;")
-    }
-}
-
-fun CodeWriter.visitGetObjectiveScore(objective: String, holder: String) {
-    visitGetScoreboard()
-    writeString(holder)
-    visitGetObjective(objective)
-    callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
-}
-
 fun CodeWriter.visitGetPlayerList(load: Boolean = true) {
     generateOrGetLocal("PlayerList", "Lnet/minecraft/server/players/PlayerList;", load) {
         visitGetServer()

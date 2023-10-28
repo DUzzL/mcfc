@@ -23,13 +23,13 @@ object EntitySelectorCodeGenerator {
             cw.visitGetPlayerList()
             cw.writeString(selector.playerName)
             cw.callMethod("net/minecraft/server/players/PlayerList", "getPlayerByName", "(Ljava/lang/String;)Lnet/minecraft/server/level/ServerPlayer;")
-            cw.executeIf(Opcodes.IFNONNULL, run)
+            cw.executeIf(Opcodes.IFNONNULL, exec = run)
             return
         }
 
         if(selector.self) {
             context.getEntity(cw)
-            cw.executeIf(Opcodes.IFNONNULL, run)
+            cw.executeIf(Opcodes.IFNONNULL, exec = run)
             return
         }
 
