@@ -78,8 +78,12 @@ object CodeGenerator {
             }
 
             CommandType.SCOREBOARD_PLAYERS_RESET -> {
-                runScoreboardOperation(command["targets"], command["objective"], context, cw) {
-                    cw.callMethod("net/minecraft/world/scores/Scoreboard", "resetPlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)V")
+                if(command.params?.get("objective") != null) {
+                    runScoreboardOperation(command["targets"], command["objective"], context, cw) {
+                        cw.callMethod("net/minecraft/world/scores/Scoreboard", "resetPlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)V")
+                    }
+                }else {
+                    throw UnsupportedOperationException("TODO: implement /scoreboard players reset <targets> [<objective>]")
                 }
             }
 

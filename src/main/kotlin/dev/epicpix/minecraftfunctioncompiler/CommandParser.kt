@@ -99,15 +99,20 @@ object CommandParser {
                         )
                     }
                     "reset" -> {
-                        val objective = context.arguments["objective"]!!.result as String
-                        Command(CommandType.SCOREBOARD_PLAYERS_RESET, mapOf(
-                            "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),
-                            "objective" to objective,
-                            "score" to context.arguments["score"]!!.result as Int
-                        ), mutableListOf()).withRequirements(
-                            CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to objective)),
-                            CommandRequirement(CommandRequirementType.OBJECTIVE_NOT_LOCKED, mapOf("objective" to objective)),
-                        )
+                        if(context.arguments["objective"] != null) {
+                            val objective = context.arguments["objective"]!!.result as String
+                            Command(CommandType.SCOREBOARD_PLAYERS_RESET, mapOf(
+                                "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),
+                                "objective" to objective
+                            ), mutableListOf()).withRequirements(
+                                CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to objective)),
+                                CommandRequirement(CommandRequirementType.OBJECTIVE_NOT_LOCKED, mapOf("objective" to objective)),
+                            )
+                        }else {
+                            Command(CommandType.SCOREBOARD_PLAYERS_RESET, mapOf(
+                                "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source])
+                            ), mutableListOf())
+                        }
                     }
                     "set" -> {
                         val objective = context.arguments["objective"]!!.result as String
