@@ -6,4 +6,5 @@ data class SelectorArgument(
     val entityUuid: UUID? = null,
     val playerName: String? = null,
     val self: Boolean = false,
+    val limit: Int? = null,
 )

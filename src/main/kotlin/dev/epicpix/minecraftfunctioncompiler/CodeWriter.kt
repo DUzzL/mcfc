@@ -177,6 +177,11 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
             Opcodes.IFNULL -> methodVisitor.visitJumpInsn(Opcodes.IFNONNULL, endLabel)
             Opcodes.IFNE -> methodVisitor.visitJumpInsn(Opcodes.IFNE, endLabel)
             Opcodes.IFEQ -> methodVisitor.visitJumpInsn(Opcodes.IFEQ, endLabel)
+            Opcodes.IF_ICMPLT -> methodVisitor.visitJumpInsn(Opcodes.IF_ICMPGE, endLabel)
+            Opcodes.IF_ICMPLE -> methodVisitor.visitJumpInsn(Opcodes.IF_ICMPGT, endLabel)
+            Opcodes.IF_ICMPEQ -> methodVisitor.visitJumpInsn(Opcodes.IF_ICMPNE, endLabel)
+            Opcodes.IF_ICMPGE -> methodVisitor.visitJumpInsn(Opcodes.IF_ICMPLT, endLabel)
+            Opcodes.IF_ICMPGT -> methodVisitor.visitJumpInsn(Opcodes.IF_ICMPLE, endLabel)
             else -> throw UnsupportedOperationException("Unknown comparison: $comparison")
         }
         inControlFlow++

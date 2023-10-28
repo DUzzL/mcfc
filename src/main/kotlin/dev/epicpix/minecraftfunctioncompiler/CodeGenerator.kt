@@ -1,5 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler
 
+import com.mojang.datafixers.optics.Optics.getter
+import dev.epicpix.minecraftfunctioncompiler.arguments.IntRangeArgument
 import dev.epicpix.minecraftfunctioncompiler.arguments.ScoreHolderArgument
 import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
@@ -187,6 +189,110 @@ object CodeGenerator {
                 }
             }
 
+            CommandType.EXECUTE_IF_SCORE_RANGE -> {
+                cw.visitGetObjective(command["targetObjective"])
+                cw.executeIf(Opcodes.IFNONNULL) {
+                    visitGetSingleScoreHolder(cw, context, command["target"]) { getter ->
+                        cw.visitGetScoreboard()
+                        getter()
+                        cw.visitGetObjective(command["targetObjective"])
+                        cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                        val uidLocal = cw.generateUniqueLocal("\$Score")
+                        cw.storeLocal(uidLocal, "Lnet/minecraft/world/scores/Score;") {
+                            val range = command.get<IntRangeArgument>("range")
+                            if (range.minimum != null && range.maximum == null) {
+                                loadLocal(uidLocal)
+                                callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                writeInt(range.minimum)
+                                executeIf(Opcodes.IF_ICMPGE) {
+                                    generateCommandLike(command["command"], context, cw)
+                                }
+                            } else if (range.maximum != null && range.minimum == null) {
+                                loadLocal(uidLocal)
+                                callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                writeInt(range.maximum)
+                                executeIf(Opcodes.IF_ICMPLE) {
+                                    generateCommandLike(command["command"], context, cw)
+                                }
+                            } else if (range.minimum != null && range.minimum == range.maximum) {
+                                loadLocal(uidLocal)
+                                callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                writeInt(range.minimum)
+                                executeIf(Opcodes.IF_ICMPEQ) {
+                                    generateCommandLike(command["command"], context, cw)
+                                }
+                            } else if (range.minimum != null && range.maximum != null) {
+                                loadLocal(uidLocal)
+                                callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                writeInt(range.minimum)
+                                executeIf(Opcodes.IF_ICMPGE) {
+                                    loadLocal(uidLocal)
+                                    callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                    writeInt(range.maximum)
+                                    executeIf(Opcodes.IF_ICMPLE) {
+                                        generateCommandLike(command["command"], context, cw)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            CommandType.EXECUTE_IF_SCORE_COMPARE -> {
+                cw.visitGetObjective(command["targetObjective"])
+                cw.executeIf(Opcodes.IFNONNULL) {
+                    cw.visitGetObjective(command["sourceObjective"])
+                    cw.executeIf(Opcodes.IFNONNULL) {
+                        visitGetSingleScoreHolder(cw, context, command["target"]) { getterTarget ->
+                            visitGetSingleScoreHolder(cw, context, command["source"]) { sourceSource ->
+                                cw.visitGetScoreboard()
+                                getterTarget()
+                                cw.visitGetObjective(command["targetObjective"])
+                                cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                                cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                cw.visitGetScoreboard()
+                                sourceSource()
+                                cw.visitGetObjective(command["sourceObjective"])
+                                cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                                cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+
+                                val operator = command.get<String>("comparison")
+
+                                when(operator) {
+                                    "<" -> {
+                                        cw.executeIf(Opcodes.IF_ICMPLT) {
+                                            generateCommandLike(command["command"], context, cw)
+                                        }
+                                    }
+                                    "<=" -> {
+                                        cw.executeIf(Opcodes.IF_ICMPLE) {
+                                            generateCommandLike(command["command"], context, cw)
+                                        }
+                                    }
+                                    "=" -> {
+                                        cw.executeIf(Opcodes.IF_ICMPEQ) {
+                                            generateCommandLike(command["command"], context, cw)
+                                        }
+                                    }
+                                    ">" -> {
+                                        cw.executeIf(Opcodes.IF_ICMPGT) {
+                                            generateCommandLike(command["command"], context, cw)
+                                        }
+                                    }
+                                    ">=" -> {
+                                        cw.executeIf(Opcodes.IF_ICMPGE) {
+                                            generateCommandLike(command["command"], context, cw)
+                                        }
+                                    }
+                                    else -> throw UnsupportedOperationException("Unknown score comparison operator: $operator")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             else -> throw UnsupportedOperationException("Cannot compile command: ${command.type}: ${command.params}")
         }
     }
@@ -197,6 +303,51 @@ object CodeGenerator {
             getter()
             cw.visitGetObjective(objective)
             run()
+        }
+    }
+
+    private fun visitGetSingleScoreHolder(cw: CodeWriter, context: GeneratorCommandContext, scoreHolder: ScoreHolderArgument, run: (getter: () -> Unit) -> Unit) {
+        if(scoreHolder.all) {
+            cw.newObject("java/util/ArrayList", "(Ljava/util/Collection;)V") {
+                cw.visitGetScoreboard()
+                cw.getObjectField("net/minecraft/world/scores/Scoreboard", "playerScores", "Ljava/util/Map;")
+                cw.callInterfaceMethod("java/util/Map", "keySet", "()Ljava/util/Set;")
+            }
+
+            val uidLocal = cw.generateUniqueLocal("\$Array")
+            cw.storeLocal(uidLocal, "Ljava/util/ArrayList;") {
+                cw.loadLocal(uidLocal)
+                cw.callMethod("java/util/ArrayList", "size", "()I")
+                cw.executeIf(Opcodes.IFNE) {
+                    run {
+                        cw.loadLocal(uidLocal)
+                        cw.writeInt(0)
+                        cw.callMethod("java/util/ArrayList", "get", "(I)Ljava/lang/Object;")
+                        cw.castType("java/lang/String")
+                    }
+                }
+            }
+            return
+        }
+
+        if(scoreHolder.name != null) {
+            run {
+                cw.writeString(scoreHolder.name)
+            }
+            return
+        }
+
+        if(scoreHolder.selector != null) {
+            EntitySelectorCodeGenerator.generateForEachEntity(cw, scoreHolder.selector.copy(limit = 1), context, allowEntities = true, allowMultiple = true) { getter ->
+                val uidLocal = cw.generateUniqueLocal("\$EntityName")
+                getter()
+                cw.callMethod("net/minecraft/world/entity/Entity", "getScoreboardName", "()Ljava/lang/String;")
+                cw.storeLocal(uidLocal, "Ljava/lang/String;") {
+                    run {
+                        cw.loadLocal(uidLocal)
+                    }
+                }
+            }
         }
     }
 
