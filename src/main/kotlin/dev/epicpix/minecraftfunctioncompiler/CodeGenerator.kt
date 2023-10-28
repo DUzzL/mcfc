@@ -172,10 +172,9 @@ object CodeGenerator {
 
             CommandType.EXECUTE_AS -> {
                 EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], context, allowEntities = true, allowMultiple = true) { getter ->
-                    val newContext = GeneratorCommandContext()
 
                     val entityUid = cw.generateUniqueLocal("CurrentEntity")
-                    newContext.entityLocal = entityUid
+                    val newContext = context.copy(entityLocal = entityUid)
                     getter()
                     cw.storeLocal(entityUid, "Lnet/minecraft/world/entity/Entity;") {
                         generateCommandLike(command["command"], newContext, cw)
