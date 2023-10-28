@@ -170,36 +170,42 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
         return inControlFlow != 0
     }
 
-    fun executeIf(comparison: Int, exec: () -> Unit) {
-        val endLabel = Label()
-        when (comparison) {
-            Opcodes.IFNONNULL -> methodVisitor.visitJumpInsn(Opcodes.IFNULL, endLabel)
-            Opcodes.IFNULL -> methodVisitor.visitJumpInsn(Opcodes.IFNONNULL, endLabel)
-            Opcodes.IFNE -> methodVisitor.visitJumpInsn(Opcodes.IFNE, endLabel)
-            Opcodes.IFEQ -> methodVisitor.visitJumpInsn(Opcodes.IFEQ, endLabel)
-            Opcodes.IF_ICMPLT -> methodVisitor.visitJumpInsn(Opcodes.IF_ICMPGE, endLabel)
-            Opcodes.IF_ICMPLE -> methodVisitor.visitJumpInsn(Opcodes.IF_ICMPGT, endLabel)
-            Opcodes.IF_ICMPEQ -> methodVisitor.visitJumpInsn(Opcodes.IF_ICMPNE, endLabel)
-            Opcodes.IF_ICMPGE -> methodVisitor.visitJumpInsn(Opcodes.IF_ICMPLT, endLabel)
-            Opcodes.IF_ICMPGT -> methodVisitor.visitJumpInsn(Opcodes.IF_ICMPLE, endLabel)
-            else -> throw UnsupportedOperationException("Unknown comparison: $comparison")
+    private fun getIfJumpOpcode(comparison: Int): Int {
+        return when (comparison) {
+            Opcodes.IFNONNULL -> Opcodes.IFNULL
+            Opcodes.IFNULL -> Opcodes.IFNONNULL
+            Opcodes.IFNE -> Opcodes.IFNE
+            Opcodes.IFEQ -> Opcodes.IFEQ
+            Opcodes.IF_ICMPLT -> Opcodes.IF_ICMPGE
+            Opcodes.IF_ICMPLE -> Opcodes.IF_ICMPGT
+            Opcodes.IF_ICMPEQ -> Opcodes.IF_ICMPNE
+            Opcodes.IF_ICMPGE -> Opcodes.IF_ICMPLT
+            Opcodes.IF_ICMPGT -> Opcodes.IF_ICMPLE
+            else -> throw UnsupportedOperationException("Unknown comparison opcode: $comparison")
         }
+    }
+
+    fun executeIf(comparison: Int, ignoreCondition: Boolean = false, exec: () -> Unit) {
+        if(ignoreCondition) {
+            exec()
+            return
+        }
+        val endLabel = Label()
+        methodVisitor.visitJumpInsn(getIfJumpOpcode(comparison), endLabel)
         inControlFlow++
         exec()
         inControlFlow--
         methodVisitor.visitLabel(endLabel)
     }
 
-    fun executeIfElse(comparison: Int, exec: () -> Unit, execElse: () -> Unit) {
+    fun executeIfElse(comparison: Int, ignoreCondition: Boolean = false, exec: () -> Unit, execElse: () -> Unit) {
+        if(ignoreCondition) {
+            exec()
+            return
+        }
         val elseLabel = Label()
         val exitLabel = Label()
-        when (comparison) {
-            Opcodes.IFNONNULL -> methodVisitor.visitJumpInsn(Opcodes.IFNULL, elseLabel)
-            Opcodes.IFNULL -> methodVisitor.visitJumpInsn(Opcodes.IFNONNULL, elseLabel)
-            Opcodes.IFNE -> methodVisitor.visitJumpInsn(Opcodes.IFNE, elseLabel)
-            Opcodes.IFEQ -> methodVisitor.visitJumpInsn(Opcodes.IFEQ, elseLabel)
-            else -> throw UnsupportedOperationException("Unknown comparison: $comparison")
-        }
+        methodVisitor.visitJumpInsn(getIfJumpOpcode(comparison), elseLabel)
         inControlFlow++
         exec()
         inControlFlow--
