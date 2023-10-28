@@ -181,6 +181,12 @@ object CodeGenerator {
                 }
             }
 
+            CommandType.EXECUTE_IF_ENTITY -> {
+                EntitySelectorCodeGenerator.generateIfEntityExists(cw, command["entities"], context) {
+                    generateCommandLike(command["command"], context, cw)
+                }
+            }
+
             else -> throw UnsupportedOperationException("Cannot compile command: ${command.type}: ${command.params}")
         }
     }

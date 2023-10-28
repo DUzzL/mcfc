@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler
 
 import com.mojang.brigadier.context.CommandContextBuilder
+import com.mojang.brigadier.context.ParsedCommandNode
 import dev.epicpix.minecraftfunctioncompiler.arguments.ScoreHolderArgument
 import dev.epicpix.minecraftfunctioncompiler.arguments.SelectorArgument
 import net.minecraft.commands.CommandFunction
@@ -25,7 +26,7 @@ object CommandParser {
 
     private fun parseCommand(cmdName: String, context: CommandContextBuilder<CommandSourceStack>, source: String): CommandLike {
         return when(cmdName) {
-            "execute" -> parseCommandExecute(context, context.nodes[1].range[source], source)
+            "execute" -> parseCommandExecute(context, context.nodes.subList(1, context.nodes.size), source)
             "kill" -> parseCommandKill(context, source)
             "scoreboard" -> parseCommandScoreboard(context, source)
             "tag" -> parseCommandTag(context, source)
@@ -33,13 +34,26 @@ object CommandParser {
         }
     }
 
-    private fun parseCommandExecute(context: CommandContextBuilder<CommandSourceStack>, type: String, source: String): CommandLike {
+    private fun parseCommandExecute(context: CommandContextBuilder<CommandSourceStack>, nodes: List<ParsedCommandNode<CommandSourceStack>>, source: String): CommandLike {
+        val type = nodes[0].range[source]
         return when(type) {
             "as" -> {
                 Command(CommandType.EXECUTE_AS, mapOf(
                     "targets" to parseArgumentSelector(context.arguments["targets"]!!.range[source]),
-                    "command" to parseCommandExecute(context.child, context.child.nodes[0].range[source], source)
+                    "command" to parseCommandExecute(context.child, context.child.nodes, source)
                 ), mutableListOf())
+            }
+            "if" -> {
+                val ifType = nodes[1].range[source]
+                when(ifType) {
+                    "entity" -> {
+                        Command(CommandType.EXECUTE_IF_ENTITY, mapOf(
+                            "entities" to parseArgumentSelector(context.arguments["entities"]!!.range[source]),
+                            "command" to parseCommandExecute(context.child, context.child.nodes, source)
+                        ), mutableListOf())
+                    }
+                    else -> throw UnsupportedOperationException("Invalid execute command if comparison type: $ifType")
+                }
             }
             "run" -> parseCommand(context.child.nodes[0].range[source], context.child, source)
             else -> throw UnsupportedOperationException("Invalid execute command type: $type")

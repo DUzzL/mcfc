@@ -6,6 +6,37 @@ import java.lang.UnsupportedOperationException
 
 object EntitySelectorCodeGenerator {
 
+    fun generateIfEntityExists(cw: CodeWriter, selector: SelectorArgument, context: GeneratorCommandContext, run: () -> Unit) {
+        if(selector.entityUuid != null) {
+            cw.visitForEachLevel { controlFlowRun, getter ->
+                getter()
+                cw.writeUUID(selector.entityUuid)
+                cw.callMethod("net/minecraft/server/level/ServerLevel", "getEntity", "(Ljava/util/UUID;)Lnet/minecraft/world/entity/Entity;")
+                cw.executeIf(Opcodes.IFNONNULL) {
+                    run()
+                    controlFlowRun.brk()
+                }
+            }
+            return
+        }
+
+        if(selector.playerName != null) {
+            cw.visitGetPlayerList()
+            cw.writeString(selector.playerName)
+            cw.callMethod("net/minecraft/server/players/PlayerList", "getPlayerByName", "(Ljava/lang/String;)Lnet/minecraft/server/level/ServerPlayer;")
+            cw.executeIf(Opcodes.IFNONNULL, run)
+            return
+        }
+
+        if(selector.self) {
+            context.getEntity(cw)
+            cw.executeIf(Opcodes.IFNONNULL, run)
+            return
+        }
+
+        throw UnsupportedOperationException("Unsupported selector: $selector")
+    }
+
     fun generateForEachEntity(cw: CodeWriter, selector: SelectorArgument, context: GeneratorCommandContext, allowEntities: Boolean, allowMultiple: Boolean, run: (getter: () -> Unit) -> Unit) {
         if(selector.entityUuid != null) {
             if(!allowEntities) throw UnsupportedOperationException("Invalid selector")
@@ -53,7 +84,7 @@ object EntitySelectorCodeGenerator {
             return
         }
 
-        throw UnsupportedOperationException("Unsupported selector")
+        throw UnsupportedOperationException("Unsupported selector: $selector")
     }
 
     fun checkEntityPredicate(cw: CodeWriter, stringSelector: String) {
