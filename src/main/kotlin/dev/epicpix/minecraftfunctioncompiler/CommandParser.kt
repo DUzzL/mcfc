@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler
 
+import com.mojang.brigadier.StringReader
 import com.mojang.brigadier.context.CommandContextBuilder
 import com.mojang.brigadier.context.ParsedCommandNode
 import net.minecraft.advancements.critereon.MinMaxBounds
@@ -77,6 +78,10 @@ object CommandParser {
                 }
             }
             "run" -> parseCommand(context.child.nodes[0].range[source], context.child, source)
+            "unless" -> {
+                val ifType = nodes[1].range[source]
+                throw UnsupportedOperationException("Invalid execute command unless comparison type: $ifType")
+            }
             else -> throw UnsupportedOperationException("Invalid execute command type: $type")
         }
     }
@@ -189,10 +194,60 @@ object CommandParser {
             }
             return SelectorArgument(playerName = selector)
         }
-        if(selector == "@s") {
-            return SelectorArgument(self = true)
+
+        val reader = StringReader(selector)
+        reader.skip()
+        val selectorType = reader.read()
+
+        val isSelf = selectorType == 's'
+        val data = SelectorGeneratorData()
+        if(selectorType == 'a') data.entityType = "minecraft:player"
+
+        if(selectorType == 'r' || selectorType == 'p') throw UnsupportedOperationException("Unsupported selector: $selector")
+
+        reader.skipWhitespace()
+        if(reader.canRead() && reader.read() == '[') {
+            while(reader.canRead()) {
+                val key = reader.readString()
+                reader.skipWhitespace()
+                if(!reader.canRead() || reader.read() != '=') throw UnsupportedOperationException("Cannot parse selector, missing '=': $selector")
+                reader.skipWhitespace()
+                parseArgumentSelectorOption(reader, key, selector, data)
+                reader.skipWhitespace()
+                if(!reader.canRead()) throw UnsupportedOperationException("Cannot parse selector, ran out of data: $selector")
+                val next = reader.read()
+                if(next == ',') continue
+                if(next == ']') break
+                throw UnsupportedOperationException("Cannot parse selector, ran out of data: $selector")
+            }
         }
-        throw UnsupportedOperationException("Cannot parse selector: $selector")
+
+        return SelectorArgument(self = isSelf, entityType = data.entityType, tags = data.tags.toList(), hasTags = data.hasTags, limit = data.limit)
+    }
+
+    private fun parseArgumentSelectorOption(reader: StringReader, key: String, selector: String, data: SelectorGeneratorData) {
+        when(key) {
+            "tag" -> {
+                val negated = if(reader.peek() == '!') { reader.read(); true } else false
+                val tag = reader.readUnquotedString()
+                if(tag == "") {
+                    data.hasTags = negated
+                }else {
+                    data.tags.add(NegatableData(tag, negated))
+                }
+            }
+            "limit" -> {
+                data.limit = reader.readInt()
+            }
+            else -> throw UnsupportedOperationException("Cannot parse selector key: $key in $selector")
+        }
     }
 
 }
+
+data class SelectorGeneratorData(
+    var entityType: String? = null,
+    val tags: MutableList<NegatableData<String>> = mutableListOf(),
+    var hasTags: Boolean? = null,
+    var limit: Int? = null,
+)

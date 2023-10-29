@@ -22,4 +22,7 @@ data class SelectorArgument(
     val playerName: String? = null,
     val self: Boolean = false,
     val limit: Int? = null,
+    val entityType: String? = null,
+    val hasTags: Boolean? = null,
+    val tags: List<NegatableData<String>> = listOf(),
 )

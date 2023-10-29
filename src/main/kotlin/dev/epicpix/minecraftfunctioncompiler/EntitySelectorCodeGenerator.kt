@@ -86,7 +86,7 @@ object EntitySelectorCodeGenerator {
         throw UnsupportedOperationException("Unsupported selector: $selector")
     }
 
-    fun checkEntityPredicate(cw: CodeWriter, stringSelector: String) {
+    fun checkEntityPredicate(cw: CodeWriter, context: GeneratorCommandContext) {
 
     }
 }

@@ -6,7 +6,7 @@ data class Command(val type: CommandType, val params: Map<String, Any?>, val sid
         return params[param] as T
     }
 
-    fun withRequirements(vararg requirements: CommandRequirement): CommandBlock {
+    fun withRequirements(requirements: List<CommandRequirement>): CommandBlock {
         return CommandBlock(
             listOf(this),
             requirements.distinct()
@@ -34,7 +34,7 @@ data class Command(val type: CommandType, val params: Map<String, Any?>, val sid
             }
             else -> {}
         }
-        return CommandBlock(listOf(this), requirements)
+        return withRequirements(requirements)
     }
 
 }
