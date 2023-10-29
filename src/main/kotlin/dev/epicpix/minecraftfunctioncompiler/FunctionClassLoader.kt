@@ -39,7 +39,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                 LOGGER.error("Unable to parse function $key", e)
             }
         }
-        LOGGER.info("Parsed ${definedFunctions.size} functions in ${System.currentTimeMillis()-startParse}ms")
+        LOGGER.info("Parsed ${definedFunctions.size}/${functions.size} functions in ${System.currentTimeMillis()-startParse}ms")
 
         val startLoader = System.currentTimeMillis()
         try {
@@ -91,6 +91,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                     originalEntity = true,
                     preconditions = listOf(),
                 )
+                codeWriter.visitGetScoreboard(load = false)
                 codeWriter.visitGetPlayerList(load = false)
                 commands.forEach {
                     generateCommandLike(it, context, codeWriter, definedFunctions)
