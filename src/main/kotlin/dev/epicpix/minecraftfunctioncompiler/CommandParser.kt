@@ -17,7 +17,9 @@ object CommandParser {
             val context = entry.parse.context
             val cmdName = context.nodes[0].node.name
 
-            commands.add(parseCommand(cmdName, context, entry.parse.reader.string))
+            val parsed = parseCommand(cmdName, context, entry.parse.reader.string)
+            if(parsed is Command) commands.add(parsed.toCommandBlock())
+            else commands.add(parsed)
         }
         return commands
     }
@@ -59,9 +61,7 @@ object CommandParser {
                                 "targetObjective" to context.arguments["targetObjective"]!!.result as String,
                                 "range" to IntRangeArgument(range.min.orElse(null), range.max.orElse(null)),
                                 "command" to parseCommandExecute(context.child, context.child.nodes, source)
-                            ), mutableListOf()).withRequirements(
-                                CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to context.arguments["targetObjective"]!!.result as String)),
-                            )
+                            ), mutableListOf())
                         }else {
                             Command(CommandType.EXECUTE_IF_SCORE_COMPARE, mapOf(
                                 "target" to parseArgumentScoreHolder(context.arguments["target"]!!.range[source]),
@@ -70,10 +70,7 @@ object CommandParser {
                                 "source" to parseArgumentScoreHolder(context.arguments["source"]!!.range[source]),
                                 "sourceObjective" to context.arguments["sourceObjective"]!!.result as String,
                                 "command" to parseCommandExecute(context.child, context.child.nodes, source)
-                            ), mutableListOf()).withRequirements(
-                                CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to context.arguments["targetObjective"]!!.result as String)),
-                                CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to context.arguments["sourceObjective"]!!.result as String)),
-                            )
+                            ), mutableListOf())
                         }
                     }
                     else -> throw UnsupportedOperationException("Invalid execute command if comparison type: $ifType")
@@ -105,10 +102,7 @@ object CommandParser {
                             "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),
                             "objective" to objective,
                             "score" to context.arguments["score"]!!.result as Int
-                        ), mutableListOf()).withRequirements(
-                            CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to objective)),
-                            CommandRequirement(CommandRequirementType.OBJECTIVE_NOT_LOCKED, mapOf("objective" to objective)),
-                        )
+                        ), mutableListOf())
                     }
                     "operation" -> {
                         val targetObjective = context.arguments["targetObjective"]!!.result as String
@@ -119,11 +113,7 @@ object CommandParser {
                             "operation" to context.arguments["operation"]!!.range[source] as String,
                             "source" to parseArgumentScoreHolder(context.arguments["source"]!!.range[source]),
                             "sourceObjective" to sourceObjective,
-                        ), mutableListOf()).withRequirements(
-                            CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to targetObjective)),
-                            CommandRequirement(CommandRequirementType.OBJECTIVE_NOT_LOCKED, mapOf("objective" to targetObjective)),
-                            CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to sourceObjective)),
-                        )
+                        ), mutableListOf())
                     }
                     "remove" -> {
                         val objective = context.arguments["objective"]!!.result as String
@@ -131,10 +121,7 @@ object CommandParser {
                             "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),
                             "objective" to objective,
                             "score" to context.arguments["score"]!!.result as Int
-                        ), mutableListOf()).withRequirements(
-                            CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to objective)),
-                            CommandRequirement(CommandRequirementType.OBJECTIVE_NOT_LOCKED, mapOf("objective" to objective)),
-                        )
+                        ), mutableListOf())
                     }
                     "reset" -> {
                         if(context.arguments["objective"] != null) {
@@ -142,10 +129,7 @@ object CommandParser {
                             Command(CommandType.SCOREBOARD_PLAYERS_RESET, mapOf(
                                 "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),
                                 "objective" to objective
-                            ), mutableListOf()).withRequirements(
-                                CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to objective)),
-                                CommandRequirement(CommandRequirementType.OBJECTIVE_NOT_LOCKED, mapOf("objective" to objective)),
-                            )
+                            ), mutableListOf())
                         }else {
                             Command(CommandType.SCOREBOARD_PLAYERS_RESET, mapOf(
                                 "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source])
@@ -158,10 +142,7 @@ object CommandParser {
                             "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),
                             "objective" to objective,
                             "score" to context.arguments["score"]!!.result as Int
-                        ), mutableListOf()).withRequirements(
-                            CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to objective)),
-                            CommandRequirement(CommandRequirementType.OBJECTIVE_NOT_LOCKED, mapOf("objective" to objective)),
-                        )
+                        ), mutableListOf())
                     }
                     else -> throw UnsupportedOperationException("Unsupported scoreboard players type arguments: $opType")
                 }

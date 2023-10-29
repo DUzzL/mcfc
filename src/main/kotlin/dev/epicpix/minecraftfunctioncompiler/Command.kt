@@ -1,9 +1,9 @@
 package dev.epicpix.minecraftfunctioncompiler
 
-data class Command(val type: CommandType, val params: Map<String, Any?>?, val sideEffects: MutableList<SideEffect>) : CommandLike {
+data class Command(val type: CommandType, val params: Map<String, Any?>, val sideEffects: MutableList<SideEffect>) : CommandLike {
 
     operator fun <T> get(param: String): T {
-        return params?.get(param) as T
+        return params[param] as T
     }
 
     fun withRequirements(vararg requirements: CommandRequirement): CommandBlock {
@@ -11,6 +11,30 @@ data class Command(val type: CommandType, val params: Map<String, Any?>?, val si
             listOf(this),
             requirements.distinct()
         )
+    }
+
+    fun toCommandBlock(): CommandBlock {
+        val requirements: MutableList<CommandRequirement> = mutableListOf()
+        when(type) {
+            CommandType.EXECUTE_IF_SCORE_RANGE -> {
+                requirements.add(CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to get("targetObjective"))))
+            }
+            CommandType.EXECUTE_IF_SCORE_COMPARE -> {
+                requirements.add(CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to get("targetObjective"))))
+                requirements.add(CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to get("sourceObjective"))))
+            }
+            CommandType.SCOREBOARD_PLAYERS_ADD, CommandType.SCOREBOARD_PLAYERS_REMOVE, CommandType.SCOREBOARD_PLAYERS_RESET, CommandType.SCOREBOARD_PLAYERS_SET -> {
+                requirements.add(CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to get("objective"))))
+                requirements.add(CommandRequirement(CommandRequirementType.OBJECTIVE_NOT_LOCKED, mapOf("objective" to get("objective"))))
+            }
+            CommandType.SCOREBOARD_PLAYERS_OPERATION -> {
+                requirements.add(CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to get("targetObjective"))))
+                requirements.add(CommandRequirement(CommandRequirementType.OBJECTIVE_NOT_LOCKED, mapOf("objective" to get("targetObjective"))))
+                requirements.add(CommandRequirement(CommandRequirementType.OBJECTIVE_EXISTS, mapOf("objective" to get("sourceObjective"))))
+            }
+            else -> {}
+        }
+        return CommandBlock(listOf(this), requirements)
     }
 
 }
