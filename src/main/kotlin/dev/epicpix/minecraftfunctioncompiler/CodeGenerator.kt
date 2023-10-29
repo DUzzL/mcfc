@@ -168,6 +168,21 @@ object CodeGenerator {
                                                 cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
                                             }
                                         }
+                                        "%=" -> {
+                                            source()
+                                            cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                            val uidLocal = cw.generateUniqueLocal("\$Score")
+                                            cw.storeLocal(uidLocal, "I") {
+                                                loadLocal(uidLocal)
+                                                cw.methodVisitor.visitJumpInsn(Opcodes.IFEQ, skip)
+                                                cw.loadLocal(targetLocal)
+                                                cw.loadLocal(targetLocal)
+                                                cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                                loadLocal(uidLocal)
+                                                cw.callFunction("java/lang/Math", "floorMod", "(II)I")
+                                                cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                                            }
+                                        }
                                         else -> throw UnsupportedOperationException("Unknown operation operator: ${command.get<String>("operation")}")
                                     }
                                 }
