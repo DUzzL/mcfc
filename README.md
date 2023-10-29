@@ -25,7 +25,7 @@ This is the list of commands supported currently as of `0.1.0-alpha.2`:
 - `function` (without ability to provide arguments)
 - `kill`
 - `scoreboard players add`
-- `scoreboard players operation` - `=`, `+=`, `-=`, `*=` (other operators coming soon)
+- `scoreboard players operation` - `=`, `+=`, `-=`, `*=`, `/=` (other operators coming soon)
 - `scoreboard players remove`
 - `scoreboard players reset` (only with the objective specified)
 - `scoreboard players set`

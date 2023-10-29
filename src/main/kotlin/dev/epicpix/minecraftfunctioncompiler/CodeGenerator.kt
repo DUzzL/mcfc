@@ -84,7 +84,7 @@ object CodeGenerator {
             }
 
             CommandType.SCOREBOARD_PLAYERS_RESET -> {
-                if(command.params?.get("objective") != null) {
+                if(command.params["objective"] != null) {
                     runScoreboardOperation(command["targets"], command["objective"], context, cw) {
                         cw.callMethod("net/minecraft/world/scores/Scoreboard", "resetPlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)V")
                     }
@@ -104,6 +104,7 @@ object CodeGenerator {
             CommandType.SCOREBOARD_PLAYERS_OPERATION -> {
                 context.runWithObjective(cw, command["sourceObjective"]) { sourceObjective, context ->
                     context.runWithObjective(cw, command["targetObjective"]) { targetObjective, context ->
+                        val skip = Label()
                         visitForEachScoreHolder(cw, context, command["targets"]) { targetGetter ->
                             visitForEachScoreHolder(cw, context, command["source"]) { sourceGetter ->
                                 fun source() {
@@ -112,50 +113,67 @@ object CodeGenerator {
                                     cw.loadLocal(sourceObjective)
                                     cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
                                 }
-                                fun target() {
-                                    cw.visitGetScoreboard()
-                                    targetGetter()
-                                    cw.loadLocal(targetObjective)
-                                    cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
-                                }
-                                when(command.get<String>("operation")) {
-                                    "=" -> {
-                                        target()
-                                        source()
-                                        cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                                        cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                                cw.visitGetScoreboard()
+                                targetGetter()
+                                cw.loadLocal(targetObjective)
+                                cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                                val targetLocal = cw.generateUniqueLocal("\$ScoreTarget")
+                                cw.storeLocal(targetLocal, "Lnet/minecraft/world/scores/Score;") {
+                                    when(command.get<String>("operation")) {
+                                        "=" -> {
+                                            cw.loadLocal(targetLocal)
+                                            source()
+                                            cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                            cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                                        }
+                                        "+=" -> {
+                                            cw.loadLocal(targetLocal)
+                                            cw.loadLocal(targetLocal)
+                                            cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                            source()
+                                            cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                            cw.writeInstruction(Opcodes.IADD)
+                                            cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                                        }
+                                        "-=" -> {
+                                            cw.loadLocal(targetLocal)
+                                            cw.loadLocal(targetLocal)
+                                            cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                            source()
+                                            cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                            cw.writeInstruction(Opcodes.ISUB)
+                                            cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                                        }
+                                        "*=" -> {
+                                            cw.loadLocal(targetLocal)
+                                            cw.loadLocal(targetLocal)
+                                            cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                            source()
+                                            cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                            cw.writeInstruction(Opcodes.IMUL)
+                                            cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                                        }
+                                        "/=" -> {
+                                            source()
+                                            cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                            val uidLocal = cw.generateUniqueLocal("\$Score")
+                                            cw.storeLocal(uidLocal, "I") {
+                                                loadLocal(uidLocal)
+                                                cw.methodVisitor.visitJumpInsn(Opcodes.IFEQ, skip)
+                                                cw.loadLocal(targetLocal)
+                                                cw.loadLocal(targetLocal)
+                                                cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                                loadLocal(uidLocal)
+                                                cw.callFunction("java/lang/Math", "floorDiv", "(II)I")
+                                                cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                                            }
+                                        }
+                                        else -> throw UnsupportedOperationException("Unknown operation operator: ${command.get<String>("operation")}")
                                     }
-                                    "+=" -> {
-                                        target()
-                                        cw.writeInstruction(Opcodes.DUP)
-                                        cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                                        source()
-                                        cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                                        cw.writeInstruction(Opcodes.IADD)
-                                        cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
-                                    }
-                                    "-=" -> {
-                                        target()
-                                        cw.writeInstruction(Opcodes.DUP)
-                                        cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                                        source()
-                                        cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                                        cw.writeInstruction(Opcodes.ISUB)
-                                        cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
-                                    }
-                                    "*=" -> {
-                                        target()
-                                        cw.writeInstruction(Opcodes.DUP)
-                                        cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                                        source()
-                                        cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                                        cw.writeInstruction(Opcodes.IMUL)
-                                        cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
-                                    }
-                                    else -> throw UnsupportedOperationException("Unknown operation operator: ${command.get<String>("operation")}")
                                 }
                             }
                         }
+                        cw.methodVisitor.visitLabel(skip)
                     }
                 }
             }
