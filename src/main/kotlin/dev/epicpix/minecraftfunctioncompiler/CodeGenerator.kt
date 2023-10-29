@@ -314,6 +314,7 @@ object CodeGenerator {
                         cw.getObjectField("net/minecraft/server/ServerFunctionLibrary", "functions", "Ljava/util/Map;")
                         cw.writeResourceLocation(func)
                         cw.callMethod("java/util/Map", "get", "(Ljava/lang/Object;)Ljava/lang/Object;")
+                        cw.castType("net/minecraft/commands/CommandFunction")
                         cw.visitGetCommandSourceStack()
                         if(!context.originalEntity) {
                             context.getEntity(cw)
