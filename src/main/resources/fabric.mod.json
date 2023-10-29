@@ -3,6 +3,7 @@
   "id": "minecraftfunctioncompiler",
   "version": "${version}",
   "name": "Function Compiler",
+  "icon": "assets/minecraftfunctioncompiler/icon.png",
   "description": "This mod allows the server to automatically compile most of the functions to Java bytecode",
   "authors": [ "EpicPix" ],
   "license": "LGPL-3.0-only",
