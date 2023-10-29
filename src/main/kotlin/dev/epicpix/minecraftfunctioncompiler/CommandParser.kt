@@ -6,11 +6,13 @@ import com.mojang.brigadier.context.ParsedCommandNode
 import net.minecraft.advancements.critereon.MinMaxBounds
 import net.minecraft.commands.CommandFunction
 import net.minecraft.commands.CommandSourceStack
+import net.minecraft.resources.ResourceLocation
+import net.minecraft.server.MinecraftServer
 import java.util.*
 
 object CommandParser {
 
-    fun parseFunctionCommands(func: CommandFunction): List<CommandLike> {
+    fun parseFunctionCommands(func: CommandFunction, server: MinecraftServer): List<CommandLike> {
         val commands = mutableListOf<CommandLike>()
         for (entry in func.entries) {
             if (entry !is CommandFunction.CommandEntry) continue
@@ -18,16 +20,17 @@ object CommandParser {
             val context = entry.parse.context
             val cmdName = context.nodes[0].node.name
 
-            val parsed = parseCommand(cmdName, context, entry.parse.reader.string)
+            val parsed = parseCommand(cmdName, context, entry.parse.reader.string, server)
             if(parsed is Command) commands.add(parsed.toCommandBlock())
             else commands.add(parsed)
         }
         return commands
     }
 
-    private fun parseCommand(cmdName: String, context: CommandContextBuilder<CommandSourceStack>, source: String): CommandLike {
+    private fun parseCommand(cmdName: String, context: CommandContextBuilder<CommandSourceStack>, source: String, server: MinecraftServer): CommandLike {
         return when(cmdName) {
-            "execute" -> parseCommandExecute(context, context.nodes.subList(1, context.nodes.size), source)
+            "execute" -> parseCommandExecute(context, context.nodes.subList(1, context.nodes.size), source, server)
+            "function" -> parseCommandFunction(context, source, server)
             "kill" -> parseCommandKill(context, source)
             "scoreboard" -> parseCommandScoreboard(context, source)
             "tag" -> parseCommandTag(context, source)
@@ -35,13 +38,13 @@ object CommandParser {
         }
     }
 
-    private fun parseCommandExecute(context: CommandContextBuilder<CommandSourceStack>, nodes: List<ParsedCommandNode<CommandSourceStack>>, source: String): CommandLike {
+    private fun parseCommandExecute(context: CommandContextBuilder<CommandSourceStack>, nodes: List<ParsedCommandNode<CommandSourceStack>>, source: String, server: MinecraftServer): CommandLike {
         val type = nodes[0].range[source]
         return when(type) {
             "as" -> {
                 Command(CommandType.EXECUTE_AS, mapOf(
                     "targets" to parseArgumentSelector(context.arguments["targets"]!!.range[source]),
-                    "command" to parseCommandExecute(context.child, context.child.nodes, source)
+                    "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
                 ), mutableListOf())
             }
             "if" -> {
@@ -50,7 +53,7 @@ object CommandParser {
                     "entity" -> {
                         Command(CommandType.EXECUTE_IF_ENTITY, mapOf(
                             "entities" to parseArgumentSelector(context.arguments["entities"]!!.range[source]),
-                            "command" to parseCommandExecute(context.child, context.child.nodes, source)
+                            "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
                         ), mutableListOf())
                     }
                     "score" -> {
@@ -61,7 +64,7 @@ object CommandParser {
                                 "target" to parseArgumentScoreHolder(context.arguments["target"]!!.range[source]),
                                 "targetObjective" to context.arguments["targetObjective"]!!.result as String,
                                 "range" to IntRangeArgument(range.min.orElse(null), range.max.orElse(null)),
-                                "command" to parseCommandExecute(context.child, context.child.nodes, source)
+                                "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
                             ), mutableListOf())
                         }else {
                             Command(CommandType.EXECUTE_IF_SCORE_COMPARE, mapOf(
@@ -70,19 +73,31 @@ object CommandParser {
                                 "comparison" to comparison,
                                 "source" to parseArgumentScoreHolder(context.arguments["source"]!!.range[source]),
                                 "sourceObjective" to context.arguments["sourceObjective"]!!.result as String,
-                                "command" to parseCommandExecute(context.child, context.child.nodes, source)
+                                "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
                             ), mutableListOf())
                         }
                     }
                     else -> throw UnsupportedOperationException("Invalid execute command if comparison type: $ifType")
                 }
             }
-            "run" -> parseCommand(context.child.nodes[0].range[source], context.child, source)
+            "run" -> parseCommand(context.child.nodes[0].range[source], context.child, source, server)
             "unless" -> {
                 val ifType = nodes[1].range[source]
                 throw UnsupportedOperationException("Invalid execute command unless comparison type: $ifType")
             }
             else -> throw UnsupportedOperationException("Invalid execute command type: $type")
+        }
+    }
+
+    private fun parseCommandFunction(context: CommandContextBuilder<CommandSourceStack>, source: String, server: MinecraftServer): CommandLike {
+        if(context.nodes.size > 2) {
+            throw UnsupportedOperationException("Too many function arguments, not supported")
+        }
+        val name = context.arguments["name"]!!.range[source]
+        return if(name.startsWith("#")) {
+            Command(CommandType.FUNCTION, mapOf("commands" to server.functions.getTag(ResourceLocation(name.substring(1))).toList()), mutableListOf())
+        }else {
+            Command(CommandType.FUNCTION, mapOf("commands" to listOf(ResourceLocation(name))), mutableListOf())
         }
     }
 

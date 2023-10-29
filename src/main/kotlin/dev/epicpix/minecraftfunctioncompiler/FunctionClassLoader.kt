@@ -6,6 +6,7 @@ import net.minecraft.commands.CommandFunction
 import net.minecraft.commands.CommandFunction.CommandEntry
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.resources.ResourceLocation
+import net.minecraft.server.MinecraftServer
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import org.slf4j.LoggerFactory
@@ -15,7 +16,7 @@ import java.lang.invoke.MethodType
 import java.nio.file.Files
 import kotlin.UnsupportedOperationException
 
-class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<ResourceLocation, CommandFunction>) : ClassLoader(parent) {
+class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<ResourceLocation, CommandFunction>, private val minecraftServer: MinecraftServer) : ClassLoader(parent) {
     private val handles: MutableMap<ResourceLocation, MethodHandle> = HashMap()
     fun loadFunctions() {
         handles.clear()
@@ -31,7 +32,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                         continue@funcLoop
                     }
                 }
-                definedFunctions[key] = mergeCommandRequirements(CommandParser.parseFunctionCommands(value))
+                definedFunctions[key] = mergeCommandRequirements(CommandParser.parseFunctionCommands(value, minecraftServer))
             } catch (e: UnsupportedOperationException) {
                 LOGGER.warn("Unable to parse function $key / ${e.message}")
             } catch (e: Throwable) {
@@ -88,11 +89,12 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
             storeLocal(entityUid, "Lnet/minecraft/world/entity/Entity;") {
                 val context = GeneratorCommandContext(
                     entityLocal = entityUid,
+                    originalEntity = true,
                     preconditions = listOf(),
                 )
                 codeWriter.visitGetPlayerList(load = false)
                 commands.forEach {
-                    generateCommandLike(it, context, codeWriter)
+                    generateCommandLike(it, context, codeWriter, definedFunctions)
                 }
             }
         }

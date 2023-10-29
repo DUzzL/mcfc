@@ -4,6 +4,7 @@ import org.objectweb.asm.Opcodes
 
 data class GeneratorCommandContext(
     val entityLocal: String?,
+    val originalEntity: Boolean,
     val preconditions: List<Precondition>,
 ) {
     fun getEntity(cw: CodeWriter) {

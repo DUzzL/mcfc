@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler
 
+import net.minecraft.resources.ResourceLocation
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
@@ -13,6 +14,7 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
     private val generatedLocals: MutableList<Local> = mutableListOf()
 
     private val uuids: MutableList<UUID> = mutableListOf()
+    private val resourceLocations: MutableList<ResourceLocation> = mutableListOf()
 
     private var inControlFlow: Int = 0
 
@@ -125,6 +127,21 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
         }else {
             getStaticField(className, "u${uuids.indexOf(value)}", "Ljava/util/UUID;")
         }
+    }
+
+    fun writeResourceLocation(value: ResourceLocation) {
+        if(!resourceLocations.contains(value)) {
+            resourceLocations.add(value)
+        }
+        if(generateDebug) {
+            getStaticField(className, "resourceLocation$$value", "Lnet/minecraft/resources/ResourceLocation;")
+        }else {
+            getStaticField(className, "r${resourceLocations.indexOf(value)}", "Lnet/minecraft/resources/ResourceLocation;")
+        }
+    }
+
+    fun writeNull() {
+        methodVisitor.visitInsn(Opcodes.ACONST_NULL)
     }
 
     fun newObject(owner: String, descriptor: String, argumentProvider: CodeWriter.() -> Unit) {
@@ -307,6 +324,17 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
                 methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className, "u$index", "Ljava/util/UUID;")
             }
         }
+        resourceLocations.forEachIndexed { index, value ->
+            methodVisitor.visitTypeInsn(Opcodes.NEW, "net/minecraft/resources/ResourceLocation")
+            methodVisitor.visitInsn(Opcodes.DUP)
+            methodVisitor.visitLdcInsn(value.toString())
+            methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, "net/minecraft/resources/ResourceLocation", "<init>", "(Ljava/lang/String;)V", false)
+            if(generateDebug) {
+                methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className, "resourceLocation$$value", "Lnet/minecraft/resources/ResourceLocation;")
+            }else {
+                methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className, "r$index", "Lnet/minecraft/resources/ResourceLocation;")
+            }
+        }
         methodVisitor.visitInsn(Opcodes.RETURN)
     }
 
@@ -316,6 +344,13 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
                 classVisitor.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, "uuid$${uuid.toString().replace("-", "")}", "Ljava/util/UUID;", null, null)
             }else {
                 classVisitor.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, "u$index", "Ljava/util/UUID;", null, null)
+            }
+        }
+        resourceLocations.forEachIndexed { index, value ->
+            if(generateDebug) {
+                classVisitor.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, "resourceLocation$$value", "Lnet/minecraft/resources/ResourceLocation;", null, null)
+            }else {
+                classVisitor.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, "r$index", "Lnet/minecraft/resources/ResourceLocation;", null, null)
             }
         }
     }

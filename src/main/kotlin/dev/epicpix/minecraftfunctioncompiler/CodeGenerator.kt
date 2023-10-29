@@ -1,19 +1,20 @@
 package dev.epicpix.minecraftfunctioncompiler
 
+import net.minecraft.resources.ResourceLocation
 import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
 
 object CodeGenerator {
 
-    fun generateCommandLike(commandLike: CommandLike, context: GeneratorCommandContext, cw: CodeWriter) {
+    fun generateCommandLike(commandLike: CommandLike, context: GeneratorCommandContext, cw: CodeWriter, definedFunctions: Map<ResourceLocation, List<CommandLike>>) {
         if(commandLike is Command) {
-            generateCommand(commandLike, context, cw)
+            generateCommand(commandLike, context, cw, definedFunctions)
         }else if(commandLike is CommandBlock) {
-            generateCommandBlock(commandLike, context, cw)
+            generateCommandBlock(commandLike, context, cw, definedFunctions)
         }
     }
 
-    fun generateCommandBlock(block: CommandBlock, context: GeneratorCommandContext, cw: CodeWriter) {
+    fun generateCommandBlock(block: CommandBlock, context: GeneratorCommandContext, cw: CodeWriter, definedFunctions: Map<ResourceLocation, List<CommandLike>>) {
         val skipLabel = Label()
         var index = 0
         fun fullfilRequirements(context: GeneratorCommandContext) {
@@ -21,7 +22,7 @@ object CodeGenerator {
                 fulfillRequirement(block.requirements[index++], context, skipLabel, cw) { fullfilRequirements(it) }
             }else {
                 for(commandLike in block.commands) {
-                    generateCommandLike(commandLike, context, cw)
+                    generateCommandLike(commandLike, context, cw, definedFunctions)
                 }
             }
         }
@@ -51,7 +52,7 @@ object CodeGenerator {
         }
     }
 
-    fun generateCommand(command: Command, context: GeneratorCommandContext, cw: CodeWriter) {
+    fun generateCommand(command: Command, context: GeneratorCommandContext, cw: CodeWriter, definedFunctions: Map<ResourceLocation, List<CommandLike>>) {
         when(command.type) {
             CommandType.KILL -> {
                 EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], context) { getter ->
@@ -179,24 +180,22 @@ object CodeGenerator {
 
             CommandType.EXECUTE_AS -> {
                 EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], context) { getter ->
-
                     val entityUid = cw.generateUniqueLocal("CurrentEntity")
-                    val newContext = context.copy(entityLocal = entityUid)
+                    val newContext = context.copy(entityLocal = entityUid, originalEntity = context.originalEntity && command.get<SelectorArgument>("targets").self)
                     getter()
                     cw.storeLocal(entityUid, "Lnet/minecraft/world/entity/Entity;") {
-                        generateCommandLike(command["command"], newContext, cw)
+                        generateCommandLike(command["command"], newContext, cw, definedFunctions)
                     }
                 }
             }
 
             CommandType.EXECUTE_IF_ENTITY -> {
                 EntitySelectorCodeGenerator.generateIfEntityExists(cw, command["entities"], context) {
-                    generateCommandLike(command["command"], context, cw)
+                    generateCommandLike(command["command"], context, cw, definedFunctions)
                 }
             }
 
             CommandType.EXECUTE_IF_SCORE_RANGE -> {
-
                 context.runWithObjective(cw, command["targetObjective"]) { targetObjective, context ->
                     visitGetSingleScoreHolder(cw, context, command["target"]) { getter ->
                         cw.visitGetScoreboard()
@@ -211,21 +210,21 @@ object CodeGenerator {
                                 callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
                                 writeInt(range.minimum)
                                 executeIf(Opcodes.IF_ICMPGE) {
-                                    generateCommandLike(command["command"], context, cw)
+                                    generateCommandLike(command["command"], context, cw, definedFunctions)
                                 }
                             } else if (range.maximum != null && range.minimum == null) {
                                 loadLocal(uidLocal)
                                 callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
                                 writeInt(range.maximum)
                                 executeIf(Opcodes.IF_ICMPLE) {
-                                    generateCommandLike(command["command"], context, cw)
+                                    generateCommandLike(command["command"], context, cw, definedFunctions)
                                 }
                             } else if (range.minimum != null && range.minimum == range.maximum) {
                                 loadLocal(uidLocal)
                                 callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
                                 writeInt(range.minimum)
                                 executeIf(Opcodes.IF_ICMPEQ) {
-                                    generateCommandLike(command["command"], context, cw)
+                                    generateCommandLike(command["command"], context, cw, definedFunctions)
                                 }
                             } else if (range.minimum != null && range.maximum != null) {
                                 loadLocal(uidLocal)
@@ -236,7 +235,7 @@ object CodeGenerator {
                                     callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
                                     writeInt(range.maximum)
                                     executeIf(Opcodes.IF_ICMPLE) {
-                                        generateCommandLike(command["command"], context, cw)
+                                        generateCommandLike(command["command"], context, cw, definedFunctions)
                                     }
                                 }
                             }
@@ -246,7 +245,6 @@ object CodeGenerator {
             }
 
             CommandType.EXECUTE_IF_SCORE_COMPARE -> {
-
                 context.runWithObjective(cw, command["targetObjective"]) { targetObjective, context ->
                     context.runWithObjective(cw, command["sourceObjective"]) { sourceObjective, context ->
                         visitGetSingleScoreHolder(cw, context, command["target"]) { getterTarget ->
@@ -267,33 +265,64 @@ object CodeGenerator {
                                 when(operator) {
                                     "<" -> {
                                         cw.executeIf(Opcodes.IF_ICMPLT) {
-                                            generateCommandLike(command["command"], context, cw)
+                                            generateCommandLike(command["command"], context, cw, definedFunctions)
                                         }
                                     }
                                     "<=" -> {
                                         cw.executeIf(Opcodes.IF_ICMPLE) {
-                                            generateCommandLike(command["command"], context, cw)
+                                            generateCommandLike(command["command"], context, cw, definedFunctions)
                                         }
                                     }
                                     "=" -> {
                                         cw.executeIf(Opcodes.IF_ICMPEQ) {
-                                            generateCommandLike(command["command"], context, cw)
+                                            generateCommandLike(command["command"], context, cw, definedFunctions)
                                         }
                                     }
                                     ">" -> {
                                         cw.executeIf(Opcodes.IF_ICMPGT) {
-                                            generateCommandLike(command["command"], context, cw)
+                                            generateCommandLike(command["command"], context, cw, definedFunctions)
                                         }
                                     }
                                     ">=" -> {
                                         cw.executeIf(Opcodes.IF_ICMPGE) {
-                                            generateCommandLike(command["command"], context, cw)
+                                            generateCommandLike(command["command"], context, cw, definedFunctions)
                                         }
                                     }
                                     else -> throw UnsupportedOperationException("Unknown score comparison operator: $operator")
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            CommandType.FUNCTION -> {
+                for(func in command.get<List<ResourceLocation>>("commands")) {
+                    if(definedFunctions.containsKey(func)) {
+                        cw.visitGetCommandSourceStack()
+                        if(!context.originalEntity) {
+                            context.getEntity(cw)
+                            cw.callMethod("net/minecraft/commands/CommandSourceStack", "withEntity", "(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/commands/CommandSourceStack;")
+                        }
+                        cw.callFunction("function/${func.namespace}/${func.path}", "run", "(Lnet/minecraft/commands/CommandSourceStack;)I")
+                        cw.methodVisitor.visitInsn(Opcodes.POP)
+                    }else {
+                        cw.visitGetServer()
+                        cw.callMethod("net/minecraft/server/MinecraftServer", "getFunctions", "()Lnet/minecraft/server/ServerFunctionManager;")
+                        cw.methodVisitor.visitInsn(Opcodes.DUP)
+                        cw.getObjectField("net/minecraft/server/ServerFunctionManager", "library", "Lnet/minecraft/server/ServerFunctionLibrary;")
+                        cw.getObjectField("net/minecraft/server/ServerFunctionLibrary", "functions", "Ljava/util/Map;")
+                        cw.writeResourceLocation(func)
+                        cw.callMethod("java/util/Map", "get", "(Ljava/lang/Object;)Ljava/lang/Object;")
+                        cw.visitGetCommandSourceStack()
+                        if(!context.originalEntity) {
+                            context.getEntity(cw)
+                            cw.callMethod("net/minecraft/commands/CommandSourceStack", "withEntity", "(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/commands/CommandSourceStack;")
+                        }
+                        cw.writeNull()
+                        cw.writeNull()
+                        cw.callMethod("net/minecraft/server/ServerFunctionManager", "execute", "(Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager\$TraceCallbacks;Lnet/minecraft/nbt/CompoundTag;)I")
+                        cw.methodVisitor.visitInsn(Opcodes.POP)
                     }
                 }
             }
