@@ -79,7 +79,7 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
     fun writeLocalVariables() {
         if(generateDebug) {
             generatedLocals.forEach {
-                methodVisitor.visitLocalVariable(it.name.replace(".", "_"), it.descriptor, null, it.start, it.end, it.index)
+                methodVisitor.visitLocalVariable(it.name.replace(".", "$").replace(":", "$"), it.descriptor, null, it.start, it.end, it.index)
             }
         }
     }
@@ -134,7 +134,7 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
             resourceLocations.add(value)
         }
         if(generateDebug) {
-            getStaticField(className, "resourceLocation$$value", "Lnet/minecraft/resources/ResourceLocation;")
+            getStaticField(className, "resourceLocation$${value.toString().replace('/', '$').replace(':', '$')}", "Lnet/minecraft/resources/ResourceLocation;")
         }else {
             getStaticField(className, "r${resourceLocations.indexOf(value)}", "Lnet/minecraft/resources/ResourceLocation;")
         }
@@ -330,7 +330,7 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
             methodVisitor.visitLdcInsn(value.toString())
             methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, "net/minecraft/resources/ResourceLocation", "<init>", "(Ljava/lang/String;)V", false)
             if(generateDebug) {
-                methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className, "resourceLocation$$value", "Lnet/minecraft/resources/ResourceLocation;")
+                methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className, "resourceLocation$${value.toString().replace('/', '$').replace(':', '$')}", "Lnet/minecraft/resources/ResourceLocation;")
             }else {
                 methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className, "r$index", "Lnet/minecraft/resources/ResourceLocation;")
             }
@@ -348,7 +348,7 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
         }
         resourceLocations.forEachIndexed { index, value ->
             if(generateDebug) {
-                classVisitor.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, "resourceLocation$$value", "Lnet/minecraft/resources/ResourceLocation;", null, null)
+                classVisitor.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, "resourceLocation$${value.toString().replace('/', '$').replace(':', '$')}", "Lnet/minecraft/resources/ResourceLocation;", null, null)
             }else {
                 classVisitor.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, "r$index", "Lnet/minecraft/resources/ResourceLocation;", null, null)
             }
