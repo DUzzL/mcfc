@@ -77,7 +77,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         val mv = cw.visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "run",
                 "(Lnet/minecraft/commands/CommandSourceStack;)I", null, null)
         mv.visitCode()
-        val codeWriter = CodeWriter(mv, className, generateDebug = true)
+        val codeWriter = CodeWriter(mv, className)
 
         val commands = definedFunctions[funcId]!!
 
@@ -117,7 +117,10 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
 
         cw.visitEnd()
         val data = cw.toByteArray()
-        Files.write(FabricLoader.getInstance().gameDir.resolve("generated").resolve("${className.replace('/', '.')}.class"), data)
+        if(DEBUG) {
+            runCatching { Files.createDirectory(FabricLoader.getInstance().gameDir.resolve("generated")) }
+            Files.write(FabricLoader.getInstance().gameDir.resolve("generated").resolve("${className.replace('/', '.')}.class"), data)
+        }
         return defineClass(className.replace('/', '.'), data, 0, data.size)
     }
 

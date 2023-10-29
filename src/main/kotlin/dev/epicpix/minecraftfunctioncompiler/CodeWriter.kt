@@ -7,7 +7,7 @@ import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 import java.util.*
 
-class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val generateDebug: Boolean) {
+class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
 
     private val locals: MutableMap<String, Local> = mutableMapOf()
     private val availableLocals: MutableSet<Int> = mutableSetOf()
@@ -77,7 +77,7 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
     }
 
     fun writeLocalVariables() {
-        if(generateDebug) {
+        if(DEBUG) {
             generatedLocals.forEach {
                 methodVisitor.visitLocalVariable(it.name.replace(".", "$").replace(":", "$"), it.descriptor, null, it.start, it.end, it.index)
             }
@@ -122,7 +122,7 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
         if(!uuids.contains(value)) {
             uuids.add(value)
         }
-        if(generateDebug) {
+        if(DEBUG) {
             getStaticField(className, "uuid$${value.toString().replace("-", "")}", "Ljava/util/UUID;")
         }else {
             getStaticField(className, "u${uuids.indexOf(value)}", "Ljava/util/UUID;")
@@ -133,7 +133,7 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
         if(!resourceLocations.contains(value)) {
             resourceLocations.add(value)
         }
-        if(generateDebug) {
+        if(DEBUG) {
             getStaticField(className, "resourceLocation$${value.toString().replace('/', '$').replace(':', '$')}", "Lnet/minecraft/resources/ResourceLocation;")
         }else {
             getStaticField(className, "r${resourceLocations.indexOf(value)}", "Lnet/minecraft/resources/ResourceLocation;")
@@ -318,7 +318,7 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
             methodVisitor.visitLdcInsn(uuid.mostSignificantBits)
             methodVisitor.visitLdcInsn(uuid.leastSignificantBits)
             methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/util/UUID", "<init>", "(JJ)V", false)
-            if(generateDebug) {
+            if(DEBUG) {
                 methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className, "uuid$${uuid.toString().replace("-", "")}", "Ljava/util/UUID;")
             }else {
                 methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className, "u$index", "Ljava/util/UUID;")
@@ -329,7 +329,7 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
             methodVisitor.visitInsn(Opcodes.DUP)
             methodVisitor.visitLdcInsn(value.toString())
             methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, "net/minecraft/resources/ResourceLocation", "<init>", "(Ljava/lang/String;)V", false)
-            if(generateDebug) {
+            if(DEBUG) {
                 methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className, "resourceLocation$${value.toString().replace('/', '$').replace(':', '$')}", "Lnet/minecraft/resources/ResourceLocation;")
             }else {
                 methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className, "r$index", "Lnet/minecraft/resources/ResourceLocation;")
@@ -340,14 +340,14 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
 
     fun generateFields(classVisitor: ClassVisitor) {
         uuids.forEachIndexed { index, uuid ->
-            if(generateDebug) {
+            if(DEBUG) {
                 classVisitor.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, "uuid$${uuid.toString().replace("-", "")}", "Ljava/util/UUID;", null, null)
             }else {
                 classVisitor.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, "u$index", "Ljava/util/UUID;", null, null)
             }
         }
         resourceLocations.forEachIndexed { index, value ->
-            if(generateDebug) {
+            if(DEBUG) {
                 classVisitor.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, "resourceLocation$${value.toString().replace('/', '$').replace(':', '$')}", "Lnet/minecraft/resources/ResourceLocation;", null, null)
             }else {
                 classVisitor.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, "r$index", "Lnet/minecraft/resources/ResourceLocation;", null, null)
