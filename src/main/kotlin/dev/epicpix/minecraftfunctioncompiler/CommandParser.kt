@@ -125,12 +125,14 @@ object CommandParser {
                         ), mutableListOf())
                     }
                     "operation" -> {
+                        val operation = context.arguments["operation"]!!.range[source] as String
+                        if(operation != "=" && operation != "+=" && operation != "-=" && operation != "*=") throw UnsupportedOperationException("Unsupported scoreboard operation: $operation")
                         val targetObjective = context.arguments["targetObjective"]!!.result as String
                         val sourceObjective = context.arguments["sourceObjective"]!!.result as String
                         Command(CommandType.SCOREBOARD_PLAYERS_OPERATION, mapOf(
                             "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),
                             "targetObjective" to targetObjective,
-                            "operation" to context.arguments["operation"]!!.range[source] as String,
+                            "operation" to operation,
                             "source" to parseArgumentScoreHolder(context.arguments["source"]!!.range[source]),
                             "sourceObjective" to sourceObjective,
                         ), mutableListOf())
