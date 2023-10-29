@@ -156,7 +156,7 @@ object CommandParser {
                     }
                     "operation" -> {
                         val operation = context.arguments["operation"]!!.range[source] as String
-                        if(operation != "=" && operation != "+=" && operation != "-=" && operation != "*=" && operation != "/=" && operation != "%=") throw UnsupportedOperationException("Unsupported scoreboard operation: $operation")
+                        if(operation == "><") throw UnsupportedOperationException("Unsupported scoreboard operation: $operation")
                         val targetObjective = context.arguments["targetObjective"]!!.result as String
                         val sourceObjective = context.arguments["sourceObjective"]!!.result as String
                         Command(CommandType.SCOREBOARD_PLAYERS_OPERATION, mapOf(

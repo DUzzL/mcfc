@@ -183,6 +183,15 @@ object CodeGenerator {
                                                 cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
                                             }
                                         }
+                                        ">" -> {
+                                            cw.loadLocal(targetLocal)
+                                            cw.loadLocal(targetLocal)
+                                            cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                            source()
+                                            cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                            cw.callFunction("java/lang/Math", "max", "(II)I")
+                                            cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                                        }
                                         else -> throw UnsupportedOperationException("Unknown operation operator: ${command.get<String>("operation")}")
                                     }
                                 }
