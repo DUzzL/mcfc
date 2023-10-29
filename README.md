@@ -22,6 +22,7 @@ This is the list of commands supported currently as of `0.1.0-alpha.2`:
 - `execute if score`
 - `execute run`
 - `execute unless entity`
+- `execute unless score`
 - `function` (without ability to provide arguments)
 - `kill`
 - `scoreboard players add`

@@ -90,6 +90,27 @@ object CommandParser {
                             "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
                         ), mutableListOf())
                     }
+                    "score" -> {
+                        val comparison = nodes[4].range[source]
+                        if(comparison == "matches") {
+                            val range = context.arguments["range"]!!.result as MinMaxBounds.Ints
+                            Command(CommandType.EXECUTE_UNLESS_SCORE_RANGE, mapOf(
+                                "target" to parseArgumentScoreHolder(context.arguments["target"]!!.range[source]),
+                                "targetObjective" to context.arguments["targetObjective"]!!.result as String,
+                                "range" to IntRangeArgument(range.min.orElse(null), range.max.orElse(null)),
+                                "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
+                            ), mutableListOf())
+                        }else {
+                            Command(CommandType.EXECUTE_UNLESS_SCORE_COMPARE, mapOf(
+                                "target" to parseArgumentScoreHolder(context.arguments["target"]!!.range[source]),
+                                "targetObjective" to context.arguments["targetObjective"]!!.result as String,
+                                "comparison" to comparison,
+                                "source" to parseArgumentScoreHolder(context.arguments["source"]!!.range[source]),
+                                "sourceObjective" to context.arguments["sourceObjective"]!!.result as String,
+                                "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
+                            ), mutableListOf())
+                        }
+                    }
 
                     else -> throw UnsupportedOperationException("Invalid execute command unless comparison type: $ifType")
                 }

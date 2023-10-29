@@ -241,37 +241,33 @@ object CodeGenerator {
                         getter()
                         cw.loadLocal(targetObjective)
                         cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                        cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
                         val uidLocal = cw.generateUniqueLocal("\$Score")
-                        cw.storeLocal(uidLocal, "Lnet/minecraft/world/scores/Score;") {
+                        cw.storeLocal(uidLocal, "I") {
                             val range = command.get<IntRangeArgument>("range")
                             if (range.minimum != null && range.maximum == null) {
                                 loadLocal(uidLocal)
-                                callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
                                 writeInt(range.minimum)
                                 executeIf(Opcodes.IF_ICMPGE) {
                                     generateCommandLike(command["command"], context, cw, definedFunctions)
                                 }
                             } else if (range.maximum != null && range.minimum == null) {
                                 loadLocal(uidLocal)
-                                callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
                                 writeInt(range.maximum)
                                 executeIf(Opcodes.IF_ICMPLE) {
                                     generateCommandLike(command["command"], context, cw, definedFunctions)
                                 }
                             } else if (range.minimum != null && range.minimum == range.maximum) {
                                 loadLocal(uidLocal)
-                                callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
                                 writeInt(range.minimum)
                                 executeIf(Opcodes.IF_ICMPEQ) {
                                     generateCommandLike(command["command"], context, cw, definedFunctions)
                                 }
                             } else if (range.minimum != null && range.maximum != null) {
                                 loadLocal(uidLocal)
-                                callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
                                 writeInt(range.minimum)
                                 executeIf(Opcodes.IF_ICMPGE) {
                                     loadLocal(uidLocal)
-                                    callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
                                     writeInt(range.maximum)
                                     executeIf(Opcodes.IF_ICMPLE) {
                                         generateCommandLike(command["command"], context, cw, definedFunctions)
@@ -324,6 +320,103 @@ object CodeGenerator {
                                     }
                                     ">=" -> {
                                         cw.executeIf(Opcodes.IF_ICMPGE) {
+                                            generateCommandLike(command["command"], context, cw, definedFunctions)
+                                        }
+                                    }
+                                    else -> throw UnsupportedOperationException("Unknown score comparison operator: $operator")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            CommandType.EXECUTE_UNLESS_SCORE_RANGE -> {
+                context.runWithObjective(cw, command["targetObjective"]) { targetObjective, context ->
+                    visitGetSingleScoreHolder(cw, context, command["target"]) { getter ->
+                        cw.visitGetScoreboard()
+                        getter()
+                        cw.loadLocal(targetObjective)
+                        cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                        cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                        val uidLocal = cw.generateUniqueLocal("\$Score")
+                        cw.storeLocal(uidLocal, "I") {
+                            val range = command.get<IntRangeArgument>("range")
+                            if (range.minimum != null && range.maximum == null) {
+                                loadLocal(uidLocal)
+                                writeInt(range.minimum)
+                                executeIf(Opcodes.IF_ICMPLT) {
+                                    generateCommandLike(command["command"], context, cw, definedFunctions)
+                                }
+                            } else if (range.maximum != null && range.minimum == null) {
+                                loadLocal(uidLocal)
+                                writeInt(range.maximum)
+                                executeIf(Opcodes.IF_ICMPGT) {
+                                    generateCommandLike(command["command"], context, cw, definedFunctions)
+                                }
+                            } else if (range.minimum != null && range.minimum == range.maximum) {
+                                loadLocal(uidLocal)
+                                writeInt(range.minimum)
+                                executeIf(Opcodes.IF_ICMPNE) {
+                                    generateCommandLike(command["command"], context, cw, definedFunctions)
+                                }
+                            } else if (range.minimum != null && range.maximum != null) {
+                                loadLocal(uidLocal)
+                                writeInt(range.minimum)
+                                executeIf(Opcodes.IF_ICMPLT) {
+                                    loadLocal(uidLocal)
+                                    writeInt(range.maximum)
+                                    executeIf(Opcodes.IF_ICMPGT) {
+                                        generateCommandLike(command["command"], context, cw, definedFunctions)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            CommandType.EXECUTE_UNLESS_SCORE_COMPARE -> {
+                context.runWithObjective(cw, command["targetObjective"]) { targetObjective, context ->
+                    context.runWithObjective(cw, command["sourceObjective"]) { sourceObjective, context ->
+                        visitGetSingleScoreHolder(cw, context, command["target"]) { getterTarget ->
+                            visitGetSingleScoreHolder(cw, context, command["source"]) { sourceSource ->
+                                cw.visitGetScoreboard()
+                                getterTarget()
+                                cw.loadLocal(targetObjective)
+                                cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                                cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                cw.visitGetScoreboard()
+                                sourceSource()
+                                cw.loadLocal(sourceObjective)
+                                cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                                cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+
+                                val operator = command.get<String>("comparison")
+
+                                when(operator) {
+                                    "<" -> {
+                                        cw.executeIf(Opcodes.IF_ICMPGE) {
+                                            generateCommandLike(command["command"], context, cw, definedFunctions)
+                                        }
+                                    }
+                                    "<=" -> {
+                                        cw.executeIf(Opcodes.IF_ICMPGT) {
+                                            generateCommandLike(command["command"], context, cw, definedFunctions)
+                                        }
+                                    }
+                                    "=" -> {
+                                        cw.executeIf(Opcodes.IF_ICMPNE) {
+                                            generateCommandLike(command["command"], context, cw, definedFunctions)
+                                        }
+                                    }
+                                    ">" -> {
+                                        cw.executeIf(Opcodes.IF_ICMPLE) {
+                                            generateCommandLike(command["command"], context, cw, definedFunctions)
+                                        }
+                                    }
+                                    ">=" -> {
+                                        cw.executeIf(Opcodes.IF_ICMPLT) {
                                             generateCommandLike(command["command"], context, cw, definedFunctions)
                                         }
                                     }
