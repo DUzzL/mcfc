@@ -201,6 +201,24 @@ object CodeGenerator {
                                             cw.callFunction("java/lang/Math", "max", "(II)I")
                                             cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
                                         }
+                                        "><" -> {
+                                            cw.visitGetScoreboard()
+                                            sourceGetter()
+                                            cw.loadLocal(sourceObjective)
+                                            cw.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                                            val sourceLocal = cw.generateUniqueLocal("\$ScoreSource")
+                                            cw.storeLocal(sourceLocal, "Lnet/minecraft/world/scores/Score;") {
+                                                cw.loadLocal(sourceLocal)
+                                                cw.loadLocal(targetLocal)
+                                                cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                                cw.loadLocal(sourceLocal)
+                                                cw.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                                                cw.loadLocal(targetLocal)
+                                                cw.methodVisitor.visitInsn(Opcodes.SWAP)
+                                                cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                                                cw.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                                            }
+                                        }
                                         else -> throw UnsupportedOperationException("Unknown operation operator: ${command.get<String>("operation")}")
                                     }
                                 }

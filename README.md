@@ -8,7 +8,7 @@ This mod will not respect the `maxCommandChainLength` gamerule to improve perfor
 
 ## Usage
 
-Put the mod on a fabric server with all of the dependencies, the mod will automatically try to optimize all functions and commands which are supported.
+Put the mod on a fabric server with all the dependencies, the mod will automatically try to optimize all functions and commands which are supported.
 
 **If you encounter any crashes, please report them on the [issue tracker](https://gitlab.epicpix.dev/EpicPix/MinecraftFunctionCompiler/-/issues) and turn off the mod temporarily until the issue won't be fixed**
 
@@ -26,7 +26,7 @@ This is the list of commands supported currently as of `0.1.0-alpha.2`:
 - `function` (without ability to provide arguments)
 - `kill`
 - `scoreboard players add`
-- `scoreboard players operation` - (except for `><` currently)
+- `scoreboard players operation`
 - `scoreboard players remove`
 - `scoreboard players reset` (only with the objective specified)
 - `scoreboard players set`
