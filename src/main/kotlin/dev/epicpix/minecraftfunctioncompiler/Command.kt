@@ -47,12 +47,11 @@ data class CommandRequirement(val type: CommandRequirementType, val data: Map<St
 
 
 enum class CommandType {
-
-    UNKNOWN,
     EXECUTE_AS,
     EXECUTE_IF_ENTITY,
     EXECUTE_IF_SCORE_COMPARE,
     EXECUTE_IF_SCORE_RANGE,
+    EXECUTE_UNLESS_ENTITY,
     FUNCTION,
     KILL,
     SCOREBOARD_PLAYERS_ADD,

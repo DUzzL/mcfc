@@ -32,6 +32,38 @@ object EntitySelectorCodeGenerator {
         }
     }
 
+    fun generateUnlessEntityExists(cw: CodeWriter, selector: SelectorArgument, context: GeneratorCommandContext, run: () -> Unit) {
+        if(selector.entityUuid != null) {
+            val skip = Label()
+            cw.visitForEachLevel { _, getter ->
+                getter()
+                cw.writeUUID(selector.entityUuid)
+                cw.callMethod("net/minecraft/server/level/ServerLevel", "getEntity", "(Ljava/util/UUID;)Lnet/minecraft/world/entity/Entity;")
+                cw.executeIf(Opcodes.IFNONNULL) {
+                    cw.methodVisitor.visitJumpInsn(Opcodes.GOTO, skip)
+                }
+            }
+            run()
+            cw.methodVisitor.visitLabel(skip)
+            return
+        }
+
+        if(selector.playerName != null) {
+            cw.visitGetPlayerList()
+            cw.writeString(selector.playerName)
+            cw.callMethod("net/minecraft/server/players/PlayerList", "getPlayerByName", "(Ljava/lang/String;)Lnet/minecraft/server/level/ServerPlayer;")
+            cw.executeIf(Opcodes.IFNULL, exec = run)
+            return
+        }
+
+        val skip = Label()
+        iterateEntities(cw, context, selector.copy(limit = 1)) {
+            cw.methodVisitor.visitJumpInsn(Opcodes.GOTO, skip)
+        }
+        run()
+        cw.methodVisitor.visitLabel(skip)
+    }
+
     fun generateForEachEntity(cw: CodeWriter, selector: SelectorArgument, context: GeneratorCommandContext, run: (getter: () -> Unit) -> Unit) {
         if(selector.entityUuid != null) {
             cw.visitForEachLevel { controlFlowRun, getter ->

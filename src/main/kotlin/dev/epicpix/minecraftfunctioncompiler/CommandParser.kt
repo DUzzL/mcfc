@@ -83,7 +83,16 @@ object CommandParser {
             "run" -> parseCommand(context.child.nodes[0].range[source], context.child, source, server)
             "unless" -> {
                 val ifType = nodes[1].range[source]
-                throw UnsupportedOperationException("Invalid execute command unless comparison type: $ifType")
+                when(ifType) {
+                    "entity" -> {
+                        Command(CommandType.EXECUTE_UNLESS_ENTITY, mapOf(
+                            "entities" to parseArgumentSelector(context.arguments["entities"]!!.range[source]),
+                            "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
+                        ), mutableListOf())
+                    }
+
+                    else -> throw UnsupportedOperationException("Invalid execute command unless comparison type: $ifType")
+                }
             }
             else -> throw UnsupportedOperationException("Invalid execute command type: $type")
         }

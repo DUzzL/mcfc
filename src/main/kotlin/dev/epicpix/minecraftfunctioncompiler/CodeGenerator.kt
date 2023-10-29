@@ -195,6 +195,12 @@ object CodeGenerator {
                 }
             }
 
+            CommandType.EXECUTE_UNLESS_ENTITY -> {
+                EntitySelectorCodeGenerator.generateUnlessEntityExists(cw, command["entities"], context) {
+                    generateCommandLike(command["command"], context, cw, definedFunctions)
+                }
+            }
+
             CommandType.EXECUTE_IF_SCORE_RANGE -> {
                 context.runWithObjective(cw, command["targetObjective"]) { targetObjective, context ->
                     visitGetSingleScoreHolder(cw, context, command["target"]) { getter ->
