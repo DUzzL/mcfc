@@ -224,8 +224,8 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
         inControlFlow++
         condition(endLabel)
         exec(ControlFlowRun(
-            { methodVisitor.visitJumpInsn(Opcodes.GOTO, beginLabel) },
-            { methodVisitor.visitJumpInsn(Opcodes.GOTO, endLabel) }
+            { methodVisitor.visitJumpInsn(it, beginLabel) },
+            { methodVisitor.visitJumpInsn(it, endLabel) }
         ))
         inControlFlow--
         methodVisitor.visitLabel(endLabel)
@@ -247,8 +247,8 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
                 }) { controlFlow ->
                     val contLabel = Label()
                     exec(indexName, ControlFlowRun(
-                        { methodVisitor.visitJumpInsn(Opcodes.GOTO, contLabel) },
-                        controlFlow.brk
+                        { methodVisitor.visitJumpInsn(it, contLabel) },
+                        controlFlow.breakJump
                     ))
                     methodVisitor.visitLabel(contLabel)
                     methodVisitor.visitIincInsn(locals[indexName]!!.index, 1)
@@ -258,14 +258,14 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
         }
     }
 
-    fun createArrayListForEachLoop(arrayLocal: String, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
+    fun createListForEachLoop(arrayLocal: String, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
         loadLocal(arrayLocal)
-        callMethod("java/util/ArrayList", "size", "()I")
+        callMethod("java/util/List", "size", "()I")
         createIndexedLoop { indexLocal, controlFlow ->
             exec(controlFlow) {
                 loadLocal(arrayLocal)
                 loadLocal(indexLocal)
-                callMethod("java/util/ArrayList", "get", "(I)Ljava/lang/Object;")
+                callMethod("java/util/List", "get", "(I)Ljava/lang/Object;")
             }
         }
     }
@@ -324,11 +324,13 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
         return "$local:${generatedLocals.size}"
     }
 
-    fun updateControlFlow(count: Int) {
-        inControlFlow += count
-    }
-
 }
 
 data class Local(val name: String, val descriptor: String, val start: Label, var end: Label?, val index: Int)
-data class ControlFlowRun(val cont: () -> Unit, val brk: () -> Unit)
+data class ControlFlowRun(val continueJump: (condition: Int) -> Unit, val breakJump: (condition: Int) -> Unit) {
+    fun cont() = continueJump(Opcodes.GOTO)
+    fun cont(condition: Int) = continueJump(condition)
+
+    fun brk() = breakJump(Opcodes.GOTO)
+    fun brk(condition: Int) = breakJump(condition)
+}

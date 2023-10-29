@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler
 
+import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
 import java.lang.UnsupportedOperationException
 
@@ -36,9 +37,8 @@ object EntitySelectorCodeGenerator {
         throw UnsupportedOperationException("Unsupported selector: $selector")
     }
 
-    fun generateForEachEntity(cw: CodeWriter, selector: SelectorArgument, context: GeneratorCommandContext, allowEntities: Boolean, allowMultiple: Boolean, run: (getter: () -> Unit) -> Unit) {
+    fun generateForEachEntity(cw: CodeWriter, selector: SelectorArgument, context: GeneratorCommandContext, run: (getter: () -> Unit) -> Unit) {
         if(selector.entityUuid != null) {
-            if(!allowEntities) throw UnsupportedOperationException("Invalid selector")
             cw.visitForEachLevel { controlFlowRun, getter ->
                 getter()
                 cw.writeUUID(selector.entityUuid)
@@ -73,20 +73,76 @@ object EntitySelectorCodeGenerator {
             return
         }
 
+        iterateEntities(cw, context, selector, run)
+    }
+
+    fun iterateEntities(cw: CodeWriter, context: GeneratorCommandContext, selector: SelectorArgument, run: (getter: () -> Unit) -> Unit) {
         if(selector.self) {
-            context.getEntity(cw)
-            cw.executeIf(Opcodes.IFNONNULL) {
-                run {
-                    context.getEntity(cw)
+            val skipLabel = Label()
+            checkEntityPredicates(cw, null, selector, {
+                context.getEntity(cw)
+            }, ControlFlowRun({ cw.methodVisitor.visitJumpInsn(it, skipLabel) }, { cw.methodVisitor.visitJumpInsn(it, skipLabel) }), run)
+            cw.methodVisitor.visitLabel(skipLabel)
+            return
+        }
+
+        if(selector.entityType == "minecraft:player") {
+            if(selector.limit == 1 || selector.limit == null) {
+                cw.visitForEachPlayer { controlFlow, getter ->
+                    checkEntityPredicates(cw, null, selector, getter, controlFlow, run)
+                }
+            }else {
+                val uidLocal = cw.generateUniqueLocal("\$Index")
+                cw.writeInt(0)
+                cw.storeLocal(uidLocal, "I") {
+                    cw.visitForEachPlayer { controlFlow, getter ->
+                        checkEntityPredicates(cw, uidLocal, selector, getter, controlFlow, run)
+                    }
                 }
             }
             return
         }
 
-        throw UnsupportedOperationException("Unsupported selector: $selector")
+        if(selector.limit == 1 || selector.limit == null) {
+            cw.visitForEachEntity { controlFlow, getter ->
+                checkEntityPredicates(cw, null, selector, getter, controlFlow, run)
+            }
+        }else {
+            val uidLocal = cw.generateUniqueLocal("\$Index")
+            cw.writeInt(0)
+            cw.storeLocal(uidLocal, "I") {
+                cw.visitForEachEntity { controlFlow, getter ->
+                    checkEntityPredicates(cw, uidLocal, selector, getter, controlFlow, run)
+                }
+            }
+        }
     }
 
-    fun checkEntityPredicate(cw: CodeWriter, context: GeneratorCommandContext) {
+    fun checkEntityPredicates(cw: CodeWriter, indexLocal: String?, selector: SelectorArgument, getter: () -> Unit, controlFlow: ControlFlowRun, exec: (getter: () -> Unit) -> Unit) {
+        if(selector.hasTags != null) {
+            getter()
+            cw.callMethod("net/minecraft/world/entity/Entity", "getTags", "()Ljava/util/Set;")
+            cw.callInterfaceMethod("java/util/Set", "size", "()I")
+            controlFlow.cont(if(selector.hasTags) Opcodes.IFNE else Opcodes.IFEQ)
 
+        }
+        for(tag in selector.tags) {
+            getter()
+            cw.callMethod("net/minecraft/world/entity/Entity", "getTags", "()Ljava/util/Set;")
+            cw.writeString(tag.data)
+            cw.callInterfaceMethod("java/util/Set", "contains", "(Ljava/lang/Object;)Z")
+            controlFlow.cont(if(tag.negated) Opcodes.IFNE else Opcodes.IFEQ)
+        }
+
+        exec(getter)
+
+        if(selector.limit == 1) {
+            controlFlow.brk()
+        }else if(selector.limit != null) {
+            cw.methodVisitor.visitIincInsn(cw.getLocal(indexLocal!!)!!, 1)
+            cw.loadLocal(indexLocal)
+            cw.writeInt(selector.limit)
+            controlFlow.brk(Opcodes.IF_ICMPGE)
+        }
     }
 }

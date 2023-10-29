@@ -54,7 +54,7 @@ object CodeGenerator {
     fun generateCommand(command: Command, context: GeneratorCommandContext, cw: CodeWriter) {
         when(command.type) {
             CommandType.KILL -> {
-                EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], context, allowEntities = true, allowMultiple = true) { getter ->
+                EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], context) { getter ->
                     getter()
                     cw.callMethod("net/minecraft/world/entity/Entity", "kill", "()V")
                 }
@@ -160,7 +160,7 @@ object CodeGenerator {
             }
 
             CommandType.TAG_ADD -> {
-                EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], context, allowEntities = true, allowMultiple = true) { getter ->
+                EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], context) { getter ->
                     getter()
                     cw.writeString(command["name"])
                     cw.callMethod("net/minecraft/world/entity/Entity", "addTag", "(Ljava/lang/String;)Z")
@@ -169,7 +169,7 @@ object CodeGenerator {
             }
 
             CommandType.TAG_REMOVE -> {
-                EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], context, allowEntities = true, allowMultiple = true) { getter ->
+                EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], context) { getter ->
                     getter()
                     cw.writeString(command["name"])
                     cw.callMethod("net/minecraft/world/entity/Entity", "removeTag", "(Ljava/lang/String;)Z")
@@ -178,7 +178,7 @@ object CodeGenerator {
             }
 
             CommandType.EXECUTE_AS -> {
-                EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], context, allowEntities = true, allowMultiple = true) { getter ->
+                EntitySelectorCodeGenerator.generateForEachEntity(cw, command["targets"], context) { getter ->
 
                     val entityUid = cw.generateUniqueLocal("CurrentEntity")
                     val newContext = context.copy(entityLocal = entityUid)
@@ -345,7 +345,7 @@ object CodeGenerator {
         }
 
         if(scoreHolder.selector != null) {
-            EntitySelectorCodeGenerator.generateForEachEntity(cw, scoreHolder.selector.copy(limit = 1), context, allowEntities = true, allowMultiple = true) { getter ->
+            EntitySelectorCodeGenerator.generateForEachEntity(cw, scoreHolder.selector.copy(limit = 1), context) { getter ->
                 val uidLocal = cw.generateUniqueLocal("\$EntityName")
                 getter()
                 cw.callMethod("net/minecraft/world/entity/Entity", "getScoreboardName", "()Ljava/lang/String;")
@@ -368,7 +368,7 @@ object CodeGenerator {
 
             val uidLocal = cw.generateUniqueLocal("\$Array")
             cw.storeLocal(uidLocal, "Ljava/util/ArrayList;") {
-                cw.createArrayListForEachLoop(uidLocal) { _, getter ->
+                cw.createListForEachLoop(uidLocal) { _, getter ->
                     run {
                         getter()
                         cw.castType("java/lang/String")
@@ -386,7 +386,7 @@ object CodeGenerator {
         }
 
         if(scoreHolder.selector != null) {
-            EntitySelectorCodeGenerator.generateForEachEntity(cw, scoreHolder.selector, context, allowEntities = true, allowMultiple = true) { getter ->
+            EntitySelectorCodeGenerator.generateForEachEntity(cw, scoreHolder.selector, context) { getter ->
                 val uidLocal = cw.generateUniqueLocal("\$EntityName")
                 getter()
                 cw.callMethod("net/minecraft/world/entity/Entity", "getScoreboardName", "()Ljava/lang/String;")

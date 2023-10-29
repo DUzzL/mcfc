@@ -45,14 +45,43 @@ fun CodeWriter.visitGetPlayerList(load: Boolean = true) {
 
 fun CodeWriter.visitForEachLevel(exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
     val uidLocal = generateUniqueLocal("\$Iterator")
-    defineLocal(uidLocal, "Ljava/lang/Iterable;") {
-        visitGetServer()
-        callMethod("net/minecraft/server/MinecraftServer", "getAllLevels", "()Ljava/lang/Iterable;")
-        storeLocal(uidLocal)
+    visitGetServer()
+    callMethod("net/minecraft/server/MinecraftServer", "getAllLevels", "()Ljava/lang/Iterable;")
+    storeLocal(uidLocal, "Ljava/lang/Iterable;") {
         createIterableForEachLoop(uidLocal) { controlFlow, getter ->
             exec(controlFlow) {
                 getter()
                 castType("net/minecraft/server/level/ServerLevel")
+            }
+        }
+    }
+}
+
+fun CodeWriter.visitForEachEntity(exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
+    visitForEachLevel { controlFlow, getter ->
+        val uidLocal = generateUniqueLocal("\$Iterator")
+        getter()
+        callMethod("net/minecraft/server/level/ServerLevel", "getAllEntities", "()Ljava/lang/Iterable;")
+        storeLocal(uidLocal, "Ljava/lang/Iterable;") {
+            createIterableForEachLoop(uidLocal) { localControlFlow, getter ->
+                exec(ControlFlowRun(localControlFlow.continueJump, controlFlow.breakJump)) {
+                    getter()
+                    castType("net/minecraft/world/entity/Entity")
+                }
+            }
+        }
+    }
+}
+
+fun CodeWriter.visitForEachPlayer(exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
+    val uidLocal = generateUniqueLocal("\$Players")
+    visitGetPlayerList()
+    callMethod("net/minecraft/server/players/PlayerList", "getPlayers", "()Ljava/util/List;")
+    storeLocal(uidLocal, "Ljava/util/List;") {
+        createListForEachLoop(uidLocal) { controlFlow, getter ->
+            exec(controlFlow) {
+                getter()
+                castType("net/minecraft/world/entity/Entity")
             }
         }
     }

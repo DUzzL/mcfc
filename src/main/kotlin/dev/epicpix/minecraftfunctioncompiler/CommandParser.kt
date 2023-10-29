@@ -201,6 +201,7 @@ object CommandParser {
 
         val isSelf = selectorType == 's'
         val data = SelectorGeneratorData()
+        if(isSelf) data.limit = 1
         if(selectorType == 'a') data.entityType = "minecraft:player"
 
         if(selectorType == 'r' || selectorType == 'p') throw UnsupportedOperationException("Unsupported selector: $selector")
