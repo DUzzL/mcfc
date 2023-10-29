@@ -10,6 +10,8 @@ This mod will not respect the `maxCommandChainLength` gamerule to improve perfor
 
 Put the mod on a fabric server with all of the dependencies, the mod will automatically try to optimize all functions and commands which are supported.
 
+**If you encounter any crashes, please report them on the [issue tracker](https://gitlab.epicpix.dev/EpicPix/MinecraftFunctionCompiler/-/issues) and turn off the mod temporarily until the issue won't be fixed**
+
 ## Supported Commands
 
 Of course this mod can't support every command, so it will only generate code for functions which contain only commands which are supported, **this will not compile functions with macros currently**. It can't compile macros because any value could be interpreted in any way, which is hard to implement using only things known at compile-time.
