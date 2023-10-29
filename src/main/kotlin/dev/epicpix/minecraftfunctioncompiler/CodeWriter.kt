@@ -277,12 +277,12 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String, val ge
 
     fun createListForEachLoop(arrayLocal: String, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
         loadLocal(arrayLocal)
-        callMethod("java/util/List", "size", "()I")
+        callInterfaceMethod("java/util/List", "size", "()I")
         createIndexedLoop { indexLocal, controlFlow ->
             exec(controlFlow) {
                 loadLocal(arrayLocal)
                 loadLocal(indexLocal)
-                callMethod("java/util/List", "get", "(I)Ljava/lang/Object;")
+                callInterfaceMethod("java/util/List", "get", "(I)Ljava/lang/Object;")
             }
         }
     }
