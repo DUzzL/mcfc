@@ -2,7 +2,6 @@ package dev.epicpix.minecraftfunctioncompiler
 
 import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
-import java.lang.UnsupportedOperationException
 
 object EntitySelectorCodeGenerator {
 
@@ -28,13 +27,9 @@ object EntitySelectorCodeGenerator {
             return
         }
 
-        if(selector.self) {
-            context.getEntity(cw)
-            cw.executeIf(Opcodes.IFNONNULL, exec = run)
-            return
+        iterateEntities(cw, context, selector.copy(limit = 1)) {
+            run()
         }
-
-        throw UnsupportedOperationException("Unsupported selector: $selector")
     }
 
     fun generateForEachEntity(cw: CodeWriter, selector: SelectorArgument, context: GeneratorCommandContext, run: (getter: () -> Unit) -> Unit) {

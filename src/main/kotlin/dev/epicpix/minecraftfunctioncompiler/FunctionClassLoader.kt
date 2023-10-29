@@ -40,7 +40,6 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
             }
         }
         LOGGER.info("Parsed ${definedFunctions.size} functions in ${System.currentTimeMillis()-startParse}ms")
-        println(definedFunctions)
 
         val startLoader = System.currentTimeMillis()
         try {
