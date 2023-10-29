@@ -90,6 +90,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                     entityLocal = entityUid,
                     preconditions = listOf(),
                 )
+                codeWriter.visitGetPlayerList(load = false)
                 commands.forEach {
                     generateCommandLike(it, context, codeWriter)
                 }

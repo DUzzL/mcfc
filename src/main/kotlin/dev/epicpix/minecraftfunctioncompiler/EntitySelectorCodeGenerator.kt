@@ -79,6 +79,8 @@ object EntitySelectorCodeGenerator {
     fun iterateEntities(cw: CodeWriter, context: GeneratorCommandContext, selector: SelectorArgument, run: (getter: () -> Unit) -> Unit) {
         if(selector.self) {
             val skipLabel = Label()
+            context.getEntity(cw)
+            cw.methodVisitor.visitJumpInsn(Opcodes.IFNULL, skipLabel)
             checkEntityPredicates(cw, null, selector, {
                 context.getEntity(cw)
             }, ControlFlowRun({ cw.methodVisitor.visitJumpInsn(it, skipLabel) }, { cw.methodVisitor.visitJumpInsn(it, skipLabel) }), run)
