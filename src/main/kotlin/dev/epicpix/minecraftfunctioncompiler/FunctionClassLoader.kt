@@ -41,19 +41,32 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         }
         LOGGER.info("Parsed ${definedFunctions.size}/${functions.size} functions in ${System.currentTimeMillis()-startParse}ms")
 
+        val loadedFunctions = mutableMapOf<ResourceLocation, Class<*>>()
         val startLoader = System.currentTimeMillis()
         try {
             for((key) in definedFunctions) {
-                val clz = defineFunction(key, definedFunctions)
-                val handle = MethodHandles.lookup().findStatic(clz, "run", MethodType.methodType(Int::class.javaPrimitiveType, CommandSourceStack::class.java))
-                handles[key] = handle
+                loadedFunctions[key] = defineFunction(key, definedFunctions)
             }
         }catch(e: Throwable) {
             LOGGER.error("Failed to compile function, clearing compilation data", e)
             definedFunctions.clear()
-            handles.clear()
+            LOGGER.info("Loaded 0 functions in ${System.currentTimeMillis()-startLoader}ms")
+            return
         }
         LOGGER.info("Loaded ${definedFunctions.size} functions in ${System.currentTimeMillis()-startLoader}ms")
+
+        val startHandles = System.currentTimeMillis()
+        try {
+            for((key) in definedFunctions) {
+                val handle = MethodHandles.lookup().findStatic(loadedFunctions[key], "run", MethodType.methodType(Int::class.javaPrimitiveType, CommandSourceStack::class.java))
+                handles[key] = handle
+            }
+        }catch(e: Throwable) {
+            LOGGER.error("Failed to create function handle, clearing data", e)
+            definedFunctions.clear()
+            handles.clear()
+        }
+        LOGGER.info("Loaded ${definedFunctions.size} function handles in ${System.currentTimeMillis()-startHandles}ms")
     }
 
     fun hasFunctionLoaded(location: ResourceLocation): Boolean {
