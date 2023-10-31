@@ -92,24 +92,32 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         mv.visitCode()
         val codeWriter = CodeWriter(mv, className)
 
+
         val commands = definedFunctions[funcId]!!
 
-        codeWriter.defineLocal("CommandSourceStack", "Lnet/minecraft/commands/CommandSourceStack;") {
-            val entityUid = codeWriter.generateUniqueLocal("CurrentEntity")
-            loadLocal("CommandSourceStack")
-            callMethod("net/minecraft/commands/CommandSourceStack", "getEntity", "()Lnet/minecraft/world/entity/Entity;")
-            storeLocal(entityUid, "Lnet/minecraft/world/entity/Entity;") {
-                val context = GeneratorCommandContext(
-                    entityLocal = entityUid,
-                    originalEntity = true,
-                    preconditions = listOf(),
-                )
-                codeWriter.visitGetScoreboard(load = false)
-                codeWriter.visitGetPlayerList(load = false)
-                commands.forEach {
-                    generateCommandLike(it, context, codeWriter, definedFunctions)
-                }
-            }
+        val dependencies = mutableListOf<CommandDependency>().run {
+            commands.forEach { addAll(getCommandDependencies(it)) }
+            distinct()
+        }
+
+        println(dependencies)
+
+        codeWriter.defineGlobalLocal("CommandSourceStack", "Lnet/minecraft/commands/CommandSourceStack;")
+
+        val entityUid = codeWriter.generateUniqueLocal("CurrentEntity")
+        codeWriter.loadLocal("CommandSourceStack")
+        codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "getEntity", "()Lnet/minecraft/world/entity/Entity;")
+        codeWriter.storeLocal(entityUid)
+        codeWriter.defineGlobalLocal(entityUid, "Lnet/minecraft/world/entity/Entity;")
+        val context = GeneratorCommandContext(
+            entityLocal = entityUid,
+            originalEntity = true,
+            preconditions = listOf(),
+        )
+        codeWriter.visitGetScoreboard(load = false)
+        codeWriter.visitGetPlayerList(load = false)
+        commands.forEach {
+            generateCommandLike(it, context, codeWriter, definedFunctions)
         }
         codeWriter.end()
 
@@ -136,6 +144,22 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
             Files.write(FabricLoader.getInstance().gameDir.resolve("generated").resolve("${className.replace('/', '.')}.class"), data)
         }
         return defineClass(className.replace('/', '.'), data, 0, data.size)
+    }
+
+    private fun getCommandDependencies(command: CommandLike): List<CommandDependency> {
+        if(command is CommandBlock) {
+            val results = mutableListOf<CommandDependency>()
+            for(cmd in command.commands) results.addAll(getCommandDependencies(cmd))
+            return results
+        }else if(command is Command) {
+            if(command.params["command"] != null) {
+                val results = mutableListOf<CommandDependency>().apply { addAll(command.dependencies) }
+                results.addAll(getCommandDependencies(command["command"]))
+                return results
+            }
+            return command.dependencies
+        }
+        throw UnsupportedOperationException("Impossible")
     }
 
     companion object {

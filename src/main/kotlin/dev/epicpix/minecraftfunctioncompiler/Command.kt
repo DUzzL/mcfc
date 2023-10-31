@@ -1,16 +1,13 @@
 package dev.epicpix.minecraftfunctioncompiler
 
-data class Command(val type: CommandType, val params: Map<String, Any?>, val sideEffects: MutableList<SideEffect>) : CommandLike {
+data class Command(val type: CommandType, val params: Map<String, Any?>, val dependencies: List<CommandDependency> = listOf()) : CommandLike {
 
     operator fun <T> get(param: String): T {
         return params[param] as T
     }
 
-    fun withRequirements(requirements: List<CommandRequirement>): CommandBlock {
-        return CommandBlock(
-            listOf(this),
-            requirements.distinct()
-        )
+    fun withDependencies(vararg dependencies: CommandDependency): Command {
+        return copy(dependencies = dependencies.toList())
     }
 
     fun toCommandBlock(): CommandBlock {
@@ -34,7 +31,10 @@ data class Command(val type: CommandType, val params: Map<String, Any?>, val sid
             }
             else -> {}
         }
-        return withRequirements(requirements)
+        return CommandBlock(
+            listOf(this),
+            requirements.distinct()
+        )
     }
 
 }
@@ -44,6 +44,13 @@ data class CommandBlock(val commands: List<CommandLike>, val requirements: List<
 interface CommandLike
 
 data class CommandRequirement(val type: CommandRequirementType, val data: Map<String, Any>)
+data class CommandDependency(val type: CommandDependencyType, val data: Map<String, Any>)
+
+object CommandDependencies {
+
+    fun objective(objective: String): CommandDependency = CommandDependency(CommandDependencyType.OBJECTIVE, mapOf("objective" to objective))
+
+}
 
 
 enum class CommandType {
@@ -69,4 +76,9 @@ enum class CommandRequirementType {
     OBJECTIVE_EXISTS,
     OBJECTIVE_NOT_LOCKED,
     ENTITY_SELF_EXISTS
+}
+
+
+enum class CommandDependencyType {
+    OBJECTIVE,
 }

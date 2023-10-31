@@ -65,7 +65,9 @@ object CommandParser {
                                 "targetObjective" to context.arguments["targetObjective"]!!.result as String,
                                 "range" to IntRangeArgument(range.min.orElse(null), range.max.orElse(null)),
                                 "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
-                            ), mutableListOf())
+                            ), mutableListOf()).withDependencies(
+                                CommandDependencies.objective(context.arguments["targetObjective"]!!.result as String)
+                            )
                         }else {
                             Command(CommandType.EXECUTE_IF_SCORE_COMPARE, mapOf(
                                 "target" to parseArgumentScoreHolder(context.arguments["target"]!!.range[source]),
@@ -74,7 +76,10 @@ object CommandParser {
                                 "source" to parseArgumentScoreHolder(context.arguments["source"]!!.range[source]),
                                 "sourceObjective" to context.arguments["sourceObjective"]!!.result as String,
                                 "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
-                            ), mutableListOf())
+                            ), mutableListOf()).withDependencies(
+                                CommandDependencies.objective(context.arguments["targetObjective"]!!.result as String),
+                                CommandDependencies.objective(context.arguments["sourceObjective"]!!.result as String),
+                            )
                         }
                     }
                     else -> throw UnsupportedOperationException("Invalid execute command if comparison type: $ifType")
@@ -99,7 +104,9 @@ object CommandParser {
                                 "targetObjective" to context.arguments["targetObjective"]!!.result as String,
                                 "range" to IntRangeArgument(range.min.orElse(null), range.max.orElse(null)),
                                 "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
-                            ), mutableListOf())
+                            ), mutableListOf()).withDependencies(
+                                CommandDependencies.objective(context.arguments["targetObjective"]!!.result as String)
+                            )
                         }else {
                             Command(CommandType.EXECUTE_UNLESS_SCORE_COMPARE, mapOf(
                                 "target" to parseArgumentScoreHolder(context.arguments["target"]!!.range[source]),
@@ -108,7 +115,10 @@ object CommandParser {
                                 "source" to parseArgumentScoreHolder(context.arguments["source"]!!.range[source]),
                                 "sourceObjective" to context.arguments["sourceObjective"]!!.result as String,
                                 "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
-                            ), mutableListOf())
+                            ), mutableListOf()).withDependencies(
+                                CommandDependencies.objective(context.arguments["targetObjective"]!!.result as String),
+                                CommandDependencies.objective(context.arguments["sourceObjective"]!!.result as String),
+                            )
                         }
                     }
 
@@ -152,7 +162,7 @@ object CommandParser {
                             "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),
                             "objective" to objective,
                             "score" to context.arguments["score"]!!.result as Int
-                        ), mutableListOf())
+                        ), mutableListOf()).withDependencies(CommandDependencies.objective(objective))
                     }
                     "operation" -> {
                         val operation = context.arguments["operation"]!!.range[source] as String
@@ -164,7 +174,7 @@ object CommandParser {
                             "operation" to operation,
                             "source" to parseArgumentScoreHolder(context.arguments["source"]!!.range[source]),
                             "sourceObjective" to sourceObjective,
-                        ), mutableListOf())
+                        ), mutableListOf()).withDependencies(CommandDependencies.objective(targetObjective), CommandDependencies.objective(sourceObjective))
                     }
                     "remove" -> {
                         val objective = context.arguments["objective"]!!.result as String
@@ -172,7 +182,7 @@ object CommandParser {
                             "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),
                             "objective" to objective,
                             "score" to context.arguments["score"]!!.result as Int
-                        ), mutableListOf())
+                        ), mutableListOf()).withDependencies(CommandDependencies.objective(objective))
                     }
                     "reset" -> {
                         if(context.arguments["objective"] != null) {
@@ -180,7 +190,7 @@ object CommandParser {
                             Command(CommandType.SCOREBOARD_PLAYERS_RESET, mapOf(
                                 "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),
                                 "objective" to objective
-                            ), mutableListOf())
+                            ), mutableListOf()).withDependencies(CommandDependencies.objective(objective))
                         }else {
                             Command(CommandType.SCOREBOARD_PLAYERS_RESET, mapOf(
                                 "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source])
@@ -193,7 +203,7 @@ object CommandParser {
                             "targets" to parseArgumentScoreHolder(context.arguments["targets"]!!.range[source]),
                             "objective" to objective,
                             "score" to context.arguments["score"]!!.result as Int
-                        ), mutableListOf())
+                        ), mutableListOf()).withDependencies(CommandDependencies.objective(objective))
                     }
                     else -> throw UnsupportedOperationException("Unsupported scoreboard players type arguments: $opType")
                 }
