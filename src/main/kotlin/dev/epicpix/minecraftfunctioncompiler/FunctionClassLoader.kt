@@ -100,22 +100,9 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
             distinct()
         }
 
-        println(dependencies)
-
         codeWriter.defineGlobalLocal("CommandSourceStack", "Lnet/minecraft/commands/CommandSourceStack;")
 
-        val entityUid = codeWriter.generateUniqueLocal("CurrentEntity")
-        codeWriter.loadLocal("CommandSourceStack")
-        codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "getEntity", "()Lnet/minecraft/world/entity/Entity;")
-        codeWriter.storeLocal(entityUid)
-        codeWriter.defineGlobalLocal(entityUid, "Lnet/minecraft/world/entity/Entity;")
-        val context = GeneratorCommandContext(
-            entityLocal = entityUid,
-            originalEntity = true,
-            preconditions = listOf(),
-        )
-        codeWriter.visitGetScoreboard(load = false)
-        codeWriter.visitGetPlayerList(load = false)
+        val context = createCommandContext(dependencies, codeWriter)
         commands.forEach {
             generateCommandLike(it, context, codeWriter, definedFunctions)
         }

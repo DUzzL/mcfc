@@ -195,6 +195,7 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
             Opcodes.IFEQ -> Opcodes.IFEQ
             Opcodes.IF_ICMPLT -> Opcodes.IF_ICMPGE
             Opcodes.IF_ICMPLE -> Opcodes.IF_ICMPGT
+            Opcodes.IF_ICMPNE -> Opcodes.IF_ICMPEQ
             Opcodes.IF_ICMPEQ -> Opcodes.IF_ICMPNE
             Opcodes.IF_ICMPGE -> Opcodes.IF_ICMPLT
             Opcodes.IF_ICMPGT -> Opcodes.IF_ICMPLE
