@@ -5,7 +5,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.InstructionType
 import dev.epicpix.minecraftfunctioncompiler.optimizer.InstructionList
 import dev.epicpix.minecraftfunctioncompiler.optimizer.Optimization
 
-object InstructionMergeOptimization : Optimization {
+object ScopeInstructionMergeOptimization : Optimization {
     override fun optimize(instructions: InstructionList): InstructionList {
         return runOptimizations(instructions)
     }
