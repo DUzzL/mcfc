@@ -16,7 +16,10 @@ object DeadCodeEliminationOptimization : Optimization {
 
     private fun runOptimizations(instructions: InstructionList, dce: DeadCodeEliminationData): InstructionList {
         val results = mutableListOf<Instruction>()
-        instructions.forEach { results.addAll(runOptimizations(it, dce)) }
+        for(it in instructions) {
+            results.addAll(runOptimizations(it, dce))
+            if(it.type == InstructionType.BREAK_LOOP || it.type == InstructionType.CONTINUE_LOOP) break
+        }
         return results
     }
 
@@ -49,8 +52,8 @@ object DeadCodeEliminationOptimization : Optimization {
             }
             InstructionType.EMPTY_CONDITION -> {
                 val data = instruction.data as InstructionDataLoop
-                val usage = getLoopUsed(instruction, data.loopId)
-                if(!usage.usedBreak) {
+                val usage = getLoopUsed(instruction, data.loopId, true)
+                if(!usage.usedBreak && usage.last) {
                     newDce = newDce.copy(unusedLoops = newDce.unusedLoops.toMutableList().apply { add(data.loopId) })
                     if(!usage.usedIndirect) {
                         return runOptimizations(instruction.children, newDce)
@@ -75,7 +78,7 @@ object DeadCodeEliminationOptimization : Optimization {
     }
 }
 
-private data class LoopUsageInfo(val usedBreak: Boolean, val usedIndirect: Boolean)
+private data class LoopUsageInfo(val usedBreak: Boolean, val usedIndirect: Boolean, val last: Boolean)
 
 private fun getLoopUsed(instruction: Instruction, loopId: Int, lastElement: Boolean = false, isInLoop: Boolean = false): LoopUsageInfo {
     var usedBreak = false
@@ -89,39 +92,41 @@ private fun getLoopUsed(instruction: Instruction, loopId: Int, lastElement: Bool
         InstructionType.CHECK_ENTITY_TAG, InstructionType.CHECK_NOT_ENTITY_TAG -> {
             val data = instruction.data as InstructionDataLocationStringLoop
             if(data.loopId == loopId) {
-                return LoopUsageInfo(usedBreak = false, usedIndirect = true)
+                return LoopUsageInfo(usedBreak = false, usedIndirect = true, last = lastElement)
             }
         }
         InstructionType.CHECK_ENTITY_TAGS, InstructionType.CHECK_NOT_ENTITY_TAGS -> {
             val data = instruction.data as InstructionDataLocationLoop
             if(data.loopId == loopId) {
-                return LoopUsageInfo(usedBreak = false, usedIndirect = true)
+                return LoopUsageInfo(usedBreak = false, usedIndirect = true, last = lastElement)
             }
         }
         InstructionType.CHECK_LIMIT -> {
             val data = instruction.data as InstructionDataLoop
             if(data.loopId == loopId) {
-                return LoopUsageInfo(usedBreak = true, usedIndirect = true)
+                return LoopUsageInfo(usedBreak = true, usedIndirect = true, last = lastElement)
             }
         }
         InstructionType.RUN_SCORE_OPERATION -> {
             val data = instruction.data as InstructionDataRunScoreOperation
             if(data.exceptionLoopId == loopId && (data.operation == ScoreboardOperation.DIVIDE || data.operation == ScoreboardOperation.MODULO)) {
-                return LoopUsageInfo(usedBreak = true, usedIndirect = true)
+                return LoopUsageInfo(usedBreak = true, usedIndirect = true, last = lastElement)
             }
         }
         InstructionType.BREAK_LOOP, InstructionType.CONTINUE_LOOP -> {
             val data = instruction.data as InstructionDataLoop
             if(data.loopId == loopId && (!lastElement || wLoop)) {
-                return LoopUsageInfo(usedBreak = true, usedIndirect = false)
+                return LoopUsageInfo(usedBreak = true, usedIndirect = false, last = lastElement)
             }
         }
         else -> {}
     }
+    var usedLastElement = lastElement
     instruction.children.forEachIndexed { index, instr ->
         val info = getLoopUsed(instr, loopId, index == instruction.children.size - 1, wLoop)
         usedBreak = usedBreak or info.usedBreak
         usedIndirect = usedIndirect or info.usedIndirect
+        usedLastElement = usedLastElement and (index == instruction.children.size - 1)
     }
-    return LoopUsageInfo(usedBreak, usedIndirect)
+    return LoopUsageInfo(usedBreak, usedIndirect, usedLastElement)
 }

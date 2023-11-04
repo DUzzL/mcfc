@@ -3,6 +3,7 @@ package dev.epicpix.minecraftfunctioncompiler.optimizer
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction
 import dev.epicpix.minecraftfunctioncompiler.optimizer.optimizations.CommonSubexpressionEliminationOptimization
 import dev.epicpix.minecraftfunctioncompiler.optimizer.optimizations.DeadCodeEliminationOptimization
+import dev.epicpix.minecraftfunctioncompiler.optimizer.optimizations.LocalInvariantCodeHoistingOptimization
 
 typealias InstructionList = List<Instruction>
 
@@ -13,6 +14,7 @@ interface Optimization {
 private val optimizations: List<Optimization> = listOf(
     DeadCodeEliminationOptimization,
     CommonSubexpressionEliminationOptimization,
+    LocalInvariantCodeHoistingOptimization,
 )
 
 fun optimize(instructions: InstructionList): List<Instruction> {

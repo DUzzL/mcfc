@@ -168,6 +168,5 @@ private fun CompilationContext.compile(command: Command) {
                 addInstruction(Instructions.removeEntityTag(entity, command["name"]))
             }
         }
-        else -> throw UnsupportedOperationException("Unsupported command type: ${command.type}")
     }
 }
