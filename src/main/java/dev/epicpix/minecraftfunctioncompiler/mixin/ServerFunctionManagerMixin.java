@@ -25,7 +25,7 @@ public class ServerFunctionManagerMixin {
     @Inject(method = "postReload", at = @At("TAIL"))
     public void postReload(ServerFunctionLibrary serverFunctionLibrary, CallbackInfo ci) {
         classLoader = new FunctionClassLoader(getClass().getClassLoader(), library.getFunctions(), server);
-        classLoader.loadFunctions();
+        classLoader.loadFunctions((ServerFunctionManager) (Object) this);
     }
 
     @Inject(method = "execute(Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;Lnet/minecraft/nbt/CompoundTag;)I", at = @At("HEAD"), cancellable = true)

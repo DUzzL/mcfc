@@ -1,24 +1,19 @@
-package dev.epicpix.minecraftfunctioncompiler
+package dev.epicpix.minecraftfunctioncompiler.emitter
 
-import net.minecraft.resources.ResourceLocation
-import org.objectweb.asm.ClassVisitor
+import dev.epicpix.minecraftfunctioncompiler.DEBUG
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
-import java.util.*
 
-class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
+class CodeWriter(val methodVisitor: MethodVisitor) {
 
     private val locals: MutableMap<String, Local> = mutableMapOf()
     private val availableLocals: MutableSet<Int> = mutableSetOf()
     private val generatedLocals: MutableList<Local> = mutableListOf()
 
-    private val uuids: MutableList<UUID> = mutableListOf()
-    private val resourceLocations: MutableList<ResourceLocation> = mutableListOf()
+    fun getLocalIndex(local: String) = locals[local]!!.index
 
-    private var inControlFlow: Int = 0
-
-    fun defineLocal(local: String, descriptor: String, exec: (CodeWriter.() -> Unit)) {
+    fun defineLocal(local: String, descriptor: String): () -> Unit {
         val localStart = Label()
         val localEnd = Label()
         methodVisitor.visitLabel(localStart)
@@ -34,11 +29,12 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
         locals[local] = Local(local, descriptor, localStart, localEnd, localIndex)
         generatedLocals.add(locals[local]!!)
 
-        exec()
-        methodVisitor.visitLabel(localEnd)
+        return {
+            methodVisitor.visitLabel(localEnd)
 
-        locals.remove(local)
-        availableLocals.add(localIndex)
+            locals.remove(local)
+            availableLocals.add(localIndex)
+        }
     }
 
     fun defineGlobalLocal(local: String, descriptor: String) {
@@ -58,13 +54,11 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
     }
 
     fun storeLocal(local: String, descriptor: String, exec: (CodeWriter.() -> Unit)) {
-        defineLocal(local, descriptor) {
-            storeLocal(local)
-            exec()
-        }
+        val end = defineLocal(local, descriptor)
+        storeLocal(local)
+        exec()
+        end()
     }
-
-    fun getLocal(local: String): Int? = locals[local]?.index
 
     fun end() {
         val endLabel = Label()
@@ -86,7 +80,7 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
 
     fun loadLocal(local: String) {
         val localVar = locals[local]!!
-        if(localVar.descriptor.startsWith('I')) {
+        if(localVar.descriptor == "I") {
             methodVisitor.visitVarInsn(Opcodes.ILOAD, localVar.index)
         }else {
             methodVisitor.visitVarInsn(Opcodes.ALOAD, localVar.index)
@@ -95,7 +89,7 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
 
     fun storeLocal(local: String) {
         val localVar = locals[local]!!
-        if(localVar.descriptor.startsWith('I')) {
+        if(localVar.descriptor == "I") {
             methodVisitor.visitVarInsn(Opcodes.ISTORE, localVar.index)
         }else {
             methodVisitor.visitVarInsn(Opcodes.ASTORE, localVar.index)
@@ -116,28 +110,6 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
 
     fun writeString(str: String) {
         methodVisitor.visitLdcInsn(str)
-    }
-
-    fun writeUUID(value: UUID) {
-        if(!uuids.contains(value)) {
-            uuids.add(value)
-        }
-        if(DEBUG) {
-            getStaticField(className, "uuid$${value.toString().replace("-", "")}", "Ljava/util/UUID;")
-        }else {
-            getStaticField(className, "u${uuids.indexOf(value)}", "Ljava/util/UUID;")
-        }
-    }
-
-    fun writeResourceLocation(value: ResourceLocation) {
-        if(!resourceLocations.contains(value)) {
-            resourceLocations.add(value)
-        }
-        if(DEBUG) {
-            getStaticField(className, "resourceLocation$${value.toString().replace('/', '$').replace(':', '$')}", "Lnet/minecraft/resources/ResourceLocation;")
-        }else {
-            getStaticField(className, "r${resourceLocations.indexOf(value)}", "Lnet/minecraft/resources/ResourceLocation;")
-        }
     }
 
     fun writeNull() {
@@ -183,11 +155,7 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
         methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, type)
     }
 
-    fun isInControlFlow(): Boolean {
-        return inControlFlow != 0
-    }
-
-    private fun getIfJumpOpcode(comparison: Int): Int {
+    fun getIfJumpOpcode(comparison: Int): Int {
         return when (comparison) {
             Opcodes.IFNONNULL -> Opcodes.IFNULL
             Opcodes.IFNULL -> Opcodes.IFNONNULL
@@ -203,49 +171,19 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
         }
     }
 
-    fun executeIf(comparison: Int, ignoreCondition: Boolean = false, exec: () -> Unit) {
-        if(ignoreCondition) {
-            exec()
-            return
-        }
+    fun executeIf(comparison: Int, exec: () -> Unit) {
         val endLabel = Label()
         methodVisitor.visitJumpInsn(getIfJumpOpcode(comparison), endLabel)
-        inControlFlow++
         exec()
-        inControlFlow--
         methodVisitor.visitLabel(endLabel)
-    }
-
-    fun executeIfElse(comparison: Int, ignoreCondition: Boolean = false, exec: () -> Unit, execElse: () -> Unit) {
-        if(ignoreCondition) {
-            exec()
-            return
-        }
-        val elseLabel = Label()
-        val exitLabel = Label()
-        methodVisitor.visitJumpInsn(getIfJumpOpcode(comparison), elseLabel)
-        inControlFlow++
-        exec()
-        inControlFlow--
-        methodVisitor.visitJumpInsn(Opcodes.GOTO, exitLabel)
-        methodVisitor.visitLabel(elseLabel)
-        inControlFlow++
-        execElse()
-        inControlFlow--
-        methodVisitor.visitLabel(exitLabel)
     }
 
     fun createWhileLoop(condition: (`break`: Label) -> Unit, exec: (ControlFlowRun) -> Unit) {
         val beginLabel = Label()
         val endLabel = Label()
         methodVisitor.visitLabel(beginLabel)
-        inControlFlow++
         condition(endLabel)
-        exec(ControlFlowRun(
-            { methodVisitor.visitJumpInsn(it, beginLabel) },
-            { methodVisitor.visitJumpInsn(it, endLabel) }
-        ))
-        inControlFlow--
+        exec(ControlFlowRun(this, beginLabel, endLabel))
         methodVisitor.visitLabel(endLabel)
     }
 
@@ -264,10 +202,7 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
                     methodVisitor.visitJumpInsn(Opcodes.IF_ICMPGE, brk)
                 }) { controlFlow ->
                     val contLabel = Label()
-                    exec(indexName, ControlFlowRun(
-                        { methodVisitor.visitJumpInsn(it, contLabel) },
-                        controlFlow.breakJump
-                    ))
+                    exec(indexName, ControlFlowRun(this, contLabel, controlFlow.breakJump))
                     methodVisitor.visitLabel(contLabel)
                     methodVisitor.visitIincInsn(locals[indexName]!!.index, 1)
                     controlFlow.cont()
@@ -276,83 +211,56 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
         }
     }
 
-    fun createListForEachLoop(arrayLocal: String, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
+    fun createListForEachLoop(arrayLocal: String, type: String, autoLoad: Boolean = false, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
         loadLocal(arrayLocal)
         callInterfaceMethod("java/util/List", "size", "()I")
         createIndexedLoop { indexLocal, controlFlow ->
-            exec(controlFlow) {
+            if(autoLoad) {
                 loadLocal(arrayLocal)
                 loadLocal(indexLocal)
                 callInterfaceMethod("java/util/List", "get", "(I)Ljava/lang/Object;")
+                castType(type)
+                exec(controlFlow) { throw UnsupportedOperationException("Cannot run getter with autoLoad enabled") }
+            }else {
+                exec(controlFlow) {
+                    loadLocal(arrayLocal)
+                    loadLocal(indexLocal)
+                    callInterfaceMethod("java/util/List", "get", "(I)Ljava/lang/Object;")
+                    castType(type)
+                }
             }
         }
     }
 
-    fun createIteratorForEachLoop(iteratorLocal: String, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
+    fun createIteratorForEachLoop(iteratorLocal: String, type: String, autoLoad: Boolean = false, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
         createWhileLoop({ brk ->
             loadLocal(iteratorLocal)
             callInterfaceMethod("java/util/Iterator", "hasNext", "()Z")
             methodVisitor.visitJumpInsn(Opcodes.IFEQ, brk)
         }) { controlFlow ->
-            defineLocal("$iteratorLocal:Element", "Ljava/lang/Object;") {
-                loadLocal(iteratorLocal)
-                callInterfaceMethod("java/util/Iterator", "next", "()Ljava/lang/Object;")
+            loadLocal(iteratorLocal)
+            callInterfaceMethod("java/util/Iterator", "next", "()Ljava/lang/Object;")
+            if(type != "java/lang/Object") castType(type)
+
+            if(!autoLoad) {
+                val end = defineLocal("$iteratorLocal:Element", "L$type;")
                 storeLocal("$iteratorLocal:Element")
+
                 exec(controlFlow) { loadLocal("$iteratorLocal:Element") }
+                end()
+            }else {
+                exec(controlFlow) { throw UnsupportedOperationException("autoLoad enabled, cannot use getter") }
             }
+
             controlFlow.cont()
         }
     }
 
-    fun createIterableForEachLoop(iterableLocal: String, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
+    fun createIterableForEachLoop(iterableLocal: String, type: String, autoLoad: Boolean = false, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
         loadLocal(iterableLocal)
         callInterfaceMethod("java/lang/Iterable", "iterator", "()Ljava/util/Iterator;")
         storeLocal("$iterableLocal:Iterator", "Ljava/util/Iterator;") {
-            createIteratorForEachLoop("$iterableLocal:Iterator", exec)
-        }
-    }
-
-    fun writeClinit(methodVisitor: MethodVisitor) {
-        uuids.forEachIndexed { index, uuid ->
-            methodVisitor.visitTypeInsn(Opcodes.NEW, "java/util/UUID")
-            methodVisitor.visitInsn(Opcodes.DUP)
-            methodVisitor.visitLdcInsn(uuid.mostSignificantBits)
-            methodVisitor.visitLdcInsn(uuid.leastSignificantBits)
-            methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/util/UUID", "<init>", "(JJ)V", false)
-            if(DEBUG) {
-                methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className, "uuid$${uuid.toString().replace("-", "")}", "Ljava/util/UUID;")
-            }else {
-                methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className, "u$index", "Ljava/util/UUID;")
-            }
-        }
-        resourceLocations.forEachIndexed { index, value ->
-            methodVisitor.visitTypeInsn(Opcodes.NEW, "net/minecraft/resources/ResourceLocation")
-            methodVisitor.visitInsn(Opcodes.DUP)
-            methodVisitor.visitLdcInsn(value.toString())
-            methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, "net/minecraft/resources/ResourceLocation", "<init>", "(Ljava/lang/String;)V", false)
-            if(DEBUG) {
-                methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className, "resourceLocation$${value.toString().replace('/', '$').replace(':', '$')}", "Lnet/minecraft/resources/ResourceLocation;")
-            }else {
-                methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, className, "r$index", "Lnet/minecraft/resources/ResourceLocation;")
-            }
-        }
-        methodVisitor.visitInsn(Opcodes.RETURN)
-    }
-
-    fun generateFields(classVisitor: ClassVisitor) {
-        uuids.forEachIndexed { index, uuid ->
-            if(DEBUG) {
-                classVisitor.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, "uuid$${uuid.toString().replace("-", "")}", "Ljava/util/UUID;", null, null)
-            }else {
-                classVisitor.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, "u$index", "Ljava/util/UUID;", null, null)
-            }
-        }
-        resourceLocations.forEachIndexed { index, value ->
-            if(DEBUG) {
-                classVisitor.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, "resourceLocation$${value.toString().replace('/', '$').replace(':', '$')}", "Lnet/minecraft/resources/ResourceLocation;", null, null)
-            }else {
-                classVisitor.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, "r$index", "Lnet/minecraft/resources/ResourceLocation;", null, null)
-            }
+            createIteratorForEachLoop("$iterableLocal:Iterator", type, autoLoad, exec)
         }
     }
 
@@ -363,10 +271,10 @@ class CodeWriter(val methodVisitor: MethodVisitor, val className: String) {
 }
 
 data class Local(val name: String, val descriptor: String, val start: Label, var end: Label?, val index: Int)
-data class ControlFlowRun(val continueJump: (condition: Int) -> Unit, val breakJump: (condition: Int) -> Unit) {
-    fun cont() = continueJump(Opcodes.GOTO)
-    fun cont(condition: Int) = continueJump(condition)
+data class ControlFlowRun(val codeWriter: CodeWriter, val continueJump: Label, val breakJump: Label) {
+    fun cont() = codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, continueJump)
+    fun cont(condition: Int) = codeWriter.methodVisitor.visitJumpInsn(condition, continueJump)
 
-    fun brk() = breakJump(Opcodes.GOTO)
-    fun brk(condition: Int) = breakJump(condition)
+    fun brk() = codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, breakJump)
+    fun brk(condition: Int) = codeWriter.methodVisitor.visitJumpInsn(condition, breakJump)
 }

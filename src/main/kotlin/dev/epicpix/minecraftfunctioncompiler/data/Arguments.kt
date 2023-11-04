@@ -1,4 +1,4 @@
-package dev.epicpix.minecraftfunctioncompiler
+package dev.epicpix.minecraftfunctioncompiler.data
 
 import java.util.*
 
@@ -9,13 +9,22 @@ data class FloatRangeArgument(
 data class IntRangeArgument(
     val minimum: Int?,
     val maximum: Int?
-)
+) {
+    override fun toString(): String {
+        return "${minimum ?: ""}..${maximum ?: ""}"
+    }
+}
 
 data class ScoreHolderArgument(
     val all: Boolean,
     val name: String?,
     val selector: SelectorArgument?
-)
+) {
+    fun single(): ScoreHolderArgument {
+        return if(selector != null) ScoreHolderArgument(false, null, selector.copy(limit = 1))
+        else this
+    }
+}
 
 data class SelectorArgument(
     val entityUuid: UUID? = null,

@@ -1,12 +1,21 @@
 package dev.epicpix.minecraftfunctioncompiler
 
-import dev.epicpix.minecraftfunctioncompiler.CodeGenerator.generateCommandLike
+import dev.epicpix.minecraftfunctioncompiler.compiler.compile
+import dev.epicpix.minecraftfunctioncompiler.emitter.CodeFieldStorage
+import dev.epicpix.minecraftfunctioncompiler.emitter.CodeWriter
+import dev.epicpix.minecraftfunctioncompiler.emitter.emitBytecode
+import dev.epicpix.minecraftfunctioncompiler.il.Instruction
+import dev.epicpix.minecraftfunctioncompiler.il.printInstructionList
+import dev.epicpix.minecraftfunctioncompiler.optimizer.optimize
+import dev.epicpix.minecraftfunctioncompiler.parser.Command
+import dev.epicpix.minecraftfunctioncompiler.parser.CommandParser
 import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.commands.CommandFunction
 import net.minecraft.commands.CommandFunction.CommandEntry
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.MinecraftServer
+import net.minecraft.server.ServerFunctionManager
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import org.slf4j.LoggerFactory
@@ -14,14 +23,13 @@ import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 import java.nio.file.Files
-import kotlin.UnsupportedOperationException
 
 class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<ResourceLocation, CommandFunction>, private val minecraftServer: MinecraftServer) : ClassLoader(parent) {
     private val handles: MutableMap<ResourceLocation, MethodHandle> = HashMap()
-    fun loadFunctions() {
+    fun loadFunctions(serverFunctionManager: ServerFunctionManager) {
         handles.clear()
 
-        val definedFunctions = mutableMapOf<ResourceLocation, List<CommandLike>>()
+        val definedFunctions = mutableMapOf<ResourceLocation, List<Command>>()
 
         val startParse = System.currentTimeMillis()
         funcLoop@
@@ -32,7 +40,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                         continue@funcLoop
                     }
                 }
-                definedFunctions[key] = mergeCommandRequirements(CommandParser.parseFunctionCommands(value, minecraftServer))
+                definedFunctions[key] = CommandParser.parseFunctionCommands(value, minecraftServer)
             } catch (e: UnsupportedOperationException) {
                 LOGGER.warn("Unable to parse function $key / ${e.message}")
             } catch (e: Throwable) {
@@ -41,19 +49,58 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         }
         LOGGER.info("Parsed ${definedFunctions.size}/${functions.size} functions in ${System.currentTimeMillis()-startParse}ms")
 
+        var totalPreoptimizedInstructions = 0
+        var totalOptimizedInstructions = 0
+
+        val compiledFunctions = mutableMapOf<ResourceLocation, List<Instruction>>()
+        val startCompile = System.currentTimeMillis()
+        for((key, value) in definedFunctions) {
+            try {
+                val compiled = compile(value)
+                val optimized = optimize(compiled)
+                compiledFunctions[key] = optimized
+                if(DEBUG) {
+                    compiled.forEach { totalPreoptimizedInstructions += it.countInstructions() }
+                    optimized.forEach { totalOptimizedInstructions += it.countInstructions() }
+                    LOGGER.info(" --- {} ---", key)
+                    printInstructionList(optimized)
+                }
+            }catch(e: Throwable) {
+                LOGGER.error("Failed to compile function ($key), clearing compilation data", e)
+                definedFunctions.clear()
+                LOGGER.info("Compiled 0 functions in ${System.currentTimeMillis()-startCompile}ms")
+                return
+            }
+        }
+        LOGGER.info("Compiled ${definedFunctions.size} functions in ${System.currentTimeMillis()-startCompile}ms")
+        if(definedFunctions.size != 0 && DEBUG) {
+            LOGGER.info("Average ${"%.2f".format(totalPreoptimizedInstructions/definedFunctions.size.toDouble())} instructions in pre-optimized IL bytecode")
+            LOGGER.info("Average ${"%.2f".format(totalOptimizedInstructions/definedFunctions.size.toDouble())} instructions in optimized IL bytecode")
+        }
+
+
+        val storage = CodeFieldStorage()
         val loadedFunctions = mutableMapOf<ResourceLocation, Class<*>>()
         val startLoader = System.currentTimeMillis()
-        try {
-            for((key) in definedFunctions) {
-                loadedFunctions[key] = defineFunction(key, definedFunctions)
+        for((key) in definedFunctions) {
+            try {
+                loadedFunctions[key] = defineFunction(key, storage, compiledFunctions[key]!!, definedFunctions)
+            }catch(e: Throwable) {
+                LOGGER.error("Failed to load function ($key), clearing data", e)
+                definedFunctions.clear()
+                LOGGER.info("Loaded 0 functions in ${System.currentTimeMillis()-startLoader}ms")
+                return
             }
-        }catch(e: Throwable) {
-            LOGGER.error("Failed to compile function, clearing compilation data", e)
-            definedFunctions.clear()
-            LOGGER.info("Loaded 0 functions in ${System.currentTimeMillis()-startLoader}ms")
-            return
         }
         LOGGER.info("Loaded ${definedFunctions.size} functions in ${System.currentTimeMillis()-startLoader}ms")
+
+        try {
+            loadData(storage, serverFunctionManager)
+        }catch(e: Throwable) {
+            LOGGER.error("Failed to load data, clearing data", e)
+            definedFunctions.clear()
+            return
+        }
 
         val startHandles = System.currentTimeMillis()
         try {
@@ -82,71 +129,48 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         }
     }
 
-    private fun defineFunction(funcId: ResourceLocation, definedFunctions: Map<ResourceLocation, List<CommandLike>>): Class<*> {
+    private fun defineFunction(funcId: ResourceLocation, fieldStorage: CodeFieldStorage, instructions: List<Instruction>, definedFunctions: Map<ResourceLocation, List<Command>>): Class<*> {
         val className = "function/${funcId.namespace}/${funcId.path}"
 
         val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
-        cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, className, null, "java/lang/Object", null)
+        cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL, className, null, "java/lang/Object", null)
         val mv = cw.visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "run",
                 "(Lnet/minecraft/commands/CommandSourceStack;)I", null, null)
         mv.visitCode()
-        val codeWriter = CodeWriter(mv, className)
-
-
-        val commands = definedFunctions[funcId]!!
-
-        val dependencies = mutableListOf<CommandDependency>().run {
-            commands.forEach { addAll(getCommandDependencies(it)) }
-            distinct()
-        }
-
+        val codeWriter = CodeWriter(mv)
         codeWriter.defineGlobalLocal("CommandSourceStack", "Lnet/minecraft/commands/CommandSourceStack;")
 
-        val context = createCommandContext(dependencies, codeWriter)
-        commands.forEach {
-            generateCommandLike(it, context, codeWriter, definedFunctions)
-        }
+        emitBytecode(instructions, fieldStorage, codeWriter, definedFunctions)
+
         codeWriter.end()
 
-        mv.visitLdcInsn(commands.size)
+        mv.visitLdcInsn(definedFunctions[funcId]!!.size)
         mv.visitInsn(Opcodes.IRETURN)
         codeWriter.writeLocalVariables()
         mv.visitMaxs(0, 0)
         mv.visitEnd()
 
-        codeWriter.generateFields(cw)
-
-        val cmv = cw.visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "<clinit>",
-            "()V", null, null)
-        cmv.visitCode()
-        codeWriter.writeClinit(cmv)
-        cmv.visitMaxs(0, 0)
-        cmv.visitEnd()
-
-
         cw.visitEnd()
-        val data = cw.toByteArray()
-        if(DEBUG) {
-            runCatching { Files.createDirectory(FabricLoader.getInstance().gameDir.resolve("generated")) }
-            Files.write(FabricLoader.getInstance().gameDir.resolve("generated").resolve("${className.replace('/', '.')}.class"), data)
-        }
-        return defineClass(className.replace('/', '.'), data, 0, data.size)
+        return defineClass(className.replace('/', '.'), cw.toByteArray())
     }
 
-    private fun getCommandDependencies(command: CommandLike): List<CommandDependency> {
-        if(command is CommandBlock) {
-            val results = mutableListOf<CommandDependency>()
-            for(cmd in command.commands) results.addAll(getCommandDependencies(cmd))
-            return results
-        }else if(command is Command) {
-            if(command.params["command"] != null) {
-                val results = mutableListOf<CommandDependency>().apply { addAll(command.dependencies) }
-                results.addAll(getCommandDependencies(command["command"]))
-                return results
-            }
-            return command.dependencies
+    private fun loadData(fieldStorage: CodeFieldStorage, serverFunctionManager: ServerFunctionManager): Class<*> {
+        val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
+        cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL, DATA_CLASS, null, "java/lang/Object", null)
+        fieldStorage.generate(cw)
+        cw.visitEnd()
+
+        val defined = defineClass(DATA_CLASS.replace('/', '.'), cw.toByteArray())
+        defined.getDeclaredMethod("load", MinecraftServer::class.java, ServerFunctionManager::class.java).invoke(null, minecraftServer, serverFunctionManager)
+        return defined
+    }
+
+    private fun defineClass(name: String, data: ByteArray): Class<*> {
+        if(DEBUG) {
+            runCatching { Files.createDirectory(FabricLoader.getInstance().gameDir.resolve("generated")) }
+            Files.write(FabricLoader.getInstance().gameDir.resolve("generated").resolve("$name.class"), data)
         }
-        throw UnsupportedOperationException("Impossible")
+        return defineClass(name, data, 0, data.size)
     }
 
     companion object {
