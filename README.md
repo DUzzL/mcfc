@@ -16,7 +16,7 @@ Put the mod on a fabric server with all the dependencies, the mod will automatic
 
 Of course this mod can't support every command, so it will only generate code for functions which contain only commands which are supported, **this will not compile functions with macros currently**. It can't compile macros because any value could be interpreted in any way, which is hard to implement using only things known at compile-time.
 
-This is the list of commands supported currently as of `0.1.0-alpha.3`:
+This is the list of commands supported currently as of `0.1.0-alpha.4`:
 - `execute as`
 - `execute if entity`
 - `execute if score`
