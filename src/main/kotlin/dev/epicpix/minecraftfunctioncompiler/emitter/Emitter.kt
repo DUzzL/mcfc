@@ -312,8 +312,13 @@ private fun emitInstruction(
             codeWriter.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
             codeWriter.methodVisitor.visitInsn(Opcodes.DUP)
             codeWriter.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-            codeWriter.writeInt(data.value)
-            codeWriter.methodVisitor.visitInsn(Opcodes.IADD)
+            if(data.value >= 0) {
+                codeWriter.writeInt(data.value)
+                codeWriter.methodVisitor.visitInsn(Opcodes.IADD)
+            }else {
+                codeWriter.writeInt(-data.value)
+                codeWriter.methodVisitor.visitInsn(Opcodes.ISUB)
+            }
             codeWriter.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
         }
         InstructionType.RUN_SCORE_OPERATION -> {

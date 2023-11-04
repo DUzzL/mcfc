@@ -121,12 +121,10 @@ private fun getLoopUsed(instruction: Instruction, loopId: Int, lastElement: Bool
         }
         else -> {}
     }
-    var usedLastElement = lastElement
     instruction.children.forEachIndexed { index, instr ->
-        val info = getLoopUsed(instr, loopId, index == instruction.children.size - 1, wLoop)
+        val info = getLoopUsed(instr, loopId, lastElement && index == instruction.children.size - 1, wLoop)
         usedBreak = usedBreak or info.usedBreak
         usedIndirect = usedIndirect or info.usedIndirect
-        usedLastElement = usedLastElement and (index == instruction.children.size - 1)
     }
-    return LoopUsageInfo(usedBreak, usedIndirect, usedLastElement)
+    return LoopUsageInfo(usedBreak, usedIndirect, lastElement)
 }
