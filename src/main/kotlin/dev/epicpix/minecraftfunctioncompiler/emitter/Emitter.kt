@@ -144,7 +144,7 @@ private fun emitInstruction(
             codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newLoops[data.loopId]!!.breakLabel)
         }
         InstructionType.FOR_EACH_PLAYER -> {
-            val data = instruction.data as InstructionDataLocationLoop
+            val data = instruction.data as InstructionDataLocation
 
             val uidLocal = codeWriter.generateUniqueLocal("\$Players")
             codeWriter.loadLocal("CommandSourceStack")
@@ -153,8 +153,7 @@ private fun emitInstruction(
             codeWriter.callMethod("net/minecraft/server/players/PlayerList", "getPlayers", "()Ljava/util/List;")
             val end = codeWriter.defineLocal(uidLocal, "Ljava/util/List;")
             codeWriter.storeLocal(uidLocal)
-            codeWriter.createListForEachLoop(uidLocal, "net/minecraft/world/entity/Entity", true) { controlFlow, getter ->
-                newLoops[data.loopId] = EmitControlFlow(controlFlow.breakJump, controlFlow.continueJump)
+            codeWriter.createListForEachLoop(uidLocal, "net/minecraft/world/entity/Entity", true) { _, getter ->
                 val uidLocal2 = codeWriter.generateUniqueLocal("\$Entity")
                 val lend = codeWriter.defineLocal(uidLocal2, "Lnet/minecraft/world/entity/Entity;")
                 codeWriter.storeLocal(uidLocal2)
@@ -165,7 +164,7 @@ private fun emitInstruction(
             end()
         }
         InstructionType.FOR_EACH_ENTITY -> {
-            val data = instruction.data as InstructionDataLocationLoop
+            val data = instruction.data as InstructionDataLocation
 
             val uidLocalLevels = codeWriter.generateUniqueLocal("\$Levels")
             codeWriter.loadLocal("CommandSourceStack")
@@ -173,14 +172,13 @@ private fun emitInstruction(
             codeWriter.callMethod("net/minecraft/server/MinecraftServer", "getAllLevels", "()Ljava/lang/Iterable;")
             val end = codeWriter.defineLocal(uidLocalLevels, "Ljava/lang/Iterable;")
             codeWriter.storeLocal(uidLocalLevels)
-            codeWriter.createIterableForEachLoop(uidLocalLevels, "net/minecraft/server/level/ServerLevel", true) { levelControlFlow, _ ->
+            codeWriter.createIterableForEachLoop(uidLocalLevels, "net/minecraft/server/level/ServerLevel", true) { _, _ ->
                 val uidLocalEntities = codeWriter.generateUniqueLocal("\$Entities")
                 codeWriter.callMethod("net/minecraft/server/level/ServerLevel", "getAllEntities", "()Ljava/lang/Iterable;")
                 codeWriter.callInterfaceMethod("java/lang/Iterable", "iterator", "()Ljava/util/Iterator;")
                 val end2 = codeWriter.defineLocal(uidLocalEntities, "Ljava/util/Iterator;")
                 codeWriter.storeLocal(uidLocalEntities)
-                codeWriter.createIteratorForEachLoop(uidLocalEntities, "net/minecraft/world/entity/Entity", true) { entityControlFlow, _ ->
-                    newLoops[data.loopId] = EmitControlFlow(levelControlFlow.breakJump, entityControlFlow.continueJump)
+                codeWriter.createIteratorForEachLoop(uidLocalEntities, "net/minecraft/world/entity/Entity", true) { _, _ ->
                     val uidLocalEntity = codeWriter.generateUniqueLocal("\$Entity")
                     val lend = codeWriter.defineLocal(uidLocalEntity, "Lnet/minecraft/world/entity/Entity;")
                     codeWriter.storeLocal(uidLocalEntity)
@@ -212,7 +210,7 @@ private fun emitInstruction(
             end()
         }
         InstructionType.FOR_ENTITY -> {
-            val data = instruction.data as InstructionDataLocationUUIDLoop
+            val data = instruction.data as InstructionDataLocationUUID
 
             val uidLocalLevels = codeWriter.generateUniqueLocal("\$Levels")
             codeWriter.loadLocal("CommandSourceStack")
@@ -221,7 +219,6 @@ private fun emitInstruction(
             val end = codeWriter.defineLocal(uidLocalLevels, "Ljava/lang/Iterable;")
             codeWriter.storeLocal(uidLocalLevels)
             codeWriter.createIterableForEachLoop(uidLocalLevels, "net/minecraft/server/level/ServerLevel", true) { controlFlow, _ ->
-                newLoops[data.loopId] = EmitControlFlow(controlFlow.breakJump, controlFlow.continueJump)
                 fieldStorage.loadUUID(codeWriter, data.value)
                 codeWriter.callMethod("net/minecraft/server/level/ServerLevel", "getEntity", "(Ljava/util/UUID;)Lnet/minecraft/world/entity/Entity;")
                 val uidLocal = codeWriter.generateUniqueLocal("\$Entity")

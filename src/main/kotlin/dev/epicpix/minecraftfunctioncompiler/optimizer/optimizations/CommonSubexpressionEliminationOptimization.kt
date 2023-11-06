@@ -40,10 +40,6 @@ object CommonSubexpressionEliminationOptimization : Optimization {
                 val remapped = remapLocation(instruction.data.local, newCse);
                 InstructionDataLocationLoop(remapped, instruction.data.loopId)
             }
-            is InstructionDataLocationUUIDLoop -> {
-                val remapped = remapLocation(instruction.data.local, newCse);
-                InstructionDataLocationUUIDLoop(remapped, instruction.data.value, instruction.data.loopId)
-            }
             is InstructionDataLocationBoolean -> {
                 val remapped = remapLocation(instruction.data.local, newCse);
                 InstructionDataLocationBoolean(remapped, instruction.data.value)

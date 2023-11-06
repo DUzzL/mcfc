@@ -17,7 +17,7 @@ data class InstructionDataLocationLoop(val local: LocationData, val loopId: Int)
 data class InstructionDataLocationBoolean(val local: LocationData, val value: Boolean) : InstructionData
 data class InstructionDataLocationString(val local: LocationData, val value: String) : InstructionData
 data class InstructionDataLocationStringLoop(val local: LocationData, val value: String, var loopId: Int) : InstructionData
-data class InstructionDataLocationUUIDLoop(val local: LocationData, val value: UUID, val loopId: Int) : InstructionData
+data class InstructionDataLocationUUID(val local: LocationData, val value: UUID) : InstructionData
 data class InstructionDataLocationLocation(val local: LocationData, val local2: LocationData) : InstructionData
 data class InstructionDataIntLoop(val value: Int, var loopId: Int) : InstructionData
 data class InstructionDataLocationLocationInt(val local: LocationData, val local2: LocationData, val value: Int) : InstructionData
@@ -45,9 +45,9 @@ data class Instruction(val type: InstructionType, val data: InstructionData?, va
 data object Instructions {
 
     fun currentEntity(local: LocationData) = Instruction(InstructionType.GET_CURRENT_ENTITY, InstructionDataLocation(local))
-    fun forEachEntity(local: LocationData, loopId: Int) = Instruction(InstructionType.FOR_EACH_ENTITY, InstructionDataLocationLoop(local, loopId))
-    fun forEachPlayer(local: LocationData, loopId: Int) = Instruction(InstructionType.FOR_EACH_PLAYER, InstructionDataLocationLoop(local, loopId))
-    fun forEntity(local: LocationData, entityUuid: UUID, loopId: Int) = Instruction(InstructionType.FOR_ENTITY, InstructionDataLocationUUIDLoop(local, entityUuid, loopId))
+    fun forEachEntity(local: LocationData) = Instruction(InstructionType.FOR_EACH_ENTITY, InstructionDataLocation(local))
+    fun forEachPlayer(local: LocationData) = Instruction(InstructionType.FOR_EACH_PLAYER, InstructionDataLocation(local))
+    fun forEntity(local: LocationData, entityUuid: UUID) = Instruction(InstructionType.FOR_ENTITY, InstructionDataLocationUUID(local, entityUuid))
     fun forPlayer(local: LocationData, entityName: String) = Instruction(InstructionType.FOR_PLAYER, InstructionDataLocationString(local, entityName))
     fun forScoreHolders(local: LocationData, single: Boolean) = Instruction(InstructionType.FOR_SCORE_HOLDERS, InstructionDataLocationBoolean(local, single))
     fun ifNull(local: LocationData) = Instruction(InstructionType.IF_NULL, InstructionDataLocation(local))

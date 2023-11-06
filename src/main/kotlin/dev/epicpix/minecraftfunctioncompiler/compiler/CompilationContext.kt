@@ -29,7 +29,7 @@ data class CompilationContext(val highestLocal: Int = 0, val currentEntity: Loca
         }else if(holder.name != null) {
             exec(LocationData(string = holder.name))
         }else if(holder.selector != null) {
-            forSelector(holder.selector) { entity ->
+            forSelector(holder.selector) { entity, _, _ ->
                 val local = LocationData(local = highestLocal)
                 val instruction = Instructions.getScoreboardName(entity, local)
                 exec(copy(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
@@ -38,51 +38,67 @@ data class CompilationContext(val highestLocal: Int = 0, val currentEntity: Loca
         }
     }
 
-    fun forCurrentEntity(exec: CompilationContext.(local: LocationData, loopId: Int) -> Unit) {
+    fun forCurrentEntity(exec: CompilationContext.(local: LocationData, breakId: Int, continueId: Int) -> Unit) {
         if(currentEntity != null) {
-            val loopId = highestLocal
-            val instruction = Instructions.emptyCondition(loopId)
-            exec(copy(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), currentEntity, loopId)
-            addInstruction(instruction)
+            forEmptyCondition { loopId ->
+                exec(this, currentEntity!!, loopId, loopId)
+            }
         }else {
-            val loopId = highestLocal
-            val local = LocationData(local = highestLocal + 1)
-            val instruction = Instructions.currentEntity(local)
-            exec(copy(currentEntity = local, highestLocal = highestLocal + 2, addInstruction = instruction.children::add), local, loopId)
-            addInstruction(Instructions.emptyCondition(loopId).with(instruction))
+            forEmptyCondition { loopId ->
+                val local = LocationData(local = highestLocal)
+                val instruction = Instructions.currentEntity(local)
+                exec(copy(currentEntity = local, highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local, loopId, loopId)
+                addInstruction(instruction)
+            }
         }
     }
 
-    fun forEachEntity(exec: CompilationContext.(local: LocationData, loopId: Int) -> Unit) {
-        val loopId = highestLocal
-        val local = LocationData(local = highestLocal + 1)
-        val instruction = Instructions.forEachEntity(local, loopId)
-        exec(copy(highestLocal = highestLocal + 2, addInstruction = instruction.children::add), local, loopId)
-        addInstruction(instruction)
+    fun forEachEntity(exec: CompilationContext.(local: LocationData, breakId: Int, continueId: Int) -> Unit) {
+        forEmptyCondition { breakId ->
+            val local = LocationData(local = highestLocal)
+            val instruction = Instructions.forEachEntity(local)
+            copy(highestLocal = highestLocal + 1, addInstruction = instruction.children::add).forEmptyCondition {
+                forEmptyCondition { continueId ->
+                    exec(local, breakId, continueId)
+                }
+            }
+            addInstruction(instruction)
+        }
     }
 
-    fun forEachPlayer(exec: CompilationContext.(local: LocationData, loopId: Int) -> Unit) {
-        val loopId = highestLocal
-        val local = LocationData(local = highestLocal + 1)
-        val instruction = Instructions.forEachPlayer(local, loopId)
-        exec(copy(highestLocal = highestLocal + 2, addInstruction = instruction.children::add), local, loopId)
-        addInstruction(instruction)
+    fun forEachPlayer(exec: CompilationContext.(local: LocationData, breakId: Int, continueId: Int) -> Unit) {
+        forEmptyCondition { breakId ->
+            val local = LocationData(local = highestLocal)
+            val instruction = Instructions.forEachEntity(local)
+            copy(highestLocal = highestLocal + 1, addInstruction = instruction.children::add).forEmptyCondition {
+                forEmptyCondition { continueId ->
+                    exec(local, breakId, continueId)
+                }
+            }
+            addInstruction(instruction)
+        }
     }
 
-    fun forEntity(entityUuid: UUID, exec: CompilationContext.(local: LocationData, loopId: Int) -> Unit) {
-        val loopId = highestLocal
-        val local = LocationData(local = highestLocal + 1)
-        val instruction = Instructions.forEntity(local, entityUuid, loopId)
-        exec(copy(highestLocal = highestLocal + 2, addInstruction = instruction.children::add), local, loopId)
-        addInstruction(instruction)
+    fun forEntity(entityUuid: UUID, exec: CompilationContext.(local: LocationData, breakId: Int, continueId: Int) -> Unit) {
+        forEmptyCondition { breakId ->
+            val local = LocationData(local = highestLocal)
+            val instruction = Instructions.forEntity(local, entityUuid)
+            copy(highestLocal = highestLocal + 1, addInstruction = instruction.children::add).forEmptyCondition {
+                forEmptyCondition { continueId ->
+                    exec(local, breakId, continueId)
+                }
+            }
+            addInstruction(instruction)
+        }
     }
 
-    fun forPlayer(playerName: String, exec: CompilationContext.(local: LocationData, loopId: Int) -> Unit) {
-        val loopId = highestLocal
-        val local = LocationData(local = highestLocal + 1)
-        val instruction = Instructions.forPlayer(local, playerName)
-        exec(copy(highestLocal = highestLocal + 2, addInstruction = instruction.children::add), local, loopId)
-        addInstruction(Instructions.emptyCondition(loopId).with(instruction))
+    fun forPlayer(playerName: String, exec: CompilationContext.(local: LocationData, breakId: Int, continueId: Int) -> Unit) {
+        forEmptyCondition { loopId ->
+            val local = LocationData(local = highestLocal)
+            val instruction = Instructions.forPlayer(local, playerName)
+            copy(highestLocal = highestLocal + 1, addInstruction = instruction.children::add).exec(local, loopId, loopId)
+            addInstruction(instruction)
+        }
     }
 
     fun forEachScoreHolder(single: Boolean = false, exec: CompilationContext.(local: LocationData) -> Unit) {
@@ -92,21 +108,21 @@ data class CompilationContext(val highestLocal: Int = 0, val currentEntity: Loca
         addInstruction(instruction)
     }
 
-    fun forSelector(selector: SelectorArgument, exec: CompilationContext.(local: LocationData) -> Unit) {
+    fun forSelector(selector: SelectorArgument, exec: CompilationContext.(local: LocationData, breakId: Int, continueId: Int) -> Unit) {
         var limiterId: Int? = null
-        fun checkEntityCondition(context: CompilationContext, local: LocationData, loopId: Int) {
+        fun checkEntityCondition(context: CompilationContext, local: LocationData, breakId: Int, continueId: Int) {
             val nonNull = Instructions.ifNotNull(local)
             for(tag in selector.tags) {
-                if(!tag.negated) nonNull.with(Instructions.checkEntityTag(local, tag.data, loopId))
-                else nonNull.with(Instructions.checkNotEntityTag(local, tag.data, loopId))
+                if(!tag.negated) nonNull.with(Instructions.checkEntityTag(local, tag.data, continueId))
+                else nonNull.with(Instructions.checkNotEntityTag(local, tag.data, continueId))
             }
             if(selector.hasTags != null) {
-                if(selector.hasTags) nonNull.with(Instructions.checkEntityTags(local, loopId))
-                else nonNull.with(Instructions.checkNotEntityTags(local, loopId))
+                if(selector.hasTags) nonNull.with(Instructions.checkEntityTags(local, continueId))
+                else nonNull.with(Instructions.checkNotEntityTags(local, continueId))
             }
-            exec(context.copy(addInstruction = nonNull.children::add), local)
+            exec(context.copy(addInstruction = nonNull.children::add), local, breakId, continueId)
             if(selector.limit == 1) {
-                nonNull.with(Instructions.breakLoop(loopId))
+                nonNull.with(Instructions.breakLoop(breakId))
             }else if(selector.limit != null) {
                 nonNull.with(Instructions.checkLimit(limiterId!!))
             }
@@ -122,15 +138,15 @@ data class CompilationContext(val highestLocal: Int = 0, val currentEntity: Loca
         } else this
 
         if(selector.playerName != null) {
-            realContext.forPlayer(selector.playerName) { local, loopId -> checkEntityCondition(this, local, loopId) }
+            realContext.forPlayer(selector.playerName) { local, breakId, continueId -> checkEntityCondition(this, local, breakId, continueId) }
         }else if(selector.entityUuid != null) {
-            realContext.forEntity(selector.entityUuid) { local, loopId -> checkEntityCondition(this, local, loopId) }
+            realContext.forEntity(selector.entityUuid) { local, breakId, continueId -> checkEntityCondition(this, local, breakId, continueId) }
         }else if(selector.self) {
-            realContext.forCurrentEntity { local, loopId -> checkEntityCondition(this, local, loopId) }
+            realContext.forCurrentEntity { local, breakId, continueId -> checkEntityCondition(this, local, breakId, continueId) }
         }else if(selector.entityType == "minecraft:player") {
-            realContext.forEachPlayer { local, loopId -> checkEntityCondition(this, local, loopId) }
+            realContext.forEachPlayer { local, breakId, continueId -> checkEntityCondition(this, local, breakId, continueId) }
         }else {
-            realContext.forEachEntity { local, loopId -> checkEntityCondition(this, local, loopId) }
+            realContext.forEachEntity { local, breakId, continueId -> checkEntityCondition(this, local, breakId, continueId) }
         }
     }
 

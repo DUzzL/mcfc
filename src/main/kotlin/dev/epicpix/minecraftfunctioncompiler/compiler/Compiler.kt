@@ -20,12 +20,12 @@ fun compile(commands: List<Command>): List<Instruction> {
 private fun CompilationContext.compile(command: Command) {
     when(command.type) {
         EXECUTE_AS -> {
-            forSelector(command["targets"]) { entity ->
+            forSelector(command["targets"]) { entity, breakId, continueId ->
                 copy(currentEntity = entity).compile(command["command"])
             }
         }
         EXECUTE_IF_ENTITY -> {
-            forSelector(command.get<SelectorArgument>("entities").copy(limit = 1)) {
+            forSelector(command.get<SelectorArgument>("entities").copy(limit = 1)) { entity, breakId, continueId ->
                 compile(command["command"])
             }
         }
@@ -60,12 +60,10 @@ private fun CompilationContext.compile(command: Command) {
             }
         }
         EXECUTE_UNLESS_ENTITY -> {
-            forEmptyCondition { loopId ->
-                forSelector(command.get<SelectorArgument>("entities").copy(limit = 1)) {
-                    addInstruction(Instructions.breakLoop(loopId))
-                }
-                compile(command["command"])
+            forSelector(command.get<SelectorArgument>("entities").copy(limit = 1)) { local, breakId, continueId ->
+                addInstruction(Instructions.breakLoop(breakId))
             }
+            compile(command["command"])
         }
         EXECUTE_UNLESS_SCORE_RANGE -> {
             getObjective(command["targetObjective"]) { objective ->
@@ -101,7 +99,7 @@ private fun CompilationContext.compile(command: Command) {
             addInstruction(Instructions.callFunctions(command["functions"], currentEntity))
         }
         KILL -> {
-            forSelector(command["targets"]) { entity ->
+            forSelector(command["targets"]) { entity, breakId, continueId ->
                 addInstruction(Instructions.killEntity(entity))
             }
         }
@@ -159,12 +157,12 @@ private fun CompilationContext.compile(command: Command) {
             }
         }
         TAG_ADD -> {
-            forSelector(command["targets"]) { entity ->
+            forSelector(command["targets"]) { entity, breakId, continueId ->
                 addInstruction(Instructions.addEntityTag(entity, command["name"]))
             }
         }
         TAG_REMOVE -> {
-            forSelector(command["targets"]) { entity ->
+            forSelector(command["targets"]) { entity, breakId, continueId ->
                 addInstruction(Instructions.removeEntityTag(entity, command["name"]))
             }
         }

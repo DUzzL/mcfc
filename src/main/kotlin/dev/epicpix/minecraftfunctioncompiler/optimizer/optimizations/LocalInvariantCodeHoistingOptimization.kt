@@ -39,10 +39,10 @@ object LocalInvariantCodeHoistingOptimization : Optimization {
         return when(instruction.type) {
             InstructionType.GET_CURRENT_ENTITY -> (instruction.data as InstructionDataLocation).local
             InstructionType.LIMITER -> LocationData(local = (instruction.data as InstructionDataIntLoop).loopId)
-            InstructionType.FOR_EACH_PLAYER -> (instruction.data as InstructionDataLocationLoop).local
-            InstructionType.FOR_EACH_ENTITY -> (instruction.data as InstructionDataLocationLoop).local
+            InstructionType.FOR_EACH_PLAYER -> (instruction.data as InstructionDataLocation).local
+            InstructionType.FOR_EACH_ENTITY -> (instruction.data as InstructionDataLocation).local
             InstructionType.FOR_PLAYER -> (instruction.data as InstructionDataLocationString).local
-            InstructionType.FOR_ENTITY -> (instruction.data as InstructionDataLocationUUIDLoop).local
+            InstructionType.FOR_ENTITY -> (instruction.data as InstructionDataLocationUUID).local
             InstructionType.FOR_SCORE_HOLDERS -> (instruction.data as InstructionDataLocationBoolean).local
             InstructionType.GET_SCOREBOARD_NAME -> (instruction.data as InstructionDataLocationLocation).local2
             InstructionType.GET_OBJECTIVE -> (instruction.data as InstructionDataLocationString).local
