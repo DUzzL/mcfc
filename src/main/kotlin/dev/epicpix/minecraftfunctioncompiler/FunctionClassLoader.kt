@@ -78,6 +78,9 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
             LOGGER.info("Average ${"%.2f".format(totalOptimizedInstructions/definedFunctions.size.toDouble())} instructions in optimized IL bytecode")
         }
 
+        val resolver = FabricLoader.getInstance().mappingResolver
+        println(resolver.namespaces)
+        println(resolver.currentRuntimeNamespace)
 
         val storage = CodeFieldStorage()
         val loadedFunctions = mutableMapOf<ResourceLocation, Class<*>>()
@@ -135,14 +138,15 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
         cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL, className, null, "java/lang/Object", null)
         val mv = cw.visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "run",
-                "(Lnet/minecraft/commands/CommandSourceStack;)I", null, null)
+                "(${CommandSourceStack::class.java.descriptorString()})I", null, null)
         mv.visitCode()
         val codeWriter = CodeWriter(mv)
-        codeWriter.defineGlobalLocal("CommandSourceStack", "Lnet/minecraft/commands/CommandSourceStack;")
+        val end = codeWriter.defineLocal("CommandSourceStack", CommandSourceStack::class.java)
 
         emitBytecode(instructions, fieldStorage, codeWriter, definedFunctions)
 
         codeWriter.end()
+        end()
 
         mv.visitLdcInsn(definedFunctions[funcId]!!.size)
         mv.visitInsn(Opcodes.IRETURN)

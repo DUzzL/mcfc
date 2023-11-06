@@ -4,6 +4,10 @@ import dev.epicpix.minecraftfunctioncompiler.DEBUG
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
+import kotlin.jvm.internal.CallableReference
+import kotlin.reflect.KClass
+import kotlin.reflect.KFunction
+import kotlin.reflect.KProperty1
 
 class CodeWriter(val methodVisitor: MethodVisitor) {
 
@@ -13,11 +17,10 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
 
     fun getLocalIndex(local: String) = locals[local]!!.index
 
-    fun defineLocal(local: String, descriptor: String): () -> Unit {
+    fun defineLocal(local: String, type: Class<*>): () -> Unit {
         val localStart = Label()
         val localEnd = Label()
         methodVisitor.visitLabel(localStart)
-
 
         val localIndex: Int
         if(availableLocals.isEmpty()) {
@@ -26,7 +29,7 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
             localIndex = availableLocals.first()
             availableLocals.remove(localIndex)
         }
-        locals[local] = Local(local, descriptor, localStart, localEnd, localIndex)
+        locals[local] = Local(local, type.descriptorString(), localStart, localEnd, localIndex)
         generatedLocals.add(locals[local]!!)
 
         return {
@@ -37,23 +40,7 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         }
     }
 
-    fun defineGlobalLocal(local: String, descriptor: String) {
-        val localStart = Label()
-        methodVisitor.visitLabel(localStart)
-
-        val localIndex: Int
-        if(availableLocals.isEmpty()) {
-            localIndex = locals.size
-        }else {
-            localIndex = availableLocals.first()
-            availableLocals.remove(localIndex)
-        }
-        val genLocal = Local(local, descriptor, localStart, null, localIndex)
-        generatedLocals.add(genLocal)
-        locals[local] = genLocal
-    }
-
-    fun storeLocal(local: String, descriptor: String, exec: (CodeWriter.() -> Unit)) {
+    private fun storeLocal(local: String, descriptor: Class<*>, exec: (CodeWriter.() -> Unit)) {
         val end = defineLocal(local, descriptor)
         storeLocal(local)
         exec()
@@ -80,7 +67,7 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
 
     fun loadLocal(local: String) {
         val localVar = locals[local]!!
-        if(localVar.descriptor == "I") {
+        if(localVar.descriptor == Int::class.javaPrimitiveType!!.descriptorString()) {
             methodVisitor.visitVarInsn(Opcodes.ILOAD, localVar.index)
         }else {
             methodVisitor.visitVarInsn(Opcodes.ALOAD, localVar.index)
@@ -89,7 +76,7 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
 
     fun storeLocal(local: String) {
         val localVar = locals[local]!!
-        if(localVar.descriptor == "I") {
+        if(localVar.descriptor == Int::class.javaPrimitiveType!!.descriptorString()) {
             methodVisitor.visitVarInsn(Opcodes.ISTORE, localVar.index)
         }else {
             methodVisitor.visitVarInsn(Opcodes.ASTORE, localVar.index)
@@ -108,6 +95,10 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         }
     }
 
+    fun writeLong(value: Long) {
+        methodVisitor.visitLdcInsn(value)
+    }
+
     fun writeString(str: String) {
         methodVisitor.visitLdcInsn(str)
     }
@@ -116,43 +107,76 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         methodVisitor.visitInsn(Opcodes.ACONST_NULL)
     }
 
-    fun newObject(owner: String, descriptor: String, argumentProvider: CodeWriter.() -> Unit) {
-        methodVisitor.visitTypeInsn(Opcodes.NEW, owner)
-        writeInstruction(Opcodes.DUP)
+    fun newObject(owner: Class<*>, vararg types: Class<*>, argumentProvider: CodeWriter.() -> Unit) {
+        methodVisitor.visitTypeInsn(Opcodes.NEW, owner.getRawDescriptor())
+        methodVisitor.visitInsn(Opcodes.DUP)
         argumentProvider()
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, owner, "<init>", descriptor, false)
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, owner.getRawDescriptor(), "<init>", types.getMethodDescriptor(Void::class.javaPrimitiveType!!), false)
     }
 
-    fun callFunction(owner: String, name: String, descriptor: String) {
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, owner, name, descriptor, false)
+    fun callFunction(owner: Class<*>, name: String, returnType: Class<*>, vararg arguments: Class<*>) {
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, owner.getRawDescriptor(), name, arguments.getMethodDescriptor(returnType), false)
     }
 
-    fun callMethod(owner: String, name: String, descriptor: String) {
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEVIRTUAL, owner, name, descriptor, false)
+    fun callMethod(function: KFunction<*>) {
+        function as CallableReference
+        methodVisitor.visitMethodInsn(
+            Opcodes.INVOKEVIRTUAL,
+            (function.owner as KClass<*>).java.getRawDescriptor(),
+            function.signature.substring(0, function.signature.indexOf('(')),
+            function.signature.substring(function.signature.indexOf('(')),
+            false
+        )
     }
 
-    fun callInterfaceMethod(owner: String, name: String, descriptor: String) {
-        methodVisitor.visitMethodInsn(Opcodes.INVOKEINTERFACE, owner, name, descriptor, true)
+    fun callMethod(function: KProperty1<*, *>) {
+        function as CallableReference
+        methodVisitor.visitMethodInsn(
+            Opcodes.INVOKEVIRTUAL,
+            (function.owner as KClass<*>).java.getRawDescriptor(),
+            function.signature.substring(0, function.signature.indexOf('(')),
+            function.signature.substring(function.signature.indexOf('(')),
+            false
+        )
     }
 
-    fun getObjectField(owner: String, name: String, descriptor: String) {
-        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, owner, name, descriptor)
+    fun callInterfaceMethod(function: KFunction<*>) {
+        function as CallableReference
+        methodVisitor.visitMethodInsn(
+            Opcodes.INVOKEINTERFACE,
+            (function.owner as KClass<*>).java.getRawDescriptor(),
+            function.signature.substring(0, function.signature.indexOf('(')),
+            function.signature.substring(function.signature.indexOf('(')),
+            true
+        )
     }
 
-    fun getStaticField(owner: String, name: String, descriptor: String) {
-        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, owner, name, descriptor)
+    fun callInterfaceMethod(function: KProperty1<*, *>) {
+        function as CallableReference
+        methodVisitor.visitMethodInsn(
+            Opcodes.INVOKEINTERFACE,
+            (function.owner as KClass<*>).java.getRawDescriptor(),
+            function.signature.substring(0, function.signature.indexOf('(')),
+            function.signature.substring(function.signature.indexOf('(')),
+            true
+        )
     }
 
-    fun setStaticField(owner: String, name: String, descriptor: String) {
-        methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, owner, name, descriptor)
+    fun getObjectField(property: KProperty1<*, *>) {
+        property as CallableReference
+        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, (property.owner as KClass<*>).java.getRawDescriptor(), property.name, (property.returnType.classifier as KClass<*>).java.descriptorString())
     }
 
-    fun writeInstruction(instr: Int) {
-        methodVisitor.visitInsn(instr)
+    fun getStaticField(owner: String, name: String, type: Class<*>) {
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, owner, name, type.descriptorString())
     }
 
-    fun castType(type: String) {
-        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, type)
+    fun setStaticField(owner: String, name: String, type: Class<*>) {
+        methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, owner, name, type.descriptorString())
+    }
+
+    fun castType(type: Class<*>) {
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, type.getRawDescriptor())
     }
 
     fun getIfJumpOpcode(comparison: Int): Int {
@@ -191,10 +215,10 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         val baseName = generateUniqueLocal("\$Indexer")
         val sizeName = "$baseName:Size"
         val indexName = "$baseName:Index"
-        storeLocal(sizeName, "I") {
+        storeLocal(sizeName, Int::class.javaPrimitiveType!!) {
 
             writeInt(0)
-            storeLocal(indexName, "I") {
+            storeLocal(indexName, Int::class.javaPrimitiveType!!) {
 
                 createWhileLoop({ brk ->
                     loadLocal(indexName)
@@ -211,61 +235,75 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         }
     }
 
-    fun createListForEachLoop(arrayLocal: String, type: String, autoLoad: Boolean = false, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
+    fun createListForEachLoop(arrayLocal: String, type: Class<*>, autoLoad: Boolean = false, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
         loadLocal(arrayLocal)
-        callInterfaceMethod("java/util/List", "size", "()I")
+        callInterfaceMethod(List<*>::size)
         createIndexedLoop { indexLocal, controlFlow ->
             if(autoLoad) {
                 loadLocal(arrayLocal)
                 loadLocal(indexLocal)
-                callInterfaceMethod("java/util/List", "get", "(I)Ljava/lang/Object;")
+                callInterfaceMethod(List<*>::get)
                 castType(type)
                 exec(controlFlow) { throw UnsupportedOperationException("Cannot run getter with autoLoad enabled") }
             }else {
                 exec(controlFlow) {
                     loadLocal(arrayLocal)
                     loadLocal(indexLocal)
-                    callInterfaceMethod("java/util/List", "get", "(I)Ljava/lang/Object;")
+                    callInterfaceMethod(List<*>::get)
                     castType(type)
                 }
             }
         }
     }
 
-    fun createIteratorForEachLoop(iteratorLocal: String, type: String, autoLoad: Boolean = false, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
+    fun createIteratorForEachLoop(iteratorLocal: String, type: Class<*>, autoLoad: Boolean = false, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
         createWhileLoop({ brk ->
             loadLocal(iteratorLocal)
-            callInterfaceMethod("java/util/Iterator", "hasNext", "()Z")
+            callInterfaceMethod(Iterator<*>::hasNext)
             methodVisitor.visitJumpInsn(Opcodes.IFEQ, brk)
         }) { controlFlow ->
             loadLocal(iteratorLocal)
-            callInterfaceMethod("java/util/Iterator", "next", "()Ljava/lang/Object;")
-            if(type != "java/lang/Object") castType(type)
+            callInterfaceMethod(Iterator<*>::next)
+            if(type != Object::class.java) castType(type)
 
             if(!autoLoad) {
-                val end = defineLocal("$iteratorLocal:Element", "L$type;")
+                val end = defineLocal("$iteratorLocal:Element", type)
                 storeLocal("$iteratorLocal:Element")
 
                 exec(controlFlow) { loadLocal("$iteratorLocal:Element") }
                 end()
             }else {
-                exec(controlFlow) { throw UnsupportedOperationException("autoLoad enabled, cannot use getter") }
+                exec(controlFlow) { throw UnsupportedOperationException("Cannot run getter with autoLoad enabled") }
             }
 
             controlFlow.cont()
         }
     }
 
-    fun createIterableForEachLoop(iterableLocal: String, type: String, autoLoad: Boolean = false, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
+    fun createIterableForEachLoop(iterableLocal: String, type: Class<*>, autoLoad: Boolean = false, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
         loadLocal(iterableLocal)
-        callInterfaceMethod("java/lang/Iterable", "iterator", "()Ljava/util/Iterator;")
-        storeLocal("$iterableLocal:Iterator", "Ljava/util/Iterator;") {
+        callInterfaceMethod(Iterable<*>::iterator)
+        storeLocal("$iterableLocal:Iterator", Iterator::class.java) {
             createIteratorForEachLoop("$iterableLocal:Iterator", type, autoLoad, exec)
         }
     }
 
     fun generateUniqueLocal(local: String): String {
         return "$local:${generatedLocals.size}"
+    }
+
+    internal fun Class<*>.getRawDescriptor(): String {
+        val descriptor = descriptorString()
+        return descriptor.substring(1, descriptor.length - 1)
+    }
+
+    internal fun Array<out Class<*>>.getMethodDescriptor(returnType: Class<*>): String {
+        var res = "("
+        for(clz in this) {
+            res += clz.descriptorString()
+        }
+        res += ")"
+        return res + returnType.descriptorString()
     }
 
 }

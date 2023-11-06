@@ -2,7 +2,18 @@ package dev.epicpix.minecraftfunctioncompiler.emitter
 
 import dev.epicpix.minecraftfunctioncompiler.il.*
 import dev.epicpix.minecraftfunctioncompiler.parser.Command
+import net.minecraft.commands.CommandSourceStack
 import net.minecraft.resources.ResourceLocation
+import net.minecraft.server.MinecraftServer
+import net.minecraft.server.level.ServerLevel
+import net.minecraft.server.level.ServerPlayer
+import net.minecraft.server.players.PlayerList
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.phys.Vec2
+import net.minecraft.world.phys.Vec3
+import net.minecraft.world.scores.Objective
+import net.minecraft.world.scores.Score
+import net.minecraft.world.scores.Scoreboard
 import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
 
@@ -40,10 +51,10 @@ private fun emitInstruction(
             val data = instruction.data as InstructionDataLocation
             val uniqueId = codeWriter.generateUniqueLocal("\$GetCurrentEntity")
             newTransforms[data.local.local!!] = uniqueId
-            val end = codeWriter.defineLocal(uniqueId, "Lnet/minecraft/world/entity/Entity;")
+            val end = codeWriter.defineLocal(uniqueId, Entity::class.java)
 
             codeWriter.loadLocal("CommandSourceStack")
-            codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "getEntity", "()Lnet/minecraft/world/entity/Entity;")
+            codeWriter.callMethod(CommandSourceStack::getEntity)
             codeWriter.storeLocal(uniqueId)
 
             run()
@@ -64,14 +75,14 @@ private fun emitInstruction(
             val data = instruction.data as InstructionDataLocationString
             data.local.load(codeWriter, newTransforms)
             codeWriter.writeString(data.value)
-            codeWriter.callMethod("net/minecraft/world/entity/Entity", "addTag", "(Ljava/lang/String;)Z")
+            codeWriter.callMethod(Entity::addTag)
             codeWriter.methodVisitor.visitInsn(Opcodes.POP)
         }
         InstructionType.REMOVE_ENTITY_TAG -> {
             val data = instruction.data as InstructionDataLocationString
             data.local.load(codeWriter, newTransforms)
             codeWriter.writeString(data.value)
-            codeWriter.callMethod("net/minecraft/world/entity/Entity", "removeTag", "(Ljava/lang/String;)Z")
+            codeWriter.callMethod(Entity::removeTag)
             codeWriter.methodVisitor.visitInsn(Opcodes.POP)
         }
         InstructionType.EMPTY_CONDITION -> {
@@ -94,38 +105,38 @@ private fun emitInstruction(
         InstructionType.CHECK_ENTITY_TAG -> {
             val data = instruction.data as InstructionDataLocationStringLoop
             data.local.load(codeWriter, newTransforms)
-            codeWriter.callMethod("net/minecraft/world/entity/Entity", "getTags", "()Ljava/util/Set;")
+            codeWriter.callMethod(Entity::getTags)
             codeWriter.writeString(data.value)
-            codeWriter.callInterfaceMethod("java/util/Set", "contains", "(Ljava/lang/Object;)Z")
+            codeWriter.callInterfaceMethod(Set<*>::contains)
             codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newLoops[data.loopId]!!.continueLabel)
         }
         InstructionType.CHECK_NOT_ENTITY_TAG -> {
             val data = instruction.data as InstructionDataLocationStringLoop
             data.local.load(codeWriter, newTransforms)
-            codeWriter.callMethod("net/minecraft/world/entity/Entity", "getTags", "()Ljava/util/Set;")
+            codeWriter.callMethod(Entity::getTags)
             codeWriter.writeString(data.value)
-            codeWriter.callInterfaceMethod("java/util/Set", "contains", "(Ljava/lang/Object;)Z")
+            codeWriter.callInterfaceMethod(Set<*>::contains)
             codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, newLoops[data.loopId]!!.continueLabel)
         }
         InstructionType.CHECK_ENTITY_TAGS -> {
             val data = instruction.data as InstructionDataLocationLoop
             data.local.load(codeWriter, newTransforms)
-            codeWriter.callMethod("net/minecraft/world/entity/Entity", "getTags", "()Ljava/util/Set;")
-            codeWriter.callInterfaceMethod("java/util/Set", "size", "()I")
+            codeWriter.callMethod(Entity::getTags)
+            codeWriter.callInterfaceMethod(Set<*>::size)
             codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newLoops[data.loopId]!!.continueLabel)
         }
         InstructionType.CHECK_NOT_ENTITY_TAGS -> {
             val data = instruction.data as InstructionDataLocationLoop
             data.local.load(codeWriter, newTransforms)
-            codeWriter.callMethod("net/minecraft/world/entity/Entity", "getTags", "()Ljava/util/Set;")
-            codeWriter.callInterfaceMethod("java/util/Set", "size", "()I")
+            codeWriter.callMethod(Entity::getTags)
+            codeWriter.callInterfaceMethod(Set<*>::size)
             codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, newLoops[data.loopId]!!.continueLabel)
         }
         InstructionType.LIMITER -> {
             val data = instruction.data as InstructionDataIntLoop
             val uniqueId = codeWriter.generateUniqueLocal("\$LimitRemaining")
             newTransforms[data.loopId] = uniqueId
-            val end = codeWriter.defineLocal(uniqueId, "I")
+            val end = codeWriter.defineLocal(uniqueId, Int::class.javaPrimitiveType!!)
             codeWriter.writeInt(data.value)
             codeWriter.storeLocal(uniqueId)
 
@@ -148,14 +159,14 @@ private fun emitInstruction(
 
             val uidLocal = codeWriter.generateUniqueLocal("\$Players")
             codeWriter.loadLocal("CommandSourceStack")
-            codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "getServer", "()Lnet/minecraft/server/MinecraftServer;")
-            codeWriter.callMethod("net/minecraft/server/MinecraftServer", "getPlayerList", "()Lnet/minecraft/server/players/PlayerList;")
-            codeWriter.callMethod("net/minecraft/server/players/PlayerList", "getPlayers", "()Ljava/util/List;")
-            val end = codeWriter.defineLocal(uidLocal, "Ljava/util/List;")
+            codeWriter.callMethod(CommandSourceStack::getServer)
+            codeWriter.callMethod(MinecraftServer::getPlayerList)
+            codeWriter.callMethod(PlayerList::getPlayers)
+            val end = codeWriter.defineLocal(uidLocal, List::class.java)
             codeWriter.storeLocal(uidLocal)
-            codeWriter.createListForEachLoop(uidLocal, "net/minecraft/world/entity/Entity", true) { _, getter ->
+            codeWriter.createListForEachLoop(uidLocal, Entity::class.java, true) { _, getter ->
                 val uidLocal2 = codeWriter.generateUniqueLocal("\$Entity")
-                val lend = codeWriter.defineLocal(uidLocal2, "Lnet/minecraft/world/entity/Entity;")
+                val lend = codeWriter.defineLocal(uidLocal2, Entity::class.java)
                 codeWriter.storeLocal(uidLocal2)
                 newTransforms[data.local.local!!] = uidLocal2
                 run()
@@ -168,19 +179,19 @@ private fun emitInstruction(
 
             val uidLocalLevels = codeWriter.generateUniqueLocal("\$Levels")
             codeWriter.loadLocal("CommandSourceStack")
-            codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "getServer", "()Lnet/minecraft/server/MinecraftServer;")
-            codeWriter.callMethod("net/minecraft/server/MinecraftServer", "getAllLevels", "()Ljava/lang/Iterable;")
-            val end = codeWriter.defineLocal(uidLocalLevels, "Ljava/lang/Iterable;")
+            codeWriter.callMethod(CommandSourceStack::getServer)
+            codeWriter.callMethod(MinecraftServer::getAllLevels)
+            val end = codeWriter.defineLocal(uidLocalLevels, Iterable::class.java)
             codeWriter.storeLocal(uidLocalLevels)
-            codeWriter.createIterableForEachLoop(uidLocalLevels, "net/minecraft/server/level/ServerLevel", true) { _, _ ->
+            codeWriter.createIterableForEachLoop(uidLocalLevels, ServerLevel::class.java, true) { _, _ ->
                 val uidLocalEntities = codeWriter.generateUniqueLocal("\$Entities")
-                codeWriter.callMethod("net/minecraft/server/level/ServerLevel", "getAllEntities", "()Ljava/lang/Iterable;")
-                codeWriter.callInterfaceMethod("java/lang/Iterable", "iterator", "()Ljava/util/Iterator;")
-                val end2 = codeWriter.defineLocal(uidLocalEntities, "Ljava/util/Iterator;")
+                codeWriter.callMethod(ServerLevel::getAllEntities)
+                codeWriter.callInterfaceMethod(Iterable<*>::iterator)
+                val end2 = codeWriter.defineLocal(uidLocalEntities, Iterator::class.java)
                 codeWriter.storeLocal(uidLocalEntities)
-                codeWriter.createIteratorForEachLoop(uidLocalEntities, "net/minecraft/world/entity/Entity", true) { _, _ ->
+                codeWriter.createIteratorForEachLoop(uidLocalEntities, Entity::class.java, true) { _, _ ->
                     val uidLocalEntity = codeWriter.generateUniqueLocal("\$Entity")
-                    val lend = codeWriter.defineLocal(uidLocalEntity, "Lnet/minecraft/world/entity/Entity;")
+                    val lend = codeWriter.defineLocal(uidLocalEntity, Entity::class.java)
                     codeWriter.storeLocal(uidLocalEntity)
                     newTransforms[data.local.local!!] = uidLocalEntity
                     run()
@@ -196,12 +207,12 @@ private fun emitInstruction(
             val data = instruction.data as InstructionDataLocationString
 
             codeWriter.loadLocal("CommandSourceStack")
-            codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "getServer", "()Lnet/minecraft/server/MinecraftServer;")
-            codeWriter.callMethod("net/minecraft/server/MinecraftServer", "getPlayerList", "()Lnet/minecraft/server/players/PlayerList;")
+            codeWriter.callMethod(CommandSourceStack::getServer)
+            codeWriter.callMethod(MinecraftServer::getPlayerList)
             codeWriter.writeString(data.value)
-            codeWriter.callMethod("net/minecraft/server/players/PlayerList", "getPlayerByName", "(Ljava/lang/String;)Lnet/minecraft/server/level/ServerPlayer;")
+            codeWriter.callMethod(PlayerList::getPlayerByName)
             val uidLocal = codeWriter.generateUniqueLocal("\$Player")
-            val end = codeWriter.defineLocal(uidLocal, "Lnet/minecraft/server/level/ServerPlayer;")
+            val end = codeWriter.defineLocal(uidLocal, ServerPlayer::class.java)
             newTransforms[data.local.local!!] = uidLocal
             codeWriter.storeLocal(uidLocal)
 
@@ -214,15 +225,15 @@ private fun emitInstruction(
 
             val uidLocalLevels = codeWriter.generateUniqueLocal("\$Levels")
             codeWriter.loadLocal("CommandSourceStack")
-            codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "getServer", "()Lnet/minecraft/server/MinecraftServer;")
-            codeWriter.callMethod("net/minecraft/server/MinecraftServer", "getAllLevels", "()Ljava/lang/Iterable;")
-            val end = codeWriter.defineLocal(uidLocalLevels, "Ljava/lang/Iterable;")
+            codeWriter.callMethod(CommandSourceStack::getServer)
+            codeWriter.callMethod(MinecraftServer::getAllLevels)
+            val end = codeWriter.defineLocal(uidLocalLevels, Iterable::class.java)
             codeWriter.storeLocal(uidLocalLevels)
-            codeWriter.createIterableForEachLoop(uidLocalLevels, "net/minecraft/server/level/ServerLevel", true) { controlFlow, _ ->
+            codeWriter.createIterableForEachLoop(uidLocalLevels, ServerLevel::class.java, true) { controlFlow, _ ->
                 fieldStorage.loadUUID(codeWriter, data.value)
-                codeWriter.callMethod("net/minecraft/server/level/ServerLevel", "getEntity", "(Ljava/util/UUID;)Lnet/minecraft/world/entity/Entity;")
+                codeWriter.callMethodGetEntity()
                 val uidLocal = codeWriter.generateUniqueLocal("\$Entity")
-                val end2 = codeWriter.defineLocal(uidLocal, "Lnet/minecraft/world/entity/Entity;")
+                val end2 = codeWriter.defineLocal(uidLocal, Entity::class.java)
                 newTransforms[data.local.local!!] = uidLocal
                 codeWriter.storeLocal(uidLocal)
                 codeWriter.loadLocal(uidLocal)
@@ -237,19 +248,19 @@ private fun emitInstruction(
         InstructionType.FOR_SCORE_HOLDERS -> {
             val data = instruction.data as InstructionDataLocationBoolean
 
-            codeWriter.newObject("java/util/ArrayList", "(Ljava/util/Collection;)V") {
+            codeWriter.newObject(ArrayList::class.java, Collection::class.java) {
                 fieldStorage.loadScoreboard(codeWriter)
-                codeWriter.getObjectField("net/minecraft/world/scores/Scoreboard", "playerScores", "Ljava/util/Map;")
-                codeWriter.callInterfaceMethod("java/util/Map", "keySet", "()Ljava/util/Set;")
+                codeWriter.getObjectField(Scoreboard::playerScores)
+                codeWriter.callInterfaceMethod(Map<*,*>::keys)
             }
 
             val uidLocal = codeWriter.generateUniqueLocal("\$Array")
-            val end = codeWriter.defineLocal(uidLocal, "Ljava/util/ArrayList;")
+            val end = codeWriter.defineLocal(uidLocal, ArrayList::class.java)
             codeWriter.storeLocal(uidLocal)
             if(!data.value) {
-                codeWriter.createListForEachLoop(uidLocal, "java/lang/String") { _, getter ->
+                codeWriter.createListForEachLoop(uidLocal, String::class.java) { _, getter ->
                     val uidLocalName = codeWriter.generateUniqueLocal("\$Name")
-                    val end2 = codeWriter.defineLocal(uidLocalName, "Ljava/lang/String;")
+                    val end2 = codeWriter.defineLocal(uidLocalName, String::class.java)
                     getter()
                     codeWriter.storeLocal(uidLocalName)
                     newTransforms[data.local.local!!] = uidLocalName
@@ -258,14 +269,14 @@ private fun emitInstruction(
                 }
             }else {
                 codeWriter.loadLocal(uidLocal)
-                codeWriter.callMethod("java/util/ArrayList", "size", "()I")
+                codeWriter.callMethod(ArrayList<*>::size)
                 codeWriter.executeIf(Opcodes.IFNE) {
                     val uidLocalName = codeWriter.generateUniqueLocal("\$Name")
-                    val end2 = codeWriter.defineLocal(uidLocalName, "Ljava/lang/String;")
+                    val end2 = codeWriter.defineLocal(uidLocalName, String::class.java)
                     codeWriter.loadLocal(uidLocal)
                     codeWriter.writeInt(0)
-                    codeWriter.callMethod("java/util/ArrayList", "get", "(I)Ljava/lang/Object;")
-                    codeWriter.castType("java/lang/String")
+                    codeWriter.callMethod(ArrayList<*>::get)
+                    codeWriter.castType(String::class.java)
                     codeWriter.storeLocal(uidLocalName)
                     newTransforms[data.local.local!!] = uidLocalName
                     run()
@@ -281,10 +292,10 @@ private fun emitInstruction(
             val data = instruction.data as InstructionDataLocationLocation
 
             data.local.load(codeWriter, newTransforms)
-            codeWriter.callMethod("net/minecraft/world/entity/Entity", "getScoreboardName", "()Ljava/lang/String;")
+            codeWriter.callMethod(Entity::getScoreboardName)
 
             val uidLocal = codeWriter.generateUniqueLocal("\$ScoreboardName")
-            val end = codeWriter.defineLocal(uidLocal, "Ljava/lang/String;")
+            val end = codeWriter.defineLocal(uidLocal, String::class.java)
             codeWriter.storeLocal(uidLocal)
             newTransforms[data.local2.local!!] = uidLocal
             run()
@@ -296,9 +307,9 @@ private fun emitInstruction(
             fieldStorage.loadScoreboard(codeWriter)
             data.local2.load(codeWriter, newTransforms)
             data.local.load(codeWriter, newTransforms)
-            codeWriter.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+            codeWriter.callMethod(Scoreboard::getOrCreatePlayerScore)
             codeWriter.writeInt(data.value)
-            codeWriter.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+            codeWriter.callMethod(Score::setScore)
         }
         InstructionType.ADD_SCORE -> {
             val data = instruction.data as InstructionDataLocationLocationInt
@@ -306,9 +317,9 @@ private fun emitInstruction(
             fieldStorage.loadScoreboard(codeWriter)
             data.local2.load(codeWriter, newTransforms)
             data.local.load(codeWriter, newTransforms)
-            codeWriter.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+            codeWriter.callMethod(Scoreboard::getOrCreatePlayerScore)
             codeWriter.methodVisitor.visitInsn(Opcodes.DUP)
-            codeWriter.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+            codeWriter.callMethod(Score::getScore)
             if(data.value >= 0) {
                 codeWriter.writeInt(data.value)
                 codeWriter.methodVisitor.visitInsn(Opcodes.IADD)
@@ -316,7 +327,7 @@ private fun emitInstruction(
                 codeWriter.writeInt(-data.value)
                 codeWriter.methodVisitor.visitInsn(Opcodes.ISUB)
             }
-            codeWriter.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+            codeWriter.callMethod(Score::setScore)
         }
         InstructionType.RUN_SCORE_OPERATION -> {
             val data = instruction.data as InstructionDataRunScoreOperation
@@ -326,23 +337,23 @@ private fun emitInstruction(
                     fieldStorage.loadScoreboard(codeWriter)
                     data.targetName.load(codeWriter, newTransforms)
                     data.targetObjective.load(codeWriter, newTransforms)
-                    codeWriter.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                    codeWriter.callMethod(Scoreboard::getOrCreatePlayerScore)
                     if(data.sourceObjective == data.targetObjective && data.sourceName == data.targetName) {
                         codeWriter.methodVisitor.visitInsn(Opcodes.POP)
                     }else {
                         fieldStorage.loadScoreboard(codeWriter)
                         data.sourceName.load(codeWriter, newTransforms)
                         data.sourceObjective.load(codeWriter, newTransforms)
-                        codeWriter.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
-                        codeWriter.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                        codeWriter.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                        codeWriter.callMethod(Scoreboard::getOrCreatePlayerScore)
+                        codeWriter.callMethod(Score::getScore)
+                        codeWriter.callMethod(Score::setScore)
                     }
                 }
                 ScoreboardOperation.PLUS, ScoreboardOperation.MINUS, ScoreboardOperation.MULTIPLY -> {
                     fieldStorage.loadScoreboard(codeWriter)
                     data.targetName.load(codeWriter, newTransforms)
                     data.targetObjective.load(codeWriter, newTransforms)
-                    codeWriter.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                    codeWriter.callMethod(Scoreboard::getOrCreatePlayerScore)
                     codeWriter.methodVisitor.visitInsn(Opcodes.DUP)
                     if(data.sourceObjective == data.targetObjective && data.sourceName == data.targetName) {
                         codeWriter.methodVisitor.visitInsn(Opcodes.DUP)
@@ -350,45 +361,45 @@ private fun emitInstruction(
                         fieldStorage.loadScoreboard(codeWriter)
                         data.sourceName.load(codeWriter, newTransforms)
                         data.sourceObjective.load(codeWriter, newTransforms)
-                        codeWriter.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                        codeWriter.callMethod(Scoreboard::getOrCreatePlayerScore)
                     }
-                    codeWriter.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                    codeWriter.callMethod(Score::getScore)
                     codeWriter.methodVisitor.visitInsn(Opcodes.SWAP)
-                    codeWriter.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                    codeWriter.callMethod(Score::getScore)
                     if(data.operation == ScoreboardOperation.PLUS) codeWriter.methodVisitor.visitInsn(Opcodes.IADD)
                     else if(data.operation == ScoreboardOperation.MINUS) {
                         codeWriter.methodVisitor.visitInsn(Opcodes.SWAP)
                         codeWriter.methodVisitor.visitInsn(Opcodes.ISUB)
                     } else codeWriter.methodVisitor.visitInsn(Opcodes.IMUL)
-                    codeWriter.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                    codeWriter.callMethod(Score::setScore)
                 }
                 ScoreboardOperation.DIVIDE, ScoreboardOperation.MODULO -> {
                     fieldStorage.loadScoreboard(codeWriter)
                     data.targetName.load(codeWriter, newTransforms)
                     data.targetObjective.load(codeWriter, newTransforms)
-                    codeWriter.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
-                    codeWriter.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                    codeWriter.callMethod(Scoreboard::getOrCreatePlayerScore)
+                    codeWriter.callMethod(Score::getScore)
                     val uniqBeh = codeWriter.generateUniqueLocal("\$Score")
-                    val endBeh = codeWriter.defineLocal(uniqBeh, "I")
+                    val endBeh = codeWriter.defineLocal(uniqBeh, Int::class.javaPrimitiveType!!)
                     codeWriter.storeLocal(uniqBeh)
 
                     fieldStorage.loadScoreboard(codeWriter)
                     data.sourceName.load(codeWriter, newTransforms)
                     data.sourceObjective.load(codeWriter, newTransforms)
-                    codeWriter.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                    codeWriter.callMethod(Scoreboard::getOrCreatePlayerScore)
                     val uniq = codeWriter.generateUniqueLocal("\$Score")
-                    val end = codeWriter.defineLocal(uniq, "Lnet/minecraft/world/scores/Score;")
+                    val end = codeWriter.defineLocal(uniq, Score::class.java)
                     codeWriter.storeLocal(uniq)
                     codeWriter.loadLocal(uniq)
-                    codeWriter.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                    codeWriter.callMethod(Score::getScore)
                     codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newLoops[data.exceptionLoopId]!!.breakLabel)
                     codeWriter.loadLocal(uniq)
                     codeWriter.loadLocal(uniqBeh)
                     codeWriter.loadLocal(uniq)
-                    codeWriter.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                    if(data.operation == ScoreboardOperation.DIVIDE) codeWriter.callFunction("java/lang/Math", "floorDiv", "(II)I")
-                    else codeWriter.callFunction("java/lang/Math", "floorMod", "(II)I")
-                    codeWriter.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                    codeWriter.callMethod(Score::getScore)
+                    if(data.operation == ScoreboardOperation.DIVIDE) codeWriter.callFunction(Math::class.java, "floorDiv", Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!)
+                    else codeWriter.callFunction(Math::class.java, "floorMod", Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!)
+                    codeWriter.callMethod(Score::setScore)
                     end()
                     endBeh()
                 }
@@ -396,7 +407,7 @@ private fun emitInstruction(
                     fieldStorage.loadScoreboard(codeWriter)
                     data.targetName.load(codeWriter, newTransforms)
                     data.targetObjective.load(codeWriter, newTransforms)
-                    codeWriter.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                    codeWriter.callMethod(Scoreboard::getOrCreatePlayerScore)
                     if(data.sourceObjective == data.targetObjective && data.sourceName == data.targetName) {
                         codeWriter.methodVisitor.visitInsn(Opcodes.POP)
                     }else {
@@ -404,43 +415,43 @@ private fun emitInstruction(
                         fieldStorage.loadScoreboard(codeWriter)
                         data.sourceName.load(codeWriter, newTransforms)
                         data.sourceObjective.load(codeWriter, newTransforms)
-                        codeWriter.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
-                        codeWriter.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                        codeWriter.callMethod(Scoreboard::getOrCreatePlayerScore)
+                        codeWriter.callMethod(Score::getScore)
                         codeWriter.methodVisitor.visitInsn(Opcodes.SWAP)
-                        codeWriter.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                        if(data.operation == ScoreboardOperation.MIN) codeWriter.callFunction("java/lang/Math", "min", "(II)I")
-                        else codeWriter.callFunction("java/lang/Math", "max", "(II)I")
-                        codeWriter.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                        codeWriter.callMethod(Score::getScore)
+                        if(data.operation == ScoreboardOperation.MIN) codeWriter.callFunction(Math::class.java, "min", Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!)
+                        else codeWriter.callFunction(Math::class.java, "max", Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!)
+                        codeWriter.callMethod(Score::setScore)
                     }
                 }
                 ScoreboardOperation.SWAP -> {
                     fieldStorage.loadScoreboard(codeWriter)
                     data.targetName.load(codeWriter, newTransforms)
                     data.targetObjective.load(codeWriter, newTransforms)
-                    codeWriter.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                    codeWriter.callMethod(Scoreboard::getOrCreatePlayerScore)
                     if(data.sourceObjective == data.targetObjective && data.sourceName == data.targetName) {
                         codeWriter.methodVisitor.visitInsn(Opcodes.POP)
                     }else {
                         val targetId = codeWriter.generateUniqueLocal("\$Score")
-                        val targetEnd = codeWriter.defineLocal(targetId, "Lnet/minecraft/world/scores/Score;")
+                        val targetEnd = codeWriter.defineLocal(targetId, Score::class.java)
                         codeWriter.storeLocal(targetId)
 
                         fieldStorage.loadScoreboard(codeWriter)
                         data.sourceName.load(codeWriter, newTransforms)
                         data.sourceObjective.load(codeWriter, newTransforms)
-                        codeWriter.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
+                        codeWriter.callMethod(Scoreboard::getOrCreatePlayerScore)
                         val sourceId = codeWriter.generateUniqueLocal("\$Score")
-                        val sourceEnd = codeWriter.defineLocal(sourceId, "Lnet/minecraft/world/scores/Score;")
+                        val sourceEnd = codeWriter.defineLocal(sourceId, Score::class.java)
                         codeWriter.storeLocal(sourceId)
 
                         codeWriter.loadLocal(sourceId)
                         codeWriter.loadLocal(targetId)
-                        codeWriter.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+                        codeWriter.callMethod(Score::getScore)
                         codeWriter.loadLocal(targetId)
                         codeWriter.loadLocal(sourceId)
-                        codeWriter.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
-                        codeWriter.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
-                        codeWriter.callMethod("net/minecraft/world/scores/Score", "setScore", "(I)V")
+                        codeWriter.callMethod(Score::getScore)
+                        codeWriter.callMethod(Score::setScore)
+                        codeWriter.callMethod(Score::setScore)
 
                         sourceEnd()
                         targetEnd()
@@ -453,10 +464,10 @@ private fun emitInstruction(
 
             fieldStorage.loadScoreboard(codeWriter)
             codeWriter.writeString(data.value)
-            codeWriter.callMethod("net/minecraft/world/scores/Scoreboard", "getObjective", "(Ljava/lang/String;)Lnet/minecraft/world/scores/Objective;")
+            codeWriter.callMethod(Scoreboard::getObjective)
 
             val uidLocal = codeWriter.generateUniqueLocal("\$Objective")
-            val end = codeWriter.defineLocal(uidLocal, "Lnet/minecraft/world/scores/Objective;")
+            val end = codeWriter.defineLocal(uidLocal, Objective::class.java)
             codeWriter.storeLocal(uidLocal)
             newTransforms[data.local.local!!] = uidLocal
             run()
@@ -470,21 +481,21 @@ private fun emitInstruction(
                     codeWriter.loadLocal("CommandSourceStack")
                     if(data.entity != null) {
                         data.entity.load(codeWriter, newTransforms)
-                        codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "withEntity", "(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/commands/CommandSourceStack;")
+                        codeWriter.callMethod(CommandSourceStack::withEntity)
                     }
                     if(data.world != null) {
                         data.world.load(codeWriter, newTransforms)
-                        codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "withLevel", "(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/world/level/Level;")
+                        codeWriter.callMethod(CommandSourceStack::withLevel)
                     }
                     if(data.position != null) {
                         data.position.load(codeWriter, newTransforms)
-                        codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "withPosition", "(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/world/phys/Vec3;")
+                        codeWriter.callMethod(CommandSourceStack::withPosition)
                     }
                     if(data.rotation != null) {
                         data.rotation.load(codeWriter, newTransforms)
-                        codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "withRotation", "(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/world/phys/Vec2;")
+                        codeWriter.callMethod(CommandSourceStack::withRotation)
                     }
-                    codeWriter.callFunction("function/${func.namespace}/${func.path}", "run", "(Lnet/minecraft/commands/CommandSourceStack;)I")
+                    codeWriter.methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, "function/${func.namespace}/${func.path}", "run", "(${CommandSourceStack::class.java.descriptorString()})I", false)
                     codeWriter.methodVisitor.visitInsn(Opcodes.POP)
                 }else {
                     fieldStorage.loadServerFunctionManager(codeWriter)
@@ -492,23 +503,23 @@ private fun emitInstruction(
                     codeWriter.loadLocal("CommandSourceStack")
                     if(data.entity != null) {
                         data.entity.load(codeWriter, newTransforms)
-                        codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "withEntity", "(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/commands/CommandSourceStack;")
+                        codeWriter.callMethod(CommandSourceStack::withEntity)
                     }
                     if(data.world != null) {
                         data.world.load(codeWriter, newTransforms)
-                        codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "withLevel", "(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/world/level/Level;")
+                        codeWriter.callMethod(CommandSourceStack::withLevel)
                     }
                     if(data.position != null) {
                         data.position.load(codeWriter, newTransforms)
-                        codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "withPosition", "(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/world/phys/Vec3;")
+                        codeWriter.callMethod(CommandSourceStack::withPosition)
                     }
                     if(data.rotation != null) {
                         data.rotation.load(codeWriter, newTransforms)
-                        codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "withRotation", "(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/world/phys/Vec2;")
+                        codeWriter.callMethod(CommandSourceStack::withRotation)
                     }
                     codeWriter.writeNull()
                     codeWriter.writeNull()
-                    codeWriter.callMethod("net/minecraft/server/ServerFunctionManager", "execute", "(Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager\$TraceCallbacks;Lnet/minecraft/nbt/CompoundTag;)I")
+                    codeWriter.callMethodExecuteCommand()
                     codeWriter.methodVisitor.visitInsn(Opcodes.POP)
                 }
             }
@@ -516,7 +527,7 @@ private fun emitInstruction(
         InstructionType.KILL_ENTITY -> {
             val data = instruction.data as InstructionDataLocation
             data.local.load(codeWriter, newTransforms)
-            codeWriter.callMethod("net/minecraft/world/entity/Entity", "kill", "()V")
+            codeWriter.callMethod(Entity::kill)
         }
         InstructionType.RESET_SCORE -> {
             val data = instruction.data as InstructionDataLocationLocation
@@ -524,15 +535,15 @@ private fun emitInstruction(
             fieldStorage.loadScoreboard(codeWriter)
             data.local2.load(codeWriter, newTransforms)
             data.local.load(codeWriter, newTransforms)
-            codeWriter.callMethod("net/minecraft/world/scores/Scoreboard", "resetPlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)V")
+            codeWriter.callMethod(Scoreboard::resetPlayerScore)
         }
         InstructionType.CHECK_SCORE_RANGE -> {
             val data = instruction.data as InstructionDataCheckScoreRange
             fieldStorage.loadScoreboard(codeWriter)
             data.name.load(codeWriter, newTransforms)
             data.objective.load(codeWriter, newTransforms)
-            codeWriter.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
-            codeWriter.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+            codeWriter.callMethod(Scoreboard::getOrCreatePlayerScore)
+            codeWriter.callMethod(Score::getScore)
             if(data.range.minimum != null && data.range.maximum == null) {
                 codeWriter.writeInt(data.range.minimum)
                 codeWriter.executeIf(if(!data.negate) Opcodes.IF_ICMPGE else Opcodes.IF_ICMPLT) {
@@ -550,7 +561,7 @@ private fun emitInstruction(
                 }
             }else if(data.range.minimum != null && data.range.maximum != null) {
                 val uid = codeWriter.generateUniqueLocal("\$Score")
-                val end = codeWriter.defineLocal(uid, "I")
+                val end = codeWriter.defineLocal(uid, Int::class.javaPrimitiveType!!)
                 codeWriter.storeLocal(uid)
                 if(!data.negate) {
                     codeWriter.loadLocal(uid)
@@ -584,14 +595,14 @@ private fun emitInstruction(
             fieldStorage.loadScoreboard(codeWriter)
             data.sourceName.load(codeWriter, newTransforms)
             data.sourceObjective.load(codeWriter, newTransforms)
-            codeWriter.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
-            codeWriter.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+            codeWriter.callMethod(Scoreboard::getOrCreatePlayerScore)
+            codeWriter.callMethod(Score::getScore)
 
             fieldStorage.loadScoreboard(codeWriter)
             data.targetName.load(codeWriter, newTransforms)
             data.targetObjective.load(codeWriter, newTransforms)
-            codeWriter.callMethod("net/minecraft/world/scores/Scoreboard", "getOrCreatePlayerScore", "(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;")
-            codeWriter.callMethod("net/minecraft/world/scores/Score", "getScore", "()I")
+            codeWriter.callMethod(Scoreboard::getOrCreatePlayerScore)
+            codeWriter.callMethod(Score::getScore)
 
             when(data.compareOperation) {
                 ScoreboardCompareOperation.LT -> { codeWriter.executeIf(Opcodes.IF_ICMPLT) { run() } }
@@ -607,11 +618,11 @@ private fun emitInstruction(
             val data = instruction.data as InstructionDataLocationLocation
 
             data.local.load(codeWriter, newTransforms)
-            codeWriter.callMethod("net/minecraft/world/entity/Entity", "level", "()Lnet/minecraft/world/level/Level;")
+            codeWriter.callMethod(Entity::level)
 
             val uidLocal = codeWriter.generateUniqueLocal("\$World")
-            val end = codeWriter.defineLocal(uidLocal, "Lnet/minecraft/server/level/ServerLevel;")
-            codeWriter.castType("net/minecraft/server/level/ServerLevel")
+            val end = codeWriter.defineLocal(uidLocal, ServerLevel::class.java)
+            codeWriter.castType(ServerLevel::class.java)
             codeWriter.storeLocal(uidLocal)
             newTransforms[data.local2.local!!] = uidLocal
             run()
@@ -621,10 +632,10 @@ private fun emitInstruction(
             val data = instruction.data as InstructionDataLocationLocation
 
             data.local.load(codeWriter, newTransforms)
-            codeWriter.callMethod("net/minecraft/world/entity/Entity", "position", "()Lnet/minecraft/world/phys/Vec3;")
+            codeWriter.callMethod(Entity::position)
 
             val uidLocal = codeWriter.generateUniqueLocal("\$Position")
-            val end = codeWriter.defineLocal(uidLocal, "Lnet/minecraft/world/phys/Vec3;")
+            val end = codeWriter.defineLocal(uidLocal, Vec3::class.java)
             codeWriter.storeLocal(uidLocal)
             newTransforms[data.local2.local!!] = uidLocal
             run()
@@ -634,10 +645,10 @@ private fun emitInstruction(
             val data = instruction.data as InstructionDataLocationLocation
 
             data.local.load(codeWriter, newTransforms)
-            codeWriter.callMethod("net/minecraft/world/entity/Entity", "getRotationVector", "()Lnet/minecraft/world/phys/Vec2;")
+            codeWriter.callMethod(Entity::getRotationVector)
 
             val uidLocal = codeWriter.generateUniqueLocal("\$Rotation")
-            val end = codeWriter.defineLocal(uidLocal, "Lnet/minecraft/world/phys/Vec2;")
+            val end = codeWriter.defineLocal(uidLocal, Vec2::class.java)
             codeWriter.storeLocal(uidLocal)
             newTransforms[data.local2.local!!] = uidLocal
             run()
