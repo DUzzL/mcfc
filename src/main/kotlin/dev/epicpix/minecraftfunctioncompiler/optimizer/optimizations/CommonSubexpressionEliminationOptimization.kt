@@ -25,60 +25,59 @@ object CommonSubexpressionEliminationOptimization : Optimization {
         var newCse = cse
         val data = when(instruction.data) {
             is InstructionDataLocation -> {
-                val remapped = remapLocation(instruction.data.local, newCse);
+                val remapped = remapLocation(instruction.data.local, newCse)
                 InstructionDataLocation(remapped)
             }
             is InstructionDataLocationString -> {
-                val remapped = remapLocation(instruction.data.local, newCse);
+                val remapped = remapLocation(instruction.data.local, newCse)
                 InstructionDataLocationString(remapped, instruction.data.value)
             }
             is InstructionDataLocationStringLoop -> {
-                val remapped = remapLocation(instruction.data.local, newCse);
+                val remapped = remapLocation(instruction.data.local, newCse)
                 InstructionDataLocationStringLoop(remapped, instruction.data.value, instruction.data.loopId)
             }
             is InstructionDataLocationLoop -> {
-                val remapped = remapLocation(instruction.data.local, newCse);
+                val remapped = remapLocation(instruction.data.local, newCse)
                 InstructionDataLocationLoop(remapped, instruction.data.loopId)
             }
             is InstructionDataLocationBoolean -> {
-                val remapped = remapLocation(instruction.data.local, newCse);
+                val remapped = remapLocation(instruction.data.local, newCse)
                 InstructionDataLocationBoolean(remapped, instruction.data.value)
             }
             is InstructionDataLocationLocation -> {
-                val remapped1 = remapLocation(instruction.data.local, newCse);
-                val remapped2 = remapLocation(instruction.data.local2, newCse);
+                val remapped1 = remapLocation(instruction.data.local, newCse)
+                val remapped2 = remapLocation(instruction.data.local2, newCse)
                 InstructionDataLocationLocation(remapped1, remapped2)
             }
             is InstructionDataLocationLocationInt -> {
-                val remapped1 = remapLocation(instruction.data.local, newCse);
-                val remapped2 = remapLocation(instruction.data.local2, newCse);
+                val remapped1 = remapLocation(instruction.data.local, newCse)
+                val remapped2 = remapLocation(instruction.data.local2, newCse)
                 InstructionDataLocationLocationInt(remapped1, remapped2, instruction.data.value)
             }
             is InstructionDataRunScoreOperation -> {
-                val targetObjective = remapLocation(instruction.data.targetObjective, newCse);
-                val targetName = remapLocation(instruction.data.targetName, newCse);
-                val sourceObjective = remapLocation(instruction.data.sourceObjective, newCse);
-                val sourceName = remapLocation(instruction.data.sourceName, newCse);
+                val targetObjective = remapLocation(instruction.data.targetObjective, newCse)
+                val targetName = remapLocation(instruction.data.targetName, newCse)
+                val sourceObjective = remapLocation(instruction.data.sourceObjective, newCse)
+                val sourceName = remapLocation(instruction.data.sourceName, newCse)
                 InstructionDataRunScoreOperation(targetObjective, targetName, sourceObjective, sourceName, instruction.data.operation, instruction.data.exceptionLoopId)
             }
             is InstructionDataFunctionCall -> {
-                if(instruction.data.entity != null) {
-                    val entity = remapLocation(instruction.data.entity, newCse);
-                    InstructionDataFunctionCall(instruction.data.functions, entity)
-                }else {
-                    instruction.data
-                }
+                val entity = remapLocation(instruction.data.entity, newCse)
+                val world = remapLocation(instruction.data.world, newCse)
+                val position = remapLocation(instruction.data.position, newCse)
+                val rotation = remapLocation(instruction.data.rotation, newCse)
+                InstructionDataFunctionCall(instruction.data.functions, entity, world, position, rotation)
             }
             is InstructionDataCheckScoreRange -> {
-                val objective = remapLocation(instruction.data.objective, newCse);
-                val name = remapLocation(instruction.data.name, newCse);
+                val objective = remapLocation(instruction.data.objective, newCse)
+                val name = remapLocation(instruction.data.name, newCse)
                 InstructionDataCheckScoreRange(objective, name, instruction.data.range, instruction.data.negate)
             }
             is InstructionDataCheckScoreCompare -> {
-                val targetObjective = remapLocation(instruction.data.targetObjective, newCse);
-                val targetName = remapLocation(instruction.data.targetName, newCse);
-                val sourceObjective = remapLocation(instruction.data.sourceObjective, newCse);
-                val sourceName = remapLocation(instruction.data.sourceName, newCse);
+                val targetObjective = remapLocation(instruction.data.targetObjective, newCse)
+                val targetName = remapLocation(instruction.data.targetName, newCse)
+                val sourceObjective = remapLocation(instruction.data.sourceObjective, newCse)
+                val sourceName = remapLocation(instruction.data.sourceName, newCse)
                 InstructionDataCheckScoreCompare(targetObjective, targetName, sourceObjective, sourceName, instruction.data.compareOperation)
             }
             else -> instruction.data
@@ -119,6 +118,15 @@ object CommonSubexpressionEliminationOptimization : Optimization {
 
 private fun remapLocation(location: LocationData, cse: CommonSubexpressionEliminationData): LocationData {
     if(location.local != null) {
+        val remappedLocal = cse.mapping[location.local] ?: location.local
+        return LocationData(local = remappedLocal)
+    }
+    return location
+}
+
+@JvmName("remapLocationNullable")
+private fun remapLocation(location: LocationData?, cse: CommonSubexpressionEliminationData): LocationData? {
+    if(location?.local != null) {
         val remappedLocal = cse.mapping[location.local] ?: location.local
         return LocationData(local = remappedLocal)
     }

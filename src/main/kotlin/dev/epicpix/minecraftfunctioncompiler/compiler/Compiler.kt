@@ -2,10 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.compiler
 
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument
 import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument
-import dev.epicpix.minecraftfunctioncompiler.il.Instruction
-import dev.epicpix.minecraftfunctioncompiler.il.Instructions
-import dev.epicpix.minecraftfunctioncompiler.il.ScoreboardCompareOperation
-import dev.epicpix.minecraftfunctioncompiler.il.ScoreboardOperation
+import dev.epicpix.minecraftfunctioncompiler.il.*
 import dev.epicpix.minecraftfunctioncompiler.parser.Command
 import dev.epicpix.minecraftfunctioncompiler.parser.CommandType.*
 
@@ -22,6 +19,17 @@ private fun CompilationContext.compile(command: Command) {
         EXECUTE_AS -> {
             forSelector(command["targets"]) { entity, breakId, continueId ->
                 copy(currentEntity = entity).compile(command["command"])
+            }
+        }
+        EXECUTE_AT -> {
+            forSelector(command["targets"]) { entity, breakId, continueId ->
+                val world = LocationData(local = highestLocal)
+                val position = LocationData(local = highestLocal + 1)
+                val rotation = LocationData(local = highestLocal + 2)
+                val execInstruction = Instructions.getEntityRotation(entity, rotation)
+                val instruction = Instructions.getEntityWorld(entity, world).with(Instructions.getEntityPosition(entity, position).with(execInstruction))
+                copy(highestLocal = highestLocal + 3, currentWorld = world, currentPosition = position, currentRotation = rotation, addInstruction = execInstruction.children::add).compile(command["command"])
+                addInstruction(instruction)
             }
         }
         EXECUTE_IF_ENTITY -> {
@@ -96,7 +104,7 @@ private fun CompilationContext.compile(command: Command) {
             }
         }
         FUNCTION -> {
-            addInstruction(Instructions.callFunctions(command["functions"], currentEntity))
+            addInstruction(Instructions.callFunctions(command["functions"], currentEntity, currentWorld, currentPosition, currentRotation))
         }
         KILL -> {
             forSelector(command["targets"]) { entity, breakId, continueId ->

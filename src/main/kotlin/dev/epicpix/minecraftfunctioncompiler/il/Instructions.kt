@@ -22,7 +22,7 @@ data class InstructionDataLocationLocation(val local: LocationData, val local2: 
 data class InstructionDataIntLoop(val value: Int, var loopId: Int) : InstructionData
 data class InstructionDataLocationLocationInt(val local: LocationData, val local2: LocationData, val value: Int) : InstructionData
 
-data class InstructionDataFunctionCall(val functions: List<ResourceLocation>, val entity: LocationData?) : InstructionData
+data class InstructionDataFunctionCall(val functions: List<ResourceLocation>, val entity: LocationData?, val world: LocationData?, val position: LocationData?, val rotation: LocationData?) : InstructionData
 data class InstructionDataRunScoreOperation(val targetObjective: LocationData, val targetName: LocationData, val sourceObjective: LocationData, val sourceName: LocationData, val operation: ScoreboardOperation, val exceptionLoopId: Int) : InstructionData
 data class InstructionDataCheckScoreRange(val objective: LocationData, val name: LocationData, val range: IntRangeArgument, val negate: Boolean) : InstructionData
 data class InstructionDataCheckScoreCompare(val targetObjective: LocationData, val targetName: LocationData, val sourceObjective: LocationData, val sourceName: LocationData, val compareOperation: ScoreboardCompareOperation) : InstructionData
@@ -69,10 +69,13 @@ data object Instructions {
     fun setScore(objective: LocationData, name: LocationData, value: Int) = Instruction(InstructionType.SET_SCORE, InstructionDataLocationLocationInt(objective, name, value))
     fun resetScore(objective: LocationData, name: LocationData) = Instruction(InstructionType.RESET_SCORE, InstructionDataLocationLocation(objective, name))
     fun runScoreOperation(targetObjective: LocationData, targetName: LocationData, sourceObjective: LocationData, sourceName: LocationData, operation: ScoreboardOperation, exceptionLoopId: Int) = Instruction(InstructionType.RUN_SCORE_OPERATION, InstructionDataRunScoreOperation(targetObjective, targetName, sourceObjective, sourceName, operation, exceptionLoopId))
-    fun callFunctions(functions: List<ResourceLocation>, entity: LocationData?) = Instruction(InstructionType.CALL_FUNCTIONS, InstructionDataFunctionCall(functions.toList(), entity))
+    fun callFunctions(functions: List<ResourceLocation>, entity: LocationData?, world: LocationData?, position: LocationData?, rotation: LocationData?) = Instruction(InstructionType.CALL_FUNCTIONS, InstructionDataFunctionCall(functions.toList(), entity, world, position, rotation))
     fun killEntity(local: LocationData) = Instruction(InstructionType.KILL_ENTITY, InstructionDataLocation(local))
     fun checkScoreRange(objective: LocationData, name: LocationData, range: IntRangeArgument, negate: Boolean) = Instruction(InstructionType.CHECK_SCORE_RANGE, InstructionDataCheckScoreRange(objective, name, range, negate))
     fun checkScoreCompare(targetObjective: LocationData, targetName: LocationData, sourceObjective: LocationData, sourceName: LocationData, compareOperation: ScoreboardCompareOperation) = Instruction(InstructionType.CHECK_SCORE_COMPARE, InstructionDataCheckScoreCompare(targetObjective, targetName, sourceObjective, sourceName, compareOperation))
+    fun getEntityWorld(entity: LocationData, world: LocationData) = Instruction(InstructionType.GET_ENTITY_WORLD, InstructionDataLocationLocation(entity, world))
+    fun getEntityPosition(entity: LocationData, position: LocationData) = Instruction(InstructionType.GET_ENTITY_POSITION, InstructionDataLocationLocation(entity, position))
+    fun getEntityRotation(entity: LocationData, rotation: LocationData) = Instruction(InstructionType.GET_ENTITY_ROTATION, InstructionDataLocationLocation(entity, rotation))
 
 }
 
@@ -107,5 +110,8 @@ enum class InstructionType {
     KILL_ENTITY,
     CHECK_SCORE_RANGE,
     CHECK_SCORE_COMPARE,
+    GET_ENTITY_WORLD,
+    GET_ENTITY_POSITION,
+    GET_ENTITY_ROTATION,
 
 }

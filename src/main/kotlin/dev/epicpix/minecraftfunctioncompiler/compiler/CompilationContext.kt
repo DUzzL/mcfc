@@ -7,7 +7,14 @@ import dev.epicpix.minecraftfunctioncompiler.il.Instructions
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData
 import java.util.*
 
-data class CompilationContext(val highestLocal: Int = 0, val currentEntity: LocationData? = null, val addInstruction: (Instruction) -> Unit) {
+data class CompilationContext(
+    val highestLocal: Int = 0,
+    val currentEntity: LocationData? = null,
+    val currentWorld: LocationData? = null,
+    val currentPosition: LocationData? = null,
+    val currentRotation: LocationData? = null,
+    val addInstruction: (Instruction) -> Unit
+) {
 
     fun forEmptyCondition(exec: CompilationContext.(loopId: Int) -> Unit) {
         val loopId = highestLocal

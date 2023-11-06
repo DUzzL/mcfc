@@ -472,6 +472,18 @@ private fun emitInstruction(
                         data.entity.load(codeWriter, newTransforms)
                         codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "withEntity", "(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/commands/CommandSourceStack;")
                     }
+                    if(data.world != null) {
+                        data.world.load(codeWriter, newTransforms)
+                        codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "withLevel", "(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/world/level/Level;")
+                    }
+                    if(data.position != null) {
+                        data.position.load(codeWriter, newTransforms)
+                        codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "withPosition", "(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/world/phys/Vec3;")
+                    }
+                    if(data.rotation != null) {
+                        data.rotation.load(codeWriter, newTransforms)
+                        codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "withRotation", "(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/world/phys/Vec2;")
+                    }
                     codeWriter.callFunction("function/${func.namespace}/${func.path}", "run", "(Lnet/minecraft/commands/CommandSourceStack;)I")
                     codeWriter.methodVisitor.visitInsn(Opcodes.POP)
                 }else {
@@ -481,6 +493,18 @@ private fun emitInstruction(
                     if(data.entity != null) {
                         data.entity.load(codeWriter, newTransforms)
                         codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "withEntity", "(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/commands/CommandSourceStack;")
+                    }
+                    if(data.world != null) {
+                        data.world.load(codeWriter, newTransforms)
+                        codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "withLevel", "(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/world/level/Level;")
+                    }
+                    if(data.position != null) {
+                        data.position.load(codeWriter, newTransforms)
+                        codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "withPosition", "(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/world/phys/Vec3;")
+                    }
+                    if(data.rotation != null) {
+                        data.rotation.load(codeWriter, newTransforms)
+                        codeWriter.callMethod("net/minecraft/commands/CommandSourceStack", "withRotation", "(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/world/phys/Vec2;")
                     }
                     codeWriter.writeNull()
                     codeWriter.writeNull()
@@ -578,6 +602,46 @@ private fun emitInstruction(
                 ScoreboardCompareOperation.GT -> { codeWriter.executeIf(Opcodes.IF_ICMPGT) { run() } }
             }
 
+        }
+        InstructionType.GET_ENTITY_WORLD -> {
+            val data = instruction.data as InstructionDataLocationLocation
+
+            data.local.load(codeWriter, newTransforms)
+            codeWriter.callMethod("net/minecraft/world/entity/Entity", "level", "()Lnet/minecraft/world/level/Level;")
+
+            val uidLocal = codeWriter.generateUniqueLocal("\$World")
+            val end = codeWriter.defineLocal(uidLocal, "Lnet/minecraft/server/level/ServerLevel;")
+            codeWriter.castType("net/minecraft/server/level/ServerLevel")
+            codeWriter.storeLocal(uidLocal)
+            newTransforms[data.local2.local!!] = uidLocal
+            run()
+            end()
+        }
+        InstructionType.GET_ENTITY_POSITION -> {
+            val data = instruction.data as InstructionDataLocationLocation
+
+            data.local.load(codeWriter, newTransforms)
+            codeWriter.callMethod("net/minecraft/world/entity/Entity", "position", "()Lnet/minecraft/world/phys/Vec3;")
+
+            val uidLocal = codeWriter.generateUniqueLocal("\$Position")
+            val end = codeWriter.defineLocal(uidLocal, "Lnet/minecraft/world/phys/Vec3;")
+            codeWriter.storeLocal(uidLocal)
+            newTransforms[data.local2.local!!] = uidLocal
+            run()
+            end()
+        }
+        InstructionType.GET_ENTITY_ROTATION -> {
+            val data = instruction.data as InstructionDataLocationLocation
+
+            data.local.load(codeWriter, newTransforms)
+            codeWriter.callMethod("net/minecraft/world/entity/Entity", "getRotationVector", "()Lnet/minecraft/world/phys/Vec2;")
+
+            val uidLocal = codeWriter.generateUniqueLocal("\$Rotation")
+            val end = codeWriter.defineLocal(uidLocal, "Lnet/minecraft/world/phys/Vec2;")
+            codeWriter.storeLocal(uidLocal)
+            newTransforms[data.local2.local!!] = uidLocal
+            run()
+            end()
         }
     }
 }

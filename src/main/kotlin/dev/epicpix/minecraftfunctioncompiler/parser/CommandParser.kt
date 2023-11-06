@@ -45,6 +45,12 @@ object CommandParser {
                     "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
                 ))
             }
+            "at" -> {
+                Command(CommandType.EXECUTE_AT, mapOf(
+                    "targets" to parseSelector(context.arguments["targets"]!!.range[source]),
+                    "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
+                ))
+            }
             "if" -> {
                 val ifType = nodes[1].range[source]
                 when(ifType) {

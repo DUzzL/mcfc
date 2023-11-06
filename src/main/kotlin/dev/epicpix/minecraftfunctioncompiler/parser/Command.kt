@@ -11,6 +11,7 @@ data class Command(val type: CommandType, val params: Map<String, Any?>) {
 
 enum class CommandType {
     EXECUTE_AS,
+    EXECUTE_AT,
     EXECUTE_IF_ENTITY,
     EXECUTE_IF_SCORE_COMPARE,
     EXECUTE_IF_SCORE_RANGE,
