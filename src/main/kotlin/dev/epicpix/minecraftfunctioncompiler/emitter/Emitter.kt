@@ -1,7 +1,15 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter
 
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ArrayList_size
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Iterable_iterator
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Map_keys
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Math_floorDiv
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Math_floorMod
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Math_max
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Math_min
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Scoreboard_playerScores
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ServerFunctionManager_execute
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ServerLevel_getEntity
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Set_contains
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Set_size
 import dev.epicpix.minecraftfunctioncompiler.il.*
@@ -235,7 +243,7 @@ private fun emitInstruction(
             codeWriter.storeLocal(uidLocalLevels)
             codeWriter.createIterableForEachLoop(uidLocalLevels, ServerLevel::class.java, true) { controlFlow, _ ->
                 fieldStorage.loadUUID(codeWriter, data.value)
-                codeWriter.callMethodGetEntity()
+                codeWriter.writeMapped(ServerLevel_getEntity)
                 val uidLocal = codeWriter.generateUniqueLocal("\$Entity")
                 val end2 = codeWriter.defineLocal(uidLocal, Entity::class.java)
                 newTransforms[data.local.local!!] = uidLocal
@@ -254,7 +262,7 @@ private fun emitInstruction(
 
             codeWriter.newObject(ArrayList::class.java, Collection::class.java) {
                 fieldStorage.loadScoreboard(codeWriter)
-                codeWriter.getObjectField(Scoreboard::playerScores)
+                codeWriter.writeMapped(Scoreboard_playerScores)
                 codeWriter.writeMapped(Map_keys)
             }
 
@@ -273,7 +281,7 @@ private fun emitInstruction(
                 }
             }else {
                 codeWriter.loadLocal(uidLocal)
-                codeWriter.callMethod(ArrayList<*>::size)
+                codeWriter.writeMapped(ArrayList_size)
                 codeWriter.executeIf(Opcodes.IFNE) {
                     val uidLocalName = codeWriter.generateUniqueLocal("\$Name")
                     val end2 = codeWriter.defineLocal(uidLocalName, String::class.java)
@@ -401,8 +409,8 @@ private fun emitInstruction(
                     codeWriter.loadLocal(uniqBeh)
                     codeWriter.loadLocal(uniq)
                     codeWriter.callMethod(Score::getScore)
-                    if(data.operation == ScoreboardOperation.DIVIDE) codeWriter.callFunction(Math::class.java, "floorDiv", Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!)
-                    else codeWriter.callFunction(Math::class.java, "floorMod", Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!)
+                    if(data.operation == ScoreboardOperation.DIVIDE) codeWriter.writeMapped(Math_floorDiv)
+                    else codeWriter.writeMapped(Math_floorMod)
                     codeWriter.callMethod(Score::setScore)
                     end()
                     endBeh()
@@ -423,8 +431,8 @@ private fun emitInstruction(
                         codeWriter.callMethod(Score::getScore)
                         codeWriter.methodVisitor.visitInsn(Opcodes.SWAP)
                         codeWriter.callMethod(Score::getScore)
-                        if(data.operation == ScoreboardOperation.MIN) codeWriter.callFunction(Math::class.java, "min", Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!)
-                        else codeWriter.callFunction(Math::class.java, "max", Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!, Int::class.javaPrimitiveType!!)
+                        if(data.operation == ScoreboardOperation.MIN) codeWriter.writeMapped(Math_min)
+                        else codeWriter.writeMapped(Math_max)
                         codeWriter.callMethod(Score::setScore)
                     }
                 }
@@ -523,7 +531,7 @@ private fun emitInstruction(
                     }
                     codeWriter.writeNull()
                     codeWriter.writeNull()
-                    codeWriter.callMethodExecuteCommand()
+                    codeWriter.writeMapped(ServerFunctionManager_execute)
                     codeWriter.methodVisitor.visitInsn(Opcodes.POP)
                 }
             }

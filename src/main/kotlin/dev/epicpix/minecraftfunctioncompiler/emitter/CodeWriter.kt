@@ -13,7 +13,6 @@ import org.objectweb.asm.Opcodes
 import kotlin.jvm.internal.CallableReference
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
-import kotlin.reflect.KProperty1
 
 class CodeWriter(val methodVisitor: MethodVisitor) {
 
@@ -120,10 +119,6 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, owner.getRawDescriptor(), "<init>", types.getMethodDescriptor(Void::class.javaPrimitiveType!!), false)
     }
 
-    fun callFunction(owner: Class<*>, name: String, returnType: Class<*>, vararg arguments: Class<*>) {
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, owner.getRawDescriptor(), name, arguments.getMethodDescriptor(returnType), false)
-    }
-
     fun callMethod(function: KFunction<*>) {
         function as CallableReference
         methodVisitor.visitMethodInsn(
@@ -133,22 +128,6 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
             function.signature.substring(function.signature.indexOf('(')),
             false
         )
-    }
-
-    fun callMethod(function: KProperty1<*, *>) {
-        function as CallableReference
-        methodVisitor.visitMethodInsn(
-            Opcodes.INVOKEVIRTUAL,
-            (function.owner as KClass<*>).java.getRawDescriptor(),
-            function.signature.substring(0, function.signature.indexOf('(')),
-            function.signature.substring(function.signature.indexOf('(')),
-            false
-        )
-    }
-
-    fun getObjectField(property: KProperty1<*, *>) {
-        property as CallableReference
-        methodVisitor.visitFieldInsn(Opcodes.GETFIELD, (property.owner as KClass<*>).java.getRawDescriptor(), property.name, (property.returnType.classifier as KClass<*>).java.descriptorString())
     }
 
     fun writeMapped(mappedData: MappedData) {
