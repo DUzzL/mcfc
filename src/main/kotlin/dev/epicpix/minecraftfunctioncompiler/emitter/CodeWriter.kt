@@ -167,6 +167,10 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         methodVisitor.visitFieldInsn(Opcodes.GETFIELD, (property.owner as KClass<*>).java.getRawDescriptor(), property.name, (property.returnType.classifier as KClass<*>).java.descriptorString())
     }
 
+    fun writeMapped(mappedData: MappedData) {
+        mappedData.generate(this)
+    }
+
     fun getStaticField(owner: String, name: String, type: Class<*>) {
         methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, owner, name, type.descriptorString())
     }

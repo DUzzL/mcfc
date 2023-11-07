@@ -4,6 +4,7 @@ import dev.epicpix.minecraftfunctioncompiler.compiler.compile
 import dev.epicpix.minecraftfunctioncompiler.emitter.CodeFieldStorage
 import dev.epicpix.minecraftfunctioncompiler.emitter.CodeWriter
 import dev.epicpix.minecraftfunctioncompiler.emitter.emitBytecode
+import dev.epicpix.minecraftfunctioncompiler.emitter.initDefinitions
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction
 import dev.epicpix.minecraftfunctioncompiler.il.printInstructionList
 import dev.epicpix.minecraftfunctioncompiler.optimizer.optimize
@@ -27,6 +28,8 @@ import java.nio.file.Files
 class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<ResourceLocation, CommandFunction>, private val minecraftServer: MinecraftServer) : ClassLoader(parent) {
     private val handles: MutableMap<ResourceLocation, MethodHandle> = HashMap()
     fun loadFunctions(serverFunctionManager: ServerFunctionManager) {
+        initDefinitions()
+
         handles.clear()
 
         val definedFunctions = mutableMapOf<ResourceLocation, List<Command>>()
