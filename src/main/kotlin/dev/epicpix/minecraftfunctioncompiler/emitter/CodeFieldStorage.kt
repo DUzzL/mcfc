@@ -4,6 +4,7 @@ import dev.epicpix.minecraftfunctioncompiler.DEBUG
 import dev.epicpix.minecraftfunctioncompiler.EMIT_SCOREBOARD_NAME
 import dev.epicpix.minecraftfunctioncompiler.EMIT_SERVER_FUNCTION_MANAGER_NAME
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Map_get
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.MinecraftServer_getScoreboard
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ServerFunctionLibrary_getFunctions
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ServerFunctionManager_getLibrary
 import net.minecraft.commands.CommandFunction
@@ -58,7 +59,7 @@ class CodeFieldStorage {
         cw.setDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, ServerFunctionManager::class.java)
 
         mv.visitVarInsn(Opcodes.ALOAD, 0)
-        cw.callMethod(MinecraftServer::getScoreboard)
+        cw.writeMapped(MinecraftServer_getScoreboard)
         cw.setDataField(EMIT_SCOREBOARD_NAME, ServerScoreboard::class.java)
 
         uuids.forEachIndexed { _, value ->

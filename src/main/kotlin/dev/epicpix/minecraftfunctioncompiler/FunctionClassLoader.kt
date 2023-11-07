@@ -81,10 +81,6 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
             LOGGER.info("Average ${"%.2f".format(totalOptimizedInstructions/definedFunctions.size.toDouble())} instructions in optimized IL bytecode")
         }
 
-        val resolver = FabricLoader.getInstance().mappingResolver
-        println(resolver.namespaces)
-        println(resolver.currentRuntimeNamespace)
-
         val storage = CodeFieldStorage()
         val loadedFunctions = mutableMapOf<ResourceLocation, Class<*>>()
         val startLoader = System.currentTimeMillis()

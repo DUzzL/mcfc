@@ -10,9 +10,6 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.List_s
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
-import kotlin.jvm.internal.CallableReference
-import kotlin.reflect.KClass
-import kotlin.reflect.KFunction
 
 class CodeWriter(val methodVisitor: MethodVisitor) {
 
@@ -117,17 +114,6 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         methodVisitor.visitInsn(Opcodes.DUP)
         argumentProvider()
         methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, owner.getRawDescriptor(), "<init>", types.getMethodDescriptor(Void::class.javaPrimitiveType!!), false)
-    }
-
-    fun callMethod(function: KFunction<*>) {
-        function as CallableReference
-        methodVisitor.visitMethodInsn(
-            Opcodes.INVOKEVIRTUAL,
-            (function.owner as KClass<*>).java.getRawDescriptor(),
-            function.signature.substring(0, function.signature.indexOf('(')),
-            function.signature.substring(function.signature.indexOf('(')),
-            false
-        )
     }
 
     fun writeMapped(mappedData: MappedData) {
