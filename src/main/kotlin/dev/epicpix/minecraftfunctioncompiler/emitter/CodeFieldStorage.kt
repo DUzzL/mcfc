@@ -1,6 +1,5 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter
 
-import dev.epicpix.minecraftfunctioncompiler.DATA_CLASS
 import dev.epicpix.minecraftfunctioncompiler.DEBUG
 import dev.epicpix.minecraftfunctioncompiler.EMIT_SCOREBOARD_NAME
 import dev.epicpix.minecraftfunctioncompiler.EMIT_SERVER_FUNCTION_MANAGER_NAME
@@ -28,26 +27,26 @@ class CodeFieldStorage {
 
     fun loadUUID(cw: CodeWriter, value: UUID) {
         if(!uuids.contains(value)) uuids.add(value)
-        cw.getStaticField(DATA_CLASS, getUuidName(value), UUID::class.java)
+        cw.getDataField(getUuidName(value), UUID::class.java)
     }
 
     fun loadResourceLocation(cw: CodeWriter, value: ResourceLocation) {
         if(!resourceLocations.contains(value)) resourceLocations.add(value)
-        cw.getStaticField(DATA_CLASS, getResourceLocationName(value), ResourceLocation::class.java)
+        cw.getDataField(getResourceLocationName(value), ResourceLocation::class.java)
     }
 
     fun loadFunction(cw: CodeWriter, value: ResourceLocation) {
         if(!resourceLocations.contains(value)) resourceLocations.add(value)
         if(!functions.contains(value)) functions.add(value)
-        cw.getStaticField(DATA_CLASS, getFunctionName(value), CommandFunction::class.java)
+        cw.getDataField(getFunctionName(value), CommandFunction::class.java)
     }
 
     fun loadServerFunctionManager(cw: CodeWriter) {
-        cw.getStaticField(DATA_CLASS, EMIT_SERVER_FUNCTION_MANAGER_NAME, ServerFunctionManager::class.java)
+        cw.getDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, ServerFunctionManager::class.java)
     }
 
     fun loadScoreboard(cw: CodeWriter) {
-        cw.getStaticField(DATA_CLASS, EMIT_SCOREBOARD_NAME, ServerScoreboard::class.java)
+        cw.getDataField(EMIT_SCOREBOARD_NAME, ServerScoreboard::class.java)
     }
 
     fun generate(classWriter: ClassWriter) {
@@ -56,25 +55,25 @@ class CodeFieldStorage {
         val cw = CodeWriter(mv)
 
         mv.visitVarInsn(Opcodes.ALOAD, 1)
-        cw.setStaticField(DATA_CLASS, EMIT_SERVER_FUNCTION_MANAGER_NAME, ServerFunctionManager::class.java)
+        cw.setDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, ServerFunctionManager::class.java)
 
         mv.visitVarInsn(Opcodes.ALOAD, 0)
         cw.callMethod(MinecraftServer::getScoreboard)
-        cw.setStaticField(DATA_CLASS, EMIT_SCOREBOARD_NAME, ServerScoreboard::class.java)
+        cw.setDataField(EMIT_SCOREBOARD_NAME, ServerScoreboard::class.java)
 
         uuids.forEachIndexed { _, value ->
             cw.newObject(UUID::class.java, Long::class.javaPrimitiveType!!, Long::class.javaPrimitiveType!!) {
                 cw.writeLong(value.mostSignificantBits)
                 cw.writeLong(value.leastSignificantBits)
             }
-            cw.setStaticField(DATA_CLASS, getUuidName(value), UUID::class.java)
+            cw.setDataField(getUuidName(value), UUID::class.java)
         }
         resourceLocations.forEachIndexed { _, value ->
             cw.newObject(ResourceLocation::class.java, String::class.java, String::class.java) {
                 mv.visitLdcInsn(value.namespace)
                 mv.visitLdcInsn(value.path)
             }
-            cw.setStaticField(DATA_CLASS, getResourceLocationName(value), ResourceLocation::class.java)
+            cw.setDataField(getResourceLocationName(value), ResourceLocation::class.java)
         }
         functions.forEachIndexed { _, value ->
             loadServerFunctionManager(cw)
@@ -83,7 +82,7 @@ class CodeFieldStorage {
             loadResourceLocation(cw, value)
             cw.writeMapped(Map_get)
             cw.castType(CommandFunction::class.java)
-            cw.setStaticField(DATA_CLASS, getFunctionName(value), CommandFunction::class.java)
+            cw.setDataField(getFunctionName(value), CommandFunction::class.java)
         }
         mv.visitInsn(Opcodes.RETURN)
         mv.visitMaxs(0, 0)

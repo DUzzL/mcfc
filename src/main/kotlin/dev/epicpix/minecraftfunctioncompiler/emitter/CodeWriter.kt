@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter
 
+import dev.epicpix.minecraftfunctioncompiler.DATA_CLASS
 import dev.epicpix.minecraftfunctioncompiler.DEBUG
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Iterable_iterator
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Iterator_hasNext
@@ -154,12 +155,12 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         mappedData.generate(this)
     }
 
-    fun getStaticField(owner: String, name: String, type: Class<*>) {
-        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, owner, name, type.descriptorString())
+    fun getDataField(name: String, type: Class<*>) {
+        methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, DATA_CLASS, name, type.descriptorString())
     }
 
-    fun setStaticField(owner: String, name: String, type: Class<*>) {
-        methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, owner, name, type.descriptorString())
+    fun setDataField(name: String, type: Class<*>) {
+        methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, DATA_CLASS, name, type.descriptorString())
     }
 
     fun castType(type: Class<*>) {
