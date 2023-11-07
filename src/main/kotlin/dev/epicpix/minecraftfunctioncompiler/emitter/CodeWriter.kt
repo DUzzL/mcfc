@@ -1,6 +1,11 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter
 
 import dev.epicpix.minecraftfunctioncompiler.DEBUG
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Iterable_iterator
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Iterator_hasNext
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Iterator_next
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.List_get
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.List_size
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
@@ -140,28 +145,6 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         )
     }
 
-    fun callInterfaceMethod(function: KFunction<*>) {
-        function as CallableReference
-        methodVisitor.visitMethodInsn(
-            Opcodes.INVOKEINTERFACE,
-            (function.owner as KClass<*>).java.getRawDescriptor(),
-            function.signature.substring(0, function.signature.indexOf('(')),
-            function.signature.substring(function.signature.indexOf('(')),
-            true
-        )
-    }
-
-    fun callInterfaceMethod(function: KProperty1<*, *>) {
-        function as CallableReference
-        methodVisitor.visitMethodInsn(
-            Opcodes.INVOKEINTERFACE,
-            (function.owner as KClass<*>).java.getRawDescriptor(),
-            function.signature.substring(0, function.signature.indexOf('(')),
-            function.signature.substring(function.signature.indexOf('(')),
-            true
-        )
-    }
-
     fun getObjectField(property: KProperty1<*, *>) {
         property as CallableReference
         methodVisitor.visitFieldInsn(Opcodes.GETFIELD, (property.owner as KClass<*>).java.getRawDescriptor(), property.name, (property.returnType.classifier as KClass<*>).java.descriptorString())
@@ -241,19 +224,19 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
 
     fun createListForEachLoop(arrayLocal: String, type: Class<*>, autoLoad: Boolean = false, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
         loadLocal(arrayLocal)
-        callInterfaceMethod(List<*>::size)
+        writeMapped(List_size)
         createIndexedLoop { indexLocal, controlFlow ->
             if(autoLoad) {
                 loadLocal(arrayLocal)
                 loadLocal(indexLocal)
-                callInterfaceMethod(List<*>::get)
+                writeMapped(List_get)
                 castType(type)
                 exec(controlFlow) { throw UnsupportedOperationException("Cannot run getter with autoLoad enabled") }
             }else {
                 exec(controlFlow) {
                     loadLocal(arrayLocal)
                     loadLocal(indexLocal)
-                    callInterfaceMethod(List<*>::get)
+                    writeMapped(List_get)
                     castType(type)
                 }
             }
@@ -263,11 +246,11 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
     fun createIteratorForEachLoop(iteratorLocal: String, type: Class<*>, autoLoad: Boolean = false, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
         createWhileLoop({ brk ->
             loadLocal(iteratorLocal)
-            callInterfaceMethod(Iterator<*>::hasNext)
+            writeMapped(Iterator_hasNext)
             methodVisitor.visitJumpInsn(Opcodes.IFEQ, brk)
         }) { controlFlow ->
             loadLocal(iteratorLocal)
-            callInterfaceMethod(Iterator<*>::next)
+            writeMapped(Iterator_next)
             if(type != Object::class.java) castType(type)
 
             if(!autoLoad) {
@@ -286,7 +269,7 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
 
     fun createIterableForEachLoop(iterableLocal: String, type: Class<*>, autoLoad: Boolean = false, exec: (ControlFlowRun, getter: () -> Unit) -> Unit) {
         loadLocal(iterableLocal)
-        callInterfaceMethod(Iterable<*>::iterator)
+        writeMapped(Iterable_iterator)
         storeLocal("$iterableLocal:Iterator", Iterator::class.java) {
             createIteratorForEachLoop("$iterableLocal:Iterator", type, autoLoad, exec)
         }

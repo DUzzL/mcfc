@@ -1,5 +1,9 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter
 
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Iterable_iterator
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Map_keys
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Set_contains
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Set_size
 import dev.epicpix.minecraftfunctioncompiler.il.*
 import dev.epicpix.minecraftfunctioncompiler.parser.Command
 import net.minecraft.commands.CommandSourceStack
@@ -107,7 +111,7 @@ private fun emitInstruction(
             data.local.load(codeWriter, newTransforms)
             codeWriter.callMethod(Entity::getTags)
             codeWriter.writeString(data.value)
-            codeWriter.callInterfaceMethod(Set<*>::contains)
+            codeWriter.writeMapped(Set_contains)
             codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newLoops[data.loopId]!!.continueLabel)
         }
         InstructionType.CHECK_NOT_ENTITY_TAG -> {
@@ -115,21 +119,21 @@ private fun emitInstruction(
             data.local.load(codeWriter, newTransforms)
             codeWriter.callMethod(Entity::getTags)
             codeWriter.writeString(data.value)
-            codeWriter.callInterfaceMethod(Set<*>::contains)
+            codeWriter.writeMapped(Set_contains)
             codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, newLoops[data.loopId]!!.continueLabel)
         }
         InstructionType.CHECK_ENTITY_TAGS -> {
             val data = instruction.data as InstructionDataLocationLoop
             data.local.load(codeWriter, newTransforms)
             codeWriter.callMethod(Entity::getTags)
-            codeWriter.callInterfaceMethod(Set<*>::size)
+            codeWriter.writeMapped(Set_size)
             codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newLoops[data.loopId]!!.continueLabel)
         }
         InstructionType.CHECK_NOT_ENTITY_TAGS -> {
             val data = instruction.data as InstructionDataLocationLoop
             data.local.load(codeWriter, newTransforms)
             codeWriter.callMethod(Entity::getTags)
-            codeWriter.callInterfaceMethod(Set<*>::size)
+            codeWriter.writeMapped(Set_size)
             codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, newLoops[data.loopId]!!.continueLabel)
         }
         InstructionType.LIMITER -> {
@@ -186,7 +190,7 @@ private fun emitInstruction(
             codeWriter.createIterableForEachLoop(uidLocalLevels, ServerLevel::class.java, true) { _, _ ->
                 val uidLocalEntities = codeWriter.generateUniqueLocal("\$Entities")
                 codeWriter.callMethod(ServerLevel::getAllEntities)
-                codeWriter.callInterfaceMethod(Iterable<*>::iterator)
+                codeWriter.writeMapped(Iterable_iterator)
                 val end2 = codeWriter.defineLocal(uidLocalEntities, Iterator::class.java)
                 codeWriter.storeLocal(uidLocalEntities)
                 codeWriter.createIteratorForEachLoop(uidLocalEntities, Entity::class.java, true) { _, _ ->
@@ -251,7 +255,7 @@ private fun emitInstruction(
             codeWriter.newObject(ArrayList::class.java, Collection::class.java) {
                 fieldStorage.loadScoreboard(codeWriter)
                 codeWriter.getObjectField(Scoreboard::playerScores)
-                codeWriter.callInterfaceMethod(Map<*,*>::keys)
+                codeWriter.writeMapped(Map_keys)
             }
 
             val uidLocal = codeWriter.generateUniqueLocal("\$Array")

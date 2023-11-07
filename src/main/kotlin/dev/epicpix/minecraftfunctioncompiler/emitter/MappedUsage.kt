@@ -1,18 +1,30 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter
 
 import net.fabricmc.loader.api.FabricLoader
-import net.minecraft.server.level.ServerLevel
+import net.minecraft.server.ServerFunctionLibrary
+import net.minecraft.server.ServerFunctionManager
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 import java.io.IOException
 import java.nio.file.Files
-import java.util.*
 
+@Suppress("RemoveExplicitTypeArguments", "unused", "ReplaceGetOrSet", "HasPlatformType", "FunctionName")
 object MappedUsageDefinitions {
 
-    fun ServerLevel_GetEntity() = type<ServerLevel>().getEntity(type<UUID>())
+    fun ServerFunctionManager_getLibrary() = type<ServerFunctionManager>().library
+    fun ServerFunctionLibrary_getFunctions() = type<ServerFunctionLibrary>().functions
+
+    fun List_size() = type<List<*>>().size
+    fun List_get() = type<List<*>>().get(type<Int>())
+    fun Set_size() = type<Set<*>>().size
+    fun Set_contains() = type<Set<*>>().contains(type<Any>())
+    fun Map_keys() = type<Map<*, *>>().keys
+    fun Map_get() = type<Map<*, *>>().get(type<Any>())
+    fun Iterator_next() = type<Iterator<*>>().next()
+    fun Iterator_hasNext() = type<Iterator<*>>().hasNext()
+    fun Iterable_iterator() = type<Iterable<*>>().iterator()
 
 
     private fun <T> type(): T = null!!

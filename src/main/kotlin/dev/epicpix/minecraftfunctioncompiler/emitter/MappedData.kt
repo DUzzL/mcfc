@@ -3,7 +3,18 @@ package dev.epicpix.minecraftfunctioncompiler.emitter
 class MappedData {
 
     companion object {
-        val ServerLevel_GetEntity = MappedData()
+        val ServerFunctionManager_getLibrary = MappedData()
+        val ServerFunctionLibrary_getFunctions = MappedData()
+
+        val List_size = MappedData()
+        val List_get = MappedData()
+        val Set_size = MappedData()
+        val Set_contains = MappedData()
+        val Map_keys = MappedData()
+        val Map_get = MappedData()
+        val Iterator_next = MappedData()
+        val Iterator_hasNext = MappedData()
+        val Iterable_iterator = MappedData()
     }
 
     internal var generator: ((CodeWriter) -> Unit)? = null

@@ -4,10 +4,12 @@ import dev.epicpix.minecraftfunctioncompiler.DATA_CLASS
 import dev.epicpix.minecraftfunctioncompiler.DEBUG
 import dev.epicpix.minecraftfunctioncompiler.EMIT_SCOREBOARD_NAME
 import dev.epicpix.minecraftfunctioncompiler.EMIT_SERVER_FUNCTION_MANAGER_NAME
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Map_get
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ServerFunctionLibrary_getFunctions
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ServerFunctionManager_getLibrary
 import net.minecraft.commands.CommandFunction
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.MinecraftServer
-import net.minecraft.server.ServerFunctionLibrary
 import net.minecraft.server.ServerFunctionManager
 import net.minecraft.server.ServerScoreboard
 import org.objectweb.asm.ClassWriter
@@ -76,10 +78,10 @@ class CodeFieldStorage {
         }
         functions.forEachIndexed { _, value ->
             loadServerFunctionManager(cw)
-            cw.getObjectField(ServerFunctionManager::library)
-            cw.getObjectField(ServerFunctionLibrary::functions)
+            cw.writeMapped(ServerFunctionManager_getLibrary)
+            cw.writeMapped(ServerFunctionLibrary_getFunctions)
             loadResourceLocation(cw, value)
-            cw.callInterfaceMethod(Map<*,*>::get)
+            cw.writeMapped(Map_get)
             cw.castType(CommandFunction::class.java)
             cw.setStaticField(DATA_CLASS, getFunctionName(value), CommandFunction::class.java)
         }
