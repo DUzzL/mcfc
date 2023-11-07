@@ -18,6 +18,7 @@ Of course this mod can't support every command, so it will only generate code fo
 
 This is the list of commands supported currently as of `0.1.0-alpha.4`:
 - `execute as`
+- `execute at`
 - `execute if entity`
 - `execute if score`
 - `execute run`
