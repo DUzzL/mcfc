@@ -63,6 +63,10 @@ object MappedUsageDefinitions {
     fun Score_setScore() = run { type<Score>().score = type<Int>() }
     fun Score_getScore() = type<Score>().score
 
+    fun Vec3_x() = type<Vec3>().x
+    fun Vec3_y() = type<Vec3>().y
+    fun Vec3_z() = type<Vec3>().z
+
     fun ArrayList_size() = type<ArrayList<*>>().size
     fun ArrayList_get() = type<ArrayList<*>>().get(type<Int>())
     fun List_size() = type<List<*>>().size

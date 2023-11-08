@@ -101,6 +101,10 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         methodVisitor.visitLdcInsn(value)
     }
 
+    fun writeDouble(value: Double) {
+        methodVisitor.visitLdcInsn(value)
+    }
+
     fun writeString(str: String) {
         methodVisitor.visitLdcInsn(str)
     }

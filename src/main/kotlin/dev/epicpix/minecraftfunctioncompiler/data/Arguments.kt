@@ -6,6 +6,7 @@ data class FloatRangeArgument(
     val minimum: Float?,
     val maximum: Float?
 )
+
 data class IntRangeArgument(
     val minimum: Int?,
     val maximum: Int?
@@ -34,4 +35,13 @@ data class SelectorArgument(
     val entityType: String? = null,
     val hasTags: Boolean? = null,
     val tags: List<NegatableData<String>> = listOf(),
+)
+
+data class WorldCoordinates(
+    val x: Double,
+    val isXRelative: Boolean,
+    val y: Double,
+    val isYRelative: Boolean,
+    val z: Double,
+    val isZRelative: Boolean,
 )

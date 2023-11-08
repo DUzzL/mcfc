@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.il
 
 import dev.epicpix.minecraftfunctioncompiler.data.IntRangeArgument
+import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates
 import net.minecraft.resources.ResourceLocation
 import java.util.*
 
@@ -21,6 +22,7 @@ data class InstructionDataLocationUUID(val local: LocationData, val value: UUID)
 data class InstructionDataLocationLocation(val local: LocationData, val local2: LocationData) : InstructionData
 data class InstructionDataIntLoop(val value: Int, var loopId: Int) : InstructionData
 data class InstructionDataLocationLocationInt(val local: LocationData, val local2: LocationData, val value: Int) : InstructionData
+data class InstructionDataLocationLocationWorldCoordinates(val local: LocationData, val local2: LocationData, val coords: WorldCoordinates) : InstructionData
 
 data class InstructionDataFunctionCall(val functions: List<ResourceLocation>, val entity: LocationData?, val world: LocationData?, val position: LocationData?, val rotation: LocationData?) : InstructionData
 data class InstructionDataRunScoreOperation(val targetObjective: LocationData, val targetName: LocationData, val sourceObjective: LocationData, val sourceName: LocationData, val operation: ScoreboardOperation, val exceptionLoopId: Int) : InstructionData
@@ -76,6 +78,7 @@ data object Instructions {
     fun getEntityWorld(entity: LocationData, world: LocationData) = Instruction(InstructionType.GET_ENTITY_WORLD, InstructionDataLocationLocation(entity, world))
     fun getEntityPosition(entity: LocationData, position: LocationData) = Instruction(InstructionType.GET_ENTITY_POSITION, InstructionDataLocationLocation(entity, position))
     fun getEntityRotation(entity: LocationData, rotation: LocationData) = Instruction(InstructionType.GET_ENTITY_ROTATION, InstructionDataLocationLocation(entity, rotation))
+    fun applyPositionWorld(positionFrom: LocationData, positionNew: LocationData, worldPosition: WorldCoordinates) = Instruction(InstructionType.APPLY_POSITION_WORLD, InstructionDataLocationLocationWorldCoordinates(positionFrom, positionNew, worldPosition))
 
 }
 
@@ -113,5 +116,6 @@ enum class InstructionType {
     GET_ENTITY_WORLD,
     GET_ENTITY_POSITION,
     GET_ENTITY_ROTATION,
+    APPLY_POSITION_WORLD,
 
 }

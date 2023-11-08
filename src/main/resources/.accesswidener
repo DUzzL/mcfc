@@ -4,3 +4,8 @@ accessible field net/minecraft/world/scores/Scoreboard playerScores Ljava/util/M
 accessible field net/minecraft/commands/arguments/ScoreHolderArgument$SelectorResult selector Lnet/minecraft/commands/arguments/selector/EntitySelector;
 accessible field net/minecraft/server/ServerFunctionManager library Lnet/minecraft/server/ServerFunctionLibrary;
 accessible field net/minecraft/server/ServerFunctionLibrary functions Ljava/util/Map;
+accessible field net/minecraft/commands/arguments/coordinates/WorldCoordinates x Lnet/minecraft/commands/arguments/coordinates/WorldCoordinate;
+accessible field net/minecraft/commands/arguments/coordinates/WorldCoordinates y Lnet/minecraft/commands/arguments/coordinates/WorldCoordinate;
+accessible field net/minecraft/commands/arguments/coordinates/WorldCoordinates z Lnet/minecraft/commands/arguments/coordinates/WorldCoordinate;
+accessible field net/minecraft/commands/arguments/coordinates/WorldCoordinate relative Z
+accessible field net/minecraft/commands/arguments/coordinates/WorldCoordinate value D

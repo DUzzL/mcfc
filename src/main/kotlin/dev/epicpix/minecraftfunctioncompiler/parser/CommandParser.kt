@@ -4,9 +4,11 @@ import com.mojang.brigadier.context.CommandContextBuilder
 import com.mojang.brigadier.context.ParsedCommandNode
 import dev.epicpix.minecraftfunctioncompiler.data.IntRangeArgument
 import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument
+import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates
 import net.minecraft.advancements.critereon.MinMaxBounds
 import net.minecraft.commands.CommandFunction
 import net.minecraft.commands.CommandSourceStack
+import net.minecraft.commands.arguments.coordinates.LocalCoordinates
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.MinecraftServer
 
@@ -85,6 +87,21 @@ object CommandParser {
                 }
             }
             "run" -> parseCommand(context.child.nodes[0].range[source], context.child, source, server)
+            "positioned" -> {
+                val posArg = context.arguments["pos"]
+                return if(posArg != null) {
+                    val pos = posArg.result
+                    when(pos) {
+                        is LocalCoordinates -> throw UnsupportedOperationException("Unsupported local coordinates")
+                        is net.minecraft.commands.arguments.coordinates.WorldCoordinates -> {
+                            Command(CommandType.EXECUTE_POSITIONED_POS, mapOf("position" to WorldCoordinates(pos.x.value, pos.x.relative, pos.y.value, pos.y.relative, pos.z.value, pos.z.relative), "command" to parseCommandExecute(context.child, context.child.nodes, source, server)))
+                        }
+                        else -> throw UnsupportedOperationException("Unknown coordinate type")
+                    }
+                }else {
+                    throw UnsupportedOperationException("Invalid execute command: positioned")
+                }
+            }
             "unless" -> {
                 val ifType = nodes[1].range[source]
                 when(ifType) {

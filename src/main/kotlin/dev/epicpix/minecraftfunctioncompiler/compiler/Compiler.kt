@@ -67,6 +67,11 @@ private fun CompilationContext.compile(command: Command) {
                 }
             }
         }
+        EXECUTE_POSITIONED_POS -> {
+            forPosition(command["position"]) { position ->
+                copy(currentPosition = position).compile(command["command"])
+            }
+        }
         EXECUTE_UNLESS_ENTITY -> {
             forSelector(command.get<SelectorArgument>("entities").copy(limit = 1)) { local, breakId, continueId ->
                 addInstruction(Instructions.breakLoop(breakId))

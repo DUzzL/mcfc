@@ -2,6 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.compiler
 
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument
 import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument
+import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction
 import dev.epicpix.minecraftfunctioncompiler.il.Instructions
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData
@@ -15,6 +16,54 @@ data class CompilationContext(
     val currentRotation: LocationData? = null,
     val addInstruction: (Instruction) -> Unit
 ) {
+
+    fun forPosition(pos: WorldCoordinates, exec: CompilationContext.(positionId: LocationData) -> Unit) {
+        getPosition { basePositionId ->
+            val positionId = LocationData(local = highestLocal)
+            val instruction = Instructions.applyPositionWorld(basePositionId, positionId, pos)
+            exec(copy(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), positionId)
+            addInstruction(instruction)
+        }
+    }
+
+    fun getWorld(exec: CompilationContext.(worldId: LocationData) -> Unit) {
+        if(currentWorld != null) {
+            exec(currentWorld)
+        }else {
+            forCurrentEntity { entity, _, _ ->
+                val local = LocationData(local = highestLocal)
+                val instruction = Instructions.getEntityWorld(entity, local)
+                exec(copy(currentEntity = local, highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
+                addInstruction(instruction)
+            }
+        }
+    }
+
+    fun getPosition(exec: CompilationContext.(positionId: LocationData) -> Unit) {
+        if(currentPosition != null) {
+            exec(currentPosition)
+        }else {
+            forCurrentEntity { entity, _, _ ->
+                val local = LocationData(local = highestLocal)
+                val instruction = Instructions.getEntityPosition(entity, local)
+                exec(copy(currentPosition = local, highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
+                addInstruction(instruction)
+            }
+        }
+    }
+
+    fun getRotation(exec: CompilationContext.(rotationId: LocationData) -> Unit) {
+        if(currentRotation != null) {
+            exec(currentRotation)
+        }else {
+            forCurrentEntity { entity, _, _ ->
+                val local = LocationData(local = highestLocal)
+                val instruction = Instructions.getEntityRotation(entity, local)
+                exec(copy(currentRotation = local, highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
+                addInstruction(instruction)
+            }
+        }
+    }
 
     fun forEmptyCondition(exec: CompilationContext.(loopId: Int) -> Unit) {
         val loopId = highestLocal
@@ -64,10 +113,8 @@ data class CompilationContext(
         forEmptyCondition { breakId ->
             val local = LocationData(local = highestLocal)
             val instruction = Instructions.forEachEntity(local)
-            copy(highestLocal = highestLocal + 1, addInstruction = instruction.children::add).forEmptyCondition {
-                forEmptyCondition { continueId ->
-                    exec(local, breakId, continueId)
-                }
+            copy(highestLocal = highestLocal + 1, addInstruction = instruction.children::add).forEmptyCondition { continueId ->
+                exec(local, breakId, continueId)
             }
             addInstruction(instruction)
         }
@@ -76,11 +123,9 @@ data class CompilationContext(
     fun forEachPlayer(exec: CompilationContext.(local: LocationData, breakId: Int, continueId: Int) -> Unit) {
         forEmptyCondition { breakId ->
             val local = LocationData(local = highestLocal)
-            val instruction = Instructions.forEachEntity(local)
-            copy(highestLocal = highestLocal + 1, addInstruction = instruction.children::add).forEmptyCondition {
-                forEmptyCondition { continueId ->
-                    exec(local, breakId, continueId)
-                }
+            val instruction = Instructions.forEachPlayer(local)
+            copy(highestLocal = highestLocal + 1, addInstruction = instruction.children::add).forEmptyCondition { continueId ->
+                exec(local, breakId, continueId)
             }
             addInstruction(instruction)
         }
@@ -90,10 +135,8 @@ data class CompilationContext(
         forEmptyCondition { breakId ->
             val local = LocationData(local = highestLocal)
             val instruction = Instructions.forEntity(local, entityUuid)
-            copy(highestLocal = highestLocal + 1, addInstruction = instruction.children::add).forEmptyCondition {
-                forEmptyCondition { continueId ->
-                    exec(local, breakId, continueId)
-                }
+            copy(highestLocal = highestLocal + 1, addInstruction = instruction.children::add).forEmptyCondition { continueId ->
+                exec(local, breakId, continueId)
             }
             addInstruction(instruction)
         }

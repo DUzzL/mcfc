@@ -21,6 +21,7 @@ This is the list of commands supported currently as of `0.1.0-alpha.5`:
 - `execute at`
 - `execute if entity`
 - `execute if score`
+- `execute positioned <pos>`
 - `execute run`
 - `execute unless entity`
 - `execute unless score`

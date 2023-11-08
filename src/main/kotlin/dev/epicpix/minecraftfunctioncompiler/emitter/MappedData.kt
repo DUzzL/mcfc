@@ -39,6 +39,10 @@ class MappedData {
         val Score_setScore = MappedData()
         val Score_getScore = MappedData()
 
+        val Vec3_x = MappedData()
+        val Vec3_y = MappedData()
+        val Vec3_z = MappedData()
+
         val ArrayList_size = MappedData()
         val ArrayList_get = MappedData()
         val List_size = MappedData()

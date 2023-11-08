@@ -37,6 +37,9 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Server
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ServerLevel_getEntity
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Set_contains
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Set_size
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Vec3_x
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Vec3_y
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Vec3_z
 import dev.epicpix.minecraftfunctioncompiler.il.*
 import dev.epicpix.minecraftfunctioncompiler.parser.Command
 import net.minecraft.commands.CommandSourceStack
@@ -682,6 +685,49 @@ private fun emitInstruction(
 
             val uidLocal = codeWriter.generateUniqueLocal("\$Rotation")
             val end = codeWriter.defineLocal(uidLocal, Vec2::class.java)
+            codeWriter.storeLocal(uidLocal)
+            newTransforms[data.local2.local!!] = uidLocal
+            run()
+            end()
+        }
+        InstructionType.APPLY_POSITION_WORLD -> {
+            val data = instruction.data as InstructionDataLocationLocationWorldCoordinates
+
+            val uidLocal = codeWriter.generateUniqueLocal("\$Position")
+            codeWriter.newObject(Vec3::class.java, Double::class.java, Double::class.java, Double::class.java) {
+                val pos = data.coords
+                if(pos.isXRelative) {
+                    data.local.load(codeWriter, newTransforms)
+                    codeWriter.writeMapped(Vec3_x)
+                    if(pos.x != 0.0) {
+                        codeWriter.writeDouble(pos.x)
+                        codeWriter.methodVisitor.visitInsn(Opcodes.DADD)
+                    }
+                }else {
+                    codeWriter.writeDouble(pos.x)
+                }
+                if(pos.isYRelative) {
+                    data.local.load(codeWriter, newTransforms)
+                    codeWriter.writeMapped(Vec3_y)
+                    if(pos.y != 0.0) {
+                        codeWriter.writeDouble(pos.y)
+                        codeWriter.methodVisitor.visitInsn(Opcodes.DADD)
+                    }
+                }else {
+                    codeWriter.writeDouble(pos.y)
+                }
+                if(pos.isZRelative) {
+                    data.local.load(codeWriter, newTransforms)
+                    codeWriter.writeMapped(Vec3_z)
+                    if(pos.z != 0.0) {
+                        codeWriter.writeDouble(pos.z)
+                        codeWriter.methodVisitor.visitInsn(Opcodes.DADD)
+                    }
+                }else {
+                    codeWriter.writeDouble(pos.z)
+                }
+            }
+            val end = codeWriter.defineLocal(uidLocal, Vec3::class.java)
             codeWriter.storeLocal(uidLocal)
             newTransforms[data.local2.local!!] = uidLocal
             run()
