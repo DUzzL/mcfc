@@ -49,17 +49,20 @@ object CommonSubexpressionEliminationOptimization : Optimization {
                 val remapped2 = remapLocation(instruction.data.local2, newCse)
                 InstructionDataLocationLocation(remapped1, remapped2)
             }
-            is InstructionDataLocationLocationInt -> {
+            is InstructionDataLocationInt -> {
+                val remapped1 = remapLocation(instruction.data.local, newCse)
+                InstructionDataLocationInt(remapped1, instruction.data.value)
+            }
+            is InstructionDataLocationLocationLocation -> {
                 val remapped1 = remapLocation(instruction.data.local, newCse)
                 val remapped2 = remapLocation(instruction.data.local2, newCse)
-                InstructionDataLocationLocationInt(remapped1, remapped2, instruction.data.value)
+                val remapped3 = remapLocation(instruction.data.local3, newCse)
+                InstructionDataLocationLocationLocation(remapped1, remapped2, remapped3)
             }
             is InstructionDataRunScoreOperation -> {
-                val targetObjective = remapLocation(instruction.data.targetObjective, newCse)
-                val targetName = remapLocation(instruction.data.targetName, newCse)
-                val sourceObjective = remapLocation(instruction.data.sourceObjective, newCse)
-                val sourceName = remapLocation(instruction.data.sourceName, newCse)
-                InstructionDataRunScoreOperation(targetObjective, targetName, sourceObjective, sourceName, instruction.data.operation, instruction.data.exceptionLoopId)
+                val target = remapLocation(instruction.data.target, newCse)
+                val source = remapLocation(instruction.data.source, newCse)
+                InstructionDataRunScoreOperation(target, source, instruction.data.operation, instruction.data.exceptionLoopId)
             }
             is InstructionDataFunctionCall -> {
                 val entity = remapLocation(instruction.data.entity, newCse)
@@ -69,16 +72,18 @@ object CommonSubexpressionEliminationOptimization : Optimization {
                 InstructionDataFunctionCall(instruction.data.functions, entity, world, position, rotation)
             }
             is InstructionDataCheckScoreRange -> {
-                val objective = remapLocation(instruction.data.objective, newCse)
-                val name = remapLocation(instruction.data.name, newCse)
-                InstructionDataCheckScoreRange(objective, name, instruction.data.range, instruction.data.negate)
+                val objective = remapLocation(instruction.data.score, newCse)
+                InstructionDataCheckScoreRange(objective, instruction.data.range, instruction.data.negate)
             }
             is InstructionDataCheckScoreCompare -> {
-                val targetObjective = remapLocation(instruction.data.targetObjective, newCse)
-                val targetName = remapLocation(instruction.data.targetName, newCse)
-                val sourceObjective = remapLocation(instruction.data.sourceObjective, newCse)
-                val sourceName = remapLocation(instruction.data.sourceName, newCse)
-                InstructionDataCheckScoreCompare(targetObjective, targetName, sourceObjective, sourceName, instruction.data.compareOperation)
+                val target = remapLocation(instruction.data.target, newCse)
+                val source = remapLocation(instruction.data.source, newCse)
+                InstructionDataCheckScoreCompare(target, source, instruction.data.compareOperation)
+            }
+            is InstructionDataLocationLocationWorldCoordinates -> {
+                val remapped1 = remapLocation(instruction.data.local, newCse)
+                val remapped2 = remapLocation(instruction.data.local2, newCse)
+                InstructionDataLocationLocationWorldCoordinates(remapped1, remapped2, instruction.data.coords)
             }
             else -> instruction.data
         }

@@ -40,28 +40,34 @@ private fun CompilationContext.compile(command: Command) {
         EXECUTE_IF_SCORE_RANGE -> {
             getObjective(command["targetObjective"]) { objective ->
                 forScoreHolder(command.get<ScoreHolderArgument>("target").single()) { name ->
-                    val instr = Instructions.checkScoreRange(objective, name, command["range"], false)
-                    copy(addInstruction = instr.children::add).compile(command["command"])
-                    addInstruction(instr)
+                    getScoreData(objective, name) { score ->
+                        val instr = Instructions.checkScoreRange(score, command["range"], false)
+                        copy(addInstruction = instr.children::add).compile(command["command"])
+                        addInstruction(instr)
+                    }
                 }
             }
         }
         EXECUTE_IF_SCORE_COMPARE -> {
             getObjective(command["targetObjective"]) { targetObjective ->
-                forScoreHolder(command.get<ScoreHolderArgument>("target").single()) { target ->
+                forScoreHolder(command.get<ScoreHolderArgument>("target").single()) { targetName ->
                     getObjective(command["sourceObjective"]) { sourceObjective ->
-                        forScoreHolder(command.get<ScoreHolderArgument>("source").single()) { source ->
-                            val operation = when(command.get<String>("comparison")) {
-                                ">" -> ScoreboardCompareOperation.GT
-                                ">=" -> ScoreboardCompareOperation.GE
-                                "=" -> ScoreboardCompareOperation.EQ
-                                "<" -> ScoreboardCompareOperation.LT
-                                "<=" -> ScoreboardCompareOperation.LE
-                                else -> throw UnsupportedOperationException("Unknown comparison: ${command.get<String>("comparison")}")
+                        forScoreHolder(command.get<ScoreHolderArgument>("source").single()) { sourceName ->
+                            getScoreData(targetObjective, targetName) { target ->
+                                getScoreData(sourceObjective, sourceName) { source ->
+                                    val operation = when(command.get<String>("comparison")) {
+                                        ">" -> ScoreboardCompareOperation.GT
+                                        ">=" -> ScoreboardCompareOperation.GE
+                                        "=" -> ScoreboardCompareOperation.EQ
+                                        "<" -> ScoreboardCompareOperation.LT
+                                        "<=" -> ScoreboardCompareOperation.LE
+                                        else -> throw UnsupportedOperationException("Unknown comparison: ${command.get<String>("comparison")}")
+                                    }
+                                    val instr = Instructions.checkScoreCompare(target, source, operation)
+                                    copy(addInstruction = instr.children::add).compile(command["command"])
+                                    addInstruction(instr)
+                                }
                             }
-                            val instr = Instructions.checkScoreCompare(targetObjective, target, sourceObjective, source, operation)
-                            copy(addInstruction = instr.children::add).compile(command["command"])
-                            addInstruction(instr)
                         }
                     }
                 }
@@ -81,28 +87,34 @@ private fun CompilationContext.compile(command: Command) {
         EXECUTE_UNLESS_SCORE_RANGE -> {
             getObjective(command["targetObjective"]) { objective ->
                 forScoreHolder(command.get<ScoreHolderArgument>("target").single()) { name ->
-                    val instr = Instructions.checkScoreRange(objective, name, command["range"], true)
-                    copy(addInstruction = instr.children::add).compile(command["command"])
-                    addInstruction(instr)
+                    getScoreData(objective, name) { score ->
+                        val instr = Instructions.checkScoreRange(score, command["range"], true)
+                        copy(addInstruction = instr.children::add).compile(command["command"])
+                        addInstruction(instr)
+                    }
                 }
             }
         }
         EXECUTE_UNLESS_SCORE_COMPARE -> {
             getObjective(command["targetObjective"]) { targetObjective ->
-                forScoreHolder(command.get<ScoreHolderArgument>("target").single()) { target ->
+                forScoreHolder(command.get<ScoreHolderArgument>("target").single()) { targetName ->
                     getObjective(command["sourceObjective"]) { sourceObjective ->
-                        forScoreHolder(command.get<ScoreHolderArgument>("source").single()) { source ->
-                            val operation = when(command.get<String>("comparison")) {
-                                ">" -> ScoreboardCompareOperation.LE
-                                ">=" -> ScoreboardCompareOperation.LT
-                                "=" -> ScoreboardCompareOperation.NE
-                                "<" -> ScoreboardCompareOperation.GE
-                                "<=" -> ScoreboardCompareOperation.GT
-                                else -> throw UnsupportedOperationException("Unknown comparison: ${command.get<String>("comparison")}")
+                        forScoreHolder(command.get<ScoreHolderArgument>("source").single()) { sourceName ->
+                            getScoreData(targetObjective, targetName) { target ->
+                                getScoreData(sourceObjective, sourceName) { source ->
+                                    val operation = when(command.get<String>("comparison")) {
+                                        ">" -> ScoreboardCompareOperation.LE
+                                        ">=" -> ScoreboardCompareOperation.LT
+                                        "=" -> ScoreboardCompareOperation.NE
+                                        "<" -> ScoreboardCompareOperation.GE
+                                        "<=" -> ScoreboardCompareOperation.GT
+                                        else -> throw UnsupportedOperationException("Unknown comparison: ${command.get<String>("comparison")}")
+                                    }
+                                    val instr = Instructions.checkScoreCompare(target, source, operation)
+                                    copy(addInstruction = instr.children::add).compile(command["command"])
+                                    addInstruction(instr)
+                                }
                             }
-                            val instr = Instructions.checkScoreCompare(targetObjective, target, sourceObjective, source, operation)
-                            copy(addInstruction = instr.children::add).compile(command["command"])
-                            addInstruction(instr)
                         }
                     }
                 }
@@ -119,7 +131,9 @@ private fun CompilationContext.compile(command: Command) {
         SCOREBOARD_PLAYERS_ADD -> {
             getObjective(command["objective"]) { objective ->
                 forScoreHolder(command["targets"]) { name ->
-                    addInstruction(Instructions.addScore(objective, name, command["score"]))
+                    getScoreData(objective, name) { scoreData ->
+                        addInstruction(Instructions.addScore(scoreData, command["score"]))
+                    }
                 }
             }
         }
@@ -129,19 +143,23 @@ private fun CompilationContext.compile(command: Command) {
                     forScoreHolder(command["targets"]) { targetName ->
                         getObjective(command["sourceObjective"]) { sourceObjective ->
                             forScoreHolder(command["source"]) { sourceName ->
-                                val operation = when(command.get<String>("operation")) {
-                                    "=" -> ScoreboardOperation.SET
-                                    "+=" -> ScoreboardOperation.PLUS
-                                    "-=" -> ScoreboardOperation.MINUS
-                                    "*=" -> ScoreboardOperation.MULTIPLY
-                                    "/=" -> ScoreboardOperation.DIVIDE
-                                    "%=" -> ScoreboardOperation.MODULO
-                                    "<" -> ScoreboardOperation.MIN
-                                    ">" -> ScoreboardOperation.MAX
-                                    "><" -> ScoreboardOperation.SWAP
-                                    else -> throw UnsupportedOperationException("Unknown operation: ${command.get<String>("operation")}")
+                                getScoreData(targetObjective, targetName) { target ->
+                                    getScoreData(sourceObjective, sourceName) { source ->
+                                        val operation = when(command.get<String>("operation")) {
+                                            "=" -> ScoreboardOperation.SET
+                                            "+=" -> ScoreboardOperation.PLUS
+                                            "-=" -> ScoreboardOperation.MINUS
+                                            "*=" -> ScoreboardOperation.MULTIPLY
+                                            "/=" -> ScoreboardOperation.DIVIDE
+                                            "%=" -> ScoreboardOperation.MODULO
+                                            "<" -> ScoreboardOperation.MIN
+                                            ">" -> ScoreboardOperation.MAX
+                                            "><" -> ScoreboardOperation.SWAP
+                                            else -> throw UnsupportedOperationException("Unknown operation: ${command.get<String>("operation")}")
+                                        }
+                                        addInstruction(Instructions.runScoreOperation(target, source, operation, loopId))
+                                    }
                                 }
-                                addInstruction(Instructions.runScoreOperation(targetObjective, targetName, sourceObjective, sourceName, operation, loopId))
                             }
                         }
                     }
@@ -151,14 +169,18 @@ private fun CompilationContext.compile(command: Command) {
         SCOREBOARD_PLAYERS_SET -> {
             getObjective(command["objective"]) { objective ->
                 forScoreHolder(command["targets"]) { name ->
-                    addInstruction(Instructions.setScore(objective, name, command["score"]))
+                    getScoreData(objective, name) { score ->
+                        addInstruction(Instructions.setScore(score, command["score"]))
+                    }
                 }
             }
         }
         SCOREBOARD_PLAYERS_REMOVE -> {
             getObjective(command["objective"]) { objective ->
                 forScoreHolder(command["targets"]) { name ->
-                    addInstruction(Instructions.addScore(objective, name, -command.get<Int>("score")))
+                    getScoreData(objective, name) { score ->
+                        addInstruction(Instructions.addScore(score, -command.get<Int>("score")))
+                    }
                 }
             }
         }

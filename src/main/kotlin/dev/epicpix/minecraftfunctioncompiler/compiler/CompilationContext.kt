@@ -17,6 +17,13 @@ data class CompilationContext(
     val addInstruction: (Instruction) -> Unit
 ) {
 
+    fun getScoreData(objective: LocationData, name: LocationData, exec: CompilationContext.(scoreData: LocationData) -> Unit) {
+        val scoreData = LocationData(local = highestLocal)
+        val instruction = Instructions.scoreData(objective, name, scoreData)
+        exec(copy(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), scoreData)
+        addInstruction(instruction)
+    }
+
     fun forPosition(pos: WorldCoordinates, exec: CompilationContext.(positionId: LocationData) -> Unit) {
         getPosition { basePositionId ->
             val positionId = LocationData(local = highestLocal)

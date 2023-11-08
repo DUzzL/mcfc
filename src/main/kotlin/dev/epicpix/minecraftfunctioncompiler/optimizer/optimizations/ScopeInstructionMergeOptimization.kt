@@ -27,6 +27,7 @@ object ScopeInstructionMergeOptimization : Optimization {
                     InstructionType.IF_NULL -> {}
                     InstructionType.GET_SCOREBOARD_NAME -> {}
                     InstructionType.GET_OBJECTIVE -> {}
+                    InstructionType.SCORE_DATA -> {}
                     else -> break
                 }
                 newBase.children.addAll(compare.children)

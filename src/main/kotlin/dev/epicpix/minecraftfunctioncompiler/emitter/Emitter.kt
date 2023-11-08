@@ -29,7 +29,6 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Player
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Score_getScore
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Score_setScore
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Scoreboard_getObjective
-import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Scoreboard_getOrCreatePlayerScore
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Scoreboard_playerScores
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Scoreboard_resetPlayerScore
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ServerFunctionManager_execute
@@ -337,23 +336,32 @@ private fun emitInstruction(
             run()
             end()
         }
-        InstructionType.SET_SCORE -> {
-            val data = instruction.data as InstructionDataLocationLocationInt
+        InstructionType.SCORE_DATA -> {
+            val data = instruction.data as InstructionDataLocationLocationLocation
 
             fieldStorage.loadScoreboard(codeWriter)
             data.local2.load(codeWriter, newTransforms)
             data.local.load(codeWriter, newTransforms)
-            codeWriter.writeMapped(Scoreboard_getOrCreatePlayerScore)
+            codeWriter.writeMapped(MappedData.Scoreboard_getOrCreatePlayerScore)
+
+            val uidLocal = codeWriter.generateUniqueLocal("\$ScoreData")
+            val end = codeWriter.defineLocal(uidLocal, Score::class.java)
+            codeWriter.storeLocal(uidLocal)
+            newTransforms[data.local3.local!!] = uidLocal
+            run()
+            end()
+        }
+        InstructionType.SET_SCORE -> {
+            val data = instruction.data as InstructionDataLocationInt
+
+            data.local.load(codeWriter, newTransforms)
             codeWriter.writeInt(data.value)
             codeWriter.writeMapped(Score_setScore)
         }
         InstructionType.ADD_SCORE -> {
-            val data = instruction.data as InstructionDataLocationLocationInt
+            val data = instruction.data as InstructionDataLocationInt
 
-            fieldStorage.loadScoreboard(codeWriter)
-            data.local2.load(codeWriter, newTransforms)
             data.local.load(codeWriter, newTransforms)
-            codeWriter.writeMapped(Scoreboard_getOrCreatePlayerScore)
             codeWriter.methodVisitor.visitInsn(Opcodes.DUP)
             codeWriter.writeMapped(Score_getScore)
             if(data.value >= 0) {
@@ -370,35 +378,19 @@ private fun emitInstruction(
 
             when(data.operation) {
                 ScoreboardOperation.SET -> {
-                    fieldStorage.loadScoreboard(codeWriter)
-                    data.targetName.load(codeWriter, newTransforms)
-                    data.targetObjective.load(codeWriter, newTransforms)
-                    codeWriter.writeMapped(Scoreboard_getOrCreatePlayerScore)
-                    if(data.sourceObjective == data.targetObjective && data.sourceName == data.targetName) {
+                    data.target.load(codeWriter, newTransforms)
+                    if(data.source == data.target) {
                         codeWriter.methodVisitor.visitInsn(Opcodes.POP)
                     }else {
-                        fieldStorage.loadScoreboard(codeWriter)
-                        data.sourceName.load(codeWriter, newTransforms)
-                        data.sourceObjective.load(codeWriter, newTransforms)
-                        codeWriter.writeMapped(Scoreboard_getOrCreatePlayerScore)
+                        data.source.load(codeWriter, newTransforms)
                         codeWriter.writeMapped(Score_getScore)
                         codeWriter.writeMapped(Score_setScore)
                     }
                 }
                 ScoreboardOperation.PLUS, ScoreboardOperation.MINUS, ScoreboardOperation.MULTIPLY -> {
-                    fieldStorage.loadScoreboard(codeWriter)
-                    data.targetName.load(codeWriter, newTransforms)
-                    data.targetObjective.load(codeWriter, newTransforms)
-                    codeWriter.writeMapped(Scoreboard_getOrCreatePlayerScore)
+                    data.target.load(codeWriter, newTransforms)
                     codeWriter.methodVisitor.visitInsn(Opcodes.DUP)
-                    if(data.sourceObjective == data.targetObjective && data.sourceName == data.targetName) {
-                        codeWriter.methodVisitor.visitInsn(Opcodes.DUP)
-                    }else {
-                        fieldStorage.loadScoreboard(codeWriter)
-                        data.sourceName.load(codeWriter, newTransforms)
-                        data.sourceObjective.load(codeWriter, newTransforms)
-                        codeWriter.writeMapped(Scoreboard_getOrCreatePlayerScore)
-                    }
+                    data.source.load(codeWriter, newTransforms)
                     codeWriter.writeMapped(Score_getScore)
                     codeWriter.methodVisitor.visitInsn(Opcodes.SWAP)
                     codeWriter.writeMapped(Score_getScore)
@@ -410,19 +402,13 @@ private fun emitInstruction(
                     codeWriter.writeMapped(Score_setScore)
                 }
                 ScoreboardOperation.DIVIDE, ScoreboardOperation.MODULO -> {
-                    fieldStorage.loadScoreboard(codeWriter)
-                    data.targetName.load(codeWriter, newTransforms)
-                    data.targetObjective.load(codeWriter, newTransforms)
-                    codeWriter.writeMapped(Scoreboard_getOrCreatePlayerScore)
+                    data.target.load(codeWriter, newTransforms)
                     codeWriter.writeMapped(Score_getScore)
                     val uniqBeh = codeWriter.generateUniqueLocal("\$Score")
                     val endBeh = codeWriter.defineLocal(uniqBeh, Int::class.javaPrimitiveType!!)
                     codeWriter.storeLocal(uniqBeh)
 
-                    fieldStorage.loadScoreboard(codeWriter)
-                    data.sourceName.load(codeWriter, newTransforms)
-                    data.sourceObjective.load(codeWriter, newTransforms)
-                    codeWriter.writeMapped(Scoreboard_getOrCreatePlayerScore)
+                    data.source.load(codeWriter, newTransforms)
                     val uniq = codeWriter.generateUniqueLocal("\$Score")
                     val end = codeWriter.defineLocal(uniq, Score::class.java)
                     codeWriter.storeLocal(uniq)
@@ -440,18 +426,12 @@ private fun emitInstruction(
                     endBeh()
                 }
                 ScoreboardOperation.MIN, ScoreboardOperation.MAX -> {
-                    fieldStorage.loadScoreboard(codeWriter)
-                    data.targetName.load(codeWriter, newTransforms)
-                    data.targetObjective.load(codeWriter, newTransforms)
-                    codeWriter.writeMapped(Scoreboard_getOrCreatePlayerScore)
-                    if(data.sourceObjective == data.targetObjective && data.sourceName == data.targetName) {
+                    data.target.load(codeWriter, newTransforms)
+                    if(data.source == data.target) {
                         codeWriter.methodVisitor.visitInsn(Opcodes.POP)
                     }else {
                         codeWriter.methodVisitor.visitInsn(Opcodes.DUP)
-                        fieldStorage.loadScoreboard(codeWriter)
-                        data.sourceName.load(codeWriter, newTransforms)
-                        data.sourceObjective.load(codeWriter, newTransforms)
-                        codeWriter.writeMapped(Scoreboard_getOrCreatePlayerScore)
+                        data.source.load(codeWriter, newTransforms)
                         codeWriter.writeMapped(Score_getScore)
                         codeWriter.methodVisitor.visitInsn(Opcodes.SWAP)
                         codeWriter.writeMapped(Score_getScore)
@@ -461,21 +441,15 @@ private fun emitInstruction(
                     }
                 }
                 ScoreboardOperation.SWAP -> {
-                    fieldStorage.loadScoreboard(codeWriter)
-                    data.targetName.load(codeWriter, newTransforms)
-                    data.targetObjective.load(codeWriter, newTransforms)
-                    codeWriter.writeMapped(Scoreboard_getOrCreatePlayerScore)
-                    if(data.sourceObjective == data.targetObjective && data.sourceName == data.targetName) {
+                    data.target.load(codeWriter, newTransforms)
+                    if(data.source == data.target) {
                         codeWriter.methodVisitor.visitInsn(Opcodes.POP)
                     }else {
                         val targetId = codeWriter.generateUniqueLocal("\$Score")
                         val targetEnd = codeWriter.defineLocal(targetId, Score::class.java)
                         codeWriter.storeLocal(targetId)
 
-                        fieldStorage.loadScoreboard(codeWriter)
-                        data.sourceName.load(codeWriter, newTransforms)
-                        data.sourceObjective.load(codeWriter, newTransforms)
-                        codeWriter.writeMapped(Scoreboard_getOrCreatePlayerScore)
+                        data.source.load(codeWriter, newTransforms)
                         val sourceId = codeWriter.generateUniqueLocal("\$Score")
                         val sourceEnd = codeWriter.defineLocal(sourceId, Score::class.java)
                         codeWriter.storeLocal(sourceId)
@@ -575,10 +549,7 @@ private fun emitInstruction(
         }
         InstructionType.CHECK_SCORE_RANGE -> {
             val data = instruction.data as InstructionDataCheckScoreRange
-            fieldStorage.loadScoreboard(codeWriter)
-            data.name.load(codeWriter, newTransforms)
-            data.objective.load(codeWriter, newTransforms)
-            codeWriter.writeMapped(Scoreboard_getOrCreatePlayerScore)
+            data.score.load(codeWriter, newTransforms)
             codeWriter.writeMapped(Score_getScore)
             if(data.range.minimum != null && data.range.maximum == null) {
                 codeWriter.writeInt(data.range.minimum)
@@ -628,16 +599,10 @@ private fun emitInstruction(
         }
         InstructionType.CHECK_SCORE_COMPARE -> {
             val data = instruction.data as InstructionDataCheckScoreCompare
-            fieldStorage.loadScoreboard(codeWriter)
-            data.sourceName.load(codeWriter, newTransforms)
-            data.sourceObjective.load(codeWriter, newTransforms)
-            codeWriter.writeMapped(Scoreboard_getOrCreatePlayerScore)
+            data.source.load(codeWriter, newTransforms)
             codeWriter.writeMapped(Score_getScore)
 
-            fieldStorage.loadScoreboard(codeWriter)
-            data.targetName.load(codeWriter, newTransforms)
-            data.targetObjective.load(codeWriter, newTransforms)
-            codeWriter.writeMapped(Scoreboard_getOrCreatePlayerScore)
+            data.target.load(codeWriter, newTransforms)
             codeWriter.writeMapped(Score_getScore)
 
             when(data.compareOperation) {

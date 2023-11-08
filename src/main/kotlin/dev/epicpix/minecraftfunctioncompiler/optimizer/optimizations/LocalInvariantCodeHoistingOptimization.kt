@@ -46,6 +46,7 @@ object LocalInvariantCodeHoistingOptimization : Optimization {
             InstructionType.FOR_SCORE_HOLDERS -> (instruction.data as InstructionDataLocationBoolean).local
             InstructionType.GET_SCOREBOARD_NAME -> (instruction.data as InstructionDataLocationLocation).local2
             InstructionType.GET_OBJECTIVE -> (instruction.data as InstructionDataLocationString).local
+            InstructionType.SCORE_DATA -> (instruction.data as InstructionDataLocationLocationLocation).local3
             else -> null
         }
     }
