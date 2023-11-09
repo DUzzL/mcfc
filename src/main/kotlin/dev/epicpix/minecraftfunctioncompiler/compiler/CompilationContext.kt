@@ -169,21 +169,23 @@ data class CompilationContext(
         var limiterId: Int? = null
         fun checkEntityCondition(context: CompilationContext, local: LocationData, breakId: Int, continueId: Int) {
             val nonNull = Instructions.ifNotNull(local)
+            val stacker = InstructionStacker(nonNull)
             for(tag in selector.tags) {
-                if(!tag.negated) nonNull.with(Instructions.checkEntityTag(local, tag.data, continueId))
-                else nonNull.with(Instructions.checkNotEntityTag(local, tag.data, continueId))
+                if(!tag.negated) stacker.stackInstruction(Instructions.checkEntityTag(local, tag.data))
+                else stacker.stackInstruction(Instructions.checkNotEntityTag(local, tag.data))
             }
             if(selector.hasTags != null) {
-                if(selector.hasTags) nonNull.with(Instructions.checkEntityTags(local, continueId))
-                else nonNull.with(Instructions.checkNotEntityTags(local, continueId))
+                if(selector.hasTags) stacker.stackInstruction(Instructions.checkEntityTags(local))
+                else stacker.stackInstruction(Instructions.checkNotEntityTags(local))
             }
-            exec(context.copy(addInstruction = nonNull.children::add), local, breakId, continueId)
+            val runInstruction = stacker.current
+            exec(context.copy(addInstruction = runInstruction.children::add), local, breakId, continueId)
             if(selector.limit == 1) {
-                nonNull.with(Instructions.breakLoop(breakId))
+                runInstruction.with(Instructions.breakLoop(breakId))
             }else if(selector.limit != null) {
-                nonNull.with(Instructions.checkLimit(limiterId!!))
+                runInstruction.with(Instructions.checkLimit(limiterId!!))
             }
-            context.addInstruction(nonNull)
+            context.addInstruction(runInstruction)
         }
 
         val realContext = if(selector.limit != 1 && selector.limit != null) {
@@ -207,4 +209,14 @@ data class CompilationContext(
         }
     }
 
+}
+
+private class InstructionStacker(
+    val base: Instruction,
+    var current: Instruction = base,
+) {
+    fun stackInstruction(instruction: Instruction) {
+        current.with(instruction)
+        current = instruction
+    }
 }

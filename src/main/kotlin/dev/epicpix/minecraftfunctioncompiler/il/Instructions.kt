@@ -14,10 +14,8 @@ interface InstructionData
 
 data class InstructionDataLoop(val loopId: Int) : InstructionData
 data class InstructionDataLocation(val local: LocationData) : InstructionData
-data class InstructionDataLocationLoop(val local: LocationData, val loopId: Int) : InstructionData
 data class InstructionDataLocationBoolean(val local: LocationData, val value: Boolean) : InstructionData
 data class InstructionDataLocationString(val local: LocationData, val value: String) : InstructionData
-data class InstructionDataLocationStringLoop(val local: LocationData, val value: String, var loopId: Int) : InstructionData
 data class InstructionDataLocationUUID(val local: LocationData, val value: UUID) : InstructionData
 data class InstructionDataLocationLocation(val local: LocationData, val local2: LocationData) : InstructionData
 data class InstructionDataIntLoop(val value: Int, var loopId: Int) : InstructionData
@@ -57,10 +55,10 @@ data object Instructions {
     fun ifNotNull(local: LocationData) = Instruction(InstructionType.IF_NOT_NULL, InstructionDataLocation(local))
     fun addEntityTag(local: LocationData, tag: String) = Instruction(InstructionType.ADD_ENTITY_TAG, InstructionDataLocationString(local, tag))
     fun removeEntityTag(local: LocationData, tag: String) = Instruction(InstructionType.REMOVE_ENTITY_TAG, InstructionDataLocationString(local, tag))
-    fun checkEntityTag(local: LocationData, tag: String, loopId: Int) = Instruction(InstructionType.CHECK_ENTITY_TAG, InstructionDataLocationStringLoop(local, tag, loopId))
-    fun checkNotEntityTag(local: LocationData, tag: String, loopId: Int) = Instruction(InstructionType.CHECK_NOT_ENTITY_TAG, InstructionDataLocationStringLoop(local, tag, loopId))
-    fun checkEntityTags(local: LocationData, loopId: Int) = Instruction(InstructionType.CHECK_ENTITY_TAGS, InstructionDataLocationLoop(local, loopId))
-    fun checkNotEntityTags(local: LocationData, loopId: Int) = Instruction(InstructionType.CHECK_NOT_ENTITY_TAGS, InstructionDataLocationLoop(local, loopId))
+    fun checkEntityTag(local: LocationData, tag: String) = Instruction(InstructionType.CHECK_ENTITY_TAG, InstructionDataLocationString(local, tag))
+    fun checkNotEntityTag(local: LocationData, tag: String) = Instruction(InstructionType.CHECK_NOT_ENTITY_TAG, InstructionDataLocationString(local, tag))
+    fun checkEntityTags(local: LocationData) = Instruction(InstructionType.CHECK_ENTITY_TAGS, InstructionDataLocation(local))
+    fun checkNotEntityTags(local: LocationData) = Instruction(InstructionType.CHECK_NOT_ENTITY_TAGS, InstructionDataLocation(local))
     fun emptyCondition(loopId: Int) = Instruction(InstructionType.EMPTY_CONDITION, InstructionDataLoop(loopId))
     fun breakLoop(loopId: Int) = Instruction(InstructionType.BREAK_LOOP, InstructionDataLoop(loopId))
     fun continueLoop(loopId: Int) = Instruction(InstructionType.CONTINUE_LOOP, InstructionDataLoop(loopId))

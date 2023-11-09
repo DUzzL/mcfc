@@ -139,34 +139,50 @@ private fun emitInstruction(
             codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, newLoops[data.loopId]!!.continueLabel)
         }
         InstructionType.CHECK_ENTITY_TAG -> {
-            val data = instruction.data as InstructionDataLocationStringLoop
+            val data = instruction.data as InstructionDataLocationString
             data.local.load(codeWriter, newTransforms)
             codeWriter.writeMapped(Entity_getTags)
             codeWriter.writeString(data.value)
             codeWriter.writeMapped(Set_contains)
-            codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newLoops[data.loopId]!!.continueLabel)
+
+            val label = Label()
+            codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, label)
+            run()
+            codeWriter.methodVisitor.visitLabel(label)
         }
         InstructionType.CHECK_NOT_ENTITY_TAG -> {
-            val data = instruction.data as InstructionDataLocationStringLoop
+            val data = instruction.data as InstructionDataLocationString
             data.local.load(codeWriter, newTransforms)
             codeWriter.writeMapped(Entity_getTags)
             codeWriter.writeString(data.value)
             codeWriter.writeMapped(Set_contains)
-            codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, newLoops[data.loopId]!!.continueLabel)
+
+            val label = Label()
+            codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, label)
+            run()
+            codeWriter.methodVisitor.visitLabel(label)
         }
         InstructionType.CHECK_ENTITY_TAGS -> {
-            val data = instruction.data as InstructionDataLocationLoop
+            val data = instruction.data as InstructionDataLocation
             data.local.load(codeWriter, newTransforms)
             codeWriter.writeMapped(Entity_getTags)
             codeWriter.writeMapped(Set_size)
-            codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newLoops[data.loopId]!!.continueLabel)
+
+            val label = Label()
+            codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, label)
+            run()
+            codeWriter.methodVisitor.visitLabel(label)
         }
         InstructionType.CHECK_NOT_ENTITY_TAGS -> {
-            val data = instruction.data as InstructionDataLocationLoop
+            val data = instruction.data as InstructionDataLocation
             data.local.load(codeWriter, newTransforms)
             codeWriter.writeMapped(Entity_getTags)
             codeWriter.writeMapped(Set_size)
-            codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, newLoops[data.loopId]!!.continueLabel)
+
+            val label = Label()
+            codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, label)
+            run()
+            codeWriter.methodVisitor.visitLabel(label)
         }
         InstructionType.LIMITER -> {
             val data = instruction.data as InstructionDataIntLoop

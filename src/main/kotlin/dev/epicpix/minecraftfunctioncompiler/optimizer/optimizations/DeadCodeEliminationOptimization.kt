@@ -89,18 +89,6 @@ private fun getLoopUsed(instruction: Instruction, loopId: Int, lastElement: Bool
         InstructionType.FOR_EACH_ENTITY -> wLoop = true
         InstructionType.FOR_EACH_PLAYER -> wLoop = true
         InstructionType.FOR_SCORE_HOLDERS -> wLoop = true
-        InstructionType.CHECK_ENTITY_TAG, InstructionType.CHECK_NOT_ENTITY_TAG -> {
-            val data = instruction.data as InstructionDataLocationStringLoop
-            if(data.loopId == loopId) {
-                return LoopUsageInfo(usedBreak = false, usedIndirect = true, last = lastElement)
-            }
-        }
-        InstructionType.CHECK_ENTITY_TAGS, InstructionType.CHECK_NOT_ENTITY_TAGS -> {
-            val data = instruction.data as InstructionDataLocationLoop
-            if(data.loopId == loopId) {
-                return LoopUsageInfo(usedBreak = false, usedIndirect = true, last = lastElement)
-            }
-        }
         InstructionType.CHECK_LIMIT -> {
             val data = instruction.data as InstructionDataLoop
             if(data.loopId == loopId) {
