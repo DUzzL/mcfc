@@ -4,6 +4,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.*
 import dev.epicpix.minecraftfunctioncompiler.optimizer.InstructionList
 import dev.epicpix.minecraftfunctioncompiler.optimizer.Optimization
 
+// TODO: Rework optimization to make different instructions have different weights, this will make sure that this instruction won't get stuck in a loop
 object LocalInvariantCodeHoistingOptimization : Optimization {
     override fun optimize(instructions: InstructionList): InstructionList {
         return runOptimizations(instructions)

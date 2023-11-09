@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.data
 
+import net.minecraft.resources.ResourceLocation
 import java.util.*
 
 data class FloatRangeArgument(
@@ -32,9 +33,10 @@ data class SelectorArgument(
     val playerName: String? = null,
     val self: Boolean = false,
     val limit: Int? = null,
-    val entityType: String? = null,
+    val entityType: ResourceLocation? = null,
     val hasTags: Boolean? = null,
     val tags: List<NegatableData<String>> = listOf(),
+    val scores: Map<String, IntRangeArgument> = mapOf(),
 )
 
 data class WorldCoordinates(
