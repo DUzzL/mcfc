@@ -37,7 +37,7 @@ This is the list of commands supported currently as of `0.1.0-alpha.5`:
 
 ## Supported Selectors
 
-Not all selectors are supported as well, currently the only supported selectors are by UUID, player name, `@e`, `@a`, `@s`, with allowed selector parameters being `limit` and `tag`, `scores`.
+Not all selectors are supported as well, currently the only supported selectors are by UUID, player name, `@e`, `@a`, `@s`, with allowed selector parameters being `limit`, `tag` and `scores`.
 
 ## How it works
 
