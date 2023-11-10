@@ -55,6 +55,10 @@ object CommonSubexpressionEliminationOptimization : Optimization {
                 val remapped3 = remapLocation(instruction.data.local3, newCse)
                 InstructionDataLocationLocationLocation(remapped1, remapped2, remapped3)
             }
+            is InstructionDataLocationGamemode -> {
+                val remapped1 = remapLocation(instruction.data.local, newCse)
+                InstructionDataLocationGamemode(remapped1, instruction.data.gamemode)
+            }
             is InstructionDataRunScoreOperation -> {
                 val target = remapLocation(instruction.data.target, newCse)
                 val source = remapLocation(instruction.data.source, newCse)

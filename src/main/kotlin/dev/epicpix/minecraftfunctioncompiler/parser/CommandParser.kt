@@ -13,6 +13,7 @@ import net.minecraft.commands.arguments.coordinates.LocalCoordinates
 import net.minecraft.core.Direction
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.MinecraftServer
+import net.minecraft.world.level.GameType
 import java.util.*
 
 object CommandParser {
@@ -34,6 +35,7 @@ object CommandParser {
         return when(cmdName) {
             "execute" -> parseCommandExecute(context, context.nodes.subList(1, context.nodes.size), source, server)
             "function" -> parseCommandFunction(context, source, server)
+            "gamemode" -> parseCommandGamemode(context, source)
             "kill" -> parseCommandKill(context, source)
             "scoreboard" -> parseCommandScoreboard(context, source)
             "tag" -> parseCommandTag(context, source)
@@ -161,6 +163,16 @@ object CommandParser {
             Command(CommandType.FUNCTION, mapOf("functions" to server.functions.getTag(ResourceLocation(name.substring(1))).toList()))
         }else {
             Command(CommandType.FUNCTION, mapOf("functions" to listOf(ResourceLocation(name))))
+        }
+    }
+
+    private fun parseCommandGamemode(context: CommandContextBuilder<CommandSourceStack>, source: String): Command {
+        val gamemode = context.arguments["gamemode"]!!.result as GameType
+        val targets = context.arguments["targets"]
+        return if(targets != null) {
+            Command(CommandType.GAMEMODE, mapOf("gamemode" to gamemode, "targets" to parseSelector(targets.range[source])))
+        }else {
+            Command(CommandType.GAMEMODE, mapOf("gamemode" to gamemode, "targets" to SelectorArgument(self = true)))
         }
     }
 

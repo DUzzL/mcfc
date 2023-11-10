@@ -19,6 +19,14 @@ class MappedData {
         val Entity_level = MappedData()
         val Entity_position = MappedData()
         val Entity_getRotationVector = MappedData()
+        val ServerPlayer_setGameMode = MappedData()
+        val ServerPlayer_gameMode = MappedData()
+        val ServerPlayerGameMode_getGameModeForPlayer = MappedData()
+
+        val GameType_SURVIVAL = MappedData()
+        val GameType_CREATIVE = MappedData()
+        val GameType_ADVENTURE = MappedData()
+        val GameType_SPECTATOR = MappedData()
 
         val ServerLevel_getEntity = MappedData()
         val ServerFunctionManager_getLibrary = MappedData()

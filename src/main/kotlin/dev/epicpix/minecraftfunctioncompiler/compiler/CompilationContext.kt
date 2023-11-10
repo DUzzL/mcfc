@@ -190,6 +190,10 @@ data class CompilationContext(
                 if(!selector.entityTypes.negated) stacker.stackInstruction(Instructions.checkEntityTypes(local, selector.entityTypes.data))
                 else stacker.stackInstruction(Instructions.checkNotEntityTypes(local, selector.entityTypes.data))
             }
+            if(selector.gamemode != null) {
+                if(!selector.gamemode.negated) stacker.stackInstruction(Instructions.checkGamemode(local, selector.gamemode.data))
+                else stacker.stackInstruction(Instructions.checkNotGamemode(local, selector.gamemode.data))
+            }
             for(tag in selector.tags) {
                 if(!tag.negated) stacker.stackInstruction(Instructions.checkEntityTag(local, tag.data))
                 else stacker.stackInstruction(Instructions.checkNotEntityTag(local, tag.data))

@@ -17,6 +17,10 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Entity
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Entity_level
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Entity_position
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Entity_removeTag
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.GameType_ADVENTURE
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.GameType_CREATIVE
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.GameType_SPECTATOR
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.GameType_SURVIVAL
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Iterable_iterator
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Map_keys
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Math_floor
@@ -36,6 +40,9 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Scoreb
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ServerFunctionManager_execute
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ServerLevel_getAllEntities
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ServerLevel_getEntity
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ServerPlayerGameMode_getGameModeForPlayer
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ServerPlayer_gameMode
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ServerPlayer_setGameMode
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Set_contains
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Set_size
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Vec3_x
@@ -48,6 +55,7 @@ import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.Entity
+import net.minecraft.world.level.GameType
 import net.minecraft.world.phys.Vec2
 import net.minecraft.world.phys.Vec3
 import net.minecraft.world.scores.Objective
@@ -763,6 +771,53 @@ private fun emitInstruction(
             newTransforms[data.result.local!!] = uidLocal
             run()
             end()
+        }
+        InstructionType.CHECK_GAMEMODE -> {
+            val data = instruction.data as InstructionDataLocationGamemode
+            data.local.load(codeWriter, newTransforms)
+            codeWriter.castType(ServerPlayer::class.java)
+            codeWriter.writeMapped(ServerPlayer_gameMode)
+            codeWriter.writeMapped(ServerPlayerGameMode_getGameModeForPlayer)
+            when(data.gamemode) {
+                GameType.SURVIVAL -> codeWriter.writeMapped(GameType_SURVIVAL)
+                GameType.CREATIVE -> codeWriter.writeMapped(GameType_CREATIVE)
+                GameType.ADVENTURE -> codeWriter.writeMapped(GameType_ADVENTURE)
+                GameType.SPECTATOR -> codeWriter.writeMapped(GameType_SPECTATOR)
+            }
+            val label = Label()
+            codeWriter.methodVisitor.visitJumpInsn(Opcodes.IF_ACMPNE, label)
+            run()
+            codeWriter.methodVisitor.visitLabel(label)
+        }
+        InstructionType.CHECK_NOT_GAMEMODE -> {
+            val data = instruction.data as InstructionDataLocationGamemode
+            data.local.load(codeWriter, newTransforms)
+            codeWriter.castType(ServerPlayer::class.java)
+            codeWriter.writeMapped(ServerPlayer_gameMode)
+            codeWriter.writeMapped(ServerPlayerGameMode_getGameModeForPlayer)
+            when(data.gamemode) {
+                GameType.SURVIVAL -> codeWriter.writeMapped(GameType_SURVIVAL)
+                GameType.CREATIVE -> codeWriter.writeMapped(GameType_CREATIVE)
+                GameType.ADVENTURE -> codeWriter.writeMapped(GameType_ADVENTURE)
+                GameType.SPECTATOR -> codeWriter.writeMapped(GameType_SPECTATOR)
+            }
+            val label = Label()
+            codeWriter.methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, label)
+            run()
+            codeWriter.methodVisitor.visitLabel(label)
+        }
+        InstructionType.SET_GAMEMODE -> {
+            val data = instruction.data as InstructionDataLocationGamemode
+            data.local.load(codeWriter, newTransforms)
+            codeWriter.castType(ServerPlayer::class.java)
+            when(data.gamemode) {
+                GameType.SURVIVAL -> codeWriter.writeMapped(GameType_SURVIVAL)
+                GameType.CREATIVE -> codeWriter.writeMapped(GameType_CREATIVE)
+                GameType.ADVENTURE -> codeWriter.writeMapped(GameType_ADVENTURE)
+                GameType.SPECTATOR -> codeWriter.writeMapped(GameType_SPECTATOR)
+            }
+            codeWriter.writeMapped(ServerPlayer_setGameMode)
+            codeWriter.methodVisitor.visitInsn(Opcodes.POP)
         }
     }
 }

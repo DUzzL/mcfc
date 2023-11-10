@@ -131,6 +131,11 @@ private fun CompilationContext.compile(command: Command) {
         FUNCTION -> {
             addInstruction(Instructions.callFunctions(command["functions"], currentEntity, currentWorld, currentPosition, currentRotation))
         }
+        GAMEMODE -> {
+            forSelector(command["targets"]) { entity, _, _ ->
+                addInstruction(Instructions.setGamemode(entity, command["gamemode"]))
+            }
+        }
         KILL -> {
             forSelector(command["targets"]) { entity, breakId, continueId ->
                 addInstruction(Instructions.killEntity(entity))

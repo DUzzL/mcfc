@@ -8,8 +8,11 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerFunctionLibrary;
 import net.minecraft.server.ServerFunctionManager;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerPlayerGameMode;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.Objective;
@@ -37,6 +40,14 @@ public class MappedUsageDefinitions {
     public static void Entity_level() { MappedUsageDefinitions.<Entity>type().level(); }
     public static void Entity_position() { MappedUsageDefinitions.<Entity>type().position(); }
     public static void Entity_getRotationVector() { MappedUsageDefinitions.<Entity>type().getRotationVector(); }
+    public static void ServerPlayer_setGameMode() { MappedUsageDefinitions.<ServerPlayer>type().setGameMode((GameType)null); }
+    public static void ServerPlayer_gameMode() { var unused = MappedUsageDefinitions.<ServerPlayer>type().gameMode; }
+    public static void ServerPlayerGameMode_getGameModeForPlayer() { MappedUsageDefinitions.<ServerPlayerGameMode>type().getGameModeForPlayer(); }
+
+    public static void GameType_SURVIVAL() { var unused = GameType.SURVIVAL; }
+    public static void GameType_CREATIVE() { var unused = GameType.CREATIVE; }
+    public static void GameType_ADVENTURE() { var unused = GameType.ADVENTURE; }
+    public static void GameType_SPECTATOR() { var unused = GameType.SPECTATOR; }
 
     public static void ServerLevel_getEntity() { MappedUsageDefinitions.<ServerLevel>type().getEntity((UUID)null); }
     public static void ServerFunctionManager_getLibrary() { var unused = MappedUsageDefinitions.<ServerFunctionManager>type().library; }

@@ -6,6 +6,7 @@ import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.registries.Registries
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.tags.TagKey
+import net.minecraft.world.level.GameType
 import java.util.*
 
 fun parseScoreHolder(scoreHolder: String): ScoreHolderArgument {
@@ -62,6 +63,7 @@ fun parseSelector(selector: String): SelectorArgument {
         hasTags = if(data.tags.isNotEmpty()) null else data.hasTags,
         limit = data.limit,
         scores = data.scores,
+        gamemode = data.gamemode,
     )
 }
 
@@ -121,6 +123,11 @@ private fun parseArgumentSelectorOption(reader: StringReader, key: String, selec
             }
             data.entityTypes = NegatableData(types, negated)
         }
+        "gamemode" -> {
+            val negated = if(reader.peek() == '!') { reader.read(); true } else false
+            data.gamemode = NegatableData(GameType.byName(reader.readUnquotedString(), null)!!, negated)
+            data.entityTypes = NegatableData(listOf(ResourceLocation("minecraft", "player")), false)
+        }
         else -> throw UnsupportedOperationException("Cannot parse selector key: $key in $selector")
     }
 }
@@ -143,4 +150,5 @@ data class SelectorGeneratorData(
     var hasTags: Boolean? = null,
     var limit: Int? = null,
     val scores: MutableMap<String, IntRangeArgument> = mutableMapOf(),
+    var gamemode: NegatableData<GameType>? = null,
 )

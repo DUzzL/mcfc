@@ -4,6 +4,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.IntRangeArgument
 import dev.epicpix.minecraftfunctioncompiler.data.SwizzleArgument
 import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates
 import net.minecraft.resources.ResourceLocation
+import net.minecraft.world.level.GameType
 import java.util.*
 
 data class LocationData(
@@ -24,6 +25,7 @@ data class InstructionDataLocationInt(val local: LocationData, val value: Int) :
 data class InstructionDataLocationResources(val local: LocationData, val resources: List<ResourceLocation>) : InstructionData
 data class InstructionDataLocationLocationWorldCoordinates(val local: LocationData, val local2: LocationData, val coords: WorldCoordinates) : InstructionData
 data class InstructionDataLocationLocationLocation(val local: LocationData, val local2: LocationData, val local3: LocationData) : InstructionData
+data class InstructionDataLocationGamemode(val local: LocationData, val gamemode: GameType) : InstructionData
 
 data class InstructionDataFunctionCall(val functions: List<ResourceLocation>, val entity: LocationData?, val world: LocationData?, val position: LocationData?, val rotation: LocationData?) : InstructionData
 data class InstructionDataRunScoreOperation(val target: LocationData, val source: LocationData, val operation: ScoreboardOperation, val exceptionLoopId: Int) : InstructionData
@@ -85,7 +87,9 @@ data object Instructions {
     fun checkEntityTypes(local: LocationData, types: List<ResourceLocation>) = Instruction(InstructionType.CHECK_ENTITY_TYPES, InstructionDataLocationResources(local, types.toList()))
     fun checkNotEntityTypes(local: LocationData, types: List<ResourceLocation>) = Instruction(InstructionType.CHECK_NOT_ENTITY_TYPES, InstructionDataLocationResources(local, types.toList()))
     fun alignPosition(position: LocationData, result: LocationData, swizzle: SwizzleArgument) = Instruction(InstructionType.ALIGN_POSITION, InstructionDataLocationAlignPosition(position, result, swizzle))
-
+    fun checkGamemode(entity: LocationData, gamemode: GameType) = Instruction(InstructionType.CHECK_GAMEMODE, InstructionDataLocationGamemode(entity, gamemode))
+    fun checkNotGamemode(entity: LocationData, gamemode: GameType) = Instruction(InstructionType.CHECK_NOT_GAMEMODE, InstructionDataLocationGamemode(entity, gamemode))
+    fun setGamemode(entity: LocationData, gamemode: GameType) = Instruction(InstructionType.SET_GAMEMODE, InstructionDataLocationGamemode(entity, gamemode))
 }
 
 enum class InstructionType {
@@ -127,5 +131,8 @@ enum class InstructionType {
     CHECK_ENTITY_TYPES,
     CHECK_NOT_ENTITY_TYPES,
     ALIGN_POSITION,
+    CHECK_GAMEMODE,
+    CHECK_NOT_GAMEMODE,
+    SET_GAMEMODE,
 
 }

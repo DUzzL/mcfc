@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.data
 
 import net.minecraft.resources.ResourceLocation
+import net.minecraft.world.level.GameType
 import java.util.*
 
 data class FloatRangeArgument(
@@ -37,6 +38,7 @@ data class SelectorArgument(
     val hasTags: Boolean? = null,
     val tags: List<NegatableData<String>> = listOf(),
     val scores: Map<String, IntRangeArgument> = mapOf(),
+    val gamemode: NegatableData<GameType>? = null,
     val selectPlayers: Boolean = entityTypes != null && !entityTypes.negated && entityTypes.data.size == 1 && entityTypes.data[0] == ResourceLocation("minecraft", "player"),
 )
 
