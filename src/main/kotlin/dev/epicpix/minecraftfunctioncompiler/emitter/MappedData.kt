@@ -55,6 +55,7 @@ class MappedData {
         val Iterator_hasNext = MappedData()
         val Iterable_iterator = MappedData()
 
+        val Math_floor = MappedData()
         val Math_floorDiv = MappedData()
         val Math_floorMod = MappedData()
         val Math_min = MappedData()

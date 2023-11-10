@@ -73,6 +73,7 @@ public class MappedUsageDefinitions {
     public static void Iterator_hasNext() { MappedUsageDefinitions.<Iterator<Object>>type().hasNext(); }
     public static void Iterable_iterator() { MappedUsageDefinitions.<Iterable<Object>>type().iterator(); }
 
+    public static void Math_floor() { Math.floor((double)0); }
     public static void Math_floorDiv() { Math.floorDiv((int)0, (int)0); }
     public static void Math_floorMod() { Math.floorMod((int)0, (int)0); }
     public static void Math_min() { Math.min((int)0, (int)0); }

@@ -4,13 +4,16 @@ import com.mojang.brigadier.context.CommandContextBuilder
 import com.mojang.brigadier.context.ParsedCommandNode
 import dev.epicpix.minecraftfunctioncompiler.data.IntRangeArgument
 import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument
+import dev.epicpix.minecraftfunctioncompiler.data.SwizzleArgument
 import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates
 import net.minecraft.advancements.critereon.MinMaxBounds
 import net.minecraft.commands.CommandFunction
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.arguments.coordinates.LocalCoordinates
+import net.minecraft.core.Direction
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.MinecraftServer
+import java.util.*
 
 object CommandParser {
 
@@ -41,6 +44,15 @@ object CommandParser {
     private fun parseCommandExecute(context: CommandContextBuilder<CommandSourceStack>, nodes: List<ParsedCommandNode<CommandSourceStack>>, source: String, server: MinecraftServer): Command {
         val type = nodes[0].range[source]
         return when(type) {
+            "align" -> {
+                @Suppress("UNCHECKED_CAST")
+                val swizzle = context.arguments["axes"]!!.result as EnumSet<Direction.Axis>
+
+                Command(CommandType.EXECUTE_ALIGN, mapOf(
+                    "swizzle" to SwizzleArgument(swizzle.contains(Direction.Axis.X), swizzle.contains(Direction.Axis.Y), swizzle.contains(Direction.Axis.Z)),
+                    "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
+                ))
+            }
             "as" -> {
                 Command(CommandType.EXECUTE_AS, mapOf(
                     "targets" to parseSelector(context.arguments["targets"]!!.range[source]),

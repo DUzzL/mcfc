@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.il
 
 import dev.epicpix.minecraftfunctioncompiler.data.IntRangeArgument
+import dev.epicpix.minecraftfunctioncompiler.data.SwizzleArgument
 import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates
 import net.minecraft.resources.ResourceLocation
 import java.util.*
@@ -28,6 +29,7 @@ data class InstructionDataFunctionCall(val functions: List<ResourceLocation>, va
 data class InstructionDataRunScoreOperation(val target: LocationData, val source: LocationData, val operation: ScoreboardOperation, val exceptionLoopId: Int) : InstructionData
 data class InstructionDataCheckScoreRange(val score: LocationData, val range: IntRangeArgument, val negate: Boolean) : InstructionData
 data class InstructionDataCheckScoreCompare(val target: LocationData, val source: LocationData, val compareOperation: ScoreboardCompareOperation) : InstructionData
+data class InstructionDataLocationAlignPosition(val position: LocationData, val result: LocationData, val swizzle: SwizzleArgument) : InstructionData
 
 enum class ScoreboardOperation { SET, PLUS, MINUS, MULTIPLY, DIVIDE, MODULO, MIN, MAX, SWAP }
 enum class ScoreboardCompareOperation { LT, LE, EQ, NE, GE, GT }
@@ -82,6 +84,7 @@ data object Instructions {
     fun applyPositionWorld(positionFrom: LocationData, positionNew: LocationData, worldPosition: WorldCoordinates) = Instruction(InstructionType.APPLY_POSITION_WORLD, InstructionDataLocationLocationWorldCoordinates(positionFrom, positionNew, worldPosition))
     fun checkEntityTypes(local: LocationData, types: List<ResourceLocation>) = Instruction(InstructionType.CHECK_ENTITY_TYPES, InstructionDataLocationResources(local, types.toList()))
     fun checkNotEntityTypes(local: LocationData, types: List<ResourceLocation>) = Instruction(InstructionType.CHECK_NOT_ENTITY_TYPES, InstructionDataLocationResources(local, types.toList()))
+    fun alignPosition(position: LocationData, result: LocationData, swizzle: SwizzleArgument) = Instruction(InstructionType.ALIGN_POSITION, InstructionDataLocationAlignPosition(position, result, swizzle))
 
 }
 
@@ -123,5 +126,6 @@ enum class InstructionType {
     APPLY_POSITION_WORLD,
     CHECK_ENTITY_TYPES,
     CHECK_NOT_ENTITY_TYPES,
+    ALIGN_POSITION,
 
 }

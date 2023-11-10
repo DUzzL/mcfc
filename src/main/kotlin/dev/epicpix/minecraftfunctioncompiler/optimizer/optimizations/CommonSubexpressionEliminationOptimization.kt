@@ -81,6 +81,11 @@ object CommonSubexpressionEliminationOptimization : Optimization {
                 val remapped2 = remapLocation(instruction.data.local2, newCse)
                 InstructionDataLocationLocationWorldCoordinates(remapped1, remapped2, instruction.data.coords)
             }
+            is InstructionDataLocationAlignPosition -> {
+                val remapped1 = remapLocation(instruction.data.position, newCse)
+                val remapped2 = remapLocation(instruction.data.result, newCse)
+                InstructionDataLocationAlignPosition(remapped1, remapped2, instruction.data.swizzle)
+            }
             else -> instruction.data
         }
 

@@ -48,3 +48,9 @@ data class WorldCoordinates(
     val z: Double,
     val isZRelative: Boolean,
 )
+
+data class SwizzleArgument(
+    val x: Boolean,
+    val y: Boolean,
+    val z: Boolean,
+)

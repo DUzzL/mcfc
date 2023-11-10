@@ -19,6 +19,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Entity
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Entity_removeTag
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Iterable_iterator
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Map_keys
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Math_floor
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Math_floorDiv
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Math_floorMod
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Math_max
@@ -740,6 +741,28 @@ private fun emitInstruction(
             }
             run()
             codeWriter.methodVisitor.visitLabel(label)
+        }
+        InstructionType.ALIGN_POSITION -> {
+            val data = instruction.data as InstructionDataLocationAlignPosition
+
+            codeWriter.newObject(Vec3::class.java, Double::class.java, Double::class.java, Double::class.java) {
+                data.position.load(codeWriter, newTransforms)
+                codeWriter.writeMapped(Vec3_x)
+                if(data.swizzle.x) codeWriter.writeMapped(Math_floor)
+                data.position.load(codeWriter, newTransforms)
+                codeWriter.writeMapped(Vec3_y)
+                if(data.swizzle.y) codeWriter.writeMapped(Math_floor)
+                data.position.load(codeWriter, newTransforms)
+                codeWriter.writeMapped(Vec3_z)
+                if(data.swizzle.z) codeWriter.writeMapped(Math_floor)
+            }
+
+            val uidLocal = codeWriter.generateUniqueLocal("\$Position")
+            val end = codeWriter.defineLocal(uidLocal, Vec3::class.java)
+            codeWriter.storeLocal(uidLocal)
+            newTransforms[data.result.local!!] = uidLocal
+            run()
+            end()
         }
     }
 }

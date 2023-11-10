@@ -16,6 +16,14 @@ fun compile(commands: List<Command>): List<Instruction> {
 
 private fun CompilationContext.compile(command: Command) {
     when(command.type) {
+        EXECUTE_ALIGN -> {
+            getPosition { positionId ->
+                val newPosition = LocationData(local = highestLocal)
+                val instruction = Instructions.alignPosition(positionId, newPosition, command["swizzle"])
+                copy(highestLocal = highestLocal + 1, currentPosition = newPosition, addInstruction = instruction.children::add).compile(command["command"])
+                addInstruction(instruction)
+            }
+        }
         EXECUTE_AS -> {
             forSelector(command["targets"]) { entity, breakId, continueId ->
                 copy(currentEntity = entity).compile(command["command"])
