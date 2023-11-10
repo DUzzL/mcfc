@@ -45,6 +45,10 @@ object CommonSubexpressionEliminationOptimization : Optimization {
                 val remapped1 = remapLocation(instruction.data.local, newCse)
                 InstructionDataLocationInt(remapped1, instruction.data.value)
             }
+            is InstructionDataLocationResources -> {
+                val remapped1 = remapLocation(instruction.data.local, newCse)
+                InstructionDataLocationResources(remapped1, instruction.data.resources)
+            }
             is InstructionDataLocationLocationLocation -> {
                 val remapped1 = remapLocation(instruction.data.local, newCse)
                 val remapped2 = remapLocation(instruction.data.local2, newCse)

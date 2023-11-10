@@ -1,11 +1,11 @@
 package dev.epicpix.minecraftfunctioncompiler.parser
 
 import com.mojang.brigadier.StringReader
-import dev.epicpix.minecraftfunctioncompiler.data.IntRangeArgument
-import dev.epicpix.minecraftfunctioncompiler.data.NegatableData
-import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument
-import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument
+import dev.epicpix.minecraftfunctioncompiler.data.*
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.core.registries.Registries
 import net.minecraft.resources.ResourceLocation
+import net.minecraft.tags.TagKey
 import java.util.*
 
 fun parseScoreHolder(scoreHolder: String): ScoreHolderArgument {
@@ -34,7 +34,7 @@ fun parseSelector(selector: String): SelectorArgument {
     val isSelf = selectorType == 's'
     val data = SelectorGeneratorData()
     if(isSelf) data.limit = 1
-    if(selectorType == 'a') data.entityType = ResourceLocation("minecraft", "player")
+    if(selectorType == 'a') data.entityTypes = NegatableData(data = listOf(ResourceLocation("minecraft", "player")), negated = false)
 
     if(selectorType == 'r' || selectorType == 'p') throw UnsupportedOperationException("Unsupported selector: $selector")
 
@@ -57,11 +57,11 @@ fun parseSelector(selector: String): SelectorArgument {
 
     return SelectorArgument(
         self = isSelf,
-        entityType = data.entityType,
-        tags = data.tags.toList(),
+        entityTypes = data.entityTypes,
+        tags = data.tags,
         hasTags = if(data.tags.isNotEmpty()) null else data.hasTags,
         limit = data.limit,
-        scores = data.scores.toMap(),
+        scores = data.scores,
     )
 }
 
@@ -103,6 +103,24 @@ private fun parseArgumentSelectorOption(reader: StringReader, key: String, selec
             }
             reader.read()
         }
+        "type" -> {
+            val negated = if(reader.peek() == '!') { reader.read(); true } else false
+            val tag = if(reader.peek() == '#') { reader.read(); true } else false
+            val type = ResourceLocation.read(reader)
+            val types = if(!tag) listOf(type) else {
+                val tagKey = TagKey.create(Registries.ENTITY_TYPE, type)
+                val typeData = BuiltInRegistries.ENTITY_TYPE.getTag(tagKey)
+                if(typeData.isEmpty) {
+                    listOf()
+                }else {
+                    BuiltInRegistries.ENTITY_TYPE.getTag(tagKey).get().map { it.unwrapKey().get().location() }.toList()
+                }
+            }
+            types.forEach {
+                if(mapEntityTypeClass(it) == null) throw UnsupportedOperationException("Unsupported entity type: $it")
+            }
+            data.entityTypes = NegatableData(types, negated)
+        }
         else -> throw UnsupportedOperationException("Cannot parse selector key: $key in $selector")
     }
 }
@@ -120,7 +138,7 @@ private fun readInt(stringReader: StringReader): Int {
 }
 
 data class SelectorGeneratorData(
-    var entityType: ResourceLocation? = null,
+    var entityTypes: NegatableData<List<ResourceLocation>>? = null,
     val tags: MutableList<NegatableData<String>> = mutableListOf(),
     var hasTags: Boolean? = null,
     var limit: Int? = null,

@@ -16,7 +16,7 @@ Put the mod on a fabric server with all the dependencies, the mod will automatic
 
 Of course this mod can't support every command, so it will only generate code for functions which contain only commands which are supported, **this will not compile functions with macros currently**. It can't compile macros because any value could be interpreted in any way, which is hard to implement using only things known at compile-time.
 
-This is the list of commands supported currently as of `0.1.0-alpha.5`:
+This is the list of commands supported currently as of `0.1.0-alpha.6`:
 - `execute as`
 - `execute at`
 - `execute if entity`
@@ -37,7 +37,7 @@ This is the list of commands supported currently as of `0.1.0-alpha.5`:
 
 ## Supported Selectors
 
-Not all selectors are supported as well, currently the only supported selectors are by UUID, player name, `@e`, `@a`, `@s`, with allowed selector parameters being `limit`, `tag` and `scores`.
+Not all selectors are supported as well, currently the only supported selectors are by UUID, player name, `@e`, `@a`, `@s`, with allowed selector parameters being `limit`, `tag`, `type` and `scores`.
 
 ## How it works
 

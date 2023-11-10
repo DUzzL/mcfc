@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter
 
+import dev.epicpix.minecraftfunctioncompiler.data.mapEntityTypeClass
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ArrayList_get
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ArrayList_size
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.CommandSourceStack_getEntity
@@ -713,6 +714,32 @@ private fun emitInstruction(
             newTransforms[data.local2.local!!] = uidLocal
             run()
             end()
+        }
+        InstructionType.CHECK_ENTITY_TYPES -> {
+            val data = instruction.data as InstructionDataLocationResources
+            val label = Label()
+            for(res in data.resources) {
+                data.local.load(codeWriter, newTransforms)
+                codeWriter.methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, mapEntityTypeClass(res)?.descriptorString()?.run { substring(1, length - 1) })
+                codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, label)
+            }
+            val label2 = Label()
+            codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, label2)
+            codeWriter.methodVisitor.visitLabel(label)
+            run()
+            codeWriter.methodVisitor.visitLabel(label2)
+
+        }
+        InstructionType.CHECK_NOT_ENTITY_TYPES -> {
+            val data = instruction.data as InstructionDataLocationResources
+            val label = Label()
+            for(res in data.resources) {
+                data.local.load(codeWriter, newTransforms)
+                codeWriter.methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, mapEntityTypeClass(res)?.descriptorString()?.run { substring(1, length - 1) })
+                codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, label)
+            }
+            run()
+            codeWriter.methodVisitor.visitLabel(label)
         }
     }
 }

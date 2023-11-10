@@ -6,7 +6,6 @@ import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction
 import dev.epicpix.minecraftfunctioncompiler.il.Instructions
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData
-import net.minecraft.resources.ResourceLocation
 import java.util.*
 
 data class CompilationContext(
@@ -184,8 +183,13 @@ data class CompilationContext(
     fun forSelector(selector: SelectorArgument, exec: CompilationContext.(local: LocationData, breakId: Int, continueId: Int) -> Unit) {
         var limiterId: Int? = null
         fun checkEntityCondition(context: CompilationContext, local: LocationData, breakId: Int, continueId: Int) {
+            var ctx = context
             val nonNull = Instructions.ifNotNull(local)
             val stacker = InstructionStacker(nonNull)
+            if(selector.entityTypes != null) {
+                if(!selector.entityTypes.negated) stacker.stackInstruction(Instructions.checkEntityTypes(local, selector.entityTypes.data))
+                else stacker.stackInstruction(Instructions.checkNotEntityTypes(local, selector.entityTypes.data))
+            }
             for(tag in selector.tags) {
                 if(!tag.negated) stacker.stackInstruction(Instructions.checkEntityTag(local, tag.data))
                 else stacker.stackInstruction(Instructions.checkNotEntityTag(local, tag.data))
@@ -196,19 +200,20 @@ data class CompilationContext(
             }
             if(selector.scores.isNotEmpty()) {
                 for((obj, range) in selector.scores) {
-                    copy(addInstruction = stacker::stackInstruction).getObjective(obj) { objective ->
+                    ctx.copy(addInstruction = stacker::stackInstruction).getObjective(obj) { objective ->
                         getScoreboardName(local) { name ->
                             getScoreData(objective, name) { score ->
                                 val instr = Instructions.checkScoreRange(score, range, false)
                                 addInstruction(instr)
                                 stacker.current = instr
+                                ctx = this
                             }
                         }
                     }
                 }
             }
             val execBase = stacker.current
-            exec(context.copy(addInstruction = execBase.children::add), local, breakId, continueId)
+            exec(ctx.copy(addInstruction = execBase.children::add), local, breakId, continueId)
             if(selector.limit == 1) {
                 execBase.with(Instructions.breakLoop(breakId))
             }else if(selector.limit != null) {
@@ -231,7 +236,7 @@ data class CompilationContext(
             realContext.forEntity(selector.entityUuid) { local, breakId, continueId -> checkEntityCondition(this, local, breakId, continueId) }
         }else if(selector.self) {
             realContext.forCurrentEntity { local, breakId, continueId -> checkEntityCondition(this, local, breakId, continueId) }
-        }else if(selector.entityType == ResourceLocation("minecraft", "player")) {
+        }else if(selector.selectPlayers) {
             realContext.forEachPlayer { local, breakId, continueId -> checkEntityCondition(this, local, breakId, continueId) }
         }else {
             realContext.forEachEntity { local, breakId, continueId -> checkEntityCondition(this, local, breakId, continueId) }

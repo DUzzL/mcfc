@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler
 
 import dev.epicpix.minecraftfunctioncompiler.compiler.compile
+import dev.epicpix.minecraftfunctioncompiler.data.updateRegistryMaps
 import dev.epicpix.minecraftfunctioncompiler.emitter.CodeFieldStorage
 import dev.epicpix.minecraftfunctioncompiler.emitter.CodeWriter
 import dev.epicpix.minecraftfunctioncompiler.emitter.emitBytecode
@@ -29,6 +30,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
     private val handles: MutableMap<ResourceLocation, MethodHandle> = HashMap()
     fun loadFunctions(serverFunctionManager: ServerFunctionManager) {
         initDefinitions()
+        updateRegistryMaps()
 
         handles.clear()
 

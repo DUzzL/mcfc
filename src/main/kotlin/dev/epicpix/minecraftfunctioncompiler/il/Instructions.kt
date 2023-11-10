@@ -20,6 +20,7 @@ data class InstructionDataLocationUUID(val local: LocationData, val value: UUID)
 data class InstructionDataLocationLocation(val local: LocationData, val local2: LocationData) : InstructionData
 data class InstructionDataIntLoop(val value: Int, var loopId: Int) : InstructionData
 data class InstructionDataLocationInt(val local: LocationData, val value: Int) : InstructionData
+data class InstructionDataLocationResources(val local: LocationData, val resources: List<ResourceLocation>) : InstructionData
 data class InstructionDataLocationLocationWorldCoordinates(val local: LocationData, val local2: LocationData, val coords: WorldCoordinates) : InstructionData
 data class InstructionDataLocationLocationLocation(val local: LocationData, val local2: LocationData, val local3: LocationData) : InstructionData
 
@@ -79,6 +80,8 @@ data object Instructions {
     fun getEntityPosition(entity: LocationData, position: LocationData) = Instruction(InstructionType.GET_ENTITY_POSITION, InstructionDataLocationLocation(entity, position))
     fun getEntityRotation(entity: LocationData, rotation: LocationData) = Instruction(InstructionType.GET_ENTITY_ROTATION, InstructionDataLocationLocation(entity, rotation))
     fun applyPositionWorld(positionFrom: LocationData, positionNew: LocationData, worldPosition: WorldCoordinates) = Instruction(InstructionType.APPLY_POSITION_WORLD, InstructionDataLocationLocationWorldCoordinates(positionFrom, positionNew, worldPosition))
+    fun checkEntityTypes(local: LocationData, types: List<ResourceLocation>) = Instruction(InstructionType.CHECK_ENTITY_TYPES, InstructionDataLocationResources(local, types.toList()))
+    fun checkNotEntityTypes(local: LocationData, types: List<ResourceLocation>) = Instruction(InstructionType.CHECK_NOT_ENTITY_TYPES, InstructionDataLocationResources(local, types.toList()))
 
 }
 
@@ -118,5 +121,7 @@ enum class InstructionType {
     GET_ENTITY_POSITION,
     GET_ENTITY_ROTATION,
     APPLY_POSITION_WORLD,
+    CHECK_ENTITY_TYPES,
+    CHECK_NOT_ENTITY_TYPES,
 
 }

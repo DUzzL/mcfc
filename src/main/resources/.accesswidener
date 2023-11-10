@@ -9,3 +9,4 @@ accessible field net/minecraft/commands/arguments/coordinates/WorldCoordinates y
 accessible field net/minecraft/commands/arguments/coordinates/WorldCoordinates z Lnet/minecraft/commands/arguments/coordinates/WorldCoordinate;
 accessible field net/minecraft/commands/arguments/coordinates/WorldCoordinate relative Z
 accessible field net/minecraft/commands/arguments/coordinates/WorldCoordinate value D
+accessible field net/minecraft/world/entity/EntityType factory Lnet/minecraft/world/entity/EntityType$EntityFactory;

@@ -33,10 +33,11 @@ data class SelectorArgument(
     val playerName: String? = null,
     val self: Boolean = false,
     val limit: Int? = null,
-    val entityType: ResourceLocation? = null,
+    val entityTypes: NegatableData<List<ResourceLocation>>? = null,
     val hasTags: Boolean? = null,
     val tags: List<NegatableData<String>> = listOf(),
     val scores: Map<String, IntRangeArgument> = mapOf(),
+    val selectPlayers: Boolean = entityTypes != null && !entityTypes.negated && entityTypes.data.size == 1 && entityTypes.data[0] == ResourceLocation("minecraft", "player"),
 )
 
 data class WorldCoordinates(
