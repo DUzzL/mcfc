@@ -1,9 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter
 
-import dev.epicpix.minecraftfunctioncompiler.data.IntRangeArgument
-import dev.epicpix.minecraftfunctioncompiler.data.SwizzleArgument
-import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates
-import dev.epicpix.minecraftfunctioncompiler.data.mapEntityTypeClass
+import dev.epicpix.minecraftfunctioncompiler.data.*
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ArrayList_get
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ArrayList_size
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.CommandSourceStack_getEntity
@@ -16,6 +13,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Entity
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Entity_getRotationVector
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Entity_getScoreboardName
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Entity_getTags
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Entity_getTeam
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Entity_kill
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Entity_level
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Entity_position
@@ -48,6 +46,8 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Server
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ServerPlayer_setGameMode
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Set_contains
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Set_size
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.String_equals
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Team_getName
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Vec3_x
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Vec3_y
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Vec3_z
@@ -742,6 +742,47 @@ private fun emitInstruction(
             }
             codeWriter.writeMapped(ServerPlayer_setGameMode)
             codeWriter.methodVisitor.visitInsn(Opcodes.POP)
+        }
+        InstructionType.CHECK_TEAM -> {
+            val teamInfo = instruction.get<NegatableData<String>>("team")
+            if(teamInfo.negated) {
+                load("entity")
+                codeWriter.writeMapped(Entity_getTeam)
+                codeWriter.executeIf(Opcodes.IFNONNULL) {
+                    codeWriter.writeString(teamInfo.data)
+                    load("entity")
+                    codeWriter.writeMapped(Entity_getTeam)
+                    codeWriter.writeMapped(Team_getName)
+                    codeWriter.writeMapped(String_equals)
+                    codeWriter.executeIf(Opcodes.IFNE) {
+                        run()
+                    }
+                }
+            }else {
+                val label = Label()
+                load("entity")
+                codeWriter.writeMapped(Entity_getTeam)
+                codeWriter.executeIf(Opcodes.IFNONNULL) {
+                    codeWriter.writeString(teamInfo.data)
+                    load("entity")
+                    codeWriter.writeMapped(Entity_getTeam)
+                    codeWriter.writeMapped(Team_getName)
+                    codeWriter.writeMapped(String_equals)
+                    codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, label)
+                }
+                val after = Label()
+                codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, after)
+                codeWriter.methodVisitor.visitLabel(label)
+                run()
+                codeWriter.methodVisitor.visitLabel(after)
+            }
+        }
+        InstructionType.HAS_TEAM -> {
+            load("entity")
+            codeWriter.writeMapped(Entity_getTeam)
+            codeWriter.executeIf(if(!instruction.get<Boolean>("negated")) Opcodes.IFNULL else Opcodes.IFNONNULL) {
+                run()
+            }
         }
     }
 }

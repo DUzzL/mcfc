@@ -61,6 +61,8 @@ fun parseSelector(selector: String): SelectorArgument {
         entityTypes = data.entityTypes,
         tags = data.tags,
         hasTags = if(data.tags.isNotEmpty()) null else data.hasTags,
+        team = data.team,
+        hasTeam = if(data.team != null) null else data.hasTeam,
         limit = data.limit,
         scores = data.scores,
         gamemode = data.gamemode,
@@ -128,6 +130,15 @@ private fun parseArgumentSelectorOption(reader: StringReader, key: String, selec
             data.gamemode = NegatableData(GameType.byName(reader.readUnquotedString(), null)!!, negated)
             data.entityTypes = NegatableData(listOf(ResourceLocation("minecraft", "player")), false)
         }
+        "team" -> {
+            val negated = if(reader.peek() == '!') { reader.read(); true } else false
+            val team = reader.readUnquotedString()
+            if(team == "") {
+                data.hasTeam = !negated
+            }else {
+                data.team = NegatableData(team, negated)
+            }
+        }
         else -> throw UnsupportedOperationException("Cannot parse selector key: $key in $selector")
     }
 }
@@ -148,6 +159,8 @@ data class SelectorGeneratorData(
     var entityTypes: NegatableData<List<ResourceLocation>>? = null,
     val tags: MutableList<NegatableData<String>> = mutableListOf(),
     var hasTags: Boolean? = null,
+    var team: NegatableData<String>? = null,
+    var hasTeam: Boolean? = null,
     var limit: Int? = null,
     val scores: MutableMap<String, IntRangeArgument> = mutableMapOf(),
     var gamemode: NegatableData<GameType>? = null,

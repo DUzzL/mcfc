@@ -19,9 +19,11 @@ class MappedData {
         val Entity_level = MappedData()
         val Entity_position = MappedData()
         val Entity_getRotationVector = MappedData()
+        val Entity_getTeam = MappedData()
         val ServerPlayer_setGameMode = MappedData()
         val ServerPlayer_gameMode = MappedData()
         val ServerPlayerGameMode_getGameModeForPlayer = MappedData()
+        val Team_getName = MappedData()
 
         val GameType_SURVIVAL = MappedData()
         val GameType_CREATIVE = MappedData()
@@ -68,6 +70,8 @@ class MappedData {
         val Math_floorMod = MappedData()
         val Math_min = MappedData()
         val Math_max = MappedData()
+
+        val String_equals = MappedData()
     }
 
     internal var generator: ((CodeWriter) -> Unit)? = null

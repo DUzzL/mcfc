@@ -194,6 +194,12 @@ data class CompilationContext(
                 if(selector.hasTags) stacker.stackInstruction(Instructions.checkEntityTags(local))
                 else stacker.stackInstruction(Instructions.checkNotEntityTags(local))
             }
+            if(selector.team != null) {
+                stacker.stackInstruction(Instructions.checkTeam(local, selector.team))
+            }
+            if(selector.hasTeam != null) {
+                stacker.stackInstruction(Instructions.hasTeam(local, selector.hasTeam))
+            }
             if(selector.scores.isNotEmpty()) {
                 for((obj, range) in selector.scores) {
                     ctx.copy(addInstruction = stacker::stackInstruction).getObjective(obj) { objective ->

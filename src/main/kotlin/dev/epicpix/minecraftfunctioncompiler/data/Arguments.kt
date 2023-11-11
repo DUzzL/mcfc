@@ -37,6 +37,8 @@ data class SelectorArgument(
     val entityTypes: NegatableData<List<ResourceLocation>>? = null,
     val hasTags: Boolean? = null,
     val tags: List<NegatableData<String>> = listOf(),
+    val hasTeam: Boolean? = null,
+    val team: NegatableData<String>? = null,
     val scores: Map<String, IntRangeArgument> = mapOf(),
     val gamemode: NegatableData<GameType>? = null,
     val selectPlayers: Boolean = entityTypes != null && !entityTypes.negated && entityTypes.data.size == 1 && entityTypes.data[0] == ResourceLocation("minecraft", "player"),

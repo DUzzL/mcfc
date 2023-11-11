@@ -18,6 +18,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.Score;
 import net.minecraft.world.scores.Scoreboard;
+import net.minecraft.world.scores.Team;
 
 import java.util.*;
 
@@ -40,9 +41,11 @@ public class MappedUsageDefinitions {
     public static void Entity_level() { MappedUsageDefinitions.<Entity>type().level(); }
     public static void Entity_position() { MappedUsageDefinitions.<Entity>type().position(); }
     public static void Entity_getRotationVector() { MappedUsageDefinitions.<Entity>type().getRotationVector(); }
+    public static void Entity_getTeam() { MappedUsageDefinitions.<Entity>type().getTeam(); }
     public static void ServerPlayer_setGameMode() { MappedUsageDefinitions.<ServerPlayer>type().setGameMode((GameType)null); }
     public static void ServerPlayer_gameMode() { var unused = MappedUsageDefinitions.<ServerPlayer>type().gameMode; }
     public static void ServerPlayerGameMode_getGameModeForPlayer() { MappedUsageDefinitions.<ServerPlayerGameMode>type().getGameModeForPlayer(); }
+    public static void Team_getName() { MappedUsageDefinitions.<Team>type().getName(); }
 
     public static void GameType_SURVIVAL() { var unused = GameType.SURVIVAL; }
     public static void GameType_CREATIVE() { var unused = GameType.CREATIVE; }
@@ -89,6 +92,8 @@ public class MappedUsageDefinitions {
     public static void Math_floorMod() { Math.floorMod((int)0, (int)0); }
     public static void Math_min() { Math.min((int)0, (int)0); }
     public static void Math_max() { Math.max((int)0, (int)0); }
+
+    public static void String_equals() { MappedUsageDefinitions.<String>type().equals((String)null); }
 
     static <T> T type() { return null; }
 

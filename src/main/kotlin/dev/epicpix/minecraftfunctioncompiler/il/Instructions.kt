@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.il
 
 import dev.epicpix.minecraftfunctioncompiler.data.IntRangeArgument
+import dev.epicpix.minecraftfunctioncompiler.data.NegatableData
 import dev.epicpix.minecraftfunctioncompiler.data.SwizzleArgument
 import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates
 import net.minecraft.resources.ResourceLocation
@@ -90,6 +91,8 @@ data object Instructions {
     fun checkGamemode(entity: LocationData, gamemode: GameType) = Instruction(InstructionType.CHECK_GAMEMODE, mapOf("entity" to entity.source(), "gamemode" to gamemode))
     fun checkNotGamemode(entity: LocationData, gamemode: GameType) = Instruction(InstructionType.CHECK_NOT_GAMEMODE, mapOf("entity" to entity.source(), "gamemode" to gamemode))
     fun setGamemode(entity: LocationData, gamemode: GameType) = Instruction(InstructionType.SET_GAMEMODE, mapOf("entity" to entity.source(), "gamemode" to gamemode))
+    fun checkTeam(entity: LocationData, team: NegatableData<String>) = Instruction(InstructionType.CHECK_TEAM, mapOf("entity" to entity.source(), "team" to team))
+    fun hasTeam(entity: LocationData, negated: Boolean) = Instruction(InstructionType.HAS_TEAM, mapOf("entity" to entity.source(), "negated" to negated))
 }
 
 enum class InstructionType {
@@ -132,5 +135,6 @@ enum class InstructionType {
     CHECK_GAMEMODE,
     CHECK_NOT_GAMEMODE,
     SET_GAMEMODE,
-
+    CHECK_TEAM,
+    HAS_TEAM,
 }
