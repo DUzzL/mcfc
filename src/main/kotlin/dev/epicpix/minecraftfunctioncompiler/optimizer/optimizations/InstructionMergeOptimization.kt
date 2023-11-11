@@ -1,8 +1,9 @@
 package dev.epicpix.minecraftfunctioncompiler.optimizer.optimizations
 
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction
-import dev.epicpix.minecraftfunctioncompiler.il.InstructionDataLocationInt
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionType
+import dev.epicpix.minecraftfunctioncompiler.il.Instructions
+import dev.epicpix.minecraftfunctioncompiler.il.LocationData
 import dev.epicpix.minecraftfunctioncompiler.optimizer.InstructionList
 import dev.epicpix.minecraftfunctioncompiler.optimizer.Optimization
 
@@ -19,27 +20,27 @@ object InstructionMergeOptimization : Optimization {
             val compareBase = instructions[checkIndex]
             index++
             if(compareBase.type == InstructionType.ADD_SCORE) {
-                var data = compareBase.data as InstructionDataLocationInt
+                val score = compareBase.get<LocationData>("score")
+                var value = compareBase.get<Int>("value")
                 while(index < instructions.size) {
                     val compare = instructions[index]
                     if(compareBase.type != compare.type) break
-                    val otherData = compare.data as InstructionDataLocationInt
-                    if(otherData.local != data.local) break
-                    data = data.copy(value = data.value + otherData.value)
+                    if(score != compare.get<LocationData>("score")) break
+                    value += compare.get<Int>("value")
                     index++
                 }
-                results.add(Instruction(InstructionType.ADD_SCORE, data, mutableListOf()))
+                results.add(Instructions.addScore(score, value))
             }else if(compareBase.type == InstructionType.SET_SCORE) {
-                var data = compareBase.data as InstructionDataLocationInt
+                val score = compareBase.get<LocationData>("score")
+                var value = compareBase.get<Int>("value")
                 while(index < instructions.size) {
                     val compare = instructions[index]
                     if(compareBase.type != compare.type) break
-                    val otherData = compare.data as InstructionDataLocationInt
-                    if(otherData.local != data.local) break
-                    data = otherData
+                    if(score != compare.get<LocationData>("score")) break
+                    value = compare["value"]
                     index++
                 }
-                results.add(Instruction(InstructionType.SET_SCORE, data, mutableListOf()))
+                results.add(Instructions.setScore(score, value))
             }else {
                 results.add(compareBase.copy(children = runOptimizations(compareBase.children).toMutableList()))
             }

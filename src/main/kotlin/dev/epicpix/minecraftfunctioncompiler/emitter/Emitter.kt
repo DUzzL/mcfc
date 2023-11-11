@@ -1,5 +1,8 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter
 
+import dev.epicpix.minecraftfunctioncompiler.data.IntRangeArgument
+import dev.epicpix.minecraftfunctioncompiler.data.SwizzleArgument
+import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates
 import dev.epicpix.minecraftfunctioncompiler.data.mapEntityTypeClass
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ArrayList_get
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ArrayList_size
@@ -91,12 +94,18 @@ private fun emitInstruction(
     val newLoops = loops.toMutableMap()
 
     fun run() = instruction.children.forEach { emitInstruction(it, fieldStorage, codeWriter, definedFunctions, newTransforms, newLoops) }
+    fun store(location: String, uid: String) {
+        val loc = instruction.get<LocationData>(location)
+        if(loc.local == null) throw UnsupportedOperationException("Tried to store variable in a non-defined local location: $loc, $instruction")
+        newTransforms[loc.local] = uid
+    }
+    fun load(location: String) = instruction.get<LocationData>(location).load(codeWriter, newTransforms)
+
 
     when(instruction.type) {
         InstructionType.GET_CURRENT_ENTITY -> {
-            val data = instruction.data as InstructionDataLocation
             val uniqueId = codeWriter.generateUniqueLocal("\$GetCurrentEntity")
-            newTransforms[data.local.local!!] = uniqueId
+            store("entity", uniqueId)
             val end = codeWriter.defineLocal(uniqueId, Entity::class.java)
 
             codeWriter.loadLocal("CommandSourceStack")
@@ -108,51 +117,36 @@ private fun emitInstruction(
             end()
         }
         InstructionType.IF_NOT_NULL -> {
-            val data = instruction.data as InstructionDataLocation
-            data.local.load(codeWriter, newTransforms)
+            load("local")
             codeWriter.executeIf(Opcodes.IFNONNULL) { run() }
         }
-        InstructionType.IF_NULL -> {
-            val data = instruction.data as InstructionDataLocation
-            data.local.load(codeWriter, newTransforms)
-            codeWriter.executeIf(Opcodes.IFNULL) { run() }
-        }
         InstructionType.ADD_ENTITY_TAG -> {
-            val data = instruction.data as InstructionDataLocationString
-            data.local.load(codeWriter, newTransforms)
-            codeWriter.writeString(data.value)
+            load("entity")
+            codeWriter.writeString(instruction["tag"])
             codeWriter.writeMapped(Entity_addTag)
             codeWriter.methodVisitor.visitInsn(Opcodes.POP)
         }
         InstructionType.REMOVE_ENTITY_TAG -> {
-            val data = instruction.data as InstructionDataLocationString
-            data.local.load(codeWriter, newTransforms)
-            codeWriter.writeString(data.value)
+            load("entity")
+            codeWriter.writeString(instruction["tag"])
             codeWriter.writeMapped(Entity_removeTag)
             codeWriter.methodVisitor.visitInsn(Opcodes.POP)
         }
-        InstructionType.EMPTY_CONDITION -> {
-            val data = instruction.data as InstructionDataLoop
+        InstructionType.SCOPE -> {
             val label = Label()
-            newLoops[data.loopId] = EmitControlFlow(label, label)
+            newLoops[instruction["scope"]] = EmitControlFlow(label, label)
 
             run()
 
             codeWriter.methodVisitor.visitLabel(label)
         }
-        InstructionType.BREAK_LOOP -> {
-            val data = instruction.data as InstructionDataLoop
-            codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, newLoops[data.loopId]!!.breakLabel)
-        }
-        InstructionType.CONTINUE_LOOP -> {
-            val data = instruction.data as InstructionDataLoop
-            codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, newLoops[data.loopId]!!.continueLabel)
+        InstructionType.EXIT_SCOPE -> {
+            codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, newLoops[instruction["scope"]]!!.breakLabel)
         }
         InstructionType.CHECK_ENTITY_TAG -> {
-            val data = instruction.data as InstructionDataLocationString
-            data.local.load(codeWriter, newTransforms)
+            load("entity")
             codeWriter.writeMapped(Entity_getTags)
-            codeWriter.writeString(data.value)
+            codeWriter.writeString(instruction["tag"])
             codeWriter.writeMapped(Set_contains)
 
             val label = Label()
@@ -161,10 +155,9 @@ private fun emitInstruction(
             codeWriter.methodVisitor.visitLabel(label)
         }
         InstructionType.CHECK_NOT_ENTITY_TAG -> {
-            val data = instruction.data as InstructionDataLocationString
-            data.local.load(codeWriter, newTransforms)
+            load("entity")
             codeWriter.writeMapped(Entity_getTags)
-            codeWriter.writeString(data.value)
+            codeWriter.writeString(instruction["tag"])
             codeWriter.writeMapped(Set_contains)
 
             val label = Label()
@@ -173,8 +166,7 @@ private fun emitInstruction(
             codeWriter.methodVisitor.visitLabel(label)
         }
         InstructionType.CHECK_ENTITY_TAGS -> {
-            val data = instruction.data as InstructionDataLocation
-            data.local.load(codeWriter, newTransforms)
+            load("entity")
             codeWriter.writeMapped(Entity_getTags)
             codeWriter.writeMapped(Set_size)
 
@@ -184,8 +176,7 @@ private fun emitInstruction(
             codeWriter.methodVisitor.visitLabel(label)
         }
         InstructionType.CHECK_NOT_ENTITY_TAGS -> {
-            val data = instruction.data as InstructionDataLocation
-            data.local.load(codeWriter, newTransforms)
+            load("entity")
             codeWriter.writeMapped(Entity_getTags)
             codeWriter.writeMapped(Set_size)
 
@@ -195,15 +186,14 @@ private fun emitInstruction(
             codeWriter.methodVisitor.visitLabel(label)
         }
         InstructionType.LIMITER -> {
-            val data = instruction.data as InstructionDataIntLoop
             val uniqueId = codeWriter.generateUniqueLocal("\$LimitRemaining")
-            newTransforms[data.loopId] = uniqueId
+            store("scope", uniqueId)
             val end = codeWriter.defineLocal(uniqueId, Int::class.javaPrimitiveType!!)
-            codeWriter.writeInt(data.value)
+            codeWriter.writeInt(instruction["limit"])
             codeWriter.storeLocal(uniqueId)
 
             val label = Label()
-            newLoops[data.loopId] = EmitControlFlow(label, label)
+            newLoops[instruction["scope"]] = EmitControlFlow(label, label)
 
             run()
 
@@ -211,14 +201,12 @@ private fun emitInstruction(
             codeWriter.methodVisitor.visitLabel(label)
         }
         InstructionType.CHECK_LIMIT -> {
-            val data = instruction.data as InstructionDataLoop
-            codeWriter.methodVisitor.visitIincInsn(codeWriter.getLocalIndex(newTransforms[data.loopId]!!), -1)
-            codeWriter.loadLocal(newTransforms[data.loopId]!!)
-            codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newLoops[data.loopId]!!.breakLabel)
+            val scope = instruction.get<Int>("scope")
+            codeWriter.methodVisitor.visitIincInsn(codeWriter.getLocalIndex(newTransforms[scope]!!), -1)
+            load("scope")
+            codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newLoops[scope]!!.breakLabel)
         }
         InstructionType.FOR_EACH_PLAYER -> {
-            val data = instruction.data as InstructionDataLocation
-
             val uidLocal = codeWriter.generateUniqueLocal("\$Players")
             codeWriter.loadLocal("CommandSourceStack")
             codeWriter.writeMapped(CommandSourceStack_getServer)
@@ -230,15 +218,13 @@ private fun emitInstruction(
                 val uidLocal2 = codeWriter.generateUniqueLocal("\$Entity")
                 val lend = codeWriter.defineLocal(uidLocal2, Entity::class.java)
                 codeWriter.storeLocal(uidLocal2)
-                newTransforms[data.local.local!!] = uidLocal2
+                store("entity", uidLocal2)
                 run()
                 lend()
             }
             end()
         }
         InstructionType.FOR_EACH_ENTITY -> {
-            val data = instruction.data as InstructionDataLocation
-
             val uidLocalLevels = codeWriter.generateUniqueLocal("\$Levels")
             codeWriter.loadLocal("CommandSourceStack")
             codeWriter.writeMapped(CommandSourceStack_getServer)
@@ -255,7 +241,7 @@ private fun emitInstruction(
                     val uidLocalEntity = codeWriter.generateUniqueLocal("\$Entity")
                     val lend = codeWriter.defineLocal(uidLocalEntity, Entity::class.java)
                     codeWriter.storeLocal(uidLocalEntity)
-                    newTransforms[data.local.local!!] = uidLocalEntity
+                    store("entity", uidLocalEntity)
                     run()
                     lend()
                 }
@@ -266,15 +252,13 @@ private fun emitInstruction(
             end()
         }
         InstructionType.FOR_PLAYER -> {
-            val data = instruction.data as InstructionDataLocationString
-
             codeWriter.loadLocal("CommandSourceStack")
             codeWriter.writeMapped(CommandSourceStack_getServer)
-            codeWriter.writeString(data.value)
+            codeWriter.writeString(instruction["name"])
             codeWriter.writeMapped(PlayerList_getPlayerByName)
             val uidLocal = codeWriter.generateUniqueLocal("\$Player")
             val end = codeWriter.defineLocal(uidLocal, ServerPlayer::class.java)
-            newTransforms[data.local.local!!] = uidLocal
+            store("entity", uidLocal)
             codeWriter.storeLocal(uidLocal)
 
             run()
@@ -282,8 +266,6 @@ private fun emitInstruction(
             end()
         }
         InstructionType.FOR_ENTITY -> {
-            val data = instruction.data as InstructionDataLocationUUID
-
             val uidLocalLevels = codeWriter.generateUniqueLocal("\$Levels")
             codeWriter.loadLocal("CommandSourceStack")
             codeWriter.writeMapped(CommandSourceStack_getServer)
@@ -291,11 +273,11 @@ private fun emitInstruction(
             val end = codeWriter.defineLocal(uidLocalLevels, Iterable::class.java)
             codeWriter.storeLocal(uidLocalLevels)
             codeWriter.createIterableForEachLoop(uidLocalLevels, ServerLevel::class.java, true) { controlFlow, _ ->
-                fieldStorage.loadUUID(codeWriter, data.value)
+                fieldStorage.loadUUID(codeWriter, instruction["uuid"])
                 codeWriter.writeMapped(ServerLevel_getEntity)
                 val uidLocal = codeWriter.generateUniqueLocal("\$Entity")
                 val end2 = codeWriter.defineLocal(uidLocal, Entity::class.java)
-                newTransforms[data.local.local!!] = uidLocal
+                store("entity", uidLocal)
                 codeWriter.storeLocal(uidLocal)
                 codeWriter.loadLocal(uidLocal)
                 codeWriter.executeIf(Opcodes.IFNONNULL) {
@@ -307,8 +289,6 @@ private fun emitInstruction(
             end()
         }
         InstructionType.FOR_SCORE_HOLDERS -> {
-            val data = instruction.data as InstructionDataLocationBoolean
-
             codeWriter.newObject(ArrayList::class.java, Collection::class.java) {
                 fieldStorage.loadScoreboard(codeWriter)
                 codeWriter.writeMapped(Scoreboard_playerScores)
@@ -318,13 +298,13 @@ private fun emitInstruction(
             val uidLocal = codeWriter.generateUniqueLocal("\$Array")
             val end = codeWriter.defineLocal(uidLocal, ArrayList::class.java)
             codeWriter.storeLocal(uidLocal)
-            if(!data.value) {
+            if(!instruction.get<Boolean>("single")) {
                 codeWriter.createListForEachLoop(uidLocal, String::class.java) { _, getter ->
                     val uidLocalName = codeWriter.generateUniqueLocal("\$Name")
                     val end2 = codeWriter.defineLocal(uidLocalName, String::class.java)
                     getter()
                     codeWriter.storeLocal(uidLocalName)
-                    newTransforms[data.local.local!!] = uidLocalName
+                    store("local", uidLocalName)
                     run()
                     end2()
                 }
@@ -339,7 +319,7 @@ private fun emitInstruction(
                     codeWriter.writeMapped(ArrayList_get)
                     codeWriter.castType(String::class.java)
                     codeWriter.storeLocal(uidLocalName)
-                    newTransforms[data.local.local!!] = uidLocalName
+                    store("local", uidLocalName)
                     run()
                     end2()
                 }
@@ -350,209 +330,170 @@ private fun emitInstruction(
 
         }
         InstructionType.GET_SCOREBOARD_NAME -> {
-            val data = instruction.data as InstructionDataLocationLocation
-
-            data.local.load(codeWriter, newTransforms)
+            load("entity")
             codeWriter.writeMapped(Entity_getScoreboardName)
 
             val uidLocal = codeWriter.generateUniqueLocal("\$ScoreboardName")
             val end = codeWriter.defineLocal(uidLocal, String::class.java)
             codeWriter.storeLocal(uidLocal)
-            newTransforms[data.local2.local!!] = uidLocal
+            store("name", uidLocal)
             run()
             end()
         }
         InstructionType.SCORE_DATA -> {
-            val data = instruction.data as InstructionDataLocationLocationLocation
-
             fieldStorage.loadScoreboard(codeWriter)
-            data.local2.load(codeWriter, newTransforms)
-            data.local.load(codeWriter, newTransforms)
+            load("name")
+            load("objective")
             codeWriter.writeMapped(MappedData.Scoreboard_getOrCreatePlayerScore)
 
             val uidLocal = codeWriter.generateUniqueLocal("\$ScoreData")
             val end = codeWriter.defineLocal(uidLocal, Score::class.java)
             codeWriter.storeLocal(uidLocal)
-            newTransforms[data.local3.local!!] = uidLocal
+            store("score", uidLocal)
             run()
             end()
         }
         InstructionType.SET_SCORE -> {
-            val data = instruction.data as InstructionDataLocationInt
-
-            data.local.load(codeWriter, newTransforms)
-            codeWriter.writeInt(data.value)
+            load("score")
+            codeWriter.writeInt(instruction["value"])
             codeWriter.writeMapped(Score_setScore)
         }
         InstructionType.ADD_SCORE -> {
-            val data = instruction.data as InstructionDataLocationInt
-
-            data.local.load(codeWriter, newTransforms)
+            load("score")
             codeWriter.methodVisitor.visitInsn(Opcodes.DUP)
             codeWriter.writeMapped(Score_getScore)
-            if(data.value >= 0) {
-                codeWriter.writeInt(data.value)
+            val value = instruction.get<Int>("value")
+            if(value >= 0) {
+                codeWriter.writeInt(value)
                 codeWriter.methodVisitor.visitInsn(Opcodes.IADD)
             }else {
-                codeWriter.writeInt(-data.value)
+                codeWriter.writeInt(-value)
                 codeWriter.methodVisitor.visitInsn(Opcodes.ISUB)
             }
             codeWriter.writeMapped(Score_setScore)
         }
         InstructionType.RUN_SCORE_OPERATION -> {
-            val data = instruction.data as InstructionDataRunScoreOperation
-
-            when(data.operation) {
+            val operation = instruction.get<ScoreboardOperation>("operation")
+            when(operation) {
                 ScoreboardOperation.SET -> {
-                    data.target.load(codeWriter, newTransforms)
-                    if(data.source == data.target) {
-                        codeWriter.methodVisitor.visitInsn(Opcodes.POP)
-                    }else {
-                        data.source.load(codeWriter, newTransforms)
-                        codeWriter.writeMapped(Score_getScore)
-                        codeWriter.writeMapped(Score_setScore)
-                    }
+                    load("target")
+                    load("source")
+                    codeWriter.writeMapped(Score_getScore)
+                    codeWriter.writeMapped(Score_setScore)
                 }
                 ScoreboardOperation.PLUS, ScoreboardOperation.MINUS, ScoreboardOperation.MULTIPLY -> {
-                    data.target.load(codeWriter, newTransforms)
+                    load("target")
                     codeWriter.methodVisitor.visitInsn(Opcodes.DUP)
-                    data.source.load(codeWriter, newTransforms)
+                    load("source")
                     codeWriter.writeMapped(Score_getScore)
                     codeWriter.methodVisitor.visitInsn(Opcodes.SWAP)
                     codeWriter.writeMapped(Score_getScore)
-                    if(data.operation == ScoreboardOperation.PLUS) codeWriter.methodVisitor.visitInsn(Opcodes.IADD)
-                    else if(data.operation == ScoreboardOperation.MINUS) {
+                    if(operation == ScoreboardOperation.PLUS) codeWriter.methodVisitor.visitInsn(Opcodes.IADD)
+                    else if(operation == ScoreboardOperation.MINUS) {
                         codeWriter.methodVisitor.visitInsn(Opcodes.SWAP)
                         codeWriter.methodVisitor.visitInsn(Opcodes.ISUB)
                     } else codeWriter.methodVisitor.visitInsn(Opcodes.IMUL)
                     codeWriter.writeMapped(Score_setScore)
                 }
                 ScoreboardOperation.DIVIDE, ScoreboardOperation.MODULO -> {
-                    data.target.load(codeWriter, newTransforms)
+                    load("target")
                     codeWriter.writeMapped(Score_getScore)
                     val uniqBeh = codeWriter.generateUniqueLocal("\$Score")
                     val endBeh = codeWriter.defineLocal(uniqBeh, Int::class.javaPrimitiveType!!)
                     codeWriter.storeLocal(uniqBeh)
 
-                    data.source.load(codeWriter, newTransforms)
+                    load("source")
                     val uniq = codeWriter.generateUniqueLocal("\$Score")
                     val end = codeWriter.defineLocal(uniq, Score::class.java)
                     codeWriter.storeLocal(uniq)
                     codeWriter.loadLocal(uniq)
                     codeWriter.writeMapped(Score_getScore)
-                    codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newLoops[data.exceptionLoopId]!!.breakLabel)
+                    codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newLoops[instruction["exceptionScope"]]!!.breakLabel)
                     codeWriter.loadLocal(uniq)
                     codeWriter.loadLocal(uniqBeh)
                     codeWriter.loadLocal(uniq)
                     codeWriter.writeMapped(Score_getScore)
-                    if(data.operation == ScoreboardOperation.DIVIDE) codeWriter.writeMapped(Math_floorDiv)
+                    if(operation == ScoreboardOperation.DIVIDE) codeWriter.writeMapped(Math_floorDiv)
                     else codeWriter.writeMapped(Math_floorMod)
                     codeWriter.writeMapped(Score_setScore)
                     end()
                     endBeh()
                 }
                 ScoreboardOperation.MIN, ScoreboardOperation.MAX -> {
-                    data.target.load(codeWriter, newTransforms)
-                    if(data.source == data.target) {
-                        codeWriter.methodVisitor.visitInsn(Opcodes.POP)
-                    }else {
-                        codeWriter.methodVisitor.visitInsn(Opcodes.DUP)
-                        data.source.load(codeWriter, newTransforms)
-                        codeWriter.writeMapped(Score_getScore)
-                        codeWriter.methodVisitor.visitInsn(Opcodes.SWAP)
-                        codeWriter.writeMapped(Score_getScore)
-                        if(data.operation == ScoreboardOperation.MIN) codeWriter.writeMapped(Math_min)
-                        else codeWriter.writeMapped(Math_max)
-                        codeWriter.writeMapped(Score_setScore)
-                    }
+                    load("target")
+                    codeWriter.methodVisitor.visitInsn(Opcodes.DUP)
+                    load("source")
+                    codeWriter.writeMapped(Score_getScore)
+                    codeWriter.methodVisitor.visitInsn(Opcodes.SWAP)
+                    codeWriter.writeMapped(Score_getScore)
+                    if(operation == ScoreboardOperation.MIN) codeWriter.writeMapped(Math_min)
+                    else codeWriter.writeMapped(Math_max)
+                    codeWriter.writeMapped(Score_setScore)
                 }
                 ScoreboardOperation.SWAP -> {
-                    data.target.load(codeWriter, newTransforms)
-                    if(data.source == data.target) {
-                        codeWriter.methodVisitor.visitInsn(Opcodes.POP)
-                    }else {
-                        val targetId = codeWriter.generateUniqueLocal("\$Score")
-                        val targetEnd = codeWriter.defineLocal(targetId, Score::class.java)
-                        codeWriter.storeLocal(targetId)
+                    load("target")
+                    val targetId = codeWriter.generateUniqueLocal("\$Score")
+                    val targetEnd = codeWriter.defineLocal(targetId, Score::class.java)
+                    codeWriter.storeLocal(targetId)
 
-                        data.source.load(codeWriter, newTransforms)
-                        val sourceId = codeWriter.generateUniqueLocal("\$Score")
-                        val sourceEnd = codeWriter.defineLocal(sourceId, Score::class.java)
-                        codeWriter.storeLocal(sourceId)
+                    load("source")
+                    val sourceId = codeWriter.generateUniqueLocal("\$Score")
+                    val sourceEnd = codeWriter.defineLocal(sourceId, Score::class.java)
+                    codeWriter.storeLocal(sourceId)
 
-                        codeWriter.loadLocal(sourceId)
-                        codeWriter.loadLocal(targetId)
-                        codeWriter.writeMapped(Score_getScore)
-                        codeWriter.loadLocal(targetId)
-                        codeWriter.loadLocal(sourceId)
-                        codeWriter.writeMapped(Score_getScore)
-                        codeWriter.writeMapped(Score_setScore)
-                        codeWriter.writeMapped(Score_setScore)
+                    codeWriter.loadLocal(sourceId)
+                    codeWriter.loadLocal(targetId)
+                    codeWriter.writeMapped(Score_getScore)
+                    codeWriter.loadLocal(targetId)
+                    codeWriter.loadLocal(sourceId)
+                    codeWriter.writeMapped(Score_getScore)
+                    codeWriter.writeMapped(Score_setScore)
+                    codeWriter.writeMapped(Score_setScore)
 
-                        sourceEnd()
-                        targetEnd()
-                    }
+                    sourceEnd()
+                    targetEnd()
                 }
             }
         }
         InstructionType.GET_OBJECTIVE -> {
-            val data = instruction.data as InstructionDataLocationString
-
             fieldStorage.loadScoreboard(codeWriter)
-            codeWriter.writeString(data.value)
+            codeWriter.writeString(instruction["name"])
             codeWriter.writeMapped(Scoreboard_getObjective)
 
             val uidLocal = codeWriter.generateUniqueLocal("\$Objective")
             val end = codeWriter.defineLocal(uidLocal, Objective::class.java)
             codeWriter.storeLocal(uidLocal)
-            newTransforms[data.local.local!!] = uidLocal
+            store("objective", uidLocal)
             run()
             end()
         }
         InstructionType.CALL_FUNCTIONS -> {
-            val data = instruction.data as InstructionDataFunctionCall
-
-            for(func in data.functions) {
+            for(func in instruction.get<List<ResourceLocation>>("functions")) {
+                if(!definedFunctions.containsKey(func)) {
+                    fieldStorage.loadServerFunctionManager(codeWriter)
+                    fieldStorage.loadFunction(codeWriter, func)
+                }
+                codeWriter.loadLocal("CommandSourceStack")
+                if(instruction.get<LocationData?>("entity") != null) {
+                    load("entity")
+                    codeWriter.writeMapped(CommandSourceStack_withEntity)
+                }
+                if(instruction.get<LocationData?>("world") != null) {
+                    load("world")
+                    codeWriter.writeMapped(CommandSourceStack_withLevel)
+                }
+                if(instruction.get<LocationData?>("position") != null) {
+                    load("position")
+                    codeWriter.writeMapped(CommandSourceStack_withPosition)
+                }
+                if(instruction.get<LocationData?>("rotation") != null) {
+                    load("rotation")
+                    codeWriter.writeMapped(CommandSourceStack_withRotation)
+                }
                 if(definedFunctions.containsKey(func)) {
-                    codeWriter.loadLocal("CommandSourceStack")
-                    if(data.entity != null) {
-                        data.entity.load(codeWriter, newTransforms)
-                        codeWriter.writeMapped(CommandSourceStack_withEntity)
-                    }
-                    if(data.world != null) {
-                        data.world.load(codeWriter, newTransforms)
-                        codeWriter.writeMapped(CommandSourceStack_withLevel)
-                    }
-                    if(data.position != null) {
-                        data.position.load(codeWriter, newTransforms)
-                        codeWriter.writeMapped(CommandSourceStack_withPosition)
-                    }
-                    if(data.rotation != null) {
-                        data.rotation.load(codeWriter, newTransforms)
-                        codeWriter.writeMapped(CommandSourceStack_withRotation)
-                    }
                     codeWriter.methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, "function/${func.namespace}/${func.path}", "run", "(${CommandSourceStack::class.java.descriptorString()})I", false)
                     codeWriter.methodVisitor.visitInsn(Opcodes.POP)
                 }else {
-                    fieldStorage.loadServerFunctionManager(codeWriter)
-                    fieldStorage.loadFunction(codeWriter, func)
-                    codeWriter.loadLocal("CommandSourceStack")
-                    if(data.entity != null) {
-                        data.entity.load(codeWriter, newTransforms)
-                        codeWriter.writeMapped(CommandSourceStack_withEntity)
-                    }
-                    if(data.world != null) {
-                        data.world.load(codeWriter, newTransforms)
-                        codeWriter.writeMapped(CommandSourceStack_withLevel)
-                    }
-                    if(data.position != null) {
-                        data.position.load(codeWriter, newTransforms)
-                        codeWriter.writeMapped(CommandSourceStack_withPosition)
-                    }
-                    if(data.rotation != null) {
-                        data.rotation.load(codeWriter, newTransforms)
-                        codeWriter.writeMapped(CommandSourceStack_withRotation)
-                    }
                     codeWriter.writeNull()
                     codeWriter.writeNull()
                     codeWriter.writeMapped(ServerFunctionManager_execute)
@@ -561,47 +502,45 @@ private fun emitInstruction(
             }
         }
         InstructionType.KILL_ENTITY -> {
-            val data = instruction.data as InstructionDataLocation
-            data.local.load(codeWriter, newTransforms)
+            load("entity")
             codeWriter.writeMapped(Entity_kill)
         }
         InstructionType.RESET_SCORE -> {
-            val data = instruction.data as InstructionDataLocationLocation
-
             fieldStorage.loadScoreboard(codeWriter)
-            data.local2.load(codeWriter, newTransforms)
-            data.local.load(codeWriter, newTransforms)
+            load("name")
+            load("objective")
             codeWriter.writeMapped(Scoreboard_resetPlayerScore)
         }
         InstructionType.CHECK_SCORE_RANGE -> {
-            val data = instruction.data as InstructionDataCheckScoreRange
-            data.score.load(codeWriter, newTransforms)
+            load("score")
             codeWriter.writeMapped(Score_getScore)
-            if(data.range.minimum != null && data.range.maximum == null) {
-                codeWriter.writeInt(data.range.minimum)
-                codeWriter.executeIf(if(!data.negate) Opcodes.IF_ICMPGE else Opcodes.IF_ICMPLT) {
+            val range = instruction.get<IntRangeArgument>("range")
+            val negate = instruction.get<Boolean>("negate")
+            if(range.minimum != null && range.maximum == null) {
+                codeWriter.writeInt(range.minimum)
+                codeWriter.executeIf(if(!negate) Opcodes.IF_ICMPGE else Opcodes.IF_ICMPLT) {
                     run()
                 }
-            }else if(data.range.minimum == null && data.range.maximum != null) {
-                codeWriter.writeInt(data.range.maximum)
-                codeWriter.executeIf(if(!data.negate) Opcodes.IF_ICMPLE else Opcodes.IF_ICMPGT) {
+            }else if(range.minimum == null && range.maximum != null) {
+                codeWriter.writeInt(range.maximum)
+                codeWriter.executeIf(if(!negate) Opcodes.IF_ICMPLE else Opcodes.IF_ICMPGT) {
                     run()
                 }
-            }else if(data.range.minimum != null && data.range.minimum == data.range.maximum) {
-                codeWriter.writeInt(data.range.minimum)
-                codeWriter.executeIf(if(!data.negate) Opcodes.IF_ICMPEQ else Opcodes.IF_ICMPNE) {
+            }else if(range.minimum != null && range.minimum == range.maximum) {
+                codeWriter.writeInt(range.minimum)
+                codeWriter.executeIf(if(!negate) Opcodes.IF_ICMPEQ else Opcodes.IF_ICMPNE) {
                     run()
                 }
-            }else if(data.range.minimum != null && data.range.maximum != null) {
+            }else if(range.minimum != null && range.maximum != null) {
                 val uid = codeWriter.generateUniqueLocal("\$Score")
                 val end = codeWriter.defineLocal(uid, Int::class.javaPrimitiveType!!)
                 codeWriter.storeLocal(uid)
-                if(!data.negate) {
+                if(!negate) {
                     codeWriter.loadLocal(uid)
-                    codeWriter.writeInt(data.range.minimum)
+                    codeWriter.writeInt(range.minimum)
                     codeWriter.executeIf(Opcodes.IF_ICMPGE) {
                         codeWriter.loadLocal(uid)
-                        codeWriter.writeInt(data.range.maximum)
+                        codeWriter.writeInt(range.maximum)
                         codeWriter.executeIf(Opcodes.IF_ICMPLE) {
                             run()
                         }
@@ -609,10 +548,10 @@ private fun emitInstruction(
                 }else {
                     val skip = Label()
                     codeWriter.loadLocal(uid)
-                    codeWriter.writeInt(data.range.minimum)
+                    codeWriter.writeInt(range.minimum)
                     codeWriter.executeIf(Opcodes.IF_ICMPGE) {
                         codeWriter.loadLocal(uid)
-                        codeWriter.writeInt(data.range.maximum)
+                        codeWriter.writeInt(range.maximum)
                         codeWriter.executeIf(Opcodes.IF_ICMPLE) {
                             codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, skip)
                         }
@@ -624,14 +563,13 @@ private fun emitInstruction(
             }
         }
         InstructionType.CHECK_SCORE_COMPARE -> {
-            val data = instruction.data as InstructionDataCheckScoreCompare
-            data.source.load(codeWriter, newTransforms)
+            load("source")
             codeWriter.writeMapped(Score_getScore)
 
-            data.target.load(codeWriter, newTransforms)
+            load("target")
             codeWriter.writeMapped(Score_getScore)
 
-            when(data.compareOperation) {
+            when(instruction.get<ScoreboardCompareOperation>("compareOperation")) {
                 ScoreboardCompareOperation.LT -> { codeWriter.executeIf(Opcodes.IF_ICMPLT) { run() } }
                 ScoreboardCompareOperation.LE -> { codeWriter.executeIf(Opcodes.IF_ICMPLE) { run() } }
                 ScoreboardCompareOperation.EQ -> { codeWriter.executeIf(Opcodes.IF_ICMPEQ) { run() } }
@@ -642,53 +580,45 @@ private fun emitInstruction(
 
         }
         InstructionType.GET_ENTITY_WORLD -> {
-            val data = instruction.data as InstructionDataLocationLocation
-
-            data.local.load(codeWriter, newTransforms)
+            load("entity")
             codeWriter.writeMapped(Entity_level)
 
             val uidLocal = codeWriter.generateUniqueLocal("\$World")
             val end = codeWriter.defineLocal(uidLocal, ServerLevel::class.java)
             codeWriter.castType(ServerLevel::class.java)
             codeWriter.storeLocal(uidLocal)
-            newTransforms[data.local2.local!!] = uidLocal
+            store("world", uidLocal)
             run()
             end()
         }
         InstructionType.GET_ENTITY_POSITION -> {
-            val data = instruction.data as InstructionDataLocationLocation
-
-            data.local.load(codeWriter, newTransforms)
+            load("entity")
             codeWriter.writeMapped(Entity_position)
 
             val uidLocal = codeWriter.generateUniqueLocal("\$Position")
             val end = codeWriter.defineLocal(uidLocal, Vec3::class.java)
             codeWriter.storeLocal(uidLocal)
-            newTransforms[data.local2.local!!] = uidLocal
+            store("position", uidLocal)
             run()
             end()
         }
         InstructionType.GET_ENTITY_ROTATION -> {
-            val data = instruction.data as InstructionDataLocationLocation
-
-            data.local.load(codeWriter, newTransforms)
+            load("entity")
             codeWriter.writeMapped(Entity_getRotationVector)
 
             val uidLocal = codeWriter.generateUniqueLocal("\$Rotation")
             val end = codeWriter.defineLocal(uidLocal, Vec2::class.java)
             codeWriter.storeLocal(uidLocal)
-            newTransforms[data.local2.local!!] = uidLocal
+            store("rotation", uidLocal)
             run()
             end()
         }
         InstructionType.APPLY_POSITION_WORLD -> {
-            val data = instruction.data as InstructionDataLocationLocationWorldCoordinates
-
             val uidLocal = codeWriter.generateUniqueLocal("\$Position")
             codeWriter.newObject(Vec3::class.java, Double::class.java, Double::class.java, Double::class.java) {
-                val pos = data.coords
+                val pos = instruction.get<WorldCoordinates>("position")
                 if(pos.isXRelative) {
-                    data.local.load(codeWriter, newTransforms)
+                    load("from")
                     codeWriter.writeMapped(Vec3_x)
                     if(pos.x != 0.0) {
                         codeWriter.writeDouble(pos.x)
@@ -698,7 +628,7 @@ private fun emitInstruction(
                     codeWriter.writeDouble(pos.x)
                 }
                 if(pos.isYRelative) {
-                    data.local.load(codeWriter, newTransforms)
+                    load("from")
                     codeWriter.writeMapped(Vec3_y)
                     if(pos.y != 0.0) {
                         codeWriter.writeDouble(pos.y)
@@ -708,7 +638,7 @@ private fun emitInstruction(
                     codeWriter.writeDouble(pos.y)
                 }
                 if(pos.isZRelative) {
-                    data.local.load(codeWriter, newTransforms)
+                    load("from")
                     codeWriter.writeMapped(Vec3_z)
                     if(pos.z != 0.0) {
                         codeWriter.writeDouble(pos.z)
@@ -720,15 +650,14 @@ private fun emitInstruction(
             }
             val end = codeWriter.defineLocal(uidLocal, Vec3::class.java)
             codeWriter.storeLocal(uidLocal)
-            newTransforms[data.local2.local!!] = uidLocal
+            store("to", uidLocal)
             run()
             end()
         }
         InstructionType.CHECK_ENTITY_TYPES -> {
-            val data = instruction.data as InstructionDataLocationResources
             val label = Label()
-            for(res in data.resources) {
-                data.local.load(codeWriter, newTransforms)
+            for(res in instruction.get<List<ResourceLocation>>("types")) {
+                load("entity")
                 codeWriter.methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, mapEntityTypeClass(res)?.descriptorString()?.run { substring(1, length - 1) })
                 codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, label)
             }
@@ -740,10 +669,9 @@ private fun emitInstruction(
 
         }
         InstructionType.CHECK_NOT_ENTITY_TYPES -> {
-            val data = instruction.data as InstructionDataLocationResources
             val label = Label()
-            for(res in data.resources) {
-                data.local.load(codeWriter, newTransforms)
+            for(res in instruction.get<List<ResourceLocation>>("types")) {
+                load("entity")
                 codeWriter.methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, mapEntityTypeClass(res)?.descriptorString()?.run { substring(1, length - 1) })
                 codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, label)
             }
@@ -751,34 +679,32 @@ private fun emitInstruction(
             codeWriter.methodVisitor.visitLabel(label)
         }
         InstructionType.ALIGN_POSITION -> {
-            val data = instruction.data as InstructionDataLocationAlignPosition
-
             codeWriter.newObject(Vec3::class.java, Double::class.java, Double::class.java, Double::class.java) {
-                data.position.load(codeWriter, newTransforms)
+                val swizzle = instruction.get<SwizzleArgument>("swizzle")
+                load("position")
                 codeWriter.writeMapped(Vec3_x)
-                if(data.swizzle.x) codeWriter.writeMapped(Math_floor)
-                data.position.load(codeWriter, newTransforms)
+                if(swizzle.x) codeWriter.writeMapped(Math_floor)
+                load("position")
                 codeWriter.writeMapped(Vec3_y)
-                if(data.swizzle.y) codeWriter.writeMapped(Math_floor)
-                data.position.load(codeWriter, newTransforms)
+                if(swizzle.y) codeWriter.writeMapped(Math_floor)
+                load("position")
                 codeWriter.writeMapped(Vec3_z)
-                if(data.swizzle.z) codeWriter.writeMapped(Math_floor)
+                if(swizzle.z) codeWriter.writeMapped(Math_floor)
             }
 
             val uidLocal = codeWriter.generateUniqueLocal("\$Position")
             val end = codeWriter.defineLocal(uidLocal, Vec3::class.java)
             codeWriter.storeLocal(uidLocal)
-            newTransforms[data.result.local!!] = uidLocal
+            store("result", uidLocal)
             run()
             end()
         }
         InstructionType.CHECK_GAMEMODE -> {
-            val data = instruction.data as InstructionDataLocationGamemode
-            data.local.load(codeWriter, newTransforms)
+            load("entity")
             codeWriter.castType(ServerPlayer::class.java)
             codeWriter.writeMapped(ServerPlayer_gameMode)
             codeWriter.writeMapped(ServerPlayerGameMode_getGameModeForPlayer)
-            when(data.gamemode) {
+            when(instruction.get<GameType>("gamemode")) {
                 GameType.SURVIVAL -> codeWriter.writeMapped(GameType_SURVIVAL)
                 GameType.CREATIVE -> codeWriter.writeMapped(GameType_CREATIVE)
                 GameType.ADVENTURE -> codeWriter.writeMapped(GameType_ADVENTURE)
@@ -790,12 +716,11 @@ private fun emitInstruction(
             codeWriter.methodVisitor.visitLabel(label)
         }
         InstructionType.CHECK_NOT_GAMEMODE -> {
-            val data = instruction.data as InstructionDataLocationGamemode
-            data.local.load(codeWriter, newTransforms)
+            load("entity")
             codeWriter.castType(ServerPlayer::class.java)
             codeWriter.writeMapped(ServerPlayer_gameMode)
             codeWriter.writeMapped(ServerPlayerGameMode_getGameModeForPlayer)
-            when(data.gamemode) {
+            when(instruction.get<GameType>("gamemode")) {
                 GameType.SURVIVAL -> codeWriter.writeMapped(GameType_SURVIVAL)
                 GameType.CREATIVE -> codeWriter.writeMapped(GameType_CREATIVE)
                 GameType.ADVENTURE -> codeWriter.writeMapped(GameType_ADVENTURE)
@@ -807,10 +732,9 @@ private fun emitInstruction(
             codeWriter.methodVisitor.visitLabel(label)
         }
         InstructionType.SET_GAMEMODE -> {
-            val data = instruction.data as InstructionDataLocationGamemode
-            data.local.load(codeWriter, newTransforms)
+            load("entity")
             codeWriter.castType(ServerPlayer::class.java)
-            when(data.gamemode) {
+            when(instruction.get<GameType>("gamemode")) {
                 GameType.SURVIVAL -> codeWriter.writeMapped(GameType_SURVIVAL)
                 GameType.CREATIVE -> codeWriter.writeMapped(GameType_CREATIVE)
                 GameType.ADVENTURE -> codeWriter.writeMapped(GameType_ADVENTURE)

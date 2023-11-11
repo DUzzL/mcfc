@@ -1,6 +1,9 @@
 package dev.epicpix.minecraftfunctioncompiler.optimizer.optimizations
 
-import dev.epicpix.minecraftfunctioncompiler.il.*
+import dev.epicpix.minecraftfunctioncompiler.il.Instruction
+import dev.epicpix.minecraftfunctioncompiler.il.InstructionType
+import dev.epicpix.minecraftfunctioncompiler.il.LocationData
+import dev.epicpix.minecraftfunctioncompiler.il.remapInstructionData
 import dev.epicpix.minecraftfunctioncompiler.optimizer.InstructionList
 import dev.epicpix.minecraftfunctioncompiler.optimizer.Optimization
 
@@ -23,98 +26,32 @@ object CommonSubexpressionEliminationOptimization : Optimization {
 
     private fun runOptimizations(instruction: Instruction, cse: CommonSubexpressionEliminationData): InstructionList {
         var newCse = cse
-        val data = when(instruction.data) {
-            is InstructionDataLocation -> {
-                val remapped = remapLocation(instruction.data.local, newCse)
-                InstructionDataLocation(remapped)
-            }
-            is InstructionDataLocationString -> {
-                val remapped = remapLocation(instruction.data.local, newCse)
-                InstructionDataLocationString(remapped, instruction.data.value)
-            }
-            is InstructionDataLocationBoolean -> {
-                val remapped = remapLocation(instruction.data.local, newCse)
-                InstructionDataLocationBoolean(remapped, instruction.data.value)
-            }
-            is InstructionDataLocationLocation -> {
-                val remapped1 = remapLocation(instruction.data.local, newCse)
-                val remapped2 = remapLocation(instruction.data.local2, newCse)
-                InstructionDataLocationLocation(remapped1, remapped2)
-            }
-            is InstructionDataLocationInt -> {
-                val remapped1 = remapLocation(instruction.data.local, newCse)
-                InstructionDataLocationInt(remapped1, instruction.data.value)
-            }
-            is InstructionDataLocationResources -> {
-                val remapped1 = remapLocation(instruction.data.local, newCse)
-                InstructionDataLocationResources(remapped1, instruction.data.resources)
-            }
-            is InstructionDataLocationLocationLocation -> {
-                val remapped1 = remapLocation(instruction.data.local, newCse)
-                val remapped2 = remapLocation(instruction.data.local2, newCse)
-                val remapped3 = remapLocation(instruction.data.local3, newCse)
-                InstructionDataLocationLocationLocation(remapped1, remapped2, remapped3)
-            }
-            is InstructionDataLocationGamemode -> {
-                val remapped1 = remapLocation(instruction.data.local, newCse)
-                InstructionDataLocationGamemode(remapped1, instruction.data.gamemode)
-            }
-            is InstructionDataRunScoreOperation -> {
-                val target = remapLocation(instruction.data.target, newCse)
-                val source = remapLocation(instruction.data.source, newCse)
-                InstructionDataRunScoreOperation(target, source, instruction.data.operation, instruction.data.exceptionLoopId)
-            }
-            is InstructionDataFunctionCall -> {
-                val entity = remapLocation(instruction.data.entity, newCse)
-                val world = remapLocation(instruction.data.world, newCse)
-                val position = remapLocation(instruction.data.position, newCse)
-                val rotation = remapLocation(instruction.data.rotation, newCse)
-                InstructionDataFunctionCall(instruction.data.functions, entity, world, position, rotation)
-            }
-            is InstructionDataCheckScoreRange -> {
-                val objective = remapLocation(instruction.data.score, newCse)
-                InstructionDataCheckScoreRange(objective, instruction.data.range, instruction.data.negate)
-            }
-            is InstructionDataCheckScoreCompare -> {
-                val target = remapLocation(instruction.data.target, newCse)
-                val source = remapLocation(instruction.data.source, newCse)
-                InstructionDataCheckScoreCompare(target, source, instruction.data.compareOperation)
-            }
-            is InstructionDataLocationLocationWorldCoordinates -> {
-                val remapped1 = remapLocation(instruction.data.local, newCse)
-                val remapped2 = remapLocation(instruction.data.local2, newCse)
-                InstructionDataLocationLocationWorldCoordinates(remapped1, remapped2, instruction.data.coords)
-            }
-            is InstructionDataLocationAlignPosition -> {
-                val remapped1 = remapLocation(instruction.data.position, newCse)
-                val remapped2 = remapLocation(instruction.data.result, newCse)
-                InstructionDataLocationAlignPosition(remapped1, remapped2, instruction.data.swizzle)
-            }
-            else -> instruction.data
-        }
+        val data = remapInstructionData(instruction.data, cse.mapping)
 
         when(instruction.type) {
             InstructionType.GET_OBJECTIVE -> {
-                data as InstructionDataLocationString
-                if(newCse.objectives[data.value] == null) {
+                val name = instruction.get<String>("name")
+                val objective = instruction.get<LocationData>("objective")
+                if(newCse.objectives[name] == null) {
                     newCse = newCse.copy(
-                        objectives = newCse.objectives.toMutableMap().apply { set(data.value, data.local.local!!) }
+                        objectives = newCse.objectives.toMutableMap().apply { set(name, objective.local!!) }
                     )
                 }else {
                     return runOptimizations(instruction.children, newCse.copy(
-                        mapping = newCse.mapping.toMutableMap().apply { set(data.local.local!!, newCse.objectives[data.value]!!) }
+                        mapping = newCse.mapping.toMutableMap().apply { set(objective.local!!, newCse.objectives[name]!!) }
                     ))
                 }
             }
             InstructionType.GET_SCOREBOARD_NAME -> {
-                data as InstructionDataLocationLocation
-                if(newCse.scoreboardNames[data.local.local!!] == null) {
+                val entity = instruction.get<LocationData>("entity")
+                val name = instruction.get<LocationData>("name")
+                if(newCse.scoreboardNames[entity.local!!] == null) {
                     newCse = newCse.copy(
-                        scoreboardNames = newCse.scoreboardNames.toMutableMap().apply { set(data.local.local, data.local2.local!!) }
+                        scoreboardNames = newCse.scoreboardNames.toMutableMap().apply { set(entity.local, name.local!!) }
                     )
                 }else {
                     return runOptimizations(instruction.children, newCse.copy(
-                        mapping = newCse.mapping.toMutableMap().apply { set(data.local2.local!!, newCse.scoreboardNames[data.local.local]!!) }
+                        mapping = newCse.mapping.toMutableMap().apply { set(name.local!!, newCse.scoreboardNames[entity.local]!!) }
                     ))
                 }
             }
@@ -124,21 +61,4 @@ object CommonSubexpressionEliminationOptimization : Optimization {
         return listOf(Instruction(instruction.type, data, runOptimizations(instruction.children, newCse).toMutableList()))
     }
 
-}
-
-private fun remapLocation(location: LocationData, cse: CommonSubexpressionEliminationData): LocationData {
-    if(location.local != null) {
-        val remappedLocal = cse.mapping[location.local] ?: location.local
-        return LocationData(local = remappedLocal)
-    }
-    return location
-}
-
-@JvmName("remapLocationNullable")
-private fun remapLocation(location: LocationData?, cse: CommonSubexpressionEliminationData): LocationData? {
-    if(location?.local != null) {
-        val remappedLocal = cse.mapping[location.local] ?: location.local
-        return LocationData(local = remappedLocal)
-    }
-    return location
 }

@@ -2,6 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.data
 
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.ResourceLocation
+import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.EntityType
 import java.lang.reflect.Modifier
 import java.lang.reflect.ParameterizedType
@@ -19,4 +20,5 @@ fun updateRegistryMaps() {
             entityTypeMappings[BuiltInRegistries.ENTITY_TYPE.getKey(value)] = type
         }
     }
+    entityTypeMappings[ResourceLocation("minecraft", "player")] = ServerPlayer::class.java
 }

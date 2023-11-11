@@ -74,7 +74,7 @@ data class CompilationContext(
 
     fun forEmptyCondition(exec: CompilationContext.(loopId: Int) -> Unit) {
         val loopId = highestLocal
-        val instruction = Instructions.emptyCondition(loopId)
+        val instruction = Instructions.scope(loopId)
         addInstruction(instruction)
         exec(copy(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), loopId)
     }
@@ -84,14 +84,6 @@ data class CompilationContext(
         val instruction = Instructions.ifNotNull(local)
         addInstruction(Instructions.getObjective(local, name).with(instruction))
         exec(copy(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
-    }
-
-    fun getObjectiveOrJump(name: String, jump: Int, exec: CompilationContext.(local: LocationData) -> Unit) {
-        val local = LocationData(local = highestLocal)
-        val obj = Instructions.getObjective(local, name)
-        obj.with(Instructions.ifNull(local).with(Instructions.breakLoop(jump)))
-        addInstruction(obj)
-        exec(copy(highestLocal = highestLocal + 1, addInstruction = obj.children::add), local)
     }
 
     fun forScoreHolder(holder: ScoreHolderArgument, exec: CompilationContext.(local: LocationData) -> Unit) {
@@ -219,7 +211,7 @@ data class CompilationContext(
             val execBase = stacker.current
             exec(ctx.copy(addInstruction = execBase.children::add), local, breakId, continueId)
             if(selector.limit == 1) {
-                execBase.with(Instructions.breakLoop(breakId))
+                execBase.with(Instructions.exitScope(breakId))
             }else if(selector.limit != null) {
                 execBase.with(Instructions.checkLimit(limiterId!!))
             }

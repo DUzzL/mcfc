@@ -1,12 +1,15 @@
 package dev.epicpix.minecraftfunctioncompiler.optimizer.optimizations
 
-import dev.epicpix.minecraftfunctioncompiler.il.*
+import dev.epicpix.minecraftfunctioncompiler.il.Instruction
+import dev.epicpix.minecraftfunctioncompiler.il.InstructionType
+import dev.epicpix.minecraftfunctioncompiler.il.LocationData
+import dev.epicpix.minecraftfunctioncompiler.il.ScoreboardOperation
 import dev.epicpix.minecraftfunctioncompiler.optimizer.InstructionList
 import dev.epicpix.minecraftfunctioncompiler.optimizer.Optimization
 
 private data class DeadCodeEliminationData(
     val knownNonNulls: List<Int>,
-    val unusedLoops: List<Int>,
+    val unusedScopes: List<Int>,
 )
 
 object DeadCodeEliminationOptimization : Optimization {
@@ -18,7 +21,7 @@ object DeadCodeEliminationOptimization : Optimization {
         val results = mutableListOf<Instruction>()
         for(it in instructions) {
             results.addAll(runOptimizations(it, dce))
-            if(it.type == InstructionType.BREAK_LOOP || it.type == InstructionType.CONTINUE_LOOP) break
+            if(it.type == InstructionType.EXIT_SCOPE) break
         }
         return results
     }
@@ -27,8 +30,7 @@ object DeadCodeEliminationOptimization : Optimization {
         var newDce = dce
         when(instruction.type) {
             InstructionType.IF_NOT_NULL -> {
-                val data = instruction.data as InstructionDataLocation
-                val local = data.local
+                val local = instruction.get<LocationData>("local")
                 if(local.local != null) {
                     if(newDce.knownNonNulls.contains(local.local)) {
                         return runOptimizations(instruction.children, newDce)
@@ -39,36 +41,19 @@ object DeadCodeEliminationOptimization : Optimization {
                     return runOptimizations(instruction.children, newDce)
                 }
             }
-            InstructionType.IF_NULL -> {
-                val data = instruction.data as InstructionDataLocation
-                val local = data.local
-                if(local.local != null) {
-                    if(newDce.knownNonNulls.contains(local.local)) {
-                        return emptyList()
-                    }
-                }else if(local.string != null) {
-                    return instruction.children
-                }
-            }
-            InstructionType.EMPTY_CONDITION -> {
-                val data = instruction.data as InstructionDataLoop
-                val usage = getLoopUsed(instruction, data.loopId, true)
+            InstructionType.SCOPE -> {
+                val scope = instruction.get<Int>("scope")
+                val usage = getScopeUsed(instruction, scope, true)
                 if(!usage.usedBreak && usage.last) {
-                    newDce = newDce.copy(unusedLoops = newDce.unusedLoops.toMutableList().apply { add(data.loopId) })
+                    newDce = newDce.copy(unusedScopes = newDce.unusedScopes.toMutableList().apply { add(scope) })
                     if(!usage.usedIndirect) {
                         return runOptimizations(instruction.children, newDce)
                     }
                 }
             }
-            InstructionType.BREAK_LOOP -> {
-                val data = instruction.data as InstructionDataLoop
-                if(newDce.unusedLoops.contains(data.loopId)) {
-                    return emptyList()
-                }
-            }
-            InstructionType.CONTINUE_LOOP -> {
-                val data = instruction.data as InstructionDataLoop
-                if(newDce.unusedLoops.contains(data.loopId)) {
+            InstructionType.EXIT_SCOPE -> {
+                val scope = instruction.get<Int>("scope")
+                if(newDce.unusedScopes.contains(scope)) {
                     return emptyList()
                 }
             }
@@ -78,9 +63,9 @@ object DeadCodeEliminationOptimization : Optimization {
     }
 }
 
-private data class LoopUsageInfo(val usedBreak: Boolean, val usedIndirect: Boolean, val last: Boolean)
+private data class ScopeUsageInfo(val usedBreak: Boolean, val usedIndirect: Boolean, val last: Boolean)
 
-private fun getLoopUsed(instruction: Instruction, loopId: Int, lastElement: Boolean = false, isInLoop: Boolean = false): LoopUsageInfo {
+private fun getScopeUsed(instruction: Instruction, inScopeId: Int, lastElement: Boolean = false, isInLoop: Boolean = false): ScopeUsageInfo {
     var usedBreak = false
     var usedIndirect = false
     var wLoop = isInLoop
@@ -90,29 +75,30 @@ private fun getLoopUsed(instruction: Instruction, loopId: Int, lastElement: Bool
         InstructionType.FOR_EACH_PLAYER -> wLoop = true
         InstructionType.FOR_SCORE_HOLDERS -> wLoop = true
         InstructionType.CHECK_LIMIT -> {
-            val data = instruction.data as InstructionDataLoop
-            if(data.loopId == loopId) {
-                return LoopUsageInfo(usedBreak = true, usedIndirect = true, last = lastElement)
+            val scope = instruction.get<Int>("scope")
+            if(scope == inScopeId) {
+                return ScopeUsageInfo(usedBreak = true, usedIndirect = true, last = lastElement)
             }
         }
         InstructionType.RUN_SCORE_OPERATION -> {
-            val data = instruction.data as InstructionDataRunScoreOperation
-            if(data.exceptionLoopId == loopId && (data.operation == ScoreboardOperation.DIVIDE || data.operation == ScoreboardOperation.MODULO)) {
-                return LoopUsageInfo(usedBreak = true, usedIndirect = true, last = lastElement)
+            val exceptionScope = instruction.get<Int>("exceptionScope")
+            val operation = instruction.get<ScoreboardOperation>("operation")
+            if(exceptionScope == inScopeId && (operation == ScoreboardOperation.DIVIDE || operation == ScoreboardOperation.MODULO)) {
+                return ScopeUsageInfo(usedBreak = true, usedIndirect = true, last = lastElement)
             }
         }
-        InstructionType.BREAK_LOOP, InstructionType.CONTINUE_LOOP -> {
-            val data = instruction.data as InstructionDataLoop
-            if(data.loopId == loopId && (!lastElement || wLoop)) {
-                return LoopUsageInfo(usedBreak = true, usedIndirect = false, last = lastElement)
+        InstructionType.EXIT_SCOPE -> {
+            val scope = instruction.get<Int>("scope")
+            if(scope == inScopeId && (!lastElement || wLoop)) {
+                return ScopeUsageInfo(usedBreak = true, usedIndirect = false, last = lastElement)
             }
         }
         else -> {}
     }
     instruction.children.forEachIndexed { index, instr ->
-        val info = getLoopUsed(instr, loopId, lastElement && index == instruction.children.size - 1, wLoop)
+        val info = getScopeUsed(instr, inScopeId, lastElement && index == instruction.children.size - 1, wLoop)
         usedBreak = usedBreak or info.usedBreak
         usedIndirect = usedIndirect or info.usedIndirect
     }
-    return LoopUsageInfo(usedBreak, usedIndirect, lastElement)
+    return ScopeUsageInfo(usedBreak, usedIndirect, lastElement)
 }

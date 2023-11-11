@@ -10,33 +10,21 @@ import java.util.*
 data class LocationData(
     val local: Int? = null,
     val string: String? = null,
-)
 
-interface InstructionData
-
-data class InstructionDataLoop(val loopId: Int) : InstructionData
-data class InstructionDataLocation(val local: LocationData) : InstructionData
-data class InstructionDataLocationBoolean(val local: LocationData, val value: Boolean) : InstructionData
-data class InstructionDataLocationString(val local: LocationData, val value: String) : InstructionData
-data class InstructionDataLocationUUID(val local: LocationData, val value: UUID) : InstructionData
-data class InstructionDataLocationLocation(val local: LocationData, val local2: LocationData) : InstructionData
-data class InstructionDataIntLoop(val value: Int, var loopId: Int) : InstructionData
-data class InstructionDataLocationInt(val local: LocationData, val value: Int) : InstructionData
-data class InstructionDataLocationResources(val local: LocationData, val resources: List<ResourceLocation>) : InstructionData
-data class InstructionDataLocationLocationWorldCoordinates(val local: LocationData, val local2: LocationData, val coords: WorldCoordinates) : InstructionData
-data class InstructionDataLocationLocationLocation(val local: LocationData, val local2: LocationData, val local3: LocationData) : InstructionData
-data class InstructionDataLocationGamemode(val local: LocationData, val gamemode: GameType) : InstructionData
-
-data class InstructionDataFunctionCall(val functions: List<ResourceLocation>, val entity: LocationData?, val world: LocationData?, val position: LocationData?, val rotation: LocationData?) : InstructionData
-data class InstructionDataRunScoreOperation(val target: LocationData, val source: LocationData, val operation: ScoreboardOperation, val exceptionLoopId: Int) : InstructionData
-data class InstructionDataCheckScoreRange(val score: LocationData, val range: IntRangeArgument, val negate: Boolean) : InstructionData
-data class InstructionDataCheckScoreCompare(val target: LocationData, val source: LocationData, val compareOperation: ScoreboardCompareOperation) : InstructionData
-data class InstructionDataLocationAlignPosition(val position: LocationData, val result: LocationData, val swizzle: SwizzleArgument) : InstructionData
+    val isSource: Boolean = false,
+    val isDestination: Boolean = false,
+) {
+    fun source() = LocationData(local, string, isSource = true, isDestination = false)
+    fun destination() = LocationData(local, string, isSource = false, isDestination = true)
+}
 
 enum class ScoreboardOperation { SET, PLUS, MINUS, MULTIPLY, DIVIDE, MODULO, MIN, MAX, SWAP }
 enum class ScoreboardCompareOperation { LT, LE, EQ, NE, GE, GT }
 
-data class Instruction(val type: InstructionType, val data: InstructionData?, val children: MutableList<Instruction> = mutableListOf()) {
+data class Instruction(val type: InstructionType, val data: Map<String, Any?>, val children: MutableList<Instruction> = mutableListOf()) {
+    @Suppress("UNCHECKED_CAST")
+    operator fun <T> get(key: String): T = data[key] as T
+
     fun with(instruction: Instruction): Instruction {
         children.add(instruction)
         return this
@@ -48,48 +36,60 @@ data class Instruction(val type: InstructionType, val data: InstructionData?, va
     }
 }
 
+fun remapInstructionData(data: Map<String, Any?>, mappings: Map<Int, Int>): Map<String, Any?> {
+    val result = mutableMapOf<String, Any?>()
+    data.forEach { (key, value) ->
+        if(value is LocationData) {
+            if(value.local != null) {
+                result[key] = LocationData(mappings[value.local] ?: value.local, value.string, value.isSource, value.isDestination)
+                return@forEach
+            }
+        }
+        result[key] = value
+    }
+    return result
+}
+
 data object Instructions {
 
-    fun currentEntity(local: LocationData) = Instruction(InstructionType.GET_CURRENT_ENTITY, InstructionDataLocation(local))
-    fun forEachEntity(local: LocationData) = Instruction(InstructionType.FOR_EACH_ENTITY, InstructionDataLocation(local))
-    fun forEachPlayer(local: LocationData) = Instruction(InstructionType.FOR_EACH_PLAYER, InstructionDataLocation(local))
-    fun forEntity(local: LocationData, entityUuid: UUID) = Instruction(InstructionType.FOR_ENTITY, InstructionDataLocationUUID(local, entityUuid))
-    fun forPlayer(local: LocationData, entityName: String) = Instruction(InstructionType.FOR_PLAYER, InstructionDataLocationString(local, entityName))
-    fun forScoreHolders(local: LocationData, single: Boolean) = Instruction(InstructionType.FOR_SCORE_HOLDERS, InstructionDataLocationBoolean(local, single))
-    fun ifNull(local: LocationData) = Instruction(InstructionType.IF_NULL, InstructionDataLocation(local))
-    fun ifNotNull(local: LocationData) = Instruction(InstructionType.IF_NOT_NULL, InstructionDataLocation(local))
-    fun addEntityTag(local: LocationData, tag: String) = Instruction(InstructionType.ADD_ENTITY_TAG, InstructionDataLocationString(local, tag))
-    fun removeEntityTag(local: LocationData, tag: String) = Instruction(InstructionType.REMOVE_ENTITY_TAG, InstructionDataLocationString(local, tag))
-    fun checkEntityTag(local: LocationData, tag: String) = Instruction(InstructionType.CHECK_ENTITY_TAG, InstructionDataLocationString(local, tag))
-    fun checkNotEntityTag(local: LocationData, tag: String) = Instruction(InstructionType.CHECK_NOT_ENTITY_TAG, InstructionDataLocationString(local, tag))
-    fun checkEntityTags(local: LocationData) = Instruction(InstructionType.CHECK_ENTITY_TAGS, InstructionDataLocation(local))
-    fun checkNotEntityTags(local: LocationData) = Instruction(InstructionType.CHECK_NOT_ENTITY_TAGS, InstructionDataLocation(local))
-    fun emptyCondition(loopId: Int) = Instruction(InstructionType.EMPTY_CONDITION, InstructionDataLoop(loopId))
-    fun breakLoop(loopId: Int) = Instruction(InstructionType.BREAK_LOOP, InstructionDataLoop(loopId))
-    fun continueLoop(loopId: Int) = Instruction(InstructionType.CONTINUE_LOOP, InstructionDataLoop(loopId))
-    fun limiter(loopId: Int, value: Int) = Instruction(InstructionType.LIMITER, InstructionDataIntLoop(value, loopId))
-    fun checkLimit(loopId: Int) = Instruction(InstructionType.CHECK_LIMIT, InstructionDataLoop(loopId))
-    fun getObjective(local: LocationData, name: String) = Instruction(InstructionType.GET_OBJECTIVE, InstructionDataLocationString(local, name))
-    fun getScoreboardName(local: LocationData, localStore: LocationData) = Instruction(InstructionType.GET_SCOREBOARD_NAME, InstructionDataLocationLocation(local, localStore))
-    fun scoreData(objective: LocationData, name: LocationData, location: LocationData) = Instruction(InstructionType.SCORE_DATA, InstructionDataLocationLocationLocation(objective, name, location))
-    fun addScore(score: LocationData, value: Int) = Instruction(InstructionType.ADD_SCORE, InstructionDataLocationInt(score, value))
-    fun setScore(score: LocationData, value: Int) = Instruction(InstructionType.SET_SCORE, InstructionDataLocationInt(score, value))
-    fun resetScore(objective: LocationData, name: LocationData) = Instruction(InstructionType.RESET_SCORE, InstructionDataLocationLocation(objective, name))
-    fun runScoreOperation(target: LocationData, source: LocationData, operation: ScoreboardOperation, exceptionLoopId: Int) = Instruction(InstructionType.RUN_SCORE_OPERATION, InstructionDataRunScoreOperation(target, source, operation, exceptionLoopId))
-    fun callFunctions(functions: List<ResourceLocation>, entity: LocationData?, world: LocationData?, position: LocationData?, rotation: LocationData?) = Instruction(InstructionType.CALL_FUNCTIONS, InstructionDataFunctionCall(functions.toList(), entity, world, position, rotation))
-    fun killEntity(local: LocationData) = Instruction(InstructionType.KILL_ENTITY, InstructionDataLocation(local))
-    fun checkScoreRange(score: LocationData, range: IntRangeArgument, negate: Boolean) = Instruction(InstructionType.CHECK_SCORE_RANGE, InstructionDataCheckScoreRange(score, range, negate))
-    fun checkScoreCompare(target: LocationData, source: LocationData, compareOperation: ScoreboardCompareOperation) = Instruction(InstructionType.CHECK_SCORE_COMPARE, InstructionDataCheckScoreCompare(target, source, compareOperation))
-    fun getEntityWorld(entity: LocationData, world: LocationData) = Instruction(InstructionType.GET_ENTITY_WORLD, InstructionDataLocationLocation(entity, world))
-    fun getEntityPosition(entity: LocationData, position: LocationData) = Instruction(InstructionType.GET_ENTITY_POSITION, InstructionDataLocationLocation(entity, position))
-    fun getEntityRotation(entity: LocationData, rotation: LocationData) = Instruction(InstructionType.GET_ENTITY_ROTATION, InstructionDataLocationLocation(entity, rotation))
-    fun applyPositionWorld(positionFrom: LocationData, positionNew: LocationData, worldPosition: WorldCoordinates) = Instruction(InstructionType.APPLY_POSITION_WORLD, InstructionDataLocationLocationWorldCoordinates(positionFrom, positionNew, worldPosition))
-    fun checkEntityTypes(local: LocationData, types: List<ResourceLocation>) = Instruction(InstructionType.CHECK_ENTITY_TYPES, InstructionDataLocationResources(local, types.toList()))
-    fun checkNotEntityTypes(local: LocationData, types: List<ResourceLocation>) = Instruction(InstructionType.CHECK_NOT_ENTITY_TYPES, InstructionDataLocationResources(local, types.toList()))
-    fun alignPosition(position: LocationData, result: LocationData, swizzle: SwizzleArgument) = Instruction(InstructionType.ALIGN_POSITION, InstructionDataLocationAlignPosition(position, result, swizzle))
-    fun checkGamemode(entity: LocationData, gamemode: GameType) = Instruction(InstructionType.CHECK_GAMEMODE, InstructionDataLocationGamemode(entity, gamemode))
-    fun checkNotGamemode(entity: LocationData, gamemode: GameType) = Instruction(InstructionType.CHECK_NOT_GAMEMODE, InstructionDataLocationGamemode(entity, gamemode))
-    fun setGamemode(entity: LocationData, gamemode: GameType) = Instruction(InstructionType.SET_GAMEMODE, InstructionDataLocationGamemode(entity, gamemode))
+    fun currentEntity(entity: LocationData) = Instruction(InstructionType.GET_CURRENT_ENTITY, mapOf("entity" to entity.destination()))
+    fun forEachEntity(entity: LocationData) = Instruction(InstructionType.FOR_EACH_ENTITY, mapOf("entity" to entity.destination()))
+    fun forEachPlayer(entity: LocationData) = Instruction(InstructionType.FOR_EACH_PLAYER, mapOf("entity" to entity.destination()))
+    fun forEntity(entity: LocationData, entityUuid: UUID) = Instruction(InstructionType.FOR_ENTITY, mapOf("entity" to entity.destination(), "uuid" to entityUuid))
+    fun forPlayer(entity: LocationData, entityName: String) = Instruction(InstructionType.FOR_PLAYER, mapOf("entity" to entity.destination(), "name" to entityName))
+    fun forScoreHolders(local: LocationData, single: Boolean) = Instruction(InstructionType.FOR_SCORE_HOLDERS, mapOf("local" to local.destination(), "single" to single))
+    fun ifNotNull(local: LocationData) = Instruction(InstructionType.IF_NOT_NULL, mapOf("local" to local.source()))
+    fun addEntityTag(entity: LocationData, tag: String) = Instruction(InstructionType.ADD_ENTITY_TAG, mapOf("entity" to entity.source(), "tag" to tag))
+    fun removeEntityTag(entity: LocationData, tag: String) = Instruction(InstructionType.REMOVE_ENTITY_TAG, mapOf("entity" to entity.source(), "tag" to tag))
+    fun checkEntityTag(entity: LocationData, tag: String) = Instruction(InstructionType.CHECK_ENTITY_TAG, mapOf("entity" to entity.source(), "tag" to tag))
+    fun checkNotEntityTag(entity: LocationData, tag: String) = Instruction(InstructionType.CHECK_NOT_ENTITY_TAG, mapOf("entity" to entity.source(), "tag" to tag))
+    fun checkEntityTags(entity: LocationData) = Instruction(InstructionType.CHECK_ENTITY_TAGS, mapOf("entity" to entity.source()))
+    fun checkNotEntityTags(entity: LocationData) = Instruction(InstructionType.CHECK_NOT_ENTITY_TAGS, mapOf("entity" to entity.source()))
+    fun scope(scopeId: Int) = Instruction(InstructionType.SCOPE, mapOf("scope" to scopeId))
+    fun exitScope(scopeId: Int) = Instruction(InstructionType.EXIT_SCOPE, mapOf("scope" to scopeId))
+    fun limiter(scopeId: Int, value: Int) = Instruction(InstructionType.LIMITER, mapOf("scope" to scopeId, "limit" to value))
+    fun checkLimit(scopeId: Int) = Instruction(InstructionType.CHECK_LIMIT, mapOf("scope" to scopeId))
+    fun getObjective(objective: LocationData, name: String) = Instruction(InstructionType.GET_OBJECTIVE, mapOf("objective" to objective.destination(), "name" to name))
+    fun getScoreboardName(entity: LocationData, name: LocationData) = Instruction(InstructionType.GET_SCOREBOARD_NAME, mapOf("entity" to entity.source(), "name" to name.destination()))
+    fun scoreData(objective: LocationData, name: LocationData, location: LocationData) = Instruction(InstructionType.SCORE_DATA, mapOf("objective" to objective.source(), "name" to name.source(), "score" to location.destination()))
+    fun addScore(score: LocationData, value: Int) = Instruction(InstructionType.ADD_SCORE, mapOf("score" to score.source(), "value" to value))
+    fun setScore(score: LocationData, value: Int) = Instruction(InstructionType.SET_SCORE, mapOf("score" to score.source(), "value" to value))
+    fun resetScore(objective: LocationData, name: LocationData) = Instruction(InstructionType.RESET_SCORE, mapOf("objective" to objective.source(), "name" to name.source()))
+    fun runScoreOperation(target: LocationData, source: LocationData, operation: ScoreboardOperation, exceptionScope: Int) = Instruction(InstructionType.RUN_SCORE_OPERATION, mapOf("target" to target.source(), "source" to source.source(), "operation" to operation, "exceptionScope" to exceptionScope))
+    fun callFunctions(functions: List<ResourceLocation>, entity: LocationData?, world: LocationData?, position: LocationData?, rotation: LocationData?) = Instruction(InstructionType.CALL_FUNCTIONS, mapOf("functions" to functions.toList(), "entity" to entity?.source(), "world" to world?.source(), "position" to position?.source(), "rotation" to rotation?.source()))
+    fun killEntity(entity: LocationData) = Instruction(InstructionType.KILL_ENTITY, mapOf("entity" to entity))
+    fun checkScoreRange(score: LocationData, range: IntRangeArgument, negate: Boolean) = Instruction(InstructionType.CHECK_SCORE_RANGE, mapOf("score" to score.source(), "range" to range, "negate" to negate))
+    fun checkScoreCompare(target: LocationData, source: LocationData, compareOperation: ScoreboardCompareOperation) = Instruction(InstructionType.CHECK_SCORE_COMPARE, mapOf("target" to target.source(), "source" to source.source(), "compareOperation" to compareOperation))
+    fun getEntityWorld(entity: LocationData, world: LocationData) = Instruction(InstructionType.GET_ENTITY_WORLD, mapOf("entity" to entity.source(), "world" to world.destination()))
+    fun getEntityPosition(entity: LocationData, position: LocationData) = Instruction(InstructionType.GET_ENTITY_POSITION, mapOf("entity" to entity.source(), "position" to position.destination()))
+    fun getEntityRotation(entity: LocationData, rotation: LocationData) = Instruction(InstructionType.GET_ENTITY_ROTATION, mapOf("entity" to entity.source(), "rotation" to rotation.destination()))
+    fun applyPositionWorld(positionFrom: LocationData, positionNew: LocationData, worldPosition: WorldCoordinates) = Instruction(InstructionType.APPLY_POSITION_WORLD, mapOf("from" to positionFrom.source(), "to" to positionNew.destination(), "position" to worldPosition))
+    fun checkEntityTypes(entity: LocationData, types: List<ResourceLocation>) = Instruction(InstructionType.CHECK_ENTITY_TYPES, mapOf("entity" to entity.source(), "types" to types.toList()))
+    fun checkNotEntityTypes(entity: LocationData, types: List<ResourceLocation>) = Instruction(InstructionType.CHECK_NOT_ENTITY_TYPES, mapOf("entity" to entity.source(), "types" to types.toList()))
+    fun alignPosition(position: LocationData, result: LocationData, swizzle: SwizzleArgument) = Instruction(InstructionType.ALIGN_POSITION, mapOf("position" to position.source(), "result" to result.destination(), "swizzle" to swizzle))
+    fun checkGamemode(entity: LocationData, gamemode: GameType) = Instruction(InstructionType.CHECK_GAMEMODE, mapOf("entity" to entity.source(), "gamemode" to gamemode))
+    fun checkNotGamemode(entity: LocationData, gamemode: GameType) = Instruction(InstructionType.CHECK_NOT_GAMEMODE, mapOf("entity" to entity.source(), "gamemode" to gamemode))
+    fun setGamemode(entity: LocationData, gamemode: GameType) = Instruction(InstructionType.SET_GAMEMODE, mapOf("entity" to entity.source(), "gamemode" to gamemode))
 }
 
 enum class InstructionType {
@@ -99,7 +99,6 @@ enum class InstructionType {
     FOR_EACH_PLAYER,
     FOR_ENTITY,
     FOR_PLAYER,
-    IF_NULL,
     IF_NOT_NULL,
     ADD_ENTITY_TAG,
     REMOVE_ENTITY_TAG,
@@ -107,9 +106,8 @@ enum class InstructionType {
     CHECK_NOT_ENTITY_TAG,
     CHECK_ENTITY_TAGS,
     CHECK_NOT_ENTITY_TAGS,
-    EMPTY_CONDITION,
-    BREAK_LOOP,
-    CONTINUE_LOOP,
+    SCOPE,
+    EXIT_SCOPE,
     LIMITER,
     CHECK_LIMIT,
     GET_OBJECTIVE,
