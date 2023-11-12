@@ -116,7 +116,7 @@ data class CompilationContext(
         }else {
             forEmptyCondition { loopId ->
                 val local = LocationData(local = highestLocal)
-                val instruction = Instructions.currentEntity(local)
+                val instruction = Instructions.getCurrentEntity(local)
                 addInstruction(instruction)
                 exec(copy(currentEntity = local, highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local, loopId, loopId)
             }
