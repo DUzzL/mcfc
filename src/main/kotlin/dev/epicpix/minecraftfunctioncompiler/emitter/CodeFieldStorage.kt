@@ -3,10 +3,7 @@ package dev.epicpix.minecraftfunctioncompiler.emitter
 import dev.epicpix.minecraftfunctioncompiler.DEBUG
 import dev.epicpix.minecraftfunctioncompiler.EMIT_SCOREBOARD_NAME
 import dev.epicpix.minecraftfunctioncompiler.EMIT_SERVER_FUNCTION_MANAGER_NAME
-import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Map_get
-import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.MinecraftServer_getScoreboard
-import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ServerFunctionLibrary_getFunctions
-import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ServerFunctionManager_getLibrary
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.*
 import net.minecraft.commands.CommandFunction
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.MinecraftServer

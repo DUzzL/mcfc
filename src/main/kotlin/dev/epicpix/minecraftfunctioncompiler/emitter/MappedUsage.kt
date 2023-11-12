@@ -7,6 +7,7 @@ import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 import java.io.IOException
 import java.nio.file.Files
+import java.util.function.Consumer
 
 private var isInitialized: Boolean = false
 
@@ -49,13 +50,13 @@ private class MappedFunctionsClassVisitor(api: Int) : ClassVisitor(api) {
 private class MappedUsageMethodVisitor(api: Int, val data: MappedData) : MethodVisitor(api) {
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) {
         if(owner == mappedUsageDefinitionType) return
-        data.generator = { it.methodVisitor.visitMethodInsn(opcode, owner, name, descriptor, isInterface) }
+        data.generator = Consumer { it.methodVisitor.visitMethodInsn(opcode, owner, name, descriptor, isInterface) }
         super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
     }
 
     override fun visitFieldInsn(opcode: Int, owner: String, name: String, descriptor: String) {
         if(owner == mappedUsageDefinitionType) return
-        data.generator = { it.methodVisitor.visitFieldInsn(opcode, owner, name, descriptor) }
+        data.generator = Consumer { it.methodVisitor.visitFieldInsn(opcode, owner, name, descriptor) }
         super.visitFieldInsn(opcode, owner, name, descriptor)
     }
 }

@@ -2,11 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.emitter
 
 import dev.epicpix.minecraftfunctioncompiler.DATA_CLASS
 import dev.epicpix.minecraftfunctioncompiler.DEBUG
-import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Iterable_iterator
-import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Iterator_hasNext
-import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.Iterator_next
-import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.List_get
-import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.List_size
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.*
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
