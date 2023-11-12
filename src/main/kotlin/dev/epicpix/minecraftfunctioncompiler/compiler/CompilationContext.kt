@@ -179,23 +179,19 @@ data class CompilationContext(
             val nonNull = Instructions.ifNotNull(local)
             val stacker = InstructionStacker(nonNull)
             if(selector.entityTypes != null) {
-                if(!selector.entityTypes.negated) stacker.stackInstruction(Instructions.checkEntityTypes(local, selector.entityTypes.data))
-                else stacker.stackInstruction(Instructions.checkNotEntityTypes(local, selector.entityTypes.data))
+                stacker.stackInstruction(Instructions.checkEntityTypes(local, selector.entityTypes.data, selector.entityTypes.negated))
             }
             if(selector.gamemode != null) {
-                if(!selector.gamemode.negated) stacker.stackInstruction(Instructions.checkGamemode(local, selector.gamemode.data))
-                else stacker.stackInstruction(Instructions.checkNotGamemode(local, selector.gamemode.data))
+                stacker.stackInstruction(Instructions.checkGamemode(local, selector.gamemode.data, selector.gamemode.negated))
             }
             for(tag in selector.tags) {
-                if(!tag.negated) stacker.stackInstruction(Instructions.checkEntityTag(local, tag.data))
-                else stacker.stackInstruction(Instructions.checkNotEntityTag(local, tag.data))
+                stacker.stackInstruction(Instructions.checkEntityTag(local, tag.data, tag.negated))
             }
             if(selector.hasTags != null) {
-                if(selector.hasTags) stacker.stackInstruction(Instructions.checkEntityTags(local))
-                else stacker.stackInstruction(Instructions.checkNotEntityTags(local))
+                stacker.stackInstruction(Instructions.checkEntityTags(local, selector.hasTags))
             }
             if(selector.team != null) {
-                stacker.stackInstruction(Instructions.checkTeam(local, selector.team))
+                stacker.stackInstruction(Instructions.checkTeam(local, selector.team.data, selector.team.negated))
             }
             if(selector.hasTeam != null) {
                 stacker.stackInstruction(Instructions.hasTeam(local, selector.hasTeam))

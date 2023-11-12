@@ -1,7 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.il
 
 import dev.epicpix.minecraftfunctioncompiler.data.IntRangeArgument
-import dev.epicpix.minecraftfunctioncompiler.data.NegatableData
 import dev.epicpix.minecraftfunctioncompiler.data.SwizzleArgument
 import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates
 import net.minecraft.resources.ResourceLocation
@@ -62,10 +61,8 @@ data object Instructions {
     fun ifNotNull(local: LocationData) = Instruction(InstructionType.IF_NOT_NULL, mapOf("local" to local.source()))
     fun addEntityTag(entity: LocationData, tag: String) = Instruction(InstructionType.ADD_ENTITY_TAG, mapOf("entity" to entity.source(), "tag" to tag))
     fun removeEntityTag(entity: LocationData, tag: String) = Instruction(InstructionType.REMOVE_ENTITY_TAG, mapOf("entity" to entity.source(), "tag" to tag))
-    fun checkEntityTag(entity: LocationData, tag: String) = Instruction(InstructionType.CHECK_ENTITY_TAG, mapOf("entity" to entity.source(), "tag" to tag))
-    fun checkNotEntityTag(entity: LocationData, tag: String) = Instruction(InstructionType.CHECK_NOT_ENTITY_TAG, mapOf("entity" to entity.source(), "tag" to tag))
-    fun checkEntityTags(entity: LocationData) = Instruction(InstructionType.CHECK_ENTITY_TAGS, mapOf("entity" to entity.source()))
-    fun checkNotEntityTags(entity: LocationData) = Instruction(InstructionType.CHECK_NOT_ENTITY_TAGS, mapOf("entity" to entity.source()))
+    fun checkEntityTag(entity: LocationData, tag: String, negated: Boolean) = Instruction(InstructionType.CHECK_ENTITY_TAG, mapOf("entity" to entity.source(), "tag" to tag, "negated" to negated))
+    fun checkEntityTags(entity: LocationData, negated: Boolean) = Instruction(InstructionType.CHECK_ENTITY_TAGS, mapOf("entity" to entity.source(), "negated" to negated))
     fun scope(scopeId: Int) = Instruction(InstructionType.SCOPE, mapOf("scope" to scopeId))
     fun exitScope(scopeId: Int) = Instruction(InstructionType.EXIT_SCOPE, mapOf("scope" to scopeId))
     fun limiter(scopeId: Int, value: Int) = Instruction(InstructionType.LIMITER, mapOf("scope" to scopeId, "limit" to value))
@@ -85,13 +82,11 @@ data object Instructions {
     fun getEntityPosition(entity: LocationData, position: LocationData) = Instruction(InstructionType.GET_ENTITY_POSITION, mapOf("entity" to entity.source(), "position" to position.destination()))
     fun getEntityRotation(entity: LocationData, rotation: LocationData) = Instruction(InstructionType.GET_ENTITY_ROTATION, mapOf("entity" to entity.source(), "rotation" to rotation.destination()))
     fun applyPositionWorld(positionFrom: LocationData, positionNew: LocationData, worldPosition: WorldCoordinates) = Instruction(InstructionType.APPLY_POSITION_WORLD, mapOf("from" to positionFrom.source(), "to" to positionNew.destination(), "position" to worldPosition))
-    fun checkEntityTypes(entity: LocationData, types: List<ResourceLocation>) = Instruction(InstructionType.CHECK_ENTITY_TYPES, mapOf("entity" to entity.source(), "types" to types.toList()))
-    fun checkNotEntityTypes(entity: LocationData, types: List<ResourceLocation>) = Instruction(InstructionType.CHECK_NOT_ENTITY_TYPES, mapOf("entity" to entity.source(), "types" to types.toList()))
+    fun checkEntityTypes(entity: LocationData, types: List<ResourceLocation>, negated: Boolean) = Instruction(InstructionType.CHECK_ENTITY_TYPES, mapOf("entity" to entity.source(), "types" to types.toList(), "negated" to negated))
     fun alignPosition(position: LocationData, result: LocationData, swizzle: SwizzleArgument) = Instruction(InstructionType.ALIGN_POSITION, mapOf("position" to position.source(), "result" to result.destination(), "swizzle" to swizzle))
-    fun checkGamemode(entity: LocationData, gamemode: GameType) = Instruction(InstructionType.CHECK_GAMEMODE, mapOf("entity" to entity.source(), "gamemode" to gamemode))
-    fun checkNotGamemode(entity: LocationData, gamemode: GameType) = Instruction(InstructionType.CHECK_NOT_GAMEMODE, mapOf("entity" to entity.source(), "gamemode" to gamemode))
+    fun checkGamemode(entity: LocationData, gamemode: GameType, negated: Boolean) = Instruction(InstructionType.CHECK_GAMEMODE, mapOf("entity" to entity.source(), "gamemode" to gamemode, "negated" to negated))
     fun setGamemode(entity: LocationData, gamemode: GameType) = Instruction(InstructionType.SET_GAMEMODE, mapOf("entity" to entity.source(), "gamemode" to gamemode))
-    fun checkTeam(entity: LocationData, team: NegatableData<String>) = Instruction(InstructionType.CHECK_TEAM, mapOf("entity" to entity.source(), "team" to team))
+    fun checkTeam(entity: LocationData, team: String, negated: Boolean) = Instruction(InstructionType.CHECK_TEAM, mapOf("entity" to entity.source(), "team" to team, "negated" to negated))
     fun hasTeam(entity: LocationData, negated: Boolean) = Instruction(InstructionType.HAS_TEAM, mapOf("entity" to entity.source(), "negated" to negated))
 }
 
@@ -106,9 +101,7 @@ enum class InstructionType {
     ADD_ENTITY_TAG,
     REMOVE_ENTITY_TAG,
     CHECK_ENTITY_TAG,
-    CHECK_NOT_ENTITY_TAG,
     CHECK_ENTITY_TAGS,
-    CHECK_NOT_ENTITY_TAGS,
     SCOPE,
     EXIT_SCOPE,
     LIMITER,
@@ -130,10 +123,8 @@ enum class InstructionType {
     GET_ENTITY_ROTATION,
     APPLY_POSITION_WORLD,
     CHECK_ENTITY_TYPES,
-    CHECK_NOT_ENTITY_TYPES,
     ALIGN_POSITION,
     CHECK_GAMEMODE,
-    CHECK_NOT_GAMEMODE,
     SET_GAMEMODE,
     CHECK_TEAM,
     HAS_TEAM,

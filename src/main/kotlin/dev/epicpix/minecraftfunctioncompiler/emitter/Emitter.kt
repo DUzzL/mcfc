@@ -1,6 +1,9 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter
 
-import dev.epicpix.minecraftfunctioncompiler.data.*
+import dev.epicpix.minecraftfunctioncompiler.data.IntRangeArgument
+import dev.epicpix.minecraftfunctioncompiler.data.SwizzleArgument
+import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates
+import dev.epicpix.minecraftfunctioncompiler.data.mapEntityTypeClass
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ArrayList_get
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.ArrayList_size
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.Companion.CommandSourceStack_getEntity
@@ -150,18 +153,7 @@ private fun emitInstruction(
             codeWriter.writeMapped(Set_contains)
 
             val label = Label()
-            codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, label)
-            run()
-            codeWriter.methodVisitor.visitLabel(label)
-        }
-        InstructionType.CHECK_NOT_ENTITY_TAG -> {
-            load("entity")
-            codeWriter.writeMapped(Entity_getTags)
-            codeWriter.writeString(instruction["tag"])
-            codeWriter.writeMapped(Set_contains)
-
-            val label = Label()
-            codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, label)
+            codeWriter.methodVisitor.visitJumpInsn(if(!instruction.get<Boolean>("negated")) Opcodes.IFEQ else Opcodes.IFNE, label)
             run()
             codeWriter.methodVisitor.visitLabel(label)
         }
@@ -171,17 +163,7 @@ private fun emitInstruction(
             codeWriter.writeMapped(Set_size)
 
             val label = Label()
-            codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, label)
-            run()
-            codeWriter.methodVisitor.visitLabel(label)
-        }
-        InstructionType.CHECK_NOT_ENTITY_TAGS -> {
-            load("entity")
-            codeWriter.writeMapped(Entity_getTags)
-            codeWriter.writeMapped(Set_size)
-
-            val label = Label()
-            codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, label)
+            codeWriter.methodVisitor.visitJumpInsn(if(!instruction.get<Boolean>("negated")) Opcodes.IFEQ else Opcodes.IFNE, label)
             run()
             codeWriter.methodVisitor.visitLabel(label)
         }
@@ -661,22 +643,16 @@ private fun emitInstruction(
                 codeWriter.methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, mapEntityTypeClass(res)?.descriptorString()?.run { substring(1, length - 1) })
                 codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, label)
             }
-            val label2 = Label()
-            codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, label2)
-            codeWriter.methodVisitor.visitLabel(label)
-            run()
-            codeWriter.methodVisitor.visitLabel(label2)
-
-        }
-        InstructionType.CHECK_NOT_ENTITY_TYPES -> {
-            val label = Label()
-            for(res in instruction.get<List<ResourceLocation>>("types")) {
-                load("entity")
-                codeWriter.methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, mapEntityTypeClass(res)?.descriptorString()?.run { substring(1, length - 1) })
-                codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, label)
+            if(!instruction.get<Boolean>("negated")) {
+                val label2 = Label()
+                codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, label2)
+                codeWriter.methodVisitor.visitLabel(label)
+                run()
+                codeWriter.methodVisitor.visitLabel(label2)
+            }else {
+                run()
+                codeWriter.methodVisitor.visitLabel(label)
             }
-            run()
-            codeWriter.methodVisitor.visitLabel(label)
         }
         InstructionType.ALIGN_POSITION -> {
             codeWriter.newObject(Vec3::class.java, Double::class.java, Double::class.java, Double::class.java) {
@@ -711,23 +687,7 @@ private fun emitInstruction(
                 GameType.SPECTATOR -> codeWriter.writeMapped(GameType_SPECTATOR)
             }
             val label = Label()
-            codeWriter.methodVisitor.visitJumpInsn(Opcodes.IF_ACMPNE, label)
-            run()
-            codeWriter.methodVisitor.visitLabel(label)
-        }
-        InstructionType.CHECK_NOT_GAMEMODE -> {
-            load("entity")
-            codeWriter.castType(ServerPlayer::class.java)
-            codeWriter.writeMapped(ServerPlayer_gameMode)
-            codeWriter.writeMapped(ServerPlayerGameMode_getGameModeForPlayer)
-            when(instruction.get<GameType>("gamemode")) {
-                GameType.SURVIVAL -> codeWriter.writeMapped(GameType_SURVIVAL)
-                GameType.CREATIVE -> codeWriter.writeMapped(GameType_CREATIVE)
-                GameType.ADVENTURE -> codeWriter.writeMapped(GameType_ADVENTURE)
-                GameType.SPECTATOR -> codeWriter.writeMapped(GameType_SPECTATOR)
-            }
-            val label = Label()
-            codeWriter.methodVisitor.visitJumpInsn(Opcodes.IF_ACMPEQ, label)
+            codeWriter.methodVisitor.visitJumpInsn(if(!instruction.get<Boolean>("negated")) Opcodes.IF_ACMPNE else Opcodes.IF_ACMPEQ, label)
             run()
             codeWriter.methodVisitor.visitLabel(label)
         }
@@ -744,12 +704,11 @@ private fun emitInstruction(
             codeWriter.methodVisitor.visitInsn(Opcodes.POP)
         }
         InstructionType.CHECK_TEAM -> {
-            val teamInfo = instruction.get<NegatableData<String>>("team")
-            if(teamInfo.negated) {
+            if(!instruction.get<Boolean>("negated")) {
                 load("entity")
                 codeWriter.writeMapped(Entity_getTeam)
                 codeWriter.executeIf(Opcodes.IFNONNULL) {
-                    codeWriter.writeString(teamInfo.data)
+                    codeWriter.writeString(instruction["team"])
                     load("entity")
                     codeWriter.writeMapped(Entity_getTeam)
                     codeWriter.writeMapped(Team_getName)
@@ -763,7 +722,7 @@ private fun emitInstruction(
                 load("entity")
                 codeWriter.writeMapped(Entity_getTeam)
                 codeWriter.executeIf(Opcodes.IFNONNULL) {
-                    codeWriter.writeString(teamInfo.data)
+                    codeWriter.writeString(instruction["team"])
                     load("entity")
                     codeWriter.writeMapped(Entity_getTeam)
                     codeWriter.writeMapped(Team_getName)
