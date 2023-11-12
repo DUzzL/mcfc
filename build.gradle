@@ -79,6 +79,7 @@ jar {
     from("LICENSE") {
         rename { "${it}_${project.archivesBaseName}"}
     }
+    exclude 'dev/epicpix/minecraftfunctioncompiler/il/InstructionDefinitions.class'
 }
 
 // configure the maven publication
