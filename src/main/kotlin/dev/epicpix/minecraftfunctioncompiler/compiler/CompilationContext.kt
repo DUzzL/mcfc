@@ -39,9 +39,11 @@ data class CompilationContext(
         }else {
             forCurrentEntity { entity, _, _ ->
                 val local = LocationData(local = highestLocal)
+                val nullCheck = Instructions.ifNotNull(entity)
                 val instruction = Instructions.getEntityWorld(entity, local)
-                addInstruction(instruction)
-                exec(copy(currentEntity = local, highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
+                instruction.with(nullCheck)
+                addInstruction(nullCheck)
+                exec(copy(currentRotation = local, highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
             }
         }
     }
@@ -52,9 +54,11 @@ data class CompilationContext(
         }else {
             forCurrentEntity { entity, _, _ ->
                 val local = LocationData(local = highestLocal)
+                val nullCheck = Instructions.ifNotNull(entity)
                 val instruction = Instructions.getEntityPosition(entity, local)
-                addInstruction(instruction)
-                exec(copy(currentPosition = local, highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
+                instruction.with(nullCheck)
+                addInstruction(nullCheck)
+                exec(copy(currentRotation = local, highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
             }
         }
     }
@@ -65,8 +69,10 @@ data class CompilationContext(
         }else {
             forCurrentEntity { entity, _, _ ->
                 val local = LocationData(local = highestLocal)
+                val nullCheck = Instructions.ifNotNull(entity)
                 val instruction = Instructions.getEntityRotation(entity, local)
-                addInstruction(instruction)
+                instruction.with(nullCheck)
+                addInstruction(nullCheck)
                 exec(copy(currentRotation = local, highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
             }
         }

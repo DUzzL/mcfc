@@ -42,6 +42,7 @@ fun parseSelector(selector: String): SelectorArgument {
     reader.skipWhitespace()
     if(reader.canRead() && reader.read() == '[') {
         while(reader.canRead()) {
+            reader.skipWhitespace()
             val key = reader.readString()
             reader.skipWhitespace()
             if(!reader.canRead() || reader.read() != '=') throw UnsupportedOperationException("Cannot parse selector, missing '=': $selector")
