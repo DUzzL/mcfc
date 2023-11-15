@@ -7,6 +7,9 @@ before_script:
 build:
   stage: build
   script: ./gradlew build
+  after_script:
+    - mv build/libs/mcfc-*.jar ./
   artifacts:
+    untracked: true
     paths:
-      - build/libs/*.jar
+      - mcfc-*.jar
