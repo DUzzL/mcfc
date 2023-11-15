@@ -2,10 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler
 
 import dev.epicpix.minecraftfunctioncompiler.compiler.compile
 import dev.epicpix.minecraftfunctioncompiler.data.updateRegistryMaps
-import dev.epicpix.minecraftfunctioncompiler.emitter.CodeFieldStorage
-import dev.epicpix.minecraftfunctioncompiler.emitter.CodeWriter
-import dev.epicpix.minecraftfunctioncompiler.emitter.emitBytecode
-import dev.epicpix.minecraftfunctioncompiler.emitter.initDefinitions
+import dev.epicpix.minecraftfunctioncompiler.emitter.*
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction
 import dev.epicpix.minecraftfunctioncompiler.il.printInstructionList
 import dev.epicpix.minecraftfunctioncompiler.optimizer.optimize
@@ -97,6 +94,11 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
             }
         }
         LOGGER.info("Loaded ${definedFunctions.size} functions in ${System.currentTimeMillis()-startLoader}ms")
+        if(DEBUG) {
+            val startGraph = System.currentTimeMillis()
+            generateGraphs(compiledFunctions)
+            LOGGER.info("Generated graphs in ${System.currentTimeMillis()-startGraph}ms")
+        }
 
         try {
             loadData(storage, serverFunctionManager)

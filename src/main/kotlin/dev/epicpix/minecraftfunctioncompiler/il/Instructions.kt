@@ -9,6 +9,10 @@ data class LocationData(
 ) {
     fun source() = LocationData(local, string, isSource = true, isDestination = false)
     fun destination() = LocationData(local, string, isSource = false, isDestination = true)
+
+    override fun toString(): String {
+        return "${if(local != null) "local " else ""}${if(isSource) "<in> " else ""}${if(isDestination) "<out> " else ""}${local ?: ""}${if(string != null) "\"${string.replace("\\", "\\\\").replace("\n", "\\n")}\"" else ""}"
+    }
 }
 
 enum class ScoreboardOperation { SET, PLUS, MINUS, MULTIPLY, DIVIDE, MODULO, MIN, MAX, SWAP }
