@@ -6,7 +6,7 @@ before_script:
 
 build:
   stage: build
-  script: gradle build
+  script: ./gradlew build
   artifacts:
     paths:
       - build/libs/*.jar
