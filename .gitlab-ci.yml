@@ -10,6 +10,5 @@ build:
   after_script:
     - mv build/libs/mcfc-*.jar ./
   artifacts:
-    untracked: true
     paths:
-      - mcfc-*.jar
+      - ./mcfc-*.jar
