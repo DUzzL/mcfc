@@ -47,4 +47,6 @@ private interface InstructionDefinitions {
     fun setGamemode(@InstructionSource entity: LocationData, gamemode: GameType): Instruction
     fun checkTeam(@InstructionSource entity: LocationData, team: String, negated: Boolean): Instruction
     fun hasTeam(@InstructionSource entity: LocationData, negated: Boolean): Instruction
+    fun getAttributeInstance(@InstructionSource entity: LocationData, @InstructionDestination instance: LocationData, attribute: ResourceLocation): Instruction
+    fun setAttributeBase(@InstructionSource instance: LocationData, value: Double): Instruction
 }

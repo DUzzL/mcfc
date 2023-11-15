@@ -4,6 +4,7 @@ import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.EntityType
+import net.minecraft.world.entity.LivingEntity
 import java.lang.reflect.Modifier
 import java.lang.reflect.ParameterizedType
 
@@ -21,4 +22,5 @@ fun updateRegistryMaps() {
         }
     }
     entityTypeMappings[ResourceLocation("minecraft", "player")] = ServerPlayer::class.java
+    entityTypeMappings[ResourceLocation("minecraft", "living_entity")] = LivingEntity::class.java
 }

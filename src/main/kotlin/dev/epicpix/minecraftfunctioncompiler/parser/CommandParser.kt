@@ -11,8 +11,10 @@ import net.minecraft.commands.CommandFunction
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.arguments.coordinates.LocalCoordinates
 import net.minecraft.core.Direction
+import net.minecraft.core.Holder
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.MinecraftServer
+import net.minecraft.world.entity.ai.attributes.Attribute
 import net.minecraft.world.level.GameType
 import java.util.*
 
@@ -33,6 +35,7 @@ object CommandParser {
 
     private fun parseCommand(cmdName: String, context: CommandContextBuilder<CommandSourceStack>, source: String, server: MinecraftServer): Command {
         return when(cmdName) {
+            "attribute" -> parseCommandAttribute(context, source)
             "execute" -> parseCommandExecute(context, context.nodes.subList(1, context.nodes.size), source, server)
             "function" -> parseCommandFunction(context, source, server)
             "gamemode" -> parseCommandGamemode(context, source)
@@ -43,11 +46,31 @@ object CommandParser {
         }
     }
 
+    @Suppress("UNCHECKED_CAST")
+    private fun parseCommandAttribute(context: CommandContextBuilder<CommandSourceStack>, source: String): Command {
+        val target = parseSelector(context.arguments["target"]!!.range[source])
+        val attributeHolder = (context.arguments["attribute"]!!.result as Holder.Reference<Attribute>)
+        val runType = context.nodes[3]!!.range[source]
+        if(runType == "base") {
+            val accessType = context.nodes[4]!!.range[source]
+            if(accessType == "set") {
+                val value = context.arguments["value"]!!.result as Double
+                return Command(CommandType.ATTRIBUTE_BASE_SET, mapOf(
+                    "target" to target,
+                    "attribute" to attributeHolder.key().location(),
+                    "value" to value
+                ))
+            }
+            throw UnsupportedOperationException("Attributes not implemented: base - $accessType ${attributeHolder.key()}")
+        }
+        throw UnsupportedOperationException("Attributes not implemented: $runType ${attributeHolder.key()}")
+    }
+
+    @Suppress("UNCHECKED_CAST")
     private fun parseCommandExecute(context: CommandContextBuilder<CommandSourceStack>, nodes: List<ParsedCommandNode<CommandSourceStack>>, source: String, server: MinecraftServer): Command {
         val type = nodes[0].range[source]
         return when(type) {
             "align" -> {
-                @Suppress("UNCHECKED_CAST")
                 val swizzle = context.arguments["axes"]!!.result as EnumSet<Direction.Axis>
 
                 Command(CommandType.EXECUTE_ALIGN, mapOf(
@@ -168,7 +191,7 @@ object CommandParser {
 
     private fun parseCommandGamemode(context: CommandContextBuilder<CommandSourceStack>, source: String): Command {
         val gamemode = context.arguments["gamemode"]!!.result as GameType
-        val targets = context.arguments["targets"]
+        val targets = context.arguments["target"]
         return if(targets != null) {
             Command(CommandType.GAMEMODE, mapOf("gamemode" to gamemode, "targets" to parseSelector(targets.range[source])))
         }else {

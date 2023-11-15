@@ -9,6 +9,7 @@ import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.ServerFunctionManager
 import net.minecraft.server.ServerScoreboard
+import net.minecraft.world.entity.ai.attributes.Attribute
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import java.util.*
@@ -18,10 +19,12 @@ class CodeFieldStorage {
     private val uuids: MutableList<UUID> = mutableListOf()
     private val resourceLocations: MutableList<ResourceLocation> = mutableListOf()
     private val functions: MutableList<ResourceLocation> = mutableListOf()
+    private val attributes: MutableList<ResourceLocation> = mutableListOf()
 
     private fun getUuidName(value: UUID) = if(DEBUG) "uuid\$${value.toString().replace("-", "")}" else "u${uuids.indexOf(value)}"
-    private fun getResourceLocationName(value: ResourceLocation) = if(DEBUG) "resourceLocation\$${value.toString().replace('/', '$').replace(':', '$')}" else "r${resourceLocations.indexOf(value)}"
-    private fun getFunctionName(value: ResourceLocation) = if(DEBUG) "function\$${value.toString().replace('/', '$').replace(':', '$')}" else "f${functions.indexOf(value)}"
+    private fun getResourceLocationName(value: ResourceLocation) = if(DEBUG) "resourceLocation\$${value.toString().replace('/', '$').replace(':', '$').replace('.', '$')}" else "r${resourceLocations.indexOf(value)}"
+    private fun getFunctionName(value: ResourceLocation) = if(DEBUG) "function\$${value.toString().replace('/', '$').replace(':', '$').replace('.', '$')}" else "f${functions.indexOf(value)}"
+    private fun getAttributeName(value: ResourceLocation) = if(DEBUG) "attribute\$${value.toString().replace('/', '$').replace(':', '$').replace('.', '$')}" else "f${attributes.indexOf(value)}"
 
     fun loadUUID(cw: CodeWriter, value: UUID) {
         if(!uuids.contains(value)) uuids.add(value)
@@ -37,6 +40,12 @@ class CodeFieldStorage {
         if(!resourceLocations.contains(value)) resourceLocations.add(value)
         if(!functions.contains(value)) functions.add(value)
         cw.getDataField(getFunctionName(value), CommandFunction::class.java)
+    }
+
+    fun loadAttribute(cw: CodeWriter, value: ResourceLocation) {
+        if(!resourceLocations.contains(value)) resourceLocations.add(value)
+        if(!attributes.contains(value)) attributes.add(value)
+        cw.getDataField(getAttributeName(value), Attribute::class.java)
     }
 
     fun loadServerFunctionManager(cw: CodeWriter) {
@@ -82,6 +91,13 @@ class CodeFieldStorage {
             cw.castType(CommandFunction::class.java)
             cw.setDataField(getFunctionName(value), CommandFunction::class.java)
         }
+        attributes.forEachIndexed { _, value ->
+            cw.writeMapped(BuiltInRegistries_ATTRIBUTE)
+            loadResourceLocation(cw, value)
+            cw.writeMapped(Registry_get)
+            cw.castType(Attribute::class.java)
+            cw.setDataField(getAttributeName(value), Attribute::class.java)
+        }
         mv.visitInsn(Opcodes.RETURN)
         mv.visitMaxs(0, 0)
         mv.visitEnd()
@@ -96,6 +112,9 @@ class CodeFieldStorage {
         }
         functions.forEachIndexed { index, value ->
             classWriter.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, getFunctionName(value), CommandFunction::class.java.descriptorString(), null, null)
+        }
+        attributes.forEachIndexed { index, value ->
+            classWriter.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, getAttributeName(value), Attribute::class.java.descriptorString(), null, null)
         }
 
     }

@@ -10,6 +10,7 @@ data class Command(val type: CommandType, val params: Map<String, Any?>) {
 
 
 enum class CommandType {
+    ATTRIBUTE_BASE_SET,
     EXECUTE_ALIGN,
     EXECUTE_AS,
     EXECUTE_AT,

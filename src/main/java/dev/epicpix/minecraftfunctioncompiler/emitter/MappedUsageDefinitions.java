@@ -3,7 +3,10 @@ package dev.epicpix.minecraftfunctioncompiler.emitter;
 import net.minecraft.commands.CommandFunction;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.FunctionInstantiationException;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerFunctionLibrary;
 import net.minecraft.server.ServerFunctionManager;
@@ -12,6 +15,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.ServerPlayerGameMode;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeMap;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
@@ -42,10 +49,13 @@ public class MappedUsageDefinitions {
     private static void Entity_position() { MappedUsageDefinitions.<Entity>type().position(); }
     private static void Entity_getRotationVector() { MappedUsageDefinitions.<Entity>type().getRotationVector(); }
     private static void Entity_getTeam() { MappedUsageDefinitions.<Entity>type().getTeam(); }
+    private static void LivingEntity_getAttributes() { MappedUsageDefinitions.<LivingEntity>type().getAttributes(); }
     private static void ServerPlayer_setGameMode() { MappedUsageDefinitions.<ServerPlayer>type().setGameMode((GameType)null); }
     private static void ServerPlayer_gameMode() { var unused = MappedUsageDefinitions.<ServerPlayer>type().gameMode; }
     private static void ServerPlayerGameMode_getGameModeForPlayer() { MappedUsageDefinitions.<ServerPlayerGameMode>type().getGameModeForPlayer(); }
     private static void Team_getName() { MappedUsageDefinitions.<Team>type().getName(); }
+    private static void AttributeMap_getInstance() { MappedUsageDefinitions.<AttributeMap>type().getInstance((Attribute)null); }
+    private static void AttributeInstance_setBaseValue() { MappedUsageDefinitions.<AttributeInstance>type().setBaseValue((double)0); }
 
     private static void GameType_SURVIVAL() { var unused = GameType.SURVIVAL; }
     private static void GameType_CREATIVE() { var unused = GameType.CREATIVE; }
@@ -70,6 +80,9 @@ public class MappedUsageDefinitions {
     private static void Scoreboard_resetPlayerScore() { MappedUsageDefinitions.<Scoreboard>type().resetPlayerScore((String)null, (Objective)null); }
     private static void Score_setScore() { MappedUsageDefinitions.<Score>type().setScore((int)0); }
     private static void Score_getScore() { MappedUsageDefinitions.<Score>type().getScore(); }
+
+    private static void BuiltInRegistries_ATTRIBUTE() { var unused = BuiltInRegistries.ATTRIBUTE; }
+    private static void Registry_get() { MappedUsageDefinitions.<Registry<?>>type().get((ResourceLocation)null); }
 
     private static void Vec3_x() { var unused = MappedUsageDefinitions.<Vec3>type().x; }
     private static void Vec3_y() { var unused = MappedUsageDefinitions.<Vec3>type().y; }

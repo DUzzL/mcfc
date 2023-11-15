@@ -5,6 +5,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument
 import dev.epicpix.minecraftfunctioncompiler.il.*
 import dev.epicpix.minecraftfunctioncompiler.parser.Command
 import dev.epicpix.minecraftfunctioncompiler.parser.CommandType.*
+import net.minecraft.resources.ResourceLocation
 
 fun compile(commands: List<Command>): List<Instruction> {
     val instructions = mutableListOf<Instruction>()
@@ -16,6 +17,17 @@ fun compile(commands: List<Command>): List<Instruction> {
 
 private fun CompilationContext.compile(command: Command) {
     when(command.type) {
+        ATTRIBUTE_BASE_SET -> {
+            forSelector(command["target"]) { entity, _, _ ->
+                val attrLocation = LocationData(local = highestLocal)
+                val instruction =
+                Instructions.checkEntityTypes(entity, listOf(ResourceLocation("minecraft", "living_entity")), false)
+                    .with(Instructions.getAttributeInstance(entity, attrLocation, command["attribute"])
+                        .with(Instructions.ifNotNull(attrLocation)
+                            .with(Instructions.setAttributeBase(attrLocation, command["value"]))))
+                addInstruction(instruction)
+            }
+        }
         EXECUTE_ALIGN -> {
             getPosition { positionId ->
                 val newPosition = LocationData(local = highestLocal)

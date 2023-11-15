@@ -12,6 +12,8 @@ import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.ai.attributes.AttributeInstance
 import net.minecraft.world.level.GameType
 import net.minecraft.world.phys.Vec2
 import net.minecraft.world.phys.Vec3
@@ -277,7 +279,7 @@ private fun emitInstruction(
             fieldStorage.loadScoreboard(codeWriter)
             load("name")
             load("objective")
-            codeWriter.writeMapped(MappedData.Scoreboard_getOrCreatePlayerScore)
+            codeWriter.writeMapped(Scoreboard_getOrCreatePlayerScore)
 
             val uidLocal = codeWriter.generateUniqueLocal("\$ScoreData")
             val end = codeWriter.defineLocal(uidLocal, Score::class.java)
@@ -655,18 +657,21 @@ private fun emitInstruction(
             codeWriter.methodVisitor.visitInsn(Opcodes.POP)
         }
         InstructionType.CHECK_TEAM -> {
-            if(!instruction.get<Boolean>("negated")) {
+            if(instruction["negated"]) {
                 load("entity")
                 codeWriter.writeMapped(Entity_getTeam)
-                codeWriter.executeIf(Opcodes.IFNONNULL) {
-                    codeWriter.writeString(instruction["team"])
-                    load("entity")
-                    codeWriter.writeMapped(Entity_getTeam)
-                    codeWriter.writeMapped(Team_getName)
-                    codeWriter.writeMapped(String_equals)
-                    codeWriter.executeIf(Opcodes.IFNE) {
-                        run()
-                    }
+                val label = Label()
+                codeWriter.executeIf(Opcodes.IFNULL) {
+                    codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, label)
+                }
+                codeWriter.writeString(instruction["team"])
+                load("entity")
+                codeWriter.writeMapped(Entity_getTeam)
+                codeWriter.writeMapped(Team_getName)
+                codeWriter.writeMapped(String_equals)
+                codeWriter.executeIf(Opcodes.IFNE) {
+                    codeWriter.methodVisitor.visitLabel(label)
+                    run()
                 }
             }else {
                 val label = Label()
@@ -693,6 +698,25 @@ private fun emitInstruction(
             codeWriter.executeIf(if(!instruction.get<Boolean>("negated")) Opcodes.IFNULL else Opcodes.IFNONNULL) {
                 run()
             }
+        }
+        InstructionType.GET_ATTRIBUTE_INSTANCE -> {
+            load("entity")
+            codeWriter.castType(LivingEntity::class.java)
+            codeWriter.writeMapped(LivingEntity_getAttributes)
+            fieldStorage.loadAttribute(codeWriter, instruction["attribute"])
+            codeWriter.writeMapped(AttributeMap_getInstance)
+
+            val uidLocal = codeWriter.generateUniqueLocal("\$AttributeInstance")
+            val end = codeWriter.defineLocal(uidLocal, AttributeInstance::class.java)
+            codeWriter.storeLocal(uidLocal)
+            store("instance", uidLocal)
+            run()
+            end()
+        }
+        InstructionType.SET_ATTRIBUTE_BASE ->  {
+            load("instance")
+            codeWriter.writeDouble(instruction["value"])
+            codeWriter.writeMapped(AttributeInstance_setBaseValue)
         }
     }
 }
