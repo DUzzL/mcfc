@@ -1,4 +1,4 @@
-image: gradle:alpine
+image: openjdk:17-jdk-oraclelinux7
 
 before_script:
   - GRADLE_USER_HOME="$(pwd)/.gradle"
