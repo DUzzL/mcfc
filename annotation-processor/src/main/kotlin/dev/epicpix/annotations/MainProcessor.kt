@@ -7,6 +7,8 @@ import com.google.devtools.ksp.processing.*
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.Modifier
 import com.google.devtools.ksp.symbol.Origin
+import com.google.gson.Gson
+import com.google.gson.JsonElement
 import java.io.OutputStream
 import java.util.*
 
@@ -19,6 +21,12 @@ class MainProcessor(
     private val options: Map<String, String>
 ) : SymbolProcessor {
     private var invoked = false
+
+    fun loadJson(file: String): JsonElement {
+        val str = MainProcessor::class.java.getResourceAsStream("/data/$file.json")?.readAllBytes()?.decodeToString()
+            ?: throw NullPointerException("Failed to read file $file.json")
+        return Gson().fromJson(str, JsonElement::class.java)
+    }
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
         if(invoked) return emptyList()
