@@ -226,5 +226,6 @@ private fun CompilationContext.compile(command: Command) {
                 addInstruction(Instructions.removeEntityTag(entity, command["name"]))
             }
         }
+        EMPTY -> {}
     }
 }

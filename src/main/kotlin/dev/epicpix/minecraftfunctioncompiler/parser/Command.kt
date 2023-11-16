@@ -31,5 +31,6 @@ enum class CommandType {
     SCOREBOARD_PLAYERS_SET,
     TAG_ADD,
     TAG_REMOVE,
+    EMPTY,
 }
 

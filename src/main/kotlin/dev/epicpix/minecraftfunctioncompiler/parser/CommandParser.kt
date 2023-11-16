@@ -75,19 +75,19 @@ object CommandParser {
 
                 Command(CommandType.EXECUTE_ALIGN, mapOf(
                     "swizzle" to SwizzleArgument(swizzle.contains(Direction.Axis.X), swizzle.contains(Direction.Axis.Y), swizzle.contains(Direction.Axis.Z)),
-                    "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
+                    "command" to getExecuteSubcommand(context, source, server)
                 ))
             }
             "as" -> {
                 Command(CommandType.EXECUTE_AS, mapOf(
                     "targets" to parseSelector(context.arguments["targets"]!!.range[source]),
-                    "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
+                    "command" to getExecuteSubcommand(context, source, server)
                 ))
             }
             "at" -> {
                 Command(CommandType.EXECUTE_AT, mapOf(
                     "targets" to parseSelector(context.arguments["targets"]!!.range[source]),
-                    "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
+                    "command" to getExecuteSubcommand(context, source, server)
                 ))
             }
             "if" -> {
@@ -96,7 +96,7 @@ object CommandParser {
                     "entity" -> {
                         Command(CommandType.EXECUTE_IF_ENTITY, mapOf(
                             "entities" to parseSelector(context.arguments["entities"]!!.range[source]),
-                            "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
+                            "command" to getExecuteSubcommand(context, source, server)
                         ))
                     }
                     "score" -> {
@@ -107,7 +107,7 @@ object CommandParser {
                                 "target" to parseScoreHolder(context.arguments["target"]!!.range[source]),
                                 "targetObjective" to context.arguments["targetObjective"]!!.result as String,
                                 "range" to IntRangeArgument(range.min.orElse(null), range.max.orElse(null)),
-                                "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
+                                "command" to getExecuteSubcommand(context, source, server)
                             ))
                         }else {
                             Command(CommandType.EXECUTE_IF_SCORE_COMPARE, mapOf(
@@ -116,7 +116,7 @@ object CommandParser {
                                 "comparison" to comparison,
                                 "source" to parseScoreHolder(context.arguments["source"]!!.range[source]),
                                 "sourceObjective" to context.arguments["sourceObjective"]!!.result as String,
-                                "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
+                                "command" to getExecuteSubcommand(context, source, server)
                             ))
                         }
                     }
@@ -131,7 +131,7 @@ object CommandParser {
                     when(pos) {
                         is LocalCoordinates -> throw UnsupportedOperationException("Unsupported local coordinates")
                         is net.minecraft.commands.arguments.coordinates.WorldCoordinates -> {
-                            Command(CommandType.EXECUTE_POSITIONED_POS, mapOf("position" to WorldCoordinates(pos.x.value, pos.x.relative, pos.y.value, pos.y.relative, pos.z.value, pos.z.relative), "command" to parseCommandExecute(context.child, context.child.nodes, source, server)))
+                            Command(CommandType.EXECUTE_POSITIONED_POS, mapOf("position" to WorldCoordinates(pos.x.value, pos.x.relative, pos.y.value, pos.y.relative, pos.z.value, pos.z.relative), "command" to getExecuteSubcommand(context, source, server)))
                         }
                         else -> throw UnsupportedOperationException("Unknown coordinate type")
                     }
@@ -139,13 +139,18 @@ object CommandParser {
                     throw UnsupportedOperationException("Invalid execute command: positioned")
                 }
             }
+            "store" -> {
+                val storeType = nodes[1].range[source]
+                val storeLocation = nodes[2].range[source]
+                throw UnsupportedOperationException("Invalid execute command: store / $storeType / $storeLocation")
+            }
             "unless" -> {
                 val ifType = nodes[1].range[source]
                 when(ifType) {
                     "entity" -> {
                         Command(CommandType.EXECUTE_UNLESS_ENTITY, mapOf(
                             "entities" to parseSelector(context.arguments["entities"]!!.range[source]),
-                            "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
+                            "command" to getExecuteSubcommand(context, source, server)
                         ))
                     }
                     "score" -> {
@@ -156,7 +161,7 @@ object CommandParser {
                                 "target" to parseScoreHolder(context.arguments["target"]!!.range[source]),
                                 "targetObjective" to context.arguments["targetObjective"]!!.result as String,
                                 "range" to IntRangeArgument(range.min.orElse(null), range.max.orElse(null)),
-                                "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
+                                "command" to getExecuteSubcommand(context, source, server)
                             ))
                         }else {
                             Command(CommandType.EXECUTE_UNLESS_SCORE_COMPARE, mapOf(
@@ -165,7 +170,7 @@ object CommandParser {
                                 "comparison" to comparison,
                                 "source" to parseScoreHolder(context.arguments["source"]!!.range[source]),
                                 "sourceObjective" to context.arguments["sourceObjective"]!!.result as String,
-                                "command" to parseCommandExecute(context.child, context.child.nodes, source, server)
+                                "command" to getExecuteSubcommand(context, source, server)
                             ))
                         }
                     }
@@ -289,6 +294,10 @@ object CommandParser {
             }
             else -> throw UnsupportedOperationException("Invalid tag command type: $type")
         }
+    }
+
+    private fun getExecuteSubcommand(context: CommandContextBuilder<CommandSourceStack>, source: String, server: MinecraftServer): Command {
+        return if(context.child != null) parseCommandExecute(context.child, context.child.nodes, source, server) else Command(CommandType.EMPTY, mapOf())
     }
 
 }
