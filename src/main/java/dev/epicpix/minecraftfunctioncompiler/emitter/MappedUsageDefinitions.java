@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter;
 
+import dev.epicpix.minecraftfunctioncompiler.ExtensionFunctions;
 import net.minecraft.commands.CommandFunction;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.FunctionInstantiationException;
@@ -10,6 +11,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerFunctionLibrary;
 import net.minecraft.server.ServerFunctionManager;
+import net.minecraft.server.ServerScoreboard;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.ServerPlayerGameMode;
@@ -77,6 +79,7 @@ public class MappedUsageDefinitions {
     private static void Scoreboard_playerScores() { var unused = MappedUsageDefinitions.<Scoreboard>type().playerScores; }
     private static void Scoreboard_getObjective() { MappedUsageDefinitions.<Scoreboard>type().getObjective((String)null); }
     private static void Scoreboard_getOrCreatePlayerScore() { MappedUsageDefinitions.<Scoreboard>type().getOrCreatePlayerScore((String)null, (Objective)null); }
+    private static void Scoreboard_getScore() { ExtensionFunctions.getScore((ServerScoreboard)null, (String)null, (Objective)null); }
     private static void Scoreboard_resetPlayerScore() { MappedUsageDefinitions.<Scoreboard>type().resetPlayerScore((String)null, (Objective)null); }
     private static void Score_setScore() { MappedUsageDefinitions.<Score>type().setScore((int)0); }
     private static void Score_getScore() { MappedUsageDefinitions.<Score>type().getScore(); }

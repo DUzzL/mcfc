@@ -21,12 +21,10 @@ data class IntRangeArgument(
 data class ScoreHolderArgument(
     val all: Boolean,
     val name: String?,
-    val selector: SelectorArgument?
+    val selector: SelectorArgument?,
+    val single: Boolean = false,
 ) {
-    fun single(): ScoreHolderArgument {
-        return if(selector != null) ScoreHolderArgument(false, null, selector.copy(limit = 1))
-        else this
-    }
+    fun single() = copy(single = true)
 }
 
 data class SelectorArgument(

@@ -28,7 +28,7 @@ private interface InstructionDefinitions {
     fun checkLimit(scope: Int): Instruction
     fun getObjective(@InstructionDestination objective: LocationData, name: String): Instruction
     fun getScoreboardName(@InstructionSource entity: LocationData, @InstructionDestination name: LocationData): Instruction
-    fun scoreData(@InstructionSource objective: LocationData, @InstructionSource name: LocationData, @InstructionDestination score: LocationData): Instruction
+    fun scoreData(@InstructionSource objective: LocationData, @InstructionSource name: LocationData, @InstructionDestination score: LocationData, autoCreate: Boolean): Instruction
     fun addScore(@InstructionSource score: LocationData, value: Int): Instruction
     fun setScore(@InstructionSource score: LocationData, value: Int): Instruction
     fun resetScore(@InstructionSource objective: LocationData, @InstructionSource name: LocationData): Instruction

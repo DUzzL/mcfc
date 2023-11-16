@@ -279,7 +279,7 @@ private fun emitInstruction(
             fieldStorage.loadScoreboard(codeWriter)
             load("name")
             load("objective")
-            codeWriter.writeMapped(Scoreboard_getOrCreatePlayerScore)
+            codeWriter.writeMapped(if(instruction["autoCreate"]) Scoreboard_getOrCreatePlayerScore else Scoreboard_getScore)
 
             val uidLocal = codeWriter.generateUniqueLocal("\$ScoreData")
             val end = codeWriter.defineLocal(uidLocal, Score::class.java)

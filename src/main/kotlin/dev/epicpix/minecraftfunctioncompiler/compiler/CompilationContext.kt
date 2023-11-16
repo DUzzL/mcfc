@@ -17,11 +17,17 @@ data class CompilationContext(
     val addInstruction: (Instruction) -> Unit
 ) {
 
-    fun getScoreData(objective: LocationData, name: LocationData, exec: CompilationContext.(scoreData: LocationData) -> Unit) {
+    fun getScoreData(objective: LocationData, name: LocationData, autoCreate: Boolean, exec: CompilationContext.(scoreData: LocationData) -> Unit) {
         val scoreData = LocationData(local = highestLocal)
-        val instruction = Instructions.scoreData(objective, name, scoreData)
+        val instruction = Instructions.scoreData(objective, name, scoreData, autoCreate)
         addInstruction(instruction)
-        exec(copy(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), scoreData)
+        if(autoCreate) {
+            exec(copy(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), scoreData)
+        }else {
+            val nonNull = Instructions.ifNotNull(scoreData)
+            instruction.with(nonNull)
+            exec(copy(highestLocal = highestLocal + 1, addInstruction = nonNull.children::add), scoreData)
+        }
     }
 
     fun forPosition(pos: WorldCoordinates, exec: CompilationContext.(positionId: LocationData) -> Unit) {
@@ -94,11 +100,12 @@ data class CompilationContext(
 
     fun forScoreHolder(holder: ScoreHolderArgument, exec: CompilationContext.(local: LocationData) -> Unit) {
         if(holder.all) {
-            forEachScoreHolder(single = false, exec)
+            forEachScoreHolder(single = holder.single, exec)
         }else if(holder.name != null) {
             exec(LocationData(string = holder.name))
         }else if(holder.selector != null) {
-            forSelector(holder.selector) { entity, _, _ ->
+            val selector = if(holder.single) holder.selector.copy(limit = 1) else holder.selector
+            forSelector(selector) { entity, _, _ ->
                 val local = LocationData(local = highestLocal)
                 val instruction = Instructions.getScoreboardName(entity, local)
                 addInstruction(Instructions.ifNotNull(entity).with(instruction))
@@ -206,7 +213,7 @@ data class CompilationContext(
                 for((obj, range) in selector.scores) {
                     ctx.copy(addInstruction = stacker::stackInstruction).getObjective(obj) { objective ->
                         getScoreboardName(local) { name ->
-                            getScoreData(objective, name) { score ->
+                            getScoreData(objective, name, false) { score ->
                                 val instr = Instructions.checkScoreRange(score, range, false)
                                 addInstruction(instr)
                                 stacker.current = instr

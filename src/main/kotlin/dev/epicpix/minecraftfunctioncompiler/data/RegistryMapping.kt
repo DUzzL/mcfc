@@ -22,5 +22,5 @@ fun updateRegistryMaps() {
         }
     }
     entityTypeMappings[ResourceLocation("minecraft", "player")] = ServerPlayer::class.java
-    entityTypeMappings[ResourceLocation("minecraft", "living_entity")] = LivingEntity::class.java
+    entityTypeMappings[ResourceLocation("minecraftfunctioncompiler", "living_entity")] = LivingEntity::class.java
 }

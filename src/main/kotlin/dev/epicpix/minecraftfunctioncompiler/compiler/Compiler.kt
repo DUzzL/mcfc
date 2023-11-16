@@ -15,13 +15,13 @@ fun compile(commands: List<Command>): List<Instruction> {
     return instructions
 }
 
-private fun CompilationContext.compile(command: Command) {
+private fun CompilationContext.compile(command: Command, result: ResultStorage? = null) {
     when(command.type) {
         ATTRIBUTE_BASE_SET -> {
             forSelector(command["target"]) { entity, _, _ ->
                 val attrLocation = LocationData(local = highestLocal)
                 val instruction =
-                Instructions.checkEntityTypes(entity, listOf(ResourceLocation("minecraft", "living_entity")), false)
+                Instructions.checkEntityTypes(entity, listOf(ResourceLocation("minecraftfunctioncompiler", "living_entity")), false)
                     .with(Instructions.getAttributeInstance(entity, attrLocation, command["attribute"])
                         .with(Instructions.ifNotNull(attrLocation)
                             .with(Instructions.setAttributeBase(attrLocation, command["value"]))))
@@ -32,35 +32,35 @@ private fun CompilationContext.compile(command: Command) {
             getPosition { positionId ->
                 val newPosition = LocationData(local = highestLocal)
                 val instruction = Instructions.alignPosition(positionId, newPosition, command["swizzle"])
-                copy(highestLocal = highestLocal + 1, currentPosition = newPosition, addInstruction = instruction.children::add).compile(command["command"])
+                copy(highestLocal = highestLocal + 1, currentPosition = newPosition, addInstruction = instruction.children::add).compile(command["command"], result)
                 addInstruction(instruction)
             }
         }
         EXECUTE_AS -> {
             forSelector(command["targets"]) { entity, breakId, continueId ->
-                copy(currentEntity = entity).compile(command["command"])
+                copy(currentEntity = entity).compile(command["command"], result)
             }
         }
         EXECUTE_AT -> {
-            forSelector(command["targets"]) { entity, breakId, continueId ->
+            forSelector(command["targets"]) { entity, _, _ ->
                 val world = LocationData(local = highestLocal)
                 val position = LocationData(local = highestLocal + 1)
                 val rotation = LocationData(local = highestLocal + 2)
                 val execInstruction = Instructions.getEntityRotation(entity, rotation)
                 val instruction = Instructions.getEntityWorld(entity, world).with(Instructions.getEntityPosition(entity, position).with(execInstruction))
-                copy(highestLocal = highestLocal + 3, currentWorld = world, currentPosition = position, currentRotation = rotation, addInstruction = execInstruction.children::add).compile(command["command"])
+                copy(highestLocal = highestLocal + 3, currentWorld = world, currentPosition = position, currentRotation = rotation, addInstruction = execInstruction.children::add).compile(command["command"], result)
                 addInstruction(instruction)
             }
         }
         EXECUTE_IF_ENTITY -> {
-            forSelector(command.get<SelectorArgument>("entities").copy(limit = 1)) { entity, breakId, continueId ->
+            forSelector(command.get<SelectorArgument>("entities").copy(limit = 1)) { _, _, _ ->
                 compile(command["command"])
             }
         }
         EXECUTE_IF_SCORE_RANGE -> {
             getObjective(command["targetObjective"]) { objective ->
                 forScoreHolder(command.get<ScoreHolderArgument>("target").single()) { name ->
-                    getScoreData(objective, name) { score ->
+                    getScoreData(objective, name, false) { score ->
                         val instr = Instructions.checkScoreRange(score, command["range"], false)
                         copy(addInstruction = instr.children::add).compile(command["command"])
                         addInstruction(instr)
@@ -73,8 +73,8 @@ private fun CompilationContext.compile(command: Command) {
                 forScoreHolder(command.get<ScoreHolderArgument>("target").single()) { targetName ->
                     getObjective(command["sourceObjective"]) { sourceObjective ->
                         forScoreHolder(command.get<ScoreHolderArgument>("source").single()) { sourceName ->
-                            getScoreData(targetObjective, targetName) { target ->
-                                getScoreData(sourceObjective, sourceName) { source ->
+                            getScoreData(targetObjective, targetName, false) { target ->
+                                getScoreData(sourceObjective, sourceName, false) { source ->
                                     val operation = when(command.get<String>("comparison")) {
                                         ">" -> ScoreboardCompareOperation.GT
                                         ">=" -> ScoreboardCompareOperation.GE
@@ -95,7 +95,7 @@ private fun CompilationContext.compile(command: Command) {
         }
         EXECUTE_POSITIONED_POS -> {
             forPosition(command["position"]) { position ->
-                copy(currentPosition = position).compile(command["command"])
+                copy(currentPosition = position).compile(command["command"], result)
             }
         }
         EXECUTE_UNLESS_ENTITY -> {
@@ -107,7 +107,7 @@ private fun CompilationContext.compile(command: Command) {
         EXECUTE_UNLESS_SCORE_RANGE -> {
             getObjective(command["targetObjective"]) { objective ->
                 forScoreHolder(command.get<ScoreHolderArgument>("target").single()) { name ->
-                    getScoreData(objective, name) { score ->
+                    getScoreData(objective, name, false) { score ->
                         val instr = Instructions.checkScoreRange(score, command["range"], true)
                         copy(addInstruction = instr.children::add).compile(command["command"])
                         addInstruction(instr)
@@ -120,8 +120,8 @@ private fun CompilationContext.compile(command: Command) {
                 forScoreHolder(command.get<ScoreHolderArgument>("target").single()) { targetName ->
                     getObjective(command["sourceObjective"]) { sourceObjective ->
                         forScoreHolder(command.get<ScoreHolderArgument>("source").single()) { sourceName ->
-                            getScoreData(targetObjective, targetName) { target ->
-                                getScoreData(sourceObjective, sourceName) { source ->
+                            getScoreData(targetObjective, targetName, false) { target ->
+                                getScoreData(sourceObjective, sourceName, false) { source ->
                                     val operation = when(command.get<String>("comparison")) {
                                         ">" -> ScoreboardCompareOperation.LE
                                         ">=" -> ScoreboardCompareOperation.LT
@@ -156,7 +156,7 @@ private fun CompilationContext.compile(command: Command) {
         SCOREBOARD_PLAYERS_ADD -> {
             getObjective(command["objective"]) { objective ->
                 forScoreHolder(command["targets"]) { name ->
-                    getScoreData(objective, name) { scoreData ->
+                    getScoreData(objective, name, true) { scoreData ->
                         addInstruction(Instructions.addScore(scoreData, command["score"]))
                     }
                 }
@@ -168,8 +168,8 @@ private fun CompilationContext.compile(command: Command) {
                     forScoreHolder(command["targets"]) { targetName ->
                         getObjective(command["sourceObjective"]) { sourceObjective ->
                             forScoreHolder(command["source"]) { sourceName ->
-                                getScoreData(targetObjective, targetName) { target ->
-                                    getScoreData(sourceObjective, sourceName) { source ->
+                                getScoreData(targetObjective, targetName, true) { target ->
+                                    getScoreData(sourceObjective, sourceName, true) { source ->
                                         val operation = when(command.get<String>("operation")) {
                                             "=" -> ScoreboardOperation.SET
                                             "+=" -> ScoreboardOperation.PLUS
@@ -194,7 +194,7 @@ private fun CompilationContext.compile(command: Command) {
         SCOREBOARD_PLAYERS_SET -> {
             getObjective(command["objective"]) { objective ->
                 forScoreHolder(command["targets"]) { name ->
-                    getScoreData(objective, name) { score ->
+                    getScoreData(objective, name, true) { score ->
                         addInstruction(Instructions.setScore(score, command["score"]))
                     }
                 }
@@ -203,7 +203,7 @@ private fun CompilationContext.compile(command: Command) {
         SCOREBOARD_PLAYERS_REMOVE -> {
             getObjective(command["objective"]) { objective ->
                 forScoreHolder(command["targets"]) { name ->
-                    getScoreData(objective, name) { score ->
+                    getScoreData(objective, name, true) { score ->
                         addInstruction(Instructions.addScore(score, -command.get<Int>("score")))
                     }
                 }
