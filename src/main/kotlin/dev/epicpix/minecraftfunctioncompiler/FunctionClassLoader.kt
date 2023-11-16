@@ -67,11 +67,10 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                     LOGGER.info(" --- {} ---", key)
                     printInstructionList(optimized)
                 }
+            }catch(e: UnsupportedOperationException) {
+                LOGGER.error("Failed to compile function $key / ${e.message}")
             }catch(e: Throwable) {
-                LOGGER.error("Failed to compile function ($key), clearing compilation data", e)
-                definedFunctions.clear()
-                LOGGER.info("Compiled 0 functions in ${System.currentTimeMillis()-startCompile}ms")
-                return
+                LOGGER.error("Failed to compile function $key", e)
             }
         }
         LOGGER.info("Compiled ${definedFunctions.size} functions in ${System.currentTimeMillis()-startCompile}ms")
