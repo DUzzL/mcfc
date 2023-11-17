@@ -16,29 +16,7 @@ Put the mod on a fabric server with all the dependencies, the mod will automatic
 
 Of course this mod can't support every command, so it will only generate code for functions which contain only commands which are supported, **this will not compile functions with macros currently**. It can't compile macros because any value could be interpreted in any way, which is hard to implement using only things known at compile-time.
 
-This is the list of commands supported currently as of `0.1.0-alpha.7`:
-- `attribute <target> <attribute> base set`
-- `execute align`
-- `execute as`
-- `execute at`
-- `execute if entity`
-- `execute if score`
-- `execute positioned <pos>`
-- `execute run`
-- `execute store result score`
-- `execute unless entity`
-- `execute unless score`
-- `function` (without ability to provide arguments)
-- `gamemode`
-- `kill`
-- `scoreboard players add`
-- `scoreboard players get`
-- `scoreboard players operation`
-- `scoreboard players remove`
-- `scoreboard players reset` (only with the objective specified)
-- `scoreboard players set`
-- `tag add`
-- `tag remove`
+The list of commands supported currently as of `0.1.0-alpha.7` is in the [Command Support](./docs/command_support.md) file
 
 ## Supported Selectors
 
