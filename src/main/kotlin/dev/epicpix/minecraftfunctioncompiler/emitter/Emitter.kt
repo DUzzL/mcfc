@@ -288,6 +288,17 @@ private fun emitInstruction(
             run()
             end()
         }
+        InstructionType.GET_SCORE_VALUE -> {
+            load("score")
+            codeWriter.writeMapped(Score_getScore)
+
+            val uidLocal = codeWriter.generateUniqueLocal("\$ScoreValue")
+            val end = codeWriter.defineLocal(uidLocal, Int::class.javaPrimitiveType!!)
+            codeWriter.storeLocal(uidLocal)
+            store("scoreValue", uidLocal)
+            run()
+            end()
+        }
         InstructionType.SET_SCORE -> {
             load("score")
             codeWriter.writeInt(instruction["value"])

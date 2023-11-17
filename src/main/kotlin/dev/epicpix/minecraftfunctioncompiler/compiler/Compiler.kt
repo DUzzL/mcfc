@@ -15,7 +15,7 @@ fun compile(commands: List<Command>): List<Instruction> {
     return instructions
 }
 
-private fun CompilationContext.compile(command: Command, result: ResultStorage? = null) {
+private fun CompilationContext.compile(command: Command, result: ResultStorage = ResultStorage()) {
     when(command.type) {
         ATTRIBUTE_BASE_SET -> {
             forSelector(command["target"]) { entity, _, _ ->
@@ -158,6 +158,18 @@ private fun CompilationContext.compile(command: Command, result: ResultStorage? 
                 forScoreHolder(command["targets"]) { name ->
                     getScoreData(objective, name, true) { scoreData ->
                         addInstruction(Instructions.addScore(scoreData, command["score"]))
+                    }
+                }
+            }
+        }
+        SCOREBOARD_PLAYERS_GET -> {
+            getObjective(command["objective"]) { objective ->
+                forScoreHolder(command["target"]) { name ->
+                    getScoreData(objective, name, true) { scoreData ->
+                        val res = LocationData(local = highestLocal)
+                        addInstruction(Instructions.getScoreValue(scoreData, res).apply {
+                            result.setResult(this@getScoreData.copy(addInstruction = children::add), res)
+                        })
                     }
                 }
             }

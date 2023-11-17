@@ -220,11 +220,16 @@ object CommandParser {
                 val opType = context.nodes[2].node.name
                 when(opType) {
                     "add" -> {
-                        val objective = context.arguments["objective"]!!.result as String
                         Command(CommandType.SCOREBOARD_PLAYERS_ADD, mapOf(
                             "targets" to parseScoreHolder(context.arguments["targets"]!!.range[source]),
-                            "objective" to objective,
+                            "objective" to context.arguments["objective"]!!.result as String,
                             "score" to context.arguments["score"]!!.result as Int
+                        ))
+                    }
+                    "get" -> {
+                        Command(CommandType.SCOREBOARD_PLAYERS_GET, mapOf(
+                            "target" to parseScoreHolder(context.arguments["target"]!!.range[source]).single(),
+                            "objective" to context.arguments["objective"]!!.result as String
                         ))
                     }
                     "operation" -> {

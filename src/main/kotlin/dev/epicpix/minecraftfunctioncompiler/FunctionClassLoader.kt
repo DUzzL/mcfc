@@ -31,6 +31,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
 
         handles.clear()
 
+        LOGGER.info("Found ${functions.size} functions")
         val definedFunctions = mutableMapOf<ResourceLocation, List<Command>>()
 
         val startParse = System.currentTimeMillis()
@@ -49,7 +50,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                 LOGGER.error("Unable to parse function $key", e)
             }
         }
-        LOGGER.info("Parsed ${definedFunctions.size}/${functions.size} functions in ${System.currentTimeMillis()-startParse}ms")
+        LOGGER.info("Parsed ${definedFunctions.size} functions in ${System.currentTimeMillis()-startParse}ms")
 
         var totalPreoptimizedInstructions = 0
         var totalOptimizedInstructions = 0
@@ -73,10 +74,10 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                 LOGGER.error("Failed to compile function $key", e)
             }
         }
-        LOGGER.info("Compiled ${definedFunctions.size} functions in ${System.currentTimeMillis()-startCompile}ms")
-        if(definedFunctions.size != 0 && DEBUG) {
-            LOGGER.info("Average ${"%.2f".format(totalPreoptimizedInstructions/definedFunctions.size.toDouble())} instructions in pre-optimized IL bytecode")
-            LOGGER.info("Average ${"%.2f".format(totalOptimizedInstructions/definedFunctions.size.toDouble())} instructions in optimized IL bytecode")
+        LOGGER.info("Compiled ${compiledFunctions.size} functions in ${System.currentTimeMillis()-startCompile}ms")
+        if(DEBUG && definedFunctions.isNotEmpty()) {
+            LOGGER.info("Average ${"%.2f".format(totalPreoptimizedInstructions/compiledFunctions.size.toDouble())} instructions in pre-optimized IL bytecode")
+            LOGGER.info("Average ${"%.2f".format(totalOptimizedInstructions/compiledFunctions.size.toDouble())} instructions in optimized IL bytecode")
         }
 
         val storage = CodeFieldStorage()

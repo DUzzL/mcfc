@@ -31,6 +31,7 @@ This is the list of commands supported currently as of `0.1.0-alpha.7`:
 - `gamemode`
 - `kill`
 - `scoreboard players add`
+- `scoreboard players get`
 - `scoreboard players operation`
 - `scoreboard players remove`
 - `scoreboard players reset` (only with the objective specified)
