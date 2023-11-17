@@ -30,8 +30,9 @@ private interface InstructionDefinitions {
     fun getScoreboardName(@InstructionSource entity: LocationData, @InstructionDestination name: LocationData): Instruction
     fun scoreData(@InstructionSource objective: LocationData, @InstructionSource name: LocationData, @InstructionDestination score: LocationData, autoCreate: Boolean): Instruction
     fun getScoreValue(@InstructionSource score: LocationData, @InstructionDestination scoreValue: LocationData): Instruction
-    fun addScore(@InstructionSource score: LocationData, value: Int): Instruction
-    fun setScore(@InstructionSource score: LocationData, value: Int): Instruction
+    fun addScore(@InstructionSource score: LocationData, @InstructionSource value: LocationData): Instruction
+    fun removeScore(@InstructionSource score: LocationData, @InstructionSource value: LocationData): Instruction
+    fun setScore(@InstructionSource score: LocationData, @InstructionSource value: LocationData): Instruction
     fun resetScore(@InstructionSource objective: LocationData, @InstructionSource name: LocationData): Instruction
     fun runScoreOperation(@InstructionSource target: LocationData, @InstructionSource source: LocationData, operation: ScoreboardOperation, exceptionScope: Int): Instruction
     fun callFunctions(functions: List<ResourceLocation>, @InstructionSource entity: LocationData?, @InstructionSource world: LocationData?, @InstructionSource position: LocationData?, @InstructionSource rotation: LocationData?): Instruction

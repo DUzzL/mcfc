@@ -37,7 +37,7 @@ object DeadCodeEliminationOptimization : Optimization {
                     }else {
                         newDce = newDce.copy(knownNonNulls = newDce.knownNonNulls.toMutableList().apply { add(local.local) })
                     }
-                }else if(local.string != null) {
+                }else {
                     return runOptimizations(instruction.children, newDce)
                 }
             }

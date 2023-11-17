@@ -207,7 +207,7 @@ private fun CompilationContext.compile(command: Command, result: ResultStorage =
             getObjective(command["objective"]) { objective ->
                 forScoreHolder(command["targets"]) { name ->
                     getScoreData(objective, name, true) { score ->
-                        addInstruction(Instructions.setScore(score, command["score"]))
+                        addInstruction(Instructions.setScore(score, LocationData(integer = command["score"])))
                     }
                 }
             }
@@ -216,7 +216,7 @@ private fun CompilationContext.compile(command: Command, result: ResultStorage =
             getObjective(command["objective"]) { objective ->
                 forScoreHolder(command["targets"]) { name ->
                     getScoreData(objective, name, true) { score ->
-                        addInstruction(Instructions.addScore(score, -command.get<Int>("score")))
+                        addInstruction(Instructions.removeScore(score, LocationData(integer = command["score"])))
                     }
                 }
             }

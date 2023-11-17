@@ -3,15 +3,16 @@ package dev.epicpix.minecraftfunctioncompiler.il
 data class LocationData(
     val local: Int? = null,
     val string: String? = null,
+    val integer: Int? = null,
 
     val isSource: Boolean = false,
     val isDestination: Boolean = false,
 ) {
-    fun source() = LocationData(local, string, isSource = true, isDestination = false)
-    fun destination() = LocationData(local, string, isSource = false, isDestination = true)
+    fun source() = LocationData(local, string, integer, isSource = true, isDestination = false)
+    fun destination() = LocationData(local, string, integer, isSource = false, isDestination = true)
 
     override fun toString(): String {
-        return "${if(local != null) "local " else ""}${if(isSource) "<in> " else ""}${if(isDestination) "<out> " else ""}${local ?: ""}${if(string != null) "\"${string.replace("\\", "\\\\").replace("\n", "\\n")}\"" else ""}"
+        return "${if(local != null) "local " else ""}${if(isSource) "<in> " else ""}${if(isDestination) "<out> " else ""}${local ?: ""}${if(string != null) "\"${string.replace("\\", "\\\\").replace("\n", "\\n")}\"" else ""}${integer?.toString() ?: ""}"
     }
 }
 
@@ -38,7 +39,7 @@ fun remapInstructionData(data: Map<String, Any?>, mappings: Map<Int, Int>): Map<
     data.forEach { (key, value) ->
         if(value is LocationData) {
             if(value.local != null) {
-                result[key] = LocationData(mappings[value.local] ?: value.local, value.string, value.isSource, value.isDestination)
+                result[key] = LocationData(mappings[value.local] ?: value.local, value.string, value.integer, value.isSource, value.isDestination)
                 return@forEach
             }
         }

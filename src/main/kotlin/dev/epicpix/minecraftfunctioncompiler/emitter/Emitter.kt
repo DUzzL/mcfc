@@ -35,6 +35,8 @@ private fun LocationData.load(codeWriter: CodeWriter, transforms: Map<Int, Strin
         codeWriter.writeString(string)
     }else if(this.local != null) {
         codeWriter.loadLocal(transforms[local]!!)
+    }else if(this.integer != null) {
+        codeWriter.writeInt(integer)
     }
 }
 
@@ -308,14 +310,16 @@ private fun emitInstruction(
             load("score")
             codeWriter.methodVisitor.visitInsn(Opcodes.DUP)
             codeWriter.writeMapped(Score_getScore)
-            val value = instruction.get<Int>("value")
-            if(value >= 0) {
-                codeWriter.writeInt(value)
-                codeWriter.methodVisitor.visitInsn(Opcodes.IADD)
-            }else {
-                codeWriter.writeInt(-value)
-                codeWriter.methodVisitor.visitInsn(Opcodes.ISUB)
-            }
+            load("value")
+            codeWriter.methodVisitor.visitInsn(Opcodes.IADD)
+            codeWriter.writeMapped(Score_setScore)
+        }
+        InstructionType.REMOVE_SCORE -> {
+            load("score")
+            codeWriter.methodVisitor.visitInsn(Opcodes.DUP)
+            codeWriter.writeMapped(Score_getScore)
+            load("value")
+            codeWriter.methodVisitor.visitInsn(Opcodes.ISUB)
             codeWriter.writeMapped(Score_setScore)
         }
         InstructionType.RUN_SCORE_OPERATION -> {
