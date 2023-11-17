@@ -16,6 +16,20 @@ data class LocationData(
     }
 }
 
+data class ScopeData(
+    val id: Int,
+
+    val isSource: Boolean = false,
+    val isDestination: Boolean = false,
+) {
+    fun source() = ScopeData(id, isSource = true, isDestination = false)
+    fun destination() = ScopeData(id, isSource = false, isDestination = true)
+
+    override fun toString(): String {
+        return "scope ${if(isSource) "<in> " else ""}${if(isDestination) "<out> " else ""} $id"
+    }
+}
+
 enum class ScoreboardOperation { SET, PLUS, MINUS, MULTIPLY, DIVIDE, MODULO, MIN, MAX, SWAP }
 enum class ScoreboardCompareOperation { LT, LE, EQ, NE, GE, GT }
 

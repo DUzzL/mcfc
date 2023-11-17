@@ -75,7 +75,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
             }
         }
         LOGGER.info("Compiled ${compiledFunctions.size} functions in ${System.currentTimeMillis()-startCompile}ms")
-        if(DEBUG && definedFunctions.isNotEmpty()) {
+        if(DEBUG && compiledFunctions.isNotEmpty()) {
             LOGGER.info("Average ${"%.2f".format(totalPreoptimizedInstructions/compiledFunctions.size.toDouble())} instructions in pre-optimized IL bytecode")
             LOGGER.info("Average ${"%.2f".format(totalOptimizedInstructions/compiledFunctions.size.toDouble())} instructions in optimized IL bytecode")
         }
@@ -83,17 +83,16 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         val storage = CodeFieldStorage()
         val loadedFunctions = mutableMapOf<ResourceLocation, Class<*>>()
         val startLoader = System.currentTimeMillis()
-        for((key) in definedFunctions) {
+        for((key) in compiledFunctions) {
             try {
                 loadedFunctions[key] = defineFunction(key, storage, compiledFunctions[key]!!, definedFunctions)
             }catch(e: Throwable) {
                 LOGGER.error("Failed to load function ($key), clearing data", e)
-                definedFunctions.clear()
                 LOGGER.info("Loaded 0 functions in ${System.currentTimeMillis()-startLoader}ms")
                 return
             }
         }
-        LOGGER.info("Loaded ${definedFunctions.size} functions in ${System.currentTimeMillis()-startLoader}ms")
+        LOGGER.info("Loaded ${compiledFunctions.size} functions in ${System.currentTimeMillis()-startLoader}ms")
         if(DEBUG) {
             val startGraph = System.currentTimeMillis()
             generateGraphs(compiledFunctions)

@@ -157,7 +157,7 @@ private fun CompilationContext.compile(command: Command, result: ResultStorage =
             getObjective(command["objective"]) { objective ->
                 forScoreHolder(command["targets"]) { name ->
                     getScoreData(objective, name, true) { scoreData ->
-                        addInstruction(Instructions.addScore(scoreData, command["score"]))
+                        addInstruction(Instructions.addScore(scoreData, LocationData(integer = command["score"])))
                     }
                 }
             }
@@ -175,7 +175,7 @@ private fun CompilationContext.compile(command: Command, result: ResultStorage =
             }
         }
         SCOREBOARD_PLAYERS_OPERATION -> {
-            forEmptyCondition { loopId ->
+            forEmptyCondition { scope ->
                 getObjective(command["targetObjective"]) { targetObjective ->
                     forScoreHolder(command["targets"]) { targetName ->
                         getObjective(command["sourceObjective"]) { sourceObjective ->
@@ -194,7 +194,7 @@ private fun CompilationContext.compile(command: Command, result: ResultStorage =
                                             "><" -> ScoreboardOperation.SWAP
                                             else -> throw UnsupportedOperationException("Unknown operation: ${command.get<String>("operation")}")
                                         }
-                                        addInstruction(Instructions.runScoreOperation(target, source, operation, loopId))
+                                        addInstruction(Instructions.runScoreOperation(target, source, operation, scope))
                                     }
                                 }
                             }

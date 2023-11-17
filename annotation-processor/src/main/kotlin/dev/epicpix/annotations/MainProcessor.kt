@@ -96,7 +96,6 @@ class MainProcessor(
                         resolvedType.isMarkedNullable,
                         resolvedType.declaration.qualifiedName!!.asString() == "kotlin.collections.List",
                         resolvedType.declaration.qualifiedName!!.asString() == "kotlin.collections.Map",
-                        resolvedType.declaration.qualifiedName!!.asString() == "dev.epicpix.minecraftfunctioncompiler.il.InstructionData",
                         isSource,
                         isDestination))
                 }
@@ -124,7 +123,7 @@ class MainProcessor(
 
 fun String.toUpperSnakeCase() = split(Regex("(?=[A-Z])")).joinToString("_").uppercase(Locale.getDefault())
 
-data class InstructionParamData(val name: String, val isNullable: Boolean, val isList: Boolean, val isMap: Boolean, val isLocation: Boolean, val isSource: Boolean, val isDestination: Boolean)
+data class InstructionParamData(val name: String, val isNullable: Boolean, val isList: Boolean, val isMap: Boolean, val isSource: Boolean, val isDestination: Boolean)
 
 class MainProcessorProvider : SymbolProcessorProvider {
     override fun create(

@@ -46,18 +46,19 @@ private fun emitInstruction(
     codeWriter: CodeWriter,
     definedFunctions: Map<ResourceLocation, List<Command>>,
     transforms: Map<Int, String> = mapOf(),
-    loops: Map<Int, EmitControlFlow> = mapOf()
+    scopes: Map<Int, EmitControlFlow> = mapOf()
 ) {
     val newTransforms = transforms.toMutableMap()
-    val newLoops = loops.toMutableMap()
+    val newScopes = scopes.toMutableMap()
 
-    fun run() = instruction.children.forEach { emitInstruction(it, fieldStorage, codeWriter, definedFunctions, newTransforms, newLoops) }
+    fun run() = instruction.children.forEach { emitInstruction(it, fieldStorage, codeWriter, definedFunctions, newTransforms, newScopes) }
     fun store(location: String, uid: String) {
         val loc = instruction.get<LocationData>(location)
         if(loc.local == null) throw UnsupportedOperationException("Tried to store variable in a non-defined local location: $loc, $instruction")
         newTransforms[loc.local] = uid
     }
     fun load(location: String) = instruction.get<LocationData>(location).load(codeWriter, newTransforms)
+    fun scopeId(location: String) = instruction.get<ScopeData>(location).id
 
 
     when(instruction.type) {
@@ -92,14 +93,14 @@ private fun emitInstruction(
         }
         InstructionType.SCOPE -> {
             val label = Label()
-            newLoops[instruction["scope"]] = EmitControlFlow(label, label)
+            newScopes[scopeId("scope")] = EmitControlFlow(label, label)
 
             run()
 
             codeWriter.methodVisitor.visitLabel(label)
         }
         InstructionType.EXIT_SCOPE -> {
-            codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, newLoops[instruction["scope"]]!!.breakLabel)
+            codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, newScopes[scopeId("scope")]!!.breakLabel)
         }
         InstructionType.CHECK_ENTITY_TAG -> {
             load("entity")
@@ -130,7 +131,7 @@ private fun emitInstruction(
             codeWriter.storeLocal(uniqueId)
 
             val label = Label()
-            newLoops[instruction["scope"]] = EmitControlFlow(label, label)
+            newScopes[scopeId("scope")] = EmitControlFlow(label, label)
 
             run()
 
@@ -138,10 +139,10 @@ private fun emitInstruction(
             codeWriter.methodVisitor.visitLabel(label)
         }
         InstructionType.CHECK_LIMIT -> {
-            val scope = instruction.get<Int>("scope")
+            val scope = scopeId("scope")
             codeWriter.methodVisitor.visitIincInsn(codeWriter.getLocalIndex(newTransforms[scope]!!), -1)
             load("scope")
-            codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newLoops[scope]!!.breakLabel)
+            codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newScopes[scope]!!.breakLabel)
         }
         InstructionType.FOR_EACH_PLAYER -> {
             val uidLocal = codeWriter.generateUniqueLocal("\$Players")
@@ -303,7 +304,7 @@ private fun emitInstruction(
         }
         InstructionType.SET_SCORE -> {
             load("score")
-            codeWriter.writeInt(instruction["value"])
+            load("value")
             codeWriter.writeMapped(Score_setScore)
         }
         InstructionType.ADD_SCORE -> {
@@ -358,7 +359,7 @@ private fun emitInstruction(
                     codeWriter.storeLocal(uniq)
                     codeWriter.loadLocal(uniq)
                     codeWriter.writeMapped(Score_getScore)
-                    codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newLoops[instruction["exceptionScope"]]!!.breakLabel)
+                    codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newScopes[scopeId("exceptionScope")]!!.breakLabel)
                     codeWriter.loadLocal(uniq)
                     codeWriter.loadLocal(uniqBeh)
                     codeWriter.loadLocal(uniq)

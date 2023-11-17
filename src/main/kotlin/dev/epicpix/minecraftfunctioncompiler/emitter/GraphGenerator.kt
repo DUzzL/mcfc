@@ -44,7 +44,7 @@ private fun visitInstruction(instruction: Instruction, stringBuilder: StringBuil
     if(instruction.type == InstructionType.CALL_FUNCTIONS) {
         val functions = instruction.get<List<ResourceLocation>>("functions")
         for(function in functions) {
-            post.append("  x$uid -> cluster_${function.namespace}_${function.path.replace('.', '_').replace('-', '_').replace('/', '_')}\n")
+            post.append("  x$uid -> x${function.namespace}_${function.path.replace('.', '_').replace('-', '_').replace('/', '_')}\n")
         }
     }
     return curUid
@@ -53,13 +53,15 @@ private fun visitInstruction(instruction: Instruction, stringBuilder: StringBuil
 private fun generateFunctionGraph(instructions: List<Instruction>, funcId: ResourceLocation, builder: StringBuilder, post: StringBuilder, uid: Int): Int {
     if(!DEBUG) return 0
 
-    builder.append("  subgraph cluster_${funcId.namespace}_${funcId.path.replace('.', '_').replace('/', '_').replace('-', '_')} {\n")
+    val safeName = "${funcId.namespace}_${funcId.path.replace('.', '_').replace('/', '_').replace('-', '_')}"
+
+    builder.append("  subgraph cluster_$safeName {\n")
     builder.append("    color=black;\n")
     builder.append("    label=\"$funcId\";\n")
-    builder.append("    x${uid+1}[label=\"<root>\"]\n")
-    var curUid = uid + 2
+    builder.append("    x$safeName[label=\"<root>\"]\n")
+    var curUid = uid
     for(child in instructions) {
-        builder.append("    x${uid+1} -> x$curUid;\n")
+        builder.append("    x$safeName -> x$curUid;\n")
         curUid = visitInstruction(child, builder, post, curUid)
     }
     builder.append("  }\n")

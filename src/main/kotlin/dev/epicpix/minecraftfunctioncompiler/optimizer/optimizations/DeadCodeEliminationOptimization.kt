@@ -1,9 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.optimizer.optimizations
 
-import dev.epicpix.minecraftfunctioncompiler.il.Instruction
-import dev.epicpix.minecraftfunctioncompiler.il.InstructionType
-import dev.epicpix.minecraftfunctioncompiler.il.LocationData
-import dev.epicpix.minecraftfunctioncompiler.il.ScoreboardOperation
+import dev.epicpix.minecraftfunctioncompiler.il.*
 import dev.epicpix.minecraftfunctioncompiler.optimizer.InstructionList
 import dev.epicpix.minecraftfunctioncompiler.optimizer.Optimization
 
@@ -42,7 +39,7 @@ object DeadCodeEliminationOptimization : Optimization {
                 }
             }
             InstructionType.SCOPE -> {
-                val scope = instruction.get<Int>("scope")
+                val scope = instruction.get<ScopeData>("scope").id
                 val usage = getScopeUsed(instruction, scope, true)
                 if(!usage.usedBreak && usage.last) {
                     newDce = newDce.copy(unusedScopes = newDce.unusedScopes.toMutableList().apply { add(scope) })
@@ -52,7 +49,7 @@ object DeadCodeEliminationOptimization : Optimization {
                 }
             }
             InstructionType.EXIT_SCOPE -> {
-                val scope = instruction.get<Int>("scope")
+                val scope = instruction.get<ScopeData>("scope").id
                 if(newDce.unusedScopes.contains(scope)) {
                     return emptyList()
                 }
@@ -75,20 +72,20 @@ private fun getScopeUsed(instruction: Instruction, inScopeId: Int, lastElement: 
         InstructionType.FOR_EACH_PLAYER -> wLoop = true
         InstructionType.FOR_SCORE_HOLDERS -> wLoop = true
         InstructionType.CHECK_LIMIT -> {
-            val scope = instruction.get<Int>("scope")
+            val scope = instruction.get<ScopeData>("scope").id
             if(scope == inScopeId) {
                 return ScopeUsageInfo(usedBreak = true, usedIndirect = true, last = lastElement)
             }
         }
         InstructionType.RUN_SCORE_OPERATION -> {
-            val exceptionScope = instruction.get<Int>("exceptionScope")
+            val exceptionScope = instruction.get<ScopeData>("exceptionScope").id
             val operation = instruction.get<ScoreboardOperation>("operation")
             if(exceptionScope == inScopeId && (operation == ScoreboardOperation.DIVIDE || operation == ScoreboardOperation.MODULO)) {
                 return ScopeUsageInfo(usedBreak = true, usedIndirect = true, last = lastElement)
             }
         }
         InstructionType.EXIT_SCOPE -> {
-            val scope = instruction.get<Int>("scope")
+            val scope = instruction.get<ScopeData>("scope").id
             if(scope == inScopeId && (!lastElement || wLoop)) {
                 return ScopeUsageInfo(usedBreak = true, usedIndirect = false, last = lastElement)
             }
