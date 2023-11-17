@@ -26,7 +26,7 @@ data class ScopeData(
     fun destination() = ScopeData(id, isSource = false, isDestination = true)
 
     override fun toString(): String {
-        return "scope ${if(isSource) "<in> " else ""}${if(isDestination) "<out> " else ""} $id"
+        return "scope ${if(isSource) "<in> " else ""}${if(isDestination) "<out> " else ""}$id"
     }
 }
 

@@ -142,6 +142,15 @@ object CommandParser {
             "store" -> {
                 val storeType = nodes[1].range[source]
                 val storeLocation = nodes[2].range[source]
+                if(storeType == "result") {
+                    if(storeLocation == "score") {
+                        return Command(CommandType.EXECUTE_STORE_RESULT_SCORE, mapOf(
+                            "targets" to parseScoreHolder(context.arguments["targets"]!!.range[source]),
+                            "objective" to context.arguments["objective"]!!.result as String,
+                            "command" to getExecuteSubcommand(context, source, server)
+                        ))
+                    }
+                }
                 throw UnsupportedOperationException("Invalid execute command: store / $storeType / $storeLocation")
             }
             "unless" -> {

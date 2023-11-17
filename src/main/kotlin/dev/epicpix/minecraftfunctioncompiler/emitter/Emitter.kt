@@ -6,7 +6,6 @@ import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates
 import dev.epicpix.minecraftfunctioncompiler.data.mapEntityTypeClass
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedData.*
 import dev.epicpix.minecraftfunctioncompiler.il.*
-import dev.epicpix.minecraftfunctioncompiler.parser.Command
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.level.ServerLevel
@@ -24,9 +23,9 @@ import org.objectweb.asm.Opcodes
 
 private data class EmitControlFlow(val breakLabel: Label, val continueLabel: Label)
 
-fun emitBytecode(instructions: List<Instruction>, fieldStorage: CodeFieldStorage, codeWriter: CodeWriter, definedFunctions: Map<ResourceLocation, List<Command>>) {
+fun emitBytecode(instructions: List<Instruction>, fieldStorage: CodeFieldStorage, codeWriter: CodeWriter, compiledFunctions: Set<ResourceLocation>) {
     for(instruction in instructions) {
-        emitInstruction(instruction, fieldStorage, codeWriter, definedFunctions)
+        emitInstruction(instruction, fieldStorage, codeWriter, compiledFunctions)
     }
 }
 
@@ -44,14 +43,19 @@ private fun emitInstruction(
     instruction: Instruction,
     fieldStorage: CodeFieldStorage,
     codeWriter: CodeWriter,
-    definedFunctions: Map<ResourceLocation, List<Command>>,
+    compiledFunctions: Set<ResourceLocation>,
     transforms: Map<Int, String> = mapOf(),
     scopes: Map<Int, EmitControlFlow> = mapOf()
 ) {
     val newTransforms = transforms.toMutableMap()
     val newScopes = scopes.toMutableMap()
 
-    fun run() = instruction.children.forEach { emitInstruction(it, fieldStorage, codeWriter, definedFunctions, newTransforms, newScopes) }
+    fun run() = instruction.children.forEach { emitInstruction(it, fieldStorage, codeWriter, compiledFunctions, newTransforms, newScopes) }
+    fun save(location: String) {
+        val loc = instruction.get<LocationData>(location)
+        if(loc.local == null) throw UnsupportedOperationException("Tried to store variable in a non-defined local location: $loc, $instruction")
+        codeWriter.storeLocal(newTransforms[loc.local]!!)
+    }
     fun store(location: String, uid: String) {
         val loc = instruction.get<LocationData>(location)
         if(loc.local == null) throw UnsupportedOperationException("Tried to store variable in a non-defined local location: $loc, $instruction")
@@ -420,7 +424,7 @@ private fun emitInstruction(
         }
         InstructionType.CALL_FUNCTIONS -> {
             for(func in instruction.get<List<ResourceLocation>>("functions")) {
-                if(!definedFunctions.containsKey(func)) {
+                if(!compiledFunctions.contains(func)) {
                     fieldStorage.loadServerFunctionManager(codeWriter)
                     fieldStorage.loadFunction(codeWriter, func)
                 }
@@ -441,7 +445,7 @@ private fun emitInstruction(
                     load("rotation")
                     codeWriter.writeMapped(CommandSourceStack_withRotation)
                 }
-                if(definedFunctions.containsKey(func)) {
+                if(compiledFunctions.contains(func)) {
                     codeWriter.methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, "function/${func.namespace}/${func.path}", "run", "(${CommandSourceStack::class.java.descriptorString()})I", false)
                     codeWriter.methodVisitor.visitInsn(Opcodes.POP)
                 }else {
@@ -733,6 +737,26 @@ private fun emitInstruction(
             load("instance")
             codeWriter.writeDouble(instruction["value"])
             codeWriter.writeMapped(AttributeInstance_setBaseValue)
+        }
+        InstructionType.CREATE_RESULT_STORAGE -> {
+            codeWriter.writeInt(0)
+
+            val uidLocal = codeWriter.generateUniqueLocal("\$ResultStorage")
+            val end = codeWriter.defineLocal(uidLocal, Int::class.javaPrimitiveType!!)
+            codeWriter.storeLocal(uidLocal)
+            store("storage", uidLocal)
+            run()
+            end()
+        }
+        InstructionType.ADD_RESULT_STORAGE -> {
+            load("storage")
+            load("value")
+            codeWriter.methodVisitor.visitInsn(Opcodes.IADD)
+            save("storage")
+        }
+        InstructionType.SET_RESULT_STORAGE -> {
+            load("value")
+            save("storage")
         }
     }
 }

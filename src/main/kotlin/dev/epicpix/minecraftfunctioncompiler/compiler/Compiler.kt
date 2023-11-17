@@ -37,7 +37,7 @@ private fun CompilationContext.compile(command: Command, result: ResultStorage =
             }
         }
         EXECUTE_AS -> {
-            forSelector(command["targets"]) { entity, breakId, continueId ->
+            forSelector(command["targets"]) { entity, _, _ ->
                 copy(currentEntity = entity).compile(command["command"], result)
             }
         }
@@ -98,9 +98,22 @@ private fun CompilationContext.compile(command: Command, result: ResultStorage =
                 copy(currentPosition = position).compile(command["command"], result)
             }
         }
+        EXECUTE_STORE_RESULT_SCORE -> {
+            withResultStorage(requireResult = true) { res ->
+                compile(command["command"], res)
+                res.checkRequirements(command["command"])
+                getObjective(command["objective"]) { objective ->
+                    forScoreHolder(command["targets"]) { name ->
+                        getScoreData(objective, name, true) { score ->
+                            addInstruction(Instructions.setScore(score, res.result!!))
+                        }
+                    }
+                }
+            }
+        }
         EXECUTE_UNLESS_ENTITY -> {
-            forSelector(command.get<SelectorArgument>("entities").copy(limit = 1)) { local, breakId, continueId ->
-                addInstruction(Instructions.exitScope(breakId))
+            forSelector(command.get<SelectorArgument>("entities").copy(limit = 1)) { _, breakScope, _ ->
+                addInstruction(Instructions.exitScope(breakScope))
             }
             compile(command["command"])
         }
@@ -149,7 +162,7 @@ private fun CompilationContext.compile(command: Command, result: ResultStorage =
             }
         }
         KILL -> {
-            forSelector(command["targets"]) { entity, breakId, continueId ->
+            forSelector(command["targets"]) { entity, _, _ ->
                 addInstruction(Instructions.killEntity(entity))
             }
         }
@@ -175,7 +188,7 @@ private fun CompilationContext.compile(command: Command, result: ResultStorage =
             }
         }
         SCOREBOARD_PLAYERS_OPERATION -> {
-            forEmptyCondition { scope ->
+            forEmptyCondition { exceptionScope ->
                 getObjective(command["targetObjective"]) { targetObjective ->
                     forScoreHolder(command["targets"]) { targetName ->
                         getObjective(command["sourceObjective"]) { sourceObjective ->
@@ -194,7 +207,7 @@ private fun CompilationContext.compile(command: Command, result: ResultStorage =
                                             "><" -> ScoreboardOperation.SWAP
                                             else -> throw UnsupportedOperationException("Unknown operation: ${command.get<String>("operation")}")
                                         }
-                                        addInstruction(Instructions.runScoreOperation(target, source, operation, scope))
+                                        addInstruction(Instructions.runScoreOperation(target, source, operation, exceptionScope))
                                     }
                                 }
                             }
@@ -229,12 +242,12 @@ private fun CompilationContext.compile(command: Command, result: ResultStorage =
             }
         }
         TAG_ADD -> {
-            forSelector(command["targets"]) { entity, breakId, continueId ->
+            forSelector(command["targets"]) { entity, _, _ ->
                 addInstruction(Instructions.addEntityTag(entity, command["name"]))
             }
         }
         TAG_REMOVE -> {
-            forSelector(command["targets"]) { entity, breakId, continueId ->
+            forSelector(command["targets"]) { entity, _, _ ->
                 addInstruction(Instructions.removeEntityTag(entity, command["name"]))
             }
         }

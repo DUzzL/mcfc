@@ -69,7 +69,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                     printInstructionList(optimized)
                 }
             }catch(e: UnsupportedOperationException) {
-                LOGGER.error("Failed to compile function $key / ${e.message}")
+                LOGGER.warn("Failed to compile function $key / ${e.message}")
             }catch(e: Throwable) {
                 LOGGER.error("Failed to compile function $key", e)
             }
@@ -85,7 +85,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         val startLoader = System.currentTimeMillis()
         for((key) in compiledFunctions) {
             try {
-                loadedFunctions[key] = defineFunction(key, storage, compiledFunctions[key]!!, definedFunctions)
+                loadedFunctions[key] = defineFunction(key, storage, compiledFunctions[key]!!, definedFunctions, compiledFunctions.keys.toSet())
             }catch(e: Throwable) {
                 LOGGER.error("Failed to load function ($key), clearing data", e)
                 LOGGER.info("Loaded 0 functions in ${System.currentTimeMillis()-startLoader}ms")
@@ -109,16 +109,15 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
 
         val startHandles = System.currentTimeMillis()
         try {
-            for((key) in definedFunctions) {
+            for((key) in compiledFunctions) {
                 val handle = MethodHandles.lookup().findStatic(loadedFunctions[key], "run", MethodType.methodType(Int::class.javaPrimitiveType, CommandSourceStack::class.java))
                 handles[key] = handle
             }
         }catch(e: Throwable) {
             LOGGER.error("Failed to create function handle, clearing data", e)
-            definedFunctions.clear()
             handles.clear()
         }
-        LOGGER.info("Loaded ${definedFunctions.size} function handles in ${System.currentTimeMillis()-startHandles}ms")
+        LOGGER.info("Loaded ${handles.size} function handles in ${System.currentTimeMillis()-startHandles}ms")
     }
 
     fun hasFunctionLoaded(location: ResourceLocation): Boolean {
@@ -134,7 +133,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         }
     }
 
-    private fun defineFunction(funcId: ResourceLocation, fieldStorage: CodeFieldStorage, instructions: List<Instruction>, definedFunctions: Map<ResourceLocation, List<Command>>): Class<*> {
+    private fun defineFunction(funcId: ResourceLocation, fieldStorage: CodeFieldStorage, instructions: List<Instruction>, definedFunctions: Map<ResourceLocation, List<Command>>, compiledFunctions: Set<ResourceLocation>): Class<*> {
         val className = "function/${funcId.namespace}/${funcId.path}"
 
         val cw = ClassWriter(ClassWriter.COMPUTE_FRAMES)
@@ -145,7 +144,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         val codeWriter = CodeWriter(mv)
         val end = codeWriter.defineLocal("CommandSourceStack", CommandSourceStack::class.java)
 
-        emitBytecode(instructions, fieldStorage, codeWriter, definedFunctions)
+        emitBytecode(instructions, fieldStorage, codeWriter, compiledFunctions)
 
         codeWriter.end()
         end()

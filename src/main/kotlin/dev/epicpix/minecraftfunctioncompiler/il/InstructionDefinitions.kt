@@ -51,4 +51,7 @@ private interface InstructionDefinitions {
     fun hasTeam(@InstructionSource entity: LocationData, negated: Boolean): Instruction
     fun getAttributeInstance(@InstructionSource entity: LocationData, @InstructionDestination instance: LocationData, attribute: ResourceLocation): Instruction
     fun setAttributeBase(@InstructionSource instance: LocationData, value: Double): Instruction
+    fun createResultStorage(@InstructionDestination storage: LocationData): Instruction
+    fun addResultStorage(@InstructionSource storage: LocationData, @InstructionSource value: LocationData): Instruction
+    fun setResultStorage(@InstructionSource storage: LocationData, @InstructionSource value: LocationData): Instruction
 }

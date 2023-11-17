@@ -25,6 +25,7 @@ This is the list of commands supported currently as of `0.1.0-alpha.7`:
 - `execute if score`
 - `execute positioned <pos>`
 - `execute run`
+- `execute store result score`
 - `execute unless entity`
 - `execute unless score`
 - `function` (without ability to provide arguments)
