@@ -11,5 +11,12 @@ pluginManagement {
         id 'com.google.devtools.ksp' version "1.9.10-1.0.13"
     }
 }
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.5.0'
+}
 
 include 'annotation-processor'
+include 'mc-1-20-2-fabric'
+include 'mc-1-20-1-fabric'
+include 'common'
+include 'common-commands'
