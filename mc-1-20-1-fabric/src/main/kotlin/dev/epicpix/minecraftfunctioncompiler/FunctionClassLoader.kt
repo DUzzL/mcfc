@@ -1,0 +1,114 @@
+package dev.epicpix.minecraftfunctioncompiler
+
+import dev.epicpix.minecraftfunctioncompiler.commands.CommandParser
+import dev.epicpix.minecraftfunctioncompiler.compiler.compile
+import dev.epicpix.minecraftfunctioncompiler.data.DataLocation
+import dev.epicpix.minecraftfunctioncompiler.data.updateRegistryMaps
+import dev.epicpix.minecraftfunctioncompiler.emitter.ICodeFieldStorage
+import dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitions
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedUsageDefinitions
+import dev.epicpix.minecraftfunctioncompiler.emitter.getInstructionEmitter
+import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage
+import dev.epicpix.minecraftfunctioncompiler.parser.Command
+import net.fabricmc.loader.api.FabricLoader
+import net.minecraft.commands.CommandFunction
+import net.minecraft.commands.CommandFunction.CommandEntry
+import net.minecraft.commands.CommandSourceStack
+import net.minecraft.resources.ResourceLocation
+import net.minecraft.server.MinecraftServer
+import net.minecraft.server.ServerFunctionManager
+import net.minecraft.server.ServerScoreboard
+import net.minecraft.world.entity.ai.attributes.Attribute
+import org.slf4j.LoggerFactory
+import java.lang.invoke.MethodHandle
+import java.lang.invoke.MethodHandles
+import java.lang.invoke.MethodType
+
+class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<ResourceLocation, CommandFunction>, private val minecraftServer: MinecraftServer) : FunctionCompilerClassLoader(parent, FabricLoader.getInstance().gameDir.resolve("generated"), CommandSourceStack::class.java, MinecraftServer::class.java, ServerFunctionManager::class.java, minecraftServer, LOGGER::info, LOGGER::warn, LOGGER::error) {
+    private val handles: MutableMap<ResourceLocation, MethodHandle> = HashMap()
+    fun loadFunctions(serverFunctionManager: ServerFunctionManager) {
+        updateRegistryMaps()
+
+        resetHandles()
+
+        logInfo("Found ${functions.size} functions")
+        val definedFunctions = mutableMapOf<DataLocation, List<Command>>()
+
+        val startParse = System.currentTimeMillis()
+        funcLoop@
+        for ((key, value) in functions) {
+            try {
+                for (entry in value.entries) {
+                    if (entry !is CommandEntry) {
+                        continue@funcLoop
+                    }
+                }
+                definedFunctions[key.toDataLocation()] = CommandParser.parseFunctionCommands(value, minecraftServer)
+            } catch (e: UnsupportedOperationException) {
+                logWarn("Unable to parse function $key / ${e.message}")
+            } catch (e: Throwable) {
+                logError("Unable to parse function $key")
+                e.printStackTrace()
+            }
+        }
+        logInfo("Parsed ${definedFunctions.size} functions in ${System.currentTimeMillis()-startParse}ms")
+
+        loadFunctionClasses(definedFunctions, createCodeFieldStorage(), serverFunctionManager, { compile(it) }, { instructions, context ->
+            instructions.forEach { getInstructionEmitter(it.type)(context.copy(instruction = it)) }
+        })
+    }
+
+    fun hasFunctionLoaded(location: ResourceLocation): Boolean {
+        return handles.containsKey(location)
+    }
+
+    fun runFunction(location: ResourceLocation, stack: CommandSourceStack?): Int {
+        return try {
+            handles[location]!!.invoke(stack) as Int
+        } catch (e: Throwable) {
+            logError("Failed to run function $location")
+            e.printStackTrace()
+            throw RuntimeException(e)
+        }
+    }
+
+    override fun registerFunction(clazz: Class<*>, key: DataLocation) {
+        val handle = MethodHandles.lookup().findStatic(clazz, "run", MethodType.methodType(Int::class.javaPrimitiveType, CommandSourceStack::class.java))
+        handles[ResourceLocation(key.namespace, key.path)] = handle
+    }
+
+    override fun resetHandles() = handles.clear()
+    override fun handleCount() = handles.size
+
+    private fun createCodeFieldStorage(): ICodeFieldStorage {
+        return CodeFieldStorage(
+            resourceLocationClass = ResourceLocation::class.java,
+            commandFunctionClass = CommandFunction::class.java,
+            attributeClass = Attribute::class.java,
+            serverFunctionManagerClass = ServerFunctionManager::class.java,
+            minecraftServerClass = MinecraftServer::class.java,
+            serverScoreboardClass = ServerScoreboard::class.java,
+            mapScoreboard = { cw ->
+                cw.writeMapped(MappedUsageDefinitions.MinecraftServer_getScoreboard)
+            },
+            mapFunction = { cw, value ->
+                loadServerFunctionManager(cw)
+                cw.writeMapped(MappedUsageDefinitions.ServerFunctionManager_library, true)
+                cw.writeMapped(MappedUsageDefinitions.ServerFunctionLibrary_functions, true)
+                loadResourceLocation(cw, value)
+                cw.writeMapped(JavaMappedUsageDefinitions.Map_get)
+                cw.castType(CommandFunction::class.java)
+            },
+            mapAttribute = { cw, value ->
+                cw.writeMapped(MappedUsageDefinitions.BuiltInRegistries_ATTRIBUTE, true)
+                loadResourceLocation(cw, value)
+                cw.writeMapped(MappedUsageDefinitions.Registry_get)
+                cw.castType(Attribute::class.java)
+            },
+        )
+    }
+
+    companion object {
+        private val LOGGER = LoggerFactory.getLogger("minecraftfunctioncompiler")
+    }
+}
