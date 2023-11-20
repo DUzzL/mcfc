@@ -1,4 +1,8 @@
+@file:ConstantsFile("dev.epicpix.minecraftfunctioncompiler.CompileConstants")
+
 package dev.epicpix.minecraftfunctioncompiler
+
+import dev.epicpix.annotations.ConstantsFile
 
 const val DEBUG: Boolean = false
 const val DATA_CLASS: String = "function/data"

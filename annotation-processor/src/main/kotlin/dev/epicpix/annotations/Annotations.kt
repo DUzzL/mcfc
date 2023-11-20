@@ -14,12 +14,16 @@ annotation class InstructionSourceClass(val enumClass: String, val generatorClas
 
 @Retention(AnnotationRetention.SOURCE)
 @Target(AnnotationTarget.FIELD)
-annotation class MapFieldUse(val descriptor: String, val versions: Array<String> = [])
+annotation class MapFieldUse(val descriptor: String)
 
 @Retention(AnnotationRetention.SOURCE)
 @Target(AnnotationTarget.FIELD)
-annotation class MapFunctionUse(val descriptor: String, val versions: Array<String> = [])
+annotation class MapFunctionUse(val descriptor: String)
 
 @Retention(AnnotationRetention.SOURCE)
 @Target(AnnotationTarget.CLASS)
 annotation class MapSourceClass(val value: String)
+
+@Retention(AnnotationRetention.SOURCE)
+@Target(AnnotationTarget.FILE)
+annotation class ConstantsFile(val value: String)

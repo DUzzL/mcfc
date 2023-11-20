@@ -16,11 +16,16 @@ repositories {
 dependencies {
     implementation(project(":annotation-processor"))
     implementation("org.ow2.asm:asm:9.6")
+    implementation("com.google.code.gson:gson:2.10.1")
     ksp project(":annotation-processor")
 }
 
 ksp {
     arg("isJarTask", "false")
+    arg("version", project.mod_version)
+    if("true" == System.getenv("CI")) {
+        arg("commit", System.getenv("CI_COMMIT_SHA"))
+    }
 }
 
 kotlin {

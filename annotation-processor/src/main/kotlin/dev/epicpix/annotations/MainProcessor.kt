@@ -64,8 +64,24 @@ class MainProcessor(
 
         generateFunctionMapping(resolver, mappingData)
         generateInstructionData(resolver)
+        generateConstantsData(resolver)
 
         return listOf()
+    }
+
+    @OptIn(KspExperimental::class)
+    fun generateConstantsData(resolver: Resolver) {
+        resolver.getSymbolsWithAnnotation(ConstantsFile::class.java.name).forEach {
+            val resultClass = it.getAnnotationsByType(ConstantsFile::class).first().value
+            val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
+            val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
+            val map = codeGenerator.createNewFile(Dependencies(true), resultPackage, resultName, "kt")
+            map.appendText("package $resultPackage\n")
+            map.appendText("const val isDevelopmentEnvironment: Boolean = ${options["isJarTask"] != "true"}\n")
+            map.appendText("const val versionCommit: String = \"${options["commit"] ?: "development"}\"\n")
+            map.appendText("const val versionName: String = \"${options["version"] ?: error("Version option not specified")}\"\n")
+            map.close()
+        }
     }
 
     @OptIn(KspExperimental::class)
@@ -92,26 +108,20 @@ class MainProcessor(
                 def.annotations.toList().forEach {
                     val qualified = it.annotationType.resolve().declaration.qualifiedName?.asString()
                     if(qualified == MapFieldUse::class.java.name) {
-                        val versions = it.arguments.find { it.name!!.asString() == "versions" }!!.value as ArrayList<String>
-                        if(versions.isEmpty() || versions.contains(options["minecraft_version"])) {
-                            val fullDescriptor = it.arguments.find { it.name!!.asString() == "descriptor" }!!.value as String
-                            val className = mappingData.getClassName(fullDescriptor.split(":")[0])
-                            val fieldDescriptor = remapType(Type.getType(fullDescriptor.split(":")[2]), mappingData).descriptor
-                            val fieldName = mappingData.getFieldName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1], fullDescriptor.split(":")[2])
+                        val fullDescriptor = it.arguments.find { it.name!!.asString() == "descriptor" }!!.value as String
+                        val className = mappingData.getClassName(fullDescriptor.split(":")[0])
+                        val fieldDescriptor = remapType(Type.getType(fullDescriptor.split(":")[2]), mappingData).descriptor
+                        val fieldName = mappingData.getFieldName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1], fullDescriptor.split(":")[2])
 
-                            map.appendText("        ${def.qualifiedName!!.asString()} = dev.epicpix.minecraftfunctioncompiler.emitter.MappedFieldData(\"$className\", \"$fieldName\", \"$fieldDescriptor\")\n".replace("\$", "\\\$"))
-                        }
+                        map.appendText("        ${def.qualifiedName!!.asString()} = dev.epicpix.minecraftfunctioncompiler.emitter.MappedFieldData(\"$className\", \"$fieldName\", \"$fieldDescriptor\")\n".replace("\$", "\\\$"))
                     }
                     if(qualified == MapFunctionUse::class.java.name) {
-                        val versions = it.arguments.find { it.name!!.asString() == "versions" }!!.value as ArrayList<String>
-                        if(versions.isEmpty() || versions.contains(options["minecraft_version"])) {
-                            val fullDescriptor = it.arguments.find { it.name!!.asString() == "descriptor" }!!.value as String
-                            val className = mappingData.getClassName(fullDescriptor.split(":")[0])
-                            val methodDescriptor = remapType(Type.getMethodType("(" + fullDescriptor.split("(")[1]), mappingData).descriptor
-                            val methodName = mappingData.getMethodName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1].split("(")[0], "(" + fullDescriptor.split("(")[1])
+                        val fullDescriptor = it.arguments.find { it.name!!.asString() == "descriptor" }!!.value as String
+                        val className = mappingData.getClassName(fullDescriptor.split(":")[0])
+                        val methodDescriptor = remapType(Type.getMethodType("(" + fullDescriptor.split("(")[1]), mappingData).descriptor
+                        val methodName = mappingData.getMethodName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1].split("(")[0], "(" + fullDescriptor.split("(")[1])
 
-                            map.appendText("        ${def.qualifiedName!!.asString()} = dev.epicpix.minecraftfunctioncompiler.emitter.MappedFunctionData(\"$className\", \"$methodName\", \"$methodDescriptor\")\n".replace("\$", "\\\$"))
-                        }
+                        map.appendText("        ${def.qualifiedName!!.asString()} = dev.epicpix.minecraftfunctioncompiler.emitter.MappedFunctionData(\"$className\", \"$methodName\", \"$methodDescriptor\")\n".replace("\$", "\\\$"))
                     }
                 }
             }

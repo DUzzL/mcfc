@@ -7,7 +7,10 @@ import dev.epicpix.minecraftfunctioncompiler.data.NegatableData
 import dev.epicpix.minecraftfunctioncompiler.data.mapEntityTypeClass
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.registerBaseInstructionEmitters
 import dev.epicpix.minecraftfunctioncompiler.emitter.registerInstructionEmitters
+import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter
 import net.fabricmc.api.ModInitializer
+import net.minecraft.DetectedVersion
+import net.minecraft.client.Minecraft
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.registries.Registries
 import net.minecraft.resources.ResourceLocation
@@ -16,6 +19,7 @@ import net.minecraft.world.level.GameType
 
 object FunctionCompilerMain : ModInitializer {
     override fun onInitialize() {
+        FunctionCompilerReporter.setMinecraftVersion(DetectedVersion.BUILT_IN.name, Minecraft.getInstance().versionType)
         registerBaseInstructionEmitters()
         registerInstructionEmitters()
         initBaseSelectorOptions()
