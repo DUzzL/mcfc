@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler
 
+import com.google.gson.JsonObject
 import dev.epicpix.minecraftfunctioncompiler.commands.CommandParser
 import dev.epicpix.minecraftfunctioncompiler.compiler.compile
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation
@@ -10,6 +11,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.MappedUsageDefinitions
 import dev.epicpix.minecraftfunctioncompiler.emitter.getInstructionEmitter
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage
 import dev.epicpix.minecraftfunctioncompiler.parser.Command
+import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter
 import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.commands.CommandFunction
 import net.minecraft.commands.CommandFunction.CommandEntry
@@ -28,10 +30,8 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
     private val handles: MutableMap<ResourceLocation, MethodHandle> = HashMap()
     fun loadFunctions(serverFunctionManager: ServerFunctionManager) {
         updateRegistryMaps()
-
         resetHandles()
 
-        logInfo("Found ${functions.size} functions")
         val definedFunctions = mutableMapOf<DataLocation, List<Command>>()
 
         val startParse = System.currentTimeMillis()
@@ -49,11 +49,11 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
             } catch (e: Throwable) {
                 logError("Unable to parse function $key")
                 e.printStackTrace()
+                FunctionCompilerReporter.reportException("parse_command", e, JsonObject())
             }
         }
-        logInfo("Parsed ${definedFunctions.size} functions in ${System.currentTimeMillis()-startParse}ms")
-
-        loadFunctionClasses(definedFunctions, createCodeFieldStorage(), serverFunctionManager, { compile(it) }, { instructions, context ->
+        val parseTime = (System.currentTimeMillis()-startParse)/1000.0
+        loadFunctionClasses(functions.size, parseTime, definedFunctions, createCodeFieldStorage(), serverFunctionManager, { compile(it) }, { instructions, context ->
             instructions.forEach { getInstructionEmitter(it.type)(context.copy(instruction = it)) }
         })
     }
@@ -78,7 +78,6 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
     }
 
     override fun resetHandles() = handles.clear()
-    override fun handleCount() = handles.size
 
     private fun createCodeFieldStorage(): ICodeFieldStorage {
         return CodeFieldStorage(

@@ -38,7 +38,6 @@ fun MappingData?.getFieldName(owner: String, name: String, desc: String): String
     return mappedFields.entries.find { it.key.name == name && it.key.owner == owner && it.key.desc == desc }?.value ?: (if(!owner.startsWith("net/minecraft")) name else error("No field mapping for $owner.$name $desc"))
 }
 
-@Suppress("UNCHECKED_CAST")
 class MainProcessor(
     private val codeGenerator: CodeGenerator,
     private val options: Map<String, String>

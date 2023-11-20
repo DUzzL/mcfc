@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler
 
+import com.google.gson.JsonObject
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext
 import dev.epicpix.minecraftfunctioncompiler.emitter.ICodeFieldStorage
@@ -10,6 +11,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.InstructionType
 import dev.epicpix.minecraftfunctioncompiler.il.printInstructionList
 import dev.epicpix.minecraftfunctioncompiler.optimizer.optimize
 import dev.epicpix.minecraftfunctioncompiler.parser.Command
+import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import java.nio.file.Files
@@ -29,9 +31,10 @@ abstract class FunctionCompilerClassLoader(
 
     abstract fun registerFunction(clazz: Class<*>, key: DataLocation)
     abstract fun resetHandles()
-    abstract fun handleCount(): Int
 
     fun loadFunctionClasses(
+        foundFunctionCount: Int,
+        parseTime: Double,
         definedFunctions: Map<DataLocation, List<Command>>,
         fieldStorage: ICodeFieldStorage,
         serverFunctionManager: Any,
@@ -46,11 +49,11 @@ abstract class FunctionCompilerClassLoader(
         for((key, value) in definedFunctions) {
             try {
                 val compiled = compile(value)
+                compiled.forEach { totalPreoptimizedInstructions += it.countInstructions() }
                 val optimized = optimize(compiled)
+                optimized.forEach { totalOptimizedInstructions += it.countInstructions() }
                 compiledFunctions[key] = optimized
                 if(DEBUG) {
-                    compiled.forEach { totalPreoptimizedInstructions += it.countInstructions() }
-                    optimized.forEach { totalOptimizedInstructions += it.countInstructions() }
                     logInfo(" --- $key ---")
                     printInstructionList(optimized, logInfo)
                 }
@@ -59,14 +62,10 @@ abstract class FunctionCompilerClassLoader(
             }catch(e: Throwable) {
                 logError("Failed to compile function $key")
                 e.printStackTrace()
+                FunctionCompilerReporter.reportException("compile_function", e, JsonObject())
             }
         }
-        logInfo("Compiled ${compiledFunctions.size} functions in ${System.currentTimeMillis()-startCompile}ms")
-        if(DEBUG && compiledFunctions.isNotEmpty()) {
-            logInfo("Average ${"%.2f".format(totalPreoptimizedInstructions/compiledFunctions.size.toDouble())} instructions in pre-optimized IL bytecode")
-            logInfo("Average ${"%.2f".format(totalOptimizedInstructions/compiledFunctions.size.toDouble())} instructions in optimized IL bytecode")
-        }
-
+        val compileTime = (System.currentTimeMillis()-startCompile)/1000.0
         val compiledFunctionSet = compiledFunctions.keys.toSet()
         val loadedFunctions = mutableMapOf<DataLocation, Class<*>>()
         val startLoader = System.currentTimeMillis()
@@ -74,18 +73,12 @@ abstract class FunctionCompilerClassLoader(
             try {
                 loadedFunctions[key] = defineFunction(key, fieldStorage, compiledFunctions[key]!!, definedFunctions[key]!!.size, compiledFunctionSet, emitBytecode)
             }catch(e: Throwable) {
-                logError("Failed to load function ($key), clearing data")
+                logError("Failed to load function ($key), skipping function compilation")
                 e.printStackTrace()
-                logInfo("Loaded 0 functions in ${System.currentTimeMillis()-startLoader}ms")
+                FunctionCompilerReporter.reportExceptionWithInstructions("define_function", e, compiledFunctions[key]!!)
+                FunctionCompilerReporter.sendReports()
                 return
             }
-        }
-        logInfo("Loaded ${compiledFunctions.size} functions in ${System.currentTimeMillis()-startLoader}ms")
-        if(DEBUG) {
-            runCatching { Files.createDirectory(generatedDir) }
-            val startGraph = System.currentTimeMillis()
-            generateGraphs(compiledFunctions, generatedDir)
-            logInfo("Generated graphs in ${System.currentTimeMillis()-startGraph}ms")
         }
 
         try {
@@ -93,7 +86,16 @@ abstract class FunctionCompilerClassLoader(
         }catch(e: Throwable) {
             logError("Failed to load data, clearing data")
             e.printStackTrace()
+            FunctionCompilerReporter.reportException("define_data_class", e, JsonObject())
+            FunctionCompilerReporter.sendReports()
             return
+        }
+        val classLoadTime = (System.currentTimeMillis()-startLoader)/1000.0
+        if(DEBUG) {
+            runCatching { Files.createDirectory(generatedDir) }
+            val startGraph = System.currentTimeMillis()
+            generateGraphs(compiledFunctions, generatedDir)
+            logInfo("Generated graphs in ${System.currentTimeMillis()-startGraph}ms")
         }
 
         val startHandles = System.currentTimeMillis()
@@ -103,13 +105,18 @@ abstract class FunctionCompilerClassLoader(
             }catch(e: Throwable) {
                 logError("Failed to create function handle ($key), clearing data")
                 e.printStackTrace()
+                FunctionCompilerReporter.reportException("load_function_class", e, JsonObject())
+                FunctionCompilerReporter.sendReports()
                 resetHandles()
                 logInfo("Instruction dump:")
                 printInstructionList(compiledFunctions[key]!!, logInfo)
                 break
             }
         }
-        logInfo("Loaded ${handleCount()} function handles in ${System.currentTimeMillis()-startHandles}ms")
+        val handleLoadTime = (System.currentTimeMillis()-startHandles)/1000.0
+        FunctionCompilerReporter.reportCompilationStatistics(foundFunctionCount, definedFunctions.size, compiledFunctions.size, parseTime, compileTime, classLoadTime, handleLoadTime, totalPreoptimizedInstructions, totalOptimizedInstructions)
+
+        FunctionCompilerReporter.sendReports()
     }
 
     private fun defineFunction(funcId: DataLocation, fieldStorage: ICodeFieldStorage, instructions: List<Instruction>, commandCount: Int, compiledFunctions: Set<DataLocation>, emitBytecode: (List<Instruction>, EmitterContext) -> Unit): Class<*> {
