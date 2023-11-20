@@ -49,7 +49,7 @@ class MainProcessor(
         if(invoked) return emptyList()
         invoked = true
 
-        val mappingData = if(options["isJarTask"] == "true") MappingData() else null
+        val mappingData = if(options["isJarTask"] == "true" && options["mappingsFile"] != null) MappingData() else null
         if(mappingData != null) {
             val mappingsPath = Paths.get(options["mappingsFile"]!!)
             val mappingProvider = TinyUtils.createTinyMappingProvider(mappingsPath, "named", "intermediary")

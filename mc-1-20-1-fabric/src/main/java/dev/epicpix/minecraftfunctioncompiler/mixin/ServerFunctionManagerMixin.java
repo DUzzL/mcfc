@@ -3,7 +3,6 @@ package dev.epicpix.minecraftfunctioncompiler.mixin;
 import dev.epicpix.minecraftfunctioncompiler.FunctionClassLoader;
 import net.minecraft.commands.CommandFunction;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerFunctionLibrary;
 import net.minecraft.server.ServerFunctionManager;
