@@ -302,8 +302,8 @@ object CommandParser {
         }
     }
 
-    private fun getExecuteSubcommand(context: CommandContextBuilder<CommandSourceStack>, source: String, server: MinecraftServer): Command {
-        return if(context.child != null) parseCommandExecute(context.child, context.child.nodes, source, server) else Command(CommandTypes.EMPTY, mapOf())
+    private fun getExecuteSubcommand(context: CommandContextBuilder<CommandSourceStack>, source: String, server: MinecraftServer): Command? {
+        return if(context.child != null) parseCommandExecute(context.child, context.child.nodes, source, server) else null
     }
 
 }

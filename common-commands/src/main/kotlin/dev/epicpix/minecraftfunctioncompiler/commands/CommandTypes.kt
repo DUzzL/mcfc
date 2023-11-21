@@ -26,6 +26,5 @@ data object CommandTypes {
     val SCOREBOARD_PLAYERS_SET = CommandType("SCOREBOARD_PLAYERS_SET")
     val TAG_ADD = CommandType("TAG_ADD")
     val TAG_REMOVE = CommandType("TAG_REMOVE")
-    val EMPTY = CommandType("EMPTY")
 }
 

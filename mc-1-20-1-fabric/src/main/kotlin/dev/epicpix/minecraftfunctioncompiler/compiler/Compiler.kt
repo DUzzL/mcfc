@@ -17,7 +17,8 @@ fun compile(commands: List<Command>): List<Instruction> {
     return instructions
 }
 
-private fun ICompilationContext.compile(command: Command, result: ResultStorage = ResultStorage()) {
+private fun ICompilationContext.compile(command: Command?, result: ResultStorage = ResultStorage()) {
+    if(command == null) return
     when(command.type) {
         CommandTypes.ATTRIBUTE_BASE_SET -> {
             forSelector(command["target"]) { entity, _, _ ->
@@ -253,6 +254,5 @@ private fun ICompilationContext.compile(command: Command, result: ResultStorage 
                 addInstruction(Instructions.removeEntityTag(entity, command["name"]))
             }
         }
-        CommandTypes.EMPTY -> {}
     }
 }
