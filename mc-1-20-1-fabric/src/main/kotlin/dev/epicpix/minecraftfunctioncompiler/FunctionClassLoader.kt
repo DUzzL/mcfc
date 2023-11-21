@@ -29,6 +29,7 @@ import java.lang.invoke.MethodType
 class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<ResourceLocation, CommandFunction>, private val minecraftServer: MinecraftServer) : FunctionCompilerClassLoader(parent, FabricLoader.getInstance().gameDir.resolve("generated"), CommandSourceStack::class.java, MinecraftServer::class.java, ServerFunctionManager::class.java, minecraftServer, LOGGER::info, LOGGER::warn, LOGGER::error) {
     private val handles: MutableMap<ResourceLocation, MethodHandle> = HashMap()
     fun loadFunctions(serverFunctionManager: ServerFunctionManager) {
+        if(functions.isEmpty()) return
         updateRegistryMaps()
         resetHandles()
 
