@@ -22,7 +22,7 @@ Not all commands are currently implemented in this mod, if a command is not list
 | `scoreboard players get`       | Partial[^1]           | Partial[^1]           | Yes                    | No                      |
 | `scoreboard players operation` | Partial[^1]           | Partial[^1]           | No                     | No                      |
 | `scoreboard players remove`    | Partial[^1]           | Partial[^1]           | No                     | No                      |
-| `scoreboard players reset`     | Partial[^1] [^4]      | Partial[^1] [^4]      | No                     | No                      |
+| `scoreboard players reset`     | Partial[^1]           | Partial[^1]           | No                     | No                      |
 | `scoreboard players set`       | Partial[^1]           | Partial[^1]           | No                     | No                      |
 | `tag add`                      | Partial[^1]           | Partial[^1]           | No                     | No                      |
 | `tag remove`                   | Partial[^1]           | Partial[^1]           | No                     | No                      |
@@ -30,4 +30,3 @@ Not all commands are currently implemented in this mod, if a command is not list
 [^1]: Not all selectors are currently supported.
 [^2]: Local positions (^ ^ ^) are not implemented, relative and absolute positions do work.
 [^3]: Functions do not accept macro arguments
-[^4]: Does not support resetting all objectives at once

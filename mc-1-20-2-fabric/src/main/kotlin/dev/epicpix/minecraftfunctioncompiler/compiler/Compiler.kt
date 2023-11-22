@@ -238,9 +238,15 @@ private fun ICompilationContext.compile(command: Command?, result: ResultStorage
             }
         }
         CommandTypes.SCOREBOARD_PLAYERS_RESET -> {
-            getObjective(command["objective"]) { objective ->
+            if(command.params.containsKey("objective")) {
+                getObjective(command["objective"]) { objective ->
+                    forScoreHolder(command["targets"]) { name ->
+                        addInstruction(Instructions.resetScore(objective, name))
+                    }
+                }
+            }else {
                 forScoreHolder(command["targets"]) { name ->
-                    addInstruction(Instructions.resetScore(objective, name))
+                    addInstruction(Instructions.resetPlayerScore(name))
                 }
             }
         }

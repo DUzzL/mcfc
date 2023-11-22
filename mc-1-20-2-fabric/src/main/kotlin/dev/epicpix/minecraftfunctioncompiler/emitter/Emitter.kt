@@ -367,6 +367,12 @@ fun registerInstructionEmitters() {
         load("objective")
         codeWriter.writeMapped(Scoreboard_resetPlayerScore)
     }
+    registerEmitterInstruction(InstructionTypes.RESET_PLAYER_SCORE) {
+        fieldStorage.loadScoreboard(codeWriter)
+        load("name")
+        codeWriter.writeNull()
+        codeWriter.writeMapped(Scoreboard_resetPlayerScore)
+    }
     registerEmitterInstruction(InstructionTypes.CHECK_SCORE_RANGE) {
         load("score")
         codeWriter.writeMapped(Score_getScore)

@@ -7,6 +7,7 @@ import com.google.devtools.ksp.getDeclaredProperties
 import com.google.devtools.ksp.processing.*
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSFile
 import com.google.devtools.ksp.symbol.Origin
 import net.fabricmc.tinyremapper.IMappingProvider
 import net.fabricmc.tinyremapper.TinyUtils
@@ -74,7 +75,7 @@ class MainProcessor(
             val resultClass = it.getAnnotationsByType(ConstantsFile::class).first().value
             val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
             val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
-            val map = codeGenerator.createNewFile(Dependencies(true), resultPackage, resultName, "kt")
+            val map = codeGenerator.createNewFile(Dependencies(true, it as KSFile), resultPackage, resultName, "kt")
             map.appendText("package $resultPackage\n")
             map.appendText("const val isDevelopmentEnvironment: Boolean = ${options["isJarTask"] != "true"}\n")
             map.appendText("const val versionCommit: String = \"${options["commit"] ?: "development"}\"\n")
@@ -89,11 +90,11 @@ class MainProcessor(
             val resultClass = it.getAnnotationsByType(MapSourceClass::class).first().value
             val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
             val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
-            val map = codeGenerator.createNewFile(Dependencies(true), resultPackage, resultName, "kt")
+            val map = codeGenerator.createNewFile(Dependencies(true, (it as KSClassDeclaration).containingFile!!), resultPackage, resultName, "kt")
             map.appendText("package $resultPackage\n")
             map.appendText("object $resultName {\n")
             map.appendText("    fun init() {\n")
-            generateFunctionMappingPer(map, mappingData, it as KSClassDeclaration)
+            generateFunctionMappingPer(map, mappingData, it)
             map.appendText("    }\n")
             map.appendText("}\n")
             map.close()
@@ -149,11 +150,11 @@ class MainProcessor(
             val enumResultPackage = enumClass.substring(0, enumClass.lastIndexOf('.'))
             val enumResultClass = enumClass.substring(enumClass.lastIndexOf('.')+1)
 
-            val impl = codeGenerator.createNewFile(Dependencies(true), generatorResultPackage, generatorResultClass + "Impl", "kt")
+            val impl = codeGenerator.createNewFile(Dependencies(true, (it as KSClassDeclaration).containingFile!!), generatorResultPackage, generatorResultClass + "Impl", "kt")
             impl.appendText("package $generatorResultPackage\n")
             impl.appendText("data object $generatorResultClass {\n")
 
-            val types = codeGenerator.createNewFile(Dependencies(true), enumResultPackage, enumResultClass, "kt")
+            val types = codeGenerator.createNewFile(Dependencies(true, it.containingFile!!), enumResultPackage, enumResultClass, "kt")
             types.appendText("package $enumResultPackage\n")
             types.appendText("object $enumResultClass {\n")
 

@@ -262,10 +262,9 @@ object CommandParser {
                                 "objective" to objective
                             ))
                         }else {
-//                            Command(CommandTypes.SCOREBOARD_PLAYERS_RESET, mapOf(
-//                                "targets" to parseScoreHolder(context.arguments["targets"]!!.range[source])
-//                            ))
-                            throw UnsupportedOperationException("Unsupported in compiler")
+                            Command(CommandTypes.SCOREBOARD_PLAYERS_RESET, mapOf(
+                                "targets" to parseScoreHolder(context.arguments["targets"]!!.range[source])
+                            ))
                         }
                     }
                     "set" -> {

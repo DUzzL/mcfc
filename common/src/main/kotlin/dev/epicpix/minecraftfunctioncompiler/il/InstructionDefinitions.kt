@@ -9,21 +9,27 @@ import java.util.*
 @Suppress("unused")
 @InstructionSourceClass("dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes", "dev.epicpix.minecraftfunctioncompiler.il.Instructions")
 private interface InstructionDefinitions {
+    // General instructions
+    fun ifNotNull(@InstructionSource local: LocationData): Instruction
+    fun scope(@InstructionDestination scope: ScopeData): Instruction
+    fun exitScope(@InstructionSource scope: ScopeData): Instruction
+    fun limiter(@InstructionDestination scope: ScopeData, limit: Int): Instruction
+    fun checkLimit(@InstructionSource scope: ScopeData): Instruction
+    fun createResultStorage(@InstructionDestination storage: LocationData): Instruction
+    fun addResultStorage(@InstructionSource storage: LocationData, @InstructionSource value: LocationData): Instruction
+    fun setResultStorage(@InstructionSource storage: LocationData, @InstructionSource value: LocationData): Instruction
+
+    // Minecraft specific instructions
     fun getCurrentEntity(@InstructionDestination entity: LocationData): Instruction
     fun forEachEntity(@InstructionDestination entity: LocationData): Instruction
     fun forEachPlayer(@InstructionDestination entity: LocationData): Instruction
     fun forEntity(@InstructionDestination entity: LocationData, uuid: UUID): Instruction
     fun forPlayer(@InstructionDestination entity: LocationData, name: String): Instruction
     fun forScoreHolders(@InstructionDestination local: LocationData, single: Boolean): Instruction
-    fun ifNotNull(@InstructionSource local: LocationData): Instruction
     fun addEntityTag(@InstructionSource entity: LocationData, tag: String): Instruction
     fun removeEntityTag(@InstructionSource entity: LocationData, tag: String): Instruction
     fun checkEntityTag(@InstructionSource entity: LocationData, tag: String, negated: Boolean): Instruction
     fun checkEntityTags(@InstructionSource entity: LocationData, negated: Boolean): Instruction
-    fun scope(@InstructionDestination scope: ScopeData): Instruction
-    fun exitScope(@InstructionSource scope: ScopeData): Instruction
-    fun limiter(@InstructionDestination scope: ScopeData, limit: Int): Instruction
-    fun checkLimit(@InstructionSource scope: ScopeData): Instruction
     fun getObjective(@InstructionDestination objective: LocationData, name: String): Instruction
     fun getScoreboardName(@InstructionSource entity: LocationData, @InstructionDestination name: LocationData): Instruction
     fun scoreData(@InstructionSource objective: LocationData, @InstructionSource name: LocationData, @InstructionDestination score: LocationData, autoCreate: Boolean): Instruction
@@ -32,6 +38,7 @@ private interface InstructionDefinitions {
     fun removeScore(@InstructionSource score: LocationData, @InstructionSource value: LocationData): Instruction
     fun setScore(@InstructionSource score: LocationData, @InstructionSource value: LocationData): Instruction
     fun resetScore(@InstructionSource objective: LocationData, @InstructionSource name: LocationData): Instruction
+    fun resetPlayerScore(@InstructionSource name: LocationData): Instruction
     fun runScoreOperation(@InstructionSource target: LocationData, @InstructionSource source: LocationData, operation: ScoreboardOperation, exceptionScope: ScopeData): Instruction
     fun callFunctions(functions: List<DataLocation>, @InstructionSource entity: LocationData?, @InstructionSource world: LocationData?, @InstructionSource position: LocationData?, @InstructionSource rotation: LocationData?): Instruction
     fun killEntity(@InstructionSource entity: LocationData): Instruction
@@ -49,7 +56,4 @@ private interface InstructionDefinitions {
     fun hasTeam(@InstructionSource entity: LocationData, negated: Boolean): Instruction
     fun getAttributeInstance(@InstructionSource entity: LocationData, @InstructionDestination instance: LocationData, attribute: DataLocation): Instruction
     fun setAttributeBase(@InstructionSource instance: LocationData, value: Double): Instruction
-    fun createResultStorage(@InstructionDestination storage: LocationData): Instruction
-    fun addResultStorage(@InstructionSource storage: LocationData, @InstructionSource value: LocationData): Instruction
-    fun setResultStorage(@InstructionSource storage: LocationData, @InstructionSource value: LocationData): Instruction
 }
