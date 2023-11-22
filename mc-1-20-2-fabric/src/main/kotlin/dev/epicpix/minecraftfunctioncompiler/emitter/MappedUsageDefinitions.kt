@@ -112,5 +112,10 @@ object MappedUsageDefinitions {
     @MapFieldUse("net/minecraft/world/phys/Vec3:z:D")
     var Vec3_z: MappedFieldData? = null
 
+    @MapFieldUse("net/minecraft/world/phys/Vec2:x:F")
+    var Vec2_x: MappedFieldData? = null
+    @MapFieldUse("net/minecraft/world/phys/Vec2:y:F")
+    var Vec2_y: MappedFieldData? = null
+
     init { MappedUsageInitializer.init() }
 }

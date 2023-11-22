@@ -3,6 +3,7 @@ package dev.epicpix.minecraftfunctioncompiler
 import dev.epicpix.minecraftfunctioncompiler.commands.initBaseSelectorOptions
 import dev.epicpix.minecraftfunctioncompiler.commands.registerSelectorOption
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation
+import dev.epicpix.minecraftfunctioncompiler.data.FloatRangeArgument
 import dev.epicpix.minecraftfunctioncompiler.data.NegatableData
 import dev.epicpix.minecraftfunctioncompiler.data.mapEntityTypeClass
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.registerBaseInstructionEmitters
@@ -10,11 +11,13 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.registerInstructionEmitters
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter
 import net.fabricmc.api.ModInitializer
 import net.minecraft.DetectedVersion
+import net.minecraft.advancements.critereon.WrappedMinMaxBounds
 import net.minecraft.client.Minecraft
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.registries.Registries
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.tags.TagKey
+import net.minecraft.util.Mth
 import net.minecraft.world.level.GameType
 
 object FunctionCompilerMain : ModInitializer {
@@ -45,6 +48,14 @@ object FunctionCompilerMain : ModInitializer {
             val negated = if(peek() == '!') { read(); true } else false
             data.gamemode = NegatableData(GameType.byName(readUnquotedString(), null)!!.toGamemode(), negated)
             data.entityTypes = NegatableData(listOf(DataLocation("minecraft", "player")), false)
+        }
+        registerSelectorOption("x_rotation") { data ->
+            val bounds = WrappedMinMaxBounds.fromReader(this, true, Mth::wrapDegrees)
+            data.pitch = FloatRangeArgument(bounds.min, bounds.max)
+        }
+        registerSelectorOption("y_rotation") { data ->
+            val bounds = WrappedMinMaxBounds.fromReader(this, true, Mth::wrapDegrees)
+            data.yaw = FloatRangeArgument(bounds.min, bounds.max)
         }
     }
 }

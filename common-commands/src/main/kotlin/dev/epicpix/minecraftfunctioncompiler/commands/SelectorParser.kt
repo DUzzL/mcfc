@@ -63,6 +63,8 @@ fun parseSelector(selector: String): SelectorArgument {
         limit = data.limit,
         scores = data.scores,
         gamemode = data.gamemode,
+        yaw = data.yaw,
+        pitch = data.pitch,
     )
 }
 

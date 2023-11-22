@@ -60,19 +60,19 @@ class CodeWriter(override val methodVisitor: MethodVisitor) : ICodeWriter {
 
     override fun loadLocal(local: String) {
         val localVar = locals[local]!!
-        if(localVar.descriptor == "I") {
-            methodVisitor.visitVarInsn(Opcodes.ILOAD, localVar.index)
-        }else {
-            methodVisitor.visitVarInsn(Opcodes.ALOAD, localVar.index)
+        when(localVar.descriptor) {
+            "I" -> methodVisitor.visitVarInsn(Opcodes.ILOAD, localVar.index)
+            "F" -> methodVisitor.visitVarInsn(Opcodes.FLOAD, localVar.index)
+            else -> methodVisitor.visitVarInsn(Opcodes.ALOAD, localVar.index)
         }
     }
 
     override fun storeLocal(local: String) {
         val localVar = locals[local]!!
-        if(localVar.descriptor == "I") {
-            methodVisitor.visitVarInsn(Opcodes.ISTORE, localVar.index)
-        }else {
-            methodVisitor.visitVarInsn(Opcodes.ASTORE, localVar.index)
+        when(localVar.descriptor) {
+            "I" -> methodVisitor.visitVarInsn(Opcodes.ISTORE, localVar.index)
+            "F" -> methodVisitor.visitVarInsn(Opcodes.FSTORE, localVar.index)
+            else -> methodVisitor.visitVarInsn(Opcodes.ASTORE, localVar.index)
         }
     }
 

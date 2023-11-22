@@ -56,4 +56,5 @@ private interface InstructionDefinitions {
     fun hasTeam(@InstructionSource entity: LocationData, negated: Boolean): Instruction
     fun getAttributeInstance(@InstructionSource entity: LocationData, @InstructionDestination instance: LocationData, attribute: DataLocation): Instruction
     fun setAttributeBase(@InstructionSource instance: LocationData, value: Double): Instruction
+    fun checkRotation(@InstructionSource rotation: LocationData, yaw: FloatRangeArgument?, pitch: FloatRangeArgument?): Instruction
 }

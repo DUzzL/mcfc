@@ -53,6 +53,8 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.MappedUsageDefinitions.Serv
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedUsageDefinitions.ServerPlayer_gameMode
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedUsageDefinitions.ServerPlayer_setGameMode
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedUsageDefinitions.Team_getName
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedUsageDefinitions.Vec2_x
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedUsageDefinitions.Vec2_y
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedUsageDefinitions.Vec3_x
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedUsageDefinitions.Vec3_y
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedUsageDefinitions.Vec3_z
@@ -608,5 +610,31 @@ fun registerInstructionEmitters() {
         load("instance")
         codeWriter.writeDouble(instruction["value"])
         codeWriter.writeMapped(AttributeInstance_setBaseValue)
+    }
+    registerEmitterInstruction(InstructionTypes.CHECK_ROTATION) {
+        val yaw = instruction.get<FloatRangeArgument?>("yaw")
+        if(yaw != null) {
+            load("rotation")
+            codeWriter.writeMapped(Vec2_x, true)
+            checkFloatRange(yaw) {
+                val pitch = instruction.get<FloatRangeArgument?>("pitch")
+                if(pitch != null) {
+                    load("rotation")
+                    codeWriter.writeMapped(Vec2_y, true)
+                    checkFloatRange(pitch) { run() }
+                    return@checkFloatRange
+                }
+                run()
+            }
+            return@registerEmitterInstruction
+        }
+        val pitch = instruction.get<FloatRangeArgument?>("pitch")
+        if(pitch != null) {
+            load("rotation")
+            codeWriter.writeMapped(Vec2_y, true)
+            checkFloatRange(pitch) { run() }
+            return@registerEmitterInstruction
+        }
+        run()
     }
 }

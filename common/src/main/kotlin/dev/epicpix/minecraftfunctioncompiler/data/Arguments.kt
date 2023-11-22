@@ -2,6 +2,15 @@ package dev.epicpix.minecraftfunctioncompiler.data
 
 import java.util.*
 
+data class FloatRangeArgument(
+    val minimum: Float?,
+    val maximum: Float?
+) {
+    override fun toString(): String {
+        return "${minimum ?: ""}..${maximum ?: ""}"
+    }
+}
+
 data class IntRangeArgument(
     val minimum: Int?,
     val maximum: Int?
@@ -32,6 +41,8 @@ data class SelectorArgument(
     val team: NegatableData<String>? = null,
     val scores: Map<String, IntRangeArgument> = mapOf(),
     val gamemode: NegatableData<Gamemode>? = null,
+    val yaw: FloatRangeArgument? = null,
+    val pitch: FloatRangeArgument? = null,
     val selectPlayers: Boolean = entityTypes != null && !entityTypes.negated && entityTypes.data.size == 1 && entityTypes.data[0] == DataLocation("minecraft", "player"),
 )
 

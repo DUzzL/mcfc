@@ -1,9 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.commands
 
-import dev.epicpix.minecraftfunctioncompiler.data.DataLocation
-import dev.epicpix.minecraftfunctioncompiler.data.Gamemode
-import dev.epicpix.minecraftfunctioncompiler.data.IntRangeArgument
-import dev.epicpix.minecraftfunctioncompiler.data.NegatableData
+import dev.epicpix.minecraftfunctioncompiler.data.*
 
 data class SelectorGeneratorData(
     var entityTypes: NegatableData<List<DataLocation>>? = null,
@@ -14,4 +11,6 @@ data class SelectorGeneratorData(
     var limit: Int? = null,
     val scores: MutableMap<String, IntRangeArgument> = mutableMapOf(),
     var gamemode: NegatableData<Gamemode>? = null,
+    var yaw: FloatRangeArgument? = null,
+    var pitch: FloatRangeArgument? = null,
 )

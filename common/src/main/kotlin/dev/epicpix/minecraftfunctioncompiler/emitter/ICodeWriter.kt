@@ -25,6 +25,7 @@ interface ICodeWriter {
         }
     }
     fun writeLong(value: Long) = methodVisitor.visitLdcInsn(value)
+    fun writeFloat(value: Float) = methodVisitor.visitLdcInsn(value)
     fun writeDouble(value: Double) = methodVisitor.visitLdcInsn(value)
     fun writeString(value: String) = methodVisitor.visitLdcInsn(value)
     fun writeNull() = methodVisitor.visitInsn(Opcodes.ACONST_NULL)

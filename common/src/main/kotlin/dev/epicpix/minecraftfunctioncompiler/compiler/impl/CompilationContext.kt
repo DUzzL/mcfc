@@ -225,6 +225,12 @@ data class CompilationContext(
             if(selector.hasTags != null) {
                 stacker.stackInstruction(Instructions.checkEntityTags(local, selector.hasTags))
             }
+            if(selector.yaw != null || selector.pitch != null) {
+                val rotationLocal = LocationData(local = context.highestLocal)
+                stacker.stackInstruction(Instructions.getEntityRotation(local, rotationLocal))
+                stacker.stackInstruction(Instructions.checkRotation(rotationLocal, selector.yaw, selector.pitch))
+                ctx = ctx.with(highestLocal = context.highestLocal + 1)
+            }
             if(selector.team != null) {
                 stacker.stackInstruction(Instructions.checkTeam(local, selector.team.data, selector.team.negated))
             }
