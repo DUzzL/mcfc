@@ -35,7 +35,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
 
         val definedFunctions = mutableMapOf<DataLocation, List<Command>>()
 
-        val startParse = System.currentTimeMillis()
+        val startParse = System.nanoTime()
         funcLoop@
         for ((key, value) in functions) {
             try {
@@ -53,7 +53,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                 FunctionCompilerReporter.reportException("parse_command", e, JsonObject())
             }
         }
-        val parseTime = (System.currentTimeMillis()-startParse)/1000.0
+        val parseTime = (System.nanoTime()-startParse)/1000000000.0
         loadFunctionClasses(functions.size, parseTime, definedFunctions, createCodeFieldStorage(), serverFunctionManager, { compile(it) }, { instructions, context ->
             instructions.forEach { getInstructionEmitter(it.type)(context.copy(instruction = it)) }
         })

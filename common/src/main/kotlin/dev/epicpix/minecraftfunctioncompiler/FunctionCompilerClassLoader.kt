@@ -45,7 +45,7 @@ abstract class FunctionCompilerClassLoader(
         var totalOptimizedInstructions = 0
 
         val compiledFunctions = mutableMapOf<DataLocation, List<Instruction>>()
-        val startCompile = System.currentTimeMillis()
+        val startCompile = System.nanoTime()
         for((key, value) in definedFunctions) {
             try {
                 val compiled = compile(value)
@@ -65,10 +65,10 @@ abstract class FunctionCompilerClassLoader(
                 FunctionCompilerReporter.reportException("compile_function", e, JsonObject())
             }
         }
-        val compileTime = (System.currentTimeMillis()-startCompile)/1000.0
+        val compileTime = (System.nanoTime()-startCompile)/1000000000.0
         val compiledFunctionSet = compiledFunctions.keys.toSet()
         val loadedFunctions = mutableMapOf<DataLocation, Class<*>>()
-        val startLoader = System.currentTimeMillis()
+        val startLoader = System.nanoTime()
         for((key) in compiledFunctions) {
             try {
                 loadedFunctions[key] = defineFunction(key, fieldStorage, compiledFunctions[key]!!, definedFunctions[key]!!.size, compiledFunctionSet, emitBytecode)
@@ -90,15 +90,15 @@ abstract class FunctionCompilerClassLoader(
             FunctionCompilerReporter.sendReports()
             return
         }
-        val classLoadTime = (System.currentTimeMillis()-startLoader)/1000.0
+        val classLoadTime = (System.nanoTime()-startLoader)/1000000000.0
         if(DEBUG) {
             runCatching { Files.createDirectory(generatedDir) }
-            val startGraph = System.currentTimeMillis()
+            val startGraph = System.nanoTime()
             generateGraphs(compiledFunctions, generatedDir)
-            logInfo("Generated graphs in ${System.currentTimeMillis()-startGraph}ms")
+            logInfo("Generated graphs in ${System.nanoTime()-startGraph}ms")
         }
 
-        val startHandles = System.currentTimeMillis()
+        val startHandles = System.nanoTime()
         for((key) in compiledFunctions) {
             try {
                 registerFunction(loadedFunctions[key]!!, key)
@@ -113,7 +113,7 @@ abstract class FunctionCompilerClassLoader(
                 break
             }
         }
-        val handleLoadTime = (System.currentTimeMillis()-startHandles)/1000.0
+        val handleLoadTime = (System.nanoTime()-startHandles)/1000000000.0
         FunctionCompilerReporter.reportCompilationStatistics(foundFunctionCount, definedFunctions.size, compiledFunctions.size, parseTime, compileTime, classLoadTime, handleLoadTime, totalPreoptimizedInstructions, totalOptimizedInstructions)
 
         FunctionCompilerReporter.sendReports()
