@@ -105,7 +105,7 @@ abstract class FunctionCompilerClassLoader(
             }catch(e: Throwable) {
                 logError("Failed to create function handle ($key), clearing data")
                 e.printStackTrace()
-                FunctionCompilerReporter.reportException("load_function_class", e, JsonObject())
+                FunctionCompilerReporter.reportExceptionWithInstructions("load_function_class", e, compiledFunctions[key]!!)
                 FunctionCompilerReporter.sendReports()
                 resetHandles()
                 logInfo("Instruction dump:")
