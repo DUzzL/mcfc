@@ -5,7 +5,11 @@ data class NegatableData<T>(
     val negated: Boolean
 )
 
-data class DataLocation(val namespace: String, val path: String)
+data class DataLocation(val namespace: String, val path: String) {
+    override fun toString(): String {
+        return "$namespace/$path"
+    }
+}
 
 enum class Gamemode {
     SURVIVAL,

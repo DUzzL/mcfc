@@ -4,7 +4,7 @@ package dev.epicpix.minecraftfunctioncompiler
 
 import dev.epicpix.annotations.ConstantsFile
 
-const val DEBUG: Boolean = true
+const val DEBUG: Boolean = false
 const val DATA_CLASS: String = "function/data"
 
 const val EMIT_SERVER_FUNCTION_MANAGER_NAME = "_ServerFunctionManager"

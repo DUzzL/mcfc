@@ -52,11 +52,21 @@ object FunctionCompilerReporter {
         }
     }
 
+    private fun writeExceptionJson(exception: Throwable, json: JsonObject) {
+        json.apply {
+            addProperty("exception_type", exception.javaClass.name)
+            addProperty("exception_message", exception.message)
+            addProperty("exception_stack_trace", exception.stackTraceToString())
+            if(exception.cause != null) {
+                add("caused_by", JsonObject().apply { writeExceptionJson(exception.cause!!, this) })
+            }
+        }
+    }
+
     fun reportException(step: String, exception: Throwable, extra: JsonElement) {
         reportRawData("exception", JsonObject().apply {
             addProperty("step", step)
-            addProperty("exception_message", exception.message)
-            addProperty("exception_stack_trace", exception.stackTraceToString())
+            writeExceptionJson(exception, this)
             add("extra", extra)
         })
     }
