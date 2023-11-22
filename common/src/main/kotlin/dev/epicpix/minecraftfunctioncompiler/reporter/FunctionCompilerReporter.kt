@@ -56,7 +56,10 @@ object FunctionCompilerReporter {
         json.apply {
             addProperty("exception_type", exception.javaClass.name)
             addProperty("exception_message", exception.message)
-            addProperty("exception_stack_trace", exception.stackTraceToString())
+            val stackTrace = exception.stackTrace
+            val trace = StringBuilder()
+            stackTrace.forEach { trace.append(it).append("\n") }
+            addProperty("exception_stack_trace", trace.toString())
             if(exception.cause != null) {
                 add("caused_by", JsonObject().apply { writeExceptionJson(exception.cause!!, this) })
             }
