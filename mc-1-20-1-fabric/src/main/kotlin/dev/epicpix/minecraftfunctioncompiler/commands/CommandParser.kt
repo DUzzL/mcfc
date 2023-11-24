@@ -8,6 +8,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.SwizzleArgument
 import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates
 import dev.epicpix.minecraftfunctioncompiler.parser.Command
 import dev.epicpix.minecraftfunctioncompiler.toDataLocation
+import dev.epicpix.minecraftfunctioncompiler.toGamemode
 import net.minecraft.advancements.critereon.MinMaxBounds
 import net.minecraft.commands.CommandFunction
 import net.minecraft.commands.CommandSourceStack
@@ -16,13 +17,14 @@ import net.minecraft.core.Direction
 import net.minecraft.core.Holder
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.MinecraftServer
+import net.minecraft.server.ServerFunctionManager
 import net.minecraft.world.entity.ai.attributes.Attribute
 import net.minecraft.world.level.GameType
 import java.util.*
 
 object CommandParser {
 
-    fun parseFunctionCommands(func: CommandFunction, server: MinecraftServer): List<Command> {
+    fun parseFunctionCommands(func: CommandFunction, server: MinecraftServer, functionManager: ServerFunctionManager): List<Command> {
         val commands = mutableListOf<Command>()
         for (entry in func.entries) {
             if (entry !is CommandFunction.CommandEntry) continue
@@ -30,16 +32,16 @@ object CommandParser {
             val context = entry.parse.context
             val cmdName = context.nodes[0].node.name
 
-            commands.add(parseCommand(cmdName, context, entry.parse.reader.string, server))
+            commands.add(parseCommand(cmdName, context, entry.parse.reader.string, server, functionManager))
         }
         return commands
     }
 
-    private fun parseCommand(cmdName: String, context: CommandContextBuilder<CommandSourceStack>, source: String, server: MinecraftServer): Command {
+    private fun parseCommand(cmdName: String, context: CommandContextBuilder<CommandSourceStack>, source: String, server: MinecraftServer, functionManager: ServerFunctionManager): Command {
         return when(cmdName) {
             "attribute" -> parseCommandAttribute(context, source)
-            "execute" -> parseCommandExecute(context, context.nodes.subList(1, context.nodes.size), source, server)
-            "function" -> parseCommandFunction(context, source, server)
+            "execute" -> parseCommandExecute(context, context.nodes.subList(1, context.nodes.size), source, server, functionManager)
+            "function" -> parseCommandFunction(context, source, functionManager)
             "gamemode" -> parseCommandGamemode(context, source)
             "kill" -> parseCommandKill(context, source)
             "scoreboard" -> parseCommandScoreboard(context, source)
@@ -69,26 +71,26 @@ object CommandParser {
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun parseCommandExecute(context: CommandContextBuilder<CommandSourceStack>, nodes: List<ParsedCommandNode<CommandSourceStack>>, source: String, server: MinecraftServer): Command {
+    private fun parseCommandExecute(context: CommandContextBuilder<CommandSourceStack>, nodes: List<ParsedCommandNode<CommandSourceStack>>, source: String, server: MinecraftServer, functionManager: ServerFunctionManager): Command {
         return when(val type = nodes[0].range[source]) {
             "align" -> {
                 val swizzle = context.arguments["axes"]!!.result as EnumSet<Direction.Axis>
 
                 Command(CommandTypes.EXECUTE_ALIGN, mapOf(
                     "swizzle" to SwizzleArgument(swizzle.contains(Direction.Axis.X), swizzle.contains(Direction.Axis.Y), swizzle.contains(Direction.Axis.Z)),
-                    "command" to getExecuteSubcommand(context, source, server)
+                    "command" to getExecuteSubcommand(context, source, server, functionManager)
                 ))
             }
             "as" -> {
                 Command(CommandTypes.EXECUTE_AS, mapOf(
                     "targets" to parseSelector(context.arguments["targets"]!!.range[source]),
-                    "command" to getExecuteSubcommand(context, source, server)
+                    "command" to getExecuteSubcommand(context, source, server, functionManager)
                 ))
             }
             "at" -> {
                 Command(CommandTypes.EXECUTE_AT, mapOf(
                     "targets" to parseSelector(context.arguments["targets"]!!.range[source]),
-                    "command" to getExecuteSubcommand(context, source, server)
+                    "command" to getExecuteSubcommand(context, source, server, functionManager)
                 ))
             }
             "if" -> {
@@ -96,7 +98,7 @@ object CommandParser {
                     "entity" -> {
                         Command(CommandTypes.EXECUTE_IF_ENTITY, mapOf(
                             "entities" to parseSelector(context.arguments["entities"]!!.range[source]),
-                            "command" to getExecuteSubcommand(context, source, server)
+                            "command" to getExecuteSubcommand(context, source, server, functionManager)
                         ))
                     }
                     "score" -> {
@@ -107,7 +109,7 @@ object CommandParser {
                                 "target" to parseScoreHolder(context.arguments["target"]!!.range[source]),
                                 "targetObjective" to context.arguments["targetObjective"]!!.result as String,
                                 "range" to IntRangeArgument(range.min, range.max),
-                                "command" to getExecuteSubcommand(context, source, server)
+                                "command" to getExecuteSubcommand(context, source, server, functionManager)
                             ))
                         }else {
                             Command(CommandTypes.EXECUTE_IF_SCORE_COMPARE, mapOf(
@@ -116,21 +118,21 @@ object CommandParser {
                                 "comparison" to comparison,
                                 "source" to parseScoreHolder(context.arguments["source"]!!.range[source]),
                                 "sourceObjective" to context.arguments["sourceObjective"]!!.result as String,
-                                "command" to getExecuteSubcommand(context, source, server)
+                                "command" to getExecuteSubcommand(context, source, server, functionManager)
                             ))
                         }
                     }
                     else -> throw UnsupportedOperationException("Invalid execute command if comparison type: $ifType")
                 }
             }
-            "run" -> parseCommand(context.child.nodes[0].range[source], context.child, source, server)
+            "run" -> parseCommand(context.child.nodes[0].range[source], context.child, source, server, functionManager)
             "positioned" -> {
                 val posArg = context.arguments["pos"]
                 return if(posArg != null) {
                     when(val pos = posArg.result) {
                         is LocalCoordinates -> throw UnsupportedOperationException("Unsupported local coordinates")
                         is net.minecraft.commands.arguments.coordinates.WorldCoordinates -> {
-                            Command(CommandTypes.EXECUTE_POSITIONED_POS, mapOf("position" to WorldCoordinates(pos.x.value, pos.x.relative, pos.y.value, pos.y.relative, pos.z.value, pos.z.relative), "command" to getExecuteSubcommand(context, source, server)))
+                            Command(CommandTypes.EXECUTE_POSITIONED_POS, mapOf("position" to WorldCoordinates(pos.x.value, pos.x.relative, pos.y.value, pos.y.relative, pos.z.value, pos.z.relative), "command" to getExecuteSubcommand(context, source, server, functionManager)))
                         }
                         else -> throw UnsupportedOperationException("Unknown coordinate type")
                     }
@@ -146,7 +148,7 @@ object CommandParser {
                         return Command(CommandTypes.EXECUTE_STORE_RESULT_SCORE, mapOf(
                             "targets" to parseScoreHolder(context.arguments["targets"]!!.range[source]),
                             "objective" to context.arguments["objective"]!!.result as String,
-                            "command" to getExecuteSubcommand(context, source, server)
+                            "command" to getExecuteSubcommand(context, source, server, functionManager)
                         ))
                     }
                 }
@@ -157,7 +159,7 @@ object CommandParser {
                     "entity" -> {
                         Command(CommandTypes.EXECUTE_UNLESS_ENTITY, mapOf(
                             "entities" to parseSelector(context.arguments["entities"]!!.range[source]),
-                            "command" to getExecuteSubcommand(context, source, server)
+                            "command" to getExecuteSubcommand(context, source, server, functionManager)
                         ))
                     }
                     "score" -> {
@@ -168,7 +170,7 @@ object CommandParser {
                                 "target" to parseScoreHolder(context.arguments["target"]!!.range[source]),
                                 "targetObjective" to context.arguments["targetObjective"]!!.result as String,
                                 "range" to IntRangeArgument(range.min, range.max),
-                                "command" to getExecuteSubcommand(context, source, server)
+                                "command" to getExecuteSubcommand(context, source, server, functionManager)
                             ))
                         }else {
                             Command(CommandTypes.EXECUTE_UNLESS_SCORE_COMPARE, mapOf(
@@ -177,7 +179,7 @@ object CommandParser {
                                 "comparison" to comparison,
                                 "source" to parseScoreHolder(context.arguments["source"]!!.range[source]),
                                 "sourceObjective" to context.arguments["sourceObjective"]!!.result as String,
-                                "command" to getExecuteSubcommand(context, source, server)
+                                "command" to getExecuteSubcommand(context, source, server, functionManager)
                             ))
                         }
                     }
@@ -189,17 +191,17 @@ object CommandParser {
         }
     }
 
-    private fun parseCommandFunction(context: CommandContextBuilder<CommandSourceStack>, source: String, server: MinecraftServer): Command {
+    private fun parseCommandFunction(context: CommandContextBuilder<CommandSourceStack>, source: String, functionManager: ServerFunctionManager): Command {
         val name = context.arguments["name"]!!.range[source]
         return if(name.startsWith("#")) {
-            Command(CommandTypes.FUNCTION, mapOf("functions" to server.functions.getTag(ResourceLocation(name.substring(1))).toList().map { it.id.toDataLocation() }))
+            Command(CommandTypes.FUNCTION, mapOf("functions" to functionManager.getTag(ResourceLocation(name.substring(1))).toList().map { it.id.toDataLocation() }))
         }else {
             Command(CommandTypes.FUNCTION, mapOf("functions" to listOf(ResourceLocation(name).toDataLocation())))
         }
     }
 
     private fun parseCommandGamemode(context: CommandContextBuilder<CommandSourceStack>, source: String): Command {
-        val gamemode = context.arguments["gamemode"]!!.result as GameType
+        val gamemode = (context.arguments["gamemode"]!!.result as GameType).toGamemode()
         val targets = context.arguments["target"]
         return if(targets != null) {
             Command(CommandTypes.GAMEMODE, mapOf("gamemode" to gamemode, "targets" to parseSelector(targets.range[source])))
@@ -301,8 +303,8 @@ object CommandParser {
         }
     }
 
-    private fun getExecuteSubcommand(context: CommandContextBuilder<CommandSourceStack>, source: String, server: MinecraftServer): Command? {
-        return if(context.child != null) parseCommandExecute(context.child, context.child.nodes, source, server) else null
+    private fun getExecuteSubcommand(context: CommandContextBuilder<CommandSourceStack>, source: String, server: MinecraftServer, functionManager: ServerFunctionManager): Command? {
+        return if(context.child != null) parseCommandExecute(context.child, context.child.nodes, source, server, functionManager) else null
     }
 
 }

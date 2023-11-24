@@ -350,7 +350,7 @@ fun registerInstructionEmitters() {
                 codeWriter.writeMapped(CommandSourceStack_withRotation)
             }
             if(compiledFunctions.contains(func)) {
-                codeWriter.methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, "function/${func.namespace}/${func.path}", "run", "(${CommandSourceStack::class.java.descriptorString()})I", false)
+                codeWriter.methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, "function/${func.namespace}/${func.path}".replace('.', '$'), "run", "(${CommandSourceStack::class.java.descriptorString()})I", false)
             }else {
                 codeWriter.writeNull()
                 codeWriter.writeNull()

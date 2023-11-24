@@ -120,7 +120,7 @@ abstract class FunctionCompilerClassLoader(
     }
 
     private fun defineFunction(funcId: DataLocation, fieldStorage: ICodeFieldStorage, instructions: List<Instruction>, commandCount: Int, compiledFunctions: Set<DataLocation>, emitBytecode: (List<Instruction>, EmitterContext) -> Unit): Class<*> {
-        val className = "function/${funcId.namespace}/${funcId.path}"
+        val className = "function/${funcId.namespace}/${funcId.path}".replace('.', '$')
 
         val cw = createClassWriter()
         cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL, className, null, "java/lang/Object", null)

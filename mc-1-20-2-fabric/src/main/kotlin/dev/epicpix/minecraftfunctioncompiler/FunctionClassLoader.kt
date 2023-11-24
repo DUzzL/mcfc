@@ -44,7 +44,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                         continue@funcLoop
                     }
                 }
-                definedFunctions[key.toDataLocation()] = CommandParser.parseFunctionCommands(value, minecraftServer)
+                definedFunctions[key.toDataLocation()] = CommandParser.parseFunctionCommands(value, minecraftServer, serverFunctionManager)
             } catch (e: UnsupportedOperationException) {
                 logWarn("Unable to parse function $key / ${e.message}")
             } catch (e: Throwable) {
