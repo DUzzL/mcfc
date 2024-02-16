@@ -110,11 +110,6 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, ownerName, "<init>", "(${types.joinToString("") { it.descriptorString() }})V", false)
     }
 
-    fun writeMapped(mappedData: MappedFunctionData?) {
-        if(mappedData == null) error("Tried to use an uninitialized MappedFunctionData (not supported in this minecraft version?)")
-        methodVisitor.visitMethodInsn(mappedData.opcode, mappedData.clazz, mappedData.methodName, mappedData.methodDescriptor, mappedData.isInterface)
-    }
-
     fun getDataField(name: String, type: Class<*>) {
         methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, DATA_CLASS, name, type.descriptorString())
     }

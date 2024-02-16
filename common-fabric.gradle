@@ -24,7 +24,7 @@ project.ext.isJarTask = false
 
 gradle.taskGraph.whenReady { taskExecutionGraph ->
     ksp {
-        arg("isJarTask", taskExecutionGraph.hasTask(':jar').toString())
+        arg("isJarTask", (taskExecutionGraph.hasTask(':jar') || taskExecutionGraph.hasTask(":${project.name}:proguard")).toString())
     }
 }
 

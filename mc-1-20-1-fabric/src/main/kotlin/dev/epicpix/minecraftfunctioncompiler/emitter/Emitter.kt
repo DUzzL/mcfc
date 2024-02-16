@@ -1,7 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter
 
 import dev.epicpix.minecraftfunctioncompiler.data.*
-import dev.epicpix.minecraftfunctioncompiler.emitter.MappedUsageDefinitions.*
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData
 import dev.epicpix.minecraftfunctioncompiler.il.ScoreboardCompareOperation
@@ -21,26 +20,26 @@ import org.objectweb.asm.Opcodes
 
 fun registerInstructionEmitters() {
     registerEmitterInstruction(InstructionTypes.GET_CURRENT_ENTITY) {
-        codeWriter.loadLocal("CommandSourceStack")
-        codeWriter.writeMapped(CommandSourceStack_getEntity)
+        codeWriter.callCommandSourceStack_getEntity { codeWriter.loadLocal("CommandSourceStack") }
         runStored("entity", "\$GetCurrentEntity", Entity::class.java)
     }
     registerEmitterInstruction(InstructionTypes.ADD_ENTITY_TAG) {
-        load("entity")
-        codeWriter.writeString(instruction["tag"])
-        codeWriter.writeMapped(Entity_addTag)
+        codeWriter.callEntity_addTag {
+            load("entity")
+            codeWriter.writeString(instruction["tag"])
+        }
         codeWriter.methodVisitor.visitInsn(Opcodes.POP)
     }
     registerEmitterInstruction(InstructionTypes.REMOVE_ENTITY_TAG) {
-        load("entity")
-        codeWriter.writeString(instruction["tag"])
-        codeWriter.writeMapped(Entity_removeTag)
+        codeWriter.callEntity_removeTag {
+            load("entity")
+            codeWriter.writeString(instruction["tag"])
+        }
         codeWriter.methodVisitor.visitInsn(Opcodes.POP)
     }
     registerEmitterInstruction(InstructionTypes.CHECK_ENTITY_TAG) {
         codeWriter.callSet_contains {
-            load("entity")
-            codeWriter.writeMapped(Entity_getTags)
+            codeWriter.callEntity_getTags { load("entity") }
             codeWriter.writeString(instruction["tag"])
         }
 
@@ -51,8 +50,7 @@ fun registerInstructionEmitters() {
     }
     registerEmitterInstruction(InstructionTypes.CHECK_ENTITY_TAGS) {
         codeWriter.callSet_size {
-            load("entity")
-            codeWriter.writeMapped(Entity_getTags)
+            codeWriter.callEntity_getTags { load("entity") }
         }
 
         val label = Label()
@@ -62,10 +60,13 @@ fun registerInstructionEmitters() {
     }
     registerEmitterInstruction(InstructionTypes.FOR_EACH_PLAYER) {
         val uidLocal = codeWriter.generateUniqueLocal("\$Players")
-        codeWriter.loadLocal("CommandSourceStack")
-        codeWriter.writeMapped(CommandSourceStack_getServer)
-        codeWriter.writeMapped(MinecraftServer_getPlayerList)
-        codeWriter.writeMapped(PlayerList_getPlayers)
+        codeWriter.callPlayerList_getPlayers {
+            codeWriter.callMinecraftServer_getPlayerList {
+                codeWriter.callCommandSourceStack_getServer {
+                    codeWriter.loadLocal("CommandSourceStack")
+                }
+            }
+        }
         codeWriter.storeLocal(uidLocal, List::class.java) {
             codeWriter.createListForEachLoop(uidLocal, Entity::class.java) {
                 runStored("entity", "\$Entity", Entity::class.java)
@@ -74,13 +75,15 @@ fun registerInstructionEmitters() {
     }
     registerEmitterInstruction(InstructionTypes.FOR_EACH_ENTITY) {
         val uidLocalLevels = codeWriter.generateUniqueLocal("\$Levels")
-        codeWriter.loadLocal("CommandSourceStack")
-        codeWriter.writeMapped(CommandSourceStack_getServer)
-        codeWriter.writeMapped(MinecraftServer_getAllLevels)
+        codeWriter.callMinecraftServer_getAllLevels {
+            codeWriter.callCommandSourceStack_getServer {
+                codeWriter.loadLocal("CommandSourceStack")
+            }
+        }
         codeWriter.storeLocal(uidLocalLevels, Iterable::class.java) {
             codeWriter.createIterableForEachLoop(uidLocalLevels, ServerLevel::class.java, true) {
                 val uidLocalEntities = codeWriter.generateUniqueLocal("\$Entities")
-                codeWriter.callIterable_iterator { codeWriter.writeMapped(ServerLevel_getAllEntities) }
+                codeWriter.callIterable_iterator { codeWriter.callServerLevel_getAllEntities {} }
                 codeWriter.storeLocal(uidLocalEntities, Iterator::class.java) {
                     codeWriter.createIteratorForEachLoop(uidLocalEntities, Entity::class.java, true) {
                         runStored("entity", "\$Entity", Entity::class.java)
@@ -90,21 +93,26 @@ fun registerInstructionEmitters() {
         }
     }
     registerEmitterInstruction(InstructionTypes.FOR_PLAYER) {
-        codeWriter.loadLocal("CommandSourceStack")
-        codeWriter.writeMapped(CommandSourceStack_getServer)
-        codeWriter.writeString(instruction["name"])
-        codeWriter.writeMapped(PlayerList_getPlayerByName)
+        codeWriter.callPlayerList_getPlayerByName {
+            codeWriter.callCommandSourceStack_getServer {
+                codeWriter.loadLocal("CommandSourceStack")
+            }
+            codeWriter.writeString(instruction["name"])
+        }
         runStored("entity", "\$Player", ServerPlayer::class.java)
     }
     registerEmitterInstruction(InstructionTypes.FOR_ENTITY) {
-        codeWriter.loadLocal("CommandSourceStack")
-        codeWriter.writeMapped(CommandSourceStack_getServer)
-        codeWriter.writeMapped(MinecraftServer_getAllLevels)
+        codeWriter.callMinecraftServer_getAllLevels {
+            codeWriter.callCommandSourceStack_getServer {
+                codeWriter.loadLocal("CommandSourceStack")
+            }
+        }
         val uidLocalLevels = codeWriter.generateUniqueLocal("\$Levels")
         codeWriter.storeLocal(uidLocalLevels, Iterable::class.java) {
             codeWriter.createIterableForEachLoop(uidLocalLevels, ServerLevel::class.java, true) {
-                fieldStorage.loadUUID(codeWriter, instruction["uuid"])
-                codeWriter.writeMapped(ServerLevel_getEntity)
+                codeWriter.callServerLevel_getEntity {
+                    fieldStorage.loadUUID(codeWriter, instruction["uuid"])
+                }
                 val uidLocal = codeWriter.generateUniqueLocal("\$Entity")
                 storeCreate("entity", uidLocal, Entity::class.java) {
                     codeWriter.loadLocal(uidLocal)
@@ -143,58 +151,68 @@ fun registerInstructionEmitters() {
 
     }
     registerEmitterInstruction(InstructionTypes.GET_SCOREBOARD_NAME) {
-        load("entity")
-        codeWriter.writeMapped(Entity_getScoreboardName)
+        codeWriter.callEntity_getScoreboardName { load("entity") }
         runStored("name", "\$ScoreboardName", String::class.java)
     }
     registerEmitterInstruction(InstructionTypes.SCORE_DATA) {
-        fieldStorage.loadScoreboard(codeWriter)
-        load("name")
-        load("objective")
-        codeWriter.writeMapped(if(instruction["autoCreate"]) Scoreboard_getOrCreatePlayerScore else Scoreboard_getScore)
+        if(instruction["autoCreate"]) {
+            codeWriter.callScoreboard_getOrCreatePlayerScore {
+                fieldStorage.loadScoreboard(codeWriter)
+                load("name")
+                load("objective")
+            }
+        }else {
+            codeWriter.callScore_getScore {
+                fieldStorage.loadScoreboard(codeWriter)
+                load("name")
+                load("objective")
+            }
+        }
         runStored("score", "\$ScoreData", Score::class.java)
     }
     registerEmitterInstruction(InstructionTypes.GET_SCORE_VALUE) {
-        load("score")
-        codeWriter.writeMapped(Score_getScore)
+        codeWriter.callScore_getScore { load("score") }
         runStored("scoreValue", "\$ScoreValue", Int::class.javaPrimitiveType!!)
     }
     registerEmitterInstruction(InstructionTypes.SET_SCORE) {
-        load("score")
-        load("value")
-        codeWriter.writeMapped(Score_setScore)
+        codeWriter.callScore_setScore {
+            load("score")
+            load("value")
+        }
     }
     registerEmitterInstruction(InstructionTypes.ADD_SCORE) {
         load("score")
         codeWriter.methodVisitor.visitInsn(Opcodes.DUP)
-        codeWriter.writeMapped(Score_getScore)
+        codeWriter.callScore_getScore {  }
         load("value")
         codeWriter.methodVisitor.visitInsn(Opcodes.IADD)
-        codeWriter.writeMapped(Score_setScore)
+        codeWriter.callScore_setScore {  }
     }
     registerEmitterInstruction(InstructionTypes.REMOVE_SCORE) {
         load("score")
         codeWriter.methodVisitor.visitInsn(Opcodes.DUP)
-        codeWriter.writeMapped(Score_getScore)
+        codeWriter.callScore_getScore {  }
         load("value")
         codeWriter.methodVisitor.visitInsn(Opcodes.ISUB)
-        codeWriter.writeMapped(Score_setScore)
+        codeWriter.callScore_setScore {  }
     }
     registerEmitterInstruction(InstructionTypes.RUN_SCORE_OPERATION) {
         when(val operation = instruction.get<ScoreboardOperation>("operation")) {
             ScoreboardOperation.SET -> {
-                load("target")
-                load("source")
-                codeWriter.writeMapped(Score_getScore)
-                codeWriter.writeMapped(Score_setScore)
+                codeWriter.callScore_setScore {
+                    codeWriter.callScore_getScore {
+                        load("target")
+                        load("source")
+                    }
+                }
             }
             ScoreboardOperation.PLUS, ScoreboardOperation.MINUS, ScoreboardOperation.MULTIPLY -> {
                 load("target")
                 codeWriter.methodVisitor.visitInsn(Opcodes.DUP)
                 load("source")
-                codeWriter.writeMapped(Score_getScore)
+                codeWriter.callScore_getScore {  }
                 codeWriter.methodVisitor.visitInsn(Opcodes.SWAP)
-                codeWriter.writeMapped(Score_getScore)
+                codeWriter.callScore_getScore {  }
                 when(operation) {
                     ScoreboardOperation.PLUS -> codeWriter.methodVisitor.visitInsn(Opcodes.IADD)
                     ScoreboardOperation.MINUS -> {
@@ -203,26 +221,26 @@ fun registerInstructionEmitters() {
                     }
                     else -> codeWriter.methodVisitor.visitInsn(Opcodes.IMUL)
                 }
-                codeWriter.writeMapped(Score_setScore)
+                codeWriter.callScore_setScore {  }
             }
             ScoreboardOperation.DIVIDE, ScoreboardOperation.MODULO -> {
                 load("target")
-                codeWriter.writeMapped(Score_getScore)
+                codeWriter.callScore_getScore {  }
                 val uniqBeh = codeWriter.generateUniqueLocal("\$Score")
                 codeWriter.storeLocal(uniqBeh, Int::class.javaPrimitiveType!!) {
                     load("source")
                     val uniq = codeWriter.generateUniqueLocal("\$Score")
                     codeWriter.storeLocal(uniq, Score::class.java) {
                         codeWriter.loadLocal(uniq)
-                        codeWriter.writeMapped(Score_getScore)
+                        codeWriter.callScore_getScore {  }
                         codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newScopes[scopeId("exceptionScope")]!!.breakLabel)
                         codeWriter.loadLocal(uniq)
                         codeWriter.loadLocal(uniqBeh)
                         codeWriter.loadLocal(uniq)
-                        codeWriter.writeMapped(Score_getScore)
+                        codeWriter.callScore_getScore {  }
                         if(operation == ScoreboardOperation.DIVIDE) codeWriter.callMath_floorDiv {}
                         else codeWriter.callMath_floorMod {}
-                        codeWriter.writeMapped(Score_setScore)
+                        codeWriter.callScore_setScore {  }
                     }
                 }
             }
@@ -230,12 +248,12 @@ fun registerInstructionEmitters() {
                 load("target")
                 codeWriter.methodVisitor.visitInsn(Opcodes.DUP)
                 load("source")
-                codeWriter.writeMapped(Score_getScore)
+                codeWriter.callScore_getScore {  }
                 codeWriter.methodVisitor.visitInsn(Opcodes.SWAP)
-                codeWriter.writeMapped(Score_getScore)
+                codeWriter.callScore_getScore {  }
                 if(operation == ScoreboardOperation.MIN) codeWriter.callMath_min {}
                 else codeWriter.callMath_max {}
-                codeWriter.writeMapped(Score_setScore)
+                codeWriter.callScore_setScore {  }
             }
             ScoreboardOperation.SWAP -> {
                 load("target")
@@ -246,21 +264,22 @@ fun registerInstructionEmitters() {
                     codeWriter.storeLocal(sourceId, Score::class.java) {
                         codeWriter.loadLocal(sourceId)
                         codeWriter.loadLocal(targetId)
-                        codeWriter.writeMapped(Score_getScore)
+                        codeWriter.callScore_getScore {  }
                         codeWriter.loadLocal(targetId)
                         codeWriter.loadLocal(sourceId)
-                        codeWriter.writeMapped(Score_getScore)
-                        codeWriter.writeMapped(Score_setScore)
-                        codeWriter.writeMapped(Score_setScore)
+                        codeWriter.callScore_getScore {  }
+                        codeWriter.callScore_setScore {  }
+                        codeWriter.callScore_setScore {  }
                     }
                 }
             }
         }
     }
     registerEmitterInstruction(InstructionTypes.GET_OBJECTIVE) {
-        fieldStorage.loadScoreboard(codeWriter)
-        codeWriter.writeString(instruction["name"])
-        codeWriter.writeMapped(Scoreboard_getObjective)
+        codeWriter.callScoreboard_getObjective {
+            fieldStorage.loadScoreboard(codeWriter)
+            codeWriter.writeString(instruction["name"])
+        }
         runStored("objective", "\$Objective", Objective::class.java)
     }
     registerEmitterInstruction(InstructionTypes.CALL_FUNCTIONS) {
@@ -271,49 +290,45 @@ fun registerInstructionEmitters() {
             }
             codeWriter.loadLocal("CommandSourceStack")
             if(instruction.get<LocationData?>("entity") != null) {
-                load("entity")
-                codeWriter.writeMapped(CommandSourceStack_withEntity)
+                codeWriter.callCommandSourceStack_withEntity { load("entity") }
             }
             if(instruction.get<LocationData?>("world") != null) {
-                load("world")
-                codeWriter.writeMapped(CommandSourceStack_withLevel)
+                codeWriter.callCommandSourceStack_withLevel { load("world") }
             }
             if(instruction.get<LocationData?>("position") != null) {
-                load("position")
-                codeWriter.writeMapped(CommandSourceStack_withPosition)
+                codeWriter.callCommandSourceStack_withPosition { load("position") }
             }
             if(instruction.get<LocationData?>("rotation") != null) {
-                load("rotation")
-                codeWriter.writeMapped(CommandSourceStack_withRotation)
+                codeWriter.callCommandSourceStack_withRotation { load("rotation") }
             }
             if(compiledFunctions.contains(func)) {
                 codeWriter.methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, "function/${func.namespace}/${func.path}".replace('.', '$'), "run", "(${CommandSourceStack::class.java.descriptorString()})I", false)
             }else {
                 codeWriter.writeNull()
-                codeWriter.writeMapped(ServerFunctionManager_execute)
+                codeWriter.callServerFunctionManager_execute {  }
             }
             codeWriter.methodVisitor.visitInsn(Opcodes.POP)
         }
     }
     registerEmitterInstruction(InstructionTypes.KILL_ENTITY) {
-        load("entity")
-        codeWriter.writeMapped(Entity_kill)
+        codeWriter.callEntity_kill { load("entity") }
     }
     registerEmitterInstruction(InstructionTypes.RESET_SCORE) {
-        fieldStorage.loadScoreboard(codeWriter)
-        load("name")
-        load("objective")
-        codeWriter.writeMapped(Scoreboard_resetPlayerScore)
+        codeWriter.callScoreboard_resetPlayerScore {
+            fieldStorage.loadScoreboard(codeWriter)
+            load("name")
+            load("objective")
+        }
     }
     registerEmitterInstruction(InstructionTypes.RESET_PLAYER_SCORE) {
-        fieldStorage.loadScoreboard(codeWriter)
-        load("name")
-        codeWriter.writeNull()
-        codeWriter.writeMapped(Scoreboard_resetPlayerScore)
+        codeWriter.callScoreboard_resetPlayerScore {
+            fieldStorage.loadScoreboard(codeWriter)
+            load("name")
+            codeWriter.writeNull()
+        }
     }
     registerEmitterInstruction(InstructionTypes.CHECK_SCORE_RANGE) {
-        load("score")
-        codeWriter.writeMapped(Score_getScore)
+        codeWriter.callScore_getScore { load("score") }
         val range = instruction.get<IntRangeArgument>("range")
         val negate = instruction.get<Boolean>("negate")
         if(range.minimum != null && range.maximum == null) {
@@ -354,11 +369,8 @@ fun registerInstructionEmitters() {
         }
     }
     registerEmitterInstruction(InstructionTypes.CHECK_SCORE_COMPARE) {
-        load("source")
-        codeWriter.writeMapped(Score_getScore)
-
-        load("target")
-        codeWriter.writeMapped(Score_getScore)
+        codeWriter.callScore_getScore { load("source") }
+        codeWriter.callScore_getScore { load("target") }
 
         codeWriter.executeIf(when(instruction.get<ScoreboardCompareOperation>("compareOperation")) {
             ScoreboardCompareOperation.LT -> Opcodes.IF_ICMPLT
@@ -370,19 +382,16 @@ fun registerInstructionEmitters() {
         }) { run() }
     }
     registerEmitterInstruction(InstructionTypes.GET_ENTITY_WORLD) {
-        load("entity")
-        codeWriter.writeMapped(Entity_level)
+        codeWriter.callEntity_level { load("entity") }
         codeWriter.castType(ServerLevel::class.java)
         runStored("world", "\$World", ServerLevel::class.java)
     }
     registerEmitterInstruction(InstructionTypes.GET_ENTITY_POSITION) {
-        load("entity")
-        codeWriter.writeMapped(Entity_position)
+        codeWriter.callEntity_position { load("entity") }
         runStored("position", "\$Position", Vec3::class.java)
     }
     registerEmitterInstruction(InstructionTypes.GET_ENTITY_ROTATION) {
-        load("entity")
-        codeWriter.writeMapped(Entity_getRotationVector)
+        codeWriter.callEntity_getRotationVector { load("entity") }
         runStored("rotation", "\$Rotation", Vec2::class.java)
     }
     registerEmitterInstruction(InstructionTypes.APPLY_POSITION_WORLD) {
@@ -449,11 +458,12 @@ fun registerInstructionEmitters() {
         runStored("result", "\$Position", Vec3::class.java)
     }
     registerEmitterInstruction(InstructionTypes.CHECK_GAMEMODE) {
-        codeWriter.loadServerPlayer_gameMode {
-            load("entity")
-            codeWriter.castType(ServerPlayer::class.java)
+        codeWriter.callServerPlayerGameMode_getGameModeForPlayer {
+            codeWriter.loadServerPlayer_gameMode {
+                load("entity")
+                codeWriter.castType(ServerPlayer::class.java)
+            }
         }
-        codeWriter.writeMapped(ServerPlayerGameMode_getGameModeForPlayer)
         when(instruction.get<Gamemode>("gamemode")) {
             Gamemode.SURVIVAL -> codeWriter.loadGameType_SURVIVAL()
             Gamemode.CREATIVE -> codeWriter.loadGameType_CREATIVE()
@@ -466,30 +476,30 @@ fun registerInstructionEmitters() {
         codeWriter.methodVisitor.visitLabel(label)
     }
     registerEmitterInstruction(InstructionTypes.SET_GAMEMODE) {
-        load("entity")
-        codeWriter.castType(ServerPlayer::class.java)
-        when(instruction.get<Gamemode>("gamemode")) {
-            Gamemode.SURVIVAL -> codeWriter.loadGameType_SURVIVAL()
-            Gamemode.CREATIVE -> codeWriter.loadGameType_CREATIVE()
-            Gamemode.ADVENTURE -> codeWriter.loadGameType_ADVENTURE()
-            Gamemode.SPECTATOR -> codeWriter.loadGameType_SPECTATOR()
+        codeWriter.callServerPlayer_setGameMode {
+            load("entity")
+            codeWriter.castType(ServerPlayer::class.java)
+            when(instruction.get<Gamemode>("gamemode")) {
+                Gamemode.SURVIVAL -> codeWriter.loadGameType_SURVIVAL()
+                Gamemode.CREATIVE -> codeWriter.loadGameType_CREATIVE()
+                Gamemode.ADVENTURE -> codeWriter.loadGameType_ADVENTURE()
+                Gamemode.SPECTATOR -> codeWriter.loadGameType_SPECTATOR()
+            }
         }
-        codeWriter.writeMapped(ServerPlayer_setGameMode)
         codeWriter.methodVisitor.visitInsn(Opcodes.POP)
     }
     registerEmitterInstruction(InstructionTypes.CHECK_TEAM) {
         if(instruction["negated"]) {
-            load("entity")
-            codeWriter.writeMapped(Entity_getTeam)
+            codeWriter.callEntity_getTeam { load("entity") }
             val label = Label()
             codeWriter.executeIf(Opcodes.IFNULL) {
                 codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, label)
             }
             codeWriter.callString_equals {
                 codeWriter.writeString(instruction["team"])
-                load("entity")
-                codeWriter.writeMapped(Entity_getTeam)
-                codeWriter.writeMapped(Team_getName)
+                codeWriter.callTeam_getName {
+                    codeWriter.callEntity_getTeam { load("entity") }
+                }
             }
             codeWriter.executeIf(Opcodes.IFNE) {
                 codeWriter.methodVisitor.visitLabel(label)
@@ -497,14 +507,13 @@ fun registerInstructionEmitters() {
             }
         }else {
             val label = Label()
-            load("entity")
-            codeWriter.writeMapped(Entity_getTeam)
+            codeWriter.callEntity_getTeam { load("entity") }
             codeWriter.executeIf(Opcodes.IFNONNULL) {
                 codeWriter.callString_equals {
                     codeWriter.writeString(instruction["team"])
-                    load("entity")
-                    codeWriter.writeMapped(Entity_getTeam)
-                    codeWriter.writeMapped(Team_getName)
+                    codeWriter.callTeam_getName {
+                        codeWriter.callEntity_getTeam { load("entity") }
+                    }
                 }
                 codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, label)
             }
@@ -516,22 +525,24 @@ fun registerInstructionEmitters() {
         }
     }
     registerEmitterInstruction(InstructionTypes.HAS_TEAM) {
-        load("entity")
-        codeWriter.writeMapped(Entity_getTeam)
+        codeWriter.callEntity_getTeam { load("entity") }
         codeWriter.executeIf(if(!instruction.get<Boolean>("negated")) Opcodes.IFNULL else Opcodes.IFNONNULL) { run() }
     }
     registerEmitterInstruction(InstructionTypes.GET_ATTRIBUTE_INSTANCE) {
-        load("entity")
-        codeWriter.castType(LivingEntity::class.java)
-        codeWriter.writeMapped(LivingEntity_getAttributes)
-        fieldStorage.loadAttribute(codeWriter, instruction["attribute"])
-        codeWriter.writeMapped(AttributeMap_getInstance)
+        codeWriter.callAttributeMap_getInstance {
+            codeWriter.callLivingEntity_getAttributes {
+                load("entity")
+                codeWriter.castType(LivingEntity::class.java)
+            }
+            fieldStorage.loadAttribute(codeWriter, instruction["attribute"])
+        }
         runStored("instance", "\$AttributeInstance", AttributeInstance::class.java)
     }
     registerEmitterInstruction(InstructionTypes.SET_ATTRIBUTE_BASE)  {
-        load("instance")
-        codeWriter.writeDouble(instruction["value"])
-        codeWriter.writeMapped(AttributeInstance_setBaseValue)
+        codeWriter.callAttributeInstance_setBaseValue {
+            load("instance")
+            codeWriter.writeDouble(instruction["value"])
+        }
     }
     registerEmitterInstruction(InstructionTypes.CHECK_ROTATION) {
         val yaw = instruction.get<FloatRangeArgument?>("yaw")

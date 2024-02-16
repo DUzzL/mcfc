@@ -100,9 +100,10 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                 cw.castType(CommandFunction::class.java)
             },
             mapAttribute = { cw, value ->
-                cw.loadBuiltInRegistries_ATTRIBUTE()
-                loadResourceLocation(cw, value)
-                cw.writeMapped(MappedUsageDefinitions.Registry_get)
+                cw.callRegistry_get {
+                    cw.loadBuiltInRegistries_ATTRIBUTE()
+                    loadResourceLocation(cw, value)
+                }
                 cw.castType(Attribute::class.java)
             },
         )
