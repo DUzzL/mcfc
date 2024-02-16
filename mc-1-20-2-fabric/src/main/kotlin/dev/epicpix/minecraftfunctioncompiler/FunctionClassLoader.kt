@@ -86,7 +86,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
             minecraftServerClass = MinecraftServer::class.java,
             serverScoreboardClass = ServerScoreboard::class.java,
             mapScoreboard = { cw ->
-                cw.writeMapped(MappedUsageDefinitions.MinecraftServer_getScoreboard)
+                cw.callMinecraftServer_getScoreboard {}
             },
             mapFunction = { cw, value ->
                 cw.callMap_get {
