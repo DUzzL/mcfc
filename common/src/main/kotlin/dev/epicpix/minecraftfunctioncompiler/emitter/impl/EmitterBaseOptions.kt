@@ -9,9 +9,7 @@ import org.objectweb.asm.Opcodes
 fun registerBaseInstructionEmitters() {
     registerEmitterInstruction(InstructionTypes.IF_NOT_NULL) {
         load("local")
-        val end = codeWriter.executeIf(Opcodes.IFNONNULL)
-        run()
-        end()
+        codeWriter.executeIf(Opcodes.IFNONNULL) { run() }
     }
 
     registerEmitterInstruction(InstructionTypes.SCOPE) {
@@ -27,11 +25,11 @@ fun registerBaseInstructionEmitters() {
 
     registerEmitterInstruction(InstructionTypes.LIMITER) {
         codeWriter.writeInt(instruction["limit"])
-        val end = storeCreate("scope", codeWriter.generateUniqueLocal("\$LimitRemaining"), Int::class.javaPrimitiveType!!)
         val label = Label()
-        newScopes[scopeId("scope")] = EmitControlFlow(label, label)
-        run()
-        end()
+        storeCreate("scope", codeWriter.generateUniqueLocal("\$LimitRemaining"), Int::class.javaPrimitiveType!!) {
+            newScopes[scopeId("scope")] = EmitControlFlow(label, label)
+            run()
+        }
         codeWriter.methodVisitor.visitLabel(label)
     }
 

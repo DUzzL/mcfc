@@ -5,7 +5,6 @@ import dev.epicpix.minecraftfunctioncompiler.EMIT_SCOREBOARD_NAME
 import dev.epicpix.minecraftfunctioncompiler.EMIT_SERVER_FUNCTION_MANAGER_NAME
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation
 import dev.epicpix.minecraftfunctioncompiler.emitter.ICodeFieldStorage
-import dev.epicpix.minecraftfunctioncompiler.emitter.ICodeWriter
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import java.util.*
@@ -32,33 +31,33 @@ class CodeFieldStorage(
     private fun getFunctionName(value: DataLocation) = if(DEBUG) "function\$${value.toString().replace('/', '$').replace(':', '$').replace('.', '$')}" else "f${functions.indexOf(value)}"
     private fun getAttributeName(value: DataLocation) = if(DEBUG) "attribute\$${value.toString().replace('/', '$').replace(':', '$').replace('.', '$')}" else "f${attributes.indexOf(value)}"
 
-    override fun loadUUID(cw: ICodeWriter, value: UUID) {
+    override fun loadUUID(cw: CodeWriter, value: UUID) {
         if(!uuids.contains(value)) uuids.add(value)
         cw.getDataField(getUuidName(value), UUID::class.java)
     }
 
-    override fun loadResourceLocation(cw: ICodeWriter, value: DataLocation) {
+    override fun loadResourceLocation(cw: CodeWriter, value: DataLocation) {
         if(!resourceLocations.contains(value)) resourceLocations.add(value)
         cw.getDataField(getResourceLocationName(value), resourceLocationClass)
     }
 
-    override fun loadFunction(cw: ICodeWriter, value: DataLocation) {
+    override fun loadFunction(cw: CodeWriter, value: DataLocation) {
         if(!resourceLocations.contains(value)) resourceLocations.add(value)
         if(!functions.contains(value)) functions.add(value)
         cw.getDataField(getFunctionName(value), commandFunctionClass)
     }
 
-    override fun loadAttribute(cw: ICodeWriter, value: DataLocation) {
+    override fun loadAttribute(cw: CodeWriter, value: DataLocation) {
         if(!resourceLocations.contains(value)) resourceLocations.add(value)
         if(!attributes.contains(value)) attributes.add(value)
         cw.getDataField(getAttributeName(value), attributeClass)
     }
 
-    override fun loadServerFunctionManager(cw: ICodeWriter) {
+    override fun loadServerFunctionManager(cw: CodeWriter) {
         cw.getDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerClass)
     }
 
-    override fun loadScoreboard(cw: ICodeWriter) {
+    override fun loadScoreboard(cw: CodeWriter) {
         cw.getDataField(EMIT_SCOREBOARD_NAME, serverScoreboardClass)
     }
 
@@ -75,17 +74,17 @@ class CodeFieldStorage(
         cw.setDataField(EMIT_SCOREBOARD_NAME, serverScoreboardClass)
 
         uuids.forEachIndexed { _, value ->
-            val createEnd = cw.newObject(UUID::class.java, Long::class.javaPrimitiveType!!, Long::class.javaPrimitiveType!!)
-            cw.writeLong(value.mostSignificantBits)
-            cw.writeLong(value.leastSignificantBits)
-            createEnd()
+            cw.newObject(UUID::class.java, Long::class.javaPrimitiveType!!, Long::class.javaPrimitiveType!!) {
+                cw.writeLong(value.mostSignificantBits)
+                cw.writeLong(value.leastSignificantBits)
+            }
             cw.setDataField(getUuidName(value), UUID::class.java)
         }
         resourceLocations.forEachIndexed { _, value ->
-            val createEnd = cw.newObject(resourceLocationClass, String::class.java, String::class.java)
-            mv.visitLdcInsn(value.namespace)
-            mv.visitLdcInsn(value.path)
-            createEnd()
+            cw.newObject(resourceLocationClass, String::class.java, String::class.java) {
+                cw.writeString(value.namespace)
+                cw.writeString(value.path)
+            }
             cw.setDataField(getResourceLocationName(value), resourceLocationClass)
         }
         functions.forEachIndexed { _, value ->

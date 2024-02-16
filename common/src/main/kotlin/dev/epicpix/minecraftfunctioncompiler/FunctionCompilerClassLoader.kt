@@ -128,12 +128,11 @@ abstract class FunctionCompilerClassLoader(
             "(${commandSourceStackClass.descriptorString()})I", null, null)
         mv.visitCode()
         val codeWriter = CodeWriter(mv)
-        val end = codeWriter.defineLocal("CommandSourceStack", commandSourceStackClass)
+        codeWriter.defineLocal("CommandSourceStack", commandSourceStackClass) {
+            emitBytecode(instructions, EmitterContext(fieldStorage, codeWriter, compiledFunctions, mapOf(), mapOf(), Instruction(InstructionType("<NONE>"), mapOf()), mutableMapOf(), mutableMapOf()))
 
-        emitBytecode(instructions, EmitterContext(fieldStorage, codeWriter, compiledFunctions, mapOf(), mapOf(), Instruction(InstructionType("<NONE>"), mapOf()), mutableMapOf(), mutableMapOf()))
-
-        codeWriter.endLabels()
-        end()
+            codeWriter.endLabels()
+        }
 
         mv.visitLdcInsn(commandCount)
         mv.visitInsn(Opcodes.IRETURN)

@@ -2,26 +2,25 @@ package dev.epicpix.minecraftfunctioncompiler.emitter.impl
 
 import dev.epicpix.minecraftfunctioncompiler.DATA_CLASS
 import dev.epicpix.minecraftfunctioncompiler.DEBUG
-import dev.epicpix.minecraftfunctioncompiler.emitter.*
+import dev.epicpix.minecraftfunctioncompiler.emitter.ControlFlowExecution
+import dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitions
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedFieldData
+import dev.epicpix.minecraftfunctioncompiler.emitter.MappedFunctionData
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 
-private data class Local(val name: String, val descriptor: String, val start: Label, var end: Label?, val index: Int)
+data class Local(val name: String, val descriptor: String, val start: Label, var end: Label, val index: Int)
 
-class CodeWriter(override val methodVisitor: MethodVisitor) : ICodeWriter {
+class CodeWriter(val methodVisitor: MethodVisitor) {
 
-    private val locals: MutableMap<String, Local> = mutableMapOf()
-    private val availableLocals: MutableSet<Int> = mutableSetOf()
-    private val generatedLocals: MutableList<Local> = mutableListOf()
+    val locals: MutableMap<String, Local> = mutableMapOf()
+    val availableLocals: MutableSet<Int> = mutableSetOf()
+    val generatedLocals: MutableList<Local> = mutableListOf()
 
-    override fun getLocalIndex(local: String) = locals[local]!!.index
+    fun getLocalIndex(local: String) = locals[local]!!.index
 
-    override fun defineLocal(local: String, type: Class<*>): () -> Unit {
-        val localStart = Label()
-        val localEnd = Label()
-        methodVisitor.visitLabel(localStart)
-
+    fun allocateLocalIndex(): Int {
         val localIndex: Int
         if(availableLocals.isEmpty()) {
             localIndex = locals.size
@@ -29,28 +28,40 @@ class CodeWriter(override val methodVisitor: MethodVisitor) : ICodeWriter {
             localIndex = availableLocals.first()
             availableLocals.remove(localIndex)
         }
-        locals[local] = Local(local, type.descriptorString(), localStart, localEnd, localIndex)
-        generatedLocals.add(locals[local]!!)
-
-        return {
-            methodVisitor.visitLabel(localEnd)
-
-            locals.remove(local)
-            availableLocals.add(localIndex)
-        }
+        return localIndex
     }
 
-    override fun endLabels() {
+    fun deallocateLocalIndex(index: Int) {
+        availableLocals.add(index)
+    }
+
+    fun createLocal(local: String, type: Class<*>): Local {
+        val localStart = Label()
+        methodVisitor.visitLabel(localStart)
+        val localValue = Local(local, type.descriptorString(), localStart, Label(), allocateLocalIndex())
+        locals[local] = localValue
+        generatedLocals.add(localValue)
+        return localValue
+    }
+
+    fun destroyLocal(local: Local) {
+        methodVisitor.visitLabel(local.end)
+        locals.remove(local.name)
+        deallocateLocalIndex(local.index)
+    }
+
+    inline fun defineLocal(local: String, type: Class<*>, exec: () -> Unit) {
+        val localValue = createLocal(local, type)
+        exec()
+        destroyLocal(localValue)
+    }
+
+    fun endLabels() {
         val endLabel = Label()
         methodVisitor.visitLabel(endLabel)
-        generatedLocals.forEach {
-            if(it.end == null) {
-                it.end = endLabel
-            }
-        }
     }
 
-    override fun writeLocalVariables() {
+    fun writeLocalVariables() {
         if(DEBUG) {
             generatedLocals.forEach {
                 methodVisitor.visitLocalVariable(it.name.replace(".", "$").replace(":", "$"), it.descriptor, null, it.start, it.end, it.index)
@@ -58,7 +69,7 @@ class CodeWriter(override val methodVisitor: MethodVisitor) : ICodeWriter {
         }
     }
 
-    override fun loadLocal(local: String) {
+    fun loadLocal(local: String) {
         val localVar = locals[local]!!
         when(localVar.descriptor) {
             "I" -> methodVisitor.visitVarInsn(Opcodes.ILOAD, localVar.index)
@@ -67,7 +78,7 @@ class CodeWriter(override val methodVisitor: MethodVisitor) : ICodeWriter {
         }
     }
 
-    override fun storeLocal(local: String) {
+    fun storeLocal(local: String) {
         val localVar = locals[local]!!
         when(localVar.descriptor) {
             "I" -> methodVisitor.visitVarInsn(Opcodes.ISTORE, localVar.index)
@@ -76,38 +87,55 @@ class CodeWriter(override val methodVisitor: MethodVisitor) : ICodeWriter {
         }
     }
 
-    override fun newObject(owner: Class<*>, vararg types: Class<*>): () -> Unit {
-        val ownerName = owner.descriptorString().run { substring(1, length - 1) }
-        methodVisitor.visitTypeInsn(Opcodes.NEW, ownerName)
-        methodVisitor.visitInsn(Opcodes.DUP)
-        return {
-            methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, ownerName, "<init>", "(${types.joinToString("") { it.descriptorString() }})V", false)
+    fun writeInt(value: Int) {
+        if (value >= -1 && value <= 5) {
+            methodVisitor.visitInsn(Opcodes.ICONST_0 + value)
+        } else if (value >= Byte.MIN_VALUE && value <= Byte.MAX_VALUE) {
+            methodVisitor.visitIntInsn(Opcodes.BIPUSH, value)
+        } else if (value >= Short.MIN_VALUE && value <= Short.MAX_VALUE) {
+            methodVisitor.visitIntInsn(Opcodes.SIPUSH, value)
+        } else {
+            methodVisitor.visitLdcInsn(value)
         }
     }
 
-    override fun writeMapped(mappedData: MappedFieldData?, load: Boolean) {
+    fun writeLong(value: Long) = methodVisitor.visitLdcInsn(value)
+    fun writeFloat(value: Float) = methodVisitor.visitLdcInsn(value)
+    fun writeDouble(value: Double) = methodVisitor.visitLdcInsn(value)
+    fun writeString(value: String) = methodVisitor.visitLdcInsn(value)
+    fun writeNull() = methodVisitor.visitInsn(Opcodes.ACONST_NULL)
+
+    fun newObject(owner: Class<*>, vararg types: Class<*>, arguments: () -> Unit) {
+        val ownerName = owner.descriptorString().run { substring(1, length - 1) }
+        methodVisitor.visitTypeInsn(Opcodes.NEW, ownerName)
+        methodVisitor.visitInsn(Opcodes.DUP)
+        arguments()
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, ownerName, "<init>", "(${types.joinToString("") { it.descriptorString() }})V", false)
+    }
+
+    fun writeMapped(mappedData: MappedFieldData?, load: Boolean) {
         if(mappedData == null) error("Tried to use an uninitialized MappedFieldData (not supported in this minecraft version?)")
         methodVisitor.visitFieldInsn(mappedData.primaryOpcode + (if(load) 0 else 1), mappedData.clazz, mappedData.fieldName, mappedData.fieldType)
     }
 
-    override fun writeMapped(mappedData: MappedFunctionData?) {
+    fun writeMapped(mappedData: MappedFunctionData?) {
         if(mappedData == null) error("Tried to use an uninitialized MappedFunctionData (not supported in this minecraft version?)")
         methodVisitor.visitMethodInsn(mappedData.opcode, mappedData.clazz, mappedData.methodName, mappedData.methodDescriptor, mappedData.isInterface)
     }
 
-    override fun getDataField(name: String, type: Class<*>) {
+    fun getDataField(name: String, type: Class<*>) {
         methodVisitor.visitFieldInsn(Opcodes.GETSTATIC, DATA_CLASS, name, type.descriptorString())
     }
 
-    override fun setDataField(name: String, type: Class<*>) {
+    fun setDataField(name: String, type: Class<*>) {
         methodVisitor.visitFieldInsn(Opcodes.PUTSTATIC, DATA_CLASS, name, type.descriptorString())
     }
 
-    override fun castType(type: Class<*>) {
+    fun castType(type: Class<*>) {
         methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, type.descriptorString().run { substring(1, length - 1) })
     }
 
-    override fun getIfJumpOpcode(comparison: Int): Int {
+    fun getIfJumpOpcode(comparison: Int): Int {
         return when (comparison) {
             Opcodes.IFNONNULL -> Opcodes.IFNULL
             Opcodes.IFNULL -> Opcodes.IFNONNULL
@@ -123,13 +151,14 @@ class CodeWriter(override val methodVisitor: MethodVisitor) : ICodeWriter {
         }
     }
 
-    override fun executeIf(comparison: Int): () -> Unit {
+    inline fun executeIf(comparison: Int, exec: () -> Unit) {
         val endLabel = Label()
         methodVisitor.visitJumpInsn(getIfJumpOpcode(comparison), endLabel)
-        return { methodVisitor.visitLabel(endLabel) }
+        exec()
+        methodVisitor.visitLabel(endLabel)
     }
 
-    override fun createWhileLoop(condition: (`break`: Label) -> Unit, exec: (ControlFlowExecution) -> Unit) {
+    inline fun createWhileLoop(condition: (`break`: Label) -> Unit, exec: (ControlFlowExecution) -> Unit) {
         val beginLabel = Label()
         val endLabel = Label()
         methodVisitor.visitLabel(beginLabel)
@@ -138,27 +167,27 @@ class CodeWriter(override val methodVisitor: MethodVisitor) : ICodeWriter {
         methodVisitor.visitLabel(endLabel)
     }
 
-    override fun createIndexedLoop(exec: (indexLocal: String) -> Unit) {
+    inline fun createIndexedLoop(exec: (indexLocal: String) -> Unit) {
         val baseName = generateUniqueLocal("\$Indexer")
         val sizeName = "$baseName:Size"
         val indexName = "$baseName:Index"
-        val endSize = storeLocal(sizeName, Int::class.javaPrimitiveType!!)
-        writeInt(0)
-        val endIndex = storeLocal(indexName, Int::class.javaPrimitiveType!!)
-        createWhileLoop({ brk ->
-            loadLocal(indexName)
-            loadLocal(sizeName)
-            methodVisitor.visitJumpInsn(Opcodes.IF_ICMPGE, brk)
-        }) { controlFlow ->
-            exec(indexName)
-            methodVisitor.visitIincInsn(locals[indexName]!!.index, 1)
-            methodVisitor.visitJumpInsn(Opcodes.GOTO, controlFlow.continueJump)
+        storeLocal(sizeName, Int::class.javaPrimitiveType!!) {
+            writeInt(0)
+            storeLocal(indexName, Int::class.javaPrimitiveType!!) {
+                createWhileLoop({ brk ->
+                    loadLocal(indexName)
+                    loadLocal(sizeName)
+                    methodVisitor.visitJumpInsn(Opcodes.IF_ICMPGE, brk)
+                }) { controlFlow ->
+                    exec(indexName)
+                    methodVisitor.visitIincInsn(getLocalIndex(indexName), 1)
+                    methodVisitor.visitJumpInsn(Opcodes.GOTO, controlFlow.continueJump)
+                }
+            }
         }
-        endIndex()
-        endSize()
     }
 
-    override fun createListForEachLoop(arrayLocal: String, type: Class<*>, exec: () -> Unit) {
+    inline fun createListForEachLoop(arrayLocal: String, type: Class<*>, exec: () -> Unit) {
         loadLocal(arrayLocal)
         writeMapped(JavaMappedUsageDefinitions.List_size)
         createIndexedLoop { indexLocal ->
@@ -170,7 +199,7 @@ class CodeWriter(override val methodVisitor: MethodVisitor) : ICodeWriter {
         }
     }
 
-    override fun createIteratorForEachLoop(iteratorLocal: String, type: Class<*>, autoLoad: Boolean, exec: (getter: () -> Unit) -> Unit) {
+    inline fun createIteratorForEachLoop(iteratorLocal: String, type: Class<*>, autoLoad: Boolean, exec: (getter: () -> Unit) -> Unit) {
         createWhileLoop({ brk ->
             loadLocal(iteratorLocal)
             writeMapped(JavaMappedUsageDefinitions.Iterator_hasNext)
@@ -181,11 +210,9 @@ class CodeWriter(override val methodVisitor: MethodVisitor) : ICodeWriter {
             if(type != Object::class.java) castType(type)
 
             if(!autoLoad) {
-                val end = defineLocal("$iteratorLocal:Element", type)
-                storeLocal("$iteratorLocal:Element")
-
-                exec { loadLocal("$iteratorLocal:Element") }
-                end()
+                storeLocal("$iteratorLocal:Element", type) {
+                    exec { loadLocal("$iteratorLocal:Element") }
+                }
             }else {
                 exec { throw UnsupportedOperationException("Cannot run getter with autoLoad enabled") }
             }
@@ -194,16 +221,23 @@ class CodeWriter(override val methodVisitor: MethodVisitor) : ICodeWriter {
         }
     }
 
-    override fun createIterableForEachLoop(iterableLocal: String, type: Class<*>, autoLoad: Boolean, exec: (getter: () -> Unit) -> Unit) {
+    inline fun createIterableForEachLoop(iterableLocal: String, type: Class<*>, autoLoad: Boolean, exec: (getter: () -> Unit) -> Unit) {
         loadLocal(iterableLocal)
         writeMapped(JavaMappedUsageDefinitions.Iterable_iterator)
-        val endIterator = storeLocal("$iterableLocal:Iterator", Iterator::class.java)
-        createIteratorForEachLoop("$iterableLocal:Iterator", type, autoLoad, exec)
-        endIterator()
+        storeLocal("$iterableLocal:Iterator", Iterator::class.java) {
+            createIteratorForEachLoop("$iterableLocal:Iterator", type, autoLoad, exec)
+        }
     }
 
-    override fun generateUniqueLocal(local: String): String {
+    fun generateUniqueLocal(local: String): String {
         return "$local:${generatedLocals.size}"
+    }
+
+    inline fun storeLocal(local: String, descriptor: Class<*>, exec: () -> Unit) {
+        defineLocal(local, descriptor) {
+            storeLocal(local)
+            exec()
+        }
     }
 
 }

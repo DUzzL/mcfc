@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter
 
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation
+import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData
 import dev.epicpix.minecraftfunctioncompiler.il.ScopeData
@@ -10,7 +11,7 @@ data class EmitControlFlow(val breakLabel: Label, val continueLabel: Label)
 
 data class EmitterContext(
     val fieldStorage: ICodeFieldStorage,
-    val codeWriter: ICodeWriter,
+    val codeWriter: CodeWriter,
     val compiledFunctions: Set<DataLocation>,
     val transforms: Map<Int, String> = mapOf(),
     val scopes: Map<Int, EmitControlFlow> = mapOf(),
@@ -39,15 +40,13 @@ data class EmitterContext(
         newTransforms[loc.local] = uid
     }
 
-    fun storeCreate(location: String, uid: String, type: Class<*>): () -> Unit {
+    inline fun storeCreate(location: String, uid: String, type: Class<*>, exec: () -> Unit) {
         store(location, uid)
-        return codeWriter.storeLocal(uid, type)
+        codeWriter.storeLocal(uid, type, exec)
     }
 
     fun runStored(location: String, uidName: String, type: Class<*>) {
-        val end = storeCreate(location, codeWriter.generateUniqueLocal(uidName), type)
-        run()
-        end()
+        storeCreate(location, codeWriter.generateUniqueLocal(uidName), type) { run() }
     }
 
     fun load(location: String) {
