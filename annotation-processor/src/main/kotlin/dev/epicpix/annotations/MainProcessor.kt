@@ -9,6 +9,8 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFile
 import com.google.devtools.ksp.symbol.Origin
+import com.google.gson.Gson
+import com.google.gson.JsonElement
 import net.fabricmc.tinyremapper.IMappingProvider
 import net.fabricmc.tinyremapper.TinyUtils
 import org.objectweb.asm.Type
@@ -39,6 +41,12 @@ fun MappingData?.getFieldName(owner: String, name: String, desc: String): String
     return mappedFields.entries.find { it.key.name == name && it.key.owner == owner && it.key.desc == desc }?.value ?: (if(!owner.startsWith("net/minecraft")) name else error("No field mapping for $owner.$name $desc"))
 }
 
+fun loadJson(file: String): JsonElement {
+    val str = MainProcessor::class.java.getResourceAsStream("/data/$file.json")?.readAllBytes()?.decodeToString()
+        ?: throw NullPointerException("Failed to read file $file.json")
+    return Gson().fromJson(str, JsonElement::class.java)
+}
+
 class MainProcessor(
     private val codeGenerator: CodeGenerator,
     private val options: Map<String, String>
@@ -62,7 +70,7 @@ class MainProcessor(
             })
         }
 
-        generateFunctionMapping(resolver, mappingData)
+        generateFunctionMapping(resolver, mappingData, options["project"])
         generateInstructionData(resolver)
         generateConstantsData(resolver)
 
@@ -85,7 +93,7 @@ class MainProcessor(
     }
 
     @OptIn(KspExperimental::class)
-    fun generateFunctionMapping(resolver: Resolver, mappingData: MappingData?) {
+    fun generateFunctionMapping(resolver: Resolver, mappingData: MappingData?, project: String?) {
         resolver.getSymbolsWithAnnotation(MapSourceClass::class.java.name).forEach {
             val resultClass = it.getAnnotationsByType(MapSourceClass::class).first().value
             val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
@@ -96,6 +104,32 @@ class MainProcessor(
             map.appendText("    fun init() {\n")
             generateFunctionMappingPer(map, mappingData, it)
             map.appendText("    }\n")
+            map.appendText("}\n")
+            map.close()
+        }
+
+        if(project != null) {
+            val data = loadJson(project).asJsonObject
+            val resultClass = data["definition_file"].asString
+            val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
+            val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
+            val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")
+            map.appendText("package $resultPackage;\n")
+            map.appendText("public class $resultName {\n")
+            data["definitions_functions"]?.asJsonObject?.entrySet()?.forEach { (k, v) ->
+                val fullDescriptor = v.asString
+                val className = mappingData.getClassName(fullDescriptor.split(":")[0])
+                val methodDescriptor = remapType(Type.getMethodType("(" + fullDescriptor.split("(")[1]), mappingData).descriptor
+                val methodName = mappingData.getMethodName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1].split("(")[0], "(" + fullDescriptor.split("(")[1])
+                map.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.emitter.MappedFunctionData $k = new dev.epicpix.minecraftfunctioncompiler.emitter.MappedFunctionData(\"$className\", \"$methodName\", \"$methodDescriptor\");\n")
+            }
+            data["definitions_fields"]?.asJsonObject?.entrySet()?.forEach { (k, v) ->
+                val fullDescriptor = v.asString
+                val className = mappingData.getClassName(fullDescriptor.split(":")[0])
+                val fieldDescriptor = remapType(Type.getType(fullDescriptor.split(":")[2]), mappingData).descriptor
+                val fieldName = mappingData.getFieldName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1], fullDescriptor.split(":")[2])
+                map.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.emitter.MappedFieldData $k = new dev.epicpix.minecraftfunctioncompiler.emitter.MappedFieldData(\"$className\", \"$fieldName\", \"$fieldDescriptor\");\n")
+            }
             map.appendText("}\n")
             map.close()
         }

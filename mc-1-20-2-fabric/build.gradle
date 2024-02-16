@@ -12,3 +12,7 @@ ext {
 }
 
 apply from: "../common-fabric.gradle"
+
+ksp {
+    arg("project", "mc-1-20-2-fabric")
+}
