@@ -1,7 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter
 
 import dev.epicpix.minecraftfunctioncompiler.data.*
-import dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitions.*
 import dev.epicpix.minecraftfunctioncompiler.emitter.MappedUsageDefinitions.*
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData
@@ -81,8 +80,7 @@ fun registerInstructionEmitters() {
         codeWriter.storeLocal(uidLocalLevels, Iterable::class.java) {
             codeWriter.createIterableForEachLoop(uidLocalLevels, ServerLevel::class.java, true) {
                 val uidLocalEntities = codeWriter.generateUniqueLocal("\$Entities")
-                codeWriter.writeMapped(ServerLevel_getAllEntities)
-                codeWriter.writeMapped(Iterable_iterator)
+                codeWriter.callIterable_iterator { codeWriter.writeMapped(ServerLevel_getAllEntities) }
                 codeWriter.storeLocal(uidLocalEntities, Iterator::class.java) {
                     codeWriter.createIteratorForEachLoop(uidLocalEntities, Entity::class.java, true) {
                         runStored("entity", "\$Entity", Entity::class.java)
@@ -117,9 +115,9 @@ fun registerInstructionEmitters() {
     }
     registerEmitterInstruction(InstructionTypes.FOR_SCORE_HOLDERS) {
         codeWriter.newObject(ArrayList::class.java, Collection::class.java) {
-            fieldStorage.loadScoreboard(codeWriter)
-            codeWriter.writeMapped(Scoreboard_playerScores, true)
-            codeWriter.writeMapped(Map_keySet)
+            codeWriter.callMap_keySet {
+                codeWriter.loadScoreboard_playerScores { fieldStorage.loadScoreboard(codeWriter) }
+            }
         }
 
         val uidLocal = codeWriter.generateUniqueLocal("\$Array")
@@ -129,12 +127,12 @@ fun registerInstructionEmitters() {
                     runStored("local", "\$Name", String::class.java)
                 }
             }else {
-                codeWriter.loadLocal(uidLocal)
-                codeWriter.writeMapped(ArrayList_size)
+                codeWriter.callArrayList_size { codeWriter.loadLocal(uidLocal) }
                 codeWriter.executeIf(Opcodes.IFNE) {
-                    codeWriter.loadLocal(uidLocal)
-                    codeWriter.writeInt(0)
-                    codeWriter.writeMapped(ArrayList_get)
+                    codeWriter.callArrayList_get {
+                        codeWriter.loadLocal(uidLocal)
+                        codeWriter.writeInt(0)
+                    }
                     codeWriter.castType(String::class.java)
                     runStored("local", "\$Name", String::class.java)
                 }
@@ -220,8 +218,8 @@ fun registerInstructionEmitters() {
                         codeWriter.loadLocal(uniqBeh)
                         codeWriter.loadLocal(uniq)
                         codeWriter.writeMapped(Score_getScore)
-                        if(operation == ScoreboardOperation.DIVIDE) codeWriter.writeMapped(Math_floorDiv)
-                        else codeWriter.writeMapped(Math_floorMod)
+                        if(operation == ScoreboardOperation.DIVIDE) codeWriter.callMath_floorDiv {}
+                        else codeWriter.callMath_floorMod {}
                         codeWriter.writeMapped(Score_setScore)
                     }
                 }
@@ -233,8 +231,8 @@ fun registerInstructionEmitters() {
                 codeWriter.writeMapped(Score_getScore)
                 codeWriter.methodVisitor.visitInsn(Opcodes.SWAP)
                 codeWriter.writeMapped(Score_getScore)
-                if(operation == ScoreboardOperation.MIN) codeWriter.writeMapped(Math_min)
-                else codeWriter.writeMapped(Math_max)
+                if(operation == ScoreboardOperation.MIN) codeWriter.callMath_min {}
+                else codeWriter.callMath_max {}
                 codeWriter.writeMapped(Score_setScore)
             }
             ScoreboardOperation.SWAP -> {
@@ -390,8 +388,7 @@ fun registerInstructionEmitters() {
         codeWriter.newObject(Vec3::class.java, Double::class.java, Double::class.java, Double::class.java) {
             val pos = instruction.get<WorldCoordinates>("position")
             if(pos.isXRelative) {
-                load("from")
-                codeWriter.writeMapped(Vec3_x, true)
+                codeWriter.loadVec3_x { load("from") }
                 if(pos.x != 0.0) {
                     codeWriter.writeDouble(pos.x)
                     codeWriter.methodVisitor.visitInsn(Opcodes.DADD)
@@ -400,8 +397,7 @@ fun registerInstructionEmitters() {
                 codeWriter.writeDouble(pos.x)
             }
             if(pos.isYRelative) {
-                load("from")
-                codeWriter.writeMapped(Vec3_y, true)
+                codeWriter.loadVec3_y { load("from") }
                 if(pos.y != 0.0) {
                     codeWriter.writeDouble(pos.y)
                     codeWriter.methodVisitor.visitInsn(Opcodes.DADD)
@@ -410,8 +406,7 @@ fun registerInstructionEmitters() {
                 codeWriter.writeDouble(pos.y)
             }
             if(pos.isZRelative) {
-                load("from")
-                codeWriter.writeMapped(Vec3_z, true)
+                codeWriter.loadVec3_z { load("from") }
                 if(pos.z != 0.0) {
                     codeWriter.writeDouble(pos.z)
                     codeWriter.methodVisitor.visitInsn(Opcodes.DADD)
@@ -443,29 +438,27 @@ fun registerInstructionEmitters() {
     registerEmitterInstruction(InstructionTypes.ALIGN_POSITION) {
         codeWriter.newObject(Vec3::class.java, Double::class.java, Double::class.java, Double::class.java) {
             val swizzle = instruction.get<SwizzleArgument>("swizzle")
-            load("position")
-            codeWriter.writeMapped(Vec3_x, true)
-            if(swizzle.x) codeWriter.writeMapped(Math_floor)
-            load("position")
-            codeWriter.writeMapped(Vec3_y, true)
-            if(swizzle.y) codeWriter.writeMapped(Math_floor)
-            load("position")
-            codeWriter.writeMapped(Vec3_z, true)
-            if(swizzle.z) codeWriter.writeMapped(Math_floor)
+            codeWriter.loadVec3_x { load("position") }
+            if(swizzle.x) codeWriter.callMath_floor {}
+            codeWriter.loadVec3_y { load("position") }
+            if(swizzle.y) codeWriter.callMath_floor {}
+            codeWriter.loadVec3_z { load("position") }
+            if(swizzle.z) codeWriter.callMath_floor {}
         }
         runStored("result", "\$Position", Vec3::class.java)
     }
     registerEmitterInstruction(InstructionTypes.CHECK_GAMEMODE) {
-        load("entity")
-        codeWriter.castType(ServerPlayer::class.java)
-        codeWriter.writeMapped(ServerPlayer_gameMode, true)
+        codeWriter.loadServerPlayer_gameMode {
+            load("entity")
+            codeWriter.castType(ServerPlayer::class.java)
+        }
         codeWriter.writeMapped(ServerPlayerGameMode_getGameModeForPlayer)
-        codeWriter.writeMapped(when(instruction.get<Gamemode>("gamemode")) {
-            Gamemode.SURVIVAL -> GameType_SURVIVAL
-            Gamemode.CREATIVE -> GameType_CREATIVE
-            Gamemode.ADVENTURE -> GameType_ADVENTURE
-            Gamemode.SPECTATOR -> GameType_SPECTATOR
-        }, true)
+        when(instruction.get<Gamemode>("gamemode")) {
+            Gamemode.SURVIVAL -> codeWriter.loadGameType_SURVIVAL()
+            Gamemode.CREATIVE -> codeWriter.loadGameType_CREATIVE()
+            Gamemode.ADVENTURE -> codeWriter.loadGameType_ADVENTURE()
+            Gamemode.SPECTATOR -> codeWriter.loadGameType_SPECTATOR()
+        }
         val label = Label()
         codeWriter.methodVisitor.visitJumpInsn(if(!instruction.get<Boolean>("negated")) Opcodes.IF_ACMPNE else Opcodes.IF_ACMPEQ, label)
         run()
@@ -474,12 +467,12 @@ fun registerInstructionEmitters() {
     registerEmitterInstruction(InstructionTypes.SET_GAMEMODE) {
         load("entity")
         codeWriter.castType(ServerPlayer::class.java)
-        codeWriter.writeMapped(when(instruction.get<Gamemode>("gamemode")) {
-            Gamemode.SURVIVAL -> GameType_SURVIVAL
-            Gamemode.CREATIVE -> GameType_CREATIVE
-            Gamemode.ADVENTURE -> GameType_ADVENTURE
-            Gamemode.SPECTATOR -> GameType_SPECTATOR
-        }, true)
+        when(instruction.get<Gamemode>("gamemode")) {
+            Gamemode.SURVIVAL -> codeWriter.loadGameType_SURVIVAL()
+            Gamemode.CREATIVE -> codeWriter.loadGameType_CREATIVE()
+            Gamemode.ADVENTURE -> codeWriter.loadGameType_ADVENTURE()
+            Gamemode.SPECTATOR -> codeWriter.loadGameType_SPECTATOR()
+        }
         codeWriter.writeMapped(ServerPlayer_setGameMode)
         codeWriter.methodVisitor.visitInsn(Opcodes.POP)
     }
@@ -491,11 +484,12 @@ fun registerInstructionEmitters() {
             codeWriter.executeIf(Opcodes.IFNULL) {
                 codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, label)
             }
-            codeWriter.writeString(instruction["team"])
-            load("entity")
-            codeWriter.writeMapped(Entity_getTeam)
-            codeWriter.writeMapped(Team_getName)
-            codeWriter.writeMapped(String_equals)
+            codeWriter.callString_equals {
+                codeWriter.writeString(instruction["team"])
+                load("entity")
+                codeWriter.writeMapped(Entity_getTeam)
+                codeWriter.writeMapped(Team_getName)
+            }
             codeWriter.executeIf(Opcodes.IFNE) {
                 codeWriter.methodVisitor.visitLabel(label)
                 run()
@@ -505,11 +499,12 @@ fun registerInstructionEmitters() {
             load("entity")
             codeWriter.writeMapped(Entity_getTeam)
             codeWriter.executeIf(Opcodes.IFNONNULL) {
-                codeWriter.writeString(instruction["team"])
-                load("entity")
-                codeWriter.writeMapped(Entity_getTeam)
-                codeWriter.writeMapped(Team_getName)
-                codeWriter.writeMapped(String_equals)
+                codeWriter.callString_equals {
+                    codeWriter.writeString(instruction["team"])
+                    load("entity")
+                    codeWriter.writeMapped(Entity_getTeam)
+                    codeWriter.writeMapped(Team_getName)
+                }
                 codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, label)
             }
             val after = Label()
@@ -540,13 +535,11 @@ fun registerInstructionEmitters() {
     registerEmitterInstruction(InstructionTypes.CHECK_ROTATION) {
         val yaw = instruction.get<FloatRangeArgument?>("yaw")
         if(yaw != null) {
-            load("rotation")
-            codeWriter.writeMapped(Vec2_x, true)
+            codeWriter.loadVec2_x { load("rotation") }
             checkFloatRange(yaw) {
                 val pitch = instruction.get<FloatRangeArgument?>("pitch")
                 if(pitch != null) {
-                    load("rotation")
-                    codeWriter.writeMapped(Vec2_y, true)
+                    codeWriter.loadVec2_y { load("rotation") }
                     checkFloatRange(pitch) { run() }
                     return@checkFloatRange
                 }
@@ -556,8 +549,7 @@ fun registerInstructionEmitters() {
         }
         val pitch = instruction.get<FloatRangeArgument?>("pitch")
         if(pitch != null) {
-            load("rotation")
-            codeWriter.writeMapped(Vec2_y, true)
+            codeWriter.loadVec2_y { load("rotation") }
             checkFloatRange(pitch) { run() }
             return@registerEmitterInstruction
         }

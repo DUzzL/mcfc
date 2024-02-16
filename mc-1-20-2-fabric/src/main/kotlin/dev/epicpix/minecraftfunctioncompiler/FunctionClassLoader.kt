@@ -5,10 +5,7 @@ import dev.epicpix.minecraftfunctioncompiler.commands.CommandParser
 import dev.epicpix.minecraftfunctioncompiler.compiler.compile
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation
 import dev.epicpix.minecraftfunctioncompiler.data.updateRegistryMaps
-import dev.epicpix.minecraftfunctioncompiler.emitter.ICodeFieldStorage
-import dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitions
-import dev.epicpix.minecraftfunctioncompiler.emitter.MappedUsageDefinitions
-import dev.epicpix.minecraftfunctioncompiler.emitter.getInstructionEmitter
+import dev.epicpix.minecraftfunctioncompiler.emitter.*
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage
 import dev.epicpix.minecraftfunctioncompiler.parser.Command
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter
@@ -92,15 +89,18 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                 cw.writeMapped(MappedUsageDefinitions.MinecraftServer_getScoreboard)
             },
             mapFunction = { cw, value ->
-                loadServerFunctionManager(cw)
-                cw.writeMapped(MappedUsageDefinitions.ServerFunctionManager_library, true)
-                cw.writeMapped(MappedUsageDefinitions.ServerFunctionLibrary_functions, true)
-                loadResourceLocation(cw, value)
-                cw.writeMapped(JavaMappedUsageDefinitions.Map_get)
+                cw.callMap_get {
+                    cw.loadServerFunctionLibrary_functions {
+                        cw.loadServerFunctionManager_library {
+                            loadServerFunctionManager(cw)
+                        }
+                    }
+                    loadResourceLocation(cw, value)
+                }
                 cw.castType(CommandFunction::class.java)
             },
             mapAttribute = { cw, value ->
-                cw.writeMapped(MappedUsageDefinitions.BuiltInRegistries_ATTRIBUTE, true)
+                cw.loadBuiltInRegistries_ATTRIBUTE()
                 loadResourceLocation(cw, value)
                 cw.writeMapped(MappedUsageDefinitions.Registry_get)
                 cw.castType(Attribute::class.java)
