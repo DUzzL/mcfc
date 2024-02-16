@@ -23,7 +23,10 @@
     "AttributeMap_getInstance": "net/minecraft/world/entity/ai/attributes/AttributeMap:getInstance(Lnet/minecraft/world/entity/ai/attributes/Attribute;)Lnet/minecraft/world/entity/ai/attributes/AttributeInstance;",
     "AttributeInstance_setBaseValue": "net/minecraft/world/entity/ai/attributes/AttributeInstance:setBaseValue(D)V",
     "ServerLevel_getEntity": "net/minecraft/server/level/ServerLevel:getEntity(Ljava/util/UUID;)Lnet/minecraft/world/entity/Entity;",
-    "ServerFunctionManager_execute": "net/minecraft/server/ServerFunctionManager:execute(Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;)I",
+    "ServerFunctionManager_execute": {
+      "1.20.2+": "net/minecraft/server/ServerFunctionManager:execute(Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;Lnet/minecraft/nbt/CompoundTag;)I",
+      "1.20.1-": "net/minecraft/server/ServerFunctionManager:execute(Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;)I"
+    },
     "CommandSourceStack_getEntity": "net/minecraft/commands/CommandSourceStack:getEntity()Lnet/minecraft/world/entity/Entity;",
     "CommandSourceStack_getServer": "net/minecraft/commands/CommandSourceStack:getServer()Lnet/minecraft/server/MinecraftServer;",
     "CommandSourceStack_withEntity": "net/minecraft/commands/CommandSourceStack:withEntity(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/commands/CommandSourceStack;",

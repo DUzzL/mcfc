@@ -29,6 +29,7 @@ gradle.taskGraph.whenReady { taskExecutionGraph ->
 }
 
 ksp {
+    arg("definitions", "minecraft")
     project.afterEvaluate {
         arg("mappingsFile", loom.mappingsFile.absolutePath)
     }

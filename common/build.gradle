@@ -29,7 +29,7 @@ gradle.taskGraph.whenReady { taskExecutionGraph ->
 }
 
 ksp {
-    arg("project", "common")
+    arg("definitions", "common")
     arg("version", project.mod_version)
     if("true" == System.getenv("CI")) {
         arg("commit", System.getenv("CI_COMMIT_SHA"))
