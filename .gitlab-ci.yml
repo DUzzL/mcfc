@@ -6,7 +6,7 @@ before_script:
 
 build:
   stage: build
-  script: ./gradlew build
+  script: ./gradlew proguard
   after_script:
     - mv $(find -name "mcfc-*.jar" ! -name "*-dev.jar" ! -name "*-sources.jar") ./
   artifacts:

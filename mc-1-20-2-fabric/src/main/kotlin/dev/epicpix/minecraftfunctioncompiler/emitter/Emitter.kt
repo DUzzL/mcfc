@@ -39,10 +39,11 @@ fun registerInstructionEmitters() {
         codeWriter.methodVisitor.visitInsn(Opcodes.POP)
     }
     registerEmitterInstruction(InstructionTypes.CHECK_ENTITY_TAG) {
-        load("entity")
-        codeWriter.writeMapped(Entity_getTags)
-        codeWriter.writeString(instruction["tag"])
-        codeWriter.writeMapped(Set_contains)
+        codeWriter.callSet_contains {
+            load("entity")
+            codeWriter.writeMapped(Entity_getTags)
+            codeWriter.writeString(instruction["tag"])
+        }
 
         val label = Label()
         codeWriter.methodVisitor.visitJumpInsn(if(!instruction.get<Boolean>("negated")) Opcodes.IFEQ else Opcodes.IFNE, label)
@@ -50,9 +51,10 @@ fun registerInstructionEmitters() {
         codeWriter.methodVisitor.visitLabel(label)
     }
     registerEmitterInstruction(InstructionTypes.CHECK_ENTITY_TAGS) {
-        load("entity")
-        codeWriter.writeMapped(Entity_getTags)
-        codeWriter.writeMapped(Set_size)
+        codeWriter.callSet_size {
+            load("entity")
+            codeWriter.writeMapped(Entity_getTags)
+        }
 
         val label = Label()
         codeWriter.methodVisitor.visitJumpInsn(if(!instruction.get<Boolean>("negated")) Opcodes.IFEQ else Opcodes.IFNE, label)
@@ -458,12 +460,12 @@ fun registerInstructionEmitters() {
         codeWriter.castType(ServerPlayer::class.java)
         codeWriter.writeMapped(ServerPlayer_gameMode, true)
         codeWriter.writeMapped(ServerPlayerGameMode_getGameModeForPlayer)
-        when(instruction.get<Gamemode>("gamemode")) {
-            Gamemode.SURVIVAL -> codeWriter.writeMapped(GameType_SURVIVAL, true)
-            Gamemode.CREATIVE -> codeWriter.writeMapped(GameType_CREATIVE, true)
-            Gamemode.ADVENTURE -> codeWriter.writeMapped(GameType_ADVENTURE, true)
-            Gamemode.SPECTATOR -> codeWriter.writeMapped(GameType_SPECTATOR, true)
-        }
+        codeWriter.writeMapped(when(instruction.get<Gamemode>("gamemode")) {
+            Gamemode.SURVIVAL -> GameType_SURVIVAL
+            Gamemode.CREATIVE -> GameType_CREATIVE
+            Gamemode.ADVENTURE -> GameType_ADVENTURE
+            Gamemode.SPECTATOR -> GameType_SPECTATOR
+        }, true)
         val label = Label()
         codeWriter.methodVisitor.visitJumpInsn(if(!instruction.get<Boolean>("negated")) Opcodes.IF_ACMPNE else Opcodes.IF_ACMPEQ, label)
         run()
@@ -472,12 +474,12 @@ fun registerInstructionEmitters() {
     registerEmitterInstruction(InstructionTypes.SET_GAMEMODE) {
         load("entity")
         codeWriter.castType(ServerPlayer::class.java)
-        when(instruction.get<Gamemode>("gamemode")) {
-            Gamemode.SURVIVAL -> codeWriter.writeMapped(GameType_SURVIVAL, true)
-            Gamemode.CREATIVE -> codeWriter.writeMapped(GameType_CREATIVE, true)
-            Gamemode.ADVENTURE -> codeWriter.writeMapped(GameType_ADVENTURE, true)
-            Gamemode.SPECTATOR -> codeWriter.writeMapped(GameType_SPECTATOR, true)
-        }
+        codeWriter.writeMapped(when(instruction.get<Gamemode>("gamemode")) {
+            Gamemode.SURVIVAL -> GameType_SURVIVAL
+            Gamemode.CREATIVE -> GameType_CREATIVE
+            Gamemode.ADVENTURE -> GameType_ADVENTURE
+            Gamemode.SPECTATOR -> GameType_SPECTATOR
+        }, true)
         codeWriter.writeMapped(ServerPlayer_setGameMode)
         codeWriter.methodVisitor.visitInsn(Opcodes.POP)
     }

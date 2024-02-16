@@ -2,10 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.emitter.impl
 
 import dev.epicpix.minecraftfunctioncompiler.DATA_CLASS
 import dev.epicpix.minecraftfunctioncompiler.DEBUG
-import dev.epicpix.minecraftfunctioncompiler.emitter.ControlFlowExecution
-import dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitions
-import dev.epicpix.minecraftfunctioncompiler.emitter.MappedFieldData
-import dev.epicpix.minecraftfunctioncompiler.emitter.MappedFunctionData
+import dev.epicpix.minecraftfunctioncompiler.emitter.*
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
@@ -188,12 +185,12 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
     }
 
     inline fun createListForEachLoop(arrayLocal: String, type: Class<*>, exec: () -> Unit) {
-        loadLocal(arrayLocal)
-        writeMapped(JavaMappedUsageDefinitions.List_size)
+        callList_size { loadLocal(arrayLocal) }
         createIndexedLoop { indexLocal ->
-            loadLocal(arrayLocal)
-            loadLocal(indexLocal)
-            writeMapped(JavaMappedUsageDefinitions.List_get)
+            callList_get {
+                loadLocal(arrayLocal)
+                loadLocal(indexLocal)
+            }
             castType(type)
             exec()
         }
@@ -201,12 +198,10 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
 
     inline fun createIteratorForEachLoop(iteratorLocal: String, type: Class<*>, autoLoad: Boolean, exec: (getter: () -> Unit) -> Unit) {
         createWhileLoop({ brk ->
-            loadLocal(iteratorLocal)
-            writeMapped(JavaMappedUsageDefinitions.Iterator_hasNext)
+            callIterator_hasNext { loadLocal(iteratorLocal) }
             methodVisitor.visitJumpInsn(Opcodes.IFEQ, brk)
         }) { controlFlow ->
-            loadLocal(iteratorLocal)
-            writeMapped(JavaMappedUsageDefinitions.Iterator_next)
+            callIterator_next { loadLocal(iteratorLocal) }
             if(type != Object::class.java) castType(type)
 
             if(!autoLoad) {
@@ -222,8 +217,7 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
     }
 
     inline fun createIterableForEachLoop(iterableLocal: String, type: Class<*>, autoLoad: Boolean, exec: (getter: () -> Unit) -> Unit) {
-        loadLocal(iterableLocal)
-        writeMapped(JavaMappedUsageDefinitions.Iterable_iterator)
+        callIterable_iterator { loadLocal(iterableLocal) }
         storeLocal("$iterableLocal:Iterator", Iterator::class.java) {
             createIteratorForEachLoop("$iterableLocal:Iterator", type, autoLoad, exec)
         }

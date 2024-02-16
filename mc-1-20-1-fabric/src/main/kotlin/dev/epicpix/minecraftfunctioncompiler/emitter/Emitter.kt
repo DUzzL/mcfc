@@ -456,12 +456,12 @@ fun registerInstructionEmitters() {
         codeWriter.castType(ServerPlayer::class.java)
         codeWriter.writeMapped(MappedUsageDefinitions.ServerPlayer_gameMode, true)
         codeWriter.writeMapped(MappedUsageDefinitions.ServerPlayerGameMode_getGameModeForPlayer)
-        when(instruction.get<Gamemode>("gamemode")) {
-            Gamemode.SURVIVAL -> codeWriter.writeMapped(MappedUsageDefinitions.GameType_SURVIVAL, true)
-            Gamemode.CREATIVE -> codeWriter.writeMapped(MappedUsageDefinitions.GameType_CREATIVE, true)
-            Gamemode.ADVENTURE -> codeWriter.writeMapped(MappedUsageDefinitions.GameType_ADVENTURE, true)
-            Gamemode.SPECTATOR -> codeWriter.writeMapped(MappedUsageDefinitions.GameType_SPECTATOR, true)
-        }
+        codeWriter.writeMapped(when(instruction.get<Gamemode>("gamemode")) {
+            Gamemode.SURVIVAL -> MappedUsageDefinitions.GameType_SURVIVAL
+            Gamemode.CREATIVE -> MappedUsageDefinitions.GameType_CREATIVE
+            Gamemode.ADVENTURE -> MappedUsageDefinitions.GameType_ADVENTURE
+            Gamemode.SPECTATOR -> MappedUsageDefinitions.GameType_SPECTATOR
+        }, true)
         val label = Label()
         codeWriter.methodVisitor.visitJumpInsn(if(!instruction.get<Boolean>("negated")) Opcodes.IF_ACMPNE else Opcodes.IF_ACMPEQ, label)
         run()
@@ -470,12 +470,12 @@ fun registerInstructionEmitters() {
     registerEmitterInstruction(InstructionTypes.SET_GAMEMODE) {
         load("entity")
         codeWriter.castType(ServerPlayer::class.java)
-        when(instruction.get<Gamemode>("gamemode")) {
-            Gamemode.SURVIVAL -> codeWriter.writeMapped(MappedUsageDefinitions.GameType_SURVIVAL, true)
-            Gamemode.CREATIVE -> codeWriter.writeMapped(MappedUsageDefinitions.GameType_CREATIVE, true)
-            Gamemode.ADVENTURE -> codeWriter.writeMapped(MappedUsageDefinitions.GameType_ADVENTURE, true)
-            Gamemode.SPECTATOR -> codeWriter.writeMapped(MappedUsageDefinitions.GameType_SPECTATOR, true)
-        }
+        codeWriter.writeMapped(when(instruction.get<Gamemode>("gamemode")) {
+            Gamemode.SURVIVAL -> MappedUsageDefinitions.GameType_SURVIVAL
+            Gamemode.CREATIVE -> MappedUsageDefinitions.GameType_CREATIVE
+            Gamemode.ADVENTURE -> MappedUsageDefinitions.GameType_ADVENTURE
+            Gamemode.SPECTATOR -> MappedUsageDefinitions.GameType_SPECTATOR
+        }, true)
         codeWriter.writeMapped(MappedUsageDefinitions.ServerPlayer_setGameMode)
         codeWriter.methodVisitor.visitInsn(Opcodes.POP)
     }

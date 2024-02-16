@@ -116,12 +116,21 @@ class MainProcessor(
             val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")
             map.appendText("package $resultPackage;\n")
             map.appendText("public class $resultName {\n")
+            val mapExtensions = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, "${resultName}Extensions", "kt")
+            mapExtensions.appendText("package $resultPackage\n")
             data["definitions_functions"]?.asJsonObject?.entrySet()?.forEach { (k, v) ->
-                val fullDescriptor = v.asString
+                val fullDescriptor = v.asString.split("@")[0]
                 val className = mappingData.getClassName(fullDescriptor.split(":")[0])
                 val methodDescriptor = remapType(Type.getMethodType("(" + fullDescriptor.split("(")[1]), mappingData).descriptor
                 val methodName = mappingData.getMethodName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1].split("(")[0], "(" + fullDescriptor.split("(")[1])
                 map.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.emitter.MappedFunctionData $k = new dev.epicpix.minecraftfunctioncompiler.emitter.MappedFunctionData(\"$className\", \"$methodName\", \"$methodDescriptor\");\n")
+                val callDetails = v.asString.split("@").getOrNull(1)
+                if(callDetails != null) {
+                    val isStatic = !callDetails.contains("M")
+                    val isInterface = callDetails.contains("I")
+                    val opcode = if(isStatic) 184 else if(isInterface) 185 else 182
+                    mapExtensions.appendText("inline fun dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter.call$k(params: () -> Unit) { params(); methodVisitor.visitMethodInsn($opcode, \"$className\", \"$methodName\", \"$methodDescriptor\", $isInterface); }\n")
+                }
             }
             data["definitions_fields"]?.asJsonObject?.entrySet()?.forEach { (k, v) ->
                 val fullDescriptor = v.asString
