@@ -46,9 +46,4 @@ fun registerBaseInstructionEmitters() {
         codeWriter.methodVisitor.visitInsn(Opcodes.IADD)
         save("storage")
     }
-
-    registerEmitterInstruction(InstructionTypes.SET_RESULT_STORAGE) {
-        load("value")
-        save("storage")
-    }
 }

@@ -11,7 +11,7 @@ private fun splitTokens(code: String): List<String> {
         }
         if(index >= code.length) return null
         var res = code[index++].toString()
-        if("{}[]().,+-/*".contains(res)) {
+        if("{}[]().,+-/*;".contains(res)) {
             return res
         }
         if(res == "=" || res == "!") {
@@ -47,6 +47,7 @@ private enum class TokenType {
     IF,
     CMP_EQ,
     CMP_NE,
+    ASSIGN,
     NULL,
     WORD,
     NUMBER,
@@ -70,7 +71,7 @@ private class ParsedTokensNumber(val number: String) : ParsedTokens(TokenType.NU
     }
 }
 
-private fun Iterator<String>.expectToken(token: String) {
+private fun ListIterator<String>.expectToken(token: String) {
     if(!hasNext()) throw IllegalStateException("Expected token '$token', got EOF")
     val got = next()
     if(got != token) {
@@ -78,21 +79,23 @@ private fun Iterator<String>.expectToken(token: String) {
     }
 }
 
-private fun Iterator<String>.readExpression(): ParsedTokens {
+private fun ListIterator<String>.readExpression(): ParsedTokens {
     val exp1 = readExpressionBase()
     if(!hasNext()) throw IllegalStateException("Expected expression operator, got EOF")
     val op = next()
+    if(op != "==" && op != "!=") {
+        previous()
+        return exp1
+    }
     val exp2 = readExpressionBase()
     if(op == "==") {
         return ParsedTokens(TokenType.CMP_EQ, listOf(exp1, exp2))
-    }else if(op == "!=") {
-        return ParsedTokens(TokenType.CMP_NE, listOf(exp1, exp2))
     }else {
-        throw IllegalStateException("Expected expression operator, got '$op'")
+        return ParsedTokens(TokenType.CMP_NE, listOf(exp1, exp2))
     }
 }
 
-private fun Iterator<String>.readExpressionBase(): ParsedTokens {
+private fun ListIterator<String>.readExpressionBase(): ParsedTokens {
     if(!hasNext()) throw IllegalStateException("Expected expression base, got EOF")
     val value = next()
     if(value.matches(Regex("[0-9]+"))) {
@@ -106,7 +109,7 @@ private fun Iterator<String>.readExpressionBase(): ParsedTokens {
     }
 }
 
-private fun parseCode(iter: Iterator<String>): ParsedTokens {
+private fun parseCode(iter: ListIterator<String>): ParsedTokens {
     val res = mutableListOf<ParsedTokens>()
     iter.expectToken("{")
     while(iter.hasNext()) {
@@ -120,7 +123,13 @@ private fun parseCode(iter: Iterator<String>): ParsedTokens {
         }else if(token == "}") {
             return ParsedTokens(TokenType.CODE, res)
         }else if(token == "run") {
+            iter.expectToken(";")
             res.add(ParsedTokens(TokenType.RUN, listOf()))
+        }else if(token.startsWith("@")) {
+            iter.expectToken("=")
+            val expression = iter.readExpression()
+            iter.expectToken(";")
+            res.add(ParsedTokens(TokenType.ASSIGN, listOf(ParsedTokensWord(token), expression)))
         }else {
             throw IllegalStateException("Expected code token, got '$token'")
         }
@@ -134,6 +143,7 @@ private enum class LoweredTokenType {
     IF_EQ,
     IF_NE,
     LOCAL,
+    ASSIGN,
     NULL,
     NUMBER,
     RUN,
@@ -142,17 +152,17 @@ private enum class LoweredTokenType {
 
 private open class LoweredTokens(val type: LoweredTokenType, val children: List<LoweredTokens>) {
     override fun toString(): String {
-        return "ParsedTokens(type=$type, children=$children)"
+        return "LoweredTokens(type=$type, children=$children)"
     }
 }
 private class LoweredTokensLocal(val local: String) : LoweredTokens(LoweredTokenType.LOCAL, listOf()) {
     override fun toString(): String {
-        return "ParsedTokensWord(local='$local')"
+        return "LoweredTokensLocal(local='$local')"
     }
 }
 private class LoweredTokensNumber(val number: String) : LoweredTokens(LoweredTokenType.NUMBER, listOf()) {
     override fun toString(): String {
-        return "ParsedTokensNumber(number='$number')"
+        return "LoweredTokensNumber(number='$number')"
     }
 }
 
@@ -200,7 +210,11 @@ private fun lowerCode(parsed: ParsedTokens): LoweredTokens {
             }
         }else if(token.type == TokenType.RUN) {
             res.add(LoweredTokens(LoweredTokenType.RUN, listOf()))
-        } else {
+        }else if(token.type == TokenType.ASSIGN) {
+            val exp1 = lowerExpression(token.children[0])
+            val exp2 = lowerExpression(token.children[1])
+            res.add(LoweredTokens(LoweredTokenType.ASSIGN, listOf(exp1, exp2)))
+        }else {
             throw IllegalStateException("Unexpected code token: $token")
         }
     }
@@ -236,6 +250,15 @@ private fun writeCode(mappingData: MappingData?, code: LoweredTokens, output: Ou
     }else if(code.type == LoweredTokenType.RUN) {
         output.appendText("context.run();\n")
         return uniqId
+    }else if(code.type == LoweredTokenType.ASSIGN) {
+        writeExpression(mappingData, code.children[1], output, false)
+        val assignTo = code.children[0]
+        if(assignTo is LoweredTokensLocal) {
+            output.appendText("context.save(\"${assignTo.local}\");\n")
+        }else {
+            throw IllegalStateException("Cannot assigned to non-local variable: $assignTo")
+        }
+        return uniqId
     }else {
         throw IllegalStateException("Unexpected code token: $code")
     }
@@ -245,7 +268,7 @@ fun generateCode(mappingData: MappingData?, inputCode: String, output: OutputStr
     output.appendText("// $inputCode\n")
     val tokens = splitTokens(inputCode)
     output.appendText("// ${tokens.joinToString(" ")}\n")
-    val code = parseCode(listOf("{", *tokens.toTypedArray(), "}").iterator())
+    val code = parseCode(listOf("{", *tokens.toTypedArray(), "}").listIterator())
     output.appendText("// $code\n")
     val lowered = lowerCode(code)
     output.appendText("// $lowered\n")
