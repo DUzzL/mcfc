@@ -32,10 +32,10 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         availableLocals.add(index)
     }
 
-    fun createLocal(local: String, type: Class<*>): Local {
+    fun createLocal(local: String, type: String): Local {
         val localStart = Label()
         methodVisitor.visitLabel(localStart)
-        val localValue = Local(local, type.descriptorString(), localStart, Label(), allocateLocalIndex())
+        val localValue = Local(local, type, localStart, Label(), allocateLocalIndex())
         locals[local] = localValue
         generatedLocals.add(localValue)
         return localValue
@@ -48,7 +48,7 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
     }
 
     inline fun defineLocal(local: String, type: Class<*>, exec: () -> Unit) {
-        val localValue = createLocal(local, type)
+        val localValue = createLocal(local, type.descriptorString())
         exec()
         destroyLocal(localValue)
     }
@@ -215,6 +215,10 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
 
     fun generateUniqueLocal(local: String): String {
         return "$local:${generatedLocals.size}"
+    }
+
+    fun generateUniqueLocal(): String {
+        return "L:${generatedLocals.size}"
     }
 
     inline fun storeLocal(local: String, descriptor: Class<*>, exec: () -> Unit) {

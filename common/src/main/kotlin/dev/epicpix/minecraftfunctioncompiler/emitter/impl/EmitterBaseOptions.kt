@@ -23,11 +23,6 @@ fun registerBaseInstructionEmitters() {
         codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newScopes[scope]!!)
     }
 
-    registerEmitterInstruction(InstructionTypes.CREATE_RESULT_STORAGE) {
-        codeWriter.writeInt(0)
-        runStored("storage", "\$ResultStorage", Int::class.javaPrimitiveType!!)
-    }
-
     registerEmitterInstruction(InstructionTypes.ADD_RESULT_STORAGE) {
         load("storage")
         load("value")

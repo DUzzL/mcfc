@@ -21,8 +21,8 @@ private fun splitTokens(code: String): List<String> {
                 return res
             }
         }
-        if(res.first().isLetter() || res.first() == '@' || res.first() == '#') {
-            while(index < code.length && (code[index].isLetterOrDigit() || code[index] == '_')) {
+        if(res.first().isLetter() || res.first() == '@' || res.first() == '#' || res.first() == ':') {
+            while(index < code.length && (code[index].isLetterOrDigit() || code[index] == '_' || (res.first() == ':' && (code[index] == '/' || code[index] == '$')))) {
                 res += code[index++]
             }
             return res
@@ -46,6 +46,7 @@ private fun splitTokens(code: String): List<String> {
 private enum class TokenType {
     SCOPE,
     EXIT_SCOPE,
+    CREATE_LOCAL,
     IF,
     CMP_EQ,
     CMP_NE,
@@ -150,6 +151,21 @@ private fun parseCode(iter: ListIterator<String>): ParsedTokens {
             iter.expectToken(")")
             iter.expectToken(";")
             res.add(ParsedTokens(TokenType.EXIT_SCOPE, listOf(ParsedTokensWord(scope))))
+        }else if(token == "create_local") {
+            iter.expectToken("(")
+            val type = iter.next()
+            if(!type.startsWith(":")) {
+                throw IllegalStateException("Expected type token, got '$type'")
+            }
+            val local = iter.next()
+            if(!local.startsWith("@")) {
+                throw IllegalStateException("Expected local token, got '$local'")
+            }
+            iter.expectToken("=")
+            val value = iter.readExpression()
+            iter.expectToken(")")
+            val code = parseCode(iter)
+            res.add(ParsedTokens(TokenType.CREATE_LOCAL, listOf(ParsedTokensWord(type), ParsedTokensWord(local), value, code)))
         }else {
             throw IllegalStateException("Expected code token, got '$token'")
         }
@@ -167,6 +183,8 @@ private enum class LoweredTokenType {
     SCOPE_BLOCK,
     EXIT_SCOPE,
     ASSIGN,
+    CREATE_LOCAL,
+    TYPE,
     NULL,
     NUMBER,
     RUN,
@@ -188,6 +206,11 @@ private class LoweredTokensScope(val scope: String) : LoweredTokens(LoweredToken
         return "LoweredTokensScope(scope='$scope')"
     }
 }
+private class LoweredTokensType(val typeName: String) : LoweredTokens(LoweredTokenType.TYPE, listOf()) {
+    override fun toString(): String {
+        return "LoweredTokensType(typeName='$typeName')"
+    }
+}
 private class LoweredTokensNumber(val number: String) : LoweredTokens(LoweredTokenType.NUMBER, listOf()) {
     override fun toString(): String {
         return "LoweredTokensNumber(number='$number')"
@@ -201,6 +224,8 @@ private fun lowerExpression(parsed: ParsedTokens): LoweredTokens {
         }else {
             throw IllegalStateException("Unknown expression word: ${parsed.word}")
         }
+    }else if(parsed is ParsedTokensNumber) {
+        return LoweredTokensNumber(parsed.number)
     }else if(parsed.type == TokenType.NULL) {
         return LoweredTokens(LoweredTokenType.NULL, listOf())
     }
@@ -249,6 +274,12 @@ private fun lowerCode(parsed: ParsedTokens): LoweredTokens {
             val exp1 = lowerExpression(token.children[0])
             val exp2 = lowerExpression(token.children[1])
             res.add(LoweredTokens(LoweredTokenType.ASSIGN, listOf(exp1, exp2)))
+        }else if(token.type == TokenType.CREATE_LOCAL) {
+            val type = (token.children[0] as ParsedTokensWord).word.substring(1)
+            val local = (token.children[1] as ParsedTokensWord).word.substring(1)
+            val expression = lowerExpression(token.children[2])
+            val code = lowerCode(token.children[3])
+            res.add(LoweredTokens(LoweredTokenType.CREATE_LOCAL, listOf(LoweredTokensType(type), LoweredTokensLocal(local), expression, code)))
         }else {
             throw IllegalStateException("Unexpected code token: $token")
         }
@@ -260,6 +291,23 @@ private fun writeExpression(mappingData: MappingData?, expression: LoweredTokens
     if(expression is LoweredTokensLocal) {
         if(!dropResult) {
             output.appendText("context.load(\"${expression.local}\");\n")
+        }
+    }else if(expression is LoweredTokensNumber) {
+        if(!dropResult) {
+            val value = expression.number.toInt()
+            if (value >= -1 && value <= 5) {
+                if(value == -1) {
+                    output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.ICONST_M1);\n")
+                }else {
+                    output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.ICONST_$value);\n")
+                }
+            } else if (value >= Byte.MIN_VALUE && value <= Byte.MAX_VALUE) {
+                output.appendText("context.getCodeWriter().getMethodVisitor().visitIntInsn(org.objectweb.asm.Opcodes.BIPUSH, $value);\n")
+            } else if (value >= Short.MIN_VALUE && value <= Short.MAX_VALUE) {
+                output.appendText("context.getCodeWriter().getMethodVisitor().visitIntInsn(org.objectweb.asm.Opcodes.SIPUSH, $value);\n")
+            } else {
+                output.appendText("context.getCodeWriter().getMethodVisitor().visitLdcInsn($value);\n")
+            }
         }
     }else {
         throw IllegalStateException("Unexpected expression token: $expression")
@@ -304,9 +352,30 @@ private fun writeCode(mappingData: MappingData?, code: LoweredTokens, output: Ou
         if(assignTo is LoweredTokensLocal) {
             output.appendText("context.save(\"${assignTo.local}\");\n")
         }else {
-            throw IllegalStateException("Cannot assigned to non-local variable: $assignTo")
+            throw IllegalStateException("Cannot assign to non-local variable: $assignTo")
         }
         return uniqId
+    }else if(code.type == LoweredTokenType.CREATE_LOCAL) {
+        writeExpression(mappingData, code.children[2], output, false)
+        val assignType = (code.children[0] as LoweredTokensType).typeName.let {
+            if(it == "int") return@let "I"
+            "L${mappingData?.getClassName(it) ?: it};"
+        }
+        val assignTo = code.children[1] as LoweredTokensLocal
+        var uid = uniqId
+        val storageLocalUid = "s${uid++}"
+        val storageLocal = "l${uid++}"
+        output.appendText("String $storageLocalUid = context.getCodeWriter().generateUniqueLocal();\n")
+        output.appendText("context.store(\"${assignTo.local}\", $storageLocalUid);\n")
+        output.appendText("dev.epicpix.minecraftfunctioncompiler.emitter.impl.Local $storageLocal = context.getCodeWriter().createLocal($storageLocalUid, \"$assignType\");\n")
+        if(assignType.first() == 'I') {
+            output.appendText("context.getCodeWriter().getMethodVisitor().visitVarInsn(org.objectweb.asm.Opcodes.ISTORE, $storageLocal.getIndex());\n")
+        }else {
+            throw IllegalStateException("Unknown assign type: $assignType")
+        }
+        writeCode(mappingData, code.children[3], output, uid)
+        output.appendText("context.getCodeWriter().destroyLocal($storageLocal);\n")
+        return uid
     }else {
         throw IllegalStateException("Unexpected code token: $code")
     }
