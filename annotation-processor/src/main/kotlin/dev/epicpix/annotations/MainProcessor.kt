@@ -1,16 +1,15 @@
 package dev.epicpix.annotations
 
+import cc.ekblad.toml.decode
+import cc.ekblad.toml.tomlMapper
 import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.getAnnotationsByType
 import com.google.devtools.ksp.getDeclaredFunctions
-import com.google.devtools.ksp.getDeclaredProperties
 import com.google.devtools.ksp.processing.*
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFile
 import com.google.devtools.ksp.symbol.Origin
-import com.google.gson.Gson
-import com.google.gson.JsonElement
 import net.fabricmc.tinyremapper.IMappingProvider
 import net.fabricmc.tinyremapper.TinyUtils
 import org.objectweb.asm.Type
@@ -41,10 +40,10 @@ fun MappingData?.getFieldName(owner: String, name: String, desc: String): String
     return mappedFields.entries.find { it.key.name == name && it.key.owner == owner && it.key.desc == desc }?.value ?: (if(!owner.startsWith("net/minecraft")) name else error("No field mapping for $owner.$name $desc"))
 }
 
-fun loadJson(file: String): JsonElement {
-    val str = MainProcessor::class.java.getResourceAsStream("/data/$file.json")?.readAllBytes()?.decodeToString()
-        ?: throw NullPointerException("Failed to read file $file.json")
-    return Gson().fromJson(str, JsonElement::class.java)
+fun loadToml(file: String): Map<String, Any> {
+    val str = MainProcessor::class.java.getResourceAsStream("/data/$file.toml")?.readAllBytes()?.decodeToString()
+        ?: throw NullPointerException("Failed to read file $file.toml")
+    return tomlMapper {  }.decode(str)
 }
 
 class MainProcessor(
@@ -71,7 +70,7 @@ class MainProcessor(
         }
 
         val minecraftVersion = options["minecraft_version"]?.split(".")
-        generateFunctionMapping(resolver, mappingData, options["definitions"], minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0)
+        generateFunctionMapping(mappingData, options["definitions"], minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0)
         generateInstructionData(resolver)
         generateConstantsData(resolver)
 
@@ -93,51 +92,35 @@ class MainProcessor(
         }
     }
 
-    @OptIn(KspExperimental::class)
-    fun generateFunctionMapping(resolver: Resolver, mappingData: MappingData?, definitionFile: String?, majorVer: Int, minorVer: Int) {
-        resolver.getSymbolsWithAnnotation(MapSourceClass::class.java.name).forEach {
-            val resultClass = it.getAnnotationsByType(MapSourceClass::class).first().value
-            val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
-            val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
-            val map = codeGenerator.createNewFile(Dependencies(true, (it as KSClassDeclaration).containingFile!!), resultPackage, resultName, "kt")
-            map.appendText("package $resultPackage\n")
-            map.appendText("object $resultName {\n")
-            map.appendText("    fun init() {\n")
-            generateFunctionMappingPer(map, mappingData, it)
-            map.appendText("    }\n")
-            map.appendText("}\n")
-            map.close()
-        }
-
+    fun generateFunctionMapping(mappingData: MappingData?, definitionFile: String?, majorVer: Int, minorVer: Int) {
         if(definitionFile != null) {
-            val data = loadJson(definitionFile).asJsonObject
-            val resultClass = data["definition_file"].asString
+            val data = loadToml(definitionFile)
+            val resultClass = data["definition_file"] as String
             val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
             val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
-            val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")
-            map.appendText("package $resultPackage;\n")
-            map.appendText("public class $resultName {\n")
-            val mapExtensions = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, "${resultName}Extensions", "kt")
+            val mapExtensions = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "kt")
             mapExtensions.appendText("package $resultPackage\n")
-            fun findVersionSpecific(v: JsonElement): String? {
-                if(v.isJsonObject) {
-                    v.asJsonObject.entrySet().forEach { (k, v) ->
+            fun findVersionSpecific(v: Any?): String? {
+                if(v is Map<*, *>) {
+                    v.forEach { (k, v) ->
+                        k as String
+                        v as String
                         val minecraftVersion = k.split(".")
                         val cMajor = minecraftVersion[1].toInt()
                         val cMinor = minecraftVersion[2].filter { it.isDigit() }.toIntOrNull() ?: 0
-                        if(cMajor == majorVer && cMinor == minorVer) return v.asString
+                        if(cMajor == majorVer && cMinor == minorVer) return v
                         else if( k.endsWith("+") && ((majorVer == cMajor && minorVer >= cMinor) || (majorVer > cMajor))) {
-                            return v.asString
+                            return v
                         }else if(k.endsWith("-") && ((majorVer == cMajor && minorVer <= cMinor) || (majorVer < cMajor))) {
-                            return v.asString
+                            return v
                         }
                     }
                     return null
                 }else {
-                    return v.asString
+                    return v as String
                 }
             }
-            data["definitions_functions"]?.asJsonObject?.entrySet()?.forEach { (k, v) ->
+            (data["definitions_functions"] as? Map<*, *>)?.forEach { (k, v) ->
                 val content = findVersionSpecific(v)
                 if(content != null) {
                     val fullDescriptor = content.split("@")[0]
@@ -153,14 +136,14 @@ class MainProcessor(
                     }
                 }
             }
-            data["definitions_fields"]?.asJsonObject?.entrySet()?.forEach { (k, v) ->
+            (data["definitions_fields"] as? Map<*, *>)?.forEach { (k, v) ->
                 val content = findVersionSpecific(v)
                 if(content != null) {
                     val fullDescriptor = content.split("@")[0]
                     val className = mappingData.getClassName(fullDescriptor.split(":")[0])
                     val fieldDescriptor = remapType(Type.getType(fullDescriptor.split(":")[2]), mappingData).descriptor
                     val fieldName = mappingData.getFieldName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1], fullDescriptor.split(":")[2])
-                    val callDetails = v.asString.split("@").getOrNull(1)
+                    val callDetails = content.split("@").getOrNull(1)
                     if(callDetails != null) {
                         val isStatic = !callDetails.contains("M")
                         if(isStatic) {
@@ -170,35 +153,6 @@ class MainProcessor(
                             mapExtensions.appendText("inline fun dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter.load$k(params: () -> Unit) { params(); methodVisitor.visitFieldInsn(180, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n".replace("\$", "\\$"))
                             mapExtensions.appendText("inline fun dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter.store$k(params: () -> Unit) { params(); methodVisitor.visitFieldInsn(181, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n".replace("\$", "\\$"))
                         }
-                    }
-                }
-            }
-            map.appendText("}\n")
-            map.close()
-        }
-    }
-
-    private fun generateFunctionMappingPer(map: OutputStream, mappingData: MappingData?, clzDefinition: KSClassDeclaration) {
-        val defs = clzDefinition.getDeclaredProperties()
-        for(def in defs) {
-            if(def.origin != Origin.SYNTHETIC) {
-                def.annotations.toList().forEach {
-                    val qualified = it.annotationType.resolve().declaration.qualifiedName?.asString()
-                    if(qualified == MapFieldUse::class.java.name) {
-                        val fullDescriptor = it.arguments.find { it.name!!.asString() == "descriptor" }!!.value as String
-                        val className = mappingData.getClassName(fullDescriptor.split(":")[0])
-                        val fieldDescriptor = remapType(Type.getType(fullDescriptor.split(":")[2]), mappingData).descriptor
-                        val fieldName = mappingData.getFieldName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1], fullDescriptor.split(":")[2])
-
-                        map.appendText("        ${def.qualifiedName!!.asString()} = dev.epicpix.minecraftfunctioncompiler.emitter.MappedFieldData(\"$className\", \"$fieldName\", \"$fieldDescriptor\")\n".replace("\$", "\\\$"))
-                    }
-                    if(qualified == MapFunctionUse::class.java.name) {
-                        val fullDescriptor = it.arguments.find { it.name!!.asString() == "descriptor" }!!.value as String
-                        val className = mappingData.getClassName(fullDescriptor.split(":")[0])
-                        val methodDescriptor = remapType(Type.getMethodType("(" + fullDescriptor.split("(")[1]), mappingData).descriptor
-                        val methodName = mappingData.getMethodName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1].split("(")[0], "(" + fullDescriptor.split("(")[1])
-
-                        map.appendText("        ${def.qualifiedName!!.asString()} = dev.epicpix.minecraftfunctioncompiler.emitter.MappedFunctionData(\"$className\", \"$methodName\", \"$methodDescriptor\")\n".replace("\$", "\\\$"))
                     }
                 }
             }

@@ -3,6 +3,7 @@ group = project.maven_group
 
 repositories {
     mavenCentral()
+    maven { url = uri("https://jitpack.io") }
 }
 
 apply plugin: 'com.google.devtools.ksp'
