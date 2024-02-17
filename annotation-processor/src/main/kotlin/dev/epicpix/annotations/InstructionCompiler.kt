@@ -21,8 +21,8 @@ private fun splitTokens(code: String): List<String> {
                 return res
             }
         }
-        if(res.first().isLetter() || res.first() == '@' || res.first() == '#' || res.first() == ':') {
-            while(index < code.length && (code[index].isLetterOrDigit() || code[index] == '_' || (res.first() == ':' && (code[index] == '/' || code[index] == '$')))) {
+        if(res.first().isLetter() || res.first() == '@' || res.first() == '#' || res.first() == ':' || res.first() == '$') {
+            while(index < code.length && (code[index].isLetterOrDigit() || code[index] == '_' || (res.first() == ':' && (code[index] == '/' || code[index] == '$')) || (res.first() == '$' && code[index] == ':'))) {
                 res += code[index++]
             }
             return res
@@ -197,6 +197,7 @@ private enum class LoweredTokenType {
     IF_EQ,
     IF_NE,
     LOCAL,
+    INSTRUCTION_INPUT,
     SCOPE,
     SCOPE_BLOCK,
     EXIT_SCOPE,
@@ -221,6 +222,11 @@ private class LoweredTokensLocal(val local: String) : LoweredTokens(LoweredToken
         return "LoweredTokensLocal(local='$local')"
     }
 }
+private class LoweredTokensInstructionInput(val input: String, val typed: String) : LoweredTokens(LoweredTokenType.INSTRUCTION_INPUT, listOf()) {
+    override fun toString(): String {
+        return "LoweredTokensInstructionInput(input='$input', typed='$typed')"
+    }
+}
 private class LoweredTokensScope(val scope: String) : LoweredTokens(LoweredTokenType.SCOPE, listOf()) {
     override fun toString(): String {
         return "LoweredTokensScope(scope='$scope')"
@@ -241,6 +247,9 @@ private fun lowerExpression(parsed: ParsedTokens): LoweredTokens {
     if(parsed is ParsedTokensWord) {
         if(parsed.word.startsWith("@")) {
             return LoweredTokensLocal(parsed.word.substring(1))
+        }else if(parsed.word.startsWith("$")) {
+            val data = parsed.word.substring(1).split(":", limit = 2)
+            return LoweredTokensInstructionInput(data[0], data[1])
         }else {
             throw IllegalStateException("Unknown expression word: ${parsed.word}")
         }
@@ -331,6 +340,14 @@ private fun writeExpression(mappingData: MappingData?, expression: LoweredTokens
                 output.appendText("context.getCodeWriter().getMethodVisitor().visitIntInsn(org.objectweb.asm.Opcodes.SIPUSH, $value);\n")
             } else {
                 output.appendText("context.getCodeWriter().getMethodVisitor().visitLdcInsn($value);\n")
+            }
+        }
+    }else if(expression is LoweredTokensInstructionInput) {
+        if(!dropResult) {
+            if(expression.typed == "int") {
+                output.appendText("context.getCodeWriter().writeInt(context.getInstruction().<Integer>get(\"${expression.input}\"));\n")
+            }else {
+                throw IllegalStateException("Unknown expression type: $expression")
             }
         }
     }else if(expression.type == LoweredTokenType.PLUS) {
