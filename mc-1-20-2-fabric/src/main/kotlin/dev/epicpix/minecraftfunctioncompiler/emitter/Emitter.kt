@@ -231,7 +231,7 @@ fun registerInstructionEmitters() {
                     codeWriter.storeLocal(uniq, Score::class.java) {
                         codeWriter.loadLocal(uniq)
                         codeWriter.callScore_getScore {  }
-                        codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newScopes[scopeId("exceptionScope")]!!.breakLabel)
+                        codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newScopes[scopeId("exceptionScope")]!!)
                         codeWriter.loadLocal(uniq)
                         codeWriter.loadLocal(uniqBeh)
                         codeWriter.loadLocal(uniq)

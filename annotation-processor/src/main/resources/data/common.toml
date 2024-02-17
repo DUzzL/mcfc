@@ -22,4 +22,5 @@ String_equals = "java/lang/String:equals(Ljava/lang/Object;)Z@M"
 
 [instructions]
 IF_NOT_NULL = "if(@local != null) { run; }"
+SCOPE = "scope(#scope) { run; }"
 SET_RESULT_STORAGE = "@storage = @value;"

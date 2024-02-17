@@ -21,7 +21,7 @@ private fun splitTokens(code: String): List<String> {
                 return res
             }
         }
-        if(res.first().isLetter() || res.first() == '@') {
+        if(res.first().isLetter() || res.first() == '@' || res.first() == '#') {
             while(index < code.length && code[index].isLetterOrDigit()) {
                 res += code[index++]
             }
@@ -44,6 +44,7 @@ private fun splitTokens(code: String): List<String> {
 }
 
 private enum class TokenType {
+    SCOPE,
     IF,
     CMP_EQ,
     CMP_NE,
@@ -120,6 +121,15 @@ private fun parseCode(iter: ListIterator<String>): ParsedTokens {
             iter.expectToken(")")
             val code = parseCode(iter)
             res.add(ParsedTokens(TokenType.IF, listOf(expression, code)))
+        }else if(token == "scope") {
+            iter.expectToken("(")
+            val scope = iter.next()
+            if(!scope.startsWith("#")) {
+                throw IllegalStateException("Expected scope token, got '$scope'")
+            }
+            iter.expectToken(")")
+            val code = parseCode(iter)
+            res.add(ParsedTokens(TokenType.SCOPE, listOf(ParsedTokensWord(scope), code)))
         }else if(token == "}") {
             return ParsedTokens(TokenType.CODE, res)
         }else if(token == "run") {
@@ -143,6 +153,8 @@ private enum class LoweredTokenType {
     IF_EQ,
     IF_NE,
     LOCAL,
+    SCOPE,
+    SCOPE_BLOCK,
     ASSIGN,
     NULL,
     NUMBER,
@@ -158,6 +170,11 @@ private open class LoweredTokens(val type: LoweredTokenType, val children: List<
 private class LoweredTokensLocal(val local: String) : LoweredTokens(LoweredTokenType.LOCAL, listOf()) {
     override fun toString(): String {
         return "LoweredTokensLocal(local='$local')"
+    }
+}
+private class LoweredTokensScope(val scope: String) : LoweredTokens(LoweredTokenType.SCOPE, listOf()) {
+    override fun toString(): String {
+        return "LoweredTokensScope(scope='$scope')"
     }
 }
 private class LoweredTokensNumber(val number: String) : LoweredTokens(LoweredTokenType.NUMBER, listOf()) {
@@ -208,6 +225,10 @@ private fun lowerCode(parsed: ParsedTokens): LoweredTokens {
             }else {
                 throw IllegalStateException("Unsupported if expression: $expression")
             }
+        }else if(token.type == TokenType.SCOPE) {
+            val scope = (token.children[0] as ParsedTokensWord).word.substring(1)
+            val code = lowerCode(token.children[1])
+            res.add(LoweredTokens(LoweredTokenType.SCOPE_BLOCK, listOf(LoweredTokensScope(scope), code)))
         }else if(token.type == TokenType.RUN) {
             res.add(LoweredTokens(LoweredTokenType.RUN, listOf()))
         }else if(token.type == TokenType.ASSIGN) {
@@ -244,6 +265,15 @@ private fun writeCode(mappingData: MappingData?, code: LoweredTokens, output: Ou
         output.appendText("org.objectweb.asm.Label $jumpLabel = new org.objectweb.asm.Label();\n")
         writeExpression(mappingData, code.children[0], output, false)
         output.appendText("context.getCodeWriter().getMethodVisitor().visitJumpInsn(org.objectweb.asm.Opcodes.IFNULL, $jumpLabel);\n")
+        uid = writeCode(mappingData, code.children[1], output, uid)
+        output.appendText("context.getCodeWriter().getMethodVisitor().visitLabel($jumpLabel);\n")
+        return uid
+    }else if(code.type == LoweredTokenType.SCOPE_BLOCK) {
+        var uid = uniqId
+        val jumpLabel = "j${uid++}"
+        val scope = (code.children[0] as LoweredTokensScope).scope
+        output.appendText("org.objectweb.asm.Label $jumpLabel = new org.objectweb.asm.Label();\n")
+        output.appendText("context.getNewScopes().put(context.getInstruction().<dev.epicpix.minecraftfunctioncompiler.il.ScopeData>get(\"$scope\").getId(), $jumpLabel);\n")
         uid = writeCode(mappingData, code.children[1], output, uid)
         output.appendText("context.getCodeWriter().getMethodVisitor().visitLabel($jumpLabel);\n")
         return uid

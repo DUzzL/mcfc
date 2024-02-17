@@ -7,18 +7,16 @@ import dev.epicpix.minecraftfunctioncompiler.il.LocationData
 import dev.epicpix.minecraftfunctioncompiler.il.ScopeData
 import org.objectweb.asm.Label
 
-data class EmitControlFlow(val breakLabel: Label, val continueLabel: Label)
-
 data class EmitterContext(
     val fieldStorage: ICodeFieldStorage,
     val codeWriter: CodeWriter,
     val compiledFunctions: Set<DataLocation>,
     val transforms: Map<Int, String> = mapOf(),
-    val scopes: Map<Int, EmitControlFlow> = mapOf(),
+    val scopes: Map<Int, Label> = mapOf(),
 
     val instruction: Instruction,
     val newTransforms: MutableMap<Int, String>,
-    val newScopes: MutableMap<Int, EmitControlFlow>,
+    val newScopes: MutableMap<Int, Label>,
 ) {
     fun run() {
         instruction.children.forEach {
