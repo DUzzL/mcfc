@@ -13,6 +13,7 @@ import com.google.devtools.ksp.symbol.Origin
 import net.fabricmc.tinyremapper.IMappingProvider
 import net.fabricmc.tinyremapper.TinyUtils
 import org.objectweb.asm.Type
+import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.nio.file.Paths
 import java.util.*
@@ -71,15 +72,15 @@ class MainProcessor(
 
         val minecraftVersion = options["minecraft_version"]?.split(".")
         val definitions = options["definitions"]?.let { loadToml(it) }
+        val instructionData = generateInstructionData(resolver)
         if(definitions != null) {
             if(definitions["definition_file"] != null) {
                 generateFunctionMapping(mappingData, definitions, minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0)
             }
             if(definitions["instructions_file"] != null) {
-                generateInstructionEmitters(mappingData, definitions, minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0)
+                generateInstructionEmitters(mappingData, instructionData, definitions, minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0)
             }
         }
-        generateInstructionData(resolver)
         generateConstantsData(resolver)
 
         return listOf()
@@ -164,7 +165,7 @@ class MainProcessor(
         }
     }
 
-    fun generateInstructionEmitters(mappingData: MappingData?, data: Map<String, Any>, majorVer: Int, minorVer: Int) {
+    fun generateInstructionEmitters(mappingData: MappingData?, instructionMapping: Map<String, String>, data: Map<String, Any>, majorVer: Int, minorVer: Int) {
         val resultClass = data["instructions_file"] as String
         val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
         val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
@@ -195,7 +196,12 @@ class MainProcessor(
         (data["instructions"] as? Map<*, *>)?.forEach { (k, v) ->
             val instruction = findVersionSpecific(v)
             if(instruction != null) {
-                map.appendText("        /* $k - $instruction */\n")
+                map.appendText("        dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructionsKt.registerEmitterInstruction(${instructionMapping[k]}, (context) -> {\n")
+                val output = ByteArrayOutputStream()
+                generateCode(mappingData, instruction, output)
+                map.appendText(output.toByteArray().decodeToString().trimEnd().prependIndent("            "))
+                map.appendText("\n")
+                map.appendText("        });\n")
             }
         }
         map.appendText("    }\n")
@@ -213,7 +219,8 @@ class MainProcessor(
     }
 
     @OptIn(KspExperimental::class)
-    fun generateInstructionData(resolver: Resolver) {
+    fun generateInstructionData(resolver: Resolver): Map<String, String> {
+        val instructionMappings = mutableMapOf<String, String>()
         val classesList = resolver.getSymbolsWithAnnotation(InstructionSourceClass::class.java.name).toList()
         classesList.forEach {
             val annotation = it.getAnnotationsByType(InstructionSourceClass::class).first()
@@ -238,6 +245,7 @@ class MainProcessor(
                     if(def.origin != Origin.SYNTHETIC) {
                         val named = def.simpleName.asString().toUpperSnakeCase()
                         types.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.il.InstructionType $named = new dev.epicpix.minecraftfunctioncompiler.il.InstructionType(\"$named\");\n")
+                        instructionMappings[named] = "$enumClass.$named"
                         val params = mutableListOf<InstructionParamData>()
                         impl.appendText("fun ${def.simpleName.asString()}(")
                         for(param in def.parameters) {
@@ -285,6 +293,7 @@ class MainProcessor(
             types.appendText("}\n")
             types.close()
         }
+        return instructionMappings
     }
 }
 

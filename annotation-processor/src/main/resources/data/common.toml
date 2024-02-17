@@ -21,4 +21,4 @@ Math_max = "java/lang/Math:max(II)I@S"
 String_equals = "java/lang/String:equals(Ljava/lang/Object;)Z@M"
 
 [instructions]
-IF_NOT_NULL = "if ( @local != null ) { run }"
+IF_NOT_NULL = "if(@local != null) { run }"

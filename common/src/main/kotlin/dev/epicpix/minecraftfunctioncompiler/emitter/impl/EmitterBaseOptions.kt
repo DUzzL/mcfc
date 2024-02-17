@@ -7,11 +7,6 @@ import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
 
 fun registerBaseInstructionEmitters() {
-    registerEmitterInstruction(InstructionTypes.IF_NOT_NULL) {
-        load("local")
-        codeWriter.executeIf(Opcodes.IFNONNULL) { run() }
-    }
-
     registerEmitterInstruction(InstructionTypes.SCOPE) {
         val label = Label()
         newScopes[scopeId("scope")] = EmitControlFlow(label, label)
