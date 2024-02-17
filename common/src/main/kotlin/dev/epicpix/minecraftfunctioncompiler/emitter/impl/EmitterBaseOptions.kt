@@ -6,10 +6,6 @@ import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
 
 fun registerBaseInstructionEmitters() {
-    registerEmitterInstruction(InstructionTypes.EXIT_SCOPE) {
-        codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, newScopes[scopeId("scope")]!!)
-    }
-
     registerEmitterInstruction(InstructionTypes.LIMITER) {
         codeWriter.writeInt(instruction["limit"])
         val label = Label()
