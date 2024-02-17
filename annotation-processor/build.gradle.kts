@@ -14,7 +14,6 @@ repositories {
 dependencies {
     implementation("com.squareup:javapoet:1.12.1")
     implementation("com.google.devtools.ksp:symbol-processing-api:1.9.10-1.0.13")
-    implementation("com.google.code.gson:gson:2.10.1")
     implementation("cc.ekblad:4koma:1.2.0")
     implementation("net.fabricmc:tiny-remapper:0.8.2")
 }

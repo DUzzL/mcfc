@@ -70,7 +70,15 @@ class MainProcessor(
         }
 
         val minecraftVersion = options["minecraft_version"]?.split(".")
-        generateFunctionMapping(mappingData, options["definitions"], minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0)
+        val definitions = options["definitions"]?.let { loadToml(it) }
+        if(definitions != null) {
+            if(definitions["definition_file"] != null) {
+                generateFunctionMapping(mappingData, definitions, minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0)
+            }
+            if(definitions["instructions_file"] != null) {
+                generateInstructionEmitters(mappingData, definitions, minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0)
+            }
+        }
         generateInstructionData(resolver)
         generateConstantsData(resolver)
 
@@ -92,71 +100,106 @@ class MainProcessor(
         }
     }
 
-    fun generateFunctionMapping(mappingData: MappingData?, definitionFile: String?, majorVer: Int, minorVer: Int) {
-        if(definitionFile != null) {
-            val data = loadToml(definitionFile)
-            val resultClass = data["definition_file"] as String
-            val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
-            val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
-            val mapExtensions = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "kt")
-            mapExtensions.appendText("package $resultPackage\n")
-            fun findVersionSpecific(v: Any?): String? {
-                if(v is Map<*, *>) {
-                    v.forEach { (k, v) ->
-                        k as String
-                        v as String
-                        val minecraftVersion = k.split(".")
-                        val cMajor = minecraftVersion[1].toInt()
-                        val cMinor = minecraftVersion[2].filter { it.isDigit() }.toIntOrNull() ?: 0
-                        if(cMajor == majorVer && cMinor == minorVer) return v
-                        else if( k.endsWith("+") && ((majorVer == cMajor && minorVer >= cMinor) || (majorVer > cMajor))) {
-                            return v
-                        }else if(k.endsWith("-") && ((majorVer == cMajor && minorVer <= cMinor) || (majorVer < cMajor))) {
-                            return v
-                        }
-                    }
-                    return null
-                }else {
-                    return v as String
-                }
-            }
-            (data["definitions_functions"] as? Map<*, *>)?.forEach { (k, v) ->
-                val content = findVersionSpecific(v)
-                if(content != null) {
-                    val fullDescriptor = content.split("@")[0]
-                    val className = mappingData.getClassName(fullDescriptor.split(":")[0])
-                    val methodDescriptor = remapType(Type.getMethodType("(" + fullDescriptor.split("(")[1]), mappingData).descriptor
-                    val methodName = mappingData.getMethodName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1].split("(")[0], "(" + fullDescriptor.split("(")[1])
-                    val callDetails = content.split("@").getOrNull(1)
-                    if(callDetails != null) {
-                        val isStatic = !callDetails.contains("M")
-                        val isInterface = callDetails.contains("I")
-                        val opcode = if(isStatic) 184 else if(isInterface) 185 else 182
-                        mapExtensions.appendText("inline fun dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter.call$k(params: () -> Unit) { params(); methodVisitor.visitMethodInsn($opcode, \"$className\", \"$methodName\", \"$methodDescriptor\", $isInterface); }\n".replace("\$", "\\$"))
+    fun generateFunctionMapping(mappingData: MappingData?, data: Map<String, Any>, majorVer: Int, minorVer: Int) {
+        val resultClass = data["definition_file"] as String
+        val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
+        val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
+        val mapExtensions = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "kt")
+        mapExtensions.appendText("package $resultPackage\n")
+        fun findVersionSpecific(v: Any?): String? {
+            if(v is Map<*, *>) {
+                v.forEach { (k, v) ->
+                    k as String
+                    v as String
+                    val minecraftVersion = k.split(".")
+                    val cMajor = minecraftVersion[1].toInt()
+                    val cMinor = minecraftVersion[2].filter { it.isDigit() }.toIntOrNull() ?: 0
+                    if(cMajor == majorVer && cMinor == minorVer) return v
+                    else if( k.endsWith("+") && ((majorVer == cMajor && minorVer >= cMinor) || (majorVer > cMajor))) {
+                        return v
+                    }else if(k.endsWith("-") && ((majorVer == cMajor && minorVer <= cMinor) || (majorVer < cMajor))) {
+                        return v
                     }
                 }
+                return null
+            }else {
+                return v as String
             }
-            (data["definitions_fields"] as? Map<*, *>)?.forEach { (k, v) ->
-                val content = findVersionSpecific(v)
-                if(content != null) {
-                    val fullDescriptor = content.split("@")[0]
-                    val className = mappingData.getClassName(fullDescriptor.split(":")[0])
-                    val fieldDescriptor = remapType(Type.getType(fullDescriptor.split(":")[2]), mappingData).descriptor
-                    val fieldName = mappingData.getFieldName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1], fullDescriptor.split(":")[2])
-                    val callDetails = content.split("@").getOrNull(1)
-                    if(callDetails != null) {
-                        val isStatic = !callDetails.contains("M")
-                        if(isStatic) {
-                            mapExtensions.appendText("@Suppress(\"NOTHING_TO_INLINE\") inline fun dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter.load$k() { methodVisitor.visitFieldInsn(178, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n".replace("\$", "\\$"))
-                            mapExtensions.appendText("inline fun dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter.store$k(value: () -> Unit) { value(); methodVisitor.visitFieldInsn(179, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n".replace("\$", "\\$"))
-                        }else {
-                            mapExtensions.appendText("inline fun dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter.load$k(params: () -> Unit) { params(); methodVisitor.visitFieldInsn(180, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n".replace("\$", "\\$"))
-                            mapExtensions.appendText("inline fun dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter.store$k(params: () -> Unit) { params(); methodVisitor.visitFieldInsn(181, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n".replace("\$", "\\$"))
-                        }
+        }
+        (data["definitions_functions"] as? Map<*, *>)?.forEach { (k, v) ->
+            val content = findVersionSpecific(v)
+            if(content != null) {
+                val fullDescriptor = content.split("@")[0]
+                val className = mappingData.getClassName(fullDescriptor.split(":")[0])
+                val methodDescriptor = remapType(Type.getMethodType("(" + fullDescriptor.split("(")[1]), mappingData).descriptor
+                val methodName = mappingData.getMethodName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1].split("(")[0], "(" + fullDescriptor.split("(")[1])
+                val callDetails = content.split("@").getOrNull(1)
+                if(callDetails != null) {
+                    val isStatic = !callDetails.contains("M")
+                    val isInterface = callDetails.contains("I")
+                    val opcode = if(isStatic) 184 else if(isInterface) 185 else 182
+                    mapExtensions.appendText("inline fun dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter.call$k(params: () -> Unit) { params(); methodVisitor.visitMethodInsn($opcode, \"$className\", \"$methodName\", \"$methodDescriptor\", $isInterface); }\n".replace("\$", "\\$"))
+                }
+            }
+        }
+        (data["definitions_fields"] as? Map<*, *>)?.forEach { (k, v) ->
+            val content = findVersionSpecific(v)
+            if(content != null) {
+                val fullDescriptor = content.split("@")[0]
+                val className = mappingData.getClassName(fullDescriptor.split(":")[0])
+                val fieldDescriptor = remapType(Type.getType(fullDescriptor.split(":")[2]), mappingData).descriptor
+                val fieldName = mappingData.getFieldName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1], fullDescriptor.split(":")[2])
+                val callDetails = content.split("@").getOrNull(1)
+                if(callDetails != null) {
+                    val isStatic = !callDetails.contains("M")
+                    if(isStatic) {
+                        mapExtensions.appendText("@Suppress(\"NOTHING_TO_INLINE\") inline fun dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter.load$k() { methodVisitor.visitFieldInsn(178, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n".replace("\$", "\\$"))
+                        mapExtensions.appendText("inline fun dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter.store$k(value: () -> Unit) { value(); methodVisitor.visitFieldInsn(179, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n".replace("\$", "\\$"))
+                    }else {
+                        mapExtensions.appendText("inline fun dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter.load$k(params: () -> Unit) { params(); methodVisitor.visitFieldInsn(180, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n".replace("\$", "\\$"))
+                        mapExtensions.appendText("inline fun dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter.store$k(params: () -> Unit) { params(); methodVisitor.visitFieldInsn(181, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n".replace("\$", "\\$"))
                     }
                 }
             }
         }
+    }
+
+    fun generateInstructionEmitters(mappingData: MappingData?, data: Map<String, Any>, majorVer: Int, minorVer: Int) {
+        val resultClass = data["instructions_file"] as String
+        val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
+        val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
+        val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")
+        map.appendText("package $resultPackage;\n")
+        map.appendText("public class $resultName {\n")
+        fun findVersionSpecific(v: Any?): String? {
+            if(v is Map<*, *>) {
+                v.forEach { (k, v) ->
+                    k as String
+                    v as String
+                    val minecraftVersion = k.split(".")
+                    val cMajor = minecraftVersion[1].toInt()
+                    val cMinor = minecraftVersion[2].filter { it.isDigit() }.toIntOrNull() ?: 0
+                    if(cMajor == majorVer && cMinor == minorVer) return v
+                    else if( k.endsWith("+") && ((majorVer == cMajor && minorVer >= cMinor) || (majorVer > cMajor))) {
+                        return v
+                    }else if(k.endsWith("-") && ((majorVer == cMajor && minorVer <= cMinor) || (majorVer < cMajor))) {
+                        return v
+                    }
+                }
+                return null
+            }else {
+                return v as String
+            }
+        }
+        map.appendText("    public static void registerInstructionEmitters() {\n")
+        (data["instructions"] as? Map<*, *>)?.forEach { (k, v) ->
+            val instruction = findVersionSpecific(v)
+            if(instruction != null) {
+                map.appendText("        /* $k - $instruction */\n")
+            }
+        }
+        map.appendText("    }\n")
+        map.appendText("}\n")
     }
 
     fun remapType(type: Type, mappingData: MappingData?): Type {
@@ -185,16 +228,16 @@ class MainProcessor(
             impl.appendText("package $generatorResultPackage\n")
             impl.appendText("data object $generatorResultClass {\n")
 
-            val types = codeGenerator.createNewFile(Dependencies(true, it.containingFile!!), enumResultPackage, enumResultClass, "kt")
-            types.appendText("package $enumResultPackage\n")
-            types.appendText("object $enumResultClass {\n")
+            val types = codeGenerator.createNewFile(Dependencies(true, it.containingFile!!), enumResultPackage, enumResultClass, "java")
+            types.appendText("package $enumResultPackage;\n")
+            types.appendText("public class $enumResultClass {\n")
 
             classesList.forEach {
                 val defs = (it as KSClassDeclaration).getDeclaredFunctions()
                 for(def in defs) {
                     if(def.origin != Origin.SYNTHETIC) {
                         val named = def.simpleName.asString().toUpperSnakeCase()
-                        types.appendText("    val $named = dev.epicpix.minecraftfunctioncompiler.il.InstructionType(\"$named\")\n")
+                        types.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.il.InstructionType $named = new dev.epicpix.minecraftfunctioncompiler.il.InstructionType(\"$named\");\n")
                         val params = mutableListOf<InstructionParamData>()
                         impl.appendText("fun ${def.simpleName.asString()}(")
                         for(param in def.parameters) {
