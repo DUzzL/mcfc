@@ -56,6 +56,8 @@ private enum class TokenType {
     NUMBER,
     RUN,
     CODE,
+    PLUS,
+    MINUS,
 }
 
 private open class ParsedTokens(val type: TokenType, val children: List<ParsedTokens>) {
@@ -83,18 +85,34 @@ private fun ListIterator<String>.expectToken(token: String) {
 }
 
 private fun ListIterator<String>.readExpression(): ParsedTokens {
-    val exp1 = readExpressionBase()
-    if(!hasNext()) throw IllegalStateException("Expected expression operator, got EOF")
+    val exp1 = readExpression1()
+    if(!hasNext()) return exp1
     val op = next()
     if(op != "==" && op != "!=") {
         previous()
         return exp1
     }
-    val exp2 = readExpressionBase()
+    val exp2 = readExpression1()
     if(op == "==") {
         return ParsedTokens(TokenType.CMP_EQ, listOf(exp1, exp2))
     }else {
         return ParsedTokens(TokenType.CMP_NE, listOf(exp1, exp2))
+    }
+}
+
+private fun ListIterator<String>.readExpression1(): ParsedTokens {
+    val exp1 = readExpressionBase()
+    if(!hasNext()) return exp1
+    val op = next()
+    if(op != "+" && op != "-") {
+        previous()
+        return exp1
+    }
+    val exp2 = readExpressionBase()
+    if(op == "+") {
+        return ParsedTokens(TokenType.PLUS, listOf(exp1, exp2))
+    }else {
+        return ParsedTokens(TokenType.MINUS, listOf(exp1, exp2))
     }
 }
 
@@ -186,6 +204,8 @@ private enum class LoweredTokenType {
     CREATE_LOCAL,
     TYPE,
     NULL,
+    PLUS,
+    MINUS,
     NUMBER,
     RUN,
     CODE,
@@ -228,6 +248,10 @@ private fun lowerExpression(parsed: ParsedTokens): LoweredTokens {
         return LoweredTokensNumber(parsed.number)
     }else if(parsed.type == TokenType.NULL) {
         return LoweredTokens(LoweredTokenType.NULL, listOf())
+    }else if(parsed.type == TokenType.PLUS) {
+        return LoweredTokens(LoweredTokenType.PLUS, listOf(lowerExpression(parsed.children[0]), lowerExpression(parsed.children[1])))
+    }else if(parsed.type == TokenType.MINUS) {
+        return LoweredTokens(LoweredTokenType.MINUS, listOf(lowerExpression(parsed.children[0]), lowerExpression(parsed.children[1])))
     }
     throw IllegalStateException("Unexpected expression token: $parsed")
 }
@@ -308,6 +332,20 @@ private fun writeExpression(mappingData: MappingData?, expression: LoweredTokens
             } else {
                 output.appendText("context.getCodeWriter().getMethodVisitor().visitLdcInsn($value);\n")
             }
+        }
+    }else if(expression.type == LoweredTokenType.PLUS) {
+        writeExpression(mappingData, expression.children[0], output, false)
+        writeExpression(mappingData, expression.children[1], output, false)
+        output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.IADD);\n")
+        if(dropResult) {
+            output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.POP);\n")
+        }
+    }else if(expression.type == LoweredTokenType.MINUS) {
+        writeExpression(mappingData, expression.children[0], output, false)
+        writeExpression(mappingData, expression.children[1], output, false)
+        output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.ISUB);\n")
+        if(dropResult) {
+            output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.POP);\n")
         }
     }else {
         throw IllegalStateException("Unexpected expression token: $expression")

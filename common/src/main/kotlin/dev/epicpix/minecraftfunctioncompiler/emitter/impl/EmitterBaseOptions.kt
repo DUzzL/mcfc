@@ -22,11 +22,4 @@ fun registerBaseInstructionEmitters() {
         load("scope")
         codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFEQ, newScopes[scope]!!)
     }
-
-    registerEmitterInstruction(InstructionTypes.ADD_RESULT_STORAGE) {
-        load("storage")
-        load("value")
-        codeWriter.methodVisitor.visitInsn(Opcodes.IADD)
-        save("storage")
-    }
 }
