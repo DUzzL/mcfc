@@ -1,0 +1,47 @@
+#emitter_noobf_file("dev.epicpix.minecraftfunctioncompiler.emitter.impl.EmitterBaseOptions")
+#emitter_obf_file("dev.epicpix.minecraftfunctioncompiler.emitter.Emitter2")
+#enum_file("dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2")
+#generator_file("dev.epicpix.minecraftfunctioncompiler.il.Instructions2")
+
+@IF_NOT_NULL(object [ctx:local]) {
+  if([ctx:local] != null) {
+    run();
+  }
+}
+
+@SCOPE(scope [ctx:scope]) {
+  scope([ctx:scope]) {
+    run();
+  }
+}
+
+@EXIT_SCOPE(scope [ctx:scope]) {
+  exit_scope([ctx:scope]);
+}
+
+@LIMITER(scope [ctx:scope], int [ctx:current], int [instr:limit]) {
+  scope([ctx:scope]) {
+    let [ctx:current] = [instr:limit];
+    run();
+  }
+}
+
+@CHECK_LIMIT(scope [ctx:scope], int [ctx:current]) {
+  [ctx:current] = [ctx:current] - 1;
+  if([ctx:current] == 0) {
+    exit_scope([ctx:scope]);
+  }
+}
+
+@CREATE_RESULT_STORAGE(int [ctx:storage]) {
+  let [ctx:storage] = 0;
+  run();
+}
+
+@ADD_RESULT_STORAGE(int [ctx:storage], int [ctx:value]) {
+  [ctx:storage] = [ctx:storage] + [ctx:value];
+}
+
+@SET_RESULT_STORAGE(int [ctx:storage], int [ctx:value]) {
+  [ctx:storage] = [ctx:value];
+}

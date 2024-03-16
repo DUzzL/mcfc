@@ -16,7 +16,6 @@ import org.objectweb.asm.Type
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.nio.file.Paths
-import java.util.*
 
 fun OutputStream.appendText(str: String) {
     this.write(str.toByteArray())
@@ -42,9 +41,12 @@ fun MappingData?.getFieldName(owner: String, name: String, desc: String): String
 }
 
 fun loadToml(file: String): Map<String, Any> {
-    val str = MainProcessor::class.java.getResourceAsStream("/data/$file.toml")?.readAllBytes()?.decodeToString()
-        ?: throw NullPointerException("Failed to read file $file.toml")
+    val str = loadDataFile("$file.toml") ?: throw NullPointerException("Failed to read file $file.toml")
     return tomlMapper {  }.decode(str)
+}
+
+fun loadDataFile(file: String): String? {
+    return MainProcessor::class.java.getResourceAsStream("/data/$file")?.readAllBytes()?.decodeToString()
 }
 
 class MainProcessor(
@@ -72,15 +74,13 @@ class MainProcessor(
 
         val minecraftVersion = options["minecraft_version"]?.split(".")
         val definitions = options["definitions"]?.let { loadToml(it) }
-        val instructionData = generateInstructionData(resolver)
+        generateInstructionData(resolver)
         if(definitions != null) {
             if(definitions["definition_file"] != null) {
                 generateFunctionMapping(mappingData, definitions, minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0)
             }
-            if(definitions["instructions_file"] != null) {
-                generateInstructionEmitters(mappingData, instructionData, definitions, minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0)
-            }
         }
+        generateInstructionData(mappingData, options["definitions"] == "common")
         generateConstantsData(resolver)
 
         return listOf()
@@ -165,40 +165,21 @@ class MainProcessor(
         }
     }
 
-    fun generateInstructionEmitters(mappingData: MappingData?, instructionMapping: Map<String, String>, data: Map<String, Any>, majorVer: Int, minorVer: Int) {
-        val resultClass = data["instructions_file"] as String
+    fun generateInstructionData(mappingData: MappingData?, common: Boolean) {
+        val file = parseCode(loadDataFile("data.instructions")!!)
+
+        val resultClass = if(common) file.fileInfo["emitter_noobf_file"]!! else file.fileInfo["emitter_obf_file"]!!
         val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
         val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
         val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")
         map.appendText("package $resultPackage;\n")
         map.appendText("public class $resultName {\n")
-        fun findVersionSpecific(v: Any?): String? {
-            if(v is Map<*, *>) {
-                v.forEach { (k, v) ->
-                    k as String
-                    v as String
-                    val minecraftVersion = k.split(".")
-                    val cMajor = minecraftVersion[1].toInt()
-                    val cMinor = minecraftVersion[2].filter { it.isDigit() }.toIntOrNull() ?: 0
-                    if(cMajor == majorVer && cMinor == minorVer) return v
-                    else if( k.endsWith("+") && ((majorVer == cMajor && minorVer >= cMinor) || (majorVer > cMajor))) {
-                        return v
-                    }else if(k.endsWith("-") && ((majorVer == cMajor && minorVer <= cMinor) || (majorVer < cMajor))) {
-                        return v
-                    }
-                }
-                return null
-            }else {
-                return v as String
-            }
-        }
         map.appendText("    public static void registerInstructionEmitters() {\n")
-        (data["instructions"] as? Map<*, *>)?.forEach { (k, v) ->
-            val instruction = findVersionSpecific(v)
-            if(instruction != null) {
-                map.appendText("        dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructionsKt.registerEmitterInstruction(${instructionMapping[k]}, (context) -> {\n")
+        file.definitions.forEach {
+            if(it.usesObf != (mappingData == null)) {
+                map.appendText("        dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructionsKt.registerEmitterInstruction(${file.fileInfo["enum_file"]}.${it.name}, (context) -> {\n")
                 val output = ByteArrayOutputStream()
-                generateCode(mappingData, instruction, output)
+                generateCode(mappingData, it, output)
                 map.appendText(output.toByteArray().decodeToString().trimEnd().prependIndent("            "))
                 map.appendText("\n")
                 map.appendText("        });\n")
@@ -206,6 +187,65 @@ class MainProcessor(
         }
         map.appendText("    }\n")
         map.appendText("}\n")
+
+        if(common) {
+            val generatorClass = file.fileInfo["generator_file"]!!
+            val generatorResultPackage = generatorClass.substring(0, generatorClass.lastIndexOf('.'))
+            val generatorResultClass = generatorClass.substring(generatorClass.lastIndexOf('.')+1)
+            val enumClass = file.fileInfo["enum_file"]!!
+            val enumResultPackage = enumClass.substring(0, enumClass.lastIndexOf('.'))
+            val enumResultClass = enumClass.substring(enumClass.lastIndexOf('.')+1)
+
+            val impl = codeGenerator.createNewFile(Dependencies.ALL_FILES, generatorResultPackage, generatorResultClass + "Impl", "kt")
+            impl.appendText("package $generatorResultPackage\n")
+            impl.appendText("data object $generatorResultClass {\n")
+
+            val types = codeGenerator.createNewFile(Dependencies.ALL_FILES, enumResultPackage, enumResultClass, "java")
+            types.appendText("package $enumResultPackage;\n")
+            types.appendText("public class $enumResultClass {\n")
+
+            file.definitions.forEach {
+                val named = it.name.uppercase()
+                types.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.il.InstructionType $named = new dev.epicpix.minecraftfunctioncompiler.il.InstructionType(\"$named\");\n")
+
+                impl.appendText("fun ${named.snakeToLowerCamelCase()}(")
+                for(param in it.params) {
+                    val typeName = when(param.scope) {
+                        ParsedTokenValueAccessorScope.CONTEXT -> {
+                            if(param.type == ParsedTokenExpressionType.SCOPE) {
+                                "dev.epicpix.minecraftfunctioncompiler.il.ScopeData"
+                            }else {
+                                "dev.epicpix.minecraftfunctioncompiler.il.LocationData"
+                            }
+                        }
+                        ParsedTokenValueAccessorScope.INSTRUCTION -> {
+                            if(param.type == ParsedTokenExpressionType.INTEGER) {
+                                "Int"
+                            }else {
+                                TODO()
+                            }
+                        }
+                    }
+
+                    impl.appendText("${param.name.snakeToLowerCamelCase()}: $typeName, ")
+                }
+                val instructionType = "dev.epicpix.minecraftfunctioncompiler.il.Instruction"
+                impl.appendText("): $instructionType = $instructionType($enumClass.$named, mapOf(")
+                it.params.forEach {
+                    impl.appendText("\"${it.name}\" to ${it.name.snakeToLowerCamelCase()}")
+                    if(it.scope == ParsedTokenValueAccessorScope.CONTEXT) {
+                        impl.appendText(".uses(source = ${it.gets}, destination = ${it.sets})")
+                    }
+                    impl.appendText(", ")
+                }
+                impl.appendText("))\n")
+            }
+
+            impl.appendText("}\n")
+            impl.close()
+            types.appendText("}\n")
+            types.close()
+        }
     }
 
     fun remapType(type: Type, mappingData: MappingData?): Type {
@@ -297,7 +337,10 @@ class MainProcessor(
     }
 }
 
-fun String.toUpperSnakeCase() = split(Regex("(?=[A-Z])")).joinToString("_").uppercase(Locale.getDefault())
+fun String.toUpperSnakeCase() = split(Regex("(?=[A-Z])")).joinToString("_").uppercase()
+fun String.toLowerSnakeCase() = split(Regex("(?=[A-Z])")).joinToString("_").lowercase()
+fun String.camelToSnakeCase() = replace(Regex("(?<=.)[A-Z]"), "_$0").lowercase()
+fun String.snakeToLowerCamelCase() = Regex("_[a-zA-Z]").replace(lowercase()) { it.value.replace("_","").uppercase() }
 
 data class InstructionParamData(val name: String, val isNullable: Boolean, val isList: Boolean, val isMap: Boolean, val isSource: Boolean, val isDestination: Boolean)
 

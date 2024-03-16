@@ -1,41 +1,121 @@
 package dev.epicpix.annotations
 
+import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 
-private fun splitTokens(code: String): List<String> {
+private interface LexToken
+
+private data class LexTokenFileHeader(val name: String) : LexToken
+private data class LexTokenInstructionDefinition(val name: String) : LexToken
+private data class LexTokenNumber(val number: String) : LexToken
+private data class LexTokenWord(val word: String) : LexToken
+private data class LexTokenString(val content: String) : LexToken
+private data class LexTokenSimple(val type: LexTokenSimpleType) : LexToken
+
+private enum class LexTokenSimpleType {
+    OPEN_BRACE,
+    CLOSE_BRACE,
+    OPEN_BRACKET,
+    CLOSE_BRACKET,
+    OPEN_PAREN,
+    CLOSE_PAREN,
+    DOT,
+    COMMA,
+    PLUS,
+    MINUS,
+    SLASH,
+    STAR,
+    SEMICOLON,
+    COLON,
+    EQ,
+    NE,
+    ASSIGN,
+    KW_IF,
+    KW_NULL,
+    KW_LET,
+}
+
+private fun lexTokens(code: String): List<LexToken> {
     var index = 0
-    fun readToken(): String? {
+    fun readToken(): LexToken? {
         if(index >= code.length) return null
         while(index < code.length && " \t\n".contains(code[index])) {
             index++
         }
         if(index >= code.length) return null
         var res = code[index++].toString()
-        if("{}[]().,+-/*;".contains(res)) {
-            return res
+        when(res.first()) {
+            '{' -> return LexTokenSimple(LexTokenSimpleType.OPEN_BRACE)
+            '}' -> return LexTokenSimple(LexTokenSimpleType.CLOSE_BRACE)
+            '[' -> return LexTokenSimple(LexTokenSimpleType.OPEN_BRACKET)
+            ']' -> return LexTokenSimple(LexTokenSimpleType.CLOSE_BRACKET)
+            '(' -> return LexTokenSimple(LexTokenSimpleType.OPEN_PAREN)
+            ')' -> return LexTokenSimple(LexTokenSimpleType.CLOSE_PAREN)
+            '.' -> return LexTokenSimple(LexTokenSimpleType.DOT)
+            ',' -> return LexTokenSimple(LexTokenSimpleType.COMMA)
+            '+' -> return LexTokenSimple(LexTokenSimpleType.PLUS)
+            '-' -> return LexTokenSimple(LexTokenSimpleType.MINUS)
+            '/' -> return LexTokenSimple(LexTokenSimpleType.SLASH)
+            '*' -> return LexTokenSimple(LexTokenSimpleType.STAR)
+            ';' -> return LexTokenSimple(LexTokenSimpleType.SEMICOLON)
+            ':' -> return LexTokenSimple(LexTokenSimpleType.COLON)
         }
         if(res == "=" || res == "!") {
             if(index < code.length && code[index] == '=') {
-                return res + code[index++]
-            }else {
-                return res
+                index++
+                if(res == "=") {
+                    return LexTokenSimple(LexTokenSimpleType.EQ)
+                }else {
+                    return LexTokenSimple(LexTokenSimpleType.NE)
+                }
             }
         }
-        if(res.first().isLetter() || res.first() == '@' || res.first() == '#' || res.first() == ':' || res.first() == '$') {
-            while(index < code.length && (code[index].isLetterOrDigit() || code[index] == '_' || (res.first() == ':' && (code[index] == '/' || code[index] == '$')) || (res.first() == '$' && code[index] == ':'))) {
+        if(res == "=") {
+            return LexTokenSimple(LexTokenSimpleType.ASSIGN)
+        }
+        if(res.first() == '@') {
+            res = ""
+            while(index < code.length && (code[index].isLetter() || code[index] == '_')) {
                 res += code[index++]
             }
-            return res
+            return LexTokenInstructionDefinition(res)
+        }
+        if(res.first() == '#') {
+            res = ""
+            while(index < code.length && (code[index].isLetter() || code[index] == '_')) {
+                res += code[index++]
+            }
+            return LexTokenFileHeader(res)
+        }
+        if(res.first().isLetter()) {
+            while(index < code.length && (code[index].isLetterOrDigit() || code[index] == '_')) {
+                res += code[index++]
+            }
+            if(res == "if") {
+                return LexTokenSimple(LexTokenSimpleType.KW_IF)
+            }else if(res == "null") {
+                return LexTokenSimple(LexTokenSimpleType.KW_NULL)
+            }else if(res == "let") {
+                return LexTokenSimple(LexTokenSimpleType.KW_LET)
+            }
+            return LexTokenWord(res)
         }
         if(res.first().isDigit()) {
             while(index < code.length && code[index].isDigit()) {
                 res += code[index++]
             }
-            return res
+            return LexTokenNumber(res)
         }
-        throw NotImplementedError("Failed to read token\ncode: $code\nvalue: $res")
+        if(res.first() == '"') {
+            while(index < code.length && code[index] != '"') {
+                res += code[index++]
+            }
+            index++
+            return LexTokenString(res.substring(1))
+        }
+        throw NotImplementedError("Failed to lex token\ncode: $code\nvalue: $res")
     }
-    val res = mutableListOf<String>()
+    val res = mutableListOf<LexToken>()
     while(true) {
         val token = readToken() ?: break
         res.add(token)
@@ -43,406 +123,408 @@ private fun splitTokens(code: String): List<String> {
     return res
 }
 
-private enum class TokenType {
-    SCOPE,
-    EXIT_SCOPE,
-    CREATE_LOCAL,
-    IF,
-    CMP_EQ,
-    CMP_NE,
-    ASSIGN,
-    NULL,
-    WORD,
-    NUMBER,
-    RUN,
-    CODE,
-    PLUS,
-    MINUS,
-}
-
-private open class ParsedTokens(val type: TokenType, val children: List<ParsedTokens>) {
-    override fun toString(): String {
-        return "ParsedTokens(type=$type, children=$children)"
-    }
-}
-private class ParsedTokensWord(val word: String) : ParsedTokens(TokenType.WORD, listOf()) {
-    override fun toString(): String {
-        return "ParsedTokensWord(word='$word')"
-    }
-}
-private class ParsedTokensNumber(val number: String) : ParsedTokens(TokenType.NUMBER, listOf()) {
-    override fun toString(): String {
-        return "ParsedTokensNumber(number='$number')"
+interface ParsedToken
+interface ParsedTokenStatement : ParsedToken
+interface ParsedTokenExpression : ParsedToken {
+    fun type(): ParsedTokenExpressionType {
+        return when(this) {
+            is ParsedTokenExpressionBinary -> type
+            is ParsedTokenExpressionTyped -> type
+            is ParsedTokenValueAccessor -> type
+            is ParsedTokenExpressionNumber -> ParsedTokenExpressionType.INTEGER
+            else -> throw IllegalArgumentException("Unknown expression: $this")
+        }
     }
 }
 
-private fun ListIterator<String>.expectToken(token: String) {
-    if(!hasNext()) throw IllegalStateException("Expected token '$token', got EOF")
-    val got = next()
-    if(got != token) {
-        throw IllegalStateException("Expected token '$token', got '$got'")
+data class ParsedFile(val fileInfo: Map<String, String>, val definitions: List<ParsedTokenInstructionDefinition>)
+
+data class ParsedTokenValueAccessor(val type: ParsedTokenExpressionType, val scope: ParsedTokenValueAccessorScope, val name: String, var gets: Boolean = false, var sets: Boolean = false) : ParsedTokenExpression
+data class ParsedTokenInstructionDefinition(val name: String, val params: List<ParsedTokenValueAccessor>, val code: List<ParsedTokenStatement>, var usesObf: Boolean = false) : ParsedToken
+
+data class ParsedTokenStatementIf(val expression: ParsedTokenExpression, val code: List<ParsedTokenStatement>) : ParsedTokenStatement
+data class ParsedTokenStatementFunctionCall(val name: String, val arguments: List<ParsedTokenExpression>, val code: List<ParsedTokenStatement>?) : ParsedTokenStatement
+data class ParsedTokenStatementDefineVariable(val accessor: ParsedTokenValueAccessor, val expression: ParsedTokenExpression) : ParsedTokenStatement
+data class ParsedTokenStatementAssignVariable(val accessor: ParsedTokenValueAccessor, val expression: ParsedTokenExpression) : ParsedTokenStatement
+
+data class ParsedTokenExpressionNumber(val number: Long) : ParsedTokenExpression
+data class ParsedTokenExpressionTyped(val type: ParsedTokenExpressionType) : ParsedTokenExpression
+data class ParsedTokenExpressionBinary(val a: ParsedTokenExpression, val b: ParsedTokenExpression, val op: ParsedTokenExpressionOperator, val type: ParsedTokenExpressionType) : ParsedTokenExpression
+
+enum class ParsedTokenValueAccessorScope {
+    CONTEXT, INSTRUCTION,
+}
+
+enum class ParsedTokenExpressionType {
+    NULL, BOOLEAN, INTEGER, SCOPE, OBJECT,
+}
+
+enum class ParsedTokenExpressionOperator {
+    ADD, SUB, EQ, NE
+}
+
+private fun parseExpressionTypeWord(iter: ListIterator<LexToken>): ParsedTokenExpressionType {
+    val word = iter.expectToken<LexTokenWord>()
+    return when(word.word) {
+        "boolean" -> ParsedTokenExpressionType.BOOLEAN
+        "int" -> ParsedTokenExpressionType.INTEGER
+        "object" -> ParsedTokenExpressionType.OBJECT
+        "scope" -> ParsedTokenExpressionType.SCOPE
+        else -> throw IllegalArgumentException("Unknown expression type: ${word.word}")
     }
 }
 
-private fun ListIterator<String>.readExpression(): ParsedTokens {
-    val exp1 = readExpression1()
-    if(!hasNext()) return exp1
-    val op = next()
-    if(op != "==" && op != "!=") {
-        previous()
-        return exp1
-    }
-    val exp2 = readExpression1()
-    if(op == "==") {
-        return ParsedTokens(TokenType.CMP_EQ, listOf(exp1, exp2))
-    }else {
-        return ParsedTokens(TokenType.CMP_NE, listOf(exp1, exp2))
+private fun parseExpressionAccessorScopeWord(iter: ListIterator<LexToken>): ParsedTokenValueAccessorScope {
+    val word = iter.expectToken<LexTokenWord>()
+    return when(word.word) {
+        "ctx" -> ParsedTokenValueAccessorScope.CONTEXT
+        "instr" -> ParsedTokenValueAccessorScope.INSTRUCTION
+        else -> throw IllegalArgumentException("Unknown value accessor type: ${word.word}")
     }
 }
 
-private fun ListIterator<String>.readExpression1(): ParsedTokens {
-    val exp1 = readExpressionBase()
-    if(!hasNext()) return exp1
-    val op = next()
-    if(op != "+" && op != "-") {
-        previous()
-        return exp1
+private fun parseFunctionDefinitionParams(iter: ListIterator<LexToken>): List<ParsedTokenValueAccessor> {
+    val res = mutableListOf<ParsedTokenValueAccessor>()
+    while(true) {
+        if(iter.tryNextToken<LexTokenWord>() == null) {
+            break
+        }
+        iter.previous()
+        val type = parseExpressionTypeWord(iter)
+        iter.expectTokenType(LexTokenSimpleType.OPEN_BRACKET)
+        val scope = parseExpressionAccessorScopeWord(iter)
+        iter.expectTokenType(LexTokenSimpleType.COLON)
+        val name = iter.expectToken<LexTokenWord>()
+        iter.expectTokenType(LexTokenSimpleType.CLOSE_BRACKET)
+        res.add(ParsedTokenValueAccessor(type, scope, name.word))
+        if(!iter.tryNextTokenType(LexTokenSimpleType.COMMA)) {
+            break
+        }
     }
-    val exp2 = readExpressionBase()
-    if(op == "+") {
-        return ParsedTokens(TokenType.PLUS, listOf(exp1, exp2))
-    }else {
-        return ParsedTokens(TokenType.MINUS, listOf(exp1, exp2))
-    }
+    return res
 }
 
-private fun ListIterator<String>.readExpressionBase(): ParsedTokens {
-    if(!hasNext()) throw IllegalStateException("Expected expression base, got EOF")
-    val value = next()
-    if(value.matches(Regex("[0-9]+"))) {
-        return ParsedTokensNumber(value)
-    }else if(value == "null") {
-        return ParsedTokens(TokenType.NULL, listOf())
-    }else if(value == "run") {
-        return ParsedTokens(TokenType.RUN, listOf())
-    }else {
-        return ParsedTokensWord(value)
+private fun parseFunctionCallParams(iter: ListIterator<LexToken>, valueDefinitions: List<ParsedTokenValueAccessor>): List<ParsedTokenExpression> {
+    val res = mutableListOf<ParsedTokenExpression>()
+    while(true) {
+        if(iter.tryNextTokenType(LexTokenSimpleType.CLOSE_PAREN)) {
+            iter.previous()
+            break
+        }
+        res.add(parseExpression(iter, valueDefinitions))
+        if(!iter.tryNextTokenType(LexTokenSimpleType.COMMA)) {
+            break
+        }
     }
+    return res
 }
 
-private fun parseCode(iter: ListIterator<String>): ParsedTokens {
-    val res = mutableListOf<ParsedTokens>()
-    iter.expectToken("{")
+private fun parseExpression(iter: ListIterator<LexToken>, valueDefinitions: List<ParsedTokenValueAccessor>): ParsedTokenExpression {
+    val exp1 = parseExpression1(iter, valueDefinitions)
+    if(!iter.hasNext()) return exp1
+    if(iter.tryNextTokenType(LexTokenSimpleType.EQ)) {
+        return ParsedTokenExpressionBinary(exp1, parseExpression(iter, valueDefinitions), ParsedTokenExpressionOperator.EQ, ParsedTokenExpressionType.BOOLEAN)
+    }
+    if(iter.tryNextTokenType(LexTokenSimpleType.NE)) {
+        return ParsedTokenExpressionBinary(exp1, parseExpression(iter, valueDefinitions), ParsedTokenExpressionOperator.NE, ParsedTokenExpressionType.BOOLEAN)
+    }
+    return exp1
+}
+
+private fun parseExpression1(iter: ListIterator<LexToken>, valueDefinitions: List<ParsedTokenValueAccessor>): ParsedTokenExpression {
+    val exp1 = parseExpressionBase(iter, valueDefinitions)
+    if(!iter.hasNext()) return exp1
+    if(iter.tryNextTokenType(LexTokenSimpleType.PLUS)) {
+        return ParsedTokenExpressionBinary(exp1, parseExpression1(iter, valueDefinitions), ParsedTokenExpressionOperator.ADD, ParsedTokenExpressionType.INTEGER)
+    }
+    if(iter.tryNextTokenType(LexTokenSimpleType.MINUS)) {
+        return ParsedTokenExpressionBinary(exp1, parseExpression1(iter, valueDefinitions), ParsedTokenExpressionOperator.SUB, ParsedTokenExpressionType.INTEGER)
+    }
+    return exp1
+}
+
+private fun parseExpressionBase(iter: ListIterator<LexToken>, valueDefinitions: List<ParsedTokenValueAccessor>): ParsedTokenExpression {
+    if(!iter.hasNext()) throw IllegalStateException("Expected expression base, got EOF")
+    iter.tryNextToken<LexTokenNumber> {
+        return ParsedTokenExpressionNumber(it.number.toLong())
+    }
+    iter.tryNextTokenType(LexTokenSimpleType.KW_NULL) {
+        return ParsedTokenExpressionTyped(ParsedTokenExpressionType.NULL)
+    }
+    if(iter.tryNextTokenType(LexTokenSimpleType.OPEN_BRACKET)) {
+        iter.previous()
+        return parseValueAccessor(iter, valueDefinitions)
+    }
+    throw IllegalStateException("Invalid expression base: ${iter.next()}")
+}
+
+private fun parseValueAccessor(iter: ListIterator<LexToken>, valueDefinitions: List<ParsedTokenValueAccessor>): ParsedTokenValueAccessor {
+    iter.expectTokenType(LexTokenSimpleType.OPEN_BRACKET)
+    val scope = parseExpressionAccessorScopeWord(iter)
+    iter.expectTokenType(LexTokenSimpleType.COLON)
+    val name = iter.expectToken<LexTokenWord>()
+    iter.expectTokenType(LexTokenSimpleType.CLOSE_BRACKET)
+    for(definition in valueDefinitions) {
+        if(definition.scope == scope && definition.name == name.word) {
+            return definition
+        }
+    }
+    throw IllegalArgumentException("Undefined value accessor: [$scope:${name.word}]")
+}
+
+private fun parseCode(iter: ListIterator<LexToken>, valueDefinitions: List<ParsedTokenValueAccessor>): List<ParsedTokenStatement> {
+    val res = mutableListOf<ParsedTokenStatement>()
+    iter.expectTokenType(LexTokenSimpleType.OPEN_BRACE)
+    while(!iter.tryNextTokenType(LexTokenSimpleType.CLOSE_BRACE)) {
+        if(iter.tryNextTokenType(LexTokenSimpleType.KW_IF)) {
+            iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
+            val expression = parseExpression(iter, valueDefinitions)
+            iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
+            val code = parseCode(iter, valueDefinitions)
+            res.add(ParsedTokenStatementIf(expression, code))
+        }else if(iter.tryNextTokenType(LexTokenSimpleType.KW_LET)) {
+            val accessor = parseValueAccessor(iter, valueDefinitions)
+            iter.expectTokenType(LexTokenSimpleType.ASSIGN)
+            val expression = parseExpression(iter, valueDefinitions)
+            iter.expectTokenType(LexTokenSimpleType.SEMICOLON)
+            res.add(ParsedTokenStatementDefineVariable(accessor, expression))
+        }else if(iter.tryNextTokenType(LexTokenSimpleType.OPEN_BRACKET)) {
+            iter.previous()
+            val accessor = parseValueAccessor(iter, valueDefinitions)
+            iter.expectTokenType(LexTokenSimpleType.ASSIGN)
+            val expression = parseExpression(iter, valueDefinitions)
+            iter.expectTokenType(LexTokenSimpleType.SEMICOLON)
+            res.add(ParsedTokenStatementAssignVariable(accessor, expression))
+        }else {
+            val name = iter.expectToken<LexTokenWord>()
+            iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
+            val params = parseFunctionCallParams(iter, valueDefinitions)
+            iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
+            val code = if(!iter.tryNextTokenType(LexTokenSimpleType.SEMICOLON)) parseCode(iter, valueDefinitions) else null
+            res.add(ParsedTokenStatementFunctionCall(name.word, params, code))
+        }
+    }
+    return res
+}
+
+private fun parseTokens(iter: ListIterator<LexToken>): ParsedFile {
+    val fileInfo = mutableMapOf<String, String>()
+    val instrDefs = mutableListOf<ParsedTokenInstructionDefinition>()
     while(iter.hasNext()) {
-        val token = iter.next()
-        if(token == "if") {
-            iter.expectToken("(")
-            val expression = iter.readExpression()
-            iter.expectToken(")")
-            val code = parseCode(iter)
-            res.add(ParsedTokens(TokenType.IF, listOf(expression, code)))
-        }else if(token == "scope") {
-            iter.expectToken("(")
-            val scope = iter.next()
-            if(!scope.startsWith("#")) {
-                throw IllegalStateException("Expected scope token, got '$scope'")
-            }
-            iter.expectToken(")")
-            val code = parseCode(iter)
-            res.add(ParsedTokens(TokenType.SCOPE, listOf(ParsedTokensWord(scope), code)))
-        }else if(token == "}") {
-            return ParsedTokens(TokenType.CODE, res)
-        }else if(token == "run") {
-            iter.expectToken(";")
-            res.add(ParsedTokens(TokenType.RUN, listOf()))
-        }else if(token.startsWith("@")) {
-            iter.expectToken("=")
-            val expression = iter.readExpression()
-            iter.expectToken(";")
-            res.add(ParsedTokens(TokenType.ASSIGN, listOf(ParsedTokensWord(token), expression)))
-        }else if(token == "exit_scope") {
-            iter.expectToken("(")
-            val scope = iter.next()
-            if(!scope.startsWith("#")) {
-                throw IllegalStateException("Expected scope token, got '$scope'")
-            }
-            iter.expectToken(")")
-            iter.expectToken(";")
-            res.add(ParsedTokens(TokenType.EXIT_SCOPE, listOf(ParsedTokensWord(scope))))
-        }else if(token == "create_local") {
-            iter.expectToken("(")
-            val type = iter.next()
-            if(!type.startsWith(":")) {
-                throw IllegalStateException("Expected type token, got '$type'")
-            }
-            val local = iter.next()
-            if(!local.startsWith("@")) {
-                throw IllegalStateException("Expected local token, got '$local'")
-            }
-            iter.expectToken("=")
-            val value = iter.readExpression()
-            iter.expectToken(")")
-            val code = parseCode(iter)
-            res.add(ParsedTokens(TokenType.CREATE_LOCAL, listOf(ParsedTokensWord(type), ParsedTokensWord(local), value, code)))
-        }else {
-            throw IllegalStateException("Expected code token, got '$token'")
+        val next = iter.next()
+        if(next is LexTokenFileHeader) {
+            iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
+            val content = iter.expectToken<LexTokenString>()
+            iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
+            fileInfo[next.name] = content.content
+        }else if(next is LexTokenInstructionDefinition) {
+            iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
+            val params = parseFunctionDefinitionParams(iter)
+            iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
+            val code = parseCode(iter, params)
+            instrDefs.add(ParsedTokenInstructionDefinition(next.name, params, code))
         }
     }
-    throw IllegalStateException("Expected '}', got EOF")
+    return ParsedFile(fileInfo, instrDefs)
 }
 
-private enum class LoweredTokenType {
-    IF_NULL,
-    IF_NOT_NULL,
-    IF_EQ,
-    IF_NE,
-    LOCAL,
-    INSTRUCTION_INPUT,
-    SCOPE,
-    SCOPE_BLOCK,
-    EXIT_SCOPE,
-    ASSIGN,
-    CREATE_LOCAL,
-    TYPE,
-    NULL,
-    PLUS,
-    MINUS,
-    NUMBER,
-    RUN,
-    CODE,
-}
-
-private open class LoweredTokens(val type: LoweredTokenType, val children: List<LoweredTokens>) {
-    override fun toString(): String {
-        return "LoweredTokens(type=$type, children=$children)"
-    }
-}
-private class LoweredTokensLocal(val local: String) : LoweredTokens(LoweredTokenType.LOCAL, listOf()) {
-    override fun toString(): String {
-        return "LoweredTokensLocal(local='$local')"
-    }
-}
-private class LoweredTokensInstructionInput(val input: String, val typed: String) : LoweredTokens(LoweredTokenType.INSTRUCTION_INPUT, listOf()) {
-    override fun toString(): String {
-        return "LoweredTokensInstructionInput(input='$input', typed='$typed')"
-    }
-}
-private class LoweredTokensScope(val scope: String) : LoweredTokens(LoweredTokenType.SCOPE, listOf()) {
-    override fun toString(): String {
-        return "LoweredTokensScope(scope='$scope')"
-    }
-}
-private class LoweredTokensType(val typeName: String) : LoweredTokens(LoweredTokenType.TYPE, listOf()) {
-    override fun toString(): String {
-        return "LoweredTokensType(typeName='$typeName')"
-    }
-}
-private class LoweredTokensNumber(val number: String) : LoweredTokens(LoweredTokenType.NUMBER, listOf()) {
-    override fun toString(): String {
-        return "LoweredTokensNumber(number='$number')"
+private fun ListIterator<LexToken>.expectTokenType(type: LexTokenSimpleType) {
+    if(!hasNext()) throw IllegalStateException("Expected token type '$type', got EOF")
+    val got = next()
+    if(!(got is LexTokenSimple && got.type == type)) {
+        throw IllegalStateException("Expected token type '$type', got '$got'")
     }
 }
 
-private fun lowerExpression(parsed: ParsedTokens): LoweredTokens {
-    if(parsed is ParsedTokensWord) {
-        if(parsed.word.startsWith("@")) {
-            return LoweredTokensLocal(parsed.word.substring(1))
-        }else if(parsed.word.startsWith("$")) {
-            val data = parsed.word.substring(1).split(":", limit = 2)
-            return LoweredTokensInstructionInput(data[0], data[1])
-        }else {
-            throw IllegalStateException("Unknown expression word: ${parsed.word}")
+private fun ListIterator<LexToken>.tryNextTokenType(type: LexTokenSimpleType): Boolean {
+    if(!hasNext()) return false
+    val got = next()
+    if(!(got is LexTokenSimple && got.type == type)) {
+        previous()
+        return false
+    }
+    return true
+}
+
+private inline fun ListIterator<LexToken>.tryNextTokenType(type: LexTokenSimpleType, code: () -> Unit) {
+    if(tryNextTokenType(type)) {
+        code()
+    }
+}
+
+private inline fun <reified T: LexToken> ListIterator<LexToken>.expectToken(): T {
+    if(!hasNext()) throw IllegalStateException("Expected token '${T::class.java}', got EOF")
+    val got = next()
+    if(got !is T) {
+        throw IllegalStateException("Expected token '${T::class.java}', got '$got'")
+    }
+    return got
+}
+
+private inline fun <reified T: LexToken> ListIterator<LexToken>.tryNextToken(): T? {
+    if(!hasNext()) return null
+    val got = next()
+    if(got !is T) {
+        previous()
+        return null
+    }
+    return got
+}
+
+private inline fun <reified T: LexToken> ListIterator<LexToken>.tryNextToken(code: (T) -> Unit) {
+    val value = tryNextToken<T>()
+    if(value != null) {
+        code(value)
+    }
+}
+
+private fun writeExpression(mappingData: MappingData?, expression: ParsedTokenExpression, output: OutputStream) {
+    if(expression is ParsedTokenValueAccessor) {
+        expression.gets = true
+        if(expression.scope == ParsedTokenValueAccessorScope.CONTEXT) {
+            output.appendText("context.load(\"${expression.name}\");\n")
+            return
+        }else if(expression.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
+            if(expression.type == ParsedTokenExpressionType.INTEGER) {
+                output.appendText("context.getCodeWriter().writeInt(context.getInstruction().<Integer>get(\"${expression.name}\"));\n")
+                return
+            }
         }
-    }else if(parsed is ParsedTokensNumber) {
-        return LoweredTokensNumber(parsed.number)
-    }else if(parsed.type == TokenType.NULL) {
-        return LoweredTokens(LoweredTokenType.NULL, listOf())
-    }else if(parsed.type == TokenType.PLUS) {
-        return LoweredTokens(LoweredTokenType.PLUS, listOf(lowerExpression(parsed.children[0]), lowerExpression(parsed.children[1])))
-    }else if(parsed.type == TokenType.MINUS) {
-        return LoweredTokens(LoweredTokenType.MINUS, listOf(lowerExpression(parsed.children[0]), lowerExpression(parsed.children[1])))
+    }else if(expression is ParsedTokenExpressionNumber) {
+        val value = expression.number.toInt()
+        if (value >= -1 && value <= 5) {
+            if(value == -1) {
+                output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.ICONST_M1);\n")
+            }else {
+                output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.ICONST_$value);\n")
+            }
+        } else if (value >= Byte.MIN_VALUE && value <= Byte.MAX_VALUE) {
+            output.appendText("context.getCodeWriter().getMethodVisitor().visitIntInsn(org.objectweb.asm.Opcodes.BIPUSH, $value);\n")
+        } else if (value >= Short.MIN_VALUE && value <= Short.MAX_VALUE) {
+            output.appendText("context.getCodeWriter().getMethodVisitor().visitIntInsn(org.objectweb.asm.Opcodes.SIPUSH, $value);\n")
+        } else {
+            output.appendText("context.getCodeWriter().getMethodVisitor().visitLdcInsn($value);\n")
+        }
+        return
+    }else if(expression is ParsedTokenExpressionBinary) {
+        if(expression.op == ParsedTokenExpressionOperator.ADD) {
+            if(expression.type == ParsedTokenExpressionType.INTEGER) {
+                writeExpression(mappingData, expression.a, output)
+                writeExpression(mappingData, expression.b, output)
+                output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.IADD);\n")
+                return
+            }
+        }else if(expression.op == ParsedTokenExpressionOperator.SUB) {
+            if(expression.type == ParsedTokenExpressionType.INTEGER) {
+                writeExpression(mappingData, expression.a, output)
+                writeExpression(mappingData, expression.b, output)
+                output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.ISUB);\n")
+                return
+            }
+        }
     }
-    throw IllegalStateException("Unexpected expression token: $parsed")
+    throw UnsupportedOperationException("Unsupported expression: $expression")
 }
 
-private fun lowerCode(parsed: ParsedTokens): LoweredTokens {
-    val res = mutableListOf<LoweredTokens>()
-    for(token in parsed.children) {
-        if(token.type == TokenType.IF) {
-            val expression = token.children[0]
-            val code = lowerCode(token.children[1])
-            if(expression.type == TokenType.CMP_EQ) {
-                val exp1 = lowerExpression(expression.children[0])
-                val exp2 = lowerExpression(expression.children[1])
-                val isNullCheck = (exp1.type == LoweredTokenType.NULL) xor (exp2.type == LoweredTokenType.NULL)
-                if(isNullCheck) {
-                    val nonNull = if(exp1.type == LoweredTokenType.NULL) exp2 else exp1
-                    res.add(LoweredTokens(LoweredTokenType.IF_NULL, listOf(nonNull, code)))
+private fun writeCode(mappingData: MappingData?, code: List<ParsedTokenStatement>, output: OutputStream, onScopeEnd: MutableList<() -> Unit>, uniqId: Int): Int {
+    var uid = uniqId
+    for(el in code) {
+        if(el is ParsedTokenStatementIf) {
+            if(el.expression.type() != ParsedTokenExpressionType.BOOLEAN) {
+                throw IllegalStateException("in if(<expr>), <expr> must return a boolean")
+            }
+            if(el.expression !is ParsedTokenExpressionBinary || (el.expression.op != ParsedTokenExpressionOperator.NE && el.expression.op != ParsedTokenExpressionOperator.EQ)) {
+                throw IllegalStateException("if(<expr>) only works with if(<expr> != <expr>) or if(<expr> == <expr>)")
+            }
+            val jumpLabel = "j${uid++}"
+            output.appendText("org.objectweb.asm.Label $jumpLabel = new org.objectweb.asm.Label();\n")
+            if((el.expression.a.type() == ParsedTokenExpressionType.NULL) xor (el.expression.b.type() == ParsedTokenExpressionType.NULL)) {
+                val nonNull = if(el.expression.a.type() == ParsedTokenExpressionType.NULL) el.expression.b else el.expression.a
+                writeExpression(mappingData, nonNull, output)
+                if(el.expression.op == ParsedTokenExpressionOperator.NE) {
+                    output.appendText("context.getCodeWriter().getMethodVisitor().visitJumpInsn(org.objectweb.asm.Opcodes.IFNULL, $jumpLabel);\n")
                 }else {
-                    res.add(LoweredTokens(LoweredTokenType.IF_EQ, listOf(exp1, exp2, code)))
-                }
-            }else if(expression.type == TokenType.CMP_NE) {
-                val exp1 = lowerExpression(expression.children[0])
-                val exp2 = lowerExpression(expression.children[1])
-                val isNullCheck = (exp1.type == LoweredTokenType.NULL) xor (exp2.type == LoweredTokenType.NULL)
-                if(isNullCheck) {
-                    val nonNull = if(exp1.type == LoweredTokenType.NULL) exp2 else exp1
-                    res.add(LoweredTokens(LoweredTokenType.IF_NOT_NULL, listOf(nonNull, code)))
-                }else {
-                    res.add(LoweredTokens(LoweredTokenType.IF_NE, listOf(exp1, exp2, code)))
+                    output.appendText("context.getCodeWriter().getMethodVisitor().visitJumpInsn(org.objectweb.asm.Opcodes.IFNONNULL, $jumpLabel);\n")
                 }
             }else {
-                throw IllegalStateException("Unsupported if expression: $expression")
-            }
-        }else if(token.type == TokenType.SCOPE) {
-            val scope = (token.children[0] as ParsedTokensWord).word.substring(1)
-            val code = lowerCode(token.children[1])
-            res.add(LoweredTokens(LoweredTokenType.SCOPE_BLOCK, listOf(LoweredTokensScope(scope), code)))
-        }else if(token.type == TokenType.EXIT_SCOPE) {
-            val scope = (token.children[0] as ParsedTokensWord).word.substring(1)
-            res.add(LoweredTokens(LoweredTokenType.EXIT_SCOPE, listOf(LoweredTokensScope(scope))))
-        }else if(token.type == TokenType.RUN) {
-            res.add(LoweredTokens(LoweredTokenType.RUN, listOf()))
-        }else if(token.type == TokenType.ASSIGN) {
-            val exp1 = lowerExpression(token.children[0])
-            val exp2 = lowerExpression(token.children[1])
-            res.add(LoweredTokens(LoweredTokenType.ASSIGN, listOf(exp1, exp2)))
-        }else if(token.type == TokenType.CREATE_LOCAL) {
-            val type = (token.children[0] as ParsedTokensWord).word.substring(1)
-            val local = (token.children[1] as ParsedTokensWord).word.substring(1)
-            val expression = lowerExpression(token.children[2])
-            val code = lowerCode(token.children[3])
-            res.add(LoweredTokens(LoweredTokenType.CREATE_LOCAL, listOf(LoweredTokensType(type), LoweredTokensLocal(local), expression, code)))
-        }else {
-            throw IllegalStateException("Unexpected code token: $token")
-        }
-    }
-    return LoweredTokens(LoweredTokenType.CODE, res)
-}
-
-private fun writeExpression(mappingData: MappingData?, expression: LoweredTokens, output: OutputStream, dropResult: Boolean) {
-    if(expression is LoweredTokensLocal) {
-        if(!dropResult) {
-            output.appendText("context.load(\"${expression.local}\");\n")
-        }
-    }else if(expression is LoweredTokensNumber) {
-        if(!dropResult) {
-            val value = expression.number.toInt()
-            if (value >= -1 && value <= 5) {
-                if(value == -1) {
-                    output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.ICONST_M1);\n")
-                }else {
-                    output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.ICONST_$value);\n")
+                if(el.expression.a.type() != el.expression.b.type()) {
+                    throw IllegalStateException("if(<expr> ==/!= <expr>) only works if both <expr> have the same type")
                 }
-            } else if (value >= Byte.MIN_VALUE && value <= Byte.MAX_VALUE) {
-                output.appendText("context.getCodeWriter().getMethodVisitor().visitIntInsn(org.objectweb.asm.Opcodes.BIPUSH, $value);\n")
-            } else if (value >= Short.MIN_VALUE && value <= Short.MAX_VALUE) {
-                output.appendText("context.getCodeWriter().getMethodVisitor().visitIntInsn(org.objectweb.asm.Opcodes.SIPUSH, $value);\n")
-            } else {
-                output.appendText("context.getCodeWriter().getMethodVisitor().visitLdcInsn($value);\n")
+                if(el.expression.a.type() == ParsedTokenExpressionType.INTEGER) {
+                    writeExpression(mappingData, el.expression.a, output)
+                    writeExpression(mappingData, el.expression.b, output)
+                    if(el.expression.op == ParsedTokenExpressionOperator.NE) {
+                        output.appendText("context.getCodeWriter().getMethodVisitor().visitJumpInsn(org.objectweb.asm.Opcodes.IF_ICMPEQ, $jumpLabel);\n")
+                    }else {
+                        output.appendText("context.getCodeWriter().getMethodVisitor().visitJumpInsn(org.objectweb.asm.Opcodes.IF_ICMPNE, $jumpLabel);\n")
+                    }
+                }else {
+                    throw IllegalArgumentException("Unsupported expression comparison type: ${el.expression.a.type()}")
+                }
             }
-        }
-    }else if(expression is LoweredTokensInstructionInput) {
-        if(!dropResult) {
-            if(expression.typed == "int") {
-                output.appendText("context.getCodeWriter().writeInt(context.getInstruction().<Integer>get(\"${expression.input}\"));\n")
+            uid = writeCode(mappingData, el.code, output, mutableListOf(), uid)
+            output.appendText("context.getCodeWriter().getMethodVisitor().visitLabel($jumpLabel);\n")
+            continue
+        }else if(el is ParsedTokenStatementFunctionCall) {
+            if(el.name == "run") {
+                output.appendText("context.run();\n")
+                continue
+            }else if(el.name == "scope") {
+                val scopeAccessor = el.arguments[0] as ParsedTokenValueAccessor
+                scopeAccessor.sets = true
+                val jumpLabel = "j${uid++}"
+                output.appendText("org.objectweb.asm.Label $jumpLabel = new org.objectweb.asm.Label();\n")
+                output.appendText("context.getNewScopes().put(context.getInstruction().<dev.epicpix.minecraftfunctioncompiler.il.ScopeData>get(\"${scopeAccessor.name}\").getId(), $jumpLabel);\n")
+                uid = writeCode(mappingData, el.code!!, output, mutableListOf(), uid)
+                output.appendText("context.getCodeWriter().getMethodVisitor().visitLabel($jumpLabel);\n")
+                continue
+            }else if(el.name == "exit_scope") {
+                val scopeAccessor = el.arguments[0] as ParsedTokenValueAccessor
+                scopeAccessor.gets = true
+                output.appendText("context.getCodeWriter().getMethodVisitor().visitJumpInsn(org.objectweb.asm.Opcodes.GOTO, context.getNewScopes().get(context.getInstruction().<dev.epicpix.minecraftfunctioncompiler.il.ScopeData>get(\"${scopeAccessor.name}\").getId()));\n")
+                continue
             }else {
-                throw IllegalStateException("Unknown expression type: $expression")
+                throw IllegalArgumentException("Unknown function call: ${el.name}")
             }
+        }else if(el is ParsedTokenStatementDefineVariable) {
+            writeExpression(mappingData, el.expression, output)
+            val assignType = "I"
+            val assignTo = el.accessor.name
+            el.accessor.sets = true
+            val storageLocalUid = "s${uid++}"
+            val storageLocal = "l${uid++}"
+            output.appendText("String $storageLocalUid = context.getCodeWriter().generateUniqueLocal();\n")
+            output.appendText("context.store(\"$assignTo\", $storageLocalUid);\n")
+            output.appendText("dev.epicpix.minecraftfunctioncompiler.emitter.impl.Local $storageLocal = context.getCodeWriter().createLocal($storageLocalUid, \"$assignType\");\n")
+            if(assignType.first() == 'I') {
+                output.appendText("context.getCodeWriter().getMethodVisitor().visitVarInsn(org.objectweb.asm.Opcodes.ISTORE, $storageLocal.getIndex());\n")
+            }else {
+                throw IllegalStateException("Unknown assign type: $assignType")
+            }
+            onScopeEnd.add {
+                output.appendText("context.getCodeWriter().destroyLocal($storageLocal);\n")
+            }
+            continue
+        }else if(el is ParsedTokenStatementAssignVariable) {
+            writeExpression(mappingData, el.expression, output)
+            el.accessor.sets = true
+            output.appendText("context.save(\"${el.accessor.name}\");\n")
+            continue
         }
-    }else if(expression.type == LoweredTokenType.PLUS) {
-        writeExpression(mappingData, expression.children[0], output, false)
-        writeExpression(mappingData, expression.children[1], output, false)
-        output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.IADD);\n")
-        if(dropResult) {
-            output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.POP);\n")
-        }
-    }else if(expression.type == LoweredTokenType.MINUS) {
-        writeExpression(mappingData, expression.children[0], output, false)
-        writeExpression(mappingData, expression.children[1], output, false)
-        output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.ISUB);\n")
-        if(dropResult) {
-            output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.POP);\n")
-        }
-    }else {
-        throw IllegalStateException("Unexpected expression token: $expression")
+        throw Exception(el.toString())
     }
+    onScopeEnd.forEach { it() }
+    return uid
 }
 
-private fun writeCode(mappingData: MappingData?, code: LoweredTokens, output: OutputStream, uniqId: Int): Int {
-    if(code.type == LoweredTokenType.CODE) {
-        var uid = uniqId
-        code.children.forEach {
-            uid = writeCode(mappingData, it, output, uid)
-        }
-        return uid
-    }else if(code.type == LoweredTokenType.IF_NOT_NULL) {
-        var uid = uniqId
-        val jumpLabel = "j${uid++}"
-        output.appendText("org.objectweb.asm.Label $jumpLabel = new org.objectweb.asm.Label();\n")
-        writeExpression(mappingData, code.children[0], output, false)
-        output.appendText("context.getCodeWriter().getMethodVisitor().visitJumpInsn(org.objectweb.asm.Opcodes.IFNULL, $jumpLabel);\n")
-        uid = writeCode(mappingData, code.children[1], output, uid)
-        output.appendText("context.getCodeWriter().getMethodVisitor().visitLabel($jumpLabel);\n")
-        return uid
-    }else if(code.type == LoweredTokenType.SCOPE_BLOCK) {
-        var uid = uniqId
-        val jumpLabel = "j${uid++}"
-        val scope = (code.children[0] as LoweredTokensScope).scope
-        output.appendText("org.objectweb.asm.Label $jumpLabel = new org.objectweb.asm.Label();\n")
-        output.appendText("context.getNewScopes().put(context.getInstruction().<dev.epicpix.minecraftfunctioncompiler.il.ScopeData>get(\"$scope\").getId(), $jumpLabel);\n")
-        uid = writeCode(mappingData, code.children[1], output, uid)
-        output.appendText("context.getCodeWriter().getMethodVisitor().visitLabel($jumpLabel);\n")
-        return uid
-    }else if(code.type == LoweredTokenType.EXIT_SCOPE) {
-        val scope = (code.children[0] as LoweredTokensScope).scope
-        output.appendText("context.getCodeWriter().getMethodVisitor().visitJumpInsn(org.objectweb.asm.Opcodes.GOTO, context.getNewScopes().get(context.getInstruction().<dev.epicpix.minecraftfunctioncompiler.il.ScopeData>get(\"$scope\").getId()));\n")
-        return uniqId
-    }else if(code.type == LoweredTokenType.RUN) {
-        output.appendText("context.run();\n")
-        return uniqId
-    }else if(code.type == LoweredTokenType.ASSIGN) {
-        writeExpression(mappingData, code.children[1], output, false)
-        val assignTo = code.children[0]
-        if(assignTo is LoweredTokensLocal) {
-            output.appendText("context.save(\"${assignTo.local}\");\n")
-        }else {
-            throw IllegalStateException("Cannot assign to non-local variable: $assignTo")
-        }
-        return uniqId
-    }else if(code.type == LoweredTokenType.CREATE_LOCAL) {
-        writeExpression(mappingData, code.children[2], output, false)
-        val assignType = (code.children[0] as LoweredTokensType).typeName.let {
-            if(it == "int") return@let "I"
-            "L${mappingData?.getClassName(it) ?: it};"
-        }
-        val assignTo = code.children[1] as LoweredTokensLocal
-        var uid = uniqId
-        val storageLocalUid = "s${uid++}"
-        val storageLocal = "l${uid++}"
-        output.appendText("String $storageLocalUid = context.getCodeWriter().generateUniqueLocal();\n")
-        output.appendText("context.store(\"${assignTo.local}\", $storageLocalUid);\n")
-        output.appendText("dev.epicpix.minecraftfunctioncompiler.emitter.impl.Local $storageLocal = context.getCodeWriter().createLocal($storageLocalUid, \"$assignType\");\n")
-        if(assignType.first() == 'I') {
-            output.appendText("context.getCodeWriter().getMethodVisitor().visitVarInsn(org.objectweb.asm.Opcodes.ISTORE, $storageLocal.getIndex());\n")
-        }else {
-            throw IllegalStateException("Unknown assign type: $assignType")
-        }
-        writeCode(mappingData, code.children[3], output, uid)
-        output.appendText("context.getCodeWriter().destroyLocal($storageLocal);\n")
-        return uid
-    }else {
-        throw IllegalStateException("Unexpected code token: $code")
-    }
-}
+fun parseCode(inputCode: String) = parseTokens(lexTokens(inputCode).listIterator())
 
-fun generateCode(mappingData: MappingData?, inputCode: String, output: OutputStream) {
-    output.appendText("// $inputCode\n")
-    val tokens = splitTokens(inputCode)
-    output.appendText("// ${tokens.joinToString(" ")}\n")
-    val code = parseCode(listOf("{", *tokens.toTypedArray(), "}").listIterator())
-    output.appendText("// $code\n")
-    val lowered = lowerCode(code)
-    output.appendText("// $lowered\n")
-    writeCode(mappingData, lowered, output, 0)
+fun generateCode(mappingData: MappingData?, definition: ParsedTokenInstructionDefinition, output: OutputStream) {
+    val bout = ByteArrayOutputStream()
+    writeCode(mappingData, definition.code, bout, mutableListOf(), 0)
+    output.appendText("// ${definition.name}\n")
+    output.appendText("// ${definition.params.joinToString { 
+        "${if(it.gets) "<gets> " else ""}${if(it.sets) "<sets> " else ""}${it.type.name.lowercase()} [${it.scope.name.lowercase()}:${it.name}]"
+    }}\n")
+    output.write(bout.toByteArray())
 }

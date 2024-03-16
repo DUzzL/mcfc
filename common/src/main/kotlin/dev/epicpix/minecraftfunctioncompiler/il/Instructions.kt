@@ -11,8 +11,9 @@ data class LocationData(
     val isSource: Boolean = false,
     val isDestination: Boolean = false,
 ) {
-    fun source() = LocationData(local, string, integer, isSource = true, isDestination = false)
-    fun destination() = LocationData(local, string, integer, isSource = false, isDestination = true)
+    fun source() = uses(source = true, destination = false)
+    fun destination() = uses(source = false, destination = true)
+    fun uses(source: Boolean, destination: Boolean) = LocationData(local, string, integer, isSource = source, isDestination = destination)
 
     override fun toString(): String {
         return "${if(local != null) "local " else ""}${if(isSource) "<in> " else ""}${if(isDestination) "<out> " else ""}${local ?: ""}${if(string != null) "\"${string.replace("\\", "\\\\").replace("\n", "\\n")}\"" else ""}${integer?.toString() ?: ""}"
@@ -25,8 +26,9 @@ data class ScopeData(
     val isSource: Boolean = false,
     val isDestination: Boolean = false,
 ) {
-    fun source() = ScopeData(id, isSource = true, isDestination = false)
-    fun destination() = ScopeData(id, isSource = false, isDestination = true)
+    fun source() = uses(source = true, destination = false)
+    fun destination() = uses(source = false, destination = true)
+    fun uses(source: Boolean, destination: Boolean) = ScopeData(id, isSource = source, isDestination = destination)
 
     override fun toString(): String {
         return "scope ${if(isSource) "<in> " else ""}${if(isDestination) "<out> " else ""}$id"
