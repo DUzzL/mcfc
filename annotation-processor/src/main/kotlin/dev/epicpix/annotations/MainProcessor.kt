@@ -80,7 +80,9 @@ class MainProcessor(
                 generateFunctionMapping(mappingData, definitions, minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0)
             }
         }
-        generateInstructionData(mappingData, options["definitions"] == "common")
+        if(options["definitions"] != null) {
+            generateInstructionData(mappingData, options["definitions"] == "common")
+        }
         generateConstantsData(resolver)
 
         return listOf()
