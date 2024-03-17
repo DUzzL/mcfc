@@ -81,7 +81,7 @@ class MainProcessor(
             }
         }
         if(options["definitions"] != null) {
-            generateInstructionData(mappingData, options["definitions"] == "common")
+            generateInstructionData(mappingData, options["definitions"] == "common", minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0)
         }
         generateConstantsData(resolver)
 
@@ -167,8 +167,48 @@ class MainProcessor(
         }
     }
 
-    fun generateInstructionData(mappingData: MappingData?, common: Boolean) {
-        val file = parseCode(loadDataFile("data.instructions")!!)
+    fun generateInstructionData(mappingData: MappingData?, common: Boolean, majorVer: Int, minorVer: Int) {
+        fun findVersionSpecific(v: Any?): String? {
+            if(v is Map<*, *>) {
+                v.forEach { (k, v) ->
+                    k as String
+                    v as String
+                    val minecraftVersion = k.split(".")
+                    val cMajor = minecraftVersion[1].toInt()
+                    val cMinor = minecraftVersion[2].filter { it.isDigit() }.toIntOrNull() ?: 0
+                    if(cMajor == majorVer && cMinor == minorVer) return v
+                    else if( k.endsWith("+") && ((majorVer == cMajor && minorVer >= cMinor) || (majorVer > cMajor))) {
+                        return v
+                    }else if(k.endsWith("-") && ((majorVer == cMajor && minorVer <= cMinor) || (majorVer < cMajor))) {
+                        return v
+                    }
+                }
+                return null
+            }else {
+                return v as String
+            }
+        }
+
+        val file = parseCode(loadDataFile("data.instructions")!!) {
+            val content = findVersionSpecific(it)
+            if(content != null) {
+                val fullDescriptor = content.split("@")[0]
+                val className = mappingData.getClassName(fullDescriptor.split(":")[0])
+                val methodDescriptor = remapType(Type.getMethodType("(" + fullDescriptor.split("(")[1]), mappingData).descriptor
+                val methodName = mappingData.getMethodName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1].split("(")[0], "(" + fullDescriptor.split("(")[1])
+                val callDetails = content.split("@").getOrNull(1)
+                if(callDetails != null) {
+                    val isStatic = !callDetails.contains("M")
+                    val isInterface = callDetails.contains("I")
+                    val opcode = if(isStatic) 184 else if(isInterface) 185 else 182
+                    val obf = className.contains("net/minecraft") || methodDescriptor.contains("net/minecraft")
+                    if(!common || !obf) {
+                        return@parseCode "$className $methodName $methodDescriptor $opcode $obf $isInterface"
+                    }
+                }
+            }
+            return@parseCode null
+        }
 
         val resultClass = if(common) file.fileInfo["emitter_noobf_file"]!! else file.fileInfo["emitter_obf_file"]!!
         val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
@@ -178,7 +218,7 @@ class MainProcessor(
         map.appendText("public class $resultName {\n")
         map.appendText("    public static void registerInstructionEmitters() {\n")
         file.definitions.forEach {
-            if(it.usesObf != (mappingData == null)) {
+            if(it.usesObf != common) {
                 map.appendText("        dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructionsKt.registerEmitterInstruction(${file.fileInfo["enum_file"]}.${it.name}, (context) -> {\n")
                 val output = ByteArrayOutputStream()
                 generateCode(mappingData, it, output)
@@ -214,18 +254,21 @@ class MainProcessor(
                 for(param in it.params) {
                     val typeName = when(param.scope) {
                         ParsedTokenValueAccessorScope.CONTEXT -> {
-                            if(param.type == ParsedTokenExpressionType.SCOPE) {
+                            if(param.type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.SCOPE)) {
                                 "dev.epicpix.minecraftfunctioncompiler.il.ScopeData"
                             }else {
                                 "dev.epicpix.minecraftfunctioncompiler.il.LocationData"
                             }
                         }
                         ParsedTokenValueAccessorScope.INSTRUCTION -> {
-                            if(param.type == ParsedTokenExpressionType.INTEGER) {
+                            if(param.type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)) {
                                 "Int"
                             }else {
                                 TODO()
                             }
+                        }
+                        ParsedTokenValueAccessorScope.LOCAL -> {
+                            continue
                         }
                     }
 
@@ -233,7 +276,10 @@ class MainProcessor(
                 }
                 val instructionType = "dev.epicpix.minecraftfunctioncompiler.il.Instruction"
                 impl.appendText("): $instructionType = $instructionType($enumClass.$named, mapOf(")
-                it.params.forEach {
+                it.params.forEach param@{
+                    if(it.scope == ParsedTokenValueAccessorScope.LOCAL) {
+                        return@param
+                    }
                     impl.appendText("\"${it.name}\" to ${it.name.snakeToLowerCamelCase()}")
                     if(it.scope == ParsedTokenValueAccessorScope.CONTEXT) {
                         impl.appendText(".uses(source = ${it.gets}, destination = ${it.sets})")
@@ -340,8 +386,6 @@ class MainProcessor(
 }
 
 fun String.toUpperSnakeCase() = split(Regex("(?=[A-Z])")).joinToString("_").uppercase()
-fun String.toLowerSnakeCase() = split(Regex("(?=[A-Z])")).joinToString("_").lowercase()
-fun String.camelToSnakeCase() = replace(Regex("(?<=.)[A-Z]"), "_$0").lowercase()
 fun String.snakeToLowerCamelCase() = Regex("_[a-zA-Z]").replace(lowercase()) { it.value.replace("_","").uppercase() }
 
 data class InstructionParamData(val name: String, val isNullable: Boolean, val isList: Boolean, val isMap: Boolean, val isSource: Boolean, val isDestination: Boolean)

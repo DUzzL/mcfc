@@ -2,7 +2,9 @@
 #emitter_obf_file("dev.epicpix.minecraftfunctioncompiler.emitter.Emitter2")
 #enum_file("dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2")
 #generator_file("dev.epicpix.minecraftfunctioncompiler.il.Instructions2")
+#definitions("common,minecraft")
 
+// Common
 @IF_NOT_NULL(object [ctx:local]) {
   if([ctx:local] != null) {
     run();
@@ -44,4 +46,10 @@
 
 @SET_RESULT_STORAGE(int [ctx:storage], int [ctx:value]) {
   [ctx:storage] = [ctx:value];
+}
+
+// Minecraft specific
+@GET_CURRENT_ENTITY(<net.minecraft.commands.CommandSourceStack> [local:CommandSourceStack], <net.minecraft.world.entity.Entity> [ctx:entity]) {
+  let [ctx:entity] = CommandSourceStack_getEntity([local:CommandSourceStack]);
+  run();
 }
