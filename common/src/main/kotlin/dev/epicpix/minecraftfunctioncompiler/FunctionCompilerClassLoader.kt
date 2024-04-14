@@ -7,7 +7,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.ICodeFieldStorage
 import dev.epicpix.minecraftfunctioncompiler.emitter.generateGraphs
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction
-import dev.epicpix.minecraftfunctioncompiler.il.InstructionType
+import dev.epicpix.minecraftfunctioncompiler.il.Instructions2
 import dev.epicpix.minecraftfunctioncompiler.il.printInstructionList
 import dev.epicpix.minecraftfunctioncompiler.optimizer.optimize
 import dev.epicpix.minecraftfunctioncompiler.parser.Command
@@ -39,7 +39,6 @@ abstract class FunctionCompilerClassLoader(
         fieldStorage: ICodeFieldStorage,
         serverFunctionManager: Any,
         compile: (List<Command>) -> List<Instruction>,
-        emitBytecode: (List<Instruction>, EmitterContext) -> Unit,
     ) {
         var totalPreoptimizedInstructions = 0
         var totalOptimizedInstructions = 0
@@ -52,10 +51,10 @@ abstract class FunctionCompilerClassLoader(
                 compiled.forEach { totalPreoptimizedInstructions += it.countInstructions() }
                 val optimized = optimize(compiled)
                 optimized.forEach { totalOptimizedInstructions += it.countInstructions() }
-                compiledFunctions[key] = optimized
+                compiledFunctions[key] = listOf(Instructions2.addStaticRequirements(optimized))
                 if(DEBUG) {
                     logInfo(" --- $key ---")
-                    printInstructionList(optimized, logInfo)
+                    printInstructionList(compiledFunctions[key]!!, logInfo)
                 }
             }catch(e: UnsupportedOperationException) {
                 logWarn("Failed to compile function $key / ${e.message}")
@@ -71,7 +70,7 @@ abstract class FunctionCompilerClassLoader(
         val startLoader = System.nanoTime()
         for((key) in compiledFunctions) {
             try {
-                loadedFunctions[key] = defineFunction(key, fieldStorage, compiledFunctions[key]!!, definedFunctions[key]!!.size, compiledFunctionSet, emitBytecode)
+                loadedFunctions[key] = defineFunction(key, fieldStorage, compiledFunctions[key]!!, definedFunctions[key]!!.size, compiledFunctionSet)
             }catch(e: Throwable) {
                 logError("Failed to load function ($key), skipping function compilation")
                 e.printStackTrace()
@@ -95,7 +94,7 @@ abstract class FunctionCompilerClassLoader(
             runCatching { Files.createDirectory(generatedDir) }
             val startGraph = System.nanoTime()
             generateGraphs(compiledFunctions, generatedDir)
-            logInfo("Generated graphs in ${System.nanoTime()-startGraph}ms")
+            logInfo("Generated graphs in ${(System.nanoTime()-startGraph)/1000000}ms")
         }
 
         val startHandles = System.nanoTime()
@@ -119,7 +118,7 @@ abstract class FunctionCompilerClassLoader(
         FunctionCompilerReporter.sendReports()
     }
 
-    private fun defineFunction(funcId: DataLocation, fieldStorage: ICodeFieldStorage, instructions: List<Instruction>, commandCount: Int, compiledFunctions: Set<DataLocation>, emitBytecode: (List<Instruction>, EmitterContext) -> Unit): Class<*> {
+    private fun defineFunction(funcId: DataLocation, fieldStorage: ICodeFieldStorage, instructions: List<Instruction>, commandCount: Int, compiledFunctions: Set<DataLocation>): Class<*> {
         val className = "function/${funcId.namespace}/${funcId.path}".replace('.', '$')
 
         val cw = createClassWriter()
@@ -128,10 +127,8 @@ abstract class FunctionCompilerClassLoader(
             "(${commandSourceStackClass.descriptorString()})I", null, null)
         mv.visitCode()
         val codeWriter = CodeWriter(mv)
-        codeWriter.defineLocal("CommandSourceStack", commandSourceStackClass) {
-            emitBytecode(instructions, EmitterContext(fieldStorage, codeWriter, compiledFunctions, mapOf(), mapOf(), Instruction(InstructionType("<NONE>"), mapOf()), mutableMapOf(), mutableMapOf()))
-
-            codeWriter.endLabels()
+        codeWriter.defineLocal("static\$CommandSourceStack", commandSourceStackClass) {
+            EmitterContext(fieldStorage, codeWriter, compiledFunctions, mapOf(), mapOf(), Instructions2.root().copy(children = instructions.toMutableList()), mutableMapOf(), mutableMapOf()).run()
         }
 
         mv.visitLdcInsn(commandCount)

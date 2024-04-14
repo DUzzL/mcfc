@@ -26,7 +26,7 @@ private fun ICompilationContext.compile(command: Command?, result: ResultStorage
                 val instruction =
                 Instructions.checkEntityTypes(entity, listOf(DataLocation("minecraftfunctioncompiler", "living_entity")), false)
                     .with(Instructions.getAttributeInstance(entity, attrLocation, command["attribute"])
-                        .with(Instructions.ifNotNull(attrLocation)
+                        .with(Instructions2.ifNotNull(attrLocation)
                             .with(Instructions.setAttributeBase(attrLocation, command["value"]))))
                 addInstruction(instruction)
             }
@@ -116,7 +116,7 @@ private fun ICompilationContext.compile(command: Command?, result: ResultStorage
         }
         CommandTypes.EXECUTE_UNLESS_ENTITY -> {
             forSelector(command.get<SelectorArgument>("entities").copy(limit = 1)) { _, breakScope, _ ->
-                addInstruction(Instructions.exitScope(breakScope))
+                addInstruction(Instructions2.exitScope(breakScope))
             }
             compile(command["command"])
         }
@@ -252,12 +252,12 @@ private fun ICompilationContext.compile(command: Command?, result: ResultStorage
         }
         CommandTypes.TAG_ADD -> {
             forSelector(command["targets"]) { entity, _, _ ->
-                addInstruction(Instructions.addEntityTag(entity, command["name"]))
+                addInstruction(Instructions2.addEntityTag(entity, command["name"]))
             }
         }
         CommandTypes.TAG_REMOVE -> {
             forSelector(command["targets"]) { entity, _, _ ->
-                addInstruction(Instructions.removeEntityTag(entity, command["name"]))
+                addInstruction(Instructions2.removeEntityTag(entity, command["name"]))
             }
         }
     }

@@ -1,7 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.optimizer.optimizations
 
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction
-import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes
+import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData
 import dev.epicpix.minecraftfunctioncompiler.optimizer.InstructionList
 import dev.epicpix.minecraftfunctioncompiler.optimizer.Optimization
@@ -31,8 +31,8 @@ object LocalInvariantCodeHoistingOptimization : Optimization {
     private fun checkSwap(instruction: Instruction): Boolean {
         if(instruction.children.size != 1) return false
         val child = instruction.children[0]
-        if(child.type == InstructionTypes.GET_CURRENT_ENTITY) return true
-        if(child.type == InstructionTypes.IF_NOT_NULL) {
+        if(child.type == InstructionTypes2.GET_CURRENT_ENTITY) return true
+        if(child.type == InstructionTypes2.IF_NOT_NULL) {
             if(child.get<LocationData>("local") != getVariableDefinition(instruction)) return true
         }
         return false

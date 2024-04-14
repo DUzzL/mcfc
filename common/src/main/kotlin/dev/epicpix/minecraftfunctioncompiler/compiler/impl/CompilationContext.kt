@@ -4,10 +4,7 @@ import dev.epicpix.minecraftfunctioncompiler.compiler.ICompilationContext
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument
 import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument
 import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates
-import dev.epicpix.minecraftfunctioncompiler.il.Instruction
-import dev.epicpix.minecraftfunctioncompiler.il.Instructions
-import dev.epicpix.minecraftfunctioncompiler.il.LocationData
-import dev.epicpix.minecraftfunctioncompiler.il.ScopeData
+import dev.epicpix.minecraftfunctioncompiler.il.*
 import java.util.*
 
 data class CompilationContext(
@@ -34,7 +31,7 @@ data class CompilationContext(
         if(requireResult == requireSuccess) throw UnsupportedOperationException("calling withResultStorage() with requireResult == requireSuccess is not supported")
         val loc = LocationData(local = highestLocal)
         val res = if(requireResult) ResultStorage(result = loc) else ResultStorage(success = loc)
-        val instr = Instructions.createResultStorage(loc)
+        val instr = Instructions2.createResultStorage(loc)
         addInstruction(instr)
         with(highestLocal = highestLocal + 1, addInstruction = instr.children::add).exec(res)
     }
@@ -46,7 +43,7 @@ data class CompilationContext(
         if(autoCreate) {
             exec(with(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), scoreData)
         }else {
-            val nonNull = Instructions.ifNotNull(scoreData)
+            val nonNull = Instructions2.ifNotNull(scoreData)
             instruction.with(nonNull)
             exec(with(highestLocal = highestLocal + 1, addInstruction = nonNull.children::add), scoreData)
         }
@@ -67,7 +64,7 @@ data class CompilationContext(
         }else {
             forCurrentEntity { entity, _, _ ->
                 val local = LocationData(local = highestLocal)
-                val nullCheck = Instructions.ifNotNull(entity)
+                val nullCheck = Instructions2.ifNotNull(entity)
                 val instruction = Instructions.getEntityWorld(entity, local)
                 instruction.with(nullCheck)
                 addInstruction(nullCheck)
@@ -82,7 +79,7 @@ data class CompilationContext(
         }else {
             forCurrentEntity { entity, _, _ ->
                 val local = LocationData(local = highestLocal)
-                val nullCheck = Instructions.ifNotNull(entity)
+                val nullCheck = Instructions2.ifNotNull(entity)
                 val instruction = Instructions.getEntityPosition(entity, local)
                 nullCheck.with(instruction)
                 addInstruction(nullCheck)
@@ -97,7 +94,7 @@ data class CompilationContext(
         }else {
             forCurrentEntity { entity, _, _ ->
                 val local = LocationData(local = highestLocal)
-                val nullCheck = Instructions.ifNotNull(entity)
+                val nullCheck = Instructions2.ifNotNull(entity)
                 val instruction = Instructions.getEntityRotation(entity, local)
                 instruction.with(nullCheck)
                 addInstruction(nullCheck)
@@ -108,14 +105,14 @@ data class CompilationContext(
 
     override fun forScope(exec: ICompilationContext.(scope: ScopeData) -> Unit) {
         val scope = ScopeData(highestLocal)
-        val instruction = Instructions.scope(scope)
+        val instruction = Instructions2.scope(scope)
         addInstruction(instruction)
         exec(with(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), scope)
     }
 
     override fun getObjective(name: String, exec: ICompilationContext.(local: LocationData) -> Unit) {
         val local = LocationData(local = highestLocal)
-        val instruction = Instructions.ifNotNull(local)
+        val instruction = Instructions2.ifNotNull(local)
         addInstruction(Instructions.getObjective(local, name).with(instruction))
         exec(with(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
     }
@@ -130,7 +127,7 @@ data class CompilationContext(
             forSelector(selector) { entity, _, _ ->
                 val local = LocationData(local = highestLocal)
                 val instruction = Instructions.getScoreboardName(entity, local)
-                addInstruction(Instructions.ifNotNull(entity).with(instruction))
+                addInstruction(Instructions2.ifNotNull(entity).with(instruction))
                 exec(with(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
             }
         }
@@ -151,7 +148,7 @@ data class CompilationContext(
         }else {
             forScope { scope ->
                 val local = LocationData(local = highestLocal)
-                val instruction = Instructions.getCurrentEntity(local)
+                val instruction = Instructions2.getCurrentEntity(local)
                 addInstruction(instruction)
                 exec(with(currentEntity = local, highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local, scope, scope)
             }
@@ -172,7 +169,7 @@ data class CompilationContext(
     override fun forEachPlayer(exec: ICompilationContext.(local: LocationData, breakScope: ScopeData, continueScope: ScopeData) -> Unit) {
         forScope { breakScope ->
             val local = LocationData(local = highestLocal)
-            val instruction = Instructions.forEachPlayer(local)
+            val instruction = Instructions2.forEachPlayer(local)
             addInstruction(instruction)
             with(highestLocal = highestLocal + 1, addInstruction = instruction.children::add).forScope { continueScope ->
                 exec(local, breakScope, continueScope)
@@ -209,9 +206,10 @@ data class CompilationContext(
 
     override fun forSelector(selector: SelectorArgument, exec: ICompilationContext.(local: LocationData, breakScope: ScopeData, continueScope: ScopeData) -> Unit) {
         var limiterScope: ScopeData? = null
+        var limiterCounter: LocationData? = null
         fun checkEntityCondition(context: ICompilationContext, local: LocationData, breakScope: ScopeData, continueScope: ScopeData) {
             var ctx = context
-            val nonNull = Instructions.ifNotNull(local)
+            val nonNull = Instructions2.ifNotNull(local)
             val stacker = InstructionStacker(nonNull)
             if(selector.entityTypes != null) {
                 stacker.stackInstruction(Instructions.checkEntityTypes(local, selector.entityTypes.data, selector.entityTypes.negated))
@@ -220,10 +218,10 @@ data class CompilationContext(
                 stacker.stackInstruction(Instructions.checkGamemode(local, selector.gamemode.data, selector.gamemode.negated))
             }
             for(tag in selector.tags) {
-                stacker.stackInstruction(Instructions.checkEntityTag(local, tag.data, tag.negated))
+                stacker.stackInstruction(Instructions2.checkEntityTag(local, tag.data, tag.negated))
             }
             if(selector.hasTags != null) {
-                stacker.stackInstruction(Instructions.checkEntityTags(local, selector.hasTags))
+                stacker.stackInstruction(Instructions2.checkEntityTags(local, selector.hasTags))
             }
             if(selector.yaw != null || selector.pitch != null) {
                 val rotationLocal = LocationData(local = context.highestLocal)
@@ -254,17 +252,18 @@ data class CompilationContext(
             val execBase = stacker.current
             exec(ctx.with(addInstruction = execBase.children::add), local, breakScope, continueScope)
             if(selector.limit == 1) {
-                execBase.with(Instructions.exitScope(breakScope))
+                execBase.with(Instructions2.exitScope(breakScope))
             }else if(selector.limit != null) {
-                execBase.with(Instructions.checkLimit(limiterScope!!))
+                execBase.with(Instructions2.checkLimit(limiterScope!!, limiterCounter!!))
             }
             context.addInstruction(stacker.base)
         }
 
         val realContext = if(selector.limit != 1 && selector.limit != null) {
             limiterScope = ScopeData(highestLocal)
-            val instr = Instructions.limiter(limiterScope, selector.limit)
-            val newContext = with(highestLocal = highestLocal + 1, addInstruction = instr.children::add)
+            limiterCounter = LocationData(highestLocal + 1)
+            val instr = Instructions2.limiter(limiterScope, limiterCounter, selector.limit)
+            val newContext = with(highestLocal = highestLocal + 2, addInstruction = instr.children::add)
             addInstruction(instr)
             newContext
         } else this

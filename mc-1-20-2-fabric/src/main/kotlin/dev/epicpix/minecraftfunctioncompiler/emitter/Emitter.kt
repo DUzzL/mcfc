@@ -19,60 +19,6 @@ import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
 
 fun registerInstructionEmitters() {
-    registerEmitterInstruction(InstructionTypes.GET_CURRENT_ENTITY) {
-        codeWriter.callCommandSourceStack_getEntity { codeWriter.loadLocal("CommandSourceStack") }
-        runStored("entity", "\$GetCurrentEntity", Entity::class.java)
-    }
-    registerEmitterInstruction(InstructionTypes.ADD_ENTITY_TAG) {
-        codeWriter.callEntity_addTag {
-            load("entity")
-            codeWriter.writeString(instruction["tag"])
-        }
-        codeWriter.methodVisitor.visitInsn(Opcodes.POP)
-    }
-    registerEmitterInstruction(InstructionTypes.REMOVE_ENTITY_TAG) {
-        codeWriter.callEntity_removeTag {
-            load("entity")
-            codeWriter.writeString(instruction["tag"])
-        }
-        codeWriter.methodVisitor.visitInsn(Opcodes.POP)
-    }
-    registerEmitterInstruction(InstructionTypes.CHECK_ENTITY_TAG) {
-        codeWriter.callSet_contains {
-            codeWriter.callEntity_getTags { load("entity") }
-            codeWriter.writeString(instruction["tag"])
-        }
-
-        val label = Label()
-        codeWriter.methodVisitor.visitJumpInsn(if(!instruction.get<Boolean>("negated")) Opcodes.IFEQ else Opcodes.IFNE, label)
-        run()
-        codeWriter.methodVisitor.visitLabel(label)
-    }
-    registerEmitterInstruction(InstructionTypes.CHECK_ENTITY_TAGS) {
-        codeWriter.callSet_size {
-            codeWriter.callEntity_getTags { load("entity") }
-        }
-
-        val label = Label()
-        codeWriter.methodVisitor.visitJumpInsn(if(!instruction.get<Boolean>("negated")) Opcodes.IFEQ else Opcodes.IFNE, label)
-        run()
-        codeWriter.methodVisitor.visitLabel(label)
-    }
-    registerEmitterInstruction(InstructionTypes.FOR_EACH_PLAYER) {
-        val uidLocal = codeWriter.generateUniqueLocal("\$Players")
-        codeWriter.callPlayerList_getPlayers {
-            codeWriter.callMinecraftServer_getPlayerList {
-                codeWriter.callCommandSourceStack_getServer {
-                    codeWriter.loadLocal("CommandSourceStack")
-                }
-            }
-        }
-        codeWriter.storeLocal(uidLocal, List::class.java) {
-            codeWriter.createListForEachLoop(uidLocal, Entity::class.java) {
-                runStored("entity", "\$Entity", Entity::class.java)
-            }
-        }
-    }
     registerEmitterInstruction(InstructionTypes.FOR_EACH_ENTITY) {
         val uidLocalLevels = codeWriter.generateUniqueLocal("\$Levels")
         codeWriter.callMinecraftServer_getAllLevels {

@@ -51,9 +51,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
             }
         }
         val parseTime = (System.currentTimeMillis()-startParse)/1000.0
-        loadFunctionClasses(functions.size, parseTime, definedFunctions, createCodeFieldStorage(), serverFunctionManager, { compile(it) }, { instructions, context ->
-            instructions.forEach { getInstructionEmitter(it.type)(context.copy(instruction = it)) }
-        })
+        loadFunctionClasses(functions.size, parseTime, definedFunctions, createCodeFieldStorage(), serverFunctionManager) { compile(it) }
     }
 
     fun hasFunctionLoaded(location: ResourceLocation): Boolean {

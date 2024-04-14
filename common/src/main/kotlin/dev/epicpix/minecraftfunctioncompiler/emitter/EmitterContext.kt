@@ -27,14 +27,14 @@ data class EmitterContext(
     }
 
     fun save(location: String) {
-        val loc = instruction.get<LocationData>(location)
-        if(loc.local == null) throw UnsupportedOperationException("Tried to store variable in a non-defined local location: $loc, $instruction")
+        val loc = instruction.get<LocationData?>(location)
+        if(loc?.local == null) throw UnsupportedOperationException("Tried to store variable in a non-defined local location: $loc, $instruction")
         codeWriter.storeLocal(newTransforms[loc.local]!!)
     }
 
     fun store(location: String, uid: String) {
-        val loc = instruction.get<LocationData>(location)
-        if(loc.local == null) throw UnsupportedOperationException("Tried to store variable in a non-defined local location: $loc, $instruction")
+        val loc = instruction.get<LocationData?>(location)
+        if(loc?.local == null) throw UnsupportedOperationException("Tried to store variable in a non-defined local location: $loc, $instruction")
         newTransforms[loc.local] = uid
     }
 

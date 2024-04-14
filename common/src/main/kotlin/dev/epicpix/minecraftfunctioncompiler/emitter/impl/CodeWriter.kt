@@ -53,11 +53,6 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         destroyLocal(localValue)
     }
 
-    fun endLabels() {
-        val endLabel = Label()
-        methodVisitor.visitLabel(endLabel)
-    }
-
     fun writeLocalVariables() {
         if(DEBUG) {
             generatedLocals.forEach {

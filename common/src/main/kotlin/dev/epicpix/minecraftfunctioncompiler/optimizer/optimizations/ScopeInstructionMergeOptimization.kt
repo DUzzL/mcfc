@@ -2,6 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.optimizer.optimizations
 
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes
+import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2
 import dev.epicpix.minecraftfunctioncompiler.optimizer.InstructionList
 import dev.epicpix.minecraftfunctioncompiler.optimizer.Optimization
 
@@ -22,8 +23,8 @@ object ScopeInstructionMergeOptimization : Optimization {
                 val compare = instructions[index]
                 if(compareBase.type != compare.type || compareBase.data != compare.data) break
                 when(compare.type) {
-                    InstructionTypes.GET_CURRENT_ENTITY -> {}
-                    InstructionTypes.IF_NOT_NULL -> {}
+                    InstructionTypes2.GET_CURRENT_ENTITY -> {}
+                    InstructionTypes2.IF_NOT_NULL -> {}
                     InstructionTypes.GET_SCOREBOARD_NAME -> {}
                     InstructionTypes.GET_OBJECTIVE -> {}
                     InstructionTypes.SCORE_DATA -> {}

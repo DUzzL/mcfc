@@ -5,6 +5,10 @@
 #definitions("common,minecraft")
 
 // Common
+@ROOT() {
+  run();
+}
+
 @IF_NOT_NULL(object [ctx:local]) {
   if([ctx:local] != null) {
     run();
@@ -48,8 +52,68 @@
   [ctx:storage] = [ctx:value];
 }
 
+$for_each_list_indexed(<java.util.List> [ctx:list], int [local:index], int [local:size], yield<object> [ctx:element]) {
+  let [local:index] = 0;
+  let [local:size] = List_size([ctx:list]);
+  while([local:index] < [local:size]) {
+    yield([ctx:element], List_get([ctx:list], [local:index]));
+    [local:index] = [local:index] + 1;
+  }
+}
+
 // Minecraft specific
-@GET_CURRENT_ENTITY(<net.minecraft.commands.CommandSourceStack> [local:CommandSourceStack], <net.minecraft.world.entity.Entity> [ctx:entity]) {
-  let [ctx:entity] = CommandSourceStack_getEntity([local:CommandSourceStack]);
+@static_MINECRAFT_SERVER(<net.minecraft.commands.CommandSourceStack> [static:CommandSourceStack], <net.minecraft.server.MinecraftServer> [static:MinecraftServer]) {
+  let [static:MinecraftServer] = CommandSourceStack_getServer([static:CommandSourceStack]);
   run();
+}
+
+@static_PLAYER_LIST(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.players.PlayerList> [static:PlayerList]) {
+  let [static:PlayerList] = MinecraftServer_getPlayerList([static:MinecraftServer]);
+  run();
+}
+
+
+@GET_CURRENT_ENTITY(<net.minecraft.commands.CommandSourceStack> [static:CommandSourceStack], <net.minecraft.world.entity.Entity> [ctx:entity]) {
+  let [ctx:entity] = CommandSourceStack_getEntity([static:CommandSourceStack]);
+  run();
+}
+
+@ADD_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:tag]) {
+  Entity_addTag([ctx:entity], [instr:tag]);
+}
+
+@REMOVE_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:tag]) {
+  Entity_removeTag([ctx:entity], [instr:tag]);
+}
+
+@CHECK_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:tag], boolean [instr:negated]) {
+  if([instr:negated] == 0) {
+    if(Set_contains(Entity_getTags([ctx:entity]), [instr:tag]) != false) {
+      run();
+    }
+  }else {
+    if(Set_contains(Entity_getTags([ctx:entity]), [instr:tag]) == false) {
+      run();
+    }
+  }
+}
+
+@CHECK_ENTITY_TAGS(<net.minecraft.world.entity.Entity> [ctx:entity], boolean [instr:negated]) {
+  if([instr:negated] == 0) {
+    if(Set_size(Entity_getTags([ctx:entity])) != 0) {
+      run();
+    }
+  }else {
+    if(Set_size(Entity_getTags([ctx:entity])) == 0) {
+      run();
+    }
+  }
+}
+
+@FOR_EACH_PLAYER(<net.minecraft.server.players.PlayerList> [static:PlayerList], <net.minecraft.server.level.ServerPlayer> [ctx:entity], <java.util.List> [local:players]) {
+  let [local:players] = PlayerList_getPlayers([static:PlayerList]);
+  let [ctx:entity];
+  for_each_list_indexed([local:players], [ctx:entity]) {
+    run();
+  }
 }

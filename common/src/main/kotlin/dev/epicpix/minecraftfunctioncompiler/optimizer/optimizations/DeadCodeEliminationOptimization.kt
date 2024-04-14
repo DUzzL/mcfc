@@ -18,7 +18,7 @@ object DeadCodeEliminationOptimization : Optimization {
         val results = mutableListOf<Instruction>()
         for(it in instructions) {
             results.addAll(runOptimizations(it, dce))
-            if(it.type == InstructionTypes.EXIT_SCOPE) break
+            if(it.type == InstructionTypes2.EXIT_SCOPE) break
         }
         return results
     }
@@ -26,7 +26,7 @@ object DeadCodeEliminationOptimization : Optimization {
     private fun runOptimizations(instruction: Instruction, dce: DeadCodeEliminationData): InstructionList {
         var newDce = dce
         when(instruction.type) {
-            InstructionTypes.IF_NOT_NULL -> {
+            InstructionTypes2.IF_NOT_NULL -> {
                 val local = instruction.get<LocationData>("local")
                 if(local.local != null) {
                     if(newDce.knownNonNulls.contains(local.local)) {
@@ -38,7 +38,7 @@ object DeadCodeEliminationOptimization : Optimization {
                     return runOptimizations(instruction.children, newDce)
                 }
             }
-            InstructionTypes.SCOPE -> {
+            InstructionTypes2.SCOPE -> {
                 val scope = instruction.get<ScopeData>("scope").id
                 val usage = getScopeUsed(instruction, scope, true)
                 if(!usage.usedBreak && usage.last) {
@@ -48,7 +48,7 @@ object DeadCodeEliminationOptimization : Optimization {
                     }
                 }
             }
-            InstructionTypes.EXIT_SCOPE -> {
+            InstructionTypes2.EXIT_SCOPE -> {
                 val scope = instruction.get<ScopeData>("scope").id
                 if(newDce.unusedScopes.contains(scope)) {
                     return emptyList()
@@ -67,11 +67,11 @@ private fun getScopeUsed(instruction: Instruction, inScopeId: Int, lastElement: 
     var usedIndirect = false
     var wLoop = isInLoop
     when(instruction.type) {
-        InstructionTypes.LIMITER -> wLoop = true
+        InstructionTypes2.LIMITER -> wLoop = true
         InstructionTypes.FOR_EACH_ENTITY -> wLoop = true
-        InstructionTypes.FOR_EACH_PLAYER -> wLoop = true
+        InstructionTypes2.FOR_EACH_PLAYER -> wLoop = true
         InstructionTypes.FOR_SCORE_HOLDERS -> wLoop = true
-        InstructionTypes.CHECK_LIMIT -> {
+        InstructionTypes2.CHECK_LIMIT -> {
             val scope = instruction.get<ScopeData>("scope").id
             if(scope == inScopeId) {
                 return ScopeUsageInfo(usedBreak = true, usedIndirect = true, last = lastElement)
@@ -84,7 +84,7 @@ private fun getScopeUsed(instruction: Instruction, inScopeId: Int, lastElement: 
                 return ScopeUsageInfo(usedBreak = true, usedIndirect = true, last = lastElement)
             }
         }
-        InstructionTypes.EXIT_SCOPE -> {
+        InstructionTypes2.EXIT_SCOPE -> {
             val scope = instruction.get<ScopeData>("scope").id
             if(scope == inScopeId && (!lastElement || wLoop)) {
                 return ScopeUsageInfo(usedBreak = true, usedIndirect = false, last = lastElement)

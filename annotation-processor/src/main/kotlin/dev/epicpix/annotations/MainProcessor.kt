@@ -219,9 +219,9 @@ class MainProcessor(
         map.appendText("    public static void registerInstructionEmitters() {\n")
         file.definitions.forEach {
             if(it.usesObf != common) {
-                map.appendText("        dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructionsKt.registerEmitterInstruction(${file.fileInfo["enum_file"]}.${it.name}, (context) -> {\n")
+                map.appendText("        dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructionsKt.registerEmitterInstruction(${file.fileInfo["enum_file"]}.${it.name.uppercase()}, (context) -> {\n")
                 val output = ByteArrayOutputStream()
-                generateCode(mappingData, it, output)
+                generateCode(mappingData, it, file, output)
                 map.appendText(output.toByteArray().decodeToString().trimEnd().prependIndent("            "))
                 map.appendText("\n")
                 map.appendText("        });\n")
@@ -245,6 +245,7 @@ class MainProcessor(
             val types = codeGenerator.createNewFile(Dependencies.ALL_FILES, enumResultPackage, enumResultClass, "java")
             types.appendText("package $enumResultPackage;\n")
             types.appendText("public class $enumResultClass {\n")
+            val instructionType = "dev.epicpix.minecraftfunctioncompiler.il.Instruction"
 
             file.definitions.forEach {
                 val named = it.name.uppercase()
@@ -263,6 +264,10 @@ class MainProcessor(
                         ParsedTokenValueAccessorScope.INSTRUCTION -> {
                             if(param.type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)) {
                                 "Int"
+                            }else if(param.type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)) {
+                                "Boolean"
+                            }else if(param.type is ParsedTokenExpressionTypeComplex) {
+                                param.type.typeName.run { if(startsWith("java.lang.")) substring(10) else this }
                             }else {
                                 TODO()
                             }
@@ -270,14 +275,16 @@ class MainProcessor(
                         ParsedTokenValueAccessorScope.LOCAL -> {
                             continue
                         }
+                        ParsedTokenValueAccessorScope.STATIC -> {
+                            continue
+                        }
                     }
 
                     impl.appendText("${param.name.snakeToLowerCamelCase()}: $typeName, ")
                 }
-                val instructionType = "dev.epicpix.minecraftfunctioncompiler.il.Instruction"
                 impl.appendText("): $instructionType = $instructionType($enumClass.$named, mapOf(")
                 it.params.forEach param@{
-                    if(it.scope == ParsedTokenValueAccessorScope.LOCAL) {
+                    if(it.scope == ParsedTokenValueAccessorScope.LOCAL || it.scope == ParsedTokenValueAccessorScope.STATIC) {
                         return@param
                     }
                     impl.appendText("\"${it.name}\" to ${it.name.snakeToLowerCamelCase()}")
@@ -288,6 +295,50 @@ class MainProcessor(
                 }
                 impl.appendText("))\n")
             }
+
+            val instructionEnumType = "dev.epicpix.minecraftfunctioncompiler.il.InstructionType"
+            impl.appendText("\n    fun addStaticRequirements(instructions: List<$instructionType>): $instructionType {\n")
+            impl.appendText("        val requirementInstructions = mutableSetOf<$instructionEnumType>()\n")
+            impl.appendText("        instructions.forEach { addStaticRequirementsInternal(it, requirementInstructions) }\n")
+            impl.appendText("        var baseInstruction = Instruction($enumClass.ROOT, mapOf(), instructions.toMutableList())\n")
+            impl.appendText("        val addedRequirements = mutableSetOf<$instructionEnumType>()\n")
+            impl.appendText("        while(requirementInstructions.isNotEmpty()) {\n")
+            impl.appendText("            baseInstruction = includeRequirementInstruction(baseInstruction, addedRequirements, requirementInstructions.toList()[0])\n")
+            impl.appendText("            requirementInstructions.removeAll(addedRequirements)\n")
+            impl.appendText("        }\n")
+            impl.appendText("        return baseInstruction\n")
+            impl.appendText("    }\n")
+            impl.appendText("    private fun includeRequirementInstruction(instruction: $instructionType, addedRequirements: MutableSet<$instructionEnumType>, currentRequirement: $instructionEnumType): $instructionType {\n")
+            impl.appendText("        var result = instruction\n")
+            file.definitions.filter { def -> def.name.startsWith("static_") }.forEach {
+                val staticParams = it.params.filter { param -> param.scope == ParsedTokenValueAccessorScope.STATIC && param.name != "CommandSourceStack" }
+                if(staticParams.isNotEmpty()) {
+                    impl.appendText("        if(currentRequirement == $enumClass.${it.name.uppercase()}) {\n")
+                    impl.appendText("            addedRequirements.add($enumClass.${it.name.uppercase()})\n")
+                    impl.appendText("            result = $instructionType($enumClass.${it.name.uppercase()}, mapOf(), mutableListOf(result))\n")
+                    for(param in staticParams.filter { param -> it.name.uppercase() != "static${param.name}".toUpperSnakeCase() }) {
+                        impl.appendText("            if(!addedRequirements.contains($enumClass.${"static${param.name}".toUpperSnakeCase()})) {\n")
+                        impl.appendText("                result = includeRequirementInstruction(result, addedRequirements, $enumClass.${"static${param.name}".toUpperSnakeCase()})\n")
+                        impl.appendText("            }\n")
+                    }
+                    impl.appendText("        }\n")
+                }
+            }
+            impl.appendText("        return result\n")
+            impl.appendText("    }\n")
+            impl.appendText("    private fun addStaticRequirementsInternal(instruction: $instructionType, mutableSet: MutableSet<$instructionEnumType>) {\n")
+            impl.appendText("        instruction.children.forEach { addStaticRequirementsInternal(it, mutableSet) }\n")
+            file.definitions.forEach {
+                val staticParams = it.params.filter { param -> param.scope == ParsedTokenValueAccessorScope.STATIC && param.name != "CommandSourceStack" && it.name.uppercase() != "static${param.name}".toUpperSnakeCase() }
+                if(staticParams.isNotEmpty()) {
+                    impl.appendText("        if(instruction.type == $enumClass.${it.name.uppercase()}) {\n")
+                    for(param in staticParams) {
+                        impl.appendText("            mutableSet.add($enumClass.${"static${param.name}".toUpperSnakeCase()})\n")
+                    }
+                    impl.appendText("        }\n")
+                }
+            }
+            impl.appendText("    }\n")
 
             impl.appendText("}\n")
             impl.close()

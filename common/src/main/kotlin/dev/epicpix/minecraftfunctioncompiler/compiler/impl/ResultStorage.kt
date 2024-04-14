@@ -2,7 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.compiler.impl
 
 import dev.epicpix.minecraftfunctioncompiler.compiler.ICompilationContext
 import dev.epicpix.minecraftfunctioncompiler.compiler.IResultStorage
-import dev.epicpix.minecraftfunctioncompiler.il.Instructions
+import dev.epicpix.minecraftfunctioncompiler.il.Instructions2
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData
 import dev.epicpix.minecraftfunctioncompiler.parser.Command
 
@@ -20,21 +20,21 @@ class ResultStorage(
     override fun setResult(context: ICompilationContext, data: LocationData) {
         if(storesResult()) {
             updatedResult = true
-            context.addInstruction(Instructions.setResultStorage(result!!, data))
+            context.addInstruction(Instructions2.setResultStorage(result!!, data))
         }
     }
 
     override fun addResult(context: ICompilationContext, data: LocationData) {
         if(storesResult()) {
             updatedResult = true
-            context.addInstruction(Instructions.addResultStorage(result!!, data))
+            context.addInstruction(Instructions2.addResultStorage(result!!, data))
         }
     }
 
     override fun updateSuccess(context: ICompilationContext, failed: Boolean) {
         if(storesSuccess()) {
             updatedSuccess = true
-            context.addInstruction(Instructions.setResultStorage(success!!, LocationData(integer = if(failed) 0 else 1)))
+            context.addInstruction(Instructions2.setResultStorage(success!!, LocationData(integer = if(failed) 0 else 1)))
         }
     }
 
