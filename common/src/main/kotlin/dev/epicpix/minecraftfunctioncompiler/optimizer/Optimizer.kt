@@ -18,11 +18,20 @@ val optimizations: List<Optimization> = listOf(
     ScopeInstructionMergeOptimization,
 )
 
-fun optimize(instructions: InstructionList): List<Instruction> {
+data class OptimizationStatistics(val type: String?, val instructionCount: Int, val timeTaken: Double)
+
+fun optimize(instructions: InstructionList, statistics: MutableList<OptimizationStatistics>): InstructionList {
     var newInstructions = instructions
+    statistics.add(OptimizationStatistics("start", instructions.sumOf { it.countInstructions() }, 0.0))
+    val start = System.nanoTime()
     do {
         val previousInstructions = newInstructions
+        val startOptim = System.nanoTime()
         optimizations.forEach { newInstructions = it.optimize(newInstructions) }
+        val endOptim = System.nanoTime()
+        statistics.add(OptimizationStatistics("optimization_pass", newInstructions.sumOf { it.countInstructions() }, (endOptim - startOptim)/1000000000.0))
     } while(newInstructions != previousInstructions)
+    val end = System.nanoTime()
+    statistics.add(OptimizationStatistics("end", newInstructions.sumOf { it.countInstructions() }, (end - start)/1000000000.0))
     return newInstructions
 }

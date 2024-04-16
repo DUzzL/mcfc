@@ -43,11 +43,7 @@ data class Instruction(val type: InstructionType, val data: Map<String, Any?>, v
         children.add(instruction)
         return this
     }
-    fun countInstructions(): Int {
-        var result = 1
-        children.forEach { result += it.countInstructions() }
-        return result
-    }
+    fun countInstructions(): Int = 1 + children.sumOf { it.countInstructions() }
 }
 
 fun remapInstructionData(data: Map<String, Any?>, mappings: Map<Int, Int>): Map<String, Any?> {

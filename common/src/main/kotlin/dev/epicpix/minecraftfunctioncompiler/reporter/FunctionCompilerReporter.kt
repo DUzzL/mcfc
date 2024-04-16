@@ -7,6 +7,7 @@ import com.google.gson.JsonObject
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction
 import dev.epicpix.minecraftfunctioncompiler.il.printInstructionList
 import dev.epicpix.minecraftfunctioncompiler.isDevelopmentEnvironment
+import dev.epicpix.minecraftfunctioncompiler.optimizer.OptimizationStatistics
 import dev.epicpix.minecraftfunctioncompiler.versionCommit
 import dev.epicpix.minecraftfunctioncompiler.versionName
 import java.net.URL
@@ -90,8 +91,7 @@ object FunctionCompilerReporter {
         compileTime: Double,
         classLoadTime: Double,
         handleLoadTime: Double,
-        preOptimizationInstructionCount: Int,
-        postOptimizationInstructionCount: Int,
+        optimizationStats: List<List<OptimizationStatistics>>,
     ) {
         reportRawData("compilation_stats", JsonObject().apply {
             add("function_counts", JsonObject().apply {
@@ -106,8 +106,21 @@ object FunctionCompilerReporter {
                 addProperty("handle_load", handleLoadTime)
             })
             add("instruction_counts", JsonObject().apply {
-                addProperty("pre_optimization", preOptimizationInstructionCount)
-                addProperty("post_optimization", postOptimizationInstructionCount)
+                addProperty("pre_optimization", optimizationStats.sumOf { it.first().instructionCount })
+                addProperty("post_optimization", optimizationStats.sumOf { it.last().instructionCount })
+            })
+            add("optimizations", JsonArray().apply {
+                for(optimizationData in optimizationStats) {
+                    add(JsonArray().apply {
+                        for(optimization in optimizationData) {
+                            add(JsonObject().apply {
+                                addProperty("optimization", optimization.type)
+                                addProperty("instruction_count", optimization.instructionCount)
+                                addProperty("time_taken", optimization.timeTaken)
+                            })
+                        }
+                    })
+                }
             })
         })
     }

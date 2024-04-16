@@ -9,6 +9,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction
 import dev.epicpix.minecraftfunctioncompiler.il.Instructions2
 import dev.epicpix.minecraftfunctioncompiler.il.printInstructionList
+import dev.epicpix.minecraftfunctioncompiler.optimizer.OptimizationStatistics
 import dev.epicpix.minecraftfunctioncompiler.optimizer.optimize
 import dev.epicpix.minecraftfunctioncompiler.parser.Command
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter
@@ -44,12 +45,15 @@ abstract class FunctionCompilerClassLoader(
         var totalOptimizedInstructions = 0
 
         val compiledFunctions = mutableMapOf<DataLocation, List<Instruction>>()
+        val optimizerStatistics = mutableListOf<List<OptimizationStatistics>>()
         val startCompile = System.nanoTime()
         for((key, value) in definedFunctions) {
             try {
                 val compiled = compile(value)
                 compiled.forEach { totalPreoptimizedInstructions += it.countInstructions() }
-                val optimized = optimize(compiled)
+                val stats = mutableListOf<OptimizationStatistics>()
+                val optimized = optimize(compiled, stats)
+                optimizerStatistics.add(stats)
                 optimized.forEach { totalOptimizedInstructions += it.countInstructions() }
                 compiledFunctions[key] = listOf(Instructions2.addStaticRequirements(optimized))
                 if(DEBUG) {
@@ -113,7 +117,7 @@ abstract class FunctionCompilerClassLoader(
             }
         }
         val handleLoadTime = (System.nanoTime()-startHandles)/1000000000.0
-        FunctionCompilerReporter.reportCompilationStatistics(foundFunctionCount, definedFunctions.size, compiledFunctions.size, parseTime, compileTime, classLoadTime, handleLoadTime, totalPreoptimizedInstructions, totalOptimizedInstructions)
+        FunctionCompilerReporter.reportCompilationStatistics(foundFunctionCount, definedFunctions.size, compiledFunctions.size, parseTime, compileTime, classLoadTime, handleLoadTime, optimizerStatistics)
 
         FunctionCompilerReporter.sendReports()
     }

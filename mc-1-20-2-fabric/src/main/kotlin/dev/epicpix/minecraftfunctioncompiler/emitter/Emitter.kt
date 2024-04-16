@@ -22,7 +22,7 @@ fun registerInstructionEmitters() {
     registerEmitterInstruction(InstructionTypes.FOR_ENTITY) {
         codeWriter.callMinecraftServer_getAllLevels {
             codeWriter.callCommandSourceStack_getServer {
-                codeWriter.loadLocal("CommandSourceStack")
+                codeWriter.loadLocal("static\$CommandSourceStack")
             }
         }
         val uidLocalLevels = codeWriter.generateUniqueLocal("\$Levels")
@@ -204,7 +204,7 @@ fun registerInstructionEmitters() {
                 fieldStorage.loadServerFunctionManager(codeWriter)
                 fieldStorage.loadFunction(codeWriter, func)
             }
-            codeWriter.loadLocal("CommandSourceStack")
+            codeWriter.loadLocal("static\$CommandSourceStack")
             if(instruction.get<LocationData?>("entity") != null) {
                 codeWriter.callCommandSourceStack_withEntity { load("entity") }
             }
