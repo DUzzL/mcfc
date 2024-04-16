@@ -6,6 +6,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.DataLocation
 import dev.epicpix.minecraftfunctioncompiler.data.FloatRangeArgument
 import dev.epicpix.minecraftfunctioncompiler.data.NegatableData
 import dev.epicpix.minecraftfunctioncompiler.data.mapEntityTypeClass
+import dev.epicpix.minecraftfunctioncompiler.emitter.Emitter2
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.EmitterBaseOptions
 import dev.epicpix.minecraftfunctioncompiler.emitter.registerInstructionEmitters
 import net.fabricmc.api.ModInitializer
@@ -20,6 +21,7 @@ import net.minecraft.world.level.GameType
 object FunctionCompilerMain : ModInitializer {
     override fun onInitialize() {
         EmitterBaseOptions.registerInstructionEmitters()
+        Emitter2.registerInstructionEmitters()
         registerInstructionEmitters()
         initBaseSelectorOptions()
         registerSelectorOption("type") { data ->

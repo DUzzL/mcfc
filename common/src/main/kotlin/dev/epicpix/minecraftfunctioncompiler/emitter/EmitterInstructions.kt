@@ -1,16 +1,29 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter
 
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionType
-import java.util.function.Consumer
 
-private val instructionEmitters = mutableMapOf<InstructionType, EmitterContext.() -> Unit>()
+private val instructionEmitters = mutableListOf<EmitterContext.() -> Boolean>()
 
 fun registerEmitterInstruction(type: InstructionType, exec: EmitterContext.() -> Unit) {
-    instructionEmitters[type] = exec
+    instructionEmitters.add {
+        if(type != instruction.type) {
+            return@add false
+        }
+        exec()
+        return@add true
+    }
 }
 
-fun registerEmitterInstruction(type: InstructionType, exec: Consumer<EmitterContext>) {
-    instructionEmitters[type] = { exec.accept(this) }
+fun registerEmitterInstruction(exec: java.util.function.Function<EmitterContext, Boolean>) {
+    instructionEmitters.add {
+        exec.apply(this)
+    }
 }
 
-fun getInstructionEmitter(type: InstructionType) = instructionEmitters[type] ?: error("Instruction Emitter for $type not found!")
+fun emitInstruction(context: EmitterContext) {
+    for(emitter in instructionEmitters) {
+        if(emitter(context)) {
+            return
+        }
+    }
+}

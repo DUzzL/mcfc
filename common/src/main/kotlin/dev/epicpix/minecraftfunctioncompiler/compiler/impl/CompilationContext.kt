@@ -158,7 +158,7 @@ data class CompilationContext(
     override fun forEachEntity(exec: ICompilationContext.(local: LocationData, breakScope: ScopeData, continueScope: ScopeData) -> Unit) {
         forScope { breakScope ->
             val local = LocationData(local = highestLocal)
-            val instruction = Instructions.forEachEntity(local)
+            val instruction = Instructions2.forEachEntity(local)
             addInstruction(instruction)
             with(highestLocal = highestLocal + 1, addInstruction = instruction.children::add).forScope { continueScope ->
                 exec(local, breakScope, continueScope)
@@ -191,7 +191,7 @@ data class CompilationContext(
     override fun forPlayer(playerName: String, exec: ICompilationContext.(local: LocationData, breakScope: ScopeData, continueScope: ScopeData) -> Unit) {
         forScope { scope ->
             val local = LocationData(local = highestLocal)
-            val instruction = Instructions.forPlayer(local, playerName)
+            val instruction = Instructions2.forPlayer(local, playerName)
             addInstruction(instruction)
             exec(with(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local, scope, scope)
         }

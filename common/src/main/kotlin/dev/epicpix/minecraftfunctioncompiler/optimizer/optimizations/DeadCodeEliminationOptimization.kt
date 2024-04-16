@@ -68,7 +68,7 @@ private fun getScopeUsed(instruction: Instruction, inScopeId: Int, lastElement: 
     var wLoop = isInLoop
     when(instruction.type) {
         InstructionTypes2.LIMITER -> wLoop = true
-        InstructionTypes.FOR_EACH_ENTITY -> wLoop = true
+        InstructionTypes2.FOR_EACH_ENTITY -> wLoop = true
         InstructionTypes2.FOR_EACH_PLAYER -> wLoop = true
         InstructionTypes.FOR_SCORE_HOLDERS -> wLoop = true
         InstructionTypes2.CHECK_LIMIT -> {

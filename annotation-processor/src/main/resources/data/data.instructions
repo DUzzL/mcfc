@@ -61,6 +61,19 @@ $for_each_list_indexed(<java.util.List> [ctx:list], int [local:index], int [loca
   }
 }
 
+$for_each_iterator(<java.util.Iterator> [ctx:iterator], yield<object> [ctx:element]) {
+  while(Iterator_hasNext([ctx:iterator]) != false) {
+    yield([ctx:element], Iterator_next([ctx:iterator]));
+  }
+}
+
+$for_each_iterable(<java.lang.Iterable> [ctx:iterable], <java.util.Iterator> [local:iterator], yield<object> [ctx:element]) {
+  let [local:iterator] = Iterable_iterator([ctx:iterable]);
+  while(Iterator_hasNext([local:iterator]) != false) {
+    yield([ctx:element], Iterator_next([local:iterator]));
+  }
+}
+
 // Minecraft specific
 @static_MINECRAFT_SERVER(<net.minecraft.commands.CommandSourceStack> [static:CommandSourceStack], <net.minecraft.server.MinecraftServer> [static:MinecraftServer]) {
   let [static:MinecraftServer] = CommandSourceStack_getServer([static:CommandSourceStack]);
@@ -72,10 +85,18 @@ $for_each_list_indexed(<java.util.List> [ctx:list], int [local:index], int [loca
   run();
 }
 
+@static_ALL_WORLDS(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.Iterable> [static:AllWorlds]) {
+  let [static:AllWorlds] = MinecraftServer_getAllLevels([static:MinecraftServer]);
+  run();
+}
 
+
+// contract [ctx:entity] match IF_NOT_NULL remove
 @GET_CURRENT_ENTITY(<net.minecraft.commands.CommandSourceStack> [static:CommandSourceStack], <net.minecraft.world.entity.Entity> [ctx:entity]) {
   let [ctx:entity] = CommandSourceStack_getEntity([static:CommandSourceStack]);
-  run();
+  if([ctx:entity] != null) {
+    run();
+  }
 }
 
 @ADD_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:tag]) {
@@ -86,34 +107,62 @@ $for_each_list_indexed(<java.util.List> [ctx:list], int [local:index], int [loca
   Entity_removeTag([ctx:entity], [instr:tag]);
 }
 
-@CHECK_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:tag], boolean [instr:negated]) {
-  if([instr:negated] == 0) {
-    if(Set_contains(Entity_getTags([ctx:entity]), [instr:tag]) != false) {
-      run();
-    }
-  }else {
-    if(Set_contains(Entity_getTags([ctx:entity]), [instr:tag]) == false) {
-      run();
-    }
+=CHECK_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:tag], boolean [instr:negated]) {
+  (negated == false) => CHECK_HAS_ENTITY_TAG;
+  => CHECK_NOT_HAS_ENTITY_TAG;
+}
+
+@CHECK_HAS_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:tag]) {
+  if(Set_contains(Entity_getTags([ctx:entity]), [instr:tag]) != false) {
+    run();
   }
 }
 
-@CHECK_ENTITY_TAGS(<net.minecraft.world.entity.Entity> [ctx:entity], boolean [instr:negated]) {
-  if([instr:negated] == 0) {
-    if(Set_size(Entity_getTags([ctx:entity])) != 0) {
-      run();
-    }
-  }else {
-    if(Set_size(Entity_getTags([ctx:entity])) == 0) {
-      run();
-    }
+@CHECK_NOT_HAS_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:tag]) {
+  if(Set_contains(Entity_getTags([ctx:entity]), [instr:tag]) == false) {
+    run();
   }
 }
 
+=CHECK_ENTITY_TAGS(<net.minecraft.world.entity.Entity> [ctx:entity], boolean [instr:negated]) {
+  (negated == false) => CHECK_HAS_ENTITY_TAGS;
+  => CHECK_NOT_HAS_ENTITY_TAGS;
+}
+
+@CHECK_HAS_ENTITY_TAGS(<net.minecraft.world.entity.Entity> [ctx:entity]) {
+  if(Set_size(Entity_getTags([ctx:entity])) != 0) {
+    run();
+  }
+}
+
+@CHECK_NOT_HAS_ENTITY_TAGS(<net.minecraft.world.entity.Entity> [ctx:entity]) {
+  if(Set_size(Entity_getTags([ctx:entity])) == 0) {
+    run();
+  }
+}
+
+// contract [ctx:entity] match IF_NOT_NULL remove
 @FOR_EACH_PLAYER(<net.minecraft.server.players.PlayerList> [static:PlayerList], <net.minecraft.server.level.ServerPlayer> [ctx:entity], <java.util.List> [local:players]) {
   let [local:players] = PlayerList_getPlayers([static:PlayerList]);
   let [ctx:entity];
   for_each_list_indexed([local:players], [ctx:entity]) {
     run();
   }
+}
+
+// contract [ctx:entity] match IF_NOT_NULL remove
+@FOR_EACH_ENTITY(<java.lang.Iterable> [static:AllWorlds], <net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.server.level.ServerLevel> [local:world], <java.lang.Iterable> [local:entities]) {
+  let [local:world];
+  for_each_iterable([static:AllWorlds], [local:world]) {
+    let [local:entities] = ServerLevel_getAllEntities([local:world]);
+    let [ctx:entity];
+    for_each_iterable([local:entities], [ctx:entity]) {
+      run();
+    }
+  }
+}
+
+@FOR_PLAYER(<net.minecraft.server.players.PlayerList> [static:PlayerList], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:name]) {
+  let [ctx:player] = PlayerList_getPlayerByName([static:PlayerList], [instr:name]);
+  run();
 }

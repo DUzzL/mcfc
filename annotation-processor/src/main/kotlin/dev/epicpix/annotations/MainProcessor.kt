@@ -217,16 +217,23 @@ class MainProcessor(
         map.appendText("package $resultPackage;\n")
         map.appendText("public class $resultName {\n")
         map.appendText("    public static void registerInstructionEmitters() {\n")
+        map.appendText("        dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructionsKt.registerEmitterInstruction((context) -> {\n")
+        map.appendText("            var cw = context.getCodeWriter();\n")
+        map.appendText("            var mv = cw.getMethodVisitor();\n")
+        map.appendText("            var type = context.getInstruction().getType();\n")
         file.definitions.forEach {
             if(it.usesObf != common) {
-                map.appendText("        dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructionsKt.registerEmitterInstruction(${file.fileInfo["enum_file"]}.${it.name.uppercase()}, (context) -> {\n")
+                map.appendText("            if(type == ${file.fileInfo["enum_file"]}.${it.name.uppercase()}) {\n")
                 val output = ByteArrayOutputStream()
                 generateCode(mappingData, it, file, output)
-                map.appendText(output.toByteArray().decodeToString().trimEnd().prependIndent("            "))
+                map.appendText(output.toByteArray().decodeToString().trimEnd().prependIndent("                "))
                 map.appendText("\n")
-                map.appendText("        });\n")
+                map.appendText("                return true;\n")
+                map.appendText("            }\n")
             }
         }
+        map.appendText("            return false;\n")
+        map.appendText("        });\n")
         map.appendText("    }\n")
         map.appendText("}\n")
 
@@ -247,6 +254,83 @@ class MainProcessor(
             types.appendText("public class $enumResultClass {\n")
             val instructionType = "dev.epicpix.minecraftfunctioncompiler.il.Instruction"
 
+            file.collapsableDefinitions.forEach {
+                val named = it.name.uppercase()
+                types.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.il.InstructionType $named = new dev.epicpix.minecraftfunctioncompiler.il.InstructionType(\"$named\");\n")
+
+                impl.appendText("fun ${named.snakeToLowerCamelCase()}(")
+                for(param in it.params) {
+                    val typeName = when(param.scope) {
+                        ParsedTokenValueAccessorScope.CONTEXT -> {
+                            if(param.type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.SCOPE)) {
+                                "dev.epicpix.minecraftfunctioncompiler.il.ScopeData"
+                            }else {
+                                "dev.epicpix.minecraftfunctioncompiler.il.LocationData"
+                            }
+                        }
+                        ParsedTokenValueAccessorScope.INSTRUCTION -> {
+                            if(param.type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)) {
+                                "Int"
+                            }else if(param.type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)) {
+                                "Boolean"
+                            }else if(param.type is ParsedTokenExpressionTypeComplex) {
+                                param.type.typeName.run { if(startsWith("java.lang.")) substring(10) else this }
+                            }else {
+                                TODO()
+                            }
+                        }
+                        ParsedTokenValueAccessorScope.LOCAL -> {
+                            continue
+                        }
+                        ParsedTokenValueAccessorScope.STATIC -> {
+                            continue
+                        }
+                    }
+
+                    impl.appendText("${param.name.snakeToLowerCamelCase()}: $typeName, ")
+                }
+                impl.appendText("): $instructionType {\n")
+                fun mapValues(to: ParsedTokenInstructionDefinition) {
+                    impl.appendText(to.name.uppercase().snakeToLowerCamelCase())
+                    impl.appendText("(")
+                    for(value in to.params) {
+                        impl.appendText(value.name)
+                        impl.appendText(", ")
+                    }
+                    impl.appendText(")")
+                }
+                for(cond in it.conditions) {
+                    if(cond.checks.isEmpty()) {
+                        impl.appendText("        return ")
+                        mapValues(file.definitions.find { def -> def.name == cond.instruction }!!)
+                        impl.appendText("\n")
+                        continue
+                    }
+                    impl.appendText("        if(")
+                    for(checkIndex in cond.checks.indices) {
+                        val check = cond.checks[checkIndex]
+                        impl.appendText(check.param)
+                        when(check.operator) {
+                            ParsedTokenInstructionConditionOperator.EQ -> impl.appendText("==")
+                            ParsedTokenInstructionConditionOperator.NE -> impl.appendText("!=")
+                        }
+                        val param = it.params.find { param -> param.name == check.param }!!
+                        if(param.type is ParsedTokenExpressionSimpleTyped && param.type.type == ParsedTokenExpressionSimpleType.BOOLEAN) {
+                            if(check.value == 0L) {
+                                impl.appendText("false")
+                            }else {
+                                impl.appendText("true")
+                            }
+                        }else {
+                            impl.appendText(check.value.toString())
+                        }
+                    }
+                    impl.appendText(") return ")
+                    mapValues(file.definitions.find { def -> def.name == cond.instruction }!!)
+                    impl.appendText("\n")
+                }
+                impl.appendText("    }\n")
+            }
             file.definitions.forEach {
                 val named = it.name.uppercase()
                 types.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.il.InstructionType $named = new dev.epicpix.minecraftfunctioncompiler.il.InstructionType(\"$named\");\n")

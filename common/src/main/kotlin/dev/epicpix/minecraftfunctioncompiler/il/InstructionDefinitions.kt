@@ -10,9 +10,7 @@ import java.util.*
 @InstructionSourceClass("dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes", "dev.epicpix.minecraftfunctioncompiler.il.Instructions")
 private interface InstructionDefinitions {
     // Minecraft specific instructions
-    fun forEachEntity(@InstructionDestination entity: LocationData): Instruction
     fun forEntity(@InstructionDestination entity: LocationData, uuid: UUID): Instruction
-    fun forPlayer(@InstructionDestination entity: LocationData, name: String): Instruction
     fun forScoreHolders(@InstructionDestination local: LocationData, single: Boolean): Instruction
     fun getObjective(@InstructionDestination objective: LocationData, name: String): Instruction
     fun getScoreboardName(@InstructionSource entity: LocationData, @InstructionDestination name: LocationData): Instruction

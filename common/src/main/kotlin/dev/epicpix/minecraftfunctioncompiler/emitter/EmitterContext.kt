@@ -21,8 +21,7 @@ data class EmitterContext(
     fun run() {
         instruction.children.forEach {
             val ctx = copy(transforms = newTransforms, scopes = newScopes, instruction = it, newTransforms = newTransforms.toMutableMap(), newScopes = newScopes.toMutableMap())
-            val emitter = getInstructionEmitter(it.type)
-            emitter(ctx)
+            emitInstruction(ctx)
         }
     }
 

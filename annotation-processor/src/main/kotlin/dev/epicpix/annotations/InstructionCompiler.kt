@@ -23,6 +23,7 @@ private enum class LexTokenSimpleType {
     CLOSE_PAREN,
     OPEN_ANGLE_BRACKET,
     CLOSE_ANGLE_BRACKET,
+    ARROW,
     DOT,
     COMMA,
     PLUS,
@@ -89,6 +90,10 @@ private fun lexTokens(code: String): List<LexToken> {
             }
         }
         if(res == "=") {
+            if(index < code.length && code[index] == '>') {
+                index++
+                return LexTokenSimple(LexTokenSimpleType.ARROW)
+            }
             return LexTokenSimple(LexTokenSimpleType.ASSIGN)
         }
         if(res.first() == '@') {
@@ -168,11 +173,15 @@ interface ParsedToken
 interface ParsedTokenStatement : ParsedToken
 interface ParsedTokenExpression : ParsedToken
 
-data class ParsedFile(val fileInfo: Map<String, String>, val definitions: List<ParsedTokenInstructionDefinition>, val functions: List<ParsedTokenFunctionDefinition>)
+data class ParsedFile(val fileInfo: Map<String, String>, val definitions: List<ParsedTokenInstructionDefinition>, val functions: List<ParsedTokenFunctionDefinition>, val collapsableDefinitions: List<ParsedTokenCollapsableInstructionDefinition>)
 
 data class ParsedTokenValueAccessor(val type: ParsedTokenExpressionType, val scope: ParsedTokenValueAccessorScope, val name: String, var gets: Boolean = false, var sets: Boolean = false) : ParsedTokenExpression
 data class ParsedTokenInstructionDefinition(val name: String, val params: List<ParsedTokenValueAccessor>, val code: List<ParsedTokenStatement>, val definitionInfo: DefinitionInfo, var usesObf: Boolean = false) : ParsedToken
 data class ParsedTokenFunctionDefinition(val name: String, val params: List<ParsedTokenValueAccessor>, val code: List<ParsedTokenStatement>, val definitionInfo: DefinitionInfo, var usesObf: Boolean = false) : ParsedToken
+data class ParsedTokenCollapsableInstructionDefinition(val name: String, val params: List<ParsedTokenValueAccessor>, val conditions: List<ParsedTokenInstructionCondition>, var usesObf: Boolean = false) : ParsedToken
+
+data class ParsedTokenInstructionCondition(val checks: List<ParsedTokenInstructionConditionComparison>, val instruction: String) : ParsedTokenStatement
+data class ParsedTokenInstructionConditionComparison(val param: String, val operator: ParsedTokenInstructionConditionOperator, val value: Long) : ParsedTokenStatement
 
 data class ParsedTokenStatementIf(val expression: ParsedTokenExpression, val code: List<ParsedTokenStatement>, val elseCode: List<ParsedTokenStatement>?) : ParsedTokenStatement
 data class ParsedTokenStatementWhile(val expression: ParsedTokenExpression, val code: List<ParsedTokenStatement>) : ParsedTokenStatement
@@ -199,6 +208,10 @@ enum class ParsedTokenExpressionSimpleType {
 
 enum class ParsedTokenExpressionOperator {
     ADD, SUB, EQ, NE, GT, LT,
+}
+
+enum class ParsedTokenInstructionConditionOperator {
+    EQ, NE
 }
 
 private fun parseExpressionTypeWord(iter: ListIterator<LexToken>): ParsedTokenExpressionType {
@@ -252,7 +265,7 @@ private fun parseExpressionAccessorScopeWord(iter: ListIterator<LexToken>): Pars
     }
 }
 
-private fun parseFunctionDefinitionParams(iter: ListIterator<LexToken>): List<ParsedTokenValueAccessor> {
+private fun parseFunctionDefinitionParams(iter: ListIterator<LexToken>, usesObf: AtomicBoolean): List<ParsedTokenValueAccessor> {
     val res = mutableListOf<ParsedTokenValueAccessor>()
     while(true) {
         if(iter.tryNextToken<LexTokenWord>() == null && !iter.tryNextTokenType(LexTokenSimpleType.OPEN_ANGLE_BRACKET)) {
@@ -260,6 +273,11 @@ private fun parseFunctionDefinitionParams(iter: ListIterator<LexToken>): List<Pa
         }
         iter.previous()
         val type = parseExpressionTypeWord(iter)
+        if(type is ParsedTokenExpressionTypeComplex) {
+            if(type.typeName.startsWith("net.minecraft")) {
+                usesObf.set(true)
+            }
+        }
         iter.expectTokenType(LexTokenSimpleType.OPEN_BRACKET)
         val scope = parseExpressionAccessorScopeWord(iter)
         iter.expectTokenType(LexTokenSimpleType.COLON)
@@ -423,6 +441,7 @@ private fun parseTokens(iter: ListIterator<LexToken>, loadDefinitionCallback: (A
     val fileInfo = mutableMapOf<String, String>()
     val instrDefs = mutableListOf<ParsedTokenInstructionDefinition>()
     val funcDefs = mutableListOf<ParsedTokenFunctionDefinition>()
+    val collapsableInstrDefs = mutableListOf<ParsedTokenCollapsableInstructionDefinition>()
     val allFunctionNames = mutableListOf<String>()
     val functionsDefinitions = mutableMapOf<String, String>()
     while(iter.hasNext()) {
@@ -446,24 +465,60 @@ private fun parseTokens(iter: ListIterator<LexToken>, loadDefinitionCallback: (A
                 }
             }
         }else if(next is LexTokenInstructionDefinition) {
+            val usesObf = AtomicBoolean()
             iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
-            val params = parseFunctionDefinitionParams(iter)
+            val params = parseFunctionDefinitionParams(iter, usesObf)
             iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
             val defInfo = DefinitionInfo(allFunctionNames, functionsDefinitions)
-            val usesObf = AtomicBoolean()
             val code = parseCode(iter, params, defInfo, usesObf)
             instrDefs.add(ParsedTokenInstructionDefinition(next.name, params, code, defInfo, usesObf.get()))
         }else if(next is LexTokenFunctionDefinition) {
+            val usesObf = AtomicBoolean()
             iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
-            val params = parseFunctionDefinitionParams(iter)
+            val params = parseFunctionDefinitionParams(iter, usesObf)
             iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
             val defInfo = DefinitionInfo(allFunctionNames, functionsDefinitions)
-            val usesObf = AtomicBoolean()
             val code = parseCode(iter, params, defInfo, usesObf)
             funcDefs.add(ParsedTokenFunctionDefinition(next.name, params, code, defInfo, usesObf.get()))
+        }else if(next is LexTokenSimple) {
+            if(next.type == LexTokenSimpleType.ASSIGN) {
+                val name = iter.expectToken<LexTokenWord>()
+                val usesObf = AtomicBoolean()
+                iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
+                val params = parseFunctionDefinitionParams(iter, usesObf)
+                iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
+                iter.expectTokenType(LexTokenSimpleType.OPEN_BRACE)
+                val conditions = mutableListOf<ParsedTokenInstructionCondition>()
+                while(!iter.tryNextTokenType(LexTokenSimpleType.CLOSE_BRACE)) {
+                    val checks = mutableListOf<ParsedTokenInstructionConditionComparison>()
+                    if(iter.tryNextTokenType(LexTokenSimpleType.OPEN_PAREN)) {
+                        while(!iter.tryNextTokenType(LexTokenSimpleType.CLOSE_PAREN)) {
+                            val instrInput = iter.expectToken<LexTokenWord>().word
+                            val op = when(iter.expectToken<LexTokenSimple>().type) {
+                                LexTokenSimpleType.EQ -> ParsedTokenInstructionConditionOperator.EQ
+                                LexTokenSimpleType.NE -> ParsedTokenInstructionConditionOperator.NE
+                                else -> throw IllegalStateException("Invalid operator")
+                            }
+                            val value = if(iter.tryNextTokenType(LexTokenSimpleType.KW_TRUE)) {
+                                1
+                            } else if(iter.tryNextTokenType(LexTokenSimpleType.KW_FALSE)) {
+                                0
+                            } else {
+                                iter.expectToken<LexTokenNumber>().number.toLong()
+                            }
+                            checks.add(ParsedTokenInstructionConditionComparison(instrInput, op, value))
+                        }
+                    }
+                    iter.expectTokenType(LexTokenSimpleType.ARROW)
+                    val instr = iter.expectToken<LexTokenWord>().word
+                    iter.expectTokenType(LexTokenSimpleType.SEMICOLON)
+                    conditions.add(ParsedTokenInstructionCondition(checks, instr))
+                }
+                collapsableInstrDefs.add(ParsedTokenCollapsableInstructionDefinition(name.word, params, conditions, usesObf.get()))
+            }
         }
     }
-    return ParsedFile(fileInfo, instrDefs, funcDefs)
+    return ParsedFile(fileInfo, instrDefs, funcDefs, collapsableInstrDefs)
 }
 
 private fun ListIterator<LexToken>.expectTokenType(type: LexTokenSimpleType) {
@@ -598,17 +653,17 @@ private fun writeExpression(mappingData: MappingData?, functionDefinitions: Map<
         }else if(expression.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
             if(expression.type.isSimpleType(ParsedTokenExpressionSimpleType.INTEGER)) {
                 if(keepResult) {
-                    output.appendText("context.getCodeWriter().writeInt(context.getInstruction().<Integer>get(\"${expression.name}\"));\n")
+                    output.appendText("cw.writeInt(context.getInstruction().<Integer>get(\"${expression.name}\"));\n")
                 }
                 return uniqId
             }else if(expression.type.isSimpleType(ParsedTokenExpressionSimpleType.BOOLEAN)) {
                 if(keepResult) {
-                    output.appendText("context.getCodeWriter().writeInt(context.getInstruction().<Boolean>get(\"${expression.name}\") ? 1 : 0);\n")
+                    output.appendText("cw.writeInt(context.getInstruction().<Boolean>get(\"${expression.name}\") ? 1 : 0);\n")
                 }
                 return uniqId
             }else if(expression.type is ParsedTokenExpressionTypeComplex && (expression.type as ParsedTokenExpressionTypeComplex).typeName == "java.lang.String") {
                 if(keepResult) {
-                    output.appendText("context.getCodeWriter().writeString(context.getInstruction().<java.lang.String>get(\"${expression.name}\"));\n")
+                    output.appendText("cw.writeString(context.getInstruction().<java.lang.String>get(\"${expression.name}\"));\n")
                 }
                 return uniqId
             }
@@ -618,17 +673,17 @@ private fun writeExpression(mappingData: MappingData?, functionDefinitions: Map<
             }
             if(keepResult) {
                 if(expression.type.isIntegerLikeType()) {
-                    output.appendText("context.getCodeWriter().getMethodVisitor().visitVarInsn(org.objectweb.asm.Opcodes.ILOAD, ${localMappings[expression.name]}.getIndex());\n")
+                    output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ILOAD, ${localMappings[expression.name]}.getIndex());\n")
                     return uniqId
                 }else {
-                    output.appendText("context.getCodeWriter().getMethodVisitor().visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, ${localMappings[expression.name]}.getIndex());\n")
+                    output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, ${localMappings[expression.name]}.getIndex());\n")
                     return uniqId
                 }
             }
             return uniqId
         }else if(expression.scope == ParsedTokenValueAccessorScope.STATIC) {
             if(keepResult) {
-                output.appendText("context.getCodeWriter().loadLocal(\"static\$${expression.name}\");\n")
+                output.appendText("cw.loadLocal(\"static\$${expression.name}\");\n")
             }
             return uniqId
         }
@@ -637,16 +692,16 @@ private fun writeExpression(mappingData: MappingData?, functionDefinitions: Map<
             val value = expression.number.toInt()
             if(value >= -1 && value <= 5) {
                 if(value == -1) {
-                    output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.ICONST_M1);\n")
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.ICONST_M1);\n")
                 } else {
-                    output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.ICONST_$value);\n")
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.ICONST_$value);\n")
                 }
             } else if(value >= Byte.MIN_VALUE && value <= Byte.MAX_VALUE) {
-                output.appendText("context.getCodeWriter().getMethodVisitor().visitIntInsn(org.objectweb.asm.Opcodes.BIPUSH, $value);\n")
+                output.appendText("mv.visitIntInsn(org.objectweb.asm.Opcodes.BIPUSH, $value);\n")
             } else if(value >= Short.MIN_VALUE && value <= Short.MAX_VALUE) {
-                output.appendText("context.getCodeWriter().getMethodVisitor().visitIntInsn(org.objectweb.asm.Opcodes.SIPUSH, $value);\n")
+                output.appendText("mv.visitIntInsn(org.objectweb.asm.Opcodes.SIPUSH, $value);\n")
             } else {
-                output.appendText("context.getCodeWriter().getMethodVisitor().visitLdcInsn($value);\n")
+                output.appendText("mv.visitLdcInsn($value);\n")
             }
         }
         return uniqId
@@ -657,9 +712,9 @@ private fun writeExpression(mappingData: MappingData?, functionDefinitions: Map<
                 uid = writeExpression(mappingData, functionDefinitions, accessorMappings, localMappings.toMutableMap(), expression.a, file, output, uid)
                 uid = writeExpression(mappingData, functionDefinitions, accessorMappings, localMappings.toMutableMap(), expression.b, file, output, uid)
                 if(keepResult) {
-                    output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.IADD);\n")
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.IADD);\n")
                 }else {
-                    output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.POP2);\n")
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.POP2);\n")
                 }
                 return uid
             }
@@ -669,9 +724,9 @@ private fun writeExpression(mappingData: MappingData?, functionDefinitions: Map<
                 uid = writeExpression(mappingData, functionDefinitions, accessorMappings, localMappings.toMutableMap(), expression.a, file, output, uid)
                 uid = writeExpression(mappingData, functionDefinitions, accessorMappings, localMappings.toMutableMap(), expression.b, file, output, uid)
                 if(keepResult) {
-                    output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.ISUB);\n")
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.ISUB);\n")
                 }else {
-                    output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.POP2);\n")
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.POP2);\n")
                 }
                 return uid
             }
@@ -688,9 +743,9 @@ private fun writeExpression(mappingData: MappingData?, functionDefinitions: Map<
             for(arg in expression.arguments) {
                 uid = writeExpression(mappingData, functionDefinitions, accessorMappings, localMappings.toMutableMap(), arg, file, output, uid)
             }
-            output.appendText("context.getCodeWriter().getMethodVisitor().visitMethodInsn($opcode, \"$className\", \"$methodName\", \"$methodDescriptor\", $isInterface);\n")
+            output.appendText("mv.visitMethodInsn($opcode, \"$className\", \"$methodName\", \"$methodDescriptor\", $isInterface);\n")
             if(!keepResult && !methodDescriptor.endsWith(")V")) {
-                output.appendText("context.getCodeWriter().getMethodVisitor().visitInsn(org.objectweb.asm.Opcodes.POP);\n")
+                output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.POP);\n")
             }
             return uid
         }else {
@@ -722,11 +777,24 @@ private fun writeExpression(mappingData: MappingData?, functionDefinitions: Map<
                             var uid = uniqueId
                             uid = writeExpression(mappingData, functionDefinitions, accessorMappings + newMappings, localMappings.toMutableMap(), param, file, output, uid)
                             if(evaluateExpressionType(mappingData, functionDefinitions, param) != expectedType) {
-                                output.appendText("context.getCodeWriter().getMethodVisitor().visitTypeInsn(org.objectweb.asm.Opcodes.CHECKCAST, \"${(expectedType as ParsedTokenExpressionTypeComplex).typeName.replace('.', '/')}\");\n")
+                                output.appendText("mv.visitTypeInsn(org.objectweb.asm.Opcodes.CHECKCAST, \"${(expectedType as ParsedTokenExpressionTypeComplex).typeName.replace('.', '/')}\");\n")
                             }
                             val yieldFuncAccessor = expression.arguments.last() as ParsedTokenValueAccessor
                             yieldFuncAccessor.sets = true
-                            output.appendText("context.save(\"${yieldFuncAccessor.name}\");\n")
+                            when(yieldFuncAccessor.scope) {
+                                ParsedTokenValueAccessorScope.CONTEXT, ParsedTokenValueAccessorScope.INSTRUCTION -> {
+                                    output.appendText("context.save(\"${yieldFuncAccessor.name}\");\n") }
+                                ParsedTokenValueAccessorScope.LOCAL -> {
+                                    if(yieldFuncAccessor.type.isIntegerLikeType()) {
+                                        output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ISTORE, ${localMappings[yieldFuncAccessor.name]}.getIndex());\n")
+                                    }else if(yieldFuncAccessor.type.isObjectLike()) {
+                                        output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, ${localMappings[yieldFuncAccessor.name]}.getIndex());\n")
+                                    }else {
+                                        throw IllegalStateException("Unknown assign type: ${yieldFuncAccessor.type}")
+                                    }
+                                }
+                                ParsedTokenValueAccessorScope.STATIC -> {}
+                            }
                             output.appendText("{ // ${func.name} - yield([${lastArg.scope}:${lastArg.name}])\n")
                             val output2 = ByteArrayOutputStream()
                             uid = writeCode(mappingData, functionDefinitions, accessorMappings + newMappings, localMappings.toMutableMap(), expression.code!!, file, output2, mutableListOf(), uid)
@@ -763,9 +831,9 @@ private fun writeComparison(mappingData: MappingData?, functionDefinitions: Map<
             val nonNull = if(isExpressionSimpleType(mappingData, functionDefinitions, expression.a, ParsedTokenExpressionSimpleType.NULL)) expression.b else expression.a
             uid = writeExpression(mappingData, functionDefinitions, accessorMappings, localMappings.toMutableMap(), nonNull, file, output, uid)
             if(expression.op == ParsedTokenExpressionOperator.NE) {
-                output.appendText("context.getCodeWriter().getMethodVisitor().visitJumpInsn(org.objectweb.asm.Opcodes.IFNULL, $failureLabel);\n")
+                output.appendText("mv.visitJumpInsn(org.objectweb.asm.Opcodes.IFNULL, $failureLabel);\n")
             }else {
-                output.appendText("context.getCodeWriter().getMethodVisitor().visitJumpInsn(org.objectweb.asm.Opcodes.IFNONNULL, $failureLabel);\n")
+                output.appendText("mv.visitJumpInsn(org.objectweb.asm.Opcodes.IFNONNULL, $failureLabel);\n")
             }
         }else {
             val typeA = evaluateExpressionType(mappingData, functionDefinitions, expression.a)
@@ -777,9 +845,9 @@ private fun writeComparison(mappingData: MappingData?, functionDefinitions: Map<
                 uid = writeExpression(mappingData, functionDefinitions, accessorMappings, localMappings.toMutableMap(), expression.a, file, output, uid)
                 uid = writeExpression(mappingData, functionDefinitions, accessorMappings, localMappings.toMutableMap(), expression.b, file, output, uid)
                 if(expression.op == ParsedTokenExpressionOperator.NE) {
-                    output.appendText("context.getCodeWriter().getMethodVisitor().visitJumpInsn(org.objectweb.asm.Opcodes.IF_ICMPEQ, $failureLabel);\n")
+                    output.appendText("mv.visitJumpInsn(org.objectweb.asm.Opcodes.IF_ICMPEQ, $failureLabel);\n")
                 }else {
-                    output.appendText("context.getCodeWriter().getMethodVisitor().visitJumpInsn(org.objectweb.asm.Opcodes.IF_ICMPNE, $failureLabel);\n")
+                    output.appendText("mv.visitJumpInsn(org.objectweb.asm.Opcodes.IF_ICMPNE, $failureLabel);\n")
                 }
             }else {
                 throw IllegalArgumentException("Unsupported expression comparison type: ${evaluateExpressionType(mappingData, functionDefinitions, expression.a)}")
@@ -791,9 +859,9 @@ private fun writeComparison(mappingData: MappingData?, functionDefinitions: Map<
             uid = writeExpression(mappingData, functionDefinitions, accessorMappings, localMappings.toMutableMap(), expression.a, file, output, uid)
             uid = writeExpression(mappingData, functionDefinitions, accessorMappings, localMappings.toMutableMap(), expression.b, file, output, uid)
             if(expression.op == ParsedTokenExpressionOperator.LT) {
-                output.appendText("context.getCodeWriter().getMethodVisitor().visitJumpInsn(org.objectweb.asm.Opcodes.IF_ICMPGE, $failureLabel);\n")
+                output.appendText("mv.visitJumpInsn(org.objectweb.asm.Opcodes.IF_ICMPGE, $failureLabel);\n")
             }else {
-                output.appendText("context.getCodeWriter().getMethodVisitor().visitJumpInsn(org.objectweb.asm.Opcodes.IF_ICMPLE, $failureLabel);\n")
+                output.appendText("mv.visitJumpInsn(org.objectweb.asm.Opcodes.IF_ICMPLE, $failureLabel);\n")
             }
             return uid
         }else {
@@ -815,12 +883,12 @@ private fun writeCode(mappingData: MappingData?, functionDefinitions: Map<String
             if(el.elseCode != null) {
                 val jumpLabel = "j${uid++}"
                 output.appendText("org.objectweb.asm.Label $jumpLabel = new org.objectweb.asm.Label();\n")
-                output.appendText("context.getCodeWriter().getMethodVisitor().visitJumpInsn(org.objectweb.asm.Opcodes.GOTO, $jumpLabel);\n")
-                output.appendText("context.getCodeWriter().getMethodVisitor().visitLabel($failureLabel);\n")
+                output.appendText("mv.visitJumpInsn(org.objectweb.asm.Opcodes.GOTO, $jumpLabel);\n")
+                output.appendText("mv.visitLabel($failureLabel);\n")
                 uid = writeCode(mappingData, functionDefinitions, accessorMappings, localMappings.toMutableMap(), el.elseCode, file, output, mutableListOf(), uid, yieldCallbacks)
-                output.appendText("context.getCodeWriter().getMethodVisitor().visitLabel($jumpLabel);\n")
+                output.appendText("mv.visitLabel($jumpLabel);\n")
             }else {
-                output.appendText("context.getCodeWriter().getMethodVisitor().visitLabel($failureLabel);\n")
+                output.appendText("mv.visitLabel($failureLabel);\n")
             }
             continue
         }else if(el is ParsedTokenStatementWhile) {
@@ -828,11 +896,11 @@ private fun writeCode(mappingData: MappingData?, functionDefinitions: Map<String
             output.appendText("org.objectweb.asm.Label $failureLabel = new org.objectweb.asm.Label();\n")
             val startLoopLabel = "j${uid++}"
             output.appendText("org.objectweb.asm.Label $startLoopLabel = new org.objectweb.asm.Label();\n")
-            output.appendText("context.getCodeWriter().getMethodVisitor().visitLabel($startLoopLabel);\n")
+            output.appendText("mv.visitLabel($startLoopLabel);\n")
             uid = writeComparison(mappingData, functionDefinitions, accessorMappings, localMappings.toMutableMap(), el.expression, file, output, failureLabel, uid)
             uid = writeCode(mappingData, functionDefinitions, accessorMappings, localMappings.toMutableMap(), el.code, file, output, mutableListOf(), uid, yieldCallbacks)
-            output.appendText("context.getCodeWriter().getMethodVisitor().visitJumpInsn(org.objectweb.asm.Opcodes.GOTO, $startLoopLabel);\n")
-            output.appendText("context.getCodeWriter().getMethodVisitor().visitLabel($failureLabel);\n")
+            output.appendText("mv.visitJumpInsn(org.objectweb.asm.Opcodes.GOTO, $startLoopLabel);\n")
+            output.appendText("mv.visitLabel($failureLabel);\n")
             continue
         }else if(el is ParsedTokenStatementFunctionCall) {
             if(el.name == "run") {
@@ -844,11 +912,11 @@ private fun writeCode(mappingData: MappingData?, functionDefinitions: Map<String
                 output.appendText("org.objectweb.asm.Label $jumpLabel = new org.objectweb.asm.Label();\n")
                 output.appendText("context.getNewScopes().put(context.getInstruction().<dev.epicpix.minecraftfunctioncompiler.il.ScopeData>get(\"${scopeAccessor.name}\").getId(), $jumpLabel);\n")
                 uid = writeCode(mappingData, functionDefinitions, accessorMappings, localMappings.toMutableMap(), el.code!!, file, output, mutableListOf(), uid, yieldCallbacks)
-                output.appendText("context.getCodeWriter().getMethodVisitor().visitLabel($jumpLabel);\n")
+                output.appendText("mv.visitLabel($jumpLabel);\n")
             }else if(el.name == "exit_scope") {
                 val scopeAccessor = el.arguments[0] as ParsedTokenValueAccessor
                 scopeAccessor.gets = true
-                output.appendText("context.getCodeWriter().getMethodVisitor().visitJumpInsn(org.objectweb.asm.Opcodes.GOTO, context.getNewScopes().get(context.getInstruction().<dev.epicpix.minecraftfunctioncompiler.il.ScopeData>get(\"${scopeAccessor.name}\").getId()));\n")
+                output.appendText("mv.visitJumpInsn(org.objectweb.asm.Opcodes.GOTO, context.getNewScopes().get(context.getInstruction().<dev.epicpix.minecraftfunctioncompiler.il.ScopeData>get(\"${scopeAccessor.name}\").getId()));\n")
             }else if(el.name == "yield") {
                 val yieldObj = el.arguments[0] as ParsedTokenValueAccessor
                 yieldObj.gets = true
@@ -877,29 +945,29 @@ private fun writeCode(mappingData: MappingData?, functionDefinitions: Map<String
                 ParsedTokenValueAccessorScope.CONTEXT,
                 ParsedTokenValueAccessorScope.INSTRUCTION -> {
                     val storageLocalUid = "s${uid++}"
-                    output.appendText("String $storageLocalUid = context.getCodeWriter().generateUniqueLocal();\n")
+                    output.appendText("String $storageLocalUid = cw.generateUniqueLocal();\n")
                     output.appendText("context.store(\"${el.accessor.name}\", $storageLocalUid);\n")
-                    output.appendText("dev.epicpix.minecraftfunctioncompiler.emitter.impl.Local $storageLocal = context.getCodeWriter().createLocal($storageLocalUid, \"$assignType\");\n")
+                    output.appendText("dev.epicpix.minecraftfunctioncompiler.emitter.impl.Local $storageLocal = cw.createLocal($storageLocalUid, \"$assignType\");\n")
                 }
                 ParsedTokenValueAccessorScope.LOCAL -> {
-                    output.appendText("dev.epicpix.minecraftfunctioncompiler.emitter.impl.Local $storageLocal = context.getCodeWriter().createLocal(context.getCodeWriter().generateUniqueLocal(), \"$assignType\");\n")
+                    output.appendText("dev.epicpix.minecraftfunctioncompiler.emitter.impl.Local $storageLocal = cw.createLocal(cw.generateUniqueLocal(), \"$assignType\");\n")
                     localMappings[el.accessor.name] = storageLocal
                 }
                 ParsedTokenValueAccessorScope.STATIC -> {
-                    output.appendText("dev.epicpix.minecraftfunctioncompiler.emitter.impl.Local $storageLocal = context.getCodeWriter().createLocal(\"static\$${el.accessor.name}\", \"$assignType\");\n")
+                    output.appendText("dev.epicpix.minecraftfunctioncompiler.emitter.impl.Local $storageLocal = cw.createLocal(\"static\$${el.accessor.name}\", \"$assignType\");\n")
                 }
             }
             if(el.expression != null) {
                 if(assignType.first() == 'I') {
-                    output.appendText("context.getCodeWriter().getMethodVisitor().visitVarInsn(org.objectweb.asm.Opcodes.ISTORE, $storageLocal.getIndex());\n")
+                    output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ISTORE, $storageLocal.getIndex());\n")
                 } else if(assignType.first() == 'L') {
-                    output.appendText("context.getCodeWriter().getMethodVisitor().visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, $storageLocal.getIndex());\n")
+                    output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, $storageLocal.getIndex());\n")
                 } else {
                     throw IllegalStateException("Unknown assign type: $assignType")
                 }
             }
             onScopeEnd.add(0) {
-                output.appendText("context.getCodeWriter().destroyLocal($storageLocal);\n")
+                output.appendText("cw.destroyLocal($storageLocal);\n")
             }
             continue
         }else if(el is ParsedTokenStatementAssignVariable) {
@@ -910,9 +978,9 @@ private fun writeCode(mappingData: MappingData?, functionDefinitions: Map<String
                     output.appendText("context.save(\"${el.accessor.name}\");\n") }
                 ParsedTokenValueAccessorScope.LOCAL -> {
                     if(el.accessor.type.isIntegerLikeType()) {
-                        output.appendText("context.getCodeWriter().getMethodVisitor().visitVarInsn(org.objectweb.asm.Opcodes.ISTORE, ${localMappings[el.accessor.name]}.getIndex());\n")
+                        output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ISTORE, ${localMappings[el.accessor.name]}.getIndex());\n")
                     }else if(el.accessor.type.isObjectLike()) {
-                        output.appendText("context.getCodeWriter().getMethodVisitor().visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, ${localMappings[el.accessor.name]}.getIndex());\n")
+                        output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, ${localMappings[el.accessor.name]}.getIndex());\n")
                     }else {
                         throw IllegalStateException("Unknown assign type: ${el.accessor.type}")
                     }

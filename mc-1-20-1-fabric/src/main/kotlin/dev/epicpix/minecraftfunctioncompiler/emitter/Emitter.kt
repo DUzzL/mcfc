@@ -19,34 +19,6 @@ import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
 
 fun registerInstructionEmitters() {
-    registerEmitterInstruction(InstructionTypes.FOR_EACH_ENTITY) {
-        val uidLocalLevels = codeWriter.generateUniqueLocal("\$Levels")
-        codeWriter.callMinecraftServer_getAllLevels {
-            codeWriter.callCommandSourceStack_getServer {
-                codeWriter.loadLocal("CommandSourceStack")
-            }
-        }
-        codeWriter.storeLocal(uidLocalLevels, Iterable::class.java) {
-            codeWriter.createIterableForEachLoop(uidLocalLevels, ServerLevel::class.java, true) {
-                val uidLocalEntities = codeWriter.generateUniqueLocal("\$Entities")
-                codeWriter.callIterable_iterator { codeWriter.callServerLevel_getAllEntities {} }
-                codeWriter.storeLocal(uidLocalEntities, Iterator::class.java) {
-                    codeWriter.createIteratorForEachLoop(uidLocalEntities, Entity::class.java, true) {
-                        runStored("entity", "\$Entity", Entity::class.java)
-                    }
-                }
-            }
-        }
-    }
-    registerEmitterInstruction(InstructionTypes.FOR_PLAYER) {
-        codeWriter.callPlayerList_getPlayerByName {
-            codeWriter.callCommandSourceStack_getServer {
-                codeWriter.loadLocal("CommandSourceStack")
-            }
-            codeWriter.writeString(instruction["name"])
-        }
-        runStored("entity", "\$Player", ServerPlayer::class.java)
-    }
     registerEmitterInstruction(InstructionTypes.FOR_ENTITY) {
         codeWriter.callMinecraftServer_getAllLevels {
             codeWriter.callCommandSourceStack_getServer {
