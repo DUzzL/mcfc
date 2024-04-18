@@ -51,7 +51,7 @@ data class EmitterContext(
         if(loc.string != null) {
             codeWriter.writeString(loc.string)
         }else if(loc.local != null) {
-            codeWriter.loadLocal(transforms[loc.local]!!)
+            codeWriter.loadLocal(newTransforms[loc.local]!!)
         }else if(loc.integer != null) {
             codeWriter.writeInt(loc.integer)
         }
