@@ -221,11 +221,12 @@ class MainProcessor(
         map.appendText("            var cw = context.getCodeWriter();\n")
         map.appendText("            var mv = cw.getMethodVisitor();\n")
         map.appendText("            var type = context.getInstruction().getType();\n")
+        val info = mutableMapOf<String, List<AccessorStatistics>>()
         file.definitions.forEach {
             if(it.usesObf != common) {
                 map.appendText("            if(type == ${file.fileInfo["enum_file"]}.${it.name.uppercase()}) {\n")
                 val output = ByteArrayOutputStream()
-                generateCode(mappingData, it, file, output)
+                info[it.name] = generateCode(mappingData, it, file, output)
                 map.appendText(output.toByteArray().decodeToString().trimEnd().prependIndent("                "))
                 map.appendText("\n")
                 map.appendText("                return true;\n")
@@ -259,22 +260,22 @@ class MainProcessor(
                 types.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.il.InstructionType $named = new dev.epicpix.minecraftfunctioncompiler.il.InstructionType(\"$named\");\n")
 
                 impl.appendText("fun ${named.snakeToLowerCamelCase()}(")
-                for(param in it.params) {
+                for((param, type) in it.params) {
                     val typeName = when(param.scope) {
                         ParsedTokenValueAccessorScope.CONTEXT -> {
-                            if(param.type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.SCOPE)) {
+                            if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.SCOPE)) {
                                 "dev.epicpix.minecraftfunctioncompiler.il.ScopeData"
                             }else {
                                 "dev.epicpix.minecraftfunctioncompiler.il.LocationData"
                             }
                         }
                         ParsedTokenValueAccessorScope.INSTRUCTION -> {
-                            if(param.type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)) {
+                            if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)) {
                                 "Int"
-                            }else if(param.type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)) {
+                            }else if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)) {
                                 "Boolean"
-                            }else if(param.type is ParsedTokenExpressionTypeComplex) {
-                                param.type.typeName.run { if(startsWith("java.lang.")) substring(10) else this }
+                            }else if(type is ParsedTokenExpressionTypeComplex) {
+                                type.typeName.run { if(startsWith("java.lang.")) substring(10) else this }
                             }else {
                                 TODO()
                             }
@@ -293,7 +294,7 @@ class MainProcessor(
                 fun mapValues(to: ParsedTokenInstructionDefinition) {
                     impl.appendText(to.name.uppercase().snakeToLowerCamelCase())
                     impl.appendText("(")
-                    for(value in to.params) {
+                    for((value, _) in to.params) {
                         impl.appendText(value.name)
                         impl.appendText(", ")
                     }
@@ -314,8 +315,8 @@ class MainProcessor(
                             ParsedTokenInstructionConditionOperator.EQ -> impl.appendText("==")
                             ParsedTokenInstructionConditionOperator.NE -> impl.appendText("!=")
                         }
-                        val param = it.params.find { param -> param.name == check.param }!!
-                        if(param.type is ParsedTokenExpressionSimpleTyped && param.type.type == ParsedTokenExpressionSimpleType.BOOLEAN) {
+                        val param = it.params.find { (param, _) -> param.name == check.param }!!
+                        if(param.second is ParsedTokenExpressionSimpleTyped && (param.second as ParsedTokenExpressionSimpleTyped).type == ParsedTokenExpressionSimpleType.BOOLEAN) {
                             if(check.value == 0L) {
                                 impl.appendText("false")
                             }else {
@@ -336,22 +337,22 @@ class MainProcessor(
                 types.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.il.InstructionType $named = new dev.epicpix.minecraftfunctioncompiler.il.InstructionType(\"$named\");\n")
 
                 impl.appendText("fun ${named.snakeToLowerCamelCase()}(")
-                for(param in it.params) {
+                for((param, type) in it.params) {
                     val typeName = when(param.scope) {
                         ParsedTokenValueAccessorScope.CONTEXT -> {
-                            if(param.type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.SCOPE)) {
+                            if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.SCOPE)) {
                                 "dev.epicpix.minecraftfunctioncompiler.il.ScopeData"
                             }else {
                                 "dev.epicpix.minecraftfunctioncompiler.il.LocationData"
                             }
                         }
                         ParsedTokenValueAccessorScope.INSTRUCTION -> {
-                            if(param.type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)) {
+                            if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)) {
                                 "Int"
-                            }else if(param.type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)) {
+                            }else if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)) {
                                 "Boolean"
-                            }else if(param.type is ParsedTokenExpressionTypeComplex) {
-                                param.type.typeName.run { if(startsWith("java.lang.")) substring(10) else this }
+                            }else if(type is ParsedTokenExpressionTypeComplex) {
+                                type.typeName.run { if(startsWith("java.lang.")) substring(10) else this }
                             }else {
                                 TODO()
                             }
@@ -367,13 +368,15 @@ class MainProcessor(
                     impl.appendText("${param.name.snakeToLowerCamelCase()}: $typeName, ")
                 }
                 impl.appendText("): $instructionType = $instructionType($enumClass.$named, mapOf(")
-                it.params.forEach param@{
+                val selfInfo = info[it.name]
+                it.params.forEach param@{ (it, _) ->
                     if(it.scope == ParsedTokenValueAccessorScope.LOCAL || it.scope == ParsedTokenValueAccessorScope.STATIC) {
                         return@param
                     }
                     impl.appendText("\"${it.name}\" to ${it.name.snakeToLowerCamelCase()}")
                     if(it.scope == ParsedTokenValueAccessorScope.CONTEXT) {
-                        impl.appendText(".uses(source = ${it.gets}, destination = ${it.sets})")
+                        val stats = selfInfo?.find { s -> s.accessor == it } ?: AccessorStatistics(it)
+                        impl.appendText(".uses(source = ${stats.gets}, destination = ${stats.sets})")
                     }
                     impl.appendText(", ")
                 }
@@ -395,14 +398,14 @@ class MainProcessor(
             impl.appendText("    private fun includeRequirementInstruction(instruction: $instructionType, addedRequirements: MutableSet<$instructionEnumType>, currentRequirement: $instructionEnumType): $instructionType {\n")
             impl.appendText("        var result = instruction\n")
             file.definitions.filter { def -> def.name.startsWith("static_") }.forEach {
-                val staticParams = it.params.filter { param -> param.scope == ParsedTokenValueAccessorScope.STATIC && param.name != "CommandSourceStack" }
+                val staticParams = it.params.filter { (param, _) -> param.scope == ParsedTokenValueAccessorScope.STATIC && param.name != "CommandSourceStack" }
                 if(staticParams.isNotEmpty()) {
                     impl.appendText("        if(currentRequirement == $enumClass.${it.name.uppercase()}) {\n")
                     impl.appendText("            addedRequirements.add($enumClass.${it.name.uppercase()})\n")
                     impl.appendText("            result = $instructionType($enumClass.${it.name.uppercase()}, mapOf(), mutableListOf(result))\n")
-                    for(param in staticParams.filter { param -> it.name.uppercase() != "static${param.name}".toUpperSnakeCase() }) {
-                        impl.appendText("            if(!addedRequirements.contains($enumClass.${"static${param.name}".toUpperSnakeCase()})) {\n")
-                        impl.appendText("                result = includeRequirementInstruction(result, addedRequirements, $enumClass.${"static${param.name}".toUpperSnakeCase()})\n")
+                    for(param in staticParams.filter { param -> it.name.uppercase() != "static${param.first.name}".toUpperSnakeCase() }) {
+                        impl.appendText("            if(!addedRequirements.contains($enumClass.${"static${param.first.name}".toUpperSnakeCase()})) {\n")
+                        impl.appendText("                result = includeRequirementInstruction(result, addedRequirements, $enumClass.${"static${param.first.name}".toUpperSnakeCase()})\n")
                         impl.appendText("            }\n")
                     }
                     impl.appendText("        }\n")
@@ -413,11 +416,11 @@ class MainProcessor(
             impl.appendText("    private fun addStaticRequirementsInternal(instruction: $instructionType, mutableSet: MutableSet<$instructionEnumType>) {\n")
             impl.appendText("        instruction.children.forEach { addStaticRequirementsInternal(it, mutableSet) }\n")
             file.definitions.forEach {
-                val staticParams = it.params.filter { param -> param.scope == ParsedTokenValueAccessorScope.STATIC && param.name != "CommandSourceStack" && it.name.uppercase() != "static${param.name}".toUpperSnakeCase() }
+                val staticParams = it.params.filter { (param, _) -> param.scope == ParsedTokenValueAccessorScope.STATIC && param.name != "CommandSourceStack" && it.name.uppercase() != "static${param.name}".toUpperSnakeCase() }
                 if(staticParams.isNotEmpty()) {
                     impl.appendText("        if(instruction.type == $enumClass.${it.name.uppercase()}) {\n")
                     for(param in staticParams) {
-                        impl.appendText("            mutableSet.add($enumClass.${"static${param.name}".toUpperSnakeCase()})\n")
+                        impl.appendText("            mutableSet.add($enumClass.${"static${param.first.name}".toUpperSnakeCase()})\n")
                     }
                     impl.appendText("        }\n")
                 }

@@ -8,7 +8,6 @@ import dev.epicpix.minecraftfunctioncompiler.il.ScoreboardOperation
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
-import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.ai.attributes.AttributeInstance
 import net.minecraft.world.phys.Vec2
@@ -19,26 +18,6 @@ import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
 
 fun registerInstructionEmitters() {
-    registerEmitterInstruction(InstructionTypes.FOR_ENTITY) {
-        codeWriter.callMinecraftServer_getAllLevels {
-            codeWriter.callCommandSourceStack_getServer {
-                codeWriter.loadLocal("static\$CommandSourceStack")
-            }
-        }
-        val uidLocalLevels = codeWriter.generateUniqueLocal("\$Levels")
-        codeWriter.storeLocal(uidLocalLevels, Iterable::class.java) {
-            codeWriter.createIterableForEachLoop(uidLocalLevels, ServerLevel::class.java, true) {
-                codeWriter.callServerLevel_getEntity {
-                    fieldStorage.loadUUID(codeWriter, instruction["uuid"])
-                }
-                val uidLocal = codeWriter.generateUniqueLocal("\$Entity")
-                storeCreate("entity", uidLocal, Entity::class.java) {
-                    codeWriter.loadLocal(uidLocal)
-                    codeWriter.executeIf(Opcodes.IFNONNULL) { run() }
-                }
-            }
-        }
-    }
     registerEmitterInstruction(InstructionTypes.FOR_SCORE_HOLDERS) {
         codeWriter.newObject(ArrayList::class.java, Collection::class.java) {
             codeWriter.callMap_keySet {

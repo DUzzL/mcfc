@@ -180,7 +180,7 @@ data class CompilationContext(
     override fun forEntity(entityUuid: UUID, exec: ICompilationContext.(local: LocationData, breakScope: ScopeData, continueScope: ScopeData) -> Unit) {
         forScope { breakScope ->
             val local = LocationData(local = highestLocal)
-            val instruction = Instructions.forEntity(local, entityUuid)
+            val instruction = Instructions2.forEntity(local, entityUuid)
             addInstruction(instruction)
             with(highestLocal = highestLocal + 1, addInstruction = instruction.children::add).forScope { continueScope ->
                 exec(local, breakScope, continueScope)

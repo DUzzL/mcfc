@@ -9,7 +9,7 @@
   run();
 }
 
-@IF_NOT_NULL(object [ctx:local]) {
+@IF_NOT_NULL(<java.lang.Object> [ctx:local]) {
   if([ctx:local] != null) {
     run();
   }
@@ -52,23 +52,23 @@
   [ctx:storage] = [ctx:value];
 }
 
-$for_each_list_indexed(<java.util.List> [ctx:list], int [local:index], int [local:size], yield<object> [ctx:element]) {
-  let [local:index] = 0;
-  let [local:size] = List_size([ctx:list]);
+$for_each_list_indexed(<java.util.List> [ctx:list], yield<java.lang.Object> [ctx:element]) {
+  let [local:index]<int> = 0;
+  let [local:size]<int> = List_size([ctx:list]);
   while([local:index] < [local:size]) {
     yield([ctx:element], List_get([ctx:list], [local:index]));
     [local:index] = [local:index] + 1;
   }
 }
 
-$for_each_iterator(<java.util.Iterator> [ctx:iterator], yield<object> [ctx:element]) {
+$for_each_iterator(<java.util.Iterator> [ctx:iterator], yield<java.lang.Object> [ctx:element]) {
   while(Iterator_hasNext([ctx:iterator]) != false) {
     yield([ctx:element], Iterator_next([ctx:iterator]));
   }
 }
 
-$for_each_iterable(<java.lang.Iterable> [ctx:iterable], <java.util.Iterator> [local:iterator], yield<object> [ctx:element]) {
-  let [local:iterator] = Iterable_iterator([ctx:iterable]);
+$for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> [ctx:element]) {
+  let [local:iterator]<java.util.Iterator> = Iterable_iterator([ctx:iterable]);
   while(Iterator_hasNext([local:iterator]) != false) {
     yield([ctx:element], Iterator_next([local:iterator]));
   }
@@ -142,8 +142,8 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], <java.util.Iterator> [lo
 }
 
 // contract [ctx:entity] match IF_NOT_NULL remove
-@FOR_EACH_PLAYER(<net.minecraft.server.players.PlayerList> [static:PlayerList], <net.minecraft.server.level.ServerPlayer> [ctx:entity], <java.util.List> [local:players]) {
-  let [local:players] = PlayerList_getPlayers([static:PlayerList]);
+@FOR_EACH_PLAYER(<net.minecraft.server.players.PlayerList> [static:PlayerList], <net.minecraft.server.level.ServerPlayer> [ctx:entity]) {
+  let [local:players]<java.util.List> = PlayerList_getPlayers([static:PlayerList]);
   let [ctx:entity];
   for_each_list_indexed([local:players], [ctx:entity]) {
     run();
@@ -151,10 +151,10 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], <java.util.Iterator> [lo
 }
 
 // contract [ctx:entity] match IF_NOT_NULL remove
-@FOR_EACH_ENTITY(<java.lang.Iterable> [static:AllWorlds], <net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.server.level.ServerLevel> [local:world], <java.lang.Iterable> [local:entities]) {
-  let [local:world];
+@FOR_EACH_ENTITY(<java.lang.Iterable> [static:AllWorlds], <net.minecraft.world.entity.Entity> [ctx:entity]) {
+  let [local:world]<net.minecraft.server.level.ServerLevel>;
   for_each_iterable([static:AllWorlds], [local:world]) {
-    let [local:entities] = ServerLevel_getAllEntities([local:world]);
+    let [local:entities]<java.lang.Iterable> = ServerLevel_getAllEntities([local:world]);
     let [ctx:entity];
     for_each_iterable([local:entities], [ctx:entity]) {
       run();
@@ -165,4 +165,16 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], <java.util.Iterator> [lo
 @FOR_PLAYER(<net.minecraft.server.players.PlayerList> [static:PlayerList], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:name]) {
   let [ctx:player] = PlayerList_getPlayerByName([static:PlayerList], [instr:name]);
   run();
+}
+
+// contract [ctx:entity] match IF_NOT_NULL remove
+@FOR_ENTITY(<java.lang.Iterable> [static:AllWorlds], <net.minecraft.world.entity.Entity> [ctx:entity], <java.util.UUID> [instr:uuid]) {
+  let [local:world]<net.minecraft.server.level.ServerLevel>;
+  for_each_iterable([static:AllWorlds], [local:world]) {
+    let [ctx:entity] = ServerLevel_getEntity([local:world], [instr:uuid]);
+    if([ctx:entity] != null) {
+      run();
+      return;
+    }
+  }
 }
