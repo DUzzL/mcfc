@@ -356,6 +356,23 @@ private fun parseExpression2(iter: ListIterator<LexToken>, valueDefinitions: Lis
 }
 
 private fun parseExpressionBase(iter: ListIterator<LexToken>, valueDefinitions: List<ParsedTokenValueAccessor>, definitions: DefinitionInfo, usesObf: AtomicBoolean): ParsedTokenExpression {
+    var exp1 = parseExpressionLowerBase(iter, valueDefinitions, definitions, usesObf)
+    if(!iter.hasNext()) return exp1
+    while(iter.tryNextTokenType(LexTokenSimpleType.DOT)) {
+        val name = iter.expectToken<LexTokenWord>()
+        iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
+        val params = parseFunctionCallParams(iter, valueDefinitions, definitions, usesObf).toMutableList()
+        params.add(0, exp1)
+        iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
+        if(definitions.externalFunctionNames.contains(name.word) && definitions.isObfuscated(name.word)) {
+            usesObf.set(true)
+        }
+        exp1 = ParsedTokenStatementFunctionCall(name.word, params, null, definitions.externalFunctionNames.contains(name.word))
+    }
+    return exp1
+}
+
+private fun parseExpressionLowerBase(iter: ListIterator<LexToken>, valueDefinitions: List<ParsedTokenValueAccessor>, definitions: DefinitionInfo, usesObf: AtomicBoolean): ParsedTokenExpression {
     if(!iter.hasNext()) throw IllegalStateException("Expected expression base, got EOF")
     iter.tryNextToken<LexTokenNumber> {
         return ParsedTokenExpressionNumber(it.number.toLong())
@@ -453,10 +470,22 @@ private fun parseCode(iter: ListIterator<LexToken>, valueDefinitions: List<Parse
         }else if(iter.tryNextTokenType(LexTokenSimpleType.OPEN_BRACKET)) {
             iter.previous()
             val accessor = parseValueAccessor(iter, valueDefinitions)
-            iter.expectTokenType(LexTokenSimpleType.ASSIGN)
-            val expression = parseExpression(iter, valueDefinitions, definitions, usesObf)
-            iter.expectTokenType(LexTokenSimpleType.SEMICOLON)
-            res.add(ParsedTokenStatementAssignVariable(accessor, expression))
+            if(iter.tryNextTokenType(LexTokenSimpleType.DOT)) {
+                iter.previous()
+                iter.previous()
+                iter.previous()
+                iter.previous()
+                iter.previous()
+                iter.previous()
+                val expression = parseExpression(iter, valueDefinitions, definitions, usesObf)
+                iter.expectTokenType(LexTokenSimpleType.SEMICOLON)
+                res.add(expression as ParsedTokenStatementFunctionCall)
+            }else {
+                iter.expectTokenType(LexTokenSimpleType.ASSIGN)
+                val expression = parseExpression(iter, valueDefinitions, definitions, usesObf)
+                iter.expectTokenType(LexTokenSimpleType.SEMICOLON)
+                res.add(ParsedTokenStatementAssignVariable(accessor, expression))
+            }
         }else {
             val name = iter.expectToken<LexTokenWord>()
             iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
