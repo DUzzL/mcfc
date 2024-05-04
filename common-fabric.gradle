@@ -33,6 +33,7 @@ ksp {
     arg("definitions", "minecraft")
     project.afterEvaluate {
         arg("mappingsFile", loom.mappingsFile.absolutePath)
+        arg("jars", project.configurations.runtimeClasspath.incoming.files.join(":"))
     }
     arg("minecraft_version", project.minecraft_version)
 }

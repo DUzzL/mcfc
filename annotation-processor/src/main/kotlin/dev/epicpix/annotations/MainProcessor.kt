@@ -14,8 +14,10 @@ import net.fabricmc.tinyremapper.IMappingProvider
 import net.fabricmc.tinyremapper.TinyUtils
 import org.objectweb.asm.Type
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.OutputStream
 import java.nio.file.Paths
+import java.util.jar.JarFile
 
 fun OutputStream.appendText(str: String) {
     this.write(str.toByteArray())
@@ -49,6 +51,16 @@ fun loadDataFile(file: String): String? {
     return MainProcessor::class.java.getResourceAsStream("/data/$file")?.readAllBytes()?.decodeToString()
 }
 
+fun remapType(type: Type, mappingData: MappingData?): Type {
+    if(mappingData == null) return type
+    if(type.sort == Type.METHOD) {
+        val params = type.argumentTypes.map { remapType(it, mappingData) }
+        return Type.getMethodType(type.returnType.run { remapType(this, mappingData) }, *params.toTypedArray())
+    }
+    if(type.sort != Type.OBJECT) return type
+    return Type.getType("L" + (mappingData.getClassName(type.descriptor!!.run { substring(1, length - 1) })) + ";")
+}
+
 class MainProcessor(
     private val codeGenerator: CodeGenerator,
     private val options: Map<String, String>
@@ -71,7 +83,22 @@ class MainProcessor(
                 override fun acceptMethodVar(method: IMappingProvider.Member?, lvIndex: Int, startOpIdx: Int, asmIndex: Int, dstName: String?) {}
             })
         }
-
+        val jarFiles = mutableListOf<JarFile>()
+        val jarFileMappings = mutableMapOf<String, Int>()
+        if(options["jars"] != null) {
+            val jars = options["jars"]!!.split(":")
+            for(jarName in jars) {
+                val jar = JarFile(File(jarName))
+                val index = jarFiles.size
+                jarFiles.add(jar)
+                for(entry in jar.entries()) {
+                    if(!entry.isDirectory) {
+                        jarFileMappings[entry.name] = index
+                    }
+                }
+            }
+            setJarInfo(jarFiles to jarFileMappings)
+        }
         val minecraftVersion = options["minecraft_version"]?.split(".")
         val definitions = options["definitions"]?.let { loadToml(it) }
         generateInstructionData(resolver)
@@ -432,16 +459,6 @@ class MainProcessor(
             types.appendText("}\n")
             types.close()
         }
-    }
-
-    fun remapType(type: Type, mappingData: MappingData?): Type {
-        if(mappingData == null) return type
-        if(type.sort == Type.METHOD) {
-            val params = type.argumentTypes.map { remapType(it, mappingData) }
-            return Type.getMethodType(type.returnType.run { remapType(this, mappingData) }, *params.toTypedArray())
-        }
-        if(type.sort != Type.OBJECT) return type
-        return Type.getType("L" + (mappingData.getClassName(type.descriptor!!.run { substring(1, length - 1) })) + ";")
     }
 
     @OptIn(KspExperimental::class)
