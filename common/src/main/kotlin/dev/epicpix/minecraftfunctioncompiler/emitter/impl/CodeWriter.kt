@@ -2,7 +2,6 @@ package dev.epicpix.minecraftfunctioncompiler.emitter.impl
 
 import dev.epicpix.minecraftfunctioncompiler.DATA_CLASS
 import dev.epicpix.minecraftfunctioncompiler.DEBUG
-import dev.epicpix.minecraftfunctioncompiler.emitter.*
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
@@ -14,8 +13,6 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
     val locals: MutableMap<String, Local> = mutableMapOf()
     val availableLocals: MutableSet<Int> = mutableSetOf()
     val generatedLocals: MutableList<Local> = mutableListOf()
-
-    fun getLocalIndex(local: String) = locals[local]!!.index
 
     fun allocateLocalIndex(): Int {
         val localIndex: Int
@@ -138,74 +135,6 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         methodVisitor.visitJumpInsn(getIfJumpOpcode(comparison), endLabel)
         exec()
         methodVisitor.visitLabel(endLabel)
-    }
-
-    inline fun createWhileLoop(condition: (`break`: Label) -> Unit, exec: (ControlFlowExecution) -> Unit) {
-        val beginLabel = Label()
-        val endLabel = Label()
-        methodVisitor.visitLabel(beginLabel)
-        condition(endLabel)
-        exec(ControlFlowExecution(beginLabel, endLabel))
-        methodVisitor.visitLabel(endLabel)
-    }
-
-    inline fun createIndexedLoop(exec: (indexLocal: String) -> Unit) {
-        val baseName = generateUniqueLocal("\$Indexer")
-        val sizeName = "$baseName:Size"
-        val indexName = "$baseName:Index"
-        storeLocal(sizeName, Int::class.javaPrimitiveType!!) {
-            writeInt(0)
-            storeLocal(indexName, Int::class.javaPrimitiveType!!) {
-                createWhileLoop({ brk ->
-                    loadLocal(indexName)
-                    loadLocal(sizeName)
-                    methodVisitor.visitJumpInsn(Opcodes.IF_ICMPGE, brk)
-                }) { controlFlow ->
-                    exec(indexName)
-                    methodVisitor.visitIincInsn(getLocalIndex(indexName), 1)
-                    methodVisitor.visitJumpInsn(Opcodes.GOTO, controlFlow.continueJump)
-                }
-            }
-        }
-    }
-
-    inline fun createListForEachLoop(arrayLocal: String, type: Class<*>, exec: () -> Unit) {
-        callList_size { loadLocal(arrayLocal) }
-        createIndexedLoop { indexLocal ->
-            callList_get {
-                loadLocal(arrayLocal)
-                loadLocal(indexLocal)
-            }
-            castType(type)
-            exec()
-        }
-    }
-
-    inline fun createIteratorForEachLoop(iteratorLocal: String, type: Class<*>, autoLoad: Boolean, exec: (getter: () -> Unit) -> Unit) {
-        createWhileLoop({ brk ->
-            callIterator_hasNext { loadLocal(iteratorLocal) }
-            methodVisitor.visitJumpInsn(Opcodes.IFEQ, brk)
-        }) { controlFlow ->
-            callIterator_next { loadLocal(iteratorLocal) }
-            if(type != Object::class.java) castType(type)
-
-            if(!autoLoad) {
-                storeLocal("$iteratorLocal:Element", type) {
-                    exec { loadLocal("$iteratorLocal:Element") }
-                }
-            }else {
-                exec { throw UnsupportedOperationException("Cannot run getter with autoLoad enabled") }
-            }
-
-            methodVisitor.visitJumpInsn(Opcodes.GOTO, controlFlow.continueJump)
-        }
-    }
-
-    inline fun createIterableForEachLoop(iterableLocal: String, type: Class<*>, autoLoad: Boolean, exec: (getter: () -> Unit) -> Unit) {
-        callIterable_iterator { loadLocal(iterableLocal) }
-        storeLocal("$iterableLocal:Iterator", Iterator::class.java) {
-            createIteratorForEachLoop("$iterableLocal:Iterator", type, autoLoad, exec)
-        }
     }
 
     fun generateUniqueLocal(local: String): String {

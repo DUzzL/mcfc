@@ -12,45 +12,11 @@ import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.ai.attributes.AttributeInstance
 import net.minecraft.world.phys.Vec2
 import net.minecraft.world.phys.Vec3
-import net.minecraft.world.scores.Objective
 import net.minecraft.world.scores.Score
 import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
 
 fun registerInstructionEmitters() {
-    registerEmitterInstruction(InstructionTypes.FOR_SCORE_HOLDERS) {
-        codeWriter.newObject(ArrayList::class.java, Collection::class.java) {
-            codeWriter.callMap_keySet {
-                codeWriter.loadScoreboard_playerScores {
-                    fieldStorage.loadScoreboard(codeWriter)
-                }
-            }
-        }
-
-        val uidLocal = codeWriter.generateUniqueLocal("\$Array")
-        codeWriter.storeLocal(uidLocal, ArrayList::class.java) {
-            if(!instruction.get<Boolean>("single")) {
-                codeWriter.createListForEachLoop(uidLocal, String::class.java) {
-                    runStored("local", "\$Name", String::class.java)
-                }
-            }else {
-                codeWriter.callArrayList_size { codeWriter.loadLocal(uidLocal) }
-                codeWriter.executeIf(Opcodes.IFNE) {
-                    codeWriter.callArrayList_get {
-                        codeWriter.loadLocal(uidLocal)
-                        codeWriter.writeInt(0)
-                    }
-                    codeWriter.castType(String::class.java)
-                    runStored("local", "\$Name", String::class.java)
-                }
-            }
-        }
-
-    }
-    registerEmitterInstruction(InstructionTypes.GET_SCOREBOARD_NAME) {
-        codeWriter.callEntity_getScoreboardName { load("entity") }
-        runStored("name", "\$ScoreboardName", String::class.java)
-    }
     registerEmitterInstruction(InstructionTypes.SCORE_DATA) {
         if(instruction["autoCreate"]) {
             codeWriter.callScoreboard_getOrCreatePlayerScore {
@@ -171,13 +137,6 @@ fun registerInstructionEmitters() {
                 }
             }
         }
-    }
-    registerEmitterInstruction(InstructionTypes.GET_OBJECTIVE) {
-        codeWriter.callScoreboard_getObjective {
-            fieldStorage.loadScoreboard(codeWriter)
-            codeWriter.writeString(instruction["name"])
-        }
-        runStored("objective", "\$Objective", Objective::class.java)
     }
     registerEmitterInstruction(InstructionTypes.CALL_FUNCTIONS) {
         for(func in instruction.get<List<DataLocation>>("functions")) {

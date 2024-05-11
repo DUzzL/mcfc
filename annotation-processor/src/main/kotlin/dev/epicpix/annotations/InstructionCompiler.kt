@@ -1,5 +1,6 @@
 package dev.epicpix.annotations
 
+import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
@@ -44,6 +45,7 @@ private enum class LexTokenSimpleType {
     KW_FALSE,
     KW_TRUE,
     KW_RETURN,
+    KW_NEW,
 }
 
 private fun lexTokens(code: String): List<LexToken> {
@@ -132,6 +134,7 @@ private fun lexTokens(code: String): List<LexToken> {
                 "false" -> LexTokenSimple(LexTokenSimpleType.KW_FALSE)
                 "true" -> LexTokenSimple(LexTokenSimpleType.KW_TRUE)
                 "return" -> LexTokenSimple(LexTokenSimpleType.KW_RETURN)
+                "new" -> LexTokenSimple(LexTokenSimpleType.KW_NEW)
                 else -> LexTokenWord(res)
             }
         }
@@ -199,19 +202,18 @@ data class ParsedTokenInstructionCondition(val checks: List<ParsedTokenInstructi
 data class ParsedTokenInstructionConditionComparison(val param: String, val operator: ParsedTokenInstructionConditionOperator, val value: Long) : ParsedTokenStatement
 
 
-interface ParsedTokenFunctionCallInstanceType
-data class ParsedTokenFunctionCallInstanceStatic(val className: String) : ParsedTokenFunctionCallInstanceType
-data class ParsedTokenFunctionCallInstanceValue(val expression: ParsedTokenExpression) : ParsedTokenFunctionCallInstanceType
+interface ParsedTokenInstanceType
+data class ParsedTokenInstanceStatic(val className: String) : ParsedTokenInstanceType
+data class ParsedTokenInstanceValue(val expression: ParsedTokenExpression) : ParsedTokenInstanceType
 
 data object ParsedTokenStatementReturn : ParsedTokenStatement
 data class ParsedTokenStatementIf(val expression: ParsedTokenExpression, val code: List<ParsedTokenStatement>, val elseCode: List<ParsedTokenStatement>?) : ParsedTokenStatement
 data class ParsedTokenStatementWhile(val expression: ParsedTokenExpression, val code: List<ParsedTokenStatement>) : ParsedTokenStatement
-data class ParsedTokenStatementFunctionCall(val name: String, val instance: ParsedTokenFunctionCallInstanceType?, val arguments: List<ParsedTokenExpression>, val code: List<ParsedTokenStatement>?) : ParsedTokenStatement, ParsedTokenExpression {
-    val isOutsideCall: Boolean get() = instance != null
-}
+data class ParsedTokenStatementFunctionCall(val name: String, val instance: ParsedTokenInstanceType?, val arguments: List<ParsedTokenExpression>, val code: List<ParsedTokenStatement>?) : ParsedTokenStatement, ParsedTokenExpression
 data class ParsedTokenStatementDefineVariable(val type: ParsedTokenExpressionType?, val accessor: ParsedTokenValueAccessor, val expression: ParsedTokenExpression?) : ParsedTokenStatement
 data class ParsedTokenStatementAssignVariable(val accessor: ParsedTokenValueAccessor, val expression: ParsedTokenExpression) : ParsedTokenStatement
 
+data class ParsedTokenExoressionField(val name: String, val instance: ParsedTokenInstanceType) : ParsedTokenExpression
 data class ParsedTokenExpressionNumber(val number: Long) : ParsedTokenExpression
 data class ParsedTokenExpressionTyped(val type: ParsedTokenExpressionType) : ParsedTokenExpression
 data class ParsedTokenExpressionBinary(val a: ParsedTokenExpression, val b: ParsedTokenExpression, val op: ParsedTokenExpressionOperator) : ParsedTokenExpression
@@ -368,13 +370,16 @@ private fun parseExpressionBase(iter: ListIterator<LexToken>, valueDefinitions: 
     if(!iter.hasNext()) return exp1
     while(iter.tryNextTokenType(LexTokenSimpleType.DOT)) {
         val name = iter.expectToken<LexTokenWord>()
-        iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
-        val params = parseFunctionCallParams(iter, valueDefinitions, definitions, usesObf)
-        iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
-        if(definitions.externalFunctionNames.contains(name.word) && definitions.isObfuscated(name.word)) {
-            usesObf.set(true)
+        if(iter.tryNextTokenType(LexTokenSimpleType.OPEN_PAREN)) {
+            val params = parseFunctionCallParams(iter, valueDefinitions, definitions, usesObf)
+            iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
+            if(definitions.externalFunctionNames.contains(name.word) && definitions.isObfuscated(name.word)) {
+                usesObf.set(true)
+            }
+            exp1 = ParsedTokenStatementFunctionCall(name.word, ParsedTokenInstanceValue(exp1), params, null)
+        }else {
+            exp1 = ParsedTokenExoressionField(name.word, ParsedTokenInstanceValue(exp1))
         }
-        exp1 = ParsedTokenStatementFunctionCall(name.word, ParsedTokenFunctionCallInstanceValue(exp1), params, null)
     }
     return exp1
 }
@@ -392,6 +397,13 @@ private fun parseExpressionLowerBase(iter: ListIterator<LexToken>, valueDefiniti
     }
     iter.tryNextTokenType(LexTokenSimpleType.KW_TRUE) {
         return ParsedTokenExpressionNumber(1)
+    }
+    iter.tryNextTokenType(LexTokenSimpleType.KW_NEW) {
+        val instanceOf = ParsedTokenInstanceStatic((parseExpressionTypeWord(iter) as ParsedTokenExpressionTypeComplex).typeName)
+        iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
+        val params = parseFunctionCallParams(iter, valueDefinitions, definitions, usesObf)
+        iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
+        return ParsedTokenStatementFunctionCall("<init>", instanceOf, params, null)
     }
     if(iter.tryNextTokenType(LexTokenSimpleType.OPEN_BRACKET)) {
         iter.previous()
@@ -697,20 +709,67 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
     }else if(expression is ParsedTokenExpressionNumber) {
         return ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)
     }else if(expression is ParsedTokenStatementFunctionCall) {
-        val instance = expression.instance as ParsedTokenFunctionCallInstanceValue
-        val instanceType = evaluateExpressionType(writerData, instance.expression)
-        if(instanceType !is ParsedTokenExpressionTypeComplex) {
-            throw IllegalArgumentException("Cannot run functions on a primitive type: $instanceType")
-        }
         val paramTypes = expression.arguments.map { evaluateExpressionType(writerData, it) }
-        val functionMatches = getClassAccessibleMethods(instanceType.typeName).filter { it.name == expression.name && Type.getArgumentCount(it.descriptor) == paramTypes.size && Type.getArgumentTypes(it.descriptor).mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }
-        if(functionMatches.size < 1) {
-            throw IllegalArgumentException("Failed to find function [${instanceType.typeName}].${expression.name}(${paramTypes.joinToString()})")
-        }
-        if(functionMatches.size > 1) {
-            throw IllegalArgumentException("Found too many functions matching [${instanceType.typeName}].${expression.name}(${paramTypes.joinToString()}): $functionMatches")
+        val instance = expression.instance
+        val functionMatches = if(instance is ParsedTokenInstanceValue) {
+            val instanceType = evaluateExpressionType(writerData, instance.expression)
+            if(instanceType !is ParsedTokenExpressionTypeComplex) {
+                throw IllegalArgumentException("Cannot run functions on a primitive type: $instanceType")
+            }
+            val matches = getClassAccessibleMethods(instanceType.typeName).filter { !it.isStatic && it.name == expression.name && Type.getArgumentCount(it.descriptor) == paramTypes.size && Type.getArgumentTypes(it.descriptor).mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }
+            if(matches.size < 1) {
+                throw IllegalArgumentException("Failed to find function [${instanceType.typeName}].${expression.name}(${paramTypes.joinToString()})")
+            }
+            if(matches.size > 1) {
+                throw IllegalArgumentException("Found too many functions matching [${instanceType.typeName}].${expression.name}(${paramTypes.joinToString()}): $matches")
+            }
+            matches
+        }else if(instance is ParsedTokenInstanceStatic) {
+            val checkStatic = expression.name != "<init>"
+            val matches = getClassAccessibleMethods(instance.className).filter { it.isStatic == checkStatic && it.name == expression.name && Type.getArgumentCount(it.descriptor) == paramTypes.size && Type.getArgumentTypes(it.descriptor).mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }
+            if(matches.size < 1) {
+                throw IllegalArgumentException("Failed to find function <${instance.className}>.${expression.name}(${paramTypes.joinToString()})")
+            }
+            if(matches.size > 1) {
+                throw IllegalArgumentException("Found too many functions matching <${instance.className}>.${expression.name}(${paramTypes.joinToString()}): $matches")
+            }
+            matches
+        }else {
+            throw IllegalArgumentException("Cannot run function on unknown instance: $instance")
         }
         val def = Type.getMethodType(functionMatches[0].descriptor).returnType
+        if(def == Type.BOOLEAN_TYPE) {
+            return ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)
+        }
+        if(def == Type.INT_TYPE) {
+            return ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)
+        }
+        if(def.sort == Type.OBJECT) {
+            return ParsedTokenExpressionTypeComplex(def.className)
+        }
+        TODO(def.descriptor)
+    }else if(expression is ParsedTokenExoressionField) {
+        val instance = expression.instance
+        val fieldMatch = if(instance is ParsedTokenInstanceValue) {
+            val instanceType = evaluateExpressionType(writerData, instance.expression)
+            if(instanceType !is ParsedTokenExpressionTypeComplex) {
+                throw IllegalArgumentException("Cannot access fields on a primitive type: $instanceType")
+            }
+            val matches = getClassAccessibleFields(instanceType.typeName).filter { !it.isStatic && it.name == expression.name }
+            if(matches.size != 1) {
+                throw IllegalArgumentException("Failed to find field [${instanceType.typeName}].${expression.name}")
+            }
+            matches[0]
+        }else if(instance is ParsedTokenInstanceStatic) {
+            val matches = getClassAccessibleFields(instance.className).filter { it.isStatic && it.name == expression.name }
+            if(matches.size != 1) {
+                throw IllegalArgumentException("Failed to find field <${instance.className}>.${expression.name}")
+            }
+            matches[0]
+        }else {
+            throw IllegalArgumentException("Cannot access field on unknown instance: $instance")
+        }
+        val def = Type.getType(fieldMatch.descriptor)
         if(def == Type.BOOLEAN_TYPE) {
             return ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)
         }
@@ -862,27 +921,49 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             }
         }
     }else if(expression is ParsedTokenStatementFunctionCall) {
-        if(expression.isOutsideCall) {
-            val instance = expression.instance as ParsedTokenFunctionCallInstanceValue
-            val instanceType = evaluateExpressionType(writerData, instance.expression)
-            if(instanceType !is ParsedTokenExpressionTypeComplex) {
-                throw IllegalArgumentException("Cannot run functions on a primitive type: $instanceType")
-            }
+        if(expression.instance != null) {
             val paramTypes = expression.arguments.map { evaluateExpressionType(writerData, it) }
-            val functionMatches = getClassAccessibleMethods(instanceType.typeName).filter { it.name == expression.name && Type.getArgumentCount(it.descriptor) == paramTypes.size && Type.getArgumentTypes(it.descriptor).mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }
-            if(functionMatches.size < 1) {
-                throw IllegalArgumentException("Failed to find function [${instanceType.typeName}].${expression.name}(${paramTypes.joinToString()})")
-            }
-            if(functionMatches.size > 1) {
-                throw IllegalArgumentException("Found too many functions matching [${instanceType.typeName}].${expression.name}(${paramTypes.joinToString()}): $functionMatches")
+            val instance = expression.instance
+            val functionMatches = if(instance is ParsedTokenInstanceValue) {
+                val instanceType = evaluateExpressionType(writerData, instance.expression)
+                if(instanceType !is ParsedTokenExpressionTypeComplex) {
+                    throw IllegalArgumentException("Cannot run functions on a primitive type: $instanceType")
+                }
+                val matches = getClassAccessibleMethods(instanceType.typeName).filter { !it.isStatic && it.name == expression.name && Type.getArgumentCount(it.descriptor) == paramTypes.size && Type.getArgumentTypes(it.descriptor).mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }
+                if(matches.size < 1) {
+                    throw IllegalArgumentException("Failed to find function [${instanceType.typeName}].${expression.name}(${paramTypes.joinToString()})")
+                }
+                if(matches.size > 1) {
+                    throw IllegalArgumentException("Found too many functions matching [${instanceType.typeName}].${expression.name}(${paramTypes.joinToString()}): $matches")
+                }
+                matches
+            }else if(instance is ParsedTokenInstanceStatic) {
+                val checkStatic = expression.name != "<init>"
+                val matches = getClassAccessibleMethods(instance.className).filter { it.isStatic == checkStatic && it.name == expression.name && Type.getArgumentCount(it.descriptor) == paramTypes.size && Type.getArgumentTypes(it.descriptor).mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }
+                if(matches.size < 1) {
+                    throw IllegalArgumentException("Failed to find function <${instance.className}>.${expression.name}(${paramTypes.joinToString()}): ${checkStatic} ${getClassAccessibleMethods(instance.className)}")
+                }
+                if(matches.size > 1) {
+                    throw IllegalArgumentException("Found too many functions matching <${instance.className}>.${expression.name}(${paramTypes.joinToString()}): $matches")
+                }
+                matches
+            }else {
+                throw IllegalArgumentException("Cannot run function on unknown instance: $instance")
             }
             val def = functionMatches[0]
             val classOwner = loadClassInfo(def.owner.replace('/', '.').replace('$', '.'))
             val className = writerData.mappingData.getClassName(def.owner)
             val methodName = writerData.mappingData.getMethodName(def.owner, def.name, def.descriptor)
             val methodDescriptor = remapType(Type.getMethodType(def.descriptor), writerData.mappingData).descriptor
-            val opcode = if(def.isStatic) 184 else if(classOwner.isInterface) 185 else 182
+            val opcode = if(def.isStatic) Opcodes.INVOKESTATIC else if(classOwner.isInterface) Opcodes.INVOKEINTERFACE else if(expression.name == "<init>") Opcodes.INVOKESPECIAL else Opcodes.INVOKEVIRTUAL
             var uid = uniqId
+            if(expression.name == "<init>") {
+                output.appendText("mv.visitTypeInsn(org.objectweb.asm.Opcodes.NEW, \"$className\");\n")
+                output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.DUP);\n")
+            }
+            if(instance is ParsedTokenInstanceValue) {
+                uid = writeExpression(writerData.copyLocalTypes(), instance.expression, output, uid)
+            }
             for(arg in expression.arguments) {
                 uid = writeExpression(writerData.copyLocalTypes(), arg, output, uid)
             }
@@ -958,6 +1039,40 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             }
             throw UnsupportedOperationException("Unknown function call: ${expression.name}")
         }
+    }else if(expression is ParsedTokenExoressionField) {
+        val instance = expression.instance
+        val fieldMatch = if(instance is ParsedTokenInstanceValue) {
+            val instanceType = evaluateExpressionType(writerData, instance.expression)
+            if(instanceType !is ParsedTokenExpressionTypeComplex) {
+                throw IllegalArgumentException("Cannot access fields on a primitive type: $instanceType")
+            }
+            val matches = getClassAccessibleFields(instanceType.typeName).filter { !it.isStatic && it.name == expression.name }
+            if(matches.size != 1) {
+                throw IllegalArgumentException("Failed to find field [${instanceType.typeName}].${expression.name}")
+            }
+            matches[0]
+        }else if(instance is ParsedTokenInstanceStatic) {
+            val matches = getClassAccessibleFields(instance.className).filter { it.isStatic && it.name == expression.name }
+            if(matches.size != 1) {
+                throw IllegalArgumentException("Failed to find field <${instance.className}>.${expression.name}")
+            }
+            matches[0]
+        }else {
+            throw IllegalArgumentException("Cannot access field on unknown instance: $instance")
+        }
+        val className = writerData.mappingData.getClassName(fieldMatch.owner)
+        val fieldName = writerData.mappingData.getFieldName(fieldMatch.owner, fieldMatch.name, fieldMatch.descriptor)
+        val fieldDescriptor = remapType(Type.getType(fieldMatch.descriptor), writerData.mappingData).descriptor
+        val opcode = if(fieldMatch.isStatic) Opcodes.GETSTATIC else Opcodes.GETFIELD
+        var uid = uniqId
+        if(instance is ParsedTokenInstanceValue) {
+            uid = writeExpression(writerData.copyLocalTypes(), instance.expression, output, uid)
+        }
+        output.appendText("mv.visitFieldInsn($opcode, \"$className\", \"$fieldName\", \"$fieldDescriptor\");\n")
+        if(!keepResult) {
+            output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.POP);\n")
+        }
+        return uid
     }
     throw UnsupportedOperationException("Unsupported expression: $expression")
 }

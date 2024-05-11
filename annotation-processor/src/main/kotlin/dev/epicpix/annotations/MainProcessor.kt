@@ -284,8 +284,6 @@ class MainProcessor(
 
             file.collapsableDefinitions.forEach {
                 val named = it.name.uppercase()
-                types.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.il.InstructionType $named = new dev.epicpix.minecraftfunctioncompiler.il.InstructionType(\"$named\");\n")
-
                 impl.appendText("fun ${named.snakeToLowerCamelCase()}(")
                 for((param, type) in it.params) {
                     val typeName = when(param.scope) {
@@ -322,8 +320,10 @@ class MainProcessor(
                     impl.appendText(to.name.uppercase().snakeToLowerCamelCase())
                     impl.appendText("(")
                     for((value, _) in to.params) {
-                        impl.appendText(value.name)
-                        impl.appendText(", ")
+                        if(value.scope != ParsedTokenValueAccessorScope.STATIC) {
+                            impl.appendText(value.name)
+                            impl.appendText(", ")
+                        }
                     }
                     impl.appendText(")")
                 }

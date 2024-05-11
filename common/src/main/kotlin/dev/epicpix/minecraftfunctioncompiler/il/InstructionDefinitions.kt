@@ -9,9 +9,6 @@ import dev.epicpix.minecraftfunctioncompiler.data.*
 @InstructionSourceClass("dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes", "dev.epicpix.minecraftfunctioncompiler.il.Instructions")
 private interface InstructionDefinitions {
     // Minecraft specific instructions
-    fun forScoreHolders(@InstructionDestination local: LocationData, single: Boolean): Instruction
-    fun getObjective(@InstructionDestination objective: LocationData, name: String): Instruction
-    fun getScoreboardName(@InstructionSource entity: LocationData, @InstructionDestination name: LocationData): Instruction
     fun scoreData(@InstructionSource objective: LocationData, @InstructionSource name: LocationData, @InstructionDestination score: LocationData, autoCreate: Boolean): Instruction
     fun getScoreValue(@InstructionSource score: LocationData, @InstructionDestination scoreValue: LocationData): Instruction
     fun addScore(@InstructionSource score: LocationData, @InstructionSource value: LocationData): Instruction

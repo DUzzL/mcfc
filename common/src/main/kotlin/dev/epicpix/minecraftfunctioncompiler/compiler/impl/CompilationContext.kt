@@ -113,7 +113,7 @@ data class CompilationContext(
     override fun getObjective(name: String, exec: ICompilationContext.(local: LocationData) -> Unit) {
         val local = LocationData(local = highestLocal)
         val instruction = Instructions2.ifNotNull(local)
-        addInstruction(Instructions.getObjective(local, name).with(instruction))
+        addInstruction(Instructions2.getObjective(local, name).with(instruction))
         exec(with(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
     }
 
@@ -126,7 +126,7 @@ data class CompilationContext(
             val selector = if(holder.single) holder.selector.copy(limit = 1) else holder.selector
             forSelector(selector) { entity, _, _ ->
                 val local = LocationData(local = highestLocal)
-                val instruction = Instructions.getScoreboardName(entity, local)
+                val instruction = Instructions2.getScoreboardName(entity, local)
                 addInstruction(Instructions2.ifNotNull(entity).with(instruction))
                 exec(with(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
             }
@@ -135,7 +135,7 @@ data class CompilationContext(
 
     override fun getScoreboardName(entity: LocationData, exec: ICompilationContext.(local: LocationData) -> Unit) {
         val local = LocationData(local = highestLocal)
-        val instruction = Instructions.getScoreboardName(entity, local)
+        val instruction = Instructions2.getScoreboardName(entity, local)
         addInstruction(instruction)
         exec(with(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
     }
@@ -199,7 +199,7 @@ data class CompilationContext(
 
     override fun forEachScoreHolder(single: Boolean, exec: ICompilationContext.(local: LocationData) -> Unit) {
         val local = LocationData(local = highestLocal)
-        val instruction = Instructions.forScoreHolders(local, single)
+        val instruction = Instructions2.forScoreHolders(local, single)
         addInstruction(instruction)
         exec(with(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
     }

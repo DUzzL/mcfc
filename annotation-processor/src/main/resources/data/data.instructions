@@ -90,6 +90,11 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
   run();
 }
 
+@static_SCOREBOARD(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.ServerScoreboard> [static:Scoreboard]) {
+  let [static:Scoreboard] = [static:MinecraftServer].getScoreboard();
+  run();
+}
+
 
 // contract [ctx:entity] match IF_NOT_NULL remove
 @GET_CURRENT_ENTITY(<net.minecraft.commands.CommandSourceStack> [static:CommandSourceStack], <net.minecraft.world.entity.Entity> [ctx:entity]) {
@@ -177,4 +182,34 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
       return;
     }
   }
+}
+
+=FOR_SCORE_HOLDERS(<java.lang.String> [ctx:name], boolean [instr:single]) {
+  (single == false) => FOR_SINGLE_SCORE_HOLDER;
+  => FOR_MULTIPLE_SCORE_HOLDERS;
+}
+
+@FOR_SINGLE_SCORE_HOLDER(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [ctx:name]) {
+  let [local:array]<java.util.ArrayList> = new <java.util.ArrayList>([static:Scoreboard].playerScores.keySet());
+  for_each_list_indexed([local:array], [ctx:name]) {
+    run();
+  }
+}
+
+@FOR_MULTIPLE_SCORE_HOLDERS(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [ctx:name]) {
+  let [local:array]<java.util.ArrayList> = new <java.util.ArrayList>([static:Scoreboard].playerScores.keySet());
+  if([local:array].isEmpty() != 0) {
+    let [ctx:name] = [local:array].get(0);
+    run();
+  }
+}
+
+@GET_OBJECTIVE(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [instr:name]) {
+  let [ctx:objective] = [static:Scoreboard].getObjective([instr:name]);
+  run();
+}
+
+@GET_SCOREBOARD_NAME(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [ctx:name]) {
+  let [ctx:name] = [ctx:entity].getScoreboardName();
+  run();
 }

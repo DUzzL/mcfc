@@ -2,7 +2,6 @@ definition_file = "dev.epicpix.minecraftfunctioncompiler.emitter.MappedUsageDefi
 
 [definitions_functions]
 MinecraftServer_getScoreboard = "net/minecraft/server/MinecraftServer:getScoreboard()Lnet/minecraft/server/ServerScoreboard;@M"
-Entity_getScoreboardName = "net/minecraft/world/entity/Entity:getScoreboardName()Ljava/lang/String;@M"
 Entity_kill = "net/minecraft/world/entity/Entity:kill()V@M"
 Entity_level = "net/minecraft/world/entity/Entity:level()Lnet/minecraft/world/level/Level;@M"
 Entity_position = "net/minecraft/world/entity/Entity:position()Lnet/minecraft/world/phys/Vec3;@M"
@@ -18,9 +17,7 @@ CommandSourceStack_withEntity = "net/minecraft/commands/CommandSourceStack:withE
 CommandSourceStack_withLevel = "net/minecraft/commands/CommandSourceStack:withLevel(Lnet/minecraft/server/level/ServerLevel;)Lnet/minecraft/commands/CommandSourceStack;@M"
 CommandSourceStack_withPosition = "net/minecraft/commands/CommandSourceStack:withPosition(Lnet/minecraft/world/phys/Vec3;)Lnet/minecraft/commands/CommandSourceStack;@M"
 CommandSourceStack_withRotation = "net/minecraft/commands/CommandSourceStack:withRotation(Lnet/minecraft/world/phys/Vec2;)Lnet/minecraft/commands/CommandSourceStack;@M"
-Scoreboard_getObjective = "net/minecraft/world/scores/Scoreboard:getObjective(Ljava/lang/String;)Lnet/minecraft/world/scores/Objective;@M"
 Scoreboard_getOrCreatePlayerScore = "net/minecraft/world/scores/Scoreboard:getOrCreatePlayerScore(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;@M"
-Scoreboard_getScore = "dev/epicpix/minecraftfunctioncompiler/ExtensionFunctions:getScore(Lnet/minecraft/server/ServerScoreboard;Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)Lnet/minecraft/world/scores/Score;@M"
 Scoreboard_resetPlayerScore = "net/minecraft/world/scores/Scoreboard:resetPlayerScore(Ljava/lang/String;Lnet/minecraft/world/scores/Objective;)V@M"
 Score_setScore = "net/minecraft/world/scores/Score:setScore(I)V@M"
 Score_getScore = "net/minecraft/world/scores/Score:getScore()I@M"
@@ -38,7 +35,6 @@ GameType_ADVENTURE = "net/minecraft/world/level/GameType:ADVENTURE:Lnet/minecraf
 GameType_SPECTATOR = "net/minecraft/world/level/GameType:SPECTATOR:Lnet/minecraft/world/level/GameType;@S"
 ServerFunctionManager_library = "net/minecraft/server/ServerFunctionManager:library:Lnet/minecraft/server/ServerFunctionLibrary;@M"
 ServerFunctionLibrary_functions = "net/minecraft/server/ServerFunctionLibrary:functions:Ljava/util/Map;@M"
-Scoreboard_playerScores = "net/minecraft/world/scores/Scoreboard:playerScores:Ljava/util/Map;@M"
 BuiltInRegistries_ATTRIBUTE = "net/minecraft/core/registries/BuiltInRegistries:ATTRIBUTE:Lnet/minecraft/core/Registry;@S"
 Vec3_x = "net/minecraft/world/phys/Vec3:x:D@M"
 Vec3_y = "net/minecraft/world/phys/Vec3:y:D@M"

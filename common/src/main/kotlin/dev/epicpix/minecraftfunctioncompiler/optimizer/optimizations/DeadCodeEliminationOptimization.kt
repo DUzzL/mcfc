@@ -70,7 +70,7 @@ private fun getScopeUsed(instruction: Instruction, inScopeId: Int, lastElement: 
         InstructionTypes2.LIMITER -> wLoop = true
         InstructionTypes2.FOR_EACH_ENTITY -> wLoop = true
         InstructionTypes2.FOR_EACH_PLAYER -> wLoop = true
-        InstructionTypes.FOR_SCORE_HOLDERS -> wLoop = true
+        InstructionTypes2.FOR_MULTIPLE_SCORE_HOLDERS -> wLoop = true
         InstructionTypes2.CHECK_LIMIT -> {
             val scope = instruction.get<ScopeData>("scope").id
             if(scope == inScopeId) {

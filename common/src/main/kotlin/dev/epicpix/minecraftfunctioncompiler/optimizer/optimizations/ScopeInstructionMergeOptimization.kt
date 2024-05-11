@@ -25,8 +25,8 @@ object ScopeInstructionMergeOptimization : Optimization {
                 when(compare.type) {
                     InstructionTypes2.GET_CURRENT_ENTITY -> {}
                     InstructionTypes2.IF_NOT_NULL -> {}
-                    InstructionTypes.GET_SCOREBOARD_NAME -> {}
-                    InstructionTypes.GET_OBJECTIVE -> {}
+                    InstructionTypes2.GET_SCOREBOARD_NAME -> {}
+                    InstructionTypes2.GET_OBJECTIVE -> {}
                     InstructionTypes.SCORE_DATA -> {}
                     else -> break
                 }

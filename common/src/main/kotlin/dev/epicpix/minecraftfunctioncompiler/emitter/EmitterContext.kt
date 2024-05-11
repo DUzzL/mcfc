@@ -37,7 +37,7 @@ data class EmitterContext(
         newTransforms[loc.local] = uid
     }
 
-    inline fun storeCreate(location: String, uid: String, type: Class<*>, exec: () -> Unit) {
+    private fun storeCreate(location: String, uid: String, type: Class<*>, exec: () -> Unit) {
         store(location, uid)
         codeWriter.storeLocal(uid, type, exec)
     }

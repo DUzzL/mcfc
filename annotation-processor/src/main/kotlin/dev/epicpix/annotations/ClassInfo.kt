@@ -56,8 +56,13 @@ fun loadClassInfo(className: String): ClassInfo {
             methods = clz.declaredMethods.map { f -> ClassMethodInfo(
                 owner = clz.descriptorString().run { substring(1, length - 1) },
                 name = f.name,
-                descriptor = "(${f.parameters.map { p -> p.type.descriptorString() }.joinToString("")})${f.returnType.descriptorString()}",
+                descriptor = "(${f.parameters.joinToString("") { p -> p.type.descriptorString() }})${f.returnType.descriptorString()}",
                 isStatic = Modifier.isStatic(f.modifiers),
+            ) } + clz.declaredConstructors.map { f -> ClassMethodInfo(
+                owner = clz.descriptorString().run { substring(1, length - 1) },
+                name = "<init>",
+                descriptor = "(${f.parameters.joinToString("") { p -> p.type.descriptorString() }})V",
+                isStatic = false,
             ) },
             isInterface = clz.isInterface,
         )

@@ -1,7 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.optimizer.optimizations
 
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction
-import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes
+import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData
 import dev.epicpix.minecraftfunctioncompiler.il.remapInstructionData
 import dev.epicpix.minecraftfunctioncompiler.optimizer.InstructionList
@@ -29,7 +29,7 @@ object CommonSubexpressionEliminationOptimization : Optimization {
         val data = remapInstructionData(instruction.data, cse.mapping)
 
         when(instruction.type) {
-            InstructionTypes.GET_OBJECTIVE -> {
+            InstructionTypes2.GET_OBJECTIVE -> {
                 val name = instruction.get<String>("name")
                 val objective = instruction.get<LocationData>("objective")
                 if(newCse.objectives[name] == null) {
@@ -42,7 +42,7 @@ object CommonSubexpressionEliminationOptimization : Optimization {
                     ))
                 }
             }
-            InstructionTypes.GET_SCOREBOARD_NAME -> {
+            InstructionTypes2.GET_SCOREBOARD_NAME -> {
                 val entity = instruction.get<LocationData>("entity")
                 val name = instruction.get<LocationData>("name")
                 if(newCse.scoreboardNames[entity.local!!] == null) {
