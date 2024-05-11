@@ -1,0 +1,75 @@
+plugins {
+    id 'maven-publish'
+    id 'org.jetbrains.kotlin.jvm' version '1.9.21'
+}
+
+version = "${project.mod_version}-fabric"
+group = project.maven_group
+
+repositories {
+    mavenCentral()
+    maven { url = uri("https://jitpack.io") }
+    maven { url = uri("https://maven.fabricmc.net/") }
+}
+
+dependencies {
+    implementation(project(":common"))
+    implementation(project(":common-commands"))
+    implementation(project(":mc-1-20-1-fabric"))
+    implementation(project(":mc-1-20-2-fabric"))
+
+    implementation "net.fabricmc:sponge-mixin:0.12.5+mixin.0.8.5"
+    implementation "org.ow2.asm:asm:9.6"
+    implementation "org.ow2.asm:asm-analysis:9.6"
+    implementation "org.ow2.asm:asm-commons:9.6"
+    implementation "org.ow2.asm:asm-tree:9.6"
+    implementation "org.ow2.asm:asm-util:9.6"
+    implementation "net.fabricmc:fabric-loader:0.15.11"
+}
+
+def targetJavaVersion = 17
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = "UTF-8"
+    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
+        it.options.release = targetJavaVersion
+    }
+}
+
+java {
+    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
+    if (JavaVersion.current() < javaVersion) {
+        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+    }
+    archivesBaseName = project.archives_base_name
+}
+
+compileJava {
+    dependsOn(':mc-1-20-1-fabric:build')
+    dependsOn(':mc-1-20-2-fabric:build')
+}
+
+jar {
+    from(project(':common').sourceSets.main.output)
+    from(project(':common-commands').sourceSets.main.output)
+    from(project(':mc-1-20-1-fabric').sourceSets.main.output) {
+        exclude("mcfc-refmap.json")
+        exclude("META-INF/mcfc.kotlin_module")
+        exclude("fabric.mod.json")
+        rename("minecraftfunctioncompiler.v1_20_1.generated.accesswidener", "minecraftfunctioncompiler.v1_20_1.accesswidener")
+        exclude("minecraftfunctioncompiler.v1_20_1.accesswidener")
+    }
+    from(project(':mc-1-20-2-fabric').sourceSets.main.output) {
+        exclude("mcfc-refmap.json")
+        exclude("META-INF/mcfc.kotlin_module")
+        exclude("fabric.mod.json")
+        rename("minecraftfunctioncompiler.v1_20_2.generated.accesswidener", "minecraftfunctioncompiler.v1_20_2.accesswidener")
+        exclude("minecraftfunctioncompiler.v1_20_2.accesswidener")
+    }
+    from(project(':mc-combined-fabric').sourceSets.main.output)
+    filesMatching("fabric.mod.json") {
+        expand "version": project.mod_version
+    }
+    from("LICENSE") {
+        rename { "${it}_${project.archivesBaseName}"}
+    }
+}

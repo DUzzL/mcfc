@@ -25,7 +25,7 @@ project.ext.isJarTask = false
 
 gradle.taskGraph.whenReady { taskExecutionGraph ->
     ksp {
-        arg("isJarTask", (taskExecutionGraph.hasTask(':jar') || taskExecutionGraph.hasTask(":${project.name}:proguard")).toString())
+        arg("isJarTask", taskExecutionGraph.hasTask(':jar').toString())
     }
 }
 
@@ -36,6 +36,7 @@ ksp {
         arg("jars", project.configurations.runtimeClasspath.incoming.files.join(":"))
     }
     arg("minecraft_version", project.minecraft_version)
+    arg("accesswidener", file("src/main/resources/minecraftfunctioncompiler.v${project.minecraft_version.replaceAll("\\.", "_")}.accesswidener").absolutePath)
 }
 
 def targetJavaVersion = 17
@@ -55,7 +56,7 @@ java {
 }
 
 loom {
-    accessWidenerPath = file("src/main/resources/.accesswidener")
+    accessWidenerPath = file("src/main/resources/minecraftfunctioncompiler.v${project.minecraft_version.replaceAll("\\.", "_")}.accesswidener")
 }
 
 processResources {
@@ -88,40 +89,4 @@ jar {
 
 kotlin {
     jvmToolchain(17)
-}
-
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.guardsquare:proguard-gradle:7.2.0'
-    }
-}
-
-tasks.register('proguard', proguard.gradle.ProGuardTask) {
-    forceprocessing
-    verbose
-    injars "build/libs/mcfc-" + version + ".jar"
-    outjars "build/libs/mcfc-" + version + "-proguard.jar"
-
-    libraryjars "${System.getProperty('java.home')}/jmods/java.base.jmod", jarfilter: '!**.jar', filter: '!module-info.class'
-    libraryjars "${System.getProperty('java.home')}/jmods/java.net.http.jmod", jarfilter: '!**.jar', filter: '!module-info.class'
-    var files = new ArrayList<>(configurations.findByName('runtimeClasspath').getFiles())
-    files.removeIf { it.getName().endsWith(project.mod_version + ".jar") }
-    libraryjars files, jarfilter: '!**.jar', filter: '!module-info.class'
-
-    dontobfuscate
-    dontwarn
-
-    keepattributes "Signature"
-
-    keep allowoptimization: true, 'public class **'
-    keep includecode: false, 'public class dev.epicpix.minecraftfunctioncompiler.mixin.** { \
-    public protected private *; \
-    }'
-}
-
-tasks.named("proguard") {
-    dependsOn("build")
 }

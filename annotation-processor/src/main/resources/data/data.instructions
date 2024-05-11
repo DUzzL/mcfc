@@ -1,5 +1,5 @@
 #emitter_noobf_file("dev.epicpix.minecraftfunctioncompiler.emitter.impl.EmitterBaseOptions")
-#emitter_obf_file("dev.epicpix.minecraftfunctioncompiler.emitter.Emitter2")
+#emitter_obf_file("dev.epicpix.minecraftfunctioncompiler.$VERSION.emitter.Emitter2")
 #enum_file("dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2")
 #generator_file("dev.epicpix.minecraftfunctioncompiler.il.Instructions2")
 #definitions("common,minecraft")

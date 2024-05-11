@@ -8,15 +8,15 @@
   "authors": [ "EpicPix" ],
   "license": "LGPL-3.0-only",
   "environment": "*",
-  "accessWidener": ".accesswidener",
+  "accessWidener": "minecraftfunctioncompiler.v1_20_1.accesswidener",
   "entrypoints": {
     "main": [{
       "adapter": "kotlin",
-      "value": "dev.epicpix.minecraftfunctioncompiler.FunctionCompilerMain"
+      "value": "dev.epicpix.minecraftfunctioncompiler.v1_20_1.FunctionCompilerMain"
     }]
   },
   "mixins": [
-    "minecraftfunctioncompiler.mixins.json"
+    "minecraftfunctioncompiler.v1_20_1.mixins.json"
   ],
   "contact": {
     "homepage": "https://modrinth.com/mod/mcfc",
@@ -26,7 +26,9 @@
   },
   "depends": {
     "fabricloader": ">=${loader_version}",
-    "minecraft": "${minecraft_version}",
+    "minecraft": [
+      "${minecraft_version}"
+    ],
     "fabric-language-kotlin": ">=${fabric_kotlin_version}"
   }
 }

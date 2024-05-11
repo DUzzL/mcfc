@@ -10,12 +10,16 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFile
 import com.google.devtools.ksp.symbol.Origin
+import net.fabricmc.accesswidener.AccessWidenerReader
+import net.fabricmc.accesswidener.AccessWidenerVisitor
+import net.fabricmc.accesswidener.AccessWidenerWriter
 import net.fabricmc.tinyremapper.IMappingProvider
 import net.fabricmc.tinyremapper.TinyUtils
 import org.objectweb.asm.Type
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.OutputStream
+import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.jar.JarFile
 
@@ -99,19 +103,42 @@ class MainProcessor(
             }
             setJarInfo(jarFiles to jarFileMappings)
         }
+        val packageMinecraftVersion = options["minecraft_version"]?.replace(".", "_")?.run { "v$this" }
         val minecraftVersion = options["minecraft_version"]?.split(".")
         val definitions = options["definitions"]?.let { loadToml(it) }
         generateInstructionData(resolver)
         if(definitions != null) {
             if(definitions["definition_file"] != null) {
-                generateFunctionMapping(mappingData, definitions, minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0)
+                generateFunctionMapping(mappingData, definitions, minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0, packageMinecraftVersion)
             }
         }
         if(options["definitions"] != null) {
-            generateInstructionData(mappingData, options["definitions"] == "common", minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0)
+            generateInstructionData(mappingData, options["definitions"] == "common", minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0, packageMinecraftVersion)
         }
         generateConstantsData(resolver)
+        if(packageMinecraftVersion != null && mappingData != null) {
+            val accessWidenerWriter = AccessWidenerWriter()
+            AccessWidenerReader(object : AccessWidenerVisitor {
+                override fun visitHeader(namespace: String?) {
+                    accessWidenerWriter.visitHeader("intermediary")
+                }
 
+                override fun visitClass(name: String, access: AccessWidenerReader.AccessType, transitive: Boolean) {
+                    accessWidenerWriter.visitClass(mappingData.getClassName(name), access, transitive)
+                }
+
+                override fun visitMethod(owner: String, name: String, descriptor: String, access: AccessWidenerReader.AccessType, transitive: Boolean) {
+                    accessWidenerWriter.visitMethod(mappingData.getClassName(owner), mappingData.getMethodName(owner, name, descriptor), remapType(Type.getMethodType(descriptor), mappingData).descriptor, access, transitive)
+                }
+
+                override fun visitField(owner: String, name: String, descriptor: String, access: AccessWidenerReader.AccessType, transitive: Boolean) {
+                    accessWidenerWriter.visitField(mappingData.getClassName(owner), mappingData.getFieldName(owner, name, descriptor), remapType(Type.getType(descriptor), mappingData).descriptor, access, transitive)
+                }
+            }).read(Files.readAllBytes(Paths.get(options["accesswidener"]!!)))
+            val generatedAccessWidener = codeGenerator.createNewFile(Dependencies.ALL_FILES, "", "minecraftfunctioncompiler.$packageMinecraftVersion.generated", "accesswidener")
+            generatedAccessWidener.write(accessWidenerWriter.write())
+            generatedAccessWidener.close()
+        }
         return listOf()
     }
 
@@ -130,8 +157,8 @@ class MainProcessor(
         }
     }
 
-    fun generateFunctionMapping(mappingData: MappingData?, data: Map<String, Any>, majorVer: Int, minorVer: Int) {
-        val resultClass = data["definition_file"] as String
+    fun generateFunctionMapping(mappingData: MappingData?, data: Map<String, Any>, majorVer: Int, minorVer: Int, packageMinecraftVersion: String?) {
+        val resultClass = (data["definition_file"] as String).replace("\$VERSION", packageMinecraftVersion ?: "common")
         val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
         val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
         val mapExtensions = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "kt")
@@ -194,7 +221,7 @@ class MainProcessor(
         }
     }
 
-    fun generateInstructionData(mappingData: MappingData?, common: Boolean, majorVer: Int, minorVer: Int) {
+    fun generateInstructionData(mappingData: MappingData?, common: Boolean, majorVer: Int, minorVer: Int, packageMinecraftVersion: String?) {
         fun findVersionSpecific(v: Any?): String? {
             if(v is Map<*, *>) {
                 v.forEach { (k, v) ->
@@ -237,7 +264,7 @@ class MainProcessor(
             return@parseCode null
         }
 
-        val resultClass = if(common) file.fileInfo["emitter_noobf_file"]!! else file.fileInfo["emitter_obf_file"]!!
+        val resultClass = (if(common) file.fileInfo["emitter_noobf_file"]!! else file.fileInfo["emitter_obf_file"]!!).replace("\$VERSION", packageMinecraftVersion ?: "common")
         val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
         val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
         val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")

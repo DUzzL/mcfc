@@ -1,4 +1,4 @@
-definition_file = "dev.epicpix.minecraftfunctioncompiler.emitter.MappedUsageDefinitionsExtensions"
+definition_file = "dev.epicpix.minecraftfunctioncompiler.$VERSION.emitter.MappedUsageDefinitionsExtensions"
 
 [definitions_functions]
 MinecraftServer_getScoreboard = "net/minecraft/server/MinecraftServer:getScoreboard()Lnet/minecraft/server/ServerScoreboard;@M"

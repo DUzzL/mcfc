@@ -16,6 +16,7 @@ plugins {
 }
 
 include 'annotation-processor'
+include 'mc-combined-fabric'
 include 'mc-1-20-2-fabric'
 include 'mc-1-20-1-fabric'
 include 'common'
