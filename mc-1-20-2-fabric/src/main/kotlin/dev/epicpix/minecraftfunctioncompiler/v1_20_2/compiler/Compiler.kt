@@ -1,7 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_2.compiler
 
 import dev.epicpix.minecraftfunctioncompiler.commands.CommandTypes
-import dev.epicpix.minecraftfunctioncompiler.compiler.ICompilationContext
 import dev.epicpix.minecraftfunctioncompiler.compiler.impl.CompilationContext
 import dev.epicpix.minecraftfunctioncompiler.compiler.impl.ResultStorage
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation
@@ -18,7 +17,7 @@ fun compile(commands: List<Command>): List<Instruction> {
     return instructions
 }
 
-private fun ICompilationContext.compile(command: Command?, result: ResultStorage = ResultStorage()) {
+private fun CompilationContext.compile(command: Command?, result: ResultStorage = ResultStorage()) {
     if(command == null) return
     when(command.type) {
         CommandTypes.ATTRIBUTE_BASE_SET -> {
@@ -99,7 +98,7 @@ private fun ICompilationContext.compile(command: Command?, result: ResultStorage
         }
         CommandTypes.EXECUTE_POSITIONED_POS -> {
             forPosition(command["position"]) { position ->
-                (this as CompilationContext).copy(currentPosition = position).compile(command["command"], result)
+                copy(currentPosition = position).compile(command["command"], result)
             }
         }
         CommandTypes.EXECUTE_STORE_RESULT_SCORE -> {
@@ -126,7 +125,7 @@ private fun ICompilationContext.compile(command: Command?, result: ResultStorage
                 forScoreHolder(command.get<ScoreHolderArgument>("target").single()) { name ->
                     getScoreData(objective, name, false) { score ->
                         val instr = Instructions.checkScoreRange(score, command["range"], true)
-                        (this as CompilationContext).copy(addInstruction = instr.children::add).compile(command["command"])
+                        copy(addInstruction = instr.children::add).compile(command["command"])
                         addInstruction(instr)
                     }
                 }
@@ -148,7 +147,7 @@ private fun ICompilationContext.compile(command: Command?, result: ResultStorage
                                         else -> throw UnsupportedOperationException("Unknown comparison: ${command.get<String>("comparison")}")
                                     }
                                     val instr = Instructions.checkScoreCompare(target, source, operation)
-                                    (this as CompilationContext).copy(addInstruction = instr.children::add).compile(command["command"])
+                                    copy(addInstruction = instr.children::add).compile(command["command"])
                                     addInstruction(instr)
                                 }
                             }

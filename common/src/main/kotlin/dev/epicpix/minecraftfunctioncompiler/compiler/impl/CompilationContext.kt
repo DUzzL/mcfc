@@ -1,6 +1,5 @@
 package dev.epicpix.minecraftfunctioncompiler.compiler.impl
 
-import dev.epicpix.minecraftfunctioncompiler.compiler.ICompilationContext
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument
 import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument
 import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates
@@ -8,26 +7,26 @@ import dev.epicpix.minecraftfunctioncompiler.il.*
 import java.util.*
 
 data class CompilationContext(
-    override val highestLocal: Int = 0,
-    override val currentEntity: LocationData? = null,
-    override val currentWorld: LocationData? = null,
-    override val currentPosition: LocationData? = null,
-    override val currentRotation: LocationData? = null,
-    override val addInstruction: (Instruction) -> Unit,
-) : ICompilationContext {
+    val highestLocal: Int = 0,
+    val currentEntity: LocationData? = null,
+    val currentWorld: LocationData? = null,
+    val currentPosition: LocationData? = null,
+    val currentRotation: LocationData? = null,
+    val addInstruction: (Instruction) -> Unit,
+) {
 
-    override fun with(
-        highestLocal: Int?,
-        currentEntity: LocationData?,
-        currentWorld: LocationData?,
-        currentPosition: LocationData?,
-        currentRotation: LocationData?,
-        addInstruction: ((Instruction) -> Unit)?,
-    ): ICompilationContext {
+    fun with(
+        highestLocal: Int? = null,
+        currentEntity: LocationData? = null,
+        currentWorld: LocationData? = null,
+        currentPosition: LocationData? = null,
+        currentRotation: LocationData? = null,
+        addInstruction: ((Instruction) -> Unit)? = null,
+    ): CompilationContext {
         return copy(highestLocal = highestLocal ?: this.highestLocal, currentEntity = currentEntity ?: this.currentEntity, currentWorld = currentWorld ?: this.currentWorld, currentPosition = currentPosition ?: this.currentPosition, currentRotation = currentRotation ?: this.currentRotation, addInstruction = addInstruction ?: this.addInstruction)
     }
 
-    override fun withResultStorage(requireResult: Boolean, requireSuccess: Boolean, exec: ICompilationContext.(ResultStorage) -> Unit) {
+    fun withResultStorage(requireResult: Boolean = false, requireSuccess: Boolean = false, exec: CompilationContext.(ResultStorage) -> Unit) {
         if(requireResult == requireSuccess) throw UnsupportedOperationException("calling withResultStorage() with requireResult == requireSuccess is not supported")
         val loc = LocationData(local = highestLocal)
         val res = if(requireResult) ResultStorage(result = loc) else ResultStorage(success = loc)
@@ -36,7 +35,7 @@ data class CompilationContext(
         with(highestLocal = highestLocal + 1, addInstruction = instr.children::add).exec(res)
     }
 
-    override fun getScoreData(objective: LocationData, name: LocationData, autoCreate: Boolean, exec: ICompilationContext.(scoreData: LocationData) -> Unit) {
+    fun getScoreData(objective: LocationData, name: LocationData, autoCreate: Boolean, exec: CompilationContext.(scoreData: LocationData) -> Unit) {
         val scoreData = LocationData(local = highestLocal)
         val instruction = Instructions.scoreData(objective, name, scoreData, autoCreate)
         addInstruction(instruction)
@@ -49,7 +48,7 @@ data class CompilationContext(
         }
     }
 
-    override fun forPosition(pos: WorldCoordinates, exec: ICompilationContext.(positionId: LocationData) -> Unit) {
+    fun forPosition(pos: WorldCoordinates, exec: CompilationContext.(positionId: LocationData) -> Unit) {
         getPosition { basePositionId ->
             val positionId = LocationData(local = highestLocal)
             val instruction = Instructions.applyPositionWorld(basePositionId, positionId, pos)
@@ -58,7 +57,7 @@ data class CompilationContext(
         }
     }
 
-    override fun getWorld(exec: ICompilationContext.(worldId: LocationData) -> Unit) {
+    fun getWorld(exec: CompilationContext.(worldId: LocationData) -> Unit) {
         if(currentWorld != null) {
             exec(currentWorld)
         }else {
@@ -73,7 +72,7 @@ data class CompilationContext(
         }
     }
 
-    override fun getPosition(exec: ICompilationContext.(positionId: LocationData) -> Unit) {
+    fun getPosition(exec: CompilationContext.(positionId: LocationData) -> Unit) {
         if(currentPosition != null) {
             exec(currentPosition)
         }else {
@@ -88,7 +87,7 @@ data class CompilationContext(
         }
     }
 
-    override fun getRotation(exec: ICompilationContext.(rotationId: LocationData) -> Unit) {
+    fun getRotation(exec: CompilationContext.(rotationId: LocationData) -> Unit) {
         if(currentRotation != null) {
             exec(currentRotation)
         }else {
@@ -103,21 +102,21 @@ data class CompilationContext(
         }
     }
 
-    override fun forScope(exec: ICompilationContext.(scope: ScopeData) -> Unit) {
+    fun forScope(exec: CompilationContext.(scope: ScopeData) -> Unit) {
         val scope = ScopeData(highestLocal)
         val instruction = Instructions2.scope(scope)
         addInstruction(instruction)
         exec(with(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), scope)
     }
 
-    override fun getObjective(name: String, exec: ICompilationContext.(local: LocationData) -> Unit) {
+    fun getObjective(name: String, exec: CompilationContext.(local: LocationData) -> Unit) {
         val local = LocationData(local = highestLocal)
         val instruction = Instructions2.ifNotNull(local)
         addInstruction(Instructions2.getObjective(local, name).with(instruction))
         exec(with(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
     }
 
-    override fun forScoreHolder(holder: ScoreHolderArgument, exec: ICompilationContext.(local: LocationData) -> Unit) {
+    fun forScoreHolder(holder: ScoreHolderArgument, exec: CompilationContext.(local: LocationData) -> Unit) {
         if(holder.all) {
             forEachScoreHolder(single = holder.single, exec)
         }else if(holder.name != null) {
@@ -133,20 +132,18 @@ data class CompilationContext(
         }
     }
 
-    override fun getScoreboardName(entity: LocationData, exec: ICompilationContext.(local: LocationData) -> Unit) {
+    fun getScoreboardName(entity: LocationData, exec: CompilationContext.(local: LocationData) -> Unit) {
         val local = LocationData(local = highestLocal)
         val instruction = Instructions2.getScoreboardName(entity, local)
         addInstruction(instruction)
         exec(with(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
     }
 
-    override fun forCurrentEntity(exec: ICompilationContext.(local: LocationData, breakScope: ScopeData, continueScope: ScopeData) -> Unit) {
-        if(currentEntity != null) {
-            forScope { scope ->
-                exec(this, currentEntity!!, scope, scope)
-            }
-        }else {
-            forScope { scope ->
+    fun forCurrentEntity(exec: CompilationContext.(local: LocationData, breakScope: ScopeData, continueScope: ScopeData) -> Unit) {
+        forScope { scope ->
+            if(currentEntity != null) {
+                exec(this, currentEntity, scope, scope)
+            }else {
                 val local = LocationData(local = highestLocal)
                 val instruction = Instructions2.getCurrentEntity(local)
                 addInstruction(instruction)
@@ -155,7 +152,7 @@ data class CompilationContext(
         }
     }
 
-    override fun forEachEntity(exec: ICompilationContext.(local: LocationData, breakScope: ScopeData, continueScope: ScopeData) -> Unit) {
+    fun forEachEntity(exec: CompilationContext.(local: LocationData, breakScope: ScopeData, continueScope: ScopeData) -> Unit) {
         forScope { breakScope ->
             val local = LocationData(local = highestLocal)
             val instruction = Instructions2.forEachEntity(local)
@@ -166,7 +163,7 @@ data class CompilationContext(
         }
     }
 
-    override fun forEachPlayer(exec: ICompilationContext.(local: LocationData, breakScope: ScopeData, continueScope: ScopeData) -> Unit) {
+    fun forEachPlayer(exec: CompilationContext.(local: LocationData, breakScope: ScopeData, continueScope: ScopeData) -> Unit) {
         forScope { breakScope ->
             val local = LocationData(local = highestLocal)
             val instruction = Instructions2.forEachPlayer(local)
@@ -177,7 +174,7 @@ data class CompilationContext(
         }
     }
 
-    override fun forEntity(entityUuid: UUID, exec: ICompilationContext.(local: LocationData, breakScope: ScopeData, continueScope: ScopeData) -> Unit) {
+    fun forEntity(entityUuid: UUID, exec: CompilationContext.(local: LocationData, breakScope: ScopeData, continueScope: ScopeData) -> Unit) {
         forScope { breakScope ->
             val local = LocationData(local = highestLocal)
             val instruction = Instructions2.forEntity(local, entityUuid)
@@ -188,7 +185,7 @@ data class CompilationContext(
         }
     }
 
-    override fun forPlayer(playerName: String, exec: ICompilationContext.(local: LocationData, breakScope: ScopeData, continueScope: ScopeData) -> Unit) {
+    fun forPlayer(playerName: String, exec: CompilationContext.(local: LocationData, breakScope: ScopeData, continueScope: ScopeData) -> Unit) {
         forScope { scope ->
             val local = LocationData(local = highestLocal)
             val instruction = Instructions2.forPlayer(local, playerName)
@@ -197,17 +194,17 @@ data class CompilationContext(
         }
     }
 
-    override fun forEachScoreHolder(single: Boolean, exec: ICompilationContext.(local: LocationData) -> Unit) {
+    fun forEachScoreHolder(single: Boolean = false, exec: CompilationContext.(local: LocationData) -> Unit) {
         val local = LocationData(local = highestLocal)
         val instruction = Instructions2.forScoreHolders(local, single)
         addInstruction(instruction)
         exec(with(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
     }
 
-    override fun forSelector(selector: SelectorArgument, exec: ICompilationContext.(local: LocationData, breakScope: ScopeData, continueScope: ScopeData) -> Unit) {
+    fun forSelector(selector: SelectorArgument, exec: CompilationContext.(local: LocationData, breakScope: ScopeData, continueScope: ScopeData) -> Unit) {
         var limiterScope: ScopeData? = null
         var limiterCounter: LocationData? = null
-        fun checkEntityCondition(context: ICompilationContext, local: LocationData, breakScope: ScopeData, continueScope: ScopeData) {
+        fun checkEntityCondition(context: CompilationContext, local: LocationData, breakScope: ScopeData, continueScope: ScopeData) {
             var ctx = context
             val nonNull = Instructions2.ifNotNull(local)
             val stacker = InstructionStacker(nonNull)
