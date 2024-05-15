@@ -22,7 +22,5 @@ private interface InstructionDefinitions {
     fun alignPosition(@InstructionSource position: LocationData, @InstructionDestination result: LocationData, swizzle: SwizzleArgument): Instruction
     fun checkGamemode(@InstructionSource entity: LocationData, gamemode: Gamemode, negated: Boolean): Instruction
     fun setGamemode(@InstructionSource entity: LocationData, gamemode: Gamemode): Instruction
-    fun checkTeam(@InstructionSource entity: LocationData, team: String, negated: Boolean): Instruction
-    fun hasTeam(@InstructionSource entity: LocationData, negated: Boolean): Instruction
     fun checkRotation(@InstructionSource rotation: LocationData, yaw: FloatRangeArgument?, pitch: FloatRangeArgument?): Instruction
 }

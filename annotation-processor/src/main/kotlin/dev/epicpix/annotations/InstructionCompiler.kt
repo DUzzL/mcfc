@@ -409,6 +409,16 @@ private fun parseExpressionLowerBase(iter: ListIterator<LexToken>, valueDefiniti
         iter.previous()
         return parseValueAccessor(iter, valueDefinitions)
     }
+    if(iter.tryNextTokenType(LexTokenSimpleType.OPEN_ANGLE_BRACKET)) {
+        iter.previous()
+        val classOf = ParsedTokenInstanceStatic((parseExpressionTypeWord(iter) as ParsedTokenExpressionTypeComplex).typeName)
+        iter.expectTokenType(LexTokenSimpleType.DOT)
+        val name = iter.expectToken<LexTokenWord>()
+        iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
+        val params = parseFunctionCallParams(iter, valueDefinitions, definitions, usesObf)
+        iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
+        return ParsedTokenStatementFunctionCall(name.word, classOf, params, null)
+    }
     val name = iter.expectToken<LexTokenWord>()
     iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
     val params = parseFunctionCallParams(iter, valueDefinitions, definitions, usesObf)

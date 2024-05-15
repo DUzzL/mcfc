@@ -244,3 +244,37 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
   let [ctx:rotation] = [ctx:entity].getRotationVector();
   run();
 }
+
+=HAS_TEAM(<net.minecraft.world.entity.Entity> [ctx:entity], boolean [instr:negated]) {
+  (negated == false) => CHECK_HAS_TEAM;
+  => CHECK_NOT_HAS_TEAM;
+}
+
+@CHECK_HAS_TEAM(<net.minecraft.world.entity.Entity> [ctx:entity]) {
+  if([ctx:entity].getTeam() != null) {
+    run();
+  }
+}
+
+@CHECK_NOT_HAS_TEAM(<net.minecraft.world.entity.Entity> [ctx:entity]) {
+  if([ctx:entity].getTeam() == null) {
+    run();
+  }
+}
+
+=CHECK_TEAM(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:team], boolean [instr:negated]) {
+  (negated == false) => CHECK_IS_TEAM;
+  => CHECK_NOT_IS_TEAM;
+}
+
+@CHECK_IS_TEAM(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:team]) {
+  if(<java.util.Objects>.equals([ctx:entity].getTeam(), [instr:team]) == true) {
+    run();
+  }
+}
+
+@CHECK_NOT_IS_TEAM(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:team]) {
+  if(<java.util.Objects>.equals([ctx:entity].getTeam(), [instr:team]) == false) {
+    run();
+  }
+}

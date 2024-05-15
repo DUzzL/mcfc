@@ -306,46 +306,6 @@ fun registerInstructionEmitters() {
         }
         codeWriter.methodVisitor.visitInsn(Opcodes.POP)
     }
-    registerEmitterInstruction(InstructionTypes.CHECK_TEAM) {
-        if(instruction["negated"]) {
-            codeWriter.callEntity_getTeam { load("entity") }
-            val label = Label()
-            codeWriter.executeIf(Opcodes.IFNULL) {
-                codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, label)
-            }
-            codeWriter.callString_equals {
-                codeWriter.writeString(instruction["team"])
-                codeWriter.callTeam_getName {
-                    codeWriter.callEntity_getTeam { load("entity") }
-                }
-            }
-            codeWriter.executeIf(Opcodes.IFNE) {
-                codeWriter.methodVisitor.visitLabel(label)
-                run()
-            }
-        }else {
-            val label = Label()
-            codeWriter.callEntity_getTeam { load("entity") }
-            codeWriter.executeIf(Opcodes.IFNONNULL) {
-                codeWriter.callString_equals {
-                    codeWriter.writeString(instruction["team"])
-                    codeWriter.callTeam_getName {
-                        codeWriter.callEntity_getTeam { load("entity") }
-                    }
-                }
-                codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, label)
-            }
-            val after = Label()
-            codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, after)
-            codeWriter.methodVisitor.visitLabel(label)
-            run()
-            codeWriter.methodVisitor.visitLabel(after)
-        }
-    }
-    registerEmitterInstruction(InstructionTypes.HAS_TEAM) {
-        codeWriter.callEntity_getTeam { load("entity") }
-        codeWriter.executeIf(if(!instruction.get<Boolean>("negated")) Opcodes.IFNULL else Opcodes.IFNONNULL) { run() }
-    }
     registerEmitterInstruction(InstructionTypes.CHECK_ROTATION) {
         val yaw = instruction.get<FloatRangeArgument?>("yaw")
         if(yaw != null) {

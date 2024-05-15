@@ -227,10 +227,10 @@ data class CompilationContext(
                 ctx = ctx.with(highestLocal = context.highestLocal + 1)
             }
             if(selector.team != null) {
-                stacker.stackInstruction(Instructions.checkTeam(local, selector.team.data, selector.team.negated))
+                stacker.stackInstruction(Instructions2.checkTeam(local, selector.team.data, selector.team.negated))
             }
             if(selector.hasTeam != null) {
-                stacker.stackInstruction(Instructions.hasTeam(local, selector.hasTeam))
+                stacker.stackInstruction(Instructions2.hasTeam(local, selector.hasTeam))
             }
             if(selector.scores.isNotEmpty()) {
                 for((obj, range) in selector.scores) {
