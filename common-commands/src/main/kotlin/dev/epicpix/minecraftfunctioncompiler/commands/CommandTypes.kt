@@ -3,7 +3,6 @@ package dev.epicpix.minecraftfunctioncompiler.commands
 import dev.epicpix.minecraftfunctioncompiler.parser.CommandType
 
 data object CommandTypes {
-    val ATTRIBUTE_BASE_SET = CommandType("ATTRIBUTE_BASE_SET")
     val EXECUTE_ALIGN = CommandType("EXECUTE_ALIGN")
     val EXECUTE_AS = CommandType("EXECUTE_AS")
     val EXECUTE_AT = CommandType("EXECUTE_AT")

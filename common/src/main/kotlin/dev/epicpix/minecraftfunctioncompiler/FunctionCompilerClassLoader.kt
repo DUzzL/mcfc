@@ -3,8 +3,8 @@ package dev.epicpix.minecraftfunctioncompiler
 import com.google.gson.JsonObject
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext
-import dev.epicpix.minecraftfunctioncompiler.emitter.ICodeFieldStorage
 import dev.epicpix.minecraftfunctioncompiler.emitter.generateGraphs
+import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction
 import dev.epicpix.minecraftfunctioncompiler.il.Instructions2
@@ -37,7 +37,7 @@ abstract class FunctionCompilerClassLoader(
         foundFunctionCount: Int,
         parseTime: Double,
         definedFunctions: Map<DataLocation, List<Command>>,
-        fieldStorage: ICodeFieldStorage,
+        fieldStorage: CodeFieldStorage,
         serverFunctionManager: Any,
         compile: (List<Command>) -> List<Instruction>,
     ) {
@@ -122,7 +122,7 @@ abstract class FunctionCompilerClassLoader(
         FunctionCompilerReporter.sendReports()
     }
 
-    private fun defineFunction(funcId: DataLocation, fieldStorage: ICodeFieldStorage, instructions: List<Instruction>, commandCount: Int, compiledFunctions: Set<DataLocation>): Class<*> {
+    private fun defineFunction(funcId: DataLocation, fieldStorage: CodeFieldStorage, instructions: List<Instruction>, commandCount: Int, compiledFunctions: Set<DataLocation>): Class<*> {
         val className = "function/${funcId.namespace}/${funcId.path}".replace('.', '$')
 
         val cw = createClassWriter()
@@ -145,7 +145,7 @@ abstract class FunctionCompilerClassLoader(
         return defineClass(className.replace('/', '.'), cw.toByteArray())
     }
 
-    private fun loadData(fieldStorage: ICodeFieldStorage, serverFunctionManager: Any): Class<*> {
+    private fun loadData(fieldStorage: CodeFieldStorage, serverFunctionManager: Any): Class<*> {
         val cw = createClassWriter()
         cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL, DATA_CLASS, null, "java/lang/Object", null)
         fieldStorage.generate(cw)

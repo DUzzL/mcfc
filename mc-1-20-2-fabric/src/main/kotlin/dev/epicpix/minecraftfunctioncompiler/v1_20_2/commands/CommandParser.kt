@@ -16,11 +16,9 @@ import net.minecraft.commands.CommandFunction
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.arguments.coordinates.LocalCoordinates
 import net.minecraft.core.Direction
-import net.minecraft.core.Holder
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.ServerFunctionManager
-import net.minecraft.world.entity.ai.attributes.Attribute
 import net.minecraft.world.level.GameType
 import java.util.*
 
@@ -41,7 +39,6 @@ object CommandParser {
 
     private fun parseCommand(cmdName: String, context: CommandContextBuilder<CommandSourceStack>, source: String, server: MinecraftServer, functionManager: ServerFunctionManager): Command {
         return when(cmdName) {
-            "attribute" -> parseCommandAttribute(context, source)
             "execute" -> parseCommandExecute(context, context.nodes.subList(1, context.nodes.size), source, server, functionManager)
             "function" -> parseCommandFunction(context, source, functionManager)
             "gamemode" -> parseCommandGamemode(context, source)
@@ -50,26 +47,6 @@ object CommandParser {
             "tag" -> parseCommandTag(context, source)
             else -> throw UnsupportedOperationException("Cannot parse command: $cmdName")
         }
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun parseCommandAttribute(context: CommandContextBuilder<CommandSourceStack>, source: String): Command {
-        val target = parseSelector(context.arguments["target"]!!.range[source])
-        val attributeHolder = (context.arguments["attribute"]!!.result as Holder.Reference<Attribute>)
-        val runType = context.nodes[3]!!.range[source]
-        if(runType == "base") {
-            val accessType = context.nodes[4]!!.range[source]
-            if(accessType == "set") {
-                val value = context.arguments["value"]!!.result as Double
-                return Command(CommandTypes.ATTRIBUTE_BASE_SET, mapOf(
-                    "target" to target,
-                    "attribute" to attributeHolder.key().location().toDataLocation(),
-                    "value" to value
-                ))
-            }
-            throw UnsupportedOperationException("Attributes not implemented: base - $accessType ${attributeHolder.key()}")
-        }
-        throw UnsupportedOperationException("Attributes not implemented: $runType ${attributeHolder.key()}")
     }
 
     @Suppress("UNCHECKED_CAST")

@@ -4,7 +4,6 @@ import dev.epicpix.minecraftfunctioncompiler.DEBUG
 import dev.epicpix.minecraftfunctioncompiler.EMIT_SCOREBOARD_NAME
 import dev.epicpix.minecraftfunctioncompiler.EMIT_SERVER_FUNCTION_MANAGER_NAME
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation
-import dev.epicpix.minecraftfunctioncompiler.emitter.ICodeFieldStorage
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import java.util.*
@@ -12,56 +11,46 @@ import java.util.*
 class CodeFieldStorage(
     private val resourceLocationClass: Class<*>,
     private val commandFunctionClass: Class<*>,
-    private val attributeClass: Class<*>,
     private val serverFunctionManagerClass: Class<*>,
     private val minecraftServerClass: Class<*>,
     private val serverScoreboardClass: Class<*>,
-    private val mapScoreboard: ICodeFieldStorage.(CodeWriter) -> Unit,
-    private val mapFunction: ICodeFieldStorage.(CodeWriter, DataLocation) -> Unit,
-    private val mapAttribute: ICodeFieldStorage.(CodeWriter, DataLocation) -> Unit,
-) : ICodeFieldStorage {
+    private val mapScoreboard: CodeFieldStorage.(CodeWriter) -> Unit,
+    private val mapFunction: CodeFieldStorage.(CodeWriter, DataLocation) -> Unit,
+) {
 
     private val uuids: MutableList<UUID> = mutableListOf()
     private val resourceLocations: MutableList<DataLocation> = mutableListOf()
     private val functions: MutableList<DataLocation> = mutableListOf()
-    private val attributes: MutableList<DataLocation> = mutableListOf()
 
     private fun getUuidName(value: UUID) = if(DEBUG) "uuid\$${value.toString().replace("-", "")}" else "u${uuids.indexOf(value)}"
     private fun getResourceLocationName(value: DataLocation) = if(DEBUG) "resourceLocation\$${value.toString().replace('/', '$').replace(':', '$').replace('.', '$')}" else "r${resourceLocations.indexOf(value)}"
     private fun getFunctionName(value: DataLocation) = if(DEBUG) "function\$${value.toString().replace('/', '$').replace(':', '$').replace('.', '$')}" else "f${functions.indexOf(value)}"
-    private fun getAttributeName(value: DataLocation) = if(DEBUG) "attribute\$${value.toString().replace('/', '$').replace(':', '$').replace('.', '$')}" else "f${attributes.indexOf(value)}"
 
-    override fun loadUUID(cw: CodeWriter, value: UUID) {
+    fun loadUUID(cw: CodeWriter, value: UUID) {
         if(!uuids.contains(value)) uuids.add(value)
         cw.getDataField(getUuidName(value), UUID::class.java)
     }
 
-    override fun loadResourceLocation(cw: CodeWriter, value: DataLocation) {
+    fun loadResourceLocation(cw: CodeWriter, value: DataLocation) {
         if(!resourceLocations.contains(value)) resourceLocations.add(value)
         cw.getDataField(getResourceLocationName(value), resourceLocationClass)
     }
 
-    override fun loadFunction(cw: CodeWriter, value: DataLocation) {
+    fun loadFunction(cw: CodeWriter, value: DataLocation) {
         if(!resourceLocations.contains(value)) resourceLocations.add(value)
         if(!functions.contains(value)) functions.add(value)
         cw.getDataField(getFunctionName(value), commandFunctionClass)
     }
 
-    override fun loadAttribute(cw: CodeWriter, value: DataLocation) {
-        if(!resourceLocations.contains(value)) resourceLocations.add(value)
-        if(!attributes.contains(value)) attributes.add(value)
-        cw.getDataField(getAttributeName(value), attributeClass)
-    }
-
-    override fun loadServerFunctionManager(cw: CodeWriter) {
+    fun loadServerFunctionManager(cw: CodeWriter) {
         cw.getDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerClass)
     }
 
-    override fun loadScoreboard(cw: CodeWriter) {
+    fun loadScoreboard(cw: CodeWriter) {
         cw.getDataField(EMIT_SCOREBOARD_NAME, serverScoreboardClass)
     }
 
-    override fun generate(classWriter: ClassWriter) {
+    fun generate(classWriter: ClassWriter) {
         val mv = classWriter.visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "load", "(${minecraftServerClass.descriptorString()}${serverFunctionManagerClass.descriptorString()})V", null, null)
         mv.visitCode()
         val cw = CodeWriter(mv)
@@ -91,10 +80,6 @@ class CodeFieldStorage(
             mapFunction(cw, value)
             cw.setDataField(getFunctionName(value), commandFunctionClass)
         }
-        attributes.forEachIndexed { _, value ->
-            mapAttribute(cw, value)
-            cw.setDataField(getAttributeName(value), attributeClass)
-        }
         mv.visitInsn(Opcodes.RETURN)
         mv.visitMaxs(0, 0)
         mv.visitEnd()
@@ -109,9 +94,6 @@ class CodeFieldStorage(
         }
         functions.forEach { value ->
             classWriter.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, getFunctionName(value), commandFunctionClass.descriptorString(), null, null)
-        }
-        attributes.forEach { value ->
-            classWriter.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, getAttributeName(value), attributeClass.descriptorString(), null, null)
         }
 
     }

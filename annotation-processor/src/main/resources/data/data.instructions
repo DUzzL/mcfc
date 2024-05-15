@@ -213,3 +213,34 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
   let [ctx:name] = [ctx:entity].getScoreboardName();
   run();
 }
+
+@GET_SCORE_VALUE(<net.minecraft.world.scores.Score> [ctx:score], int [ctx:scoreValue]) {
+  let [ctx:scoreValue] = [ctx:score].getScore();
+  run();
+}
+
+@SET_SCORE(<net.minecraft.world.scores.Score> [ctx:score], int [ctx:value]) {
+  [ctx:score].setScore([ctx:value]);
+}
+
+@ADD_SCORE(<net.minecraft.world.scores.Score> [ctx:score], int [ctx:value]) {
+  [ctx:score].setScore([ctx:score].getScore() + [ctx:value]);
+}
+
+@REMOVE_SCORE(<net.minecraft.world.scores.Score> [ctx:score], int [ctx:value]) {
+  [ctx:score].setScore([ctx:score].getScore() - [ctx:value]);
+}
+
+@KILL_ENTITY(<net.minecraft.world.entity.Entity> [ctx:entity]) {
+  [ctx:entity].kill();
+}
+
+@GET_ENTITY_POSITION(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.phys.Vec3> [ctx:position]) {
+  let [ctx:position] = [ctx:entity].position();
+  run();
+}
+
+@GET_ENTITY_ROTATION(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.phys.Vec2> [ctx:rotation]) {
+  let [ctx:rotation] = [ctx:entity].getRotationVector();
+  run();
+}

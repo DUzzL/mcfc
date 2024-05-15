@@ -2,7 +2,6 @@ Not all commands are currently implemented in this mod, if a command is not list
 
 | Command                        | Full Support (1.20.2) | Full Support (1.20.1) | `store result` Support | `store success` Support |
 |--------------------------------|-----------------------|:----------------------|------------------------|-------------------------|
-| `attribute base set`           | Partial[^1]           | Partial[^1]           | No                     | No                      |
 | `execute align`                | Yes                   | Yes                   | No                     | No                      |
 | `execute as`                   | Partial[^1]           | Partial[^1]           | No                     | No                      |
 | `execute at`                   | Partial[^1]           | Partial[^1]           | No                     | No                      |

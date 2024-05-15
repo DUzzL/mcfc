@@ -10,9 +10,6 @@ import dev.epicpix.minecraftfunctioncompiler.v1_20_2.data.mapEntityTypeClass
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
-import net.minecraft.world.entity.LivingEntity
-import net.minecraft.world.entity.ai.attributes.AttributeInstance
-import net.minecraft.world.phys.Vec2
 import net.minecraft.world.phys.Vec3
 import net.minecraft.world.scores.Score
 import org.objectweb.asm.Label
@@ -34,32 +31,6 @@ fun registerInstructionEmitters() {
             }
         }
         runStored("score", "\$ScoreData", Score::class.java)
-    }
-    registerEmitterInstruction(InstructionTypes.GET_SCORE_VALUE) {
-        codeWriter.callScore_getScore { load("score") }
-        runStored("scoreValue", "\$ScoreValue", Int::class.javaPrimitiveType!!)
-    }
-    registerEmitterInstruction(InstructionTypes.SET_SCORE) {
-        codeWriter.callScore_setScore {
-            load("score")
-            load("value")
-        }
-    }
-    registerEmitterInstruction(InstructionTypes.ADD_SCORE) {
-        load("score")
-        codeWriter.methodVisitor.visitInsn(Opcodes.DUP)
-        codeWriter.callScore_getScore {  }
-        load("value")
-        codeWriter.methodVisitor.visitInsn(Opcodes.IADD)
-        codeWriter.callScore_setScore {  }
-    }
-    registerEmitterInstruction(InstructionTypes.REMOVE_SCORE) {
-        load("score")
-        codeWriter.methodVisitor.visitInsn(Opcodes.DUP)
-        codeWriter.callScore_getScore {  }
-        load("value")
-        codeWriter.methodVisitor.visitInsn(Opcodes.ISUB)
-        codeWriter.callScore_setScore {  }
     }
     registerEmitterInstruction(InstructionTypes.RUN_SCORE_OPERATION) {
         when(val operation = instruction.get<ScoreboardOperation>("operation")) {
@@ -168,9 +139,6 @@ fun registerInstructionEmitters() {
             codeWriter.methodVisitor.visitInsn(Opcodes.POP)
         }
     }
-    registerEmitterInstruction(InstructionTypes.KILL_ENTITY) {
-        codeWriter.callEntity_kill { load("entity") }
-    }
     registerEmitterInstruction(InstructionTypes.RESET_SCORE) {
         codeWriter.callScoreboard_resetPlayerScore {
             fieldStorage.loadScoreboard(codeWriter)
@@ -243,14 +211,6 @@ fun registerInstructionEmitters() {
         codeWriter.callEntity_level { load("entity") }
         codeWriter.castType(ServerLevel::class.java)
         runStored("world", "\$World", ServerLevel::class.java)
-    }
-    registerEmitterInstruction(InstructionTypes.GET_ENTITY_POSITION) {
-        codeWriter.callEntity_position { load("entity") }
-        runStored("position", "\$Position", Vec3::class.java)
-    }
-    registerEmitterInstruction(InstructionTypes.GET_ENTITY_ROTATION) {
-        codeWriter.callEntity_getRotationVector { load("entity") }
-        runStored("rotation", "\$Rotation", Vec2::class.java)
     }
     registerEmitterInstruction(InstructionTypes.APPLY_POSITION_WORLD) {
         codeWriter.newObject(Vec3::class.java, Double::class.java, Double::class.java, Double::class.java) {
@@ -385,22 +345,6 @@ fun registerInstructionEmitters() {
     registerEmitterInstruction(InstructionTypes.HAS_TEAM) {
         codeWriter.callEntity_getTeam { load("entity") }
         codeWriter.executeIf(if(!instruction.get<Boolean>("negated")) Opcodes.IFNULL else Opcodes.IFNONNULL) { run() }
-    }
-    registerEmitterInstruction(InstructionTypes.GET_ATTRIBUTE_INSTANCE) {
-        codeWriter.callAttributeMap_getInstance {
-            codeWriter.callLivingEntity_getAttributes {
-                load("entity")
-                codeWriter.castType(LivingEntity::class.java)
-            }
-            fieldStorage.loadAttribute(codeWriter, instruction["attribute"])
-        }
-        runStored("instance", "\$AttributeInstance", AttributeInstance::class.java)
-    }
-    registerEmitterInstruction(InstructionTypes.SET_ATTRIBUTE_BASE)  {
-        codeWriter.callAttributeInstance_setBaseValue {
-            load("instance")
-            codeWriter.writeDouble(instruction["value"])
-        }
     }
     registerEmitterInstruction(InstructionTypes.CHECK_ROTATION) {
         val yaw = instruction.get<FloatRangeArgument?>("yaw")

@@ -3,7 +3,6 @@ package dev.epicpix.minecraftfunctioncompiler.v1_20_1
 import com.google.gson.JsonObject
 import dev.epicpix.minecraftfunctioncompiler.FunctionCompilerClassLoader
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation
-import dev.epicpix.minecraftfunctioncompiler.emitter.ICodeFieldStorage
 import dev.epicpix.minecraftfunctioncompiler.emitter.callMap_get
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage
 import dev.epicpix.minecraftfunctioncompiler.parser.Command
@@ -11,7 +10,9 @@ import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter
 import dev.epicpix.minecraftfunctioncompiler.v1_20_1.commands.CommandParser
 import dev.epicpix.minecraftfunctioncompiler.v1_20_1.compiler.compile
 import dev.epicpix.minecraftfunctioncompiler.v1_20_1.data.updateRegistryMaps
-import dev.epicpix.minecraftfunctioncompiler.v1_20_1.emitter.*
+import dev.epicpix.minecraftfunctioncompiler.v1_20_1.emitter.callMinecraftServer_getScoreboard
+import dev.epicpix.minecraftfunctioncompiler.v1_20_1.emitter.loadServerFunctionLibrary_functions
+import dev.epicpix.minecraftfunctioncompiler.v1_20_1.emitter.loadServerFunctionManager_library
 import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.commands.CommandFunction
 import net.minecraft.commands.CommandFunction.CommandEntry
@@ -20,7 +21,6 @@ import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.ServerFunctionManager
 import net.minecraft.server.ServerScoreboard
-import net.minecraft.world.entity.ai.attributes.Attribute
 import org.slf4j.LoggerFactory
 import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
@@ -78,11 +78,10 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
 
     override fun resetHandles() = handles.clear()
 
-    private fun createCodeFieldStorage(): ICodeFieldStorage {
+    private fun createCodeFieldStorage(): CodeFieldStorage {
         return CodeFieldStorage(
             resourceLocationClass = ResourceLocation::class.java,
             commandFunctionClass = CommandFunction::class.java,
-            attributeClass = Attribute::class.java,
             serverFunctionManagerClass = ServerFunctionManager::class.java,
             minecraftServerClass = MinecraftServer::class.java,
             serverScoreboardClass = ServerScoreboard::class.java,
@@ -99,13 +98,6 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                     loadResourceLocation(cw, value)
                 }
                 cw.castType(CommandFunction::class.java)
-            },
-            mapAttribute = { cw, value ->
-                cw.callRegistry_get {
-                    cw.loadBuiltInRegistries_ATTRIBUTE()
-                    loadResourceLocation(cw, value)
-                }
-                cw.castType(Attribute::class.java)
             },
         )
     }

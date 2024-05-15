@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter
 
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation
+import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData
@@ -8,7 +9,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.ScopeData
 import org.objectweb.asm.Label
 
 data class EmitterContext(
-    val fieldStorage: ICodeFieldStorage,
+    val fieldStorage: CodeFieldStorage,
     val codeWriter: CodeWriter,
     val compiledFunctions: Set<DataLocation>,
     val transforms: Map<Int, String> = mapOf(),
@@ -18,10 +19,13 @@ data class EmitterContext(
     val newTransforms: MutableMap<Int, String>,
     val newScopes: MutableMap<Int, Label>,
 ) {
+    fun cloneWith(instruction: Instruction): EmitterContext {
+        return copy(transforms = newTransforms, scopes = newScopes, instruction = instruction, newTransforms = newTransforms.toMutableMap(), newScopes = newScopes.toMutableMap())
+    }
+
     fun run() {
         instruction.children.forEach {
-            val ctx = copy(transforms = newTransforms, scopes = newScopes, instruction = it, newTransforms = newTransforms.toMutableMap(), newScopes = newScopes.toMutableMap())
-            emitInstruction(ctx)
+            emitInstruction(cloneWith(it))
         }
     }
 

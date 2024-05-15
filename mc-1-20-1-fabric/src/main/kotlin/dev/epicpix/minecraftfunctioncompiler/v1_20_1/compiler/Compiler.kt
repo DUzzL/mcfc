@@ -3,7 +3,6 @@ package dev.epicpix.minecraftfunctioncompiler.v1_20_1.compiler
 import dev.epicpix.minecraftfunctioncompiler.commands.CommandTypes
 import dev.epicpix.minecraftfunctioncompiler.compiler.impl.CompilationContext
 import dev.epicpix.minecraftfunctioncompiler.compiler.impl.ResultStorage
-import dev.epicpix.minecraftfunctioncompiler.data.DataLocation
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument
 import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument
 import dev.epicpix.minecraftfunctioncompiler.il.*
@@ -20,17 +19,6 @@ fun compile(commands: List<Command>): List<Instruction> {
 private fun CompilationContext.compile(command: Command?, result: ResultStorage = ResultStorage()) {
     if(command == null) return
     when(command.type) {
-        CommandTypes.ATTRIBUTE_BASE_SET -> {
-            forSelector(command["target"]) { entity, _, _ ->
-                val attrLocation = LocationData(local = highestLocal)
-                val instruction =
-                Instructions.checkEntityTypes(entity, listOf(DataLocation("minecraftfunctioncompiler", "living_entity")), false)
-                    .with(Instructions.getAttributeInstance(entity, attrLocation, command["attribute"])
-                        .with(Instructions2.ifNotNull(attrLocation)
-                            .with(Instructions.setAttributeBase(attrLocation, command["value"]))))
-                addInstruction(instruction)
-            }
-        }
         CommandTypes.EXECUTE_ALIGN -> {
             getPosition { positionId ->
                 val newPosition = LocationData(local = highestLocal)
@@ -49,8 +37,8 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                 val world = LocationData(local = highestLocal)
                 val position = LocationData(local = highestLocal + 1)
                 val rotation = LocationData(local = highestLocal + 2)
-                val execInstruction = Instructions.getEntityRotation(entity, rotation)
-                val instruction = Instructions.getEntityWorld(entity, world).with(Instructions.getEntityPosition(entity, position).with(execInstruction))
+                val execInstruction = Instructions2.getEntityRotation(entity, rotation)
+                val instruction = Instructions.getEntityWorld(entity, world).with(Instructions2.getEntityPosition(entity, position).with(execInstruction))
                 with(highestLocal = highestLocal + 3, currentWorld = world, currentPosition = position, currentRotation = rotation, addInstruction = execInstruction.children::add).compile(command["command"], result)
                 addInstruction(instruction)
             }
@@ -108,7 +96,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                 getObjective(command["objective"]) { objective ->
                     forScoreHolder(command["targets"]) { name ->
                         getScoreData(objective, name, true) { score ->
-                            addInstruction(Instructions.setScore(score, res.result!!))
+                            addInstruction(Instructions2.setScore(score, res.result!!))
                         }
                     }
                 }
@@ -166,14 +154,14 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
         }
         CommandTypes.KILL -> {
             forSelector(command["targets"]) { entity, _, _ ->
-                addInstruction(Instructions.killEntity(entity))
+                addInstruction(Instructions2.killEntity(entity))
             }
         }
         CommandTypes.SCOREBOARD_PLAYERS_ADD -> {
             getObjective(command["objective"]) { objective ->
                 forScoreHolder(command["targets"]) { name ->
                     getScoreData(objective, name, true) { scoreData ->
-                        addInstruction(Instructions.addScore(scoreData, LocationData(integer = command["score"])))
+                        addInstruction(Instructions2.addScore(scoreData, LocationData(integer = command["score"])))
                     }
                 }
             }
@@ -183,7 +171,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                 forScoreHolder(command["target"]) { name ->
                     getScoreData(objective, name, true) { scoreData ->
                         val res = LocationData(local = highestLocal)
-                        addInstruction(Instructions.getScoreValue(scoreData, res).apply {
+                        addInstruction(Instructions2.getScoreValue(scoreData, res).apply {
                             result.setResult(with(addInstruction = children::add), res)
                         })
                     }
@@ -223,7 +211,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
             getObjective(command["objective"]) { objective ->
                 forScoreHolder(command["targets"]) { name ->
                     getScoreData(objective, name, true) { score ->
-                        addInstruction(Instructions.setScore(score, LocationData(integer = command["score"])))
+                        addInstruction(Instructions2.setScore(score, LocationData(integer = command["score"])))
                     }
                 }
             }
@@ -232,7 +220,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
             getObjective(command["objective"]) { objective ->
                 forScoreHolder(command["targets"]) { name ->
                     getScoreData(objective, name, true) { score ->
-                        addInstruction(Instructions.removeScore(score, LocationData(integer = command["score"])))
+                        addInstruction(Instructions2.removeScore(score, LocationData(integer = command["score"])))
                     }
                 }
             }

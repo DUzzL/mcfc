@@ -10,20 +10,13 @@ import dev.epicpix.minecraftfunctioncompiler.data.*
 private interface InstructionDefinitions {
     // Minecraft specific instructions
     fun scoreData(@InstructionSource objective: LocationData, @InstructionSource name: LocationData, @InstructionDestination score: LocationData, autoCreate: Boolean): Instruction
-    fun getScoreValue(@InstructionSource score: LocationData, @InstructionDestination scoreValue: LocationData): Instruction
-    fun addScore(@InstructionSource score: LocationData, @InstructionSource value: LocationData): Instruction
-    fun removeScore(@InstructionSource score: LocationData, @InstructionSource value: LocationData): Instruction
-    fun setScore(@InstructionSource score: LocationData, @InstructionSource value: LocationData): Instruction
     fun resetScore(@InstructionSource objective: LocationData, @InstructionSource name: LocationData): Instruction
     fun resetPlayerScore(@InstructionSource name: LocationData): Instruction
     fun runScoreOperation(@InstructionSource target: LocationData, @InstructionSource source: LocationData, operation: ScoreboardOperation, exceptionScope: ScopeData): Instruction
     fun callFunctions(functions: List<DataLocation>, @InstructionSource entity: LocationData?, @InstructionSource world: LocationData?, @InstructionSource position: LocationData?, @InstructionSource rotation: LocationData?): Instruction
-    fun killEntity(@InstructionSource entity: LocationData): Instruction
     fun checkScoreRange(@InstructionSource score: LocationData, range: IntRangeArgument, negate: Boolean): Instruction
     fun checkScoreCompare(@InstructionSource target: LocationData, @InstructionSource source: LocationData, compareOperation: ScoreboardCompareOperation): Instruction
     fun getEntityWorld(@InstructionSource entity: LocationData, @InstructionDestination world: LocationData): Instruction
-    fun getEntityPosition(@InstructionSource entity: LocationData, @InstructionDestination position: LocationData): Instruction
-    fun getEntityRotation(@InstructionSource entity: LocationData, @InstructionDestination rotation: LocationData): Instruction
     fun applyPositionWorld(@InstructionSource from: LocationData, @InstructionDestination to: LocationData, position: WorldCoordinates): Instruction
     fun checkEntityTypes(@InstructionSource entity: LocationData, types: List<DataLocation>, negated: Boolean): Instruction
     fun alignPosition(@InstructionSource position: LocationData, @InstructionDestination result: LocationData, swizzle: SwizzleArgument): Instruction
@@ -31,7 +24,5 @@ private interface InstructionDefinitions {
     fun setGamemode(@InstructionSource entity: LocationData, gamemode: Gamemode): Instruction
     fun checkTeam(@InstructionSource entity: LocationData, team: String, negated: Boolean): Instruction
     fun hasTeam(@InstructionSource entity: LocationData, negated: Boolean): Instruction
-    fun getAttributeInstance(@InstructionSource entity: LocationData, @InstructionDestination instance: LocationData, attribute: DataLocation): Instruction
-    fun setAttributeBase(@InstructionSource instance: LocationData, value: Double): Instruction
     fun checkRotation(@InstructionSource rotation: LocationData, yaw: FloatRangeArgument?, pitch: FloatRangeArgument?): Instruction
 }

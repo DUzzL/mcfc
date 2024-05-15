@@ -79,7 +79,7 @@ data class CompilationContext(
             forCurrentEntity { entity, _, _ ->
                 val local = LocationData(local = highestLocal)
                 val nullCheck = Instructions2.ifNotNull(entity)
-                val instruction = Instructions.getEntityPosition(entity, local)
+                val instruction = Instructions2.getEntityPosition(entity, local)
                 nullCheck.with(instruction)
                 addInstruction(nullCheck)
                 exec(with(currentPosition = local, highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
@@ -94,7 +94,7 @@ data class CompilationContext(
             forCurrentEntity { entity, _, _ ->
                 val local = LocationData(local = highestLocal)
                 val nullCheck = Instructions2.ifNotNull(entity)
-                val instruction = Instructions.getEntityRotation(entity, local)
+                val instruction = Instructions2.getEntityRotation(entity, local)
                 instruction.with(nullCheck)
                 addInstruction(nullCheck)
                 exec(with(currentRotation = local, highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)
@@ -222,7 +222,7 @@ data class CompilationContext(
             }
             if(selector.yaw != null || selector.pitch != null) {
                 val rotationLocal = LocationData(local = context.highestLocal)
-                stacker.stackInstruction(Instructions.getEntityRotation(local, rotationLocal))
+                stacker.stackInstruction(Instructions2.getEntityRotation(local, rotationLocal))
                 stacker.stackInstruction(Instructions.checkRotation(rotationLocal, selector.yaw, selector.pitch))
                 ctx = ctx.with(highestLocal = context.highestLocal + 1)
             }
