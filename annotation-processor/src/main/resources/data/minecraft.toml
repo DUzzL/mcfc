@@ -2,11 +2,7 @@ definition_file = "dev.epicpix.minecraftfunctioncompiler.$VERSION.emitter.Mapped
 
 [definitions_functions]
 MinecraftServer_getScoreboard = "net/minecraft/server/MinecraftServer:getScoreboard()Lnet/minecraft/server/ServerScoreboard;@M"
-Entity_kill = "net/minecraft/world/entity/Entity:kill()V@M"
 Entity_level = "net/minecraft/world/entity/Entity:level()Lnet/minecraft/world/level/Level;@M"
-Entity_position = "net/minecraft/world/entity/Entity:position()Lnet/minecraft/world/phys/Vec3;@M"
-Entity_getRotationVector = "net/minecraft/world/entity/Entity:getRotationVector()Lnet/minecraft/world/phys/Vec2;@M"
-Entity_getTeam = "net/minecraft/world/entity/Entity:getTeam()Lnet/minecraft/world/scores/Team;@M"
 ServerPlayer_setGameMode = "net/minecraft/server/level/ServerPlayer:setGameMode(Lnet/minecraft/world/level/GameType;)Z@M"
 ServerPlayerGameMode_getGameModeForPlayer = "net/minecraft/server/level/ServerPlayerGameMode:getGameModeForPlayer()Lnet/minecraft/world/level/GameType;@M"
 Team_getName = "net/minecraft/world/scores/Team:getName()Ljava/lang/String;@M"
@@ -31,7 +27,6 @@ GameType_ADVENTURE = "net/minecraft/world/level/GameType:ADVENTURE:Lnet/minecraf
 GameType_SPECTATOR = "net/minecraft/world/level/GameType:SPECTATOR:Lnet/minecraft/world/level/GameType;@S"
 ServerFunctionManager_library = "net/minecraft/server/ServerFunctionManager:library:Lnet/minecraft/server/ServerFunctionLibrary;@M"
 ServerFunctionLibrary_functions = "net/minecraft/server/ServerFunctionLibrary:functions:Ljava/util/Map;@M"
-BuiltInRegistries_ATTRIBUTE = "net/minecraft/core/registries/BuiltInRegistries:ATTRIBUTE:Lnet/minecraft/core/Registry;@S"
 Vec3_x = "net/minecraft/world/phys/Vec3:x:D@M"
 Vec3_y = "net/minecraft/world/phys/Vec3:y:D@M"
 Vec3_z = "net/minecraft/world/phys/Vec3:z:D@M"

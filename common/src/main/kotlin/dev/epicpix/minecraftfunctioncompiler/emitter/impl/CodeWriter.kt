@@ -25,10 +25,6 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         return localIndex
     }
 
-    fun deallocateLocalIndex(index: Int) {
-        availableLocals.add(index)
-    }
-
     fun createLocal(local: String, type: String): Local {
         val localStart = Label()
         methodVisitor.visitLabel(localStart)
@@ -41,7 +37,7 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
     fun destroyLocal(local: Local) {
         methodVisitor.visitLabel(local.end)
         locals.remove(local.name)
-        deallocateLocalIndex(local.index)
+        availableLocals.add(local.index)
     }
 
     inline fun defineLocal(local: String, type: Class<*>, exec: () -> Unit) {
