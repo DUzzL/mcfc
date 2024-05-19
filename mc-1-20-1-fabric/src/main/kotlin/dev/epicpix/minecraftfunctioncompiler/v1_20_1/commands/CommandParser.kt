@@ -5,10 +5,7 @@ import com.mojang.brigadier.context.ParsedCommandNode
 import dev.epicpix.minecraftfunctioncompiler.commands.CommandTypes
 import dev.epicpix.minecraftfunctioncompiler.commands.parseScoreHolder
 import dev.epicpix.minecraftfunctioncompiler.commands.parseSelector
-import dev.epicpix.minecraftfunctioncompiler.data.IntRangeArgument
-import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument
-import dev.epicpix.minecraftfunctioncompiler.data.SwizzleArgument
-import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates
+import dev.epicpix.minecraftfunctioncompiler.data.*
 import dev.epicpix.minecraftfunctioncompiler.parser.Command
 import dev.epicpix.minecraftfunctioncompiler.v1_20_1.toDataLocation
 import dev.epicpix.minecraftfunctioncompiler.v1_20_1.toGamemode
@@ -176,7 +173,11 @@ object CommandParser {
         return if(name.startsWith("#")) {
             Command(CommandTypes.FUNCTION, mapOf("functions" to functionManager.getTag(ResourceLocation(name.substring(1))).toList().map { it.id.toDataLocation() }))
         }else {
-            Command(CommandTypes.FUNCTION, mapOf("functions" to listOf(ResourceLocation(name).toDataLocation())))
+            if(functionManager.library.functions.containsKey(ResourceLocation(name))) {
+                Command(CommandTypes.FUNCTION, mapOf("functions" to listOf(ResourceLocation(name).toDataLocation())))
+            }else {
+                Command(CommandTypes.FUNCTION, mapOf("functions" to listOf<DataLocation>()))
+            }
         }
     }
 

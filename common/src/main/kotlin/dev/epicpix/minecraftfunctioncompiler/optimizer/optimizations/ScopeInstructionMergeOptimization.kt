@@ -1,7 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.optimizer.optimizations
 
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction
-import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2
 import dev.epicpix.minecraftfunctioncompiler.optimizer.InstructionList
 import dev.epicpix.minecraftfunctioncompiler.optimizer.Optimization
@@ -27,7 +26,8 @@ object ScopeInstructionMergeOptimization : Optimization {
                     InstructionTypes2.IF_NOT_NULL -> {}
                     InstructionTypes2.GET_SCOREBOARD_NAME -> {}
                     InstructionTypes2.GET_OBJECTIVE -> {}
-                    InstructionTypes.SCORE_DATA -> {}
+                    InstructionTypes2.SCORE_DATA_AUTO_CREATE -> {}
+                    InstructionTypes2.SCORE_DATA_NO_AUTO_CREATE -> {}
                     else -> break
                 }
                 newBase.children.addAll(compare.children)

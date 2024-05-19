@@ -14,7 +14,7 @@ import java.util.Set;
 
 public class MixinPlugin implements IMixinConfigPlugin {
     public void onLoad(String mixinPackage) {
-        try(var reader = getClass().getResourceAsStream("/minecraftfunctioncompiler.v" + McVersion.getVersion().getVersionName().replaceAll("\\.", "_") + ".accesswidener")) {
+        try(var reader = getClass().getResourceAsStream("/minecraftfunctioncompiler.v" + McVersion.getVersion().getMixinVersionName().replaceAll("\\.", "_") + ".accesswidener")) {
             new AccessWidenerReader(FabricLoaderImpl.INSTANCE.getAccessWidener()).read(reader.readAllBytes(), null);
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -36,7 +36,7 @@ public class MixinPlugin implements IMixinConfigPlugin {
     public List<String> getMixins() {
         var envType = FabricLoader.getInstance().getEnvironmentType();
         var rawMixins = List.of("ServerFunctionManagerMixin", envType == EnvType.CLIENT ? "client.MinecraftMixin" : "server.DedicatedServerMixin");
-        var convertedMixins = rawMixins.stream().map(x -> "v" + McVersion.getVersion().getVersionName().replaceAll("\\.", "_") + "." + x).toList();
+        var convertedMixins = rawMixins.stream().map(x -> "v" + McVersion.getVersion().getMixinVersionName().replaceAll("\\.", "_") + "." + x).toList();
         return convertedMixins;
     }
 

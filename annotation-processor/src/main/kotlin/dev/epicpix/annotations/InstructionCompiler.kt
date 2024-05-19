@@ -194,7 +194,7 @@ data class ParsedTokenValueAccessor(val scope: ParsedTokenValueAccessorScope, va
         return result
     }
 }
-data class ParsedTokenInstructionDefinition(val name: String, val params: List<Pair<ParsedTokenValueAccessor, ParsedTokenExpressionType>>, val code: List<ParsedTokenStatement>, val definitionInfo: DefinitionInfo, var usesObf: Boolean = false) : ParsedToken
+data class ParsedTokenInstructionDefinition(val name: String, val params: List<Pair<ParsedTokenValueAccessor, ParsedTokenExpressionType>>, val code: List<ParsedTokenStatement>, val definitionInfo: DefinitionInfo, val versionRange: Pair<String?, String?>?, var usesObf: Boolean = false) : ParsedToken
 data class ParsedTokenFunctionDefinition(val name: String, val params: List<Pair<ParsedTokenValueAccessor, ParsedTokenExpressionType>>, val code: List<ParsedTokenStatement>, val definitionInfo: DefinitionInfo, var usesObf: Boolean = false) : ParsedToken
 data class ParsedTokenCollapsableInstructionDefinition(val name: String, val params: List<Pair<ParsedTokenValueAccessor, ParsedTokenExpressionType>>, val conditions: List<ParsedTokenInstructionCondition>, var usesObf: Boolean = false) : ParsedToken
 
@@ -213,7 +213,7 @@ data class ParsedTokenStatementFunctionCall(val name: String, val instance: Pars
 data class ParsedTokenStatementDefineVariable(val type: ParsedTokenExpressionType?, val accessor: ParsedTokenValueAccessor, val expression: ParsedTokenExpression?) : ParsedTokenStatement
 data class ParsedTokenStatementAssignVariable(val accessor: ParsedTokenValueAccessor, val expression: ParsedTokenExpression) : ParsedTokenStatement
 
-data class ParsedTokenExoressionField(val name: String, val instance: ParsedTokenInstanceType) : ParsedTokenExpression
+data class ParsedTokenExpressionField(val name: String, val instance: ParsedTokenInstanceType) : ParsedTokenExpression
 data class ParsedTokenExpressionNumber(val number: Long) : ParsedTokenExpression
 data class ParsedTokenExpressionTyped(val type: ParsedTokenExpressionType) : ParsedTokenExpression
 data class ParsedTokenExpressionBinary(val a: ParsedTokenExpression, val b: ParsedTokenExpression, val op: ParsedTokenExpressionOperator) : ParsedTokenExpression
@@ -378,7 +378,7 @@ private fun parseExpressionBase(iter: ListIterator<LexToken>, valueDefinitions: 
             }
             exp1 = ParsedTokenStatementFunctionCall(name.word, ParsedTokenInstanceValue(exp1), params, null)
         }else {
-            exp1 = ParsedTokenExoressionField(name.word, ParsedTokenInstanceValue(exp1))
+            exp1 = ParsedTokenExpressionField(name.word, ParsedTokenInstanceValue(exp1))
         }
     }
     return exp1
@@ -530,6 +530,22 @@ private fun parseCode(iter: ListIterator<LexToken>, valueDefinitions: List<Parse
     return res
 }
 
+private fun parseVersionNumber(iter: ListIterator<LexToken>): String {
+    val res = StringBuilder()
+    while(iter.hasNext()) {
+        val token = iter.next()
+        if(token is LexTokenSimple && token.type == LexTokenSimpleType.DOT) {
+            res.append(".")
+        } else if(token is LexTokenNumber) {
+            res.append(token.number)
+        } else {
+            iter.previous()
+            break
+        }
+    }
+    return res.toString()
+}
+
 private fun parseTokens(iter: ListIterator<LexToken>, loadDefinitionCallback: (Any?) -> String?): ParsedFile {
     val fileInfo = mutableMapOf<String, String>()
     val instrDefs = mutableListOf<ParsedTokenInstructionDefinition>()
@@ -558,13 +574,32 @@ private fun parseTokens(iter: ListIterator<LexToken>, loadDefinitionCallback: (A
                 }
             }
         }else if(next is LexTokenInstructionDefinition) {
+            val range = if(iter.tryNextTokenType(LexTokenSimpleType.OPEN_BRACKET)) {
+                val range = if(iter.tryNextTokenType(LexTokenSimpleType.MINUS)) {
+                    val high = parseVersionNumber(iter)
+                    null to high
+                }else {
+                    val low = parseVersionNumber(iter)
+                    val high = if(iter.tryNextTokenType(LexTokenSimpleType.MINUS)) {
+                        if(iter.tryNextTokenType(LexTokenSimpleType.CLOSE_BRACKET)) {
+                            iter.previous()
+                            null
+                        }else {
+                            parseVersionNumber(iter)
+                        }
+                    } else low
+                    low to high
+                }
+                iter.expectTokenType(LexTokenSimpleType.CLOSE_BRACKET)
+                range
+            }else null
             val usesObf = AtomicBoolean()
             iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
             val params = parseFunctionDefinitionParams(iter, usesObf)
             iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
             val defInfo = DefinitionInfo(allFunctionNames, functionsDefinitions)
             val code = parseCode(iter, params.map { it.first }, defInfo, usesObf)
-            instrDefs.add(ParsedTokenInstructionDefinition(next.name, params, code, defInfo, usesObf.get()))
+            instrDefs.add(ParsedTokenInstructionDefinition(next.name, params, code, defInfo, range, usesObf.get()))
         }else if(next is LexTokenFunctionDefinition) {
             val usesObf = AtomicBoolean()
             iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
@@ -758,7 +793,7 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             return ParsedTokenExpressionTypeComplex(def.className)
         }
         TODO(def.descriptor)
-    }else if(expression is ParsedTokenExoressionField) {
+    }else if(expression is ParsedTokenExpressionField) {
         val instance = expression.instance
         val fieldMatch = if(instance is ParsedTokenInstanceValue) {
             val instanceType = evaluateExpressionType(writerData, instance.expression)
@@ -816,7 +851,7 @@ private fun doesArgumentTypeMatch(matchType: ParsedTokenExpressionType, expected
     }else if(expectedType == Type.INT_TYPE) {
         return matchType.isSimpleType(ParsedTokenExpressionSimpleType.INTEGER)
     }else if(expectedType.sort == Type.OBJECT) {
-        return matchType is ParsedTokenExpressionTypeComplex && (getClassLowerBounds(expectedType.className).any { matchType.typeName == it } || getClassLowerBounds(matchType.typeName).any { expectedType.className == it })
+        return matchType.isSimpleType(ParsedTokenExpressionSimpleType.NULL) || (matchType is ParsedTokenExpressionTypeComplex && (getClassLowerBounds(expectedType.className).any { matchType.typeName == it } || getClassLowerBounds(matchType.typeName).any { expectedType.className == it }))
     }else {
         TODO(expectedType.descriptor)
     }
@@ -904,6 +939,11 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             }
         }
         return uniqId
+    }else if(expression is ParsedTokenExpressionTyped) {
+        if(expression.type.isSimpleType(ParsedTokenExpressionSimpleType.NULL)) {
+            output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.ACONST_NULL);\n")
+            return uniqId
+        }
     }else if(expression is ParsedTokenExpressionBinary) {
         if(expression.op == ParsedTokenExpressionOperator.ADD) {
             if(isExpressionSimpleType(writerData, expression, ParsedTokenExpressionSimpleType.INTEGER)) {
@@ -978,7 +1018,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 uid = writeExpression(writerData.copyLocalTypes(), arg, output, uid)
             }
             output.appendText("mv.visitMethodInsn($opcode, \"$className\", \"$methodName\", \"$methodDescriptor\", ${classOwner.isInterface});\n")
-            if(!keepResult && Type.getReturnType(def.descriptor) == Type.VOID_TYPE) {
+            if(!keepResult && Type.getReturnType(def.descriptor) != Type.VOID_TYPE) {
                 output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.POP);\n")
             }
             return uid
@@ -1049,7 +1089,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             }
             throw UnsupportedOperationException("Unknown function call: ${expression.name}")
         }
-    }else if(expression is ParsedTokenExoressionField) {
+    }else if(expression is ParsedTokenExpressionField) {
         val instance = expression.instance
         val fieldMatch = if(instance is ParsedTokenInstanceValue) {
             val instanceType = evaluateExpressionType(writerData, instance.expression)

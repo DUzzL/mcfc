@@ -33,6 +33,17 @@ data class MappingData(
     val mappedFields: MutableMap<IMappingProvider.Member, String> = mutableMapOf(),
 )
 
+data class DefinitionPriorityTree(val def: ParsedTokenInstructionDefinition, val backwardConnections: MutableList<DefinitionPriorityTree> = mutableListOf()) {
+    fun length(): Int {
+        if(backwardConnections.isEmpty()) return 1
+        return 1 + backwardConnections.maxOf { it.length() }
+    }
+    fun getAll(): List<DefinitionPriorityTree> {
+        if(backwardConnections.isEmpty()) return listOf(this)
+        return backwardConnections.fold(listOf(this)) { acc, v -> acc + v.getAll() }
+    }
+}
+
 fun MappingData?.getClassName(name: String): String {
     if(this == null) return name
     return mappedClasses[name] ?: (if(!name.startsWith("net/minecraft")) name else error("No class mapping for $name"))
@@ -103,6 +114,7 @@ class MainProcessor(
             }
             setJarInfo(jarFiles to jarFileMappings)
         }
+        setResolver(resolver)
         val packageMinecraftVersion = options["minecraft_version"]?.replace(".", "_")?.run { "v$this" }
         val minecraftVersion = options["minecraft_version"]?.split(".")
         val definitions = options["definitions"]?.let { loadToml(it) }
@@ -278,13 +290,28 @@ class MainProcessor(
         val info = mutableMapOf<String, List<AccessorStatistics>>()
         file.definitions.forEach {
             if(it.usesObf != common) {
-                map.appendText("            if(type == ${file.fileInfo["enum_file"]}.${it.name.uppercase()}) {\n")
-                val output = ByteArrayOutputStream()
-                info[it.name] = generateCode(mappingData, it, file, output)
-                map.appendText(output.toByteArray().decodeToString().trimEnd().prependIndent("                "))
-                map.appendText("\n")
-                map.appendText("                return true;\n")
-                map.appendText("            }\n")
+                val matchesVersion = if(it.versionRange == null) true else {
+                    val f = it.versionRange.first?.split(".")?.let {
+                        val cMajor = it[1].toInt()
+                        val cMinor = it.getOrNull(2)?.filter { it.isDigit() }?.toIntOrNull() ?: 0
+                        (majorVer > cMajor) || (majorVer == cMajor && minorVer >= cMinor)
+                    } ?: true
+                    val t = it.versionRange.second?.split(".")?.let {
+                        val cMajor = it[1].toInt()
+                        val cMinor = it.getOrNull(2)?.filter { it.isDigit() }?.toIntOrNull() ?: 0
+                        (majorVer < cMajor) || (majorVer == cMajor && minorVer <= cMinor)
+                    } ?: true
+                    f && t
+                }
+                if(matchesVersion) {
+                    map.appendText("            if(type == ${file.fileInfo["enum_file"]}.${it.name.uppercase()}) {\n")
+                    val output = ByteArrayOutputStream()
+                    info[it.name] = generateCode(mappingData, it, file, output)
+                    map.appendText(output.toByteArray().decodeToString().trimEnd().prependIndent("                "))
+                    map.appendText("\n")
+                    map.appendText("                return true;\n")
+                    map.appendText("            }\n")
+                }
             }
         }
         map.appendText("            return false;\n")
@@ -364,7 +391,7 @@ class MainProcessor(
                     impl.appendText("        if(")
                     for(checkIndex in cond.checks.indices) {
                         val check = cond.checks[checkIndex]
-                        impl.appendText(check.param)
+                        impl.appendText(check.param.snakeToLowerCamelCase())
                         when(check.operator) {
                             ParsedTokenInstructionConditionOperator.EQ -> impl.appendText("==")
                             ParsedTokenInstructionConditionOperator.NE -> impl.appendText("!=")
@@ -386,8 +413,13 @@ class MainProcessor(
                 }
                 impl.appendText("    }\n")
             }
+            val writtenDefinitions = mutableListOf<String>()
             file.definitions.forEach {
                 val named = it.name.uppercase()
+                if(writtenDefinitions.contains(named)) {
+                    return@forEach
+                }
+                writtenDefinitions.add(named)
                 types.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.il.InstructionType $named = new dev.epicpix.minecraftfunctioncompiler.il.InstructionType(\"$named\");\n")
 
                 impl.appendText("fun ${named.snakeToLowerCamelCase()}(")
@@ -437,35 +469,30 @@ class MainProcessor(
                 impl.appendText("))\n")
             }
 
+            val defs = mutableListOf<DefinitionPriorityTree>()
+            file.definitions.filter { def -> def.name.startsWith("static_") }.forEach {
+                defs.add(DefinitionPriorityTree(it))
+            }
+            defs.forEach { tree ->
+                val it = tree.def
+                val staticParams = it.params.filter { (param, _) -> param.scope == ParsedTokenValueAccessorScope.STATIC && param.name != "CommandSourceStack" }
+                for(param in staticParams) {
+                    val checkName = "static${param.first.name}".toUpperSnakeCase()
+                    if(it.name.uppercase() != checkName) {
+                        tree.backwardConnections.add(defs.find { treeDef -> treeDef.def.name.uppercase() == checkName } ?: throw NullPointerException("Definition with name '$checkName' not found"))
+                    }
+                }
+            }
             val instructionEnumType = "dev.epicpix.minecraftfunctioncompiler.il.InstructionType"
             impl.appendText("\n    fun addStaticRequirements(instructions: List<$instructionType>): $instructionType {\n")
             impl.appendText("        val requirementInstructions = mutableSetOf<$instructionEnumType>()\n")
             impl.appendText("        instructions.forEach { addStaticRequirementsInternal(it, requirementInstructions) }\n")
             impl.appendText("        var baseInstruction = Instruction($enumClass.ROOT, mapOf(), instructions.toMutableList())\n")
-            impl.appendText("        val addedRequirements = mutableSetOf<$instructionEnumType>()\n")
-            impl.appendText("        while(requirementInstructions.isNotEmpty()) {\n")
-            impl.appendText("            baseInstruction = includeRequirementInstruction(baseInstruction, addedRequirements, requirementInstructions.toList()[0])\n")
-            impl.appendText("            requirementInstructions.removeAll(addedRequirements)\n")
-            impl.appendText("        }\n")
-            impl.appendText("        return baseInstruction\n")
-            impl.appendText("    }\n")
-            impl.appendText("    private fun includeRequirementInstruction(instruction: $instructionType, addedRequirements: MutableSet<$instructionEnumType>, currentRequirement: $instructionEnumType): $instructionType {\n")
-            impl.appendText("        var result = instruction\n")
-            file.definitions.filter { def -> def.name.startsWith("static_") }.forEach {
-                val staticParams = it.params.filter { (param, _) -> param.scope == ParsedTokenValueAccessorScope.STATIC && param.name != "CommandSourceStack" }
-                if(staticParams.isNotEmpty()) {
-                    impl.appendText("        if(currentRequirement == $enumClass.${it.name.uppercase()}) {\n")
-                    impl.appendText("            addedRequirements.add($enumClass.${it.name.uppercase()})\n")
-                    impl.appendText("            result = $instructionType($enumClass.${it.name.uppercase()}, mapOf(), mutableListOf(result))\n")
-                    for(param in staticParams.filter { param -> it.name.uppercase() != "static${param.first.name}".toUpperSnakeCase() }) {
-                        impl.appendText("            if(!addedRequirements.contains($enumClass.${"static${param.first.name}".toUpperSnakeCase()})) {\n")
-                        impl.appendText("                result = includeRequirementInstruction(result, addedRequirements, $enumClass.${"static${param.first.name}".toUpperSnakeCase()})\n")
-                        impl.appendText("            }\n")
-                    }
-                    impl.appendText("        }\n")
-                }
+            val defPriorities = defs.map { it.def to it.length() }.sortedByDescending { it.second }
+            for((def, _) in defPriorities) {
+                impl.appendText("        if(requirementInstructions.contains($enumClass.${def.name.uppercase()})) baseInstruction = $instructionType($enumClass.${def.name.uppercase()}, mapOf(), mutableListOf(baseInstruction))\n")
             }
-            impl.appendText("        return result\n")
+            impl.appendText("        return baseInstruction\n")
             impl.appendText("    }\n")
             impl.appendText("    private fun addStaticRequirementsInternal(instruction: $instructionType, mutableSet: MutableSet<$instructionEnumType>) {\n")
             impl.appendText("        instruction.children.forEach { addStaticRequirementsInternal(it, mutableSet) }\n")
@@ -474,7 +501,11 @@ class MainProcessor(
                 if(staticParams.isNotEmpty()) {
                     impl.appendText("        if(instruction.type == $enumClass.${it.name.uppercase()}) {\n")
                     for(param in staticParams) {
-                        impl.appendText("            mutableSet.add($enumClass.${"static${param.first.name}".toUpperSnakeCase()})\n")
+                        val paramName = "static${param.first.name}".toUpperSnakeCase()
+                        val reqs = defs.find { it.def.name.uppercase() == paramName }!!.getAll()
+                        for(req in reqs) {
+                            impl.appendText("            mutableSet.add($enumClass.${req.def.name.uppercase()})\n")
+                        }
                     }
                     impl.appendText("        }\n")
                 }

@@ -16,22 +16,6 @@ import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
 
 fun registerInstructionEmitters() {
-    registerEmitterInstruction(InstructionTypes.SCORE_DATA) {
-        if(instruction["autoCreate"]) {
-            codeWriter.callScoreboard_getOrCreatePlayerScore {
-                fieldStorage.loadScoreboard(codeWriter)
-                load("name")
-                load("objective")
-            }
-        }else {
-            codeWriter.callScore_getScore {
-                fieldStorage.loadScoreboard(codeWriter)
-                load("name")
-                load("objective")
-            }
-        }
-        runStored("score", "\$ScoreData", Score::class.java)
-    }
     registerEmitterInstruction(InstructionTypes.RUN_SCORE_OPERATION) {
         when(val operation = instruction.get<ScoreboardOperation>("operation")) {
             ScoreboardOperation.SET -> {
@@ -137,20 +121,6 @@ fun registerInstructionEmitters() {
                 codeWriter.callServerFunctionManager_execute {  }
             }
             codeWriter.methodVisitor.visitInsn(Opcodes.POP)
-        }
-    }
-    registerEmitterInstruction(InstructionTypes.RESET_SCORE) {
-        codeWriter.callScoreboard_resetPlayerScore {
-            fieldStorage.loadScoreboard(codeWriter)
-            load("name")
-            load("objective")
-        }
-    }
-    registerEmitterInstruction(InstructionTypes.RESET_PLAYER_SCORE) {
-        codeWriter.callScoreboard_resetPlayerScore {
-            fieldStorage.loadScoreboard(codeWriter)
-            load("name")
-            codeWriter.writeNull()
         }
     }
     registerEmitterInstruction(InstructionTypes.CHECK_SCORE_RANGE) {

@@ -6,6 +6,8 @@ plugins {
 version = "${project.mod_version}-fabric"
 group = project.maven_group
 
+def modVersions = ["1.20.1", "1.20.2", "1.20.4"]
+
 repositories {
     mavenCentral()
     maven { url = uri("https://jitpack.io") }
@@ -16,8 +18,9 @@ repositories {
 dependencies {
     implementation project(":common")
     implementation project(":common-commands")
-    implementation project(":mc-1-20-1-fabric")
-    implementation project(":mc-1-20-2-fabric")
+    modVersions.forEach { ver ->
+        implementation project(":mc-${ver.replace('.', '-')}-fabric")
+    }
 
     implementation "net.fabricmc:sponge-mixin:0.12.5+mixin.0.8.5"
     implementation "net.fabricmc:fabric-loader:0.15.11"
@@ -40,26 +43,22 @@ java {
 }
 
 compileJava {
-    dependsOn(':mc-1-20-1-fabric:build')
-    dependsOn(':mc-1-20-2-fabric:build')
+    modVersions.forEach { ver ->
+        dependsOn(":mc-${ver.replace('.', '-')}-fabric:build")
+    }
 }
 
 jar {
     from(project(':common').sourceSets.main.output)
     from(project(':common-commands').sourceSets.main.output)
-    from(project(':mc-1-20-1-fabric').sourceSets.main.output) {
-        exclude("mcfc-refmap.json")
-        exclude("META-INF/mcfc.kotlin_module")
-        exclude("fabric.mod.json")
-        rename("minecraftfunctioncompiler.v1_20_1.generated.accesswidener", "minecraftfunctioncompiler.v1_20_1.accesswidener")
-        exclude("minecraftfunctioncompiler.v1_20_1.accesswidener")
-    }
-    from(project(':mc-1-20-2-fabric').sourceSets.main.output) {
-        exclude("mcfc-refmap.json")
-        exclude("META-INF/mcfc.kotlin_module")
-        exclude("fabric.mod.json")
-        rename("minecraftfunctioncompiler.v1_20_2.generated.accesswidener", "minecraftfunctioncompiler.v1_20_2.accesswidener")
-        exclude("minecraftfunctioncompiler.v1_20_2.accesswidener")
+    modVersions.forEach { ver ->
+        from(project(":mc-${ver.replace('.', '-')}-fabric").sourceSets.main.output) {
+            exclude("mcfc-refmap.json")
+            exclude("META-INF/mcfc.kotlin_module")
+            exclude("fabric.mod.json")
+            rename("minecraftfunctioncompiler.v${ver.replace('.', '_')}.generated.accesswidener", "minecraftfunctioncompiler.v${ver.replace('.', '_')}.accesswidener")
+            exclude("minecraftfunctioncompiler.v${ver.replace('.', '_')}.accesswidener")
+        }
     }
     from(project(':mc-combined-fabric').sourceSets.main.output)
     filesMatching("fabric.mod.json") {

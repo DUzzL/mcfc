@@ -9,9 +9,6 @@ import dev.epicpix.minecraftfunctioncompiler.data.*
 @InstructionSourceClass("dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes", "dev.epicpix.minecraftfunctioncompiler.il.Instructions")
 private interface InstructionDefinitions {
     // Minecraft specific instructions
-    fun scoreData(@InstructionSource objective: LocationData, @InstructionSource name: LocationData, @InstructionDestination score: LocationData, autoCreate: Boolean): Instruction
-    fun resetScore(@InstructionSource objective: LocationData, @InstructionSource name: LocationData): Instruction
-    fun resetPlayerScore(@InstructionSource name: LocationData): Instruction
     fun runScoreOperation(@InstructionSource target: LocationData, @InstructionSource source: LocationData, operation: ScoreboardOperation, exceptionScope: ScopeData): Instruction
     fun callFunctions(functions: List<DataLocation>, @InstructionSource entity: LocationData?, @InstructionSource world: LocationData?, @InstructionSource position: LocationData?, @InstructionSource rotation: LocationData?): Instruction
     fun checkScoreRange(@InstructionSource score: LocationData, range: IntRangeArgument, negate: Boolean): Instruction

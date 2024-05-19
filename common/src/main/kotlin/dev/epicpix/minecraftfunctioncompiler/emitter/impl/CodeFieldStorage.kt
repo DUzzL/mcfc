@@ -1,7 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter.impl
 
 import dev.epicpix.minecraftfunctioncompiler.DEBUG
-import dev.epicpix.minecraftfunctioncompiler.EMIT_SCOREBOARD_NAME
 import dev.epicpix.minecraftfunctioncompiler.EMIT_SERVER_FUNCTION_MANAGER_NAME
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation
 import org.objectweb.asm.ClassWriter
@@ -13,8 +12,6 @@ class CodeFieldStorage(
     private val commandFunctionClass: Class<*>,
     private val serverFunctionManagerClass: Class<*>,
     private val minecraftServerClass: Class<*>,
-    private val serverScoreboardClass: Class<*>,
-    private val mapScoreboard: CodeFieldStorage.(CodeWriter) -> Unit,
     private val mapFunction: CodeFieldStorage.(CodeWriter, DataLocation) -> Unit,
 ) {
 
@@ -46,10 +43,6 @@ class CodeFieldStorage(
         cw.getDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerClass)
     }
 
-    fun loadScoreboard(cw: CodeWriter) {
-        cw.getDataField(EMIT_SCOREBOARD_NAME, serverScoreboardClass)
-    }
-
     fun generate(classWriter: ClassWriter) {
         val mv = classWriter.visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "load", "(${minecraftServerClass.descriptorString()}${serverFunctionManagerClass.descriptorString()})V", null, null)
         mv.visitCode()
@@ -57,10 +50,6 @@ class CodeFieldStorage(
 
         mv.visitVarInsn(Opcodes.ALOAD, 1)
         cw.setDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerClass)
-
-        mv.visitVarInsn(Opcodes.ALOAD, 0)
-        mapScoreboard(cw)
-        cw.setDataField(EMIT_SCOREBOARD_NAME, serverScoreboardClass)
 
         uuids.forEachIndexed { _, value ->
             cw.newObject(UUID::class.java, Long::class.javaPrimitiveType!!, Long::class.javaPrimitiveType!!) {
@@ -85,7 +74,6 @@ class CodeFieldStorage(
         mv.visitEnd()
 
         classWriter.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerClass.descriptorString(), null, null)
-        classWriter.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, EMIT_SCOREBOARD_NAME, serverScoreboardClass.descriptorString(), null, null)
         uuids.forEach { value ->
             classWriter.visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL, getUuidName(value), UUID::class.java.descriptorString(), null, null)
         }

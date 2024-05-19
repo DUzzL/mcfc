@@ -37,7 +37,7 @@ data class CompilationContext(
 
     fun getScoreData(objective: LocationData, name: LocationData, autoCreate: Boolean, exec: CompilationContext.(scoreData: LocationData) -> Unit) {
         val scoreData = LocationData(local = highestLocal)
-        val instruction = Instructions.scoreData(objective, name, scoreData, autoCreate)
+        val instruction = Instructions2.scoreData(objective, name, scoreData, autoCreate)
         addInstruction(instruction)
         if(autoCreate) {
             exec(with(highestLocal = highestLocal + 1, addInstruction = instruction.children::add), scoreData)

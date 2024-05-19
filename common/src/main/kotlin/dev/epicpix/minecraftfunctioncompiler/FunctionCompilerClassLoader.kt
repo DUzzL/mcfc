@@ -138,7 +138,11 @@ abstract class FunctionCompilerClassLoader(
         mv.visitLdcInsn(commandCount)
         mv.visitInsn(Opcodes.IRETURN)
         codeWriter.writeLocalVariables()
-        mv.visitMaxs(0, 0)
+        runCatching {
+            mv.visitMaxs(0, 0)
+        }.getOrElse {
+            throw IllegalStateException("Failed to visit maxs", it)
+        }
         mv.visitEnd()
 
         cw.visitEnd()

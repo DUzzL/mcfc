@@ -10,7 +10,6 @@ import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter
 import dev.epicpix.minecraftfunctioncompiler.v1_20_2.commands.CommandParser
 import dev.epicpix.minecraftfunctioncompiler.v1_20_2.compiler.compile
 import dev.epicpix.minecraftfunctioncompiler.v1_20_2.data.updateRegistryMaps
-import dev.epicpix.minecraftfunctioncompiler.v1_20_2.emitter.callMinecraftServer_getScoreboard
 import dev.epicpix.minecraftfunctioncompiler.v1_20_2.emitter.loadServerFunctionLibrary_functions
 import dev.epicpix.minecraftfunctioncompiler.v1_20_2.emitter.loadServerFunctionManager_library
 import net.fabricmc.loader.api.FabricLoader
@@ -20,7 +19,6 @@ import net.minecraft.commands.CommandSourceStack
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.ServerFunctionManager
-import net.minecraft.server.ServerScoreboard
 import org.slf4j.LoggerFactory
 import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
@@ -84,10 +82,6 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
             commandFunctionClass = CommandFunction::class.java,
             serverFunctionManagerClass = ServerFunctionManager::class.java,
             minecraftServerClass = MinecraftServer::class.java,
-            serverScoreboardClass = ServerScoreboard::class.java,
-            mapScoreboard = { cw ->
-                cw.callMinecraftServer_getScoreboard {}
-            },
             mapFunction = { cw, value ->
                 cw.callMap_get {
                     cw.loadServerFunctionLibrary_functions {

@@ -1,5 +1,8 @@
 package dev.epicpix.annotations
 
+import com.google.devtools.ksp.KspExperimental
+import com.google.devtools.ksp.processing.Resolver
+import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import org.objectweb.asm.*
 import java.lang.reflect.Modifier
 import java.util.jar.JarFile
@@ -32,40 +35,77 @@ private val loadedClasses = mutableMapOf<String, ClassInfo>()
 
 typealias JarInfo = Pair<List<JarFile>, Map<String, Int>>
 private var privateJarInfo: JarInfo? = null
+private var privateResolver: Resolver? = null
 
 fun setJarInfo(jarInfo: JarInfo) {
     privateJarInfo = jarInfo
 }
 
+fun setResolver(resolver: Resolver) {
+    privateResolver = resolver
+}
+
+private fun fixKotlinDesc(from: String): String {
+    return when(from) {
+        "kotlin.Boolean" -> "Z"
+        "kotlin.Unit" -> "V"
+        "kotlin.Int" -> "I"
+        "kotlin.String" -> "Ljava/lang/String;"
+        else -> "L${from.replace('.', '/')};"
+    }
+}
+
+@OptIn(KspExperimental::class)
 fun loadClassInfo(className: String): ClassInfo {
     loadedClasses[className]?.also { return it }
     val found = privateJarInfo?.second?.entries?.find { (k, _) -> k.replace('/', '.').replace('$', '.') == "$className.class" }
     if(found == null) {
-        val clz = Class.forName(className)
-        loadedClasses[className] = ClassInfo(
-            name = clz.descriptorString().run { substring(1, length - 1) },
-            superClass = clz.superclass?.descriptorString()?.run { substring(1, length - 1) },
-            interfaces = clz.interfaces.map { it.descriptorString().run { substring(1, length - 1) } },
-            fields = clz.declaredFields.map { f -> ClassFieldInfo(
-                owner = clz.descriptorString().run { substring(1, length - 1) },
-                name = f.name,
-                descriptor = f.type.descriptorString(),
-                isStatic = Modifier.isStatic(f.modifiers),
-                isFinal = Modifier.isFinal(f.modifiers)
-            ) },
-            methods = clz.declaredMethods.map { f -> ClassMethodInfo(
-                owner = clz.descriptorString().run { substring(1, length - 1) },
-                name = f.name,
-                descriptor = "(${f.parameters.joinToString("") { p -> p.type.descriptorString() }})${f.returnType.descriptorString()}",
-                isStatic = Modifier.isStatic(f.modifiers),
-            ) } + clz.declaredConstructors.map { f -> ClassMethodInfo(
-                owner = clz.descriptorString().run { substring(1, length - 1) },
-                name = "<init>",
-                descriptor = "(${f.parameters.joinToString("") { p -> p.type.descriptorString() }})V",
-                isStatic = false,
-            ) },
-            isInterface = clz.isInterface,
-        )
+        runCatching {
+            val clz = Class.forName(className)
+            loadedClasses[className] = ClassInfo(
+                name = clz.descriptorString().run { substring(1, length - 1) },
+                superClass = clz.superclass?.descriptorString()?.run { substring(1, length - 1) },
+                interfaces = clz.interfaces.map { it.descriptorString().run { substring(1, length - 1) } },
+                fields = clz.declaredFields.map { f ->
+                    ClassFieldInfo(owner = clz.descriptorString().run { substring(1, length - 1) }, name = f.name, descriptor = f.type.descriptorString(), isStatic = Modifier.isStatic(f.modifiers), isFinal = Modifier.isFinal(f.modifiers))
+                },
+                methods = clz.declaredMethods.map { f ->
+                    ClassMethodInfo(
+                        owner = clz.descriptorString().run { substring(1, length - 1) },
+                        name = f.name,
+                        descriptor = "(${f.parameters.joinToString("") { p -> p.type.descriptorString() }})${f.returnType.descriptorString()}",
+                        isStatic = Modifier.isStatic(f.modifiers),
+                    )
+                } + clz.declaredConstructors.map { f ->
+                    ClassMethodInfo(
+                        owner = clz.descriptorString().run { substring(1, length - 1) },
+                        name = "<init>",
+                        descriptor = "(${f.parameters.joinToString("") { p -> p.type.descriptorString() }})V",
+                        isStatic = false,
+                    )
+                },
+                isInterface = clz.isInterface,
+            )
+        }.getOrElse {
+            val classDecl = privateResolver!!.getClassDeclarationByName(privateResolver!!.getKSNameFromString(className))
+                ?: throw IllegalArgumentException("Class not found", it)
+            val methods = classDecl.declarations.filter { it is KSFunctionDeclaration }.map { it as KSFunctionDeclaration }.toList()
+            loadedClasses[className] = ClassInfo(
+                name = classDecl.qualifiedName!!.asString(),
+                superClass = "java.lang.Object",
+                interfaces = listOf(),
+                fields = listOf(),
+                methods = methods.map { f ->
+                    ClassMethodInfo(
+                        owner = classDecl.qualifiedName!!.asString().replace('.', '/'),
+                        name = f.simpleName.asString(),
+                        descriptor = "(${f.parameters.joinToString("") { p -> fixKotlinDesc(p.type.resolve().declaration.qualifiedName!!.asString()) }})${fixKotlinDesc(f.returnType!!.resolve().declaration.qualifiedName!!.asString())}",
+                        isStatic = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.JAVA_STATIC)
+                    )
+                },
+                isInterface = false,
+            )
+        }
         return loadedClasses[className]!!
     }else {
         val jar = privateJarInfo!!.first[found.value]
@@ -126,18 +166,18 @@ fun loadClassInfo(className: String): ClassInfo {
 fun getClassAccessibleFields(className: String): Set<ClassFieldInfo> {
     val result = mutableSetOf<ClassFieldInfo>()
     val clz = loadClassInfo(className)
-    result.addAll(clz.fields)
     clz.superClass?.also { result.addAll(getClassAccessibleFields(it.replace('/', '.').replace('$', '.')).filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } }) }
     clz.interfaces.forEach { result.addAll(getClassAccessibleFields(it.replace('/', '.').replace('$', '.')).filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } }) }
+    result.addAll(clz.fields.filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } })
     return result
 }
 
 fun getClassAccessibleMethods(className: String): Set<ClassMethodInfo> {
     val result = mutableSetOf<ClassMethodInfo>()
     val clz = loadClassInfo(className)
-    result.addAll(clz.methods)
     clz.superClass?.also { result.addAll(getClassAccessibleMethods(it.replace('/', '.').replace('$', '.')).filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } }) }
     clz.interfaces.forEach { result.addAll(getClassAccessibleMethods(it.replace('/', '.').replace('$', '.')).filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } }) }
+    result.addAll(clz.methods.filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } })
     return result
 }
 

@@ -103,10 +103,12 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
             }
         }
         CommandTypes.EXECUTE_UNLESS_ENTITY -> {
-            forSelector(command.get<SelectorArgument>("entities").copy(limit = 1)) { _, breakScope, _ ->
-                addInstruction(Instructions2.exitScope(breakScope))
+            forScope {  scope ->
+                forSelector(command.get<SelectorArgument>("entities").copy(limit = 1)) { _, _, _ ->
+                    addInstruction(Instructions2.exitScope(scope))
+                }
+                compile(command["command"])
             }
-            compile(command["command"])
         }
         CommandTypes.EXECUTE_UNLESS_SCORE_RANGE -> {
             getObjective(command["targetObjective"]) { objective ->
@@ -229,12 +231,12 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
             if(command.params.containsKey("objective")) {
                 getObjective(command["objective"]) { objective ->
                     forScoreHolder(command["targets"]) { name ->
-                        addInstruction(Instructions.resetScore(objective, name))
+                        addInstruction(Instructions2.resetScore(objective, name))
                     }
                 }
             }else {
                 forScoreHolder(command["targets"]) { name ->
-                    addInstruction(Instructions.resetPlayerScore(name))
+                    addInstruction(Instructions2.resetPlayerScore(name))
                 }
             }
         }

@@ -58,6 +58,8 @@ data class EmitterContext(
             codeWriter.loadLocal(newTransforms[loc.local]!!)
         }else if(loc.integer != null) {
             codeWriter.writeInt(loc.integer)
+        }else {
+            throw IllegalArgumentException("Loading imaginary data from $location")
         }
     }
 

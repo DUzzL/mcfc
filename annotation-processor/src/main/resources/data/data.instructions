@@ -214,21 +214,38 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
   run();
 }
 
-@GET_SCORE_VALUE(<net.minecraft.world.scores.Score> [ctx:score], int [ctx:scoreValue]) {
+@GET_SCORE_VALUE [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:score], int [ctx:scoreValue]) {
   let [ctx:scoreValue] = [ctx:score].getScore();
   run();
 }
 
-@SET_SCORE(<net.minecraft.world.scores.Score> [ctx:score], int [ctx:value]) {
+@GET_SCORE_VALUE [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:score], int [ctx:scoreValue]) {
+  let [ctx:scoreValue] = [ctx:score].get();
+  run();
+}
+
+@SET_SCORE [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:score], int [ctx:value]) {
   [ctx:score].setScore([ctx:value]);
 }
 
-@ADD_SCORE(<net.minecraft.world.scores.Score> [ctx:score], int [ctx:value]) {
+@SET_SCORE [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:score], int [ctx:value]) {
+  [ctx:score].set([ctx:value]);
+}
+
+@ADD_SCORE [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:score], int [ctx:value]) {
   [ctx:score].setScore([ctx:score].getScore() + [ctx:value]);
 }
 
-@REMOVE_SCORE(<net.minecraft.world.scores.Score> [ctx:score], int [ctx:value]) {
+@ADD_SCORE [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:score], int [ctx:value]) {
+  [ctx:score].set([ctx:score].get() + [ctx:value]);
+}
+
+@REMOVE_SCORE [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:score], int [ctx:value]) {
   [ctx:score].setScore([ctx:score].getScore() - [ctx:value]);
+}
+
+@REMOVE_SCORE [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:score], int [ctx:value]) {
+  [ctx:score].set([ctx:score].get() - [ctx:value]);
 }
 
 @KILL_ENTITY(<net.minecraft.world.entity.Entity> [ctx:entity]) {
@@ -277,4 +294,52 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
   if(<java.util.Objects>.equals([ctx:entity].getTeam(), [instr:team]) == false) {
     run();
   }
+}
+
+@RESET_SCORE [-1.20.2] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name]) {
+  [static:Scoreboard].resetPlayerScore([ctx:name], [ctx:objective]);
+}
+
+@RESET_SCORE [1.20.3-] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name]) {
+  [static:Scoreboard].resetSinglePlayerScore(<net.minecraft.world.scores.ScoreHolder>.forNameOnly([ctx:name]), [ctx:objective]);
+}
+
+@RESET_PLAYER_SCORE [-1.20.2] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard],  <java.lang.String> [ctx:name]) {
+  [static:Scoreboard].resetPlayerScore([ctx:name], null);
+}
+
+@RESET_PLAYER_SCORE [1.20.3-] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [ctx:name]) {
+  [static:Scoreboard].resetAllPlayerScores(<net.minecraft.world.scores.ScoreHolder>.forNameOnly([ctx:name]));
+}
+
+
+
+=SCORE_DATA(<net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <java.lang.Object> [ctx:score], boolean [instr:auto_create]) {
+  (auto_create == false) => SCORE_DATA_NO_AUTO_CREATE;
+  => SCORE_DATA_AUTO_CREATE;
+}
+
+@SCORE_DATA_AUTO_CREATE [-1.20.2] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <net.minecraft.world.scores.Score> [ctx:score]) {
+  let [ctx:score] = [static:Scoreboard].getOrCreatePlayerScore([ctx:name], [ctx:objective]);
+  run();
+}
+
+@SCORE_DATA_AUTO_CREATE [1.20.3-] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <net.minecraft.world.scores.ScoreAccess> [ctx:score]) {
+  let [ctx:score] = [static:Scoreboard].getOrCreatePlayerScore(<net.minecraft.world.scores.ScoreHolder>.forNameOnly([ctx:name]), [ctx:objective]);
+  run();
+}
+
+@SCORE_DATA_NO_AUTO_CREATE [1.20.1] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <net.minecraft.world.scores.Score> [ctx:score]) {
+  let [ctx:score] = <dev.epicpix.minecraftfunctioncompiler.v1_20_1.ExtensionFunctions>.getScore([static:Scoreboard], [ctx:name], [ctx:objective]);
+  run();
+}
+
+@SCORE_DATA_NO_AUTO_CREATE [1.20.2] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <net.minecraft.world.scores.Score> [ctx:score]) {
+  let [ctx:score] = <dev.epicpix.minecraftfunctioncompiler.v1_20_2.ExtensionFunctions>.getScore([static:Scoreboard], [ctx:name], [ctx:objective]);
+  run();
+}
+
+@SCORE_DATA_NO_AUTO_CREATE [1.20.3-1.20.4] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <net.minecraft.world.scores.ScoreAccess> [ctx:score]) {
+  let [ctx:score] = <dev.epicpix.minecraftfunctioncompiler.v1_20_4.ExtensionFunctions>.getScore([static:Scoreboard], <net.minecraft.world.scores.ScoreHolder>.forNameOnly([ctx:name]), [ctx:objective]);
+  run();
 }
