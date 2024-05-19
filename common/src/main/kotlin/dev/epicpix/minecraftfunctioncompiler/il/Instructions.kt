@@ -1,5 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.il
 
+import java.util.function.Consumer
+
 enum class ScoreboardOperation { SET, PLUS, MINUS, MULTIPLY, DIVIDE, MODULO, MIN, MAX, SWAP }
 enum class ScoreboardCompareOperation { LT, LE, EQ, NE, GE, GT }
 
@@ -60,9 +62,9 @@ fun remapInstructionData(data: Map<String, Any?>, mappings: Map<Int, Int>): Map<
     return result
 }
 
-fun printInstructionList(instructions: List<Instruction>, log: (String) -> Unit, currentDepth: Int = 0) {
+fun printInstructionList(instructions: List<Instruction>, log: Consumer<String>, currentDepth: Int = 0) {
     for(instruction in instructions) {
-        log("-".repeat(currentDepth) + instruction.type + " - " + instruction.data)
+        log.accept("-".repeat(currentDepth) + instruction.type + " - " + instruction.data)
         printInstructionList(instruction.children, log, currentDepth + 1)
     }
 }

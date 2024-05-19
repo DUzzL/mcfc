@@ -18,7 +18,7 @@ public class MinecraftMixin {
 
     @Inject(method = "<init>", at = @At("TAIL"))
     public void init(GameConfig gameConfig, CallbackInfo ci) {
-        FunctionCompilerReporter.INSTANCE.setMinecraftVersion(DetectedVersion.BUILT_IN.getName(), versionType);
+        FunctionCompilerReporter.setMinecraftVersion(DetectedVersion.BUILT_IN.getName(), versionType);
     }
 
 }

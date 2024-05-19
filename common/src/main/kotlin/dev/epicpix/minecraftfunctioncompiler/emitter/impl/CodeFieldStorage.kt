@@ -12,7 +12,7 @@ class CodeFieldStorage(
     private val commandFunctionClass: Class<*>,
     private val serverFunctionManagerClass: Class<*>,
     private val minecraftServerClass: Class<*>,
-    private val mapFunction: CodeFieldStorage.(CodeWriter, DataLocation) -> Unit,
+    private val mapFunction: (CodeFieldStorage, CodeWriter, DataLocation) -> Unit,
 ) {
 
     private val uuids: MutableList<UUID> = mutableListOf()
@@ -66,7 +66,7 @@ class CodeFieldStorage(
             cw.setDataField(getResourceLocationName(value), resourceLocationClass)
         }
         functions.forEachIndexed { _, value ->
-            mapFunction(cw, value)
+            mapFunction(this, cw, value)
             cw.setDataField(getFunctionName(value), commandFunctionClass)
         }
         mv.visitInsn(Opcodes.RETURN)

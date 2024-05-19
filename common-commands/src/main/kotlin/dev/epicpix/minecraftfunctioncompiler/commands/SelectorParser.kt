@@ -30,7 +30,7 @@ fun parseSelector(selector: String): SelectorArgument {
     val isSelf = selectorType == 's'
     val data = SelectorGeneratorData()
     if(isSelf) data.limit = 1
-    if(selectorType == 'a') data.entityTypes = NegatableData(data = listOf(DataLocation("minecraft", "player")), negated = false)
+    if(selectorType == 'a') data.entityTypes = NegatableData(listOf(DataLocation("minecraft", "player")), false)
 
     if(selectorType == 'r' || selectorType == 'p') throw UnsupportedOperationException("Unsupported selector: $selector")
 

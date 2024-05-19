@@ -26,7 +26,7 @@ public abstract class DedicatedServerMixin extends MinecraftServer {
 
     @Inject(method = "initServer", at = @At("HEAD"))
     public void initServer(CallbackInfoReturnable<Boolean> cir) {
-        FunctionCompilerReporter.INSTANCE.setMinecraftVersion(DetectedVersion.BUILT_IN.getName(), getServerModName());
+        FunctionCompilerReporter.setMinecraftVersion(DetectedVersion.BUILT_IN.getName(), getServerModName());
     }
 
 }

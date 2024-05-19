@@ -9,7 +9,7 @@ import dev.epicpix.minecraftfunctioncompiler.parser.Command
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter
 import dev.epicpix.minecraftfunctioncompiler.v1_20_1.commands.CommandParser
 import dev.epicpix.minecraftfunctioncompiler.v1_20_1.compiler.compile
-import dev.epicpix.minecraftfunctioncompiler.v1_20_1.data.updateRegistryMaps
+import dev.epicpix.minecraftfunctioncompiler.v1_20_1.data.RegistryMapping
 import dev.epicpix.minecraftfunctioncompiler.v1_20_1.emitter.loadServerFunctionLibrary_functions
 import dev.epicpix.minecraftfunctioncompiler.v1_20_1.emitter.loadServerFunctionManager_library
 import net.fabricmc.loader.api.FabricLoader
@@ -28,7 +28,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
     private val handles: MutableMap<ResourceLocation, MethodHandle> = HashMap()
     fun loadFunctions(serverFunctionManager: ServerFunctionManager) {
         if(functions.isEmpty()) return
-        updateRegistryMaps()
+        RegistryMapping.updateRegistryMaps()
         resetHandles()
 
         val definedFunctions = mutableMapOf<DataLocation, List<Command>>()
@@ -82,14 +82,14 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
             commandFunctionClass = CommandFunction::class.java,
             serverFunctionManagerClass = ServerFunctionManager::class.java,
             minecraftServerClass = MinecraftServer::class.java,
-            mapFunction = { cw, value ->
+            mapFunction = { cf, cw, value ->
                 cw.callMap_get {
                     cw.loadServerFunctionLibrary_functions {
                         cw.loadServerFunctionManager_library {
-                            loadServerFunctionManager(cw)
+                            cf.loadServerFunctionManager(cw)
                         }
                     }
-                    loadResourceLocation(cw, value)
+                    cf.loadResourceLocation(cw, value)
                 }
                 cw.castType(CommandFunction::class.java)
             },

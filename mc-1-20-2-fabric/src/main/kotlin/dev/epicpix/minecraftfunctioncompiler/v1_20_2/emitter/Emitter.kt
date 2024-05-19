@@ -6,7 +6,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData
 import dev.epicpix.minecraftfunctioncompiler.il.ScoreboardCompareOperation
 import dev.epicpix.minecraftfunctioncompiler.il.ScoreboardOperation
-import dev.epicpix.minecraftfunctioncompiler.v1_20_2.data.mapEntityTypeClass
+import dev.epicpix.minecraftfunctioncompiler.v1_20_2.data.RegistryMapping
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
@@ -219,7 +219,7 @@ fun registerInstructionEmitters() {
         val label = Label()
         for(res in instruction.get<List<DataLocation>>("types")) {
             load("entity")
-            codeWriter.methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, mapEntityTypeClass(res)?.descriptorString()?.run { substring(1, length - 1) })
+            codeWriter.methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, RegistryMapping.mapEntityTypeClass(res)?.descriptorString()?.run { substring(1, length - 1) })
             codeWriter.methodVisitor.visitJumpInsn(Opcodes.IFNE, label)
         }
         if(!instruction.get<Boolean>("negated")) {

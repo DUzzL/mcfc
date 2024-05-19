@@ -5,10 +5,10 @@ import dev.epicpix.minecraftfunctioncompiler.commands.registerSelectorOption
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation
 import dev.epicpix.minecraftfunctioncompiler.data.FloatRangeArgument
 import dev.epicpix.minecraftfunctioncompiler.data.NegatableData
-import dev.epicpix.minecraftfunctioncompiler.v1_20_1.data.mapEntityTypeClass
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.EmitterBaseOptions
-import dev.epicpix.minecraftfunctioncompiler.v1_20_1.emitter.registerInstructionEmitters
+import dev.epicpix.minecraftfunctioncompiler.v1_20_1.data.RegistryMapping
 import dev.epicpix.minecraftfunctioncompiler.v1_20_1.emitter.Emitter2
+import dev.epicpix.minecraftfunctioncompiler.v1_20_1.emitter.registerInstructionEmitters
 import net.fabricmc.api.ModInitializer
 import net.minecraft.advancements.critereon.WrappedMinMaxBounds
 import net.minecraft.core.registries.BuiltInRegistries
@@ -38,7 +38,7 @@ object FunctionCompilerMain : ModInitializer {
                 }
             }
             types.forEach {
-                if(mapEntityTypeClass(it) == null) throw UnsupportedOperationException("Unsupported entity type: $it")
+                if(RegistryMapping.mapEntityTypeClass(it) == null) throw UnsupportedOperationException("Unsupported entity type: $it")
             }
             data.entityTypes = NegatableData(types, negated)
         }
