@@ -21,11 +21,8 @@ import net.minecraft.server.MinecraftServer
 import net.minecraft.server.ServerFunctionManager
 import org.slf4j.LoggerFactory
 import java.lang.invoke.MethodHandle
-import java.lang.invoke.MethodHandles
-import java.lang.invoke.MethodType
 
 class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<ResourceLocation, CommandFunction>, private val minecraftServer: MinecraftServer) : FunctionCompilerClassLoader(parent, FabricLoader.getInstance().gameDir.resolve("generated"), CommandSourceStack::class.java, MinecraftServer::class.java, ServerFunctionManager::class.java, minecraftServer, LOGGER::info, LOGGER::warn, LOGGER::error) {
-    private val handles: MutableMap<ResourceLocation, MethodHandle> = HashMap()
     fun loadFunctions(serverFunctionManager: ServerFunctionManager) {
         if(functions.isEmpty()) return
         RegistryMapping.updateRegistryMaps()
@@ -33,7 +30,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
 
         val definedFunctions = mutableMapOf<DataLocation, List<Command>>()
 
-        val startParse = System.currentTimeMillis()
+        val startParse = System.nanoTime()
         funcLoop@
         for ((key, value) in functions) {
             try {
@@ -44,14 +41,14 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                 }
                 definedFunctions[key.toDataLocation()] = CommandParser.parseFunctionCommands(value, minecraftServer, serverFunctionManager)
             } catch (e: UnsupportedOperationException) {
-                logWarn("Unable to parse function $key / ${e.message}")
+                logWarn.accept("Unable to parse function $key / ${e.message}")
             } catch (e: Throwable) {
-                logError("Unable to parse function $key")
+                logError.accept("Unable to parse function $key")
                 e.printStackTrace()
                 FunctionCompilerReporter.reportException("parse_command", e, JsonObject())
             }
         }
-        val parseTime = (System.currentTimeMillis()-startParse)/1000.0
+        val parseTime = (System.nanoTime()-startParse)/1000000000.0
         loadFunctionClasses(functions.size, parseTime, definedFunctions, createCodeFieldStorage(), serverFunctionManager) { compile(it) }
     }
 
@@ -59,22 +56,19 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         return handles.containsKey(location)
     }
 
+    override fun setHandle(key: DataLocation, handle: MethodHandle) {
+        handles[ResourceLocation(key.namespace, key.path)] = handle;
+    }
+
     fun runFunction(location: ResourceLocation, stack: CommandSourceStack?): Int {
         return try {
             handles[location]!!.invoke(stack) as Int
         } catch (e: Throwable) {
-            logError("Failed to run function $location")
+            logError.accept("Failed to run function $location")
             e.printStackTrace()
             throw RuntimeException(e)
         }
     }
-
-    override fun registerFunction(clazz: Class<*>, key: DataLocation) {
-        val handle = MethodHandles.lookup().findStatic(clazz, "run", MethodType.methodType(Int::class.javaPrimitiveType, CommandSourceStack::class.java))
-        handles[ResourceLocation(key.namespace, key.path)] = handle
-    }
-
-    override fun resetHandles() = handles.clear()
 
     private fun createCodeFieldStorage(): CodeFieldStorage {
         return CodeFieldStorage(

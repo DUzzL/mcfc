@@ -45,6 +45,9 @@ data class Instruction(val type: InstructionType, val data: Map<String, Any?>, v
         children.add(instruction)
         return this
     }
+    fun withChildren(children: MutableList<Instruction>): Instruction {
+        return copy(children = children)
+    }
     fun countInstructions(): Int = 1 + children.sumOf { it.countInstructions() }
 }
 
@@ -62,7 +65,7 @@ fun remapInstructionData(data: Map<String, Any?>, mappings: Map<Int, Int>): Map<
     return result
 }
 
-fun printInstructionList(instructions: List<Instruction>, log: Consumer<String>, currentDepth: Int = 0) {
+fun printInstructionList(instructions: List<Instruction>, log: Consumer<String>, currentDepth: Int) {
     for(instruction in instructions) {
         log.accept("-".repeat(currentDepth) + instruction.type + " - " + instruction.data)
         printInstructionList(instruction.children, log, currentDepth + 1)

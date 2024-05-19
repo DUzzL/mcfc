@@ -2,7 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.v1_20_2.commands
 
 import com.mojang.brigadier.context.CommandContextBuilder
 import com.mojang.brigadier.context.ParsedCommandNode
-import dev.epicpix.minecraftfunctioncompiler.commands.CommandTypes
+import dev.epicpix.minecraftfunctioncompiler.commands.CommandType
 import dev.epicpix.minecraftfunctioncompiler.commands.parseScoreHolder
 import dev.epicpix.minecraftfunctioncompiler.commands.parseSelector
 import dev.epicpix.minecraftfunctioncompiler.data.*
@@ -53,19 +53,19 @@ object CommandParser {
             "align" -> {
                 val swizzle = context.arguments["axes"]!!.result as EnumSet<Direction.Axis>
 
-                Command(CommandTypes.EXECUTE_ALIGN, mapOf(
+                Command(CommandType.EXECUTE_ALIGN, mapOf(
                     "swizzle" to SwizzleArgument(swizzle.contains(Direction.Axis.X), swizzle.contains(Direction.Axis.Y), swizzle.contains(Direction.Axis.Z)),
                     "command" to getExecuteSubcommand(context, source, server, functionManager)
                 ))
             }
             "as" -> {
-                Command(CommandTypes.EXECUTE_AS, mapOf(
+                Command(CommandType.EXECUTE_AS, mapOf(
                     "targets" to parseSelector(context.arguments["targets"]!!.range[source]),
                     "command" to getExecuteSubcommand(context, source, server, functionManager)
                 ))
             }
             "at" -> {
-                Command(CommandTypes.EXECUTE_AT, mapOf(
+                Command(CommandType.EXECUTE_AT, mapOf(
                     "targets" to parseSelector(context.arguments["targets"]!!.range[source]),
                     "command" to getExecuteSubcommand(context, source, server, functionManager)
                 ))
@@ -73,7 +73,7 @@ object CommandParser {
             "if" -> {
                 when(val ifType = nodes[1].range[source]) {
                     "entity" -> {
-                        Command(CommandTypes.EXECUTE_IF_ENTITY, mapOf(
+                        Command(CommandType.EXECUTE_IF_ENTITY, mapOf(
                             "entities" to parseSelector(context.arguments["entities"]!!.range[source]),
                             "command" to getExecuteSubcommand(context, source, server, functionManager)
                         ))
@@ -82,14 +82,14 @@ object CommandParser {
                         val comparison = nodes[4].range[source]
                         if(comparison == "matches") {
                             val range = context.arguments["range"]!!.result as MinMaxBounds.Ints
-                            Command(CommandTypes.EXECUTE_IF_SCORE_RANGE, mapOf(
+                            Command(CommandType.EXECUTE_IF_SCORE_RANGE, mapOf(
                                 "target" to parseScoreHolder(context.arguments["target"]!!.range[source]),
                                 "targetObjective" to context.arguments["targetObjective"]!!.result as String,
                                 "range" to IntRangeArgument(range.min.orElse(null), range.max.orElse(null)),
                                 "command" to getExecuteSubcommand(context, source, server, functionManager)
                             ))
                         }else {
-                            Command(CommandTypes.EXECUTE_IF_SCORE_COMPARE, mapOf(
+                            Command(CommandType.EXECUTE_IF_SCORE_COMPARE, mapOf(
                                 "target" to parseScoreHolder(context.arguments["target"]!!.range[source]),
                                 "targetObjective" to context.arguments["targetObjective"]!!.result as String,
                                 "comparison" to comparison,
@@ -109,7 +109,7 @@ object CommandParser {
                     when(val pos = posArg.result) {
                         is LocalCoordinates -> throw UnsupportedOperationException("Unsupported local coordinates")
                         is net.minecraft.commands.arguments.coordinates.WorldCoordinates -> {
-                            Command(CommandTypes.EXECUTE_POSITIONED_POS, mapOf("position" to WorldCoordinates(pos.x.value, pos.x.relative, pos.y.value, pos.y.relative, pos.z.value, pos.z.relative), "command" to getExecuteSubcommand(context, source, server, functionManager)))
+                            Command(CommandType.EXECUTE_POSITIONED_POS, mapOf("position" to WorldCoordinates(pos.x.value, pos.x.relative, pos.y.value, pos.y.relative, pos.z.value, pos.z.relative), "command" to getExecuteSubcommand(context, source, server, functionManager)))
                         }
                         else -> throw UnsupportedOperationException("Unknown coordinate type")
                     }
@@ -122,7 +122,7 @@ object CommandParser {
                 val storeLocation = nodes[2].range[source]
                 if(storeType == "result") {
                     if(storeLocation == "score") {
-                        return Command(CommandTypes.EXECUTE_STORE_RESULT_SCORE, mapOf(
+                        return Command(CommandType.EXECUTE_STORE_RESULT_SCORE, mapOf(
                             "targets" to parseScoreHolder(context.arguments["targets"]!!.range[source]),
                             "objective" to context.arguments["objective"]!!.result as String,
                             "command" to getExecuteSubcommand(context, source, server, functionManager)
@@ -134,7 +134,7 @@ object CommandParser {
             "unless" -> {
                 when(val ifType = nodes[1].range[source]) {
                     "entity" -> {
-                        Command(CommandTypes.EXECUTE_UNLESS_ENTITY, mapOf(
+                        Command(CommandType.EXECUTE_UNLESS_ENTITY, mapOf(
                             "entities" to parseSelector(context.arguments["entities"]!!.range[source]),
                             "command" to getExecuteSubcommand(context, source, server, functionManager)
                         ))
@@ -143,14 +143,14 @@ object CommandParser {
                         val comparison = nodes[4].range[source]
                         if(comparison == "matches") {
                             val range = context.arguments["range"]!!.result as MinMaxBounds.Ints
-                            Command(CommandTypes.EXECUTE_UNLESS_SCORE_RANGE, mapOf(
+                            Command(CommandType.EXECUTE_UNLESS_SCORE_RANGE, mapOf(
                                 "target" to parseScoreHolder(context.arguments["target"]!!.range[source]),
                                 "targetObjective" to context.arguments["targetObjective"]!!.result as String,
                                 "range" to IntRangeArgument(range.min.orElse(null), range.max.orElse(null)),
                                 "command" to getExecuteSubcommand(context, source, server, functionManager)
                             ))
                         }else {
-                            Command(CommandTypes.EXECUTE_UNLESS_SCORE_COMPARE, mapOf(
+                            Command(CommandType.EXECUTE_UNLESS_SCORE_COMPARE, mapOf(
                                 "target" to parseScoreHolder(context.arguments["target"]!!.range[source]),
                                 "targetObjective" to context.arguments["targetObjective"]!!.result as String,
                                 "comparison" to comparison,
@@ -174,12 +174,12 @@ object CommandParser {
         }
         val name = context.arguments["name"]!!.range[source]
         return if(name.startsWith("#")) {
-            Command(CommandTypes.FUNCTION, mapOf("functions" to functionManager.getTag(ResourceLocation(name.substring(1))).toList().map { it.id.toDataLocation() }))
+            Command(CommandType.FUNCTION, mapOf("functions" to functionManager.getTag(ResourceLocation(name.substring(1))).toList().map { it.id.toDataLocation() }))
         }else {
             if(functionManager.library.functions.containsKey(ResourceLocation(name))) {
-                Command(CommandTypes.FUNCTION, mapOf("functions" to listOf(ResourceLocation(name).toDataLocation())))
+                Command(CommandType.FUNCTION, mapOf("functions" to listOf(ResourceLocation(name).toDataLocation())))
             }else {
-                Command(CommandTypes.FUNCTION, mapOf("functions" to listOf<DataLocation>()))
+                Command(CommandType.FUNCTION, mapOf("functions" to listOf<DataLocation>()))
             }
         }
     }
@@ -188,18 +188,18 @@ object CommandParser {
         val gamemode = (context.arguments["gamemode"]!!.result as GameType).toGamemode()
         val targets = context.arguments["target"]
         return if(targets != null) {
-            Command(CommandTypes.GAMEMODE, mapOf("gamemode" to gamemode, "targets" to parseSelector(targets.range[source])))
+            Command(CommandType.GAMEMODE, mapOf("gamemode" to gamemode, "targets" to parseSelector(targets.range[source])))
         }else {
-            Command(CommandTypes.GAMEMODE, mapOf("gamemode" to gamemode, "targets" to SelectorArgument(self = true)))
+            Command(CommandType.GAMEMODE, mapOf("gamemode" to gamemode, "targets" to SelectorArgument(self = true)))
         }
     }
 
     private fun parseCommandKill(context: CommandContextBuilder<CommandSourceStack>, source: String): Command {
         val targets = context.arguments["targets"]
         return if(targets != null) {
-            Command(CommandTypes.KILL, mapOf("targets" to parseSelector(targets.range[source])))
+            Command(CommandType.KILL, mapOf("targets" to parseSelector(targets.range[source])))
         }else {
-            Command(CommandTypes.KILL, mapOf("targets" to SelectorArgument(self = true)))
+            Command(CommandType.KILL, mapOf("targets" to SelectorArgument(self = true)))
         }
     }
 
@@ -208,14 +208,14 @@ object CommandParser {
             "players" -> {
                 when(val opType = context.nodes[2].node.name) {
                     "add" -> {
-                        Command(CommandTypes.SCOREBOARD_PLAYERS_ADD, mapOf(
+                        Command(CommandType.SCOREBOARD_PLAYERS_ADD, mapOf(
                             "targets" to parseScoreHolder(context.arguments["targets"]!!.range[source]),
                             "objective" to context.arguments["objective"]!!.result as String,
                             "score" to context.arguments["score"]!!.result as Int
                         ))
                     }
                     "get" -> {
-                        Command(CommandTypes.SCOREBOARD_PLAYERS_GET, mapOf(
+                        Command(CommandType.SCOREBOARD_PLAYERS_GET, mapOf(
                             "target" to parseScoreHolder(context.arguments["target"]!!.range[source]).single(),
                             "objective" to context.arguments["objective"]!!.result as String
                         ))
@@ -224,7 +224,7 @@ object CommandParser {
                         val operation = context.arguments["operation"]!!.range[source] as String
                         val targetObjective = context.arguments["targetObjective"]!!.result as String
                         val sourceObjective = context.arguments["sourceObjective"]!!.result as String
-                        Command(CommandTypes.SCOREBOARD_PLAYERS_OPERATION, mapOf(
+                        Command(CommandType.SCOREBOARD_PLAYERS_OPERATION, mapOf(
                             "targets" to parseScoreHolder(context.arguments["targets"]!!.range[source]),
                             "targetObjective" to targetObjective,
                             "operation" to operation,
@@ -234,7 +234,7 @@ object CommandParser {
                     }
                     "remove" -> {
                         val objective = context.arguments["objective"]!!.result as String
-                        Command(CommandTypes.SCOREBOARD_PLAYERS_REMOVE, mapOf(
+                        Command(CommandType.SCOREBOARD_PLAYERS_REMOVE, mapOf(
                             "targets" to parseScoreHolder(context.arguments["targets"]!!.range[source]),
                             "objective" to objective,
                             "score" to context.arguments["score"]!!.result as Int
@@ -243,19 +243,19 @@ object CommandParser {
                     "reset" -> {
                         if(context.arguments["objective"] != null) {
                             val objective = context.arguments["objective"]!!.result as String
-                            Command(CommandTypes.SCOREBOARD_PLAYERS_RESET, mapOf(
+                            Command(CommandType.SCOREBOARD_PLAYERS_RESET, mapOf(
                                 "targets" to parseScoreHolder(context.arguments["targets"]!!.range[source]),
                                 "objective" to objective
                             ))
                         }else {
-                            Command(CommandTypes.SCOREBOARD_PLAYERS_RESET, mapOf(
+                            Command(CommandType.SCOREBOARD_PLAYERS_RESET, mapOf(
                                 "targets" to parseScoreHolder(context.arguments["targets"]!!.range[source])
                             ))
                         }
                     }
                     "set" -> {
                         val objective = context.arguments["objective"]!!.result as String
-                        Command(CommandTypes.SCOREBOARD_PLAYERS_SET, mapOf(
+                        Command(CommandType.SCOREBOARD_PLAYERS_SET, mapOf(
                             "targets" to parseScoreHolder(context.arguments["targets"]!!.range[source]),
                             "objective" to objective,
                             "score" to context.arguments["score"]!!.result as Int
@@ -272,13 +272,13 @@ object CommandParser {
         val targets = parseSelector(context.arguments["targets"]!!.range[source])
         return when(val type = context.nodes[2].node.name) {
             "add" -> {
-                Command(CommandTypes.TAG_ADD, mapOf(
+                Command(CommandType.TAG_ADD, mapOf(
                     "targets" to targets,
                     "name" to context.arguments["name"]!!.result as String
                 ))
             }
             "remove" -> {
-                Command(CommandTypes.TAG_REMOVE, mapOf(
+                Command(CommandType.TAG_REMOVE, mapOf(
                     "targets" to targets,
                     "name" to context.arguments["name"]!!.result as String
                 ))

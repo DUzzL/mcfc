@@ -40,6 +40,12 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         availableLocals.add(local.index)
     }
 
+    fun defineLocal(local: String, type: Class<*>, exec: Runnable) {
+        val localValue = createLocal(local, type.descriptorString())
+        exec.run()
+        destroyLocal(localValue)
+    }
+
     inline fun defineLocal(local: String, type: Class<*>, exec: () -> Unit) {
         val localValue = createLocal(local, type.descriptorString())
         exec()

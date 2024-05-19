@@ -1,6 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_2.compiler
 
-import dev.epicpix.minecraftfunctioncompiler.commands.CommandTypes
+import dev.epicpix.minecraftfunctioncompiler.commands.CommandType
 import dev.epicpix.minecraftfunctioncompiler.compiler.impl.CompilationContext
 import dev.epicpix.minecraftfunctioncompiler.compiler.impl.ResultStorage
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument
@@ -19,7 +19,7 @@ fun compile(commands: List<Command>): List<Instruction> {
 private fun CompilationContext.compile(command: Command?, result: ResultStorage = ResultStorage()) {
     if(command == null) return
     when(command.type) {
-        CommandTypes.EXECUTE_ALIGN -> {
+        CommandType.EXECUTE_ALIGN -> {
             getPosition { positionId ->
                 val newPosition = LocationData(local = highestLocal)
                 val instruction = Instructions.alignPosition(positionId, newPosition, command["swizzle"])
@@ -27,12 +27,12 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                 addInstruction(instruction)
             }
         }
-        CommandTypes.EXECUTE_AS -> {
+        CommandType.EXECUTE_AS -> {
             forSelector(command["targets"]) { entity, _, _ ->
                 with(currentEntity = entity).compile(command["command"], result)
             }
         }
-        CommandTypes.EXECUTE_AT -> {
+        CommandType.EXECUTE_AT -> {
             forSelector(command["targets"]) { entity, _, _ ->
                 val world = LocationData(local = highestLocal)
                 val position = LocationData(local = highestLocal + 1)
@@ -43,12 +43,12 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                 addInstruction(instruction)
             }
         }
-        CommandTypes.EXECUTE_IF_ENTITY -> {
+        CommandType.EXECUTE_IF_ENTITY -> {
             forSelector(command.get<SelectorArgument>("entities").copy(limit = 1)) { _, _, _ ->
                 compile(command["command"])
             }
         }
-        CommandTypes.EXECUTE_IF_SCORE_RANGE -> {
+        CommandType.EXECUTE_IF_SCORE_RANGE -> {
             getObjective(command["targetObjective"]) { objective ->
                 forScoreHolder(command.get<ScoreHolderArgument>("target").single()) { name ->
                     getScoreData(objective, name, false) { score ->
@@ -59,7 +59,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                 }
             }
         }
-        CommandTypes.EXECUTE_IF_SCORE_COMPARE -> {
+        CommandType.EXECUTE_IF_SCORE_COMPARE -> {
             getObjective(command["targetObjective"]) { targetObjective ->
                 forScoreHolder(command.get<ScoreHolderArgument>("target").single()) { targetName ->
                     getObjective(command["sourceObjective"]) { sourceObjective ->
@@ -84,12 +84,12 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                 }
             }
         }
-        CommandTypes.EXECUTE_POSITIONED_POS -> {
+        CommandType.EXECUTE_POSITIONED_POS -> {
             forPosition(command["position"]) { position ->
                 copy(currentPosition = position).compile(command["command"], result)
             }
         }
-        CommandTypes.EXECUTE_STORE_RESULT_SCORE -> {
+        CommandType.EXECUTE_STORE_RESULT_SCORE -> {
             withResultStorage(requireResult = true) { res ->
                 compile(command["command"], res)
                 res.checkRequirements(command["command"])
@@ -102,7 +102,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                 }
             }
         }
-        CommandTypes.EXECUTE_UNLESS_ENTITY -> {
+        CommandType.EXECUTE_UNLESS_ENTITY -> {
             forScope {  scope ->
                 forSelector(command.get<SelectorArgument>("entities").copy(limit = 1)) { _, _, _ ->
                     addInstruction(Instructions2.exitScope(scope))
@@ -110,7 +110,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                 compile(command["command"])
             }
         }
-        CommandTypes.EXECUTE_UNLESS_SCORE_RANGE -> {
+        CommandType.EXECUTE_UNLESS_SCORE_RANGE -> {
             getObjective(command["targetObjective"]) { objective ->
                 forScoreHolder(command.get<ScoreHolderArgument>("target").single()) { name ->
                     getScoreData(objective, name, false) { score ->
@@ -121,7 +121,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                 }
             }
         }
-        CommandTypes.EXECUTE_UNLESS_SCORE_COMPARE -> {
+        CommandType.EXECUTE_UNLESS_SCORE_COMPARE -> {
             getObjective(command["targetObjective"]) { targetObjective ->
                 forScoreHolder(command.get<ScoreHolderArgument>("target").single()) { targetName ->
                     getObjective(command["sourceObjective"]) { sourceObjective ->
@@ -146,20 +146,20 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                 }
             }
         }
-        CommandTypes.FUNCTION -> {
+        CommandType.FUNCTION -> {
             addInstruction(Instructions.callFunctions(command["functions"], currentEntity, currentWorld, currentPosition, currentRotation))
         }
-        CommandTypes.GAMEMODE -> {
+        CommandType.GAMEMODE -> {
             forSelector(command["targets"]) { entity, _, _ ->
                 addInstruction(Instructions.setGamemode(entity, command["gamemode"]))
             }
         }
-        CommandTypes.KILL -> {
+        CommandType.KILL -> {
             forSelector(command["targets"]) { entity, _, _ ->
                 addInstruction(Instructions2.killEntity(entity))
             }
         }
-        CommandTypes.SCOREBOARD_PLAYERS_ADD -> {
+        CommandType.SCOREBOARD_PLAYERS_ADD -> {
             getObjective(command["objective"]) { objective ->
                 forScoreHolder(command["targets"]) { name ->
                     getScoreData(objective, name, true) { scoreData ->
@@ -168,7 +168,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                 }
             }
         }
-        CommandTypes.SCOREBOARD_PLAYERS_GET -> {
+        CommandType.SCOREBOARD_PLAYERS_GET -> {
             getObjective(command["objective"]) { objective ->
                 forScoreHolder(command["target"]) { name ->
                     getScoreData(objective, name, true) { scoreData ->
@@ -180,7 +180,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                 }
             }
         }
-        CommandTypes.SCOREBOARD_PLAYERS_OPERATION -> {
+        CommandType.SCOREBOARD_PLAYERS_OPERATION -> {
             forScope { exceptionScope ->
                 getObjective(command["targetObjective"]) { targetObjective ->
                     forScoreHolder(command["targets"]) { targetName ->
@@ -209,7 +209,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                 }
             }
         }
-        CommandTypes.SCOREBOARD_PLAYERS_SET -> {
+        CommandType.SCOREBOARD_PLAYERS_SET -> {
             getObjective(command["objective"]) { objective ->
                 forScoreHolder(command["targets"]) { name ->
                     getScoreData(objective, name, true) { score ->
@@ -218,7 +218,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                 }
             }
         }
-        CommandTypes.SCOREBOARD_PLAYERS_REMOVE -> {
+        CommandType.SCOREBOARD_PLAYERS_REMOVE -> {
             getObjective(command["objective"]) { objective ->
                 forScoreHolder(command["targets"]) { name ->
                     getScoreData(objective, name, true) { score ->
@@ -227,7 +227,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                 }
             }
         }
-        CommandTypes.SCOREBOARD_PLAYERS_RESET -> {
+        CommandType.SCOREBOARD_PLAYERS_RESET -> {
             if(command.params.containsKey("objective")) {
                 getObjective(command["objective"]) { objective ->
                     forScoreHolder(command["targets"]) { name ->
@@ -240,12 +240,12 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                 }
             }
         }
-        CommandTypes.TAG_ADD -> {
+        CommandType.TAG_ADD -> {
             forSelector(command["targets"]) { entity, _, _ ->
                 addInstruction(Instructions2.addEntityTag(entity, command["name"]))
             }
         }
-        CommandTypes.TAG_REMOVE -> {
+        CommandType.TAG_REMOVE -> {
             forSelector(command["targets"]) { entity, _, _ ->
                 addInstruction(Instructions2.removeEntityTag(entity, command["name"]))
             }
