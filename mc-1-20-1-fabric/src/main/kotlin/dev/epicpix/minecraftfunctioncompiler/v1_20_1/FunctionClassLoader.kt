@@ -72,22 +72,21 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
 
     private fun createCodeFieldStorage(): CodeFieldStorage {
         return CodeFieldStorage(
-            resourceLocationClass = ResourceLocation::class.java,
-            commandFunctionClass = CommandFunction::class.java,
-            serverFunctionManagerClass = ServerFunctionManager::class.java,
-            minecraftServerClass = MinecraftServer::class.java,
-            mapFunction = { cf, cw, value ->
-                cw.callMap_get {
-                    cw.loadServerFunctionLibrary_functions {
-                        cw.loadServerFunctionManager_library {
-                            cf.loadServerFunctionManager(cw)
-                        }
+            ResourceLocation::class.java,
+            CommandFunction::class.java,
+            ServerFunctionManager::class.java,
+            MinecraftServer::class.java,
+        ) { cf, cw, value ->
+            cw.callMap_get {
+                cw.loadServerFunctionLibrary_functions {
+                    cw.loadServerFunctionManager_library {
+                        cf.loadServerFunctionManager(cw)
                     }
-                    cf.loadResourceLocation(cw, value)
                 }
-                cw.castType(CommandFunction::class.java)
-            },
-        )
+                cf.loadResourceLocation(cw, value)
+            }
+            cw.castType(CommandFunction::class.java)
+        }
     }
 
     companion object {

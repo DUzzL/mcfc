@@ -46,8 +46,8 @@ data class EmitterContext(
         codeWriter.storeLocal(uid, type, exec)
     }
 
-    fun runStored(location: String, uidName: String, type: Class<*>) {
-        storeCreate(location, codeWriter.generateUniqueLocal(uidName), type) { run() }
+    fun runStored(location: String, type: Class<*>) {
+        storeCreate(location, codeWriter.generateUniqueLocal(), type) { run() }
     }
 
     fun load(location: String) {

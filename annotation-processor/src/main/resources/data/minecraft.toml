@@ -36,3 +36,6 @@ Vec3_y = "net/minecraft/world/phys/Vec3:y:D@M"
 Vec3_z = "net/minecraft/world/phys/Vec3:z:D@M"
 Vec2_x = "net/minecraft/world/phys/Vec2:x:F@M"
 Vec2_y = "net/minecraft/world/phys/Vec2:y:F@M"
+
+[definitions_fields.ServerFunctionManager_context]
+"1.20.2-" = "net/minecraft/server/ServerFunctionManager:context:Lnet/minecraft/server/ServerFunctionManager$ExecutionContext;@M"

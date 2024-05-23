@@ -19,7 +19,7 @@ import java.util.UUID;
 import static dev.epicpix.minecraftfunctioncompiler.CompileConstantsKt.isDevelopmentEnvironment;
 import static dev.epicpix.minecraftfunctioncompiler.CompileConstantsKt.versionCommit;
 import static dev.epicpix.minecraftfunctioncompiler.CompileConstantsKt.versionName;
-import static dev.epicpix.minecraftfunctioncompiler.il.InstructionsKt.printInstructionList;
+import static dev.epicpix.minecraftfunctioncompiler.il.Instruction.printInstructionList;
 
 public final class FunctionCompilerReporter {
     private FunctionCompilerReporter() {}

@@ -8,7 +8,6 @@ import com.google.devtools.ksp.getDeclaredFunctions
 import com.google.devtools.ksp.processing.*
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
-import com.google.devtools.ksp.symbol.KSFile
 import com.google.devtools.ksp.symbol.Origin
 import net.fabricmc.accesswidener.AccessWidenerReader
 import net.fabricmc.accesswidener.AccessWidenerVisitor
@@ -127,7 +126,9 @@ class MainProcessor(
         if(options["definitions"] != null) {
             generateInstructionData(mappingData, options["definitions"] == "common", minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0, packageMinecraftVersion)
         }
-        generateConstantsData(resolver)
+        if(options["definitions"] == "common") {
+            generateConstantsData()
+        }
         if(packageMinecraftVersion != null && mappingData != null) {
             val accessWidenerWriter = AccessWidenerWriter()
             AccessWidenerReader(object : AccessWidenerVisitor {
@@ -154,19 +155,15 @@ class MainProcessor(
         return listOf()
     }
 
-    @OptIn(KspExperimental::class)
-    fun generateConstantsData(resolver: Resolver) {
-        resolver.getSymbolsWithAnnotation(ConstantsFile::class.java.name).forEach {
-            val resultClass = it.getAnnotationsByType(ConstantsFile::class).first().value
-            val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
-            val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
-            val map = codeGenerator.createNewFile(Dependencies(true, it as KSFile), resultPackage, resultName, "kt")
-            map.appendText("package $resultPackage\n")
-            map.appendText("const val isDevelopmentEnvironment: Boolean = ${options["isJarTask"] != "true"}\n")
-            map.appendText("const val versionCommit: String = \"${options["commit"] ?: "development"}\"\n")
-            map.appendText("const val versionName: String = \"${options["version"] ?: error("Version option not specified")}\"\n")
-            map.close()
-        }
+    fun generateConstantsData() {
+        val resultPackage = "dev.epicpix.minecraftfunctioncompiler"
+        val resultName = "CompileConstants"
+        val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "kt")
+        map.appendText("package $resultPackage\n")
+        map.appendText("const val isDevelopmentEnvironment: Boolean = ${options["isJarTask"] != "true"}\n")
+        map.appendText("const val versionCommit: String = \"${options["commit"] ?: "development"}\"\n")
+        map.appendText("const val versionName: String = \"${options["version"] ?: error("Version option not specified")}\"\n")
+        map.close()
     }
 
     fun generateFunctionMapping(mappingData: MappingData?, data: Map<String, Any>, majorVer: Int, minorVer: Int, packageMinecraftVersion: String?) {
@@ -286,7 +283,7 @@ class MainProcessor(
         map.appendText("        dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructionsKt.registerEmitterInstruction((context) -> {\n")
         map.appendText("            var cw = context.getCodeWriter();\n")
         map.appendText("            var mv = cw.getMethodVisitor();\n")
-        map.appendText("            var type = context.getInstruction().getType();\n")
+        map.appendText("            var type = context.getInstruction().type();\n")
         val info = mutableMapOf<String, List<AccessorStatistics>>()
         file.definitions.forEach {
             if(it.usesObf != common) {
@@ -462,7 +459,7 @@ class MainProcessor(
                     impl.appendText("\"${it.name}\" to ${it.name.snakeToLowerCamelCase()}")
                     if(it.scope == ParsedTokenValueAccessorScope.CONTEXT) {
                         val stats = selfInfo?.find { s -> s.accessor == it } ?: AccessorStatistics(it)
-                        impl.appendText(".uses(source = ${stats.gets}, destination = ${stats.sets})")
+                        impl.appendText(".uses(/* source = */ ${stats.gets}, /* destination = */ ${stats.sets})")
                     }
                     impl.appendText(", ")
                 }
@@ -487,10 +484,10 @@ class MainProcessor(
             impl.appendText("\n    fun addStaticRequirements(instructions: List<$instructionType>): $instructionType {\n")
             impl.appendText("        val requirementInstructions = mutableSetOf<$instructionEnumType>()\n")
             impl.appendText("        instructions.forEach { addStaticRequirementsInternal(it, requirementInstructions) }\n")
-            impl.appendText("        var baseInstruction = Instruction($enumClass.ROOT, mapOf(), instructions.toMutableList())\n")
+            impl.appendText("        var baseInstruction = Instruction($enumClass.ROOT, mapOf(), instructions)\n")
             val defPriorities = defs.map { it.def to it.length() }.sortedByDescending { it.second }
             for((def, _) in defPriorities) {
-                impl.appendText("        if(requirementInstructions.contains($enumClass.${def.name.uppercase()})) baseInstruction = $instructionType($enumClass.${def.name.uppercase()}, mapOf(), mutableListOf(baseInstruction))\n")
+                impl.appendText("        if(requirementInstructions.contains($enumClass.${def.name.uppercase()})) baseInstruction = $instructionType($enumClass.${def.name.uppercase()}, mapOf(), listOf(baseInstruction))\n")
             }
             impl.appendText("        return baseInstruction\n")
             impl.appendText("    }\n")

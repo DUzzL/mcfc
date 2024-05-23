@@ -33,7 +33,7 @@ object ScopeInstructionMergeOptimization : Optimization {
                 newBase.children.addAll(compare.children)
                 index++
             }
-            results.add(newBase.copy(children = runOptimizations(newBase.children).toMutableList()))
+            results.add(newBase.withChildren(ArrayList(runOptimizations(newBase.children))))
             checkIndex = index
         }
         return results

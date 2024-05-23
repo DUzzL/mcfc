@@ -1,7 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter;
 
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
-import dev.epicpix.minecraftfunctioncompiler.data.Pair;
+import dev.epicpix.minecraftfunctioncompiler.util.Pair;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
 
@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstantsKt.DEBUG;
@@ -21,10 +22,10 @@ public final class GraphGenerator {
     private static void visitInstructionFunc(Instruction instruction, StringBuilder stringBuilder, DataLocation base, ArrayList<Pair<DataLocation, DataLocation>> calls) {
         if(!DEBUG) return;
 
-        for(var it : instruction.getChildren()) {
+        for(var it : instruction.children()) {
             visitInstructionFunc(it, stringBuilder, base, calls);
         }
-        if(instruction.getType() == InstructionTypes.CALL_FUNCTIONS) {
+        if(instruction.type() == InstructionTypes.CALL_FUNCTIONS) {
             var functions = instruction.<List<DataLocation>>get("functions");
             for(var function : functions) {
                 if(!calls.contains(new Pair<>(base, function))) {
@@ -48,14 +49,14 @@ public final class GraphGenerator {
     private static int visitInstruction(Instruction instruction, StringBuilder stringBuilder, StringBuilder post, int uid) {
         if(!DEBUG) return 0;
 
-        var instrDescription = instruction.getData().entrySet().stream().map(it -> it.getKey() + "=" + it.getValue().toString().replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")).collect(Collectors.joining("\n"));
-        stringBuilder.append("    x").append(uid).append("[label=\"").append(instruction.getType()).append("\n").append(instrDescription).append("\",shape=box];\n");
+        var instrDescription = instruction.data().entrySet().stream().map(it -> it.getKey() + "=" + Objects.toString(it.getValue()).replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")).collect(Collectors.joining("\n"));
+        stringBuilder.append("    x").append(uid).append("[label=\"").append(instruction.type()).append("\n").append(instrDescription).append("\",shape=box];\n");
         var curUid = uid + 1;
-        for(var child : instruction.getChildren()) {
+        for(var child : instruction.children()) {
             stringBuilder.append("    x").append(uid).append(" -> x").append(curUid).append(";\n");
             curUid = visitInstruction(child, stringBuilder, post, curUid);
         }
-        if(instruction.getType() == InstructionTypes.CALL_FUNCTIONS) {
+        if(instruction.type() == InstructionTypes.CALL_FUNCTIONS) {
             var functions = instruction.<List<DataLocation>>get("functions");
             for(var function : functions) {
                 post.append("  x").append(uid).append(" -> x").append(function.namespace()).append("_").append(function.path().replace('.', '_').replace('-', '_').replace('/', '_')).append("\n");

@@ -46,10 +46,10 @@ fun registerInstructionEmitters() {
             ScoreboardOperation.DIVIDE, ScoreboardOperation.MODULO -> {
                 load("target")
                 codeWriter.callScore_getScore {  }
-                val uniqBeh = codeWriter.generateUniqueLocal("\$Score")
+                val uniqBeh = codeWriter.generateUniqueLocal()
                 codeWriter.storeLocal(uniqBeh, Int::class.javaPrimitiveType!!) {
                     load("source")
-                    val uniq = codeWriter.generateUniqueLocal("\$Score")
+                    val uniq = codeWriter.generateUniqueLocal()
                     codeWriter.storeLocal(uniq, Score::class.java) {
                         codeWriter.loadLocal(uniq)
                         codeWriter.callScore_getScore {  }
@@ -77,10 +77,10 @@ fun registerInstructionEmitters() {
             }
             ScoreboardOperation.SWAP -> {
                 load("target")
-                val targetId = codeWriter.generateUniqueLocal("\$Score")
+                val targetId = codeWriter.generateUniqueLocal()
                 codeWriter.storeLocal(targetId, Score::class.java) {
                     load("source")
-                    val sourceId = codeWriter.generateUniqueLocal("\$Score")
+                    val sourceId = codeWriter.generateUniqueLocal()
                     codeWriter.storeLocal(sourceId, Score::class.java) {
                         codeWriter.loadLocal(sourceId)
                         codeWriter.loadLocal(targetId)
@@ -136,7 +136,7 @@ fun registerInstructionEmitters() {
             codeWriter.writeInt(range.minimum!!)
             codeWriter.executeIf(if(!negate) Opcodes.IF_ICMPEQ else Opcodes.IF_ICMPNE) { run() }
         }else if(range.minimum != null) {
-            val uid = codeWriter.generateUniqueLocal("\$Score")
+            val uid = codeWriter.generateUniqueLocal()
             codeWriter.storeLocal(uid, Int::class.javaPrimitiveType!!) {
                 if(!negate) {
                     codeWriter.loadLocal(uid)
@@ -179,7 +179,7 @@ fun registerInstructionEmitters() {
     registerEmitterInstruction(InstructionTypes.GET_ENTITY_WORLD) {
         codeWriter.callEntity_level { load("entity") }
         codeWriter.castType(ServerLevel::class.java)
-        runStored("world", "\$World", ServerLevel::class.java)
+        runStored("world", ServerLevel::class.java)
     }
     registerEmitterInstruction(InstructionTypes.APPLY_POSITION_WORLD) {
         codeWriter.newObject(Vec3::class.java, Double::class.java, Double::class.java, Double::class.java) {
@@ -212,7 +212,7 @@ fun registerInstructionEmitters() {
                 codeWriter.writeDouble(pos.z)
             }
         }
-        runStored("to", "\$Position", Vec3::class.java)
+        runStored("to", Vec3::class.java)
     }
     registerEmitterInstruction(InstructionTypes.CHECK_ENTITY_TYPES) {
         val label = Label()
@@ -242,7 +242,7 @@ fun registerInstructionEmitters() {
             codeWriter.loadVec3_z { load("position") }
             if(swizzle.z) codeWriter.callMath_floor {}
         }
-        runStored("result", "\$Position", Vec3::class.java)
+        runStored("result", Vec3::class.java)
     }
     registerEmitterInstruction(InstructionTypes.CHECK_GAMEMODE) {
         codeWriter.callServerPlayerGameMode_getGameModeForPlayer {
@@ -275,21 +275,16 @@ fun registerInstructionEmitters() {
         }
         codeWriter.methodVisitor.visitInsn(Opcodes.POP)
     }
-    registerEmitterInstruction(InstructionTypes.CHECK_ROTATION) {
+    registerEmitterInstruction(InstructionTypes.CHECK_ROTATION_YAW) {
         val yaw = instruction.get<FloatRangeArgument?>("yaw")
         if(yaw != null) {
             codeWriter.loadVec2_x { load("rotation") }
-            checkFloatRange(yaw) {
-                val pitch = instruction.get<FloatRangeArgument?>("pitch")
-                if(pitch != null) {
-                    codeWriter.loadVec2_y { load("rotation") }
-                    checkFloatRange(pitch) { run() }
-                    return@checkFloatRange
-                }
-                run()
-            }
+            checkFloatRange(yaw) { run() }
             return@registerEmitterInstruction
         }
+        run()
+    }
+    registerEmitterInstruction(InstructionTypes.CHECK_ROTATION_PITCH) {
         val pitch = instruction.get<FloatRangeArgument?>("pitch")
         if(pitch != null) {
             codeWriter.loadVec2_y { load("rotation") }

@@ -1223,13 +1223,13 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                 writerData.markSet(scopeAccessor)
                 val jumpLabel = "j${uid++}"
                 output.appendText("org.objectweb.asm.Label $jumpLabel = new org.objectweb.asm.Label();\n")
-                output.appendText("context.getNewScopes().put(context.getInstruction().<dev.epicpix.minecraftfunctioncompiler.il.ScopeData>get(\"${scopeAccessor.name}\").getId(), $jumpLabel);\n")
+                output.appendText("context.getNewScopes().put(context.getInstruction().<dev.epicpix.minecraftfunctioncompiler.il.ScopeData>get(\"${scopeAccessor.name}\").id(), $jumpLabel);\n")
                 uid = writeCode(writerData.copyLocalTypes(), el.code!!, output, uid, yieldCallbacks)
                 output.appendText("mv.visitLabel($jumpLabel);\n")
             }else if(el.name == "exit_scope") {
                 val scopeAccessor = el.arguments[0] as ParsedTokenValueAccessor
                 writerData.markGet(scopeAccessor)
-                output.appendText("mv.visitJumpInsn(org.objectweb.asm.Opcodes.GOTO, context.getNewScopes().get(context.getInstruction().<dev.epicpix.minecraftfunctioncompiler.il.ScopeData>get(\"${scopeAccessor.name}\").getId()));\n")
+                output.appendText("mv.visitJumpInsn(org.objectweb.asm.Opcodes.GOTO, context.getNewScopes().get(context.getInstruction().<dev.epicpix.minecraftfunctioncompiler.il.ScopeData>get(\"${scopeAccessor.name}\").id()));\n")
             }else if(el.name == "yield") {
                 val yieldObj = el.arguments[0] as ParsedTokenValueAccessor
                 writerData.markGet(yieldObj)

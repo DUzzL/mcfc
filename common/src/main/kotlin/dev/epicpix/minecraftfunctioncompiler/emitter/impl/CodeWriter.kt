@@ -96,7 +96,18 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
     fun writeString(value: String) = methodVisitor.visitLdcInsn(value)
     fun writeNull() = methodVisitor.visitInsn(Opcodes.ACONST_NULL)
 
-    fun newObject(owner: Class<*>, vararg types: Class<*>, arguments: () -> Unit) {
+    fun newObjectCreate(owner: Class<*>) {
+        val ownerName = owner.descriptorString().run { substring(1, length - 1) }
+        methodVisitor.visitTypeInsn(Opcodes.NEW, ownerName)
+        methodVisitor.visitInsn(Opcodes.DUP)
+    }
+
+    fun newObjectInit(owner: Class<*>, vararg types: Class<*>) {
+        val ownerName = owner.descriptorString().run { substring(1, length - 1) }
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, ownerName, "<init>", "(${types.joinToString("") { it.descriptorString() }})V", false)
+    }
+
+    inline fun newObject(owner: Class<*>, vararg types: Class<*>, arguments: () -> Unit) {
         val ownerName = owner.descriptorString().run { substring(1, length - 1) }
         methodVisitor.visitTypeInsn(Opcodes.NEW, ownerName)
         methodVisitor.visitInsn(Opcodes.DUP)
@@ -132,15 +143,17 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         }
     }
 
+    fun executeIfLabeled(comparison: Int): Label {
+        val endLabel = Label()
+        methodVisitor.visitJumpInsn(getIfJumpOpcode(comparison), endLabel)
+        return endLabel
+    }
+
     inline fun executeIf(comparison: Int, exec: () -> Unit) {
         val endLabel = Label()
         methodVisitor.visitJumpInsn(getIfJumpOpcode(comparison), endLabel)
         exec()
         methodVisitor.visitLabel(endLabel)
-    }
-
-    fun generateUniqueLocal(local: String): String {
-        return "$local:${generatedLocals.size}"
     }
 
     fun generateUniqueLocal(): String {

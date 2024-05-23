@@ -11,7 +11,3 @@ annotation class InstructionDestination
 @Retention(AnnotationRetention.SOURCE)
 @Target(AnnotationTarget.CLASS)
 annotation class InstructionSourceClass(val enumClass: String, val generatorClass: String)
-
-@Retention(AnnotationRetention.SOURCE)
-@Target(AnnotationTarget.FILE)
-annotation class ConstantsFile(val value: String)

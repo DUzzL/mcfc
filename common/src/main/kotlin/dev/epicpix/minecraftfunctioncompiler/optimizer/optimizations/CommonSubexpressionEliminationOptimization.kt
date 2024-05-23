@@ -1,9 +1,9 @@
 package dev.epicpix.minecraftfunctioncompiler.optimizer.optimizations
 
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction
+import dev.epicpix.minecraftfunctioncompiler.il.Instruction.remapInstructionData
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData
-import dev.epicpix.minecraftfunctioncompiler.il.remapInstructionData
 import dev.epicpix.minecraftfunctioncompiler.optimizer.InstructionList
 import dev.epicpix.minecraftfunctioncompiler.optimizer.Optimization
 

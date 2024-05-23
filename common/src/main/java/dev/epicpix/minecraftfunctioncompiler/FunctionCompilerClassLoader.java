@@ -27,7 +27,7 @@ import java.util.function.Function;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstantsKt.DATA_CLASS;
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstantsKt.DEBUG;
-import static dev.epicpix.minecraftfunctioncompiler.il.InstructionsKt.printInstructionList;
+import static dev.epicpix.minecraftfunctioncompiler.il.Instruction.printInstructionList;
 import static dev.epicpix.minecraftfunctioncompiler.optimizer.OptimizerKt.optimize;
 import static org.objectweb.asm.ClassWriter.COMPUTE_FRAMES;
 
