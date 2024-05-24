@@ -12,7 +12,6 @@ import java.util.List;
 @InstructionSourceClass(enumClass = "dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes", generatorClass = "dev.epicpix.minecraftfunctioncompiler.il.Instructions")
 interface InstructionDefinitions {
     // Minecraft specific instructions
-    Instruction runScoreOperation(@InstructionSource LocationData target, @InstructionSource LocationData source, ScoreboardOperation operation, ScopeData exceptionScope);
     Instruction callFunctions(List<DataLocation> functions, @Nullable @InstructionSource LocationData entity, @Nullable @InstructionSource LocationData world, @Nullable @InstructionSource LocationData position, @Nullable @InstructionSource LocationData rotation);
     Instruction checkScoreRange(@InstructionSource LocationData score, IntRangeArgument range, boolean negate);
     Instruction checkScoreCompare(@InstructionSource LocationData target, @InstructionSource LocationData source, ScoreboardCompareOperation compareOperation);

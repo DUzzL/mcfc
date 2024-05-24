@@ -228,11 +228,11 @@ data class ParsedTokenExpressionTypeComplex(val typeName: String) : ParsedTokenE
 data class ParsedTokenExpressionTypeYield(val yieldType: ParsedTokenExpressionType) : ParsedTokenExpressionType
 
 enum class ParsedTokenExpressionSimpleType {
-    NULL, BOOLEAN, INTEGER, SCOPE, OBJECT,
+    NULL, BOOLEAN, INTEGER, LONG, FLOAT, DOUBLE, SCOPE, OBJECT,
 }
 
 enum class ParsedTokenExpressionOperator {
-    ADD, SUB, EQ, NE, GT, LT,
+    ADD, SUB, MUL, EQ, NE, GT, LT,
 }
 
 enum class ParsedTokenInstructionConditionOperator {
@@ -354,13 +354,22 @@ private fun parseExpression1(iter: ListIterator<LexToken>, valueDefinitions: Lis
 }
 
 private fun parseExpression2(iter: ListIterator<LexToken>, valueDefinitions: List<ParsedTokenValueAccessor>, definitions: DefinitionInfo, usesObf: AtomicBoolean): ParsedTokenExpression {
-    val exp1 = parseExpressionBase(iter, valueDefinitions, definitions, usesObf)
+    val exp1 = parseExpression3(iter, valueDefinitions, definitions, usesObf)
     if(!iter.hasNext()) return exp1
     if(iter.tryNextTokenType(LexTokenSimpleType.PLUS)) {
         return ParsedTokenExpressionBinary(exp1, parseExpression2(iter, valueDefinitions, definitions, usesObf), ParsedTokenExpressionOperator.ADD)
     }
     if(iter.tryNextTokenType(LexTokenSimpleType.MINUS)) {
         return ParsedTokenExpressionBinary(exp1, parseExpression2(iter, valueDefinitions, definitions, usesObf), ParsedTokenExpressionOperator.SUB)
+    }
+    return exp1
+}
+
+private fun parseExpression3(iter: ListIterator<LexToken>, valueDefinitions: List<ParsedTokenValueAccessor>, definitions: DefinitionInfo, usesObf: AtomicBoolean): ParsedTokenExpression {
+    val exp1 = parseExpressionBase(iter, valueDefinitions, definitions, usesObf)
+    if(!iter.hasNext()) return exp1
+    if(iter.tryNextTokenType(LexTokenSimpleType.STAR)) {
+        return ParsedTokenExpressionBinary(exp1, parseExpression3(iter, valueDefinitions, definitions, usesObf), ParsedTokenExpressionOperator.MUL)
     }
     return exp1
 }
@@ -734,7 +743,7 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
     }else if(expression is ParsedTokenExpressionBinary) {
         val a = evaluateExpressionType(writerData, expression.a)
         val b = evaluateExpressionType(writerData, expression.b)
-        if(expression.op == ParsedTokenExpressionOperator.ADD || expression.op == ParsedTokenExpressionOperator.SUB) {
+        if(expression.op == ParsedTokenExpressionOperator.ADD || expression.op == ParsedTokenExpressionOperator.SUB || expression.op == ParsedTokenExpressionOperator.MUL) {
             if(a.isSimpleType(ParsedTokenExpressionSimpleType.INTEGER) && b.isSimpleType(ParsedTokenExpressionSimpleType.INTEGER)) {
                 return ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)
             }
@@ -850,6 +859,12 @@ private fun doesArgumentTypeMatch(matchType: ParsedTokenExpressionType, expected
         return matchType.isSimpleType(ParsedTokenExpressionSimpleType.BOOLEAN)
     }else if(expectedType == Type.INT_TYPE) {
         return matchType.isSimpleType(ParsedTokenExpressionSimpleType.INTEGER)
+    }else if(expectedType == Type.LONG_TYPE) {
+        return matchType.isSimpleType(ParsedTokenExpressionSimpleType.LONG)
+    }else if(expectedType == Type.FLOAT_TYPE) {
+        return matchType.isSimpleType(ParsedTokenExpressionSimpleType.FLOAT)
+    }else if(expectedType == Type.DOUBLE_TYPE) {
+        return matchType.isSimpleType(ParsedTokenExpressionSimpleType.DOUBLE)
     }else if(expectedType.sort == Type.OBJECT) {
         return matchType.isSimpleType(ParsedTokenExpressionSimpleType.NULL) || (matchType is ParsedTokenExpressionTypeComplex && (getClassLowerBounds(expectedType.className).any { matchType.typeName == it } || getClassLowerBounds(matchType.typeName).any { expectedType.className == it }))
     }else {
@@ -964,6 +979,18 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 uid = writeExpression(writerData.copyLocalTypes(), expression.b, output, uid)
                 if(keepResult) {
                     output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.ISUB);\n")
+                }else {
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.POP2);\n")
+                }
+                return uid
+            }
+        }else if(expression.op == ParsedTokenExpressionOperator.MUL) {
+            if(isExpressionSimpleType(writerData, expression, ParsedTokenExpressionSimpleType.INTEGER)) {
+                var uid = uniqId
+                uid = writeExpression(writerData.copyLocalTypes(), expression.a, output, uid)
+                uid = writeExpression(writerData.copyLocalTypes(), expression.b, output, uid)
+                if(keepResult) {
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.IMUL);\n")
                 }else {
                     output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.POP2);\n")
                 }

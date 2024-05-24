@@ -1,6 +1,9 @@
 package dev.epicpix.minecraftfunctioncompiler.optimizer.optimizations
 
-import dev.epicpix.minecraftfunctioncompiler.il.*
+import dev.epicpix.minecraftfunctioncompiler.il.Instruction
+import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2
+import dev.epicpix.minecraftfunctioncompiler.il.LocationData
+import dev.epicpix.minecraftfunctioncompiler.il.ScopeData
 import dev.epicpix.minecraftfunctioncompiler.optimizer.InstructionList
 import dev.epicpix.minecraftfunctioncompiler.optimizer.Optimization
 
@@ -77,10 +80,9 @@ private fun getScopeUsed(instruction: Instruction, inScopeId: Int, lastElement: 
                 return ScopeUsageInfo(usedBreak = true, usedIndirect = true, last = lastElement)
             }
         }
-        InstructionTypes.RUN_SCORE_OPERATION -> {
+        InstructionTypes2.RUN_SCORE_OPERATION_DIVIDE, InstructionTypes2.RUN_SCORE_OPERATION_MODULO -> {
             val exceptionScope = instruction.get<ScopeData>("exceptionScope").id
-            val operation = instruction.get<ScoreboardOperation>("operation")
-            if(exceptionScope == inScopeId && (operation == ScoreboardOperation.DIVIDE || operation == ScoreboardOperation.MODULO)) {
+            if(exceptionScope == inScopeId) {
                 return ScopeUsageInfo(usedBreak = true, usedIndirect = true, last = lastElement)
             }
         }

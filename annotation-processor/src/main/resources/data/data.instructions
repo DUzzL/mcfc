@@ -343,3 +343,96 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
   let [ctx:score] = <dev.epicpix.minecraftfunctioncompiler.v1_20_4.ExtensionFunctions>.getScore([static:Scoreboard], <net.minecraft.world.scores.ScoreHolder>.forNameOnly([ctx:name]), [ctx:objective]);
   run();
 }
+
+@RUN_SCORE_OPERATION_SET [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) {
+  [ctx:target].setScore([ctx:source].getScore());
+}
+
+@RUN_SCORE_OPERATION_SET [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source]) {
+  [ctx:target].set([ctx:source].get());
+}
+
+@RUN_SCORE_OPERATION_PLUS [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) {
+  [ctx:target].setScore([ctx:target].getScore() + [ctx:source].getScore());
+}
+
+@RUN_SCORE_OPERATION_PLUS [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source]) {
+  [ctx:target].set([ctx:target].get() + [ctx:source].get());
+}
+
+@RUN_SCORE_OPERATION_MINUS [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) {
+  [ctx:target].setScore([ctx:target].getScore() - [ctx:source].getScore());
+}
+
+@RUN_SCORE_OPERATION_MINUS [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source]) {
+  [ctx:target].set([ctx:target].get() - [ctx:source].get());
+}
+
+@RUN_SCORE_OPERATION_MULTIPLY [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) {
+  [ctx:target].setScore([ctx:target].getScore() * [ctx:source].getScore());
+}
+
+@RUN_SCORE_OPERATION_MULTIPLY [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source]) {
+  [ctx:target].set([ctx:target].get() * [ctx:source].get());
+}
+
+@RUN_SCORE_OPERATION_DIVIDE [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source], scope [ctx:exceptionScope]) {
+  if([ctx:source].getScore() != 0) {
+    [ctx:target].setScore(<java.lang.Math>.floorDiv([ctx:target].getScore(), [ctx:source].getScore()));
+  }else {
+    exit_scope([ctx:exceptionScope]);
+  }
+}
+
+@RUN_SCORE_OPERATION_DIVIDE [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source], scope [ctx:exceptionScope]) {
+  if([ctx:source].get() != 0) {
+    [ctx:target].set(<java.lang.Math>.floorDiv([ctx:target].get(), [ctx:source].get()));
+  }else {
+    exit_scope([ctx:exceptionScope]);
+  }
+}
+
+@RUN_SCORE_OPERATION_MODULO [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source], scope [ctx:exceptionScope]) {
+  if([ctx:source].getScore() != 0) {
+    [ctx:target].setScore(<java.lang.Math>.floorMod([ctx:target].getScore(), [ctx:source].getScore()));
+  }else {
+    exit_scope([ctx:exceptionScope]);
+  }
+}
+
+@RUN_SCORE_OPERATION_MODULO [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source], scope [ctx:exceptionScope]) {
+  if([ctx:source].get() != 0) {
+    [ctx:target].set(<java.lang.Math>.floorMod([ctx:target].get(), [ctx:source].get()));
+  }else {
+    exit_scope([ctx:exceptionScope]);
+  }
+}
+
+@RUN_SCORE_OPERATION_MIN [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) {
+  [ctx:target].setScore(<java.lang.Math>.min([ctx:target].getScore(), [ctx:source].getScore()));
+}
+
+@RUN_SCORE_OPERATION_MIN [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source]) {
+  [ctx:target].set(<java.lang.Math>.min([ctx:target].get(), [ctx:source].get()));
+}
+
+@RUN_SCORE_OPERATION_MAX [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) {
+  [ctx:target].setScore(<java.lang.Math>.max([ctx:target].getScore(), [ctx:source].getScore()));
+}
+
+@RUN_SCORE_OPERATION_MAX [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source]) {
+  [ctx:target].set(<java.lang.Math>.max([ctx:target].get(), [ctx:source].get()));
+}
+
+@RUN_SCORE_OPERATION_SWAP [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) {
+  let [local:temp]<int> = [ctx:target].getScore();
+  [ctx:target].setScore([ctx:source].getScore());
+  [ctx:source].setScore([local:temp]);
+}
+
+@RUN_SCORE_OPERATION_SWAP [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source]) {
+  let [local:temp]<int> = [ctx:target].get();
+  [ctx:target].set([ctx:source].get());
+  [ctx:source].set([local:temp]);
+}
+

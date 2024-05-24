@@ -42,7 +42,7 @@ public record Instruction(InstructionType type, Map<String, Object> data, ArrayL
             if(entry.getValue() instanceof LocationData value && value.local() != null) {
                 result.put(entry.getKey(), new LocationData(mappings.getOrDefault(value.local(), value.local()), value.string(), value.integer(), value.isSource(), value.isDestination()));
             }else {
-                result.put(entry.getKey(), entry);
+                result.put(entry.getKey(), entry.getValue());
             }
         }
         return result;

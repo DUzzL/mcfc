@@ -34,9 +34,6 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         funcLoop@
         for ((key, value) in functions) {
             try {
-                if(key.toString().contains("line") || key.hashCode() % 2 == 0 || key.hashCode() % 3 == 1 || key.hashCode() % 5 != 0 || key.path == "sqrt" || key.path == "load_state") {
-                    continue@funcLoop
-                }
                 for (entry in value.entries) {
                     if (entry !is CommandEntry) {
                         continue@funcLoop

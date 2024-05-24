@@ -181,26 +181,32 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
             }
         }
         CommandType.SCOREBOARD_PLAYERS_OPERATION -> {
-            forScope { exceptionScope ->
-                getObjective(command["targetObjective"]) { targetObjective ->
-                    forScoreHolder(command["targets"]) { targetName ->
-                        getObjective(command["sourceObjective"]) { sourceObjective ->
-                            forScoreHolder(command["source"]) { sourceName ->
-                                getScoreData(targetObjective, targetName, true) { target ->
-                                    getScoreData(sourceObjective, sourceName, true) { source ->
-                                        val operation = when(command.get<String>("operation")) {
-                                            "=" -> ScoreboardOperation.SET
-                                            "+=" -> ScoreboardOperation.PLUS
-                                            "-=" -> ScoreboardOperation.MINUS
-                                            "*=" -> ScoreboardOperation.MULTIPLY
-                                            "/=" -> ScoreboardOperation.DIVIDE
-                                            "%=" -> ScoreboardOperation.MODULO
-                                            "<" -> ScoreboardOperation.MIN
-                                            ">" -> ScoreboardOperation.MAX
-                                            "><" -> ScoreboardOperation.SWAP
-                                            else -> throw UnsupportedOperationException("Unknown operation: ${command.get<String>("operation")}")
-                                        }
-                                        addInstruction(Instructions.runScoreOperation(target, source, operation, exceptionScope))
+            val exceptionScope = ScopeData.ofId(highestLocal)
+            val self = when(command.get<String>("operation")) {
+                "/=", "%=" -> {
+                    val instruction = Instructions2.scope(exceptionScope)
+                    addInstruction(instruction)
+                    with(highestLocal = highestLocal + 1, addInstruction = instruction.children::add)
+                }
+                else -> this
+            }
+            self.getObjective(command["targetObjective"]) { targetObjective ->
+                forScoreHolder(command["targets"]) { targetName ->
+                    getObjective(command["sourceObjective"]) { sourceObjective ->
+                        forScoreHolder(command["source"]) { sourceName ->
+                            getScoreData(targetObjective, targetName, true) { target ->
+                                getScoreData(sourceObjective, sourceName, true) { source ->
+                                    when(command.get<String>("operation")) {
+                                        "=" -> addInstruction(Instructions2.runScoreOperationSet(target, source))
+                                        "+=" -> addInstruction(Instructions2.runScoreOperationPlus(target, source))
+                                        "-=" -> addInstruction(Instructions2.runScoreOperationMinus(target, source))
+                                        "*=" -> addInstruction(Instructions2.runScoreOperationMultiply(target, source))
+                                        "/=" -> addInstruction(Instructions2.runScoreOperationDivide(target, source, exceptionScope))
+                                        "%=" -> addInstruction(Instructions2.runScoreOperationModulo(target, source, exceptionScope))
+                                        "<" -> addInstruction(Instructions2.runScoreOperationMin(target, source))
+                                        ">" -> addInstruction(Instructions2.runScoreOperationMax(target, source))
+                                        "><" -> addInstruction(Instructions2.runScoreOperationSwap(target, source))
+                                        else -> throw UnsupportedOperationException("Unknown operation: ${command.get<String>("operation")}")
                                     }
                                 }
                             }
