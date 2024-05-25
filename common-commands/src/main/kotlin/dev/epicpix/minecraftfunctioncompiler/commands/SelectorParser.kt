@@ -3,7 +3,6 @@ package dev.epicpix.minecraftfunctioncompiler.commands
 import com.mojang.brigadier.StringReader
 import dev.epicpix.minecraftfunctioncompiler.data.*
 import java.util.*
-import java.util.function.BiConsumer
 
 fun parseScoreHolder(scoreHolder: String): ScoreHolderArgument {
     if(scoreHolder.startsWith("@")) {
@@ -58,8 +57,8 @@ fun parseSelector(selector: String): SelectorArgument {
 }
 
 
-private val selectorOptions = mutableMapOf<String, BiConsumer<StringReader, SelectorGeneratorBuilderData>>()
-fun registerSelectorOption(name: String, exec: BiConsumer<StringReader, SelectorGeneratorBuilderData>) { selectorOptions[name] = exec }
+private val selectorOptions = mutableMapOf<String, SelectorReader>()
+fun registerSelectorOption(name: String, exec: SelectorReader) { selectorOptions[name] = exec }
 
 fun initBaseSelectorOptions() {
     registerSelectorOption("tag") { reader, data ->

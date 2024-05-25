@@ -10,10 +10,7 @@
   "environment": "*",
   "accessWidener": "minecraftfunctioncompiler.v1_20_2.accesswidener",
   "entrypoints": {
-    "main": [{
-      "adapter": "kotlin",
-      "value": "dev.epicpix.minecraftfunctioncompiler.v1_20_2.FunctionCompilerMain"
-    }]
+    "main": [ "dev.epicpix.minecraftfunctioncompiler.v1_20_2.FunctionCompilerMain" ]
   },
   "mixins": [
     "minecraftfunctioncompiler.v1_20_2.mixins.json"

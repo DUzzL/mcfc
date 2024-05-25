@@ -13,3 +13,10 @@ fun StringReader.readRawInt(): Int {
     }
     return if(negative) -num else num
 }
+
+fun StringReader.optRead(char: Char): Boolean {
+    return if(peek() == char) {
+        read()
+        true
+    } else false
+}
