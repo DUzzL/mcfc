@@ -1,7 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter.impl
 
-import dev.epicpix.minecraftfunctioncompiler.DATA_CLASS
-import dev.epicpix.minecraftfunctioncompiler.DEBUG
+import dev.epicpix.minecraftfunctioncompiler.CommonConstants.DATA_CLASS
+import dev.epicpix.minecraftfunctioncompiler.CommonConstants.DEBUG
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes

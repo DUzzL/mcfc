@@ -3,24 +3,25 @@ package dev.epicpix.minecraftfunctioncompiler.commands
 import com.mojang.brigadier.StringReader
 import dev.epicpix.minecraftfunctioncompiler.data.*
 import java.util.*
+import java.util.function.BiConsumer
 
 fun parseScoreHolder(scoreHolder: String): ScoreHolderArgument {
     if(scoreHolder.startsWith("@")) {
-        return ScoreHolderArgument(false, null, parseSelector(scoreHolder))
+        return ScoreHolderArgument.selectSelector(parseSelector(scoreHolder))
     }
     if(scoreHolder == "*") {
-        return ScoreHolderArgument(true, null, null)
+        return ScoreHolderArgument.selectAll()
     }
-    return ScoreHolderArgument(false, scoreHolder, null)
+    return ScoreHolderArgument.selectNamed(scoreHolder)
 }
 
 fun parseSelector(selector: String): SelectorArgument {
     if(!selector.startsWith("@")) {
         val entityUuid = runCatching { UUID.fromString(selector) }
         if (entityUuid.isSuccess) {
-            return SelectorArgument(entityUuid = entityUuid.getOrThrow())
+            return SelectorArgument.ofUuid(entityUuid.getOrThrow())
         }
-        return SelectorArgument(playerName = selector)
+        return SelectorArgument.ofPlayer(selector)
     }
 
     val reader = StringReader(selector)
@@ -28,7 +29,7 @@ fun parseSelector(selector: String): SelectorArgument {
     val selectorType = reader.read()
 
     val isSelf = selectorType == 's'
-    val data = SelectorGeneratorData()
+    val data = SelectorGeneratorBuilderData()
     if(isSelf) data.limit = 1
     if(selectorType == 'a') data.entityTypes = NegatableData(listOf(DataLocation("minecraft", "player")), false)
 
@@ -43,7 +44,7 @@ fun parseSelector(selector: String): SelectorArgument {
             if(!reader.canRead() || reader.read() != '=') throw UnsupportedOperationException("Cannot parse selector, missing '=': $selector")
             reader.skipWhitespace()
             val option = selectorOptions[key] ?: throw UnsupportedOperationException("Cannot parse selector key: $key in $selector")
-            option(reader, data)
+            option.accept(reader, data)
             reader.skipWhitespace()
             if(!reader.canRead()) throw UnsupportedOperationException("Cannot parse selector, ran out of data: $selector")
             val next = reader.read()
@@ -53,65 +54,53 @@ fun parseSelector(selector: String): SelectorArgument {
         }
     }
 
-    return SelectorArgument(
-        self = isSelf,
-        entityTypes = data.entityTypes,
-        tags = data.tags,
-        hasTags = if(data.tags.isNotEmpty()) null else data.hasTags,
-        team = data.team,
-        hasTeam = if(data.team != null) null else data.hasTeam,
-        limit = data.limit,
-        scores = data.scores,
-        gamemode = data.gamemode,
-        yaw = data.yaw,
-        pitch = data.pitch,
-    )
+    return data.build()
 }
 
 
-private val selectorOptions = mutableMapOf<String, StringReader.(SelectorGeneratorData) -> Unit>()
-fun registerSelectorOption(name: String, exec: StringReader.(SelectorGeneratorData) -> Unit) { selectorOptions[name] = exec }
+private val selectorOptions = mutableMapOf<String, BiConsumer<StringReader, SelectorGeneratorBuilderData>>()
+fun registerSelectorOption(name: String, exec: BiConsumer<StringReader, SelectorGeneratorBuilderData>) { selectorOptions[name] = exec }
 
 fun initBaseSelectorOptions() {
-    registerSelectorOption("tag") { data ->
-        val negated = if(peek() == '!') { read(); true } else false
-        val tag = readUnquotedString()
+    registerSelectorOption("tag") { reader, data ->
+        val negated = if(reader.peek() == '!') { reader.read(); true } else false
+        val tag = reader.readUnquotedString()
         if(tag == "") {
             data.hasTags = !negated
         }else {
             data.tags.add(NegatableData(tag, negated))
         }
     }
-    registerSelectorOption("limit") { data ->
-        data.limit = readInt()
+    registerSelectorOption("limit") { reader, data ->
+        data.limit = reader.readInt()
     }
-    registerSelectorOption("scores") { data ->
-        skip()
-        skipWhitespace()
-        while(peek() != '}') {
-            val objective = readUnquotedString()
-            skipWhitespace()
-            skip()
-            skipWhitespace()
+    registerSelectorOption("scores") { reader, data ->
+        reader.skip()
+        reader.skipWhitespace()
+        while(reader.peek() != '}') {
+            val objective = reader.readUnquotedString()
+            reader.skipWhitespace()
+            reader.skip()
+            reader.skipWhitespace()
             var start: Int? = null
             var end: Int? = null
-            if(peek().isDigit() || peek() == '-') start = readRawInt()
-            if(peek() == '.') {
-                skip()
-                skip()
-                if(peek().isDigit() || peek() == '-') {
-                    end = readRawInt()
+            if(reader.peek().isDigit() || reader.peek() == '-') start = reader.readRawInt()
+            if(reader.peek() == '.') {
+                reader.skip()
+                reader.skip()
+                if(reader.peek().isDigit() || reader.peek() == '-') {
+                    end = reader.readRawInt()
                 }
             } else end = start
-            skipWhitespace()
-            if(peek() == ',') read()
+            reader.skipWhitespace()
+            if(reader.peek() == ',') reader.read()
             data.scores[objective] = IntRangeArgument(start, end)
         }
-        read()
+        reader.read()
     }
-    registerSelectorOption("team") { data ->
-        val negated = if(peek() == '!') { read(); true } else false
-        val team = readUnquotedString()
+    registerSelectorOption("team") { reader, data ->
+        val negated = if(reader.peek() == '!') { reader.read(); true } else false
+        val team = reader.readUnquotedString()
         if(team == "") {
             data.hasTeam = !negated
         }else {

@@ -16,9 +16,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-import static dev.epicpix.minecraftfunctioncompiler.CompileConstantsKt.isDevelopmentEnvironment;
-import static dev.epicpix.minecraftfunctioncompiler.CompileConstantsKt.versionCommit;
-import static dev.epicpix.minecraftfunctioncompiler.CompileConstantsKt.versionName;
+import static dev.epicpix.minecraftfunctioncompiler.CompileConstants.isDevelopmentEnvironment;
+import static dev.epicpix.minecraftfunctioncompiler.CompileConstants.versionCommit;
+import static dev.epicpix.minecraftfunctioncompiler.CompileConstants.versionName;
 import static dev.epicpix.minecraftfunctioncompiler.il.Instruction.printInstructionList;
 
 public final class FunctionCompilerReporter {
@@ -116,8 +116,8 @@ public final class FunctionCompilerReporter {
         compilationStats.add("timings", timings);
 
         JsonObject instructionCounts = new JsonObject();
-        instructionCounts.addProperty("pre_optimization", optimizationStats.stream().mapToInt(it -> it.get(0).getInstructionCount()).sum());
-        instructionCounts.addProperty("post_optimization", optimizationStats.stream().mapToInt(it -> it.get(it.size() - 1).getInstructionCount()).sum());
+        instructionCounts.addProperty("pre_optimization", optimizationStats.stream().mapToInt(it -> it.get(0).instructionCount()).sum());
+        instructionCounts.addProperty("post_optimization", optimizationStats.stream().mapToInt(it -> it.get(it.size() - 1).instructionCount()).sum());
         compilationStats.add("compilation_counts", instructionCounts);
 
         JsonArray optimizations = new JsonArray();
@@ -125,9 +125,9 @@ public final class FunctionCompilerReporter {
             JsonArray arr = new JsonArray();
             for(var optimization : optimizationData) {
                 JsonObject optimizationObj = new JsonObject();
-                optimizationObj.addProperty("optimization", optimization.getType());
-                optimizationObj.addProperty("instruction_count", optimization.getInstructionCount());
-                optimizationObj.addProperty("time_taken", optimization.getTimeTaken());
+                optimizationObj.addProperty("optimization", optimization.type());
+                optimizationObj.addProperty("instruction_count", optimization.instructionCount());
+                optimizationObj.addProperty("time_taken", optimization.timeTaken());
                 arr.add(optimizationObj);
             }
             optimizations.add(arr);

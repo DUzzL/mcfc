@@ -1,8 +1,8 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_4.emitter
 
 import dev.epicpix.minecraftfunctioncompiler.data.*
+import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterHelper.checkFloatRange
 import dev.epicpix.minecraftfunctioncompiler.emitter.callMath_floor
-import dev.epicpix.minecraftfunctioncompiler.emitter.checkFloatRange
 import dev.epicpix.minecraftfunctioncompiler.emitter.registerEmitterInstruction
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData
@@ -88,7 +88,7 @@ fun registerInstructionEmitters() {
         codeWriter.callScore_getScore { load("source") }
         codeWriter.callScore_getScore { load("target") }
 
-        codeWriter.executeIf(when(instruction.get<ScoreboardCompareOperation>("compareOperation")) {
+        codeWriter.executeIf(when(instruction.get<ScoreboardCompareOperation>("compareOperation")!!) {
             ScoreboardCompareOperation.LT -> Opcodes.IF_ICMPLT
             ScoreboardCompareOperation.LE -> Opcodes.IF_ICMPLE
             ScoreboardCompareOperation.EQ -> Opcodes.IF_ICMPEQ
@@ -172,7 +172,7 @@ fun registerInstructionEmitters() {
                 codeWriter.castType(ServerPlayer::class.java)
             }
         }
-        when(instruction.get<Gamemode>("gamemode")) {
+        when(instruction.get<Gamemode>("gamemode")!!) {
             Gamemode.SURVIVAL -> codeWriter.loadGameType_SURVIVAL()
             Gamemode.CREATIVE -> codeWriter.loadGameType_CREATIVE()
             Gamemode.ADVENTURE -> codeWriter.loadGameType_ADVENTURE()
@@ -187,7 +187,7 @@ fun registerInstructionEmitters() {
         codeWriter.callServerPlayer_setGameMode {
             load("entity")
             codeWriter.castType(ServerPlayer::class.java)
-            when(instruction.get<Gamemode>("gamemode")) {
+            when(instruction.get<Gamemode>("gamemode")!!) {
                 Gamemode.SURVIVAL -> codeWriter.loadGameType_SURVIVAL()
                 Gamemode.CREATIVE -> codeWriter.loadGameType_CREATIVE()
                 Gamemode.ADVENTURE -> codeWriter.loadGameType_ADVENTURE()
@@ -197,21 +197,11 @@ fun registerInstructionEmitters() {
         codeWriter.methodVisitor.visitInsn(Opcodes.POP)
     }
     registerEmitterInstruction(InstructionTypes.CHECK_ROTATION_YAW) {
-        val yaw = instruction.get<FloatRangeArgument?>("yaw")
-        if(yaw != null) {
-            codeWriter.loadVec2_x { load("rotation") }
-            checkFloatRange(yaw) { run() }
-            return@registerEmitterInstruction
-        }
-        run()
+        codeWriter.loadVec2_x { load("rotation") }
+        checkFloatRange(this, instruction.get("yaw")) { run() }
     }
     registerEmitterInstruction(InstructionTypes.CHECK_ROTATION_PITCH) {
-        val pitch = instruction.get<FloatRangeArgument?>("pitch")
-        if(pitch != null) {
-            codeWriter.loadVec2_y { load("rotation") }
-            checkFloatRange(pitch) { run() }
-            return@registerEmitterInstruction
-        }
-        run()
+        codeWriter.loadVec2_y { load("rotation") }
+        checkFloatRange(this, instruction.get("pitch")) { run() }
     }
 }

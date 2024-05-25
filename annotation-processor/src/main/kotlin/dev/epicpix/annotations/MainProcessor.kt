@@ -158,11 +158,14 @@ class MainProcessor(
     fun generateConstantsData() {
         val resultPackage = "dev.epicpix.minecraftfunctioncompiler"
         val resultName = "CompileConstants"
-        val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "kt")
-        map.appendText("package $resultPackage\n")
-        map.appendText("const val isDevelopmentEnvironment: Boolean = ${options["isJarTask"] != "true"}\n")
-        map.appendText("const val versionCommit: String = \"${options["commit"] ?: "development"}\"\n")
-        map.appendText("const val versionName: String = \"${options["version"] ?: error("Version option not specified")}\"\n")
+        val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")
+        map.appendText("package $resultPackage;\n")
+        map.appendText("public final class $resultName {\n")
+        map.appendText("    private $resultName() {}\n")
+        map.appendText("    public static final boolean isDevelopmentEnvironment = ${options["isJarTask"] != "true"};\n")
+        map.appendText("    public static final String versionCommit = \"${options["commit"] ?: "development"}\";\n")
+        map.appendText("    public static final String versionName = \"${options["version"] ?: error("Version option not specified")}\";\n")
+        map.appendText("}\n")
         map.close()
     }
 

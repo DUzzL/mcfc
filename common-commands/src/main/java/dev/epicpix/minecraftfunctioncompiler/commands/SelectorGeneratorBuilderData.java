@@ -5,8 +5,9 @@ import dev.epicpix.minecraftfunctioncompiler.data.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-public class SelectorGeneratorData {
+public class SelectorGeneratorBuilderData {
     public NegatableData<List<DataLocation>> entityTypes = null;
     public final ArrayList<NegatableData<String>> tags = new ArrayList<>();
     public Boolean hasTags = null;
@@ -17,4 +18,23 @@ public class SelectorGeneratorData {
     public NegatableData<Gamemode> gamemode = null;
     public FloatRangeArgument yaw = null;
     public FloatRangeArgument pitch = null;
+
+    public SelectorArgument build() {
+        return new SelectorArgument(
+                null,
+                null,
+                false,
+                limit,
+                entityTypes != null ? new NegatableData<>(List.copyOf(entityTypes.data()), entityTypes.negated()) : null,
+                hasTags,
+                List.copyOf(tags),
+                hasTeam,
+                team,
+                Map.copyOf(scores),
+                gamemode,
+                yaw,
+                pitch
+        );
+    }
+
 }

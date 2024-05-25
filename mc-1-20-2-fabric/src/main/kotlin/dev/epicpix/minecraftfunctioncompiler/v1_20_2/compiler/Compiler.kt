@@ -1,8 +1,8 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_2.compiler
 
 import dev.epicpix.minecraftfunctioncompiler.commands.CommandType
-import dev.epicpix.minecraftfunctioncompiler.compiler.impl.CompilationContext
 import dev.epicpix.minecraftfunctioncompiler.compiler.ResultStorage
+import dev.epicpix.minecraftfunctioncompiler.compiler.impl.CompilationContext
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument
 import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument
 import dev.epicpix.minecraftfunctioncompiler.il.*
@@ -44,13 +44,13 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
             }
         }
         CommandType.EXECUTE_IF_ENTITY -> {
-            forSelector(command.get<SelectorArgument>("entities").copy(limit = 1)) { _, _, _ ->
+            forSelector(command.get<SelectorArgument>("entities").limit(1)) { _, _, _ ->
                 compile(command["command"])
             }
         }
         CommandType.EXECUTE_IF_SCORE_RANGE -> {
             getObjective(command["targetObjective"]) { objective ->
-                forScoreHolder(command.get<ScoreHolderArgument>("target").single()) { name ->
+                forScoreHolder(command.get<ScoreHolderArgument>("target").selectSingle()) { name ->
                     getScoreData(objective, name, false) { score ->
                         val instr = Instructions.checkScoreRange(score, command["range"], false)
                         with(addInstruction = instr.children::add).compile(command["command"])
@@ -61,9 +61,9 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
         }
         CommandType.EXECUTE_IF_SCORE_COMPARE -> {
             getObjective(command["targetObjective"]) { targetObjective ->
-                forScoreHolder(command.get<ScoreHolderArgument>("target").single()) { targetName ->
+                forScoreHolder(command.get<ScoreHolderArgument>("target").selectSingle()) { targetName ->
                     getObjective(command["sourceObjective"]) { sourceObjective ->
-                        forScoreHolder(command.get<ScoreHolderArgument>("source").single()) { sourceName ->
+                        forScoreHolder(command.get<ScoreHolderArgument>("source").selectSingle()) { sourceName ->
                             getScoreData(targetObjective, targetName, false) { target ->
                                 getScoreData(sourceObjective, sourceName, false) { source ->
                                     val operation = when(command.get<String>("comparison")) {
@@ -104,7 +104,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
         }
         CommandType.EXECUTE_UNLESS_ENTITY -> {
             forScope {  scope ->
-                forSelector(command.get<SelectorArgument>("entities").copy(limit = 1)) { _, _, _ ->
+                forSelector(command.get<SelectorArgument>("entities").limit(1)) { _, _, _ ->
                     addInstruction(Instructions2.exitScope(scope))
                 }
                 compile(command["command"])
@@ -112,7 +112,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
         }
         CommandType.EXECUTE_UNLESS_SCORE_RANGE -> {
             getObjective(command["targetObjective"]) { objective ->
-                forScoreHolder(command.get<ScoreHolderArgument>("target").single()) { name ->
+                forScoreHolder(command.get<ScoreHolderArgument>("target").selectSingle()) { name ->
                     getScoreData(objective, name, false) { score ->
                         val instr = Instructions.checkScoreRange(score, command["range"], true)
                         copy(addInstruction = instr.children::add).compile(command["command"])
@@ -123,9 +123,9 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
         }
         CommandType.EXECUTE_UNLESS_SCORE_COMPARE -> {
             getObjective(command["targetObjective"]) { targetObjective ->
-                forScoreHolder(command.get<ScoreHolderArgument>("target").single()) { targetName ->
+                forScoreHolder(command.get<ScoreHolderArgument>("target").selectSingle()) { targetName ->
                     getObjective(command["sourceObjective"]) { sourceObjective ->
-                        forScoreHolder(command.get<ScoreHolderArgument>("source").single()) { sourceName ->
+                        forScoreHolder(command.get<ScoreHolderArgument>("source").selectSingle()) { sourceName ->
                             getScoreData(targetObjective, targetName, false) { target ->
                                 getScoreData(sourceObjective, sourceName, false) { source ->
                                     val operation = when(command.get<String>("comparison")) {

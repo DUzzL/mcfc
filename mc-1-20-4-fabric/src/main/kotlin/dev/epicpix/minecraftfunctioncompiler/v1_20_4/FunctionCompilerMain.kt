@@ -24,10 +24,10 @@ object FunctionCompilerMain : ModInitializer {
         Emitter2.registerInstructionEmitters()
         registerInstructionEmitters()
         initBaseSelectorOptions()
-        registerSelectorOption("type") { data ->
-            val negated = if(peek() == '!') { read(); true } else false
-            val tag = if(peek() == '#') { read(); true } else false
-            val type = ResourceLocation.read(this)
+        registerSelectorOption("type") { reader, data ->
+            val negated = if(reader.peek() == '!') { reader.read(); true } else false
+            val tag = if(reader.peek() == '#') { reader.read(); true } else false
+            val type = ResourceLocation.read(reader)
             val types = if(!tag) listOf(type.toDataLocation()) else {
                 val tagKey = TagKey.create(Registries.ENTITY_TYPE, type)
                 val typeData = BuiltInRegistries.ENTITY_TYPE.getTag(tagKey)
@@ -42,17 +42,17 @@ object FunctionCompilerMain : ModInitializer {
             }
             data.entityTypes = NegatableData(types, negated)
         }
-        registerSelectorOption("gamemode") { data ->
-            val negated = if(peek() == '!') { read(); true } else false
-            data.gamemode = NegatableData(GameType.byName(readUnquotedString(), null)!!.toGamemode(), negated)
+        registerSelectorOption("gamemode") { reader, data ->
+            val negated = if(reader.peek() == '!') { reader.read(); true } else false
+            data.gamemode = NegatableData(GameType.byName(reader.readUnquotedString(), null)!!.toGamemode(), negated)
             data.entityTypes = NegatableData(listOf(DataLocation("minecraft", "player")), false)
         }
-        registerSelectorOption("x_rotation") { data ->
-            val bounds = WrappedMinMaxBounds.fromReader(this, true, Mth::wrapDegrees)
+        registerSelectorOption("x_rotation") { reader, data ->
+            val bounds = WrappedMinMaxBounds.fromReader(reader, true, Mth::wrapDegrees)
             data.pitch = FloatRangeArgument(bounds.min, bounds.max)
         }
-        registerSelectorOption("y_rotation") { data ->
-            val bounds = WrappedMinMaxBounds.fromReader(this, true, Mth::wrapDegrees)
+        registerSelectorOption("y_rotation") { reader, data ->
+            val bounds = WrappedMinMaxBounds.fromReader(reader, true, Mth::wrapDegrees)
             data.yaw = FloatRangeArgument(bounds.min, bounds.max)
         }
     }

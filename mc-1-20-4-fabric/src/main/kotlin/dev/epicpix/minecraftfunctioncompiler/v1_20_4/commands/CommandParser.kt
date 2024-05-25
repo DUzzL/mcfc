@@ -197,7 +197,7 @@ object CommandParser {
         return if(targets != null) {
             Command(CommandType.GAMEMODE, mapOf("gamemode" to gamemode, "targets" to parseSelector(targets.range[source])))
         }else {
-            Command(CommandType.GAMEMODE, mapOf("gamemode" to gamemode, "targets" to SelectorArgument(self = true)))
+            Command(CommandType.GAMEMODE, mapOf("gamemode" to gamemode, "targets" to SelectorArgument.ofSelf()))
         }
     }
 
@@ -206,7 +206,7 @@ object CommandParser {
         return if(targets != null) {
             Command(CommandType.KILL, mapOf("targets" to parseSelector(targets.range[source])))
         }else {
-            Command(CommandType.KILL, mapOf("targets" to SelectorArgument(self = true)))
+            Command(CommandType.KILL, mapOf("targets" to SelectorArgument.ofSelf()))
         }
     }
 

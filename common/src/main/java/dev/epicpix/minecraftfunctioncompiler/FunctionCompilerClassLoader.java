@@ -25,8 +25,8 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import static dev.epicpix.minecraftfunctioncompiler.CommonConstantsKt.DATA_CLASS;
-import static dev.epicpix.minecraftfunctioncompiler.CommonConstantsKt.DEBUG;
+import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DATA_CLASS;
+import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DEBUG;
 import static dev.epicpix.minecraftfunctioncompiler.il.Instruction.printInstructionList;
 import static dev.epicpix.minecraftfunctioncompiler.optimizer.OptimizerKt.optimize;
 import static org.objectweb.asm.ClassWriter.COMPUTE_FRAMES;
@@ -225,7 +225,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
     }
 
     private Class<?> defineClass(String name, byte[] data) {
-        if(CommonConstantsKt.DEBUG) {
+        if(CommonConstants.DEBUG) {
             try {
                 Files.createDirectory(generatedDir);
             }catch(Exception ignored) {}

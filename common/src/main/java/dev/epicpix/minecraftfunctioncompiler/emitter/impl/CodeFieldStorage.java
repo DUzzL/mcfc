@@ -8,8 +8,8 @@ import org.objectweb.asm.Opcodes;
 import java.util.ArrayList;
 import java.util.UUID;
 
-import static dev.epicpix.minecraftfunctioncompiler.CommonConstantsKt.DEBUG;
-import static dev.epicpix.minecraftfunctioncompiler.CommonConstantsKt.EMIT_SERVER_FUNCTION_MANAGER_NAME;
+import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DEBUG;
+import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.EMIT_SERVER_FUNCTION_MANAGER_NAME;
 
 public final class CodeFieldStorage {
 

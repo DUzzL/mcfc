@@ -123,7 +123,7 @@ data class CompilationContext(
         }else if(holder.name != null) {
             exec(LocationData.ofString(holder.name))
         }else if(holder.selector != null) {
-            val selector = if(holder.single) holder.selector.copy(limit = 1) else holder.selector
+            val selector = if(holder.single) holder.selector.limit(1) else holder.selector
             forSelector(selector) { entity, _, _ ->
                 val local = LocationData.ofLocal(highestLocal)
                 val instruction = Instructions2.getScoreboardName(entity, local)
@@ -273,7 +273,7 @@ data class CompilationContext(
             realContext.forEntity(selector.entityUuid) { local, breakScope, continueScope -> checkEntityCondition(this, local, breakScope, continueScope) }
         }else if(selector.self) {
             realContext.forCurrentEntity { local, breakScope, continueScope -> checkEntityCondition(this, local, breakScope, continueScope) }
-        }else if(selector.selectPlayers) {
+        }else if(selector.selectPlayers()) {
             realContext.forEachPlayer { local, breakScope, continueScope -> checkEntityCondition(this, local, breakScope, continueScope) }
         }else {
             realContext.forEachEntity { local, breakScope, continueScope -> checkEntityCondition(this, local, breakScope, continueScope) }

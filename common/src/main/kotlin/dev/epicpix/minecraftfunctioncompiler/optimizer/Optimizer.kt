@@ -7,18 +7,12 @@ import dev.epicpix.minecraftfunctioncompiler.optimizer.optimizations.ScopeInstru
 
 typealias InstructionList = List<Instruction>
 
-interface Optimization {
-    fun optimize(instructions: InstructionList): InstructionList
-}
-
 val optimizations: List<Optimization> = listOf(
     DeadCodeEliminationOptimization,
     CommonSubexpressionEliminationOptimization,
 //    LocalInvariantCodeHoistingOptimization,
     ScopeInstructionMergeOptimization,
 )
-
-data class OptimizationStatistics(val type: String?, val instructionCount: Int, val timeTaken: Double)
 
 fun optimize(instructions: InstructionList, statistics: MutableList<OptimizationStatistics>): InstructionList {
     var newInstructions = instructions

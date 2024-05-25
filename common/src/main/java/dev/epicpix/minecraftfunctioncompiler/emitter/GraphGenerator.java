@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static dev.epicpix.minecraftfunctioncompiler.CommonConstantsKt.DEBUG;
+import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DEBUG;
 
 public final class GraphGenerator {
     private GraphGenerator() {}
