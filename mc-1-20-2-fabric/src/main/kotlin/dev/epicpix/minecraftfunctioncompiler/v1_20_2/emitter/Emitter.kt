@@ -9,7 +9,6 @@ import dev.epicpix.minecraftfunctioncompiler.il.LocationData
 import dev.epicpix.minecraftfunctioncompiler.il.ScoreboardCompareOperation
 import dev.epicpix.minecraftfunctioncompiler.v1_20_2.data.RegistryMapping
 import net.minecraft.commands.CommandSourceStack
-import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.phys.Vec3
 import org.objectweb.asm.Label
@@ -110,11 +109,6 @@ fun registerInstructionEmitters() {
             ScoreboardCompareOperation.GE -> Opcodes.IF_ICMPGE
             ScoreboardCompareOperation.GT -> Opcodes.IF_ICMPGT
         }) { run() }
-    }
-    registerEmitterInstruction(InstructionTypes.GET_ENTITY_WORLD) {
-        codeWriter.callEntity_level { load("entity") }
-        codeWriter.castType(ServerLevel::class.java)
-        runStored("world", ServerLevel::class.java)
     }
     registerEmitterInstruction(InstructionTypes.APPLY_POSITION_WORLD) {
         codeWriter.newObject(Vec3::class.java, Double::class.java, Double::class.java, Double::class.java) {

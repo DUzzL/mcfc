@@ -38,7 +38,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                 val position = LocationData.ofLocal(highestLocal + 1)
                 val rotation = LocationData.ofLocal(highestLocal + 2)
                 val execInstruction = Instructions2.getEntityRotation(entity, rotation)
-                val instruction = Instructions.getEntityWorld(entity, world).with(Instructions2.getEntityPosition(entity, position).with(execInstruction))
+                val instruction = Instructions2.getEntityWorld(entity, world).with(Instructions2.getEntityPosition(entity, position).with(execInstruction))
                 with(highestLocal = highestLocal + 3, currentWorld = world, currentPosition = position, currentRotation = rotation, addInstruction = execInstruction.children::add).compile(command["command"], result)
                 addInstruction(instruction)
             }

@@ -98,11 +98,6 @@ fun registerInstructionEmitters() {
             ScoreboardCompareOperation.GT -> Opcodes.IF_ICMPGT
         }) { run() }
     }
-    registerEmitterInstruction(InstructionTypes.GET_ENTITY_WORLD) {
-        codeWriter.callEntity_level { load("entity") }
-        codeWriter.castType(ServerLevel::class.java)
-        runStored("world", ServerLevel::class.java)
-    }
     registerEmitterInstruction(InstructionTypes.APPLY_POSITION_WORLD) {
         codeWriter.newObject(Vec3::class.java, Double::class.java, Double::class.java, Double::class.java) {
             val pos = instruction.get<WorldCoordinates>("position")

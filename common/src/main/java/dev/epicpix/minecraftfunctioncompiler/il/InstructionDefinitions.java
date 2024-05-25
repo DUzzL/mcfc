@@ -15,7 +15,6 @@ interface InstructionDefinitions {
     Instruction callFunctions(List<DataLocation> functions, @Nullable @InstructionSource LocationData entity, @Nullable @InstructionSource LocationData world, @Nullable @InstructionSource LocationData position, @Nullable @InstructionSource LocationData rotation);
     Instruction checkScoreRange(@InstructionSource LocationData score, IntRangeArgument range, boolean negate);
     Instruction checkScoreCompare(@InstructionSource LocationData target, @InstructionSource LocationData source, ScoreboardCompareOperation compareOperation);
-    Instruction getEntityWorld(@InstructionSource LocationData entity, @InstructionDestination LocationData world);
     Instruction applyPositionWorld(@InstructionSource LocationData from, @InstructionDestination LocationData to, WorldCoordinates position);
     Instruction checkEntityTypes(@InstructionSource LocationData entity, List<DataLocation> types, boolean negated);
     Instruction alignPosition(@InstructionSource LocationData position, @InstructionDestination LocationData result, SwizzleArgument swizzle);

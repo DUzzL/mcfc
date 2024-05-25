@@ -801,7 +801,10 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
         if(def.sort == Type.OBJECT) {
             return ParsedTokenExpressionTypeComplex(def.className)
         }
-        TODO(def.descriptor)
+        if(expression.name == "<init>") {
+            return ParsedTokenExpressionTypeComplex(functionMatches[0].owner)
+        }
+        throw IllegalArgumentException(def.descriptor)
     }else if(expression is ParsedTokenExpressionField) {
         val instance = expression.instance
         val fieldMatch = if(instance is ParsedTokenInstanceValue) {
@@ -1302,6 +1305,11 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                 if(assignType.first() == 'I') {
                     output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ISTORE, $storageLocal.getIndex());\n")
                 } else if(assignType.first() == 'L') {
+                    val expressionType = evaluateExpressionType(writerData, el.expression)
+                    val expressionClasses = getClassLowerBounds((expressionType as ParsedTokenExpressionTypeComplex).typeName.replace('/', '.'))
+                    if(!expressionClasses.contains((type as ParsedTokenExpressionTypeComplex).typeName)) {
+                        output.appendText("mv.visitTypeInsn(org.objectweb.asm.Opcodes.CHECKCAST, \"$assignType\");\n")
+                    }
                     output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, $storageLocal.getIndex());\n")
                 } else {
                     throw IllegalStateException("Unknown assign type: $assignType")

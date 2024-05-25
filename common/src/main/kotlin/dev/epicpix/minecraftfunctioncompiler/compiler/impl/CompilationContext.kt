@@ -65,7 +65,7 @@ data class CompilationContext(
             forCurrentEntity { entity, _, _ ->
                 val local = LocationData.ofLocal(highestLocal)
                 val nullCheck = Instructions2.ifNotNull(entity)
-                val instruction = Instructions.getEntityWorld(entity, local)
+                val instruction = Instructions2.getEntityWorld(entity, local)
                 instruction.with(nullCheck)
                 addInstruction(nullCheck)
                 exec(with(currentRotation = local, highestLocal = highestLocal + 1, addInstruction = instruction.children::add), local)

@@ -436,3 +436,7 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
   [ctx:source].set([local:temp]);
 }
 
+@GET_ENTITY_WORLD(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.server.level.ServerLevel> [ctx:level]) {
+  let [ctx:level] = [ctx:entity].level();
+  run();
+}
