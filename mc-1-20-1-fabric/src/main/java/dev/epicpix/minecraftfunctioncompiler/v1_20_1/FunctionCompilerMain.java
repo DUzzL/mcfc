@@ -1,6 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_1;
 
-import dev.epicpix.minecraftfunctioncompiler.commands.SelectorParserKt;
+import dev.epicpix.minecraftfunctioncompiler.commands.SelectorParser;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.FloatRangeArgument;
 import dev.epicpix.minecraftfunctioncompiler.data.NegatableData;
@@ -9,7 +9,6 @@ import dev.epicpix.minecraftfunctioncompiler.v1_20_1.data.RegistryMapping;
 import dev.epicpix.minecraftfunctioncompiler.v1_20_1.emitter.Emitter2;
 import dev.epicpix.minecraftfunctioncompiler.v1_20_1.emitter.EmitterKt;
 import net.fabricmc.api.ModInitializer;
-import net.minecraft.advancements.critereon.WrappedMinMaxBounds;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
@@ -19,23 +18,21 @@ import net.minecraft.world.level.GameType;
 
 import java.util.List;
 
-import static dev.epicpix.minecraftfunctioncompiler.commands.StringReaderExtensionsKt.optRead;
-
 public class FunctionCompilerMain implements ModInitializer {
     public void onInitialize() {
         EmitterBaseOptions.registerInstructionEmitters();
         Emitter2.registerInstructionEmitters();
         EmitterKt.registerInstructionEmitters();
-        SelectorParserKt.initBaseSelectorOptions();
-        SelectorParserKt.registerSelectorOption("type", (reader, data) -> {
-            var negated = optRead(reader, '!');
-            var tag = optRead(reader, '#');
-            var type = ResourceLocation.read(reader);
+        SelectorParser.initBaseSelectorOptions();
+        SelectorParser.registerSelectorOption("type", (reader, data) -> {
+            var negated = reader.skipIfNext('!');
+            var tag = reader.skipIfNext('#');
+            var type = reader.readDataLocation();
             List<DataLocation> types;
             if(!tag) {
-                types = List.of(ExtensionsKt.toDataLocation(type));
+                types = List.of(type);
             }else {
-                var tagKey = TagKey.create(Registries.ENTITY_TYPE, type);
+                var tagKey = TagKey.create(Registries.ENTITY_TYPE, new ResourceLocation(type.namespace(), type.path()));
                 var typeData = BuiltInRegistries.ENTITY_TYPE.getTag(tagKey);
                 types = typeData
                         .map(holders -> holders.stream()
@@ -51,18 +48,18 @@ public class FunctionCompilerMain implements ModInitializer {
             }
             data.entityTypes = new NegatableData<>(types, negated);
         });
-        SelectorParserKt.registerSelectorOption("gamemode", (reader, data) -> {
-            var negated = optRead(reader, '!');
-            data.gamemode = new NegatableData<>(ExtensionsKt.toGamemode(GameType.byName(reader.readUnquotedString(), GameType.DEFAULT_MODE)), negated);
+        SelectorParser.registerSelectorOption("gamemode", (reader, data) -> {
+            var negated = reader.skipIfNext('!');
+            data.gamemode = new NegatableData<>(ExtensionsKt.toGamemode(GameType.byName(reader.readWord(), GameType.DEFAULT_MODE)), negated);
             data.entityTypes = new NegatableData<>(List.of(new DataLocation("minecraft", "player")), false);
         });
-        SelectorParserKt.registerSelectorOption("x_rotation", (reader, data) -> {
-            var bounds = WrappedMinMaxBounds.fromReader(reader, true, Mth::wrapDegrees);
-            data.pitch = new FloatRangeArgument(bounds.getMin(), bounds.getMax());
+        SelectorParser.registerSelectorOption("x_rotation", (reader, data) -> {
+            var bounds = reader.readFloatRange();
+            data.pitch = new FloatRangeArgument(bounds.minimum() != null ? Mth.wrapDegrees(bounds.minimum()) : null, bounds.maximum() != null ? Mth.wrapDegrees(bounds.maximum()) : null);
         });
-        SelectorParserKt.registerSelectorOption("y_rotation", (reader, data) -> {
-            var bounds = WrappedMinMaxBounds.fromReader(reader, true, Mth::wrapDegrees);
-            data.yaw = new FloatRangeArgument(bounds.getMin(), bounds.getMax());
+        SelectorParser.registerSelectorOption("y_rotation", (reader, data) -> {
+            var bounds = reader.readFloatRange();
+            data.yaw = new FloatRangeArgument(bounds.minimum() != null ? Mth.wrapDegrees(bounds.minimum()) : null, bounds.maximum() != null ? Mth.wrapDegrees(bounds.maximum()) : null);
         });
     }
 }

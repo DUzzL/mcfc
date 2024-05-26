@@ -3,8 +3,8 @@ package dev.epicpix.minecraftfunctioncompiler.v1_20_4.commands
 import com.mojang.brigadier.context.CommandContextBuilder
 import com.mojang.brigadier.context.ParsedCommandNode
 import dev.epicpix.minecraftfunctioncompiler.commands.CommandType
-import dev.epicpix.minecraftfunctioncompiler.commands.parseScoreHolder
-import dev.epicpix.minecraftfunctioncompiler.commands.parseSelector
+import dev.epicpix.minecraftfunctioncompiler.commands.SelectorParser.parseScoreHolder
+import dev.epicpix.minecraftfunctioncompiler.commands.SelectorParser.parseSelector
 import dev.epicpix.minecraftfunctioncompiler.data.*
 import dev.epicpix.minecraftfunctioncompiler.parser.Command
 import dev.epicpix.minecraftfunctioncompiler.v1_20_4.toDataLocation

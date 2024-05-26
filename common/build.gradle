@@ -19,7 +19,6 @@ dependencies {
     implementation(project(":annotation-processor"))
     implementation("org.ow2.asm:asm:9.6")
     implementation("com.google.code.gson:gson:2.10.1")
-    implementation("com.mojang:brigadier:1.1.8")
     ksp project(":annotation-processor")
 }
 
