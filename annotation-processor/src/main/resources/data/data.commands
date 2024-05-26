@@ -1,0 +1,24 @@
+EXECUTE_ALIGN/execute align <swizzle:swizzle> <command:execute_subcommand>
+EXECUTE_AS/execute as <selector:entity_selector> <command:execute_subcommand>
+EXECUTE_AT/execute at <selector:entity_selector> <command:execute_subcommand>
+EXECUTE_IF_ENTITY/execute if entity <selector:entity_selector> <command:execute_subcommand>
+EXECUTE_IF_SCORE_RANGE/execute if score <target:score_holder> <targetObjective:objective> matches <range:int_range> <command:execute_subcommand>
+EXECUTE_IF_SCORE_COMPARE/execute if score <target:score_holder> <targetObjective:objective> <comparison:score_comparison> <source:score_holder> <sourceObjective:objective> <command:execute_subcommand>
+EXECUTE_RUN/execute run <command:root_command>
+EXECUTE_POSITIONED/execute positioned <pos:vec3> <command:execute_subcommand>
+EXECUTE_STORE_RESULT_SCORE/execute store result score <targets:score_holder> <objective:objective> <command:execute_subcommand>
+EXECUTE_UNLESS_ENTITY/execute unless entity <selector:entity_selector> <command:execute_subcommand>
+EXECUTE_UNLESS_SCORE_RANGE/execute unless score <target:score_holder> <targetObjective:objective> matches <range:int_range> <command:execute_subcommand>
+EXECUTE_UNLESS_SCORE_COMPARE/execute unless score <target:score_holder> <targetObjective:objective> <comparison:score_comparison> <source:score_holder> <sourceObjective:objective> <command:execute_subcommand>
+FUNCTION/function <functions:function>
+GAMEMODE/gamemode <gamemode:gamemode> <targets:entity_selector[players]:self>
+KILL/kill <targets:entity_selector[players]:self>
+SCOREBOARD_PLAYERS_ADD/scoreboard players add <targets:score_holder> <objective:objective> <value:int[minimum=0]>
+SCOREBOARD_PLAYERS_GET/scoreboard players get <targets:score_holder> <objective:objective>
+SCOREBOARD_PLAYERS_OPERATION/scoreboard players operation <targets:score_holder> <targetObjective:objective> <operation:scoreboard_operation> <source:score_holder> <sourceObjective:objective>
+SCOREBOARD_PLAYERS_REMOVE/scoreboard players remove <targets:score_holder> <objective:objective> <value:int[minimum=0]>
+SCOREBOARD_PLAYERS_RESET_OBJECTIVE/scoreboard players reset <targets:score_holder> <objective:objective>
+SCOREBOARD_PLAYERS_RESET_ALL/scoreboard players reset <targets:score_holder>
+SCOREBOARD_PLAYERS_SET/scoreboard players set <value:int[minimum=0]>
+TAG_ADD/tag <targets:entity_selector> add <name:word>
+TAG_REMOVE/tag <targets:entity_selector> remove <name:word>

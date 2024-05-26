@@ -4,6 +4,7 @@ import dev.epicpix.minecraftfunctioncompiler.commands.CommandType
 import dev.epicpix.minecraftfunctioncompiler.compiler.ResultStorage
 import dev.epicpix.minecraftfunctioncompiler.compiler.impl.CompilationContext
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument
+import dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCompareOperation
 import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument
 import dev.epicpix.minecraftfunctioncompiler.il.*
 import dev.epicpix.minecraftfunctioncompiler.parser.Command
@@ -52,7 +53,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
             getObjective(command["targetObjective"]) { objective ->
                 forScoreHolder(command.get<ScoreHolderArgument>("target").selectSingle()) { name ->
                     getScoreData(objective, name, false) { score ->
-                        val instr = Instructions.checkScoreRange(score, command["range"], false)
+                        val instr = Instructions.checkInScoreRange(score, command["range"])
                         with(addInstruction = instr.children::add).compile(command["command"])
                         addInstruction(instr)
                     }
@@ -114,7 +115,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
             getObjective(command["targetObjective"]) { objective ->
                 forScoreHolder(command.get<ScoreHolderArgument>("target").selectSingle()) { name ->
                     getScoreData(objective, name, false) { score ->
-                        val instr = Instructions.checkScoreRange(score, command["range"], true)
+                        val instr = Instructions.checkNotInScoreRange(score, command["range"])
                         copy(addInstruction = instr.children::add).compile(command["command"])
                         addInstruction(instr)
                     }

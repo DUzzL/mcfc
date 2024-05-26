@@ -239,7 +239,7 @@ data class CompilationContext(
                     ctx.with(addInstruction = stacker::stackInstruction).getObjective(obj) { objective ->
                         getScoreboardName(local) { name ->
                             getScoreData(objective, name, false) { score ->
-                                val instr = Instructions.checkScoreRange(score, range, false)
+                                val instr = Instructions.checkInScoreRange(score, range)
                                 addInstruction(instr)
                                 stacker.current = instr
                                 ctx = this

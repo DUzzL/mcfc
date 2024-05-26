@@ -6,10 +6,9 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.callMath_floor
 import dev.epicpix.minecraftfunctioncompiler.emitter.registerEmitterInstruction
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData
-import dev.epicpix.minecraftfunctioncompiler.il.ScoreboardCompareOperation
+import dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCompareOperation
 import dev.epicpix.minecraftfunctioncompiler.v1_20_1.data.RegistryMapping
 import net.minecraft.commands.CommandSourceStack
-import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.phys.Vec3
 import org.objectweb.asm.Label
@@ -44,44 +43,58 @@ fun registerInstructionEmitters() {
             codeWriter.methodVisitor.visitInsn(Opcodes.POP)
         }
     }
-    registerEmitterInstruction(InstructionTypes.CHECK_SCORE_RANGE) {
+    registerEmitterInstruction(InstructionTypes.CHECK_IN_SCORE_RANGE) {
         codeWriter.callScore_getScore { load("score") }
         val range = instruction.get<IntRangeArgument>("range")
-        val negate = instruction.get<Boolean>("negate")
         if(range.minimum != null && range.maximum == null) {
             codeWriter.writeInt(range.minimum!!)
-            codeWriter.executeIf(if(!negate) Opcodes.IF_ICMPGE else Opcodes.IF_ICMPLT) { run() }
+            codeWriter.executeIf(Opcodes.IF_ICMPGE) { run() }
         }else if(range.minimum == null && range.maximum != null) {
             codeWriter.writeInt(range.maximum!!)
-            codeWriter.executeIf(if(!negate) Opcodes.IF_ICMPLE else Opcodes.IF_ICMPGT) { run() }
+            codeWriter.executeIf(Opcodes.IF_ICMPLE) { run() }
         }else if(range.minimum != null && range.minimum == range.maximum) {
             codeWriter.writeInt(range.minimum!!)
-            codeWriter.executeIf(if(!negate) Opcodes.IF_ICMPEQ else Opcodes.IF_ICMPNE) { run() }
+            codeWriter.executeIf(Opcodes.IF_ICMPEQ) { run() }
         }else if(range.minimum != null) {
             val uid = codeWriter.generateUniqueLocal()
             codeWriter.storeLocal(uid, Int::class.javaPrimitiveType!!) {
-                if(!negate) {
+                codeWriter.loadLocal(uid)
+                codeWriter.writeInt(range.minimum!!)
+                codeWriter.executeIf(Opcodes.IF_ICMPGE) {
                     codeWriter.loadLocal(uid)
-                    codeWriter.writeInt(range.minimum!!)
-                    codeWriter.executeIf(Opcodes.IF_ICMPGE) {
-                        codeWriter.loadLocal(uid)
-                        codeWriter.writeInt(range.maximum!!)
-                        codeWriter.executeIf(Opcodes.IF_ICMPLE) { run() }
-                    }
-                } else {
-                    val skip = Label()
-                    codeWriter.loadLocal(uid)
-                    codeWriter.writeInt(range.minimum!!)
-                    codeWriter.executeIf(Opcodes.IF_ICMPGE) {
-                        codeWriter.loadLocal(uid)
-                        codeWriter.writeInt(range.maximum!!)
-                        codeWriter.executeIf(Opcodes.IF_ICMPLE) {
-                            codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, skip)
-                        }
-                    }
-                    run()
-                    codeWriter.methodVisitor.visitLabel(skip)
+                    codeWriter.writeInt(range.maximum!!)
+                    codeWriter.executeIf(Opcodes.IF_ICMPLE) { run() }
                 }
+            }
+        }
+    }
+    registerEmitterInstruction(InstructionTypes.CHECK_NOT_IN_SCORE_RANGE) {
+        codeWriter.callScore_getScore { load("score") }
+        val range = instruction.get<IntRangeArgument>("range")
+        if(range.minimum != null && range.maximum == null) {
+            codeWriter.writeInt(range.minimum!!)
+            codeWriter.executeIf(Opcodes.IF_ICMPLT) { run() }
+        }else if(range.minimum == null && range.maximum != null) {
+            codeWriter.writeInt(range.maximum!!)
+            codeWriter.executeIf(Opcodes.IF_ICMPGT) { run() }
+        }else if(range.minimum != null && range.minimum == range.maximum) {
+            codeWriter.writeInt(range.minimum!!)
+            codeWriter.executeIf(Opcodes.IF_ICMPNE) { run() }
+        }else if(range.minimum != null) {
+            val uid = codeWriter.generateUniqueLocal()
+            codeWriter.storeLocal(uid, Int::class.javaPrimitiveType!!) {
+                val skip = Label()
+                codeWriter.loadLocal(uid)
+                codeWriter.writeInt(range.minimum!!)
+                codeWriter.executeIf(Opcodes.IF_ICMPGE) {
+                    codeWriter.loadLocal(uid)
+                    codeWriter.writeInt(range.maximum!!)
+                    codeWriter.executeIf(Opcodes.IF_ICMPLE) {
+                        codeWriter.methodVisitor.visitJumpInsn(Opcodes.GOTO, skip)
+                    }
+                }
+                run()
+                codeWriter.methodVisitor.visitLabel(skip)
             }
         }
     }

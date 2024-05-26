@@ -17,7 +17,6 @@ repositories {
 
 dependencies {
     implementation project(":common")
-    implementation project(":common-commands")
     modVersions.forEach { ver ->
         implementation project(":mc-${ver.replace('.', '-')}-fabric")
     }
@@ -50,7 +49,6 @@ compileJava {
 
 jar {
     from(project(':common').sourceSets.main.output)
-    from(project(':common-commands').sourceSets.main.output)
     modVersions.forEach { ver ->
         from(project(":mc-${ver.replace('.', '-')}-fabric").sourceSets.main.output) {
             exclude("mcfc-refmap.json")

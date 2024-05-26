@@ -13,7 +13,8 @@ import java.util.List;
 interface InstructionDefinitions {
     // Minecraft specific instructions
     Instruction callFunctions(List<DataLocation> functions, @Nullable @InstructionSource LocationData entity, @Nullable @InstructionSource LocationData world, @Nullable @InstructionSource LocationData position, @Nullable @InstructionSource LocationData rotation);
-    Instruction checkScoreRange(@InstructionSource LocationData score, IntRangeArgument range, boolean negate);
+    Instruction checkInScoreRange(@InstructionSource LocationData score, IntRangeArgument range);
+    Instruction checkNotInScoreRange(@InstructionSource LocationData score, IntRangeArgument range);
     Instruction checkScoreCompare(@InstructionSource LocationData target, @InstructionSource LocationData source, ScoreboardCompareOperation compareOperation);
     Instruction applyPositionWorld(@InstructionSource LocationData from, @InstructionDestination LocationData to, WorldCoordinates position);
     Instruction checkEntityTypes(@InstructionSource LocationData entity, List<DataLocation> types, boolean negated);

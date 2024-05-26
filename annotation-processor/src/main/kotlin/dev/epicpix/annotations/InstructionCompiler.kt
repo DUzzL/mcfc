@@ -925,10 +925,10 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             }
             if(keepResult) {
                 if(writerData.getAccessorType(expression).isIntegerLikeType()) {
-                    output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ILOAD, ${writerData.localTypes[expression.name]!!.mapping}.getIndex());\n")
+                    output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ILOAD, ${writerData.localTypes[expression.name]!!.mapping}.index());\n")
                     return uniqId
                 }else {
-                    output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, ${writerData.localTypes[expression.name]!!.mapping}.getIndex());\n")
+                    output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, ${writerData.localTypes[expression.name]!!.mapping}.index());\n")
                     return uniqId
                 }
             }
@@ -1091,9 +1091,9 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                                 ParsedTokenValueAccessorScope.LOCAL -> {
                                     val type = writerData.getAccessorType(yieldFuncAccessor)
                                     if(type.isIntegerLikeType()) {
-                                        output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ISTORE, ${writerData.localTypes[yieldFuncAccessor.name]!!.mapping}.getIndex());\n")
+                                        output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ISTORE, ${writerData.localTypes[yieldFuncAccessor.name]!!.mapping}.index());\n")
                                     }else if(type.isObjectLike()) {
-                                        output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, ${writerData.localTypes[yieldFuncAccessor.name]!!.mapping}.getIndex());\n")
+                                        output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, ${writerData.localTypes[yieldFuncAccessor.name]!!.mapping}.index());\n")
                                     }else {
                                         throw IllegalStateException("Unknown assign type: $type")
                                     }
@@ -1303,14 +1303,14 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
             }
             if(el.expression != null) {
                 if(assignType.first() == 'I') {
-                    output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ISTORE, $storageLocal.getIndex());\n")
+                    output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ISTORE, $storageLocal.index());\n")
                 } else if(assignType.first() == 'L') {
                     val expressionType = evaluateExpressionType(writerData, el.expression)
                     val expressionClasses = getClassLowerBounds((expressionType as ParsedTokenExpressionTypeComplex).typeName.replace('/', '.'))
                     if(!expressionClasses.contains((type as ParsedTokenExpressionTypeComplex).typeName)) {
                         output.appendText("mv.visitTypeInsn(org.objectweb.asm.Opcodes.CHECKCAST, \"$assignType\");\n")
                     }
-                    output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, $storageLocal.getIndex());\n")
+                    output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, $storageLocal.index());\n")
                 } else {
                     throw IllegalStateException("Unknown assign type: $assignType")
                 }
@@ -1328,9 +1328,9 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                 ParsedTokenValueAccessorScope.LOCAL -> {
                     val type = writerData.getAccessorType(el.accessor)
                     if(type.isIntegerLikeType()) {
-                        output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ISTORE, ${writerData.localTypes[el.accessor.name]!!.mapping}.getIndex());\n")
+                        output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ISTORE, ${writerData.localTypes[el.accessor.name]!!.mapping}.index());\n")
                     }else if(type.isObjectLike()) {
-                        output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, ${writerData.localTypes[el.accessor.name]!!.mapping}.getIndex());\n")
+                        output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, ${writerData.localTypes[el.accessor.name]!!.mapping}.index());\n")
                     }else {
                         throw IllegalStateException("Unknown assign type: $type")
                     }

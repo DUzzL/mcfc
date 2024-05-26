@@ -6,8 +6,6 @@ import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 
-data class Local(val name: String, val descriptor: String, val start: Label, var end: Label, val index: Int)
-
 class CodeWriter(val methodVisitor: MethodVisitor) {
 
     val locals: MutableMap<String, Local> = mutableMapOf()

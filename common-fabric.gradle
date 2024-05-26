@@ -11,7 +11,6 @@ apply plugin: 'com.google.devtools.ksp'
 dependencies {
     implementation(project(":annotation-processor"))
     implementation(project(":common"))
-    implementation(project(":common-commands"))
     ksp project(":annotation-processor")
 
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
@@ -76,12 +75,10 @@ processResources {
 
 compileKotlin {
     dependsOn(':common:kspKotlin')
-    dependsOn(':common-commands:kspKotlin')
 }
 
 jar {
     from project(':common').sourceSets.main.output
-    from project(':common-commands').sourceSets.main.output
     from("LICENSE") {
         rename { "${it}_${project.archivesBaseName}"}
     }
