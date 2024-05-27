@@ -2,15 +2,14 @@ package dev.epicpix.minecraftfunctioncompiler.optimizer.optimizations
 
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2
-import dev.epicpix.minecraftfunctioncompiler.optimizer.InstructionList
 import dev.epicpix.minecraftfunctioncompiler.optimizer.Optimization
 
 object ScopeInstructionMergeOptimization : Optimization {
-    override fun optimize(instructions: InstructionList): InstructionList {
+    override fun optimize(instructions: List<Instruction>): List<Instruction> {
         return runOptimizations(instructions)
     }
 
-    private fun runOptimizations(instructions: InstructionList): InstructionList {
+    private fun runOptimizations(instructions: List<Instruction>): List<Instruction> {
         val results = mutableListOf<Instruction>()
         var checkIndex = 0
         while(checkIndex < instructions.size) {

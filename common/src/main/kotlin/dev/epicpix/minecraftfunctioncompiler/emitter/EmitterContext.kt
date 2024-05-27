@@ -5,7 +5,6 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData
-import dev.epicpix.minecraftfunctioncompiler.il.ScopeData
 import org.objectweb.asm.Label
 
 data class EmitterContext(
@@ -63,5 +62,4 @@ data class EmitterContext(
         }
     }
 
-    fun scopeId(location: String) = instruction.get<ScopeData>(location).id
 }

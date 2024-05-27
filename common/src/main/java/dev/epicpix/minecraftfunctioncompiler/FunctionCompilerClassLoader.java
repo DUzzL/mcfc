@@ -9,6 +9,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.il.Instructions2;
 import dev.epicpix.minecraftfunctioncompiler.optimizer.OptimizationStatistics;
+import dev.epicpix.minecraftfunctioncompiler.optimizer.Optimizer;
 import dev.epicpix.minecraftfunctioncompiler.parser.Command;
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
 import org.objectweb.asm.ClassWriter;
@@ -28,7 +29,6 @@ import java.util.function.Function;
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DATA_CLASS;
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DEBUG;
 import static dev.epicpix.minecraftfunctioncompiler.il.Instruction.printInstructionList;
-import static dev.epicpix.minecraftfunctioncompiler.optimizer.OptimizerKt.optimize;
 import static org.objectweb.asm.ClassWriter.COMPUTE_FRAMES;
 
 public abstract class FunctionCompilerClassLoader extends ClassLoader {
@@ -88,7 +88,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
             try {
                 var compiled = compile.apply(value);
                 ArrayList<OptimizationStatistics> stats = new ArrayList<>();
-                var optimized = optimize(compiled, stats);
+                var optimized = Optimizer.optimize(compiled, stats);
                 optimizerStatistics.add(stats);
                 compiledFunctions.put(key, List.of(Instructions2.INSTANCE.addStaticRequirements(optimized)));
                 if(DEBUG) {

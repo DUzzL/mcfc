@@ -9,6 +9,8 @@ import com.google.devtools.ksp.processing.*
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.Origin
+import dev.epicpix.annotations.commands.parseCommandsData
+import dev.epicpix.annotations.instructions.*
 import net.fabricmc.accesswidener.AccessWidenerReader
 import net.fabricmc.accesswidener.AccessWidenerVisitor
 import net.fabricmc.accesswidener.AccessWidenerWriter
@@ -128,6 +130,7 @@ class MainProcessor(
         }
         if(options["definitions"] == "common") {
             generateConstantsData()
+            generateCommandsData()
         }
         if(packageMinecraftVersion != null && mappingData != null) {
             val accessWidenerWriter = AccessWidenerWriter()
@@ -167,6 +170,34 @@ class MainProcessor(
         map.appendText("    public static final String versionName = \"${options["version"] ?: error("Version option not specified")}\";\n")
         map.appendText("}\n")
         map.close()
+    }
+
+    fun generateCommandsData() {
+        val data = parseCommandsData(loadDataFile("data.commands")!!);
+        run {
+            val resultPackage = "dev.epicpix.minecraftfunctioncompiler.commands"
+            val resultName = "CommandParser"
+            val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")
+            map.appendText("package $resultPackage;\n")
+            map.appendText("public final class $resultName {\n")
+            map.appendText("    private $resultName() {}\n")
+            map.appendText("/*\n")
+            map.appendText("*/\n")
+            map.appendText("}\n")
+            map.close()
+        }
+        run {
+            val resultPackage = "dev.epicpix.minecraftfunctioncompiler.commands"
+            val resultName = "CommandType"
+            val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")
+            map.appendText("package $resultPackage;\n")
+            map.appendText("public enum $resultName {\n")
+            for((command) in data.commands) {
+                map.appendText("$command,\n")
+            }
+            map.appendText("}\n")
+            map.close()
+        }
     }
 
     fun generateFunctionMapping(mappingData: MappingData?, data: Map<String, Any>, majorVer: Int, minorVer: Int, packageMinecraftVersion: String?) {

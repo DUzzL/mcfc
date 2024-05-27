@@ -90,6 +90,9 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                 copy(currentPosition = position).compile(command["command"], result)
             }
         }
+        CommandType.EXECUTE_RUN -> {
+            compile(command["command"])
+        }
         CommandType.EXECUTE_STORE_RESULT_SCORE -> {
             withResultStorage(requireResult = true) { res ->
                 compile(command["command"], res)
@@ -234,16 +237,15 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                 }
             }
         }
-        CommandType.SCOREBOARD_PLAYERS_RESET -> {
-            if(command.params.containsKey("objective")) {
-                getObjective(command["objective"]) { objective ->
-                    forScoreHolder(command["targets"]) { name ->
-                        addInstruction(Instructions2.resetScore(objective, name))
-                    }
-                }
-            }else {
+        CommandType.SCOREBOARD_PLAYERS_RESET_ALL -> {
+            forScoreHolder(command["targets"]) { name ->
+                addInstruction(Instructions2.resetPlayerScore(name))
+            }
+        }
+        CommandType.SCOREBOARD_PLAYERS_RESET_OBJECTIVE -> {
+            getObjective(command["objective"]) { objective ->
                 forScoreHolder(command["targets"]) { name ->
-                    addInstruction(Instructions2.resetPlayerScore(name))
+                    addInstruction(Instructions2.resetScore(objective, name))
                 }
             }
         }

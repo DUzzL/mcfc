@@ -36,6 +36,12 @@ public record Instruction(InstructionType type, Map<String, Object> data, ArrayL
         return res;
     }
 
+    public static int countInstructions(List<Instruction> instructions) {
+        int res = 0;
+        for(var instr : instructions) res += instr.countInstructions();
+        return res;
+    }
+
     public static Map<String, Object> remapInstructionData(Map<String, Object> data, Map<Integer, Integer> mappings) {
         HashMap<String, Object> result = new HashMap<>();
         for(var entry : data.entrySet()) {

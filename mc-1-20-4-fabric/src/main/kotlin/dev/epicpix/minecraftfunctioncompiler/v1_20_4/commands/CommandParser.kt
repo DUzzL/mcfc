@@ -250,12 +250,12 @@ object CommandParser {
                     "reset" -> {
                         if(context.arguments["objective"] != null) {
                             val objective = context.arguments["objective"]!!.result as String
-                            Command(CommandType.SCOREBOARD_PLAYERS_RESET, mapOf(
+                            Command(CommandType.SCOREBOARD_PLAYERS_RESET_OBJECTIVE, mapOf(
                                 "targets" to parseScoreHolder(context.arguments["targets"]!!.range[source]),
                                 "objective" to objective
                             ))
                         }else {
-                            Command(CommandType.SCOREBOARD_PLAYERS_RESET, mapOf(
+                            Command(CommandType.SCOREBOARD_PLAYERS_RESET_ALL, mapOf(
                                 "targets" to parseScoreHolder(context.arguments["targets"]!!.range[source])
                             ))
                         }

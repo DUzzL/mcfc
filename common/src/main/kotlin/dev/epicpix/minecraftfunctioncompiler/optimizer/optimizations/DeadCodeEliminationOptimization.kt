@@ -4,7 +4,6 @@ import dev.epicpix.minecraftfunctioncompiler.il.Instruction
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData
 import dev.epicpix.minecraftfunctioncompiler.il.ScopeData
-import dev.epicpix.minecraftfunctioncompiler.optimizer.InstructionList
 import dev.epicpix.minecraftfunctioncompiler.optimizer.Optimization
 
 private data class DeadCodeEliminationData(
@@ -13,11 +12,11 @@ private data class DeadCodeEliminationData(
 )
 
 object DeadCodeEliminationOptimization : Optimization {
-    override fun optimize(instructions: InstructionList): InstructionList {
+    override fun optimize(instructions: List<Instruction>): List<Instruction> {
         return runOptimizations(instructions, DeadCodeEliminationData(listOf(), listOf()))
     }
 
-    private fun runOptimizations(instructions: InstructionList, dce: DeadCodeEliminationData): InstructionList {
+    private fun runOptimizations(instructions: List<Instruction>, dce: DeadCodeEliminationData): List<Instruction> {
         val results = mutableListOf<Instruction>()
         for(it in instructions) {
             results.addAll(runOptimizations(it, dce))
@@ -26,7 +25,7 @@ object DeadCodeEliminationOptimization : Optimization {
         return results
     }
 
-    private fun runOptimizations(instruction: Instruction, dce: DeadCodeEliminationData): InstructionList {
+    private fun runOptimizations(instruction: Instruction, dce: DeadCodeEliminationData): List<Instruction> {
         var newDce = dce
         when(instruction.type) {
             InstructionTypes2.IF_NOT_NULL -> {

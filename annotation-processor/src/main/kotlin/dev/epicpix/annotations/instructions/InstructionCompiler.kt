@@ -1,5 +1,6 @@
-package dev.epicpix.annotations
+package dev.epicpix.annotations.instructions
 
+import dev.epicpix.annotations.*
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import java.io.ByteArrayOutputStream
