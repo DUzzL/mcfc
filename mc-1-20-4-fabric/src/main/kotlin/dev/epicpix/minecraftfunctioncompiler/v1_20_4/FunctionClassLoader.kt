@@ -10,7 +10,6 @@ import dev.epicpix.minecraftfunctioncompiler.data.TaggableLocation
 import dev.epicpix.minecraftfunctioncompiler.emitter.callMap_get
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter
-import dev.epicpix.minecraftfunctioncompiler.v1_20_4.compiler.compile
 import dev.epicpix.minecraftfunctioncompiler.v1_20_4.data.RegistryMapping
 import dev.epicpix.minecraftfunctioncompiler.v1_20_4.emitter.loadServerFunctionLibrary_functions
 import dev.epicpix.minecraftfunctioncompiler.v1_20_4.emitter.loadServerFunctionManager_library
@@ -67,7 +66,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
             }
         }
         val parseTime = (System.nanoTime()-startParse)/1000000000.0
-        loadFunctionClasses(functions.size, parseTime, definedFunctions, createCodeFieldStorage(), serverFunctionManager) { compile(it) }
+        loadFunctionClasses(functions.size, parseTime, definedFunctions, createCodeFieldStorage(), serverFunctionManager)
     }
 
     fun hasFunctionLoaded(location: ResourceLocation): Boolean {

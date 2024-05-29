@@ -1,8 +1,7 @@
-package dev.epicpix.minecraftfunctioncompiler.v1_20_4.compiler
+package dev.epicpix.minecraftfunctioncompiler.compiler
 
 import dev.epicpix.minecraftfunctioncompiler.commands.Command
 import dev.epicpix.minecraftfunctioncompiler.commands.CommandType
-import dev.epicpix.minecraftfunctioncompiler.compiler.ResultStorage
 import dev.epicpix.minecraftfunctioncompiler.compiler.impl.CompilationContext
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCompareOperation

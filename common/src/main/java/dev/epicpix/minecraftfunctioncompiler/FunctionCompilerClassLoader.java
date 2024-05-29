@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler;
 
 import com.google.gson.JsonObject;
+import dev.epicpix.minecraftfunctioncompiler.compiler.CompilerKt;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
 import dev.epicpix.minecraftfunctioncompiler.emitter.GraphGenerator;
@@ -76,8 +77,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
             double parseTime,
             Map<DataLocation, List<Command>> definedFunctions,
             CodeFieldStorage fieldStorage,
-            Object serverFunctionManager,
-            Function<List<Command>, List<Instruction>> compile
+            Object serverFunctionManager
         ) {
         HashMap<DataLocation, List<Instruction>> compiledFunctions = new HashMap<>();
         ArrayList<List<OptimizationStatistics>> optimizerStatistics = new ArrayList<>();
@@ -86,7 +86,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
             var key = func.getKey();
             var value = func.getValue();
             try {
-                var compiled = compile.apply(value);
+                var compiled = CompilerKt.compile(value);
                 ArrayList<OptimizationStatistics> stats = new ArrayList<>();
                 var optimized = Optimizer.optimize(compiled, stats);
                 optimizerStatistics.add(stats);
