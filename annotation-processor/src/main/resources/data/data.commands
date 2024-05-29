@@ -12,7 +12,7 @@ EXECUTE_UNLESS_SCORE_RANGE/execute unless score <target:score_holder> <targetObj
 EXECUTE_UNLESS_SCORE_COMPARE/execute unless score <target:score_holder> <targetObjective:objective> <comparison:score_comparison> <source:score_holder> <sourceObjective:objective> <command:execute_subcommand>
 FUNCTION/function <functions:function>
 GAMEMODE/gamemode <gamemode:gamemode> <targets:entity_selector[players]:self>
-KILL/kill <targets:entity_selector[players]:self>
+KILL/kill <targets:entity_selector:self>
 SCOREBOARD_PLAYERS_ADD/scoreboard players add <targets:score_holder> <objective:objective> <value:int[minimum=0]>
 SCOREBOARD_PLAYERS_GET/scoreboard players get <targets:score_holder> <objective:objective>
 SCOREBOARD_PLAYERS_OPERATION/scoreboard players operation <targets:score_holder> <targetObjective:objective> <operation:scoreboard_operation> <source:score_holder> <sourceObjective:objective>

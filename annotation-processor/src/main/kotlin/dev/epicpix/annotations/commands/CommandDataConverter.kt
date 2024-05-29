@@ -27,17 +27,19 @@ private fun parseCommandPart(parts: List<String>, current: ParsedCommandArgument
                 val split = inner.split(":")
                 val kindAll = split[1]
                 val kind = kindAll.substringBefore('[')
-                val kindOptions = kindAll.substringAfter('[', missingDelimiterValue = "").substringBeforeLast(']').split(".")
+                val kindOptions = kindAll.substringAfter('[', missingDelimiterValue = "").substringBeforeLast(']').split(",")
                 val options = mutableMapOf<String, String>()
                 for(opt in kindOptions) {
-                    val eq = opt.split("=", limit = 2)
-                    if(eq.size == 1) {
-                        options[opt] = "true"
-                    }else {
-                        options[eq[0]] = eq[1]
+                    if(opt.isNotBlank()) {
+                        val eq = opt.split("=", limit = 2)
+                        if(eq.size == 1) {
+                            options[opt] = "true"
+                        } else {
+                            options[eq[0]] = eq[1]
+                        }
                     }
                 }
-                ParsedCommandArgument(argName = split[0], kind = kind, kindDefaults = split.getOrNull(2))
+                ParsedCommandArgument(argName = split[0], kind = kind, kindOptions = options, kindDefaults = split.getOrNull(2))
             }else {
                 ParsedCommandArgument()
             }
@@ -62,6 +64,17 @@ fun parseCommandsData(file: String): ParsedCommandData {
         parseCommandLine(slashPart[1], commandTree, slashPart[0])
     }
     return ParsedCommandData(commands, commandTree)
+}
+
+private fun generateCommandReturn(builder: StringBuilder, uniqueId: AtomicInteger, executableCommand: String, arguments: Map<String, String>) {
+    builder.append("    if(!reader.canRead()) {\n")
+    val hashMapIndex = uniqueId.getAndIncrement()
+    builder.append("        var y$hashMapIndex = new HashMap<String, Object>();\n")
+    for((k, v) in arguments) {
+        builder.append("        y$hashMapIndex.put(\"$k\", $v);\n")
+    }
+    builder.append("        return new Command(CommandType.${executableCommand}, y$hashMapIndex);\n")
+    builder.append("    }\n")
 }
 
 private fun generateArgumentReader(name: String, data: ParsedCommandArgument, builder: StringBuilder, uniqueId: AtomicInteger, argumentPath: String, arguments: Map<String, String>, fromRoot: Boolean = false): Boolean {
@@ -89,65 +102,48 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
         return true
     }else if(data.kind != "literal") {
         val kindInfo = data.kind +
-            (if(data.kindOptions.isEmpty()) "" else data.kindOptions.map { "${it.key}=${it.value}" }.joinToString(",")) +
+            (if(data.kindOptions.isEmpty()) "" else ("[" + data.kindOptions.map { "${it.key}=${it.value}" }.joinToString(",") + "]")) +
             (if(data.kindDefaults == null) "" else ":${data.kindDefaults}")
         builder.append("{ // ${data.argName} <${kindInfo}>\n")
-        if(data.kind == "entity_selector") {
-            val allowMultiple = data.kindOptions.getOrDefault("multiple", "true").toBoolean()
-            val playersOnly = data.kindOptions.getOrDefault("players", "false").toBoolean()
-            val selectorIndex = uniqueId.getAndIncrement()
-            builder.append("    var a$selectorIndex = SelectorParser.parseSelector(reader, ${!playersOnly}, $allowMultiple);\n")
-            val newArguments = arguments + mapOf(data.argName!! to "a$selectorIndex")
-            if(data.executableCommand != null) {
-                builder.append("    if(!reader.canRead()) {\n")
-                val hashMapIndex = uniqueId.getAndIncrement()
-                builder.append("        var y$hashMapIndex = new HashMap<String, Object>();\n")
-                for((k, v) in newArguments) {
-                    builder.append("        y$hashMapIndex.put(\"$k\", $v);\n")
+        val argumentIndex = uniqueId.getAndIncrement()
+        when(data.kind) {
+            "entity_selector" -> {
+                val allowMultiple = data.kindOptions.getOrDefault("multiple", "true").toBoolean()
+                val playersOnly = data.kindOptions.getOrDefault("players", "false").toBoolean()
+                if(data.executableCommand != null && data.kindDefaults == "self") {
+                    generateCommandReturn(builder, uniqueId, data.executableCommand!!, arguments + mapOf(data.argName!! to "SelectorArgument.ofSelf()"))
                 }
-                builder.append("        return new Command(CommandType.${data.executableCommand}, y$hashMapIndex);\n")
-                builder.append("    }\n")
+                builder.append("    var a$argumentIndex = SelectorParser.parseSelector(reader, ${!playersOnly}, $allowMultiple);\n")
             }
-            builder.append("    if(!reader.skipArgumentWhitespace()) ${createWrappedError("Missing space after argument @$argumentPath $name")}\n")
-            var reachable = true
-            for((k, v) in data.children) {
-                if(reachable) {
-                    val innerBuilder = StringBuilder()
-                    reachable = generateArgumentReader(k, v, innerBuilder, uniqueId, "$argumentPath $name", newArguments)
-                    builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent("    ") + "\n")
-                }
+            "int" -> {
+                builder.append("    var a$argumentIndex = reader.readInt();\n")
+                data.kindOptions["minimum"]?.toInt()?.also { min -> builder.append("    if(a$argumentIndex < $min) ${createError("\"Integer value of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }
+                data.kindOptions["maximum"]?.toInt()?.also { max -> builder.append("    if(a$argumentIndex > $max) ${createError("\"Integer value of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
             }
+            "objective" -> builder.append("    var a$argumentIndex = reader.readWord();\n")
+            "score_holder" -> builder.append("    var a$argumentIndex = SelectorParser.parseScoreHolder(reader);\n")
+            "word" -> builder.append("    var a$argumentIndex = reader.readWord();\n")
+            else -> {
+                builder.append("    ${createWrappedError("Reading '$kindInfo' kind is not implemented @$argumentPath <${data.argName}>")}\n")
+                builder.append("}\n")
+                return false
+            }
+        }
+        val newArguments = arguments + mapOf(data.argName!! to "a$argumentIndex")
+        if(data.executableCommand != null) {
+            generateCommandReturn(builder, uniqueId, data.executableCommand!!, newArguments)
+        }
+        builder.append("    if(!reader.skipArgumentWhitespace()) ${createWrappedError("Missing space after argument @$argumentPath $name")}\n")
+        var reachable = true
+        for((k, v) in data.children) {
             if(reachable) {
-                builder.append("    ${createWrappedError("Failed to parse any options @$argumentPath $name")}\n")
+                val innerBuilder = StringBuilder()
+                reachable = generateArgumentReader(k, v, innerBuilder, uniqueId, "$argumentPath $name", newArguments)
+                builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent("    ") + "\n")
             }
-        }else if(data.kind == "word") {
-            val wordIndex = uniqueId.getAndIncrement()
-            builder.append("    var a$wordIndex = reader.readWord();\n")
-            val newArguments = arguments + mapOf(data.argName!! to "a$wordIndex")
-            if(data.executableCommand != null) {
-                builder.append("    if(!reader.canRead()) {\n")
-                val hashMapIndex = uniqueId.getAndIncrement()
-                builder.append("        var y$hashMapIndex = new HashMap<String, Object>();\n")
-                for((k, v) in newArguments) {
-                    builder.append("        y$hashMapIndex.put(\"$k\", $v);\n")
-                }
-                builder.append("        return new Command(CommandType.${data.executableCommand}, y$hashMapIndex);\n")
-                builder.append("    }\n")
-            }
-            builder.append("    if(!reader.skipArgumentWhitespace()) ${createWrappedError("Missing space after argument @$argumentPath $name")}\n")
-            var reachable = true
-            for((k, v) in data.children) {
-                if(reachable) {
-                    val innerBuilder = StringBuilder()
-                    reachable = generateArgumentReader(k, v, innerBuilder, uniqueId, "$argumentPath $name", arguments)
-                    builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent("    ") + "\n")
-                }
-            }
-            if(reachable) {
-                builder.append("    ${createWrappedError("Failed to parse any options @$argumentPath $name")}\n")
-            }
-        }else {
-            builder.append("    ${createWrappedError("Reading '$kindInfo' kind is not implemented @$argumentPath <${data.argName}>")}\n")
+        }
+        if(reachable) {
+            builder.append("    ${createWrappedError("Failed to parse any options @$argumentPath $name")}\n")
         }
         builder.append("}\n")
         return false
