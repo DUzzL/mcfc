@@ -10,7 +10,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.il.Instructions2;
 import dev.epicpix.minecraftfunctioncompiler.optimizer.OptimizationStatistics;
 import dev.epicpix.minecraftfunctioncompiler.optimizer.Optimizer;
-import dev.epicpix.minecraftfunctioncompiler.parser.Command;
+import dev.epicpix.minecraftfunctioncompiler.commands.Command;
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;

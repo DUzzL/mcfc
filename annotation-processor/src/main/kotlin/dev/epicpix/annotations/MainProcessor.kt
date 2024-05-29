@@ -9,6 +9,7 @@ import com.google.devtools.ksp.processing.*
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.Origin
+import dev.epicpix.annotations.commands.generateCommandsDataReader
 import dev.epicpix.annotations.commands.parseCommandsData
 import dev.epicpix.annotations.instructions.*
 import net.fabricmc.accesswidener.AccessWidenerReader
@@ -179,10 +180,13 @@ class MainProcessor(
             val resultName = "CommandParser"
             val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")
             map.appendText("package $resultPackage;\n")
+            map.appendText("import java.util.*;\n")
             map.appendText("public final class $resultName {\n")
             map.appendText("    private $resultName() {}\n")
-            map.appendText("/*\n")
-            map.appendText("*/\n")
+            map.appendText("    public static Command parseCommand(String command) {\n")
+            map.appendText("        var reader = new StringCommandReader(command);\n")
+            map.appendText(generateCommandsDataReader(data).substringBeforeLast('\n').prependIndent("        ") + "\n")
+            map.appendText("    }\n")
             map.appendText("}\n")
             map.close()
         }

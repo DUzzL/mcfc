@@ -1,6 +1,4 @@
-package dev.epicpix.minecraftfunctioncompiler.parser;
-
-import dev.epicpix.minecraftfunctioncompiler.commands.CommandType;
+package dev.epicpix.minecraftfunctioncompiler.commands;
 
 import java.util.Map;
 

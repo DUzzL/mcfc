@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 public class SelectorGeneratorBuilderData {
+    public boolean self = false;
     public NegatableData<List<DataLocation>> entityTypes = null;
     public final ArrayList<NegatableData<String>> tags = new ArrayList<>();
     public Boolean hasTags = null;
@@ -23,7 +24,7 @@ public class SelectorGeneratorBuilderData {
         return new SelectorArgument(
                 null,
                 null,
-                false,
+                self,
                 limit,
                 entityTypes != null ? new NegatableData<>(List.copyOf(entityTypes.data()), entityTypes.negated()) : null,
                 hasTags,

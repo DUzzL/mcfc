@@ -20,6 +20,10 @@ public class StringCommandReader {
         return index;
     }
 
+    public void setIndex(int newIndex) {
+        index = newIndex;
+    }
+
     public boolean canRead(int n) {
         return index + n <= command.length();
     }
@@ -59,6 +63,22 @@ public class StringCommandReader {
             skipped = true;
         }
         return skipped;
+    }
+
+    public boolean skipArgumentWhitespace() {
+        if(canRead() && Character.isWhitespace(peek())) {
+            skip();
+            return true;
+        }
+        return false;
+    }
+
+    public String readUntilSpace() {
+        int start = index;
+        if(canRead() && peek() != ' ') {
+            skip();
+        }
+        return command.substring(start, index);
     }
 
     private static boolean isWordCharacter(char c) {

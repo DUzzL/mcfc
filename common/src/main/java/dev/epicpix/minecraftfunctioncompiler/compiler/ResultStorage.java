@@ -3,7 +3,7 @@ package dev.epicpix.minecraftfunctioncompiler.compiler;
 import dev.epicpix.minecraftfunctioncompiler.compiler.impl.CompilationContext;
 import dev.epicpix.minecraftfunctioncompiler.il.Instructions2;
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
-import dev.epicpix.minecraftfunctioncompiler.parser.Command;
+import dev.epicpix.minecraftfunctioncompiler.commands.Command;
 
 public class ResultStorage {
 

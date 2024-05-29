@@ -29,7 +29,7 @@ public final class Optimizer {
             }
             var endOptim = System.nanoTime();
             statistics.add(new OptimizationStatistics("optimization_pass", Instruction.countInstructions(instructions), (endOptim - startOptim)/1000000000.0));
-        } while(instructions != previousInstructions);
+        } while(!instructions.equals(previousInstructions));
         var end = System.nanoTime();
         statistics.add(new OptimizationStatistics("end", Instruction.countInstructions(instructions), (end - start)/1000000000.0));
         return instructions;

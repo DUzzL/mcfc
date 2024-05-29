@@ -7,7 +7,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCompareOperation
 import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument
 import dev.epicpix.minecraftfunctioncompiler.il.*
-import dev.epicpix.minecraftfunctioncompiler.parser.Command
+import dev.epicpix.minecraftfunctioncompiler.commands.Command
 
 fun compile(commands: List<Command>): List<Instruction> {
     val instructions = mutableListOf<Instruction>()

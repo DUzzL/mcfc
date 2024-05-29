@@ -2,12 +2,12 @@ package dev.epicpix.minecraftfunctioncompiler.v1_20_4
 
 import com.google.gson.JsonObject
 import dev.epicpix.minecraftfunctioncompiler.FunctionCompilerClassLoader
+import dev.epicpix.minecraftfunctioncompiler.commands.Command
+import dev.epicpix.minecraftfunctioncompiler.commands.CommandParser
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation
 import dev.epicpix.minecraftfunctioncompiler.emitter.callMap_get
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage
-import dev.epicpix.minecraftfunctioncompiler.parser.Command
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter
-import dev.epicpix.minecraftfunctioncompiler.v1_20_4.commands.CommandParser
 import dev.epicpix.minecraftfunctioncompiler.v1_20_4.compiler.compile
 import dev.epicpix.minecraftfunctioncompiler.v1_20_4.data.RegistryMapping
 import dev.epicpix.minecraftfunctioncompiler.v1_20_4.emitter.loadServerFunctionLibrary_functions
@@ -36,12 +36,14 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         for ((key, value) in functions) {
             try {
                 if(value is PlainTextFunction) {
+                    val parsed = mutableListOf<Command>()
                     for (entry in value.entries) {
                         if (entry !is BuildContexts.Unbound) {
                             continue@funcLoop
                         }
+                        parsed.add(CommandParser.parseCommand(entry.commandInput))
                     }
-                    definedFunctions[key.toDataLocation()] = CommandParser.parseFunctionCommands(value, minecraftServer, serverFunctionManager)
+                    definedFunctions[key.toDataLocation()] = parsed
                 }
             } catch (e: UnsupportedOperationException) {
                 logWarn.accept("Unable to parse function $key / ${e.message}")
