@@ -4,7 +4,9 @@ import com.google.gson.JsonObject
 import dev.epicpix.minecraftfunctioncompiler.FunctionCompilerClassLoader
 import dev.epicpix.minecraftfunctioncompiler.commands.Command
 import dev.epicpix.minecraftfunctioncompiler.commands.CommandParser
+import dev.epicpix.minecraftfunctioncompiler.commands.IArgumentLookup
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation
+import dev.epicpix.minecraftfunctioncompiler.data.TaggableLocation
 import dev.epicpix.minecraftfunctioncompiler.emitter.callMap_get
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter
@@ -28,6 +30,17 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
         if(functions.isEmpty()) return
         RegistryMapping.updateRegistryMaps()
         resetHandles()
+        val lookup = object : IArgumentLookup {
+            override fun lookupFunctions(functions: TaggableLocation): List<DataLocation> {
+                return if(functions.isTag) {
+                    serverFunctionManager.getTag(ResourceLocation(functions.location.toString())).toList().map { it.id().toDataLocation() }
+                }else if(serverFunctionManager.library.functions.containsKey(ResourceLocation(functions.location.toString()))) {
+                    listOf(ResourceLocation(functions.location.toString()).toDataLocation())
+                }else {
+                    listOf()
+                }
+            }
+        }
 
         val definedFunctions = mutableMapOf<DataLocation, List<Command>>()
 
@@ -41,7 +54,7 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
                         if (entry !is BuildContexts.Unbound) {
                             continue@funcLoop
                         }
-                        parsed.add(CommandParser.parseCommand(entry.commandInput))
+                        parsed.add(CommandParser.parseCommand(entry.commandInput, lookup))
                     }
                     definedFunctions[key.toDataLocation()] = parsed
                 }

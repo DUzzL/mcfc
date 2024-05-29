@@ -184,10 +184,7 @@ class MainProcessor(
             map.appendText("import java.util.*;\n")
             map.appendText("public final class $resultName {\n")
             map.appendText("    private $resultName() {}\n")
-            map.appendText("    public static Command parseCommand(String command) {\n")
-            map.appendText("        var reader = new StringCommandReader(command);\n")
-            map.appendText(generateCommandsDataReader(data).substringBeforeLast('\n').prependIndent("        ") + "\n")
-            map.appendText("    }\n")
+            map.appendText(generateCommandsDataReader(data).substringBeforeLast('\n').prependIndent("    ") + "\n")
             map.appendText("}\n")
             map.close()
         }

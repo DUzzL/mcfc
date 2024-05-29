@@ -1309,7 +1309,7 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                     val expressionType = evaluateExpressionType(writerData, el.expression)
                     val expressionClasses = getClassLowerBounds((expressionType as ParsedTokenExpressionTypeComplex).typeName.replace('/', '.'))
                     if(!expressionClasses.contains((type as ParsedTokenExpressionTypeComplex).typeName)) {
-                        output.appendText("mv.visitTypeInsn(org.objectweb.asm.Opcodes.CHECKCAST, \"$assignType\");\n")
+                        output.appendText("mv.visitTypeInsn(org.objectweb.asm.Opcodes.CHECKCAST, \"${assignType.substring(1, assignType.length - 1)}\");\n")
                     }
                     output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, $storageLocal.index());\n")
                 } else {

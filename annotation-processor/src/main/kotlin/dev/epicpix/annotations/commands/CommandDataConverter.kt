@@ -66,39 +66,43 @@ fun parseCommandsData(file: String): ParsedCommandData {
     return ParsedCommandData(commands, commandTree)
 }
 
-private fun generateCommandReturn(builder: StringBuilder, uniqueId: AtomicInteger, executableCommand: String, arguments: Map<String, String>) {
-    builder.append("    if(!reader.canRead()) {\n")
-    val hashMapIndex = uniqueId.getAndIncrement()
-    builder.append("        var y$hashMapIndex = new HashMap<String, Object>();\n")
-    for((k, v) in arguments) {
-        builder.append("        y$hashMapIndex.put(\"$k\", $v);\n")
+private fun generateCommandReturn(builder: StringBuilder, uniqueId: AtomicInteger, executableCommand: String, arguments: Map<String, String>, forced: Boolean = false) {
+    if(!forced) {
+        builder.append("    if(!reader.canRead()) {\n")
+        val hashMapIndex = uniqueId.getAndIncrement()
+        builder.append("        var y$hashMapIndex = new HashMap<String, Object>();\n")
+        for((k, v) in arguments) {
+            builder.append("        y$hashMapIndex.put(\"$k\", $v);\n")
+        }
+        builder.append("        return new Command(CommandType.${executableCommand}, y$hashMapIndex);\n")
+        builder.append("    }\n")
+    }else {
+        val hashMapIndex = uniqueId.getAndIncrement()
+        builder.append("    var y$hashMapIndex = new HashMap<String, Object>();\n")
+        for((k, v) in arguments) {
+            builder.append("    y$hashMapIndex.put(\"$k\", $v);\n")
+        }
+        builder.append("    return new Command(CommandType.${executableCommand}, y$hashMapIndex);\n")
     }
-    builder.append("        return new Command(CommandType.${executableCommand}, y$hashMapIndex);\n")
-    builder.append("    }\n")
 }
 
 private fun generateArgumentReader(name: String, data: ParsedCommandArgument, builder: StringBuilder, uniqueId: AtomicInteger, argumentPath: String, arguments: Map<String, String>, fromRoot: Boolean = false): Boolean {
     val locationIndex = uniqueId.getAndIncrement();
     if(fromRoot) {
-        builder.append("{ // $name\n")
-        builder.append("    if(\"$name\".equals(commandName)) {\n")
         if(data.executableCommand != null) {
-            builder.append("        if(!reader.canRead()) return new Command(CommandType.${data.executableCommand}, Map.of());\n")
+            builder.append("if(!reader.canRead()) return new Command(CommandType.${data.executableCommand}, Map.of());\n")
         }
-        builder.append("        if(!reader.skipArgumentWhitespace()) ${createWrappedError("Missing space after argument @$argumentPath $name")}\n")
         var reachable = true
         for((k, v) in data.children) {
             if(reachable) {
                 val innerBuilder = StringBuilder()
                 reachable = generateArgumentReader(k, v, innerBuilder, uniqueId, "$argumentPath $name", arguments)
-                builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent("        ") + "\n")
+                builder.append(innerBuilder.toString().substringBeforeLast('\n') + "\n")
             }
         }
         if(reachable) {
-            builder.append("        ${createWrappedError("Failed to parse any options @$argumentPath $name")}\n")
+            builder.append("${createWrappedError("Failed to parse any options @$argumentPath $name")}\n")
         }
-        builder.append("    }\n")
-        builder.append("}\n")
         return true
     }else if(data.kind != "literal") {
         val kindInfo = data.kind +
@@ -115,23 +119,44 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 }
                 builder.append("    var a$argumentIndex = SelectorParser.parseSelector(reader, ${!playersOnly}, $allowMultiple);\n")
             }
+            "execute_subcommand" -> builder.append("    var a$argumentIndex = parseCommand_execute(reader, lookup);\n")
+            "function" -> builder.append("    var a$argumentIndex = lookup.lookupFunctions(reader.readTag());\n")
+            "gamemode" -> builder.append("    var a$argumentIndex = reader.readGamemode();\n")
             "int" -> {
                 builder.append("    var a$argumentIndex = reader.readInt();\n")
                 data.kindOptions["minimum"]?.toInt()?.also { min -> builder.append("    if(a$argumentIndex < $min) ${createError("\"Integer value of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }
                 data.kindOptions["maximum"]?.toInt()?.also { max -> builder.append("    if(a$argumentIndex > $max) ${createError("\"Integer value of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
             }
+            "int_range" -> {
+                builder.append("    var a$argumentIndex = reader.readIntRange();\n")
+                data.kindOptions["minimum"]?.toInt()?.also { min -> builder.append("    if(a$argumentIndex.minimum() < $min) ${createError("\"Integer range minimum of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }
+                data.kindOptions["maximum"]?.toInt()?.also { max -> builder.append("    if(a$argumentIndex.maximum() > $max) ${createError("\"Integer range maximum of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
+            }
             "objective" -> builder.append("    var a$argumentIndex = reader.readWord();\n")
+            "root_command" -> builder.append("    var a$argumentIndex = parseCommand(reader, lookup);\n")
+            "score_comparison" -> builder.append("    var a$argumentIndex = reader.readScoreboardCompareOperation();\n")
             "score_holder" -> builder.append("    var a$argumentIndex = SelectorParser.parseScoreHolder(reader);\n")
+            "scoreboard_operation" -> builder.append("    var a$argumentIndex = reader.readScoreboardOperation();\n")
+            "swizzle" -> builder.append("    var a$argumentIndex = reader.readSwizzle();\n")
             "word" -> builder.append("    var a$argumentIndex = reader.readWord();\n")
+            "vec3" -> builder.append("    var a$argumentIndex = reader.readVec3();\n")
             else -> {
-                builder.append("    ${createWrappedError("Reading '$kindInfo' kind is not implemented @$argumentPath <${data.argName}>")}\n")
-                builder.append("}\n")
-                return false
+                TODO("Reading '$kindInfo' kind is not implemented @$argumentPath <${data.argName}>")
             }
         }
         val newArguments = arguments + mapOf(data.argName!! to "a$argumentIndex")
+        if(data.kind == "execute_subcommand" || data.kind == "root_command") {
+            generateCommandReturn(builder, uniqueId, data.executableCommand!!, newArguments)
+            builder.append("}\n")
+            return false
+        }
         if(data.executableCommand != null) {
             generateCommandReturn(builder, uniqueId, data.executableCommand!!, newArguments)
+            if(data.children.isEmpty()) {
+                builder.append("    ${createWrappedError("Too many arguments for @$argumentPath $name")}\n")
+                builder.append("}\n")
+                return false
+            }
         }
         builder.append("    if(!reader.skipArgumentWhitespace()) ${createWrappedError("Missing space after argument @$argumentPath $name")}\n")
         var reachable = true
@@ -186,11 +211,27 @@ private fun createWrappedError(str: String) = createError("\"" + str.translateEs
 fun generateCommandsDataReader(data: ParsedCommandData): String {
     val builder = StringBuilder()
     val uid = AtomicInteger()
-    builder.append("var commandName = reader.readWord();\n")
-    for((k, v) in data.commandTree) {
-        generateArgumentReader(k, v, builder, uid, "", mapOf(), true)
-    }
-    builder.append(createError("\"Unknown command: \" + commandName"))
+    builder.append("public static Command parseCommand(String command, IArgumentLookup lookup) {\n")
+    builder.append("    return parseCommand(new StringCommandReader(command), lookup);\n")
+    builder.append("}\n")
     builder.append("\n")
+    builder.append("public static Command parseCommand(StringCommandReader reader, IArgumentLookup lookup) {\n")
+    builder.append("    var commandName = reader.readWord();\n")
+    builder.append("    if(!reader.skipArgumentWhitespace()) ${createError("\"Missing space after argument @ \" + commandName")}\n")
+    builder.append("    switch(commandName) {\n")
+    for((k, _) in data.commandTree) {
+        builder.append("        case \"$k\" -> { return parseCommand_$k(reader, lookup); }\n")
+    }
+    builder.append("        default -> ${createError("\"Unknown command: \" + commandName")}\n")
+    builder.append("    }\n")
+    builder.append("}\n")
+    builder.append("\n")
+    for((k, v) in data.commandTree) {
+        builder.append("public static Command parseCommand_$k(StringCommandReader reader, IArgumentLookup lookup) {\n")
+        val innerBuilder = StringBuilder()
+        generateArgumentReader(k, v, innerBuilder, uid, "", mapOf(), true)
+        builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent("    ") + "\n")
+        builder.append("}\n")
+    }
     return builder.toString()
 }

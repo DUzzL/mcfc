@@ -1,8 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.commands;
 
-import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
-import dev.epicpix.minecraftfunctioncompiler.data.FloatRangeArgument;
-import dev.epicpix.minecraftfunctioncompiler.data.IntRangeArgument;
+import dev.epicpix.minecraftfunctioncompiler.data.*;
 
 public class StringCommandReader {
     private final String command;
@@ -70,12 +68,12 @@ public class StringCommandReader {
             skip();
             return true;
         }
-        return false;
+        return !canRead();
     }
 
     public String readUntilSpace() {
         int start = index;
-        if(canRead() && peek() != ' ') {
+        while(canRead() && peek() != ' ') {
             skip();
         }
         return command.substring(start, index);
@@ -173,6 +171,9 @@ public class StringCommandReader {
             if(!base2.isEmpty()) {
                 try {
                     max = Float.parseFloat(base2);
+                    if(min != null && min > max) {
+                        throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_RANGE);
+                    }
                 }catch(NumberFormatException e) {
                     throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_FLOAT);
                 }
@@ -198,11 +199,16 @@ public class StringCommandReader {
             }
         }
         if(peek() == '.' && peek(1) == '.') {
+            skip();
+            skip();
             var base2 = readNumberBase();
             Integer max = null;
             if(!base2.isEmpty()) {
                 try {
                     max = Integer.parseInt(base2);
+                    if(min != null && min > max) {
+                        throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_RANGE);
+                    }
                 }catch(NumberFormatException e) {
                     throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_INTEGER);
                 }
@@ -224,6 +230,7 @@ public class StringCommandReader {
             if ((c < '0' || c > '9') && (c < 'a' || c > 'z') && c != '_' && c != ':' && c != '/' && c != '.' && c != '-') {
                 break;
             }
+            skip();
         }
         String content = command.substring(start, index);
         if(content.indexOf(':') == -1) {
@@ -234,6 +241,86 @@ public class StringCommandReader {
         if(namespace.contains("/")) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_DATA_LOCATION);
         if(path.contains(":")) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_DATA_LOCATION);
         return new DataLocation(namespace, path);
+    }
+
+    public SwizzleArgument readSwizzle() {
+        boolean x = false;
+        boolean y = false;
+        boolean z = false;
+        while(canRead() && peek() != ' ') {
+            char c = read();
+            if(c == 'x') {
+                if(x) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_SWIZZLE);
+                x = true;
+            }else if(c == 'y') {
+                if(y) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_SWIZZLE);
+                y = true;
+            }else if(c == 'z') {
+                if(z) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_SWIZZLE);
+                z = true;
+            }
+        }
+        return new SwizzleArgument(x, y, z);
+    }
+
+    public WorldCoordinates readVec3() {
+        boolean relativeX = skipIfNext('~');
+        String x = readNumberBase();
+        if(!relativeX && !x.contains(".")) x += ".5";
+        if(!skipArgumentWhitespace()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_VEC3);
+        boolean relativeY = skipIfNext('~');
+        String y = readNumberBase();
+        if(!relativeY && !y.contains(".")) y += ".5";
+        if(!skipArgumentWhitespace()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_VEC3);
+        boolean relativeZ = skipIfNext('~');
+        String z = readNumberBase();
+        if(!relativeZ && !z.contains(".")) z += ".5";
+        return new WorldCoordinates(Double.parseDouble(x), relativeX, Double.parseDouble(y), relativeY, Double.parseDouble(z), relativeZ);
+    }
+
+    public Gamemode readGamemode() {
+        String gamemode = readWord();
+        return switch (gamemode) {
+            case "creative" -> Gamemode.CREATIVE;
+            case "survival" -> Gamemode.SURVIVAL;
+            case "adventure" -> Gamemode.ADVENTURE;
+            case "spectator" -> Gamemode.SPECTATOR;
+            default -> throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_GAMEMODE);
+        };
+    }
+
+    public TaggableLocation readTag() {
+        boolean isTag = skipIfNext('#');
+        DataLocation location = readDataLocation();
+        return new TaggableLocation(location, isTag);
+    }
+
+    public ScoreboardCompareOperation readScoreboardCompareOperation() {
+        String str = readUntilSpace();
+        return switch (str) {
+            case ">" -> ScoreboardCompareOperation.GT;
+            case ">=" -> ScoreboardCompareOperation.GE;
+            case "=" -> ScoreboardCompareOperation.EQ;
+            case "<" -> ScoreboardCompareOperation.LT;
+            case "<=" -> ScoreboardCompareOperation.LE;
+            default -> throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_SCOREBOARD_COMPARE_OPERATION);
+        };
+    }
+
+    public ScoreboardOperation readScoreboardOperation() {
+        String str = readUntilSpace();
+        return switch (str) {
+            case "=" -> ScoreboardOperation.SET;
+            case "+=" -> ScoreboardOperation.ADD;
+            case "-=" -> ScoreboardOperation.SUB;
+            case "*=" -> ScoreboardOperation.MUL;
+            case "/=" -> ScoreboardOperation.DIV;
+            case "%=" -> ScoreboardOperation.MOD;
+            case "<" -> ScoreboardOperation.MIN;
+            case ">" -> ScoreboardOperation.MAX;
+            case "><" -> ScoreboardOperation.SWAP;
+            default -> throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_SCOREBOARD_OPERATION);
+        };
     }
 
 }

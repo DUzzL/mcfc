@@ -1,13 +1,14 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_1.compiler
 
+import dev.epicpix.minecraftfunctioncompiler.commands.Command
 import dev.epicpix.minecraftfunctioncompiler.commands.CommandType
 import dev.epicpix.minecraftfunctioncompiler.compiler.ResultStorage
 import dev.epicpix.minecraftfunctioncompiler.compiler.impl.CompilationContext
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCompareOperation
+import dev.epicpix.minecraftfunctioncompiler.data.ScoreboardOperation
 import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument
 import dev.epicpix.minecraftfunctioncompiler.il.*
-import dev.epicpix.minecraftfunctioncompiler.commands.Command
 
 fun compile(commands: List<Command>): List<Instruction> {
     val instructions = mutableListOf<Instruction>()
@@ -67,15 +68,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                         forScoreHolder(command.get<ScoreHolderArgument>("source").selectSingle()) { sourceName ->
                             getScoreData(targetObjective, targetName, false) { target ->
                                 getScoreData(sourceObjective, sourceName, false) { source ->
-                                    val operation = when(command.get<String>("comparison")) {
-                                        ">" -> ScoreboardCompareOperation.GT
-                                        ">=" -> ScoreboardCompareOperation.GE
-                                        "=" -> ScoreboardCompareOperation.EQ
-                                        "<" -> ScoreboardCompareOperation.LT
-                                        "<=" -> ScoreboardCompareOperation.LE
-                                        else -> throw UnsupportedOperationException("Unknown comparison: ${command.get<String>("comparison")}")
-                                    }
-                                    val instr = Instructions.checkScoreCompare(target, source, operation)
+                                    val instr = Instructions.checkScoreCompare(target, source, command.get("comparison"))
                                     with(addInstruction = instr.children::add).compile(command["command"])
                                     addInstruction(instr)
                                 }
@@ -132,15 +125,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                         forScoreHolder(command.get<ScoreHolderArgument>("source").selectSingle()) { sourceName ->
                             getScoreData(targetObjective, targetName, false) { target ->
                                 getScoreData(sourceObjective, sourceName, false) { source ->
-                                    val operation = when(command.get<String>("comparison")) {
-                                        ">" -> ScoreboardCompareOperation.LE
-                                        ">=" -> ScoreboardCompareOperation.LT
-                                        "=" -> ScoreboardCompareOperation.NE
-                                        "<" -> ScoreboardCompareOperation.GE
-                                        "<=" -> ScoreboardCompareOperation.GT
-                                        else -> throw UnsupportedOperationException("Unknown comparison: ${command.get<String>("comparison")}")
-                                    }
-                                    val instr = Instructions.checkScoreCompare(target, source, operation)
+                                    val instr = Instructions.checkScoreCompare(target, source, command.get<ScoreboardCompareOperation>("comparison").negate())
                                     copy(addInstruction = instr.children::add).compile(command["command"])
                                     addInstruction(instr)
                                 }
@@ -186,8 +171,8 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
         }
         CommandType.SCOREBOARD_PLAYERS_OPERATION -> {
             val exceptionScope = ScopeData.ofId(highestLocal)
-            val self = when(command.get<String>("operation")) {
-                "/=", "%=" -> {
+            val self = when(command.get<ScoreboardOperation>("operation")) {
+                ScoreboardOperation.DIV, ScoreboardOperation.MOD -> {
                     val instruction = Instructions2.scope(exceptionScope)
                     addInstruction(instruction)
                     with(highestLocal = highestLocal + 1, addInstruction = instruction.children::add)
@@ -200,17 +185,16 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
                         forScoreHolder(command["source"]) { sourceName ->
                             getScoreData(targetObjective, targetName, true) { target ->
                                 getScoreData(sourceObjective, sourceName, true) { source ->
-                                    when(command.get<String>("operation")) {
-                                        "=" -> addInstruction(Instructions2.runScoreOperationSet(target, source))
-                                        "+=" -> addInstruction(Instructions2.runScoreOperationPlus(target, source))
-                                        "-=" -> addInstruction(Instructions2.runScoreOperationMinus(target, source))
-                                        "*=" -> addInstruction(Instructions2.runScoreOperationMultiply(target, source))
-                                        "/=" -> addInstruction(Instructions2.runScoreOperationDivide(target, source, exceptionScope))
-                                        "%=" -> addInstruction(Instructions2.runScoreOperationModulo(target, source, exceptionScope))
-                                        "<" -> addInstruction(Instructions2.runScoreOperationMin(target, source))
-                                        ">" -> addInstruction(Instructions2.runScoreOperationMax(target, source))
-                                        "><" -> addInstruction(Instructions2.runScoreOperationSwap(target, source))
-                                        else -> throw UnsupportedOperationException("Unknown operation: ${command.get<String>("operation")}")
+                                    when(command.get<ScoreboardOperation>("operation")!!) {
+                                        ScoreboardOperation.SET -> addInstruction(Instructions2.runScoreOperationSet(target, source))
+                                        ScoreboardOperation.ADD -> addInstruction(Instructions2.runScoreOperationPlus(target, source))
+                                        ScoreboardOperation.SUB -> addInstruction(Instructions2.runScoreOperationMinus(target, source))
+                                        ScoreboardOperation.MUL -> addInstruction(Instructions2.runScoreOperationMultiply(target, source))
+                                        ScoreboardOperation.DIV -> addInstruction(Instructions2.runScoreOperationDivide(target, source, exceptionScope))
+                                        ScoreboardOperation.MOD -> addInstruction(Instructions2.runScoreOperationModulo(target, source, exceptionScope))
+                                        ScoreboardOperation.MIN -> addInstruction(Instructions2.runScoreOperationMin(target, source))
+                                        ScoreboardOperation.MAX -> addInstruction(Instructions2.runScoreOperationMax(target, source))
+                                        ScoreboardOperation.SWAP -> addInstruction(Instructions2.runScoreOperationSwap(target, source))
                                     }
                                 }
                             }
