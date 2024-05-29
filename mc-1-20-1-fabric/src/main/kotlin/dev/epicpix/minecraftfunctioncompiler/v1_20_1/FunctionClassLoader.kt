@@ -7,12 +7,12 @@ import dev.epicpix.minecraftfunctioncompiler.commands.CommandParser
 import dev.epicpix.minecraftfunctioncompiler.commands.IArgumentLookup
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation
 import dev.epicpix.minecraftfunctioncompiler.data.TaggableLocation
-import dev.epicpix.minecraftfunctioncompiler.emitter.callMap_get
+import dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callMap_get
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter
 import dev.epicpix.minecraftfunctioncompiler.v1_20_1.data.RegistryMapping
-import dev.epicpix.minecraftfunctioncompiler.v1_20_1.emitter.loadServerFunctionLibrary_functions
-import dev.epicpix.minecraftfunctioncompiler.v1_20_1.emitter.loadServerFunctionManager_library
+import dev.epicpix.minecraftfunctioncompiler.v1_20_1.emitter.MappedUsageDefinitionsExtensions.loadServerFunctionLibrary_functions
+import dev.epicpix.minecraftfunctioncompiler.v1_20_1.emitter.MappedUsageDefinitionsExtensions.loadServerFunctionManager_library
 import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.commands.CommandFunction
 import net.minecraft.commands.CommandFunction.CommandEntry
@@ -91,14 +91,11 @@ class FunctionClassLoader(parent: ClassLoader?, private val functions: Map<Resou
             ServerFunctionManager::class.java,
             MinecraftServer::class.java,
         ) { cf, cw, value ->
-            cw.callMap_get {
-                cw.loadServerFunctionLibrary_functions {
-                    cw.loadServerFunctionManager_library {
-                        cf.loadServerFunctionManager(cw)
-                    }
-                }
-                cf.loadResourceLocation(cw, value)
-            }
+            cf.loadServerFunctionManager(cw)
+            loadServerFunctionManager_library(cw)
+            loadServerFunctionLibrary_functions(cw)
+            cf.loadResourceLocation(cw, value)
+            callMap_get(cw)
             cw.castType(CommandFunction::class.java)
         }
     }

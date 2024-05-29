@@ -2,12 +2,12 @@ package dev.epicpix.minecraftfunctioncompiler.v1_20_1.emitter
 
 import dev.epicpix.minecraftfunctioncompiler.data.*
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterHelper.checkFloatRange
-import dev.epicpix.minecraftfunctioncompiler.emitter.callMath_floor
+import dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions
 import dev.epicpix.minecraftfunctioncompiler.emitter.registerEmitterInstruction
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData
-import dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCompareOperation
 import dev.epicpix.minecraftfunctioncompiler.v1_20_1.data.RegistryMapping
+import dev.epicpix.minecraftfunctioncompiler.v1_20_1.emitter.MappedUsageDefinitionsExtensions.*
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.phys.Vec3
@@ -23,28 +23,33 @@ fun registerInstructionEmitters() {
             }
             codeWriter.loadLocal("static\$CommandSourceStack")
             if(instruction.get<LocationData?>("entity") != null) {
-                codeWriter.callCommandSourceStack_withEntity { load("entity") }
+                load("entity")
+                callCommandSourceStack_withEntity(codeWriter)
             }
             if(instruction.get<LocationData?>("world") != null) {
-                codeWriter.callCommandSourceStack_withLevel { load("world") }
+                load("world")
+                callCommandSourceStack_withLevel(codeWriter)
             }
             if(instruction.get<LocationData?>("position") != null) {
-                codeWriter.callCommandSourceStack_withPosition { load("position") }
+                load("position")
+                callCommandSourceStack_withPosition(codeWriter)
             }
             if(instruction.get<LocationData?>("rotation") != null) {
-                codeWriter.callCommandSourceStack_withRotation { load("rotation") }
+                load("rotation")
+                callCommandSourceStack_withRotation(codeWriter)
             }
             if(compiledFunctions.contains(func)) {
                 codeWriter.methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, "function/${func.namespace}/${func.path}".replace('.', '$'), "run", "(${CommandSourceStack::class.java.descriptorString()})I", false)
             }else {
                 codeWriter.writeNull()
-                codeWriter.callServerFunctionManager_execute {  }
+                callServerFunctionManager_execute(codeWriter)
             }
             codeWriter.methodVisitor.visitInsn(Opcodes.POP)
         }
     }
     registerEmitterInstruction(InstructionTypes.CHECK_IN_SCORE_RANGE) {
-        codeWriter.callScore_getScore { load("score") }
+        load("score")
+        callScore_getScore(codeWriter)
         val range = instruction.get<IntRangeArgument>("range")
         if(range.minimum != null && range.maximum == null) {
             codeWriter.writeInt(range.minimum!!)
@@ -69,7 +74,8 @@ fun registerInstructionEmitters() {
         }
     }
     registerEmitterInstruction(InstructionTypes.CHECK_NOT_IN_SCORE_RANGE) {
-        codeWriter.callScore_getScore { load("score") }
+        load("score")
+        callScore_getScore(codeWriter)
         val range = instruction.get<IntRangeArgument>("range")
         if(range.minimum != null && range.maximum == null) {
             codeWriter.writeInt(range.minimum!!)
@@ -99,8 +105,10 @@ fun registerInstructionEmitters() {
         }
     }
     registerEmitterInstruction(InstructionTypes.CHECK_SCORE_COMPARE) {
-        codeWriter.callScore_getScore { load("source") }
-        codeWriter.callScore_getScore { load("target") }
+        load("source")
+        callScore_getScore(codeWriter)
+        load("target")
+        callScore_getScore(codeWriter)
 
         codeWriter.executeIf(when(instruction.get<ScoreboardCompareOperation>("compareOperation")!!) {
             ScoreboardCompareOperation.LT -> Opcodes.IF_ICMPLT
@@ -115,7 +123,8 @@ fun registerInstructionEmitters() {
         codeWriter.newObject(Vec3::class.java, Double::class.java, Double::class.java, Double::class.java) {
             val pos = instruction.get<WorldCoordinates>("position")
             if(pos.isXRelative) {
-                codeWriter.loadVec3_x { load("from") }
+                load("from")
+                loadVec3_x(codeWriter)
                 if(pos.x != 0.0) {
                     codeWriter.writeDouble(pos.x)
                     codeWriter.methodVisitor.visitInsn(Opcodes.DADD)
@@ -124,7 +133,8 @@ fun registerInstructionEmitters() {
                 codeWriter.writeDouble(pos.x)
             }
             if(pos.isYRelative) {
-                codeWriter.loadVec3_y { load("from") }
+                load("from")
+                loadVec3_y(codeWriter)
                 if(pos.y != 0.0) {
                     codeWriter.writeDouble(pos.y)
                     codeWriter.methodVisitor.visitInsn(Opcodes.DADD)
@@ -133,7 +143,8 @@ fun registerInstructionEmitters() {
                 codeWriter.writeDouble(pos.y)
             }
             if(pos.isZRelative) {
-                codeWriter.loadVec3_z { load("from") }
+                load("from")
+                loadVec3_z(codeWriter)
                 if(pos.z != 0.0) {
                     codeWriter.writeDouble(pos.z)
                     codeWriter.methodVisitor.visitInsn(Opcodes.DADD)
@@ -165,27 +176,28 @@ fun registerInstructionEmitters() {
     registerEmitterInstruction(InstructionTypes.ALIGN_POSITION) {
         codeWriter.newObject(Vec3::class.java, Double::class.java, Double::class.java, Double::class.java) {
             val swizzle = instruction.get<SwizzleArgument>("swizzle")
-            codeWriter.loadVec3_x { load("position") }
-            if(swizzle.x) codeWriter.callMath_floor {}
-            codeWriter.loadVec3_y { load("position") }
-            if(swizzle.y) codeWriter.callMath_floor {}
-            codeWriter.loadVec3_z { load("position") }
-            if(swizzle.z) codeWriter.callMath_floor {}
+            load("position")
+            loadVec3_x(codeWriter);
+            if(swizzle.x) JavaMappedUsageDefinitionsExtensions.callMath_floor(codeWriter)
+            load("position")
+            loadVec3_y(codeWriter);
+            if(swizzle.y) JavaMappedUsageDefinitionsExtensions.callMath_floor(codeWriter)
+            load("position")
+            loadVec3_z(codeWriter);
+            if(swizzle.z) JavaMappedUsageDefinitionsExtensions.callMath_floor(codeWriter)
         }
         runStored("result", Vec3::class.java)
     }
     registerEmitterInstruction(InstructionTypes.CHECK_GAMEMODE) {
-        codeWriter.callServerPlayerGameMode_getGameModeForPlayer {
-            codeWriter.loadServerPlayer_gameMode {
-                load("entity")
-                codeWriter.castType(ServerPlayer::class.java)
-            }
-        }
+        load("entity")
+        codeWriter.castType(ServerPlayer::class.java)
+        loadServerPlayer_gameMode(codeWriter)
+        callServerPlayerGameMode_getGameModeForPlayer(codeWriter)
         when(instruction.get<Gamemode>("gamemode")!!) {
-            Gamemode.SURVIVAL -> codeWriter.loadGameType_SURVIVAL()
-            Gamemode.CREATIVE -> codeWriter.loadGameType_CREATIVE()
-            Gamemode.ADVENTURE -> codeWriter.loadGameType_ADVENTURE()
-            Gamemode.SPECTATOR -> codeWriter.loadGameType_SPECTATOR()
+            Gamemode.SURVIVAL -> loadGameType_SURVIVAL(codeWriter)
+            Gamemode.CREATIVE -> loadGameType_CREATIVE(codeWriter)
+            Gamemode.ADVENTURE -> loadGameType_ADVENTURE(codeWriter)
+            Gamemode.SPECTATOR -> loadGameType_SPECTATOR(codeWriter)
         }
         val label = Label()
         codeWriter.methodVisitor.visitJumpInsn(if(!instruction.get<Boolean>("negated")) Opcodes.IF_ACMPNE else Opcodes.IF_ACMPEQ, label)
@@ -193,24 +205,25 @@ fun registerInstructionEmitters() {
         codeWriter.methodVisitor.visitLabel(label)
     }
     registerEmitterInstruction(InstructionTypes.SET_GAMEMODE) {
-        codeWriter.callServerPlayer_setGameMode {
-            load("entity")
-            codeWriter.castType(ServerPlayer::class.java)
-            when(instruction.get<Gamemode>("gamemode")!!) {
-                Gamemode.SURVIVAL -> codeWriter.loadGameType_SURVIVAL()
-                Gamemode.CREATIVE -> codeWriter.loadGameType_CREATIVE()
-                Gamemode.ADVENTURE -> codeWriter.loadGameType_ADVENTURE()
-                Gamemode.SPECTATOR -> codeWriter.loadGameType_SPECTATOR()
-            }
+        load("entity")
+        codeWriter.castType(ServerPlayer::class.java)
+        when(instruction.get<Gamemode>("gamemode")!!) {
+            Gamemode.SURVIVAL -> loadGameType_SURVIVAL(codeWriter)
+            Gamemode.CREATIVE -> loadGameType_CREATIVE(codeWriter)
+            Gamemode.ADVENTURE -> loadGameType_ADVENTURE(codeWriter)
+            Gamemode.SPECTATOR -> loadGameType_SPECTATOR(codeWriter)
         }
+        callServerPlayer_setGameMode(codeWriter)
         codeWriter.methodVisitor.visitInsn(Opcodes.POP)
     }
     registerEmitterInstruction(InstructionTypes.CHECK_ROTATION_YAW) {
-        codeWriter.loadVec2_x { load("rotation") }
+        load("rotation")
+        loadVec2_x(codeWriter)
         checkFloatRange(this, instruction.get("yaw")) { run() }
     }
     registerEmitterInstruction(InstructionTypes.CHECK_ROTATION_PITCH) {
-        codeWriter.loadVec2_y { load("rotation") }
+        load("rotation")
+        loadVec2_y(codeWriter)
         checkFloatRange(this, instruction.get("pitch")) { run() }
     }
 }

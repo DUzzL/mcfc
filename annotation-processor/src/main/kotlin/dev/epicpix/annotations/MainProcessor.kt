@@ -206,8 +206,10 @@ class MainProcessor(
         val resultClass = (data["definition_file"] as String).replace("\$VERSION", packageMinecraftVersion ?: "common")
         val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
         val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
-        val mapExtensions = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "kt")
-        mapExtensions.appendText("package $resultPackage\n")
+        val mapExtensions = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")
+        mapExtensions.appendText("package $resultPackage;\n")
+        mapExtensions.appendText("public final class $resultName {\n")
+        mapExtensions.appendText("    private $resultName() {}")
         fun findVersionSpecific(v: Any?): String? {
             if(v is Map<*, *>) {
                 v.forEach { (k, v) ->
@@ -240,7 +242,7 @@ class MainProcessor(
                     val isStatic = !callDetails.contains("M")
                     val isInterface = callDetails.contains("I")
                     val opcode = if(isStatic) 184 else if(isInterface) 185 else 182
-                    mapExtensions.appendText("inline fun dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter.call$k(params: () -> Unit) { params(); methodVisitor.visitMethodInsn($opcode, \"$className\", \"$methodName\", \"$methodDescriptor\", $isInterface); }\n".replace("\$", "\\$"))
+                    mapExtensions.appendText("    public static void call$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.getMethodVisitor().visitMethodInsn($opcode, \"$className\", \"$methodName\", \"$methodDescriptor\", $isInterface); }\n")
                 }
             }
         }
@@ -255,15 +257,16 @@ class MainProcessor(
                 if(callDetails != null) {
                     val isStatic = !callDetails.contains("M")
                     if(isStatic) {
-                        mapExtensions.appendText("@Suppress(\"NOTHING_TO_INLINE\") inline fun dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter.load$k() { methodVisitor.visitFieldInsn(178, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n".replace("\$", "\\$"))
-                        mapExtensions.appendText("inline fun dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter.store$k(value: () -> Unit) { value(); methodVisitor.visitFieldInsn(179, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n".replace("\$", "\\$"))
+                        mapExtensions.appendText("    public static void load$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.getMethodVisitor().visitFieldInsn(178, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n")
+                        mapExtensions.appendText("    public static void store$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.getMethodVisitor().visitFieldInsn(179, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n")
                     }else {
-                        mapExtensions.appendText("inline fun dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter.load$k(params: () -> Unit) { params(); methodVisitor.visitFieldInsn(180, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n".replace("\$", "\\$"))
-                        mapExtensions.appendText("inline fun dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter.store$k(params: () -> Unit) { params(); methodVisitor.visitFieldInsn(181, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n".replace("\$", "\\$"))
+                        mapExtensions.appendText("    public static void load$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.getMethodVisitor().visitFieldInsn(180, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n")
+                        mapExtensions.appendText("    public static void store$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.getMethodVisitor().visitFieldInsn(181, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n")
                     }
                 }
             }
         }
+        mapExtensions.appendText("}\n")
     }
 
     fun generateInstructionData(mappingData: MappingData?, common: Boolean, majorVer: Int, minorVer: Int, packageMinecraftVersion: String?) {
