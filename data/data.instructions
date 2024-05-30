@@ -199,7 +199,7 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 @FOR_MULTIPLE_SCORE_HOLDERS(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [ctx:name]) {
   let [local:array]<java.util.ArrayList> = new <java.util.ArrayList>([static:Scoreboard].playerScores.keySet());
   if([local:array].isEmpty() != 0) {
-    let [ctx:name] = [local:array].get(0);
+    let [ctx:name] = cast([local:array].get(0), <java.lang.String>);
     run();
   }
 }
@@ -437,6 +437,27 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 }
 
 @GET_ENTITY_WORLD(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.server.level.ServerLevel> [ctx:level]) {
-  let [ctx:level] = [ctx:entity].level();
+  let [ctx:level] = cast([ctx:entity].level(), <net.minecraft.server.level.ServerLevel>);
   run();
+}
+
+@SET_GAMEMODE(<net.minecraft.world.entity.Entity> [ctx:entity], <dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:gamemode]) {
+    cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>).setGameMode(map_enum([instr:gamemode], <net.minecraft.world.level.GameType>));
+}
+
+=CHECK_GAMEMODE(<net.minecraft.world.entity.Entity> [ctx:entity], <dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:gamemode], boolean [instr:negated]) {
+  (negated == false) => CHECK_IS_GAMEMODE;
+  => CHECK_NOT_IS_GAMEMODE;
+}
+
+@CHECK_IS_GAMEMODE(<net.minecraft.world.entity.Entity> [ctx:entity], <dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:gamemode]) {
+    if(cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>).gameMode.getGameModeForPlayer() == map_enum([instr:gamemode], <net.minecraft.world.level.GameType>)) {
+      run();
+    }
+}
+
+@CHECK_NOT_IS_GAMEMODE(<net.minecraft.world.entity.Entity> [ctx:entity], <dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:gamemode]) {
+    if(cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>).gameMode.getGameModeForPlayer() != map_enum([instr:gamemode], <net.minecraft.world.level.GameType>)) {
+      run();
+    }
 }

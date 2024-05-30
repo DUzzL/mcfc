@@ -11,6 +11,8 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.Origin
 import dev.epicpix.annotations.commands.generateCommandsDataReader
 import dev.epicpix.annotations.commands.parseCommandsData
+import dev.epicpix.annotations.enums.EnumList
+import dev.epicpix.annotations.enums.parseEnums
 import dev.epicpix.annotations.instructions.*
 import net.fabricmc.accesswidener.AccessWidenerReader
 import net.fabricmc.accesswidener.AccessWidenerVisitor
@@ -62,11 +64,10 @@ fun MappingData?.getFieldName(owner: String, name: String, desc: String): String
 private lateinit var dataDir: String
 
 fun loadToml(file: String): Map<String, Any> {
-    val str = loadDataFile("$file.toml") ?: throw NullPointerException("Failed to read file $file.toml")
-    return tomlMapper {  }.decode(str)
+    return tomlMapper {  }.decode(loadDataFile("$file.toml"))
 }
 
-fun loadDataFile(file: String): String? {
+fun loadDataFile(file: String): String {
     return Files.readString(File(dataDir, file).toPath())
 }
 
@@ -130,7 +131,8 @@ class MainProcessor(
             }
         }
         if(options["definitions"] != null) {
-            generateInstructionData(mappingData, options["definitions"] == "common", minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0, packageMinecraftVersion)
+            val enums = parseEnums(loadDataFile("data.enums"))
+            generateInstructionData(mappingData, options["definitions"] == "common", minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0, packageMinecraftVersion, enums)
         }
         if(options["definitions"] == "common") {
             generateConstantsData()
@@ -177,7 +179,7 @@ class MainProcessor(
     }
 
     fun generateCommandsData() {
-        val data = parseCommandsData(loadDataFile("data.commands")!!);
+        val data = parseCommandsData(loadDataFile("data.commands"))
         run {
             val resultPackage = "dev.epicpix.minecraftfunctioncompiler.commands"
             val resultName = "CommandParser"
@@ -212,7 +214,7 @@ class MainProcessor(
         val mapExtensions = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")
         mapExtensions.appendText("package $resultPackage;\n")
         mapExtensions.appendText("public final class $resultName {\n")
-        mapExtensions.appendText("    private $resultName() {}")
+        mapExtensions.appendText("    private $resultName() {}\n")
         fun findVersionSpecific(v: Any?): String? {
             if(v is Map<*, *>) {
                 v.forEach { (k, v) ->
@@ -272,48 +274,8 @@ class MainProcessor(
         mapExtensions.appendText("}\n")
     }
 
-    fun generateInstructionData(mappingData: MappingData?, common: Boolean, majorVer: Int, minorVer: Int, packageMinecraftVersion: String?) {
-        fun findVersionSpecific(v: Any?): String? {
-            if(v is Map<*, *>) {
-                v.forEach { (k, v) ->
-                    k as String
-                    v as String
-                    val minecraftVersion = k.split(".")
-                    val cMajor = minecraftVersion[1].toInt()
-                    val cMinor = minecraftVersion[2].filter { it.isDigit() }.toIntOrNull() ?: 0
-                    if(cMajor == majorVer && cMinor == minorVer) return v
-                    else if( k.endsWith("+") && ((majorVer == cMajor && minorVer >= cMinor) || (majorVer > cMajor))) {
-                        return v
-                    }else if(k.endsWith("-") && ((majorVer == cMajor && minorVer <= cMinor) || (majorVer < cMajor))) {
-                        return v
-                    }
-                }
-                return null
-            }else {
-                return v as String
-            }
-        }
-
-        val file = parseCode(loadDataFile("data.instructions")!!) {
-            val content = findVersionSpecific(it)
-            if(content != null) {
-                val fullDescriptor = content.split("@")[0]
-                val className = mappingData.getClassName(fullDescriptor.split(":")[0])
-                val methodDescriptor = remapType(Type.getMethodType("(" + fullDescriptor.split("(")[1]), mappingData).descriptor
-                val methodName = mappingData.getMethodName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1].split("(")[0], "(" + fullDescriptor.split("(")[1])
-                val callDetails = content.split("@").getOrNull(1)
-                if(callDetails != null) {
-                    val isStatic = !callDetails.contains("M")
-                    val isInterface = callDetails.contains("I")
-                    val opcode = if(isStatic) 184 else if(isInterface) 185 else 182
-                    val obf = className.contains("net/minecraft") || methodDescriptor.contains("net/minecraft")
-                    if(!common || !obf) {
-                        return@parseCode "$className $methodName $methodDescriptor $opcode $obf $isInterface"
-                    }
-                }
-            }
-            return@parseCode null
-        }
+    fun generateInstructionData(mappingData: MappingData?, common: Boolean, majorVer: Int, minorVer: Int, packageMinecraftVersion: String?, enums: EnumList) {
+        val file = parseCode(loadDataFile("data.instructions"))
 
         val resultClass = (if(common) file.fileInfo["emitter_noobf_file"]!! else file.fileInfo["emitter_obf_file"]!!).replace("\$VERSION", packageMinecraftVersion ?: "common")
         val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
@@ -345,7 +307,7 @@ class MainProcessor(
                 if(matchesVersion) {
                     map.appendText("            if(type == ${file.fileInfo["enum_file"]}.${it.name.uppercase()}) {\n")
                     val output = ByteArrayOutputStream()
-                    info[it.name] = generateCode(mappingData, it, file, output)
+                    info[it.name] = generateCode(mappingData, it, file, output, enums)
                     map.appendText(output.toByteArray().decodeToString().trimEnd().prependIndent("                "))
                     map.appendText("\n")
                     map.appendText("                return true;\n")

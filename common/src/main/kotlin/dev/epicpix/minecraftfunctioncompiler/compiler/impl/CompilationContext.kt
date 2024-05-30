@@ -213,7 +213,7 @@ data class CompilationContext(
                 stacker.stackInstruction(Instructions.checkEntityTypes(local, selector.entityTypes.data.toMutableList(), selector.entityTypes.negated))
             }
             if(selector.gamemode != null) {
-                stacker.stackInstruction(Instructions.checkGamemode(local, selector.gamemode.data, selector.gamemode.negated))
+                stacker.stackInstruction(Instructions2.checkGamemode(local, selector.gamemode.data, selector.gamemode.negated))
             }
             for(tag in selector.tags) {
                 stacker.stackInstruction(Instructions2.checkEntityTag(local, tag.data, tag.negated))

@@ -9,7 +9,6 @@ import dev.epicpix.minecraftfunctioncompiler.il.LocationData
 import dev.epicpix.minecraftfunctioncompiler.v1_20_2.data.RegistryMapping
 import dev.epicpix.minecraftfunctioncompiler.v1_20_2.emitter.MappedUsageDefinitionsExtensions.*
 import net.minecraft.commands.CommandSourceStack
-import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.phys.Vec3
 import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
@@ -197,34 +196,6 @@ fun registerInstructionEmitters() {
             if(swizzle.z) callMath_floor(codeWriter)
         }
         runStored("result", Vec3::class.java)
-    }
-    registerEmitterInstruction(InstructionTypes.CHECK_GAMEMODE) {
-        load("entity")
-        codeWriter.castType(ServerPlayer::class.java)
-        loadServerPlayer_gameMode(codeWriter)
-        callServerPlayerGameMode_getGameModeForPlayer(codeWriter)
-        when(instruction.get<Gamemode>("gamemode")!!) {
-            Gamemode.SURVIVAL -> loadGameType_SURVIVAL(codeWriter)
-            Gamemode.CREATIVE -> loadGameType_CREATIVE(codeWriter)
-            Gamemode.ADVENTURE -> loadGameType_ADVENTURE(codeWriter)
-            Gamemode.SPECTATOR -> loadGameType_SPECTATOR(codeWriter)
-        }
-        val label = Label()
-        codeWriter.methodVisitor.visitJumpInsn(if(!instruction.get<Boolean>("negated")) Opcodes.IF_ACMPNE else Opcodes.IF_ACMPEQ, label)
-        run()
-        codeWriter.methodVisitor.visitLabel(label)
-    }
-    registerEmitterInstruction(InstructionTypes.SET_GAMEMODE) {
-        load("entity")
-        codeWriter.castType(ServerPlayer::class.java)
-        when(instruction.get<Gamemode>("gamemode")!!) {
-            Gamemode.SURVIVAL -> loadGameType_SURVIVAL(codeWriter)
-            Gamemode.CREATIVE -> loadGameType_CREATIVE(codeWriter)
-            Gamemode.ADVENTURE -> loadGameType_ADVENTURE(codeWriter)
-            Gamemode.SPECTATOR -> loadGameType_SPECTATOR(codeWriter)
-        }
-        callServerPlayer_setGameMode(codeWriter)
-        codeWriter.methodVisitor.visitInsn(Opcodes.POP)
     }
     registerEmitterInstruction(InstructionTypes.CHECK_ROTATION_YAW) {
         load("rotation")

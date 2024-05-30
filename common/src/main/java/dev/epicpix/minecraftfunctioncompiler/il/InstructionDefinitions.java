@@ -19,8 +19,6 @@ interface InstructionDefinitions {
     Instruction applyPositionWorld(@InstructionSource LocationData from, @InstructionDestination LocationData to, WorldCoordinates position);
     Instruction checkEntityTypes(@InstructionSource LocationData entity, List<DataLocation> types, boolean negated);
     Instruction alignPosition(@InstructionSource LocationData position, @InstructionDestination LocationData result, SwizzleArgument swizzle);
-    Instruction checkGamemode(@InstructionSource LocationData entity, Gamemode gamemode, boolean negated);
-    Instruction setGamemode(@InstructionSource LocationData entity, Gamemode gamemode);
     Instruction checkRotationYaw(@InstructionSource LocationData rotation, @Nullable FloatRangeArgument yaw);
     Instruction checkRotationPitch(@InstructionSource LocationData rotation, @Nullable FloatRangeArgument pitch);
 }

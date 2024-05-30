@@ -139,7 +139,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
         }
         CommandType.GAMEMODE -> {
             forSelector(command["targets"]) { entity, _, _ ->
-                addInstruction(Instructions.setGamemode(entity, command["gamemode"]))
+                addInstruction(Instructions2.setGamemode(entity, command["gamemode"]))
             }
         }
         CommandType.KILL -> {

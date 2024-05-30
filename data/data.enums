@@ -1,0 +1,4 @@
+net.minecraft.world.level.GameType.SURVIVAL -> dev.epicpix.minecraftfunctioncompiler.data.Gamemode.SURVIVAL
+net.minecraft.world.level.GameType.CREATIVE -> dev.epicpix.minecraftfunctioncompiler.data.Gamemode.CREATIVE
+net.minecraft.world.level.GameType.ADVENTURE -> dev.epicpix.minecraftfunctioncompiler.data.Gamemode.ADVENTURE
+net.minecraft.world.level.GameType.SPECTATOR -> dev.epicpix.minecraftfunctioncompiler.data.Gamemode.SPECTATOR
