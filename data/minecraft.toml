@@ -1,7 +1,6 @@
 definition_file = "dev.epicpix.minecraftfunctioncompiler.$VERSION.emitter.MappedUsageDefinitionsExtensions"
 
 [definitions_functions]
-Entity_level = "net/minecraft/world/entity/Entity:level()Lnet/minecraft/world/level/Level;@M"
 ServerPlayer_setGameMode = "net/minecraft/server/level/ServerPlayer:setGameMode(Lnet/minecraft/world/level/GameType;)Z@M"
 ServerPlayerGameMode_getGameModeForPlayer = "net/minecraft/server/level/ServerPlayerGameMode:getGameModeForPlayer()Lnet/minecraft/world/level/GameType;@M"
 CommandSourceStack_withEntity = "net/minecraft/commands/CommandSourceStack:withEntity(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/commands/CommandSourceStack;@M"

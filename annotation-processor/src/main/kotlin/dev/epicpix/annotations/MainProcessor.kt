@@ -59,13 +59,15 @@ fun MappingData?.getFieldName(owner: String, name: String, desc: String): String
     return mappedFields.entries.find { it.key.name == name && it.key.owner == owner && it.key.desc == desc }?.value ?: (if(!owner.startsWith("net/minecraft")) name else error("No field mapping for $owner.$name $desc"))
 }
 
+private lateinit var dataDir: String
+
 fun loadToml(file: String): Map<String, Any> {
     val str = loadDataFile("$file.toml") ?: throw NullPointerException("Failed to read file $file.toml")
     return tomlMapper {  }.decode(str)
 }
 
 fun loadDataFile(file: String): String? {
-    return MainProcessor::class.java.getResourceAsStream("/data/$file")?.readAllBytes()?.decodeToString()
+    return Files.readString(File(dataDir, file).toPath())
 }
 
 fun remapType(type: Type, mappingData: MappingData?): Type {
@@ -87,6 +89,7 @@ class MainProcessor(
     override fun process(resolver: Resolver): List<KSAnnotated> {
         if(invoked) return emptyList()
         invoked = true
+        dataDir = options["data_dir"]!!
 
         val mappingData = if(options["isJarTask"] == "true" && options["mappingsFile"] != null) MappingData() else null
         if(mappingData != null) {

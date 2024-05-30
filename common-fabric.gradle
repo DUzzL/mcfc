@@ -30,6 +30,7 @@ gradle.taskGraph.whenReady { taskExecutionGraph ->
 
 ksp {
     arg("definitions", "minecraft")
+    arg("data_dir", file("../data/").absolutePath)
     project.afterEvaluate {
         arg("mappingsFile", loom.mappingsFile.absolutePath)
         arg("jars", project.configurations.runtimeClasspath.incoming.files.join(":"))
