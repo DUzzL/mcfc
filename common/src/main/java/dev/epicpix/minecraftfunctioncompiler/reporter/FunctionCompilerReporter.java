@@ -27,7 +27,7 @@ public final class FunctionCompilerReporter {
     private static boolean dataReportingEnabled = true;
 
     private static final UUID runUuid = UUID.randomUUID();
-    private static final String REPORT_URL = "https://mods.epicpix.dev/api/mcfc/v1/send_reports";
+    private static final String REPORT_URL = "https://mcfc.mods.epicpix.dev/api/v1/send_reports";
 
     private static String minecraftVersionName = null;
     private static String minecraftVersionType = null;
