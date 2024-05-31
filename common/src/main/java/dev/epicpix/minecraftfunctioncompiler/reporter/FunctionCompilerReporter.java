@@ -115,11 +115,6 @@ public final class FunctionCompilerReporter {
         timings.addProperty("handle_load", handleLoadTime);
         compilationStats.add("timings", timings);
 
-        JsonObject instructionCounts = new JsonObject();
-        instructionCounts.addProperty("pre_optimization", optimizationStats.stream().mapToInt(it -> it.get(0).instructionCount()).sum());
-        instructionCounts.addProperty("post_optimization", optimizationStats.stream().mapToInt(it -> it.get(it.size() - 1).instructionCount()).sum());
-        compilationStats.add("compilation_counts", instructionCounts);
-
         JsonArray optimizations = new JsonArray();
         for(var optimizationData : optimizationStats) {
             JsonArray arr = new JsonArray();
