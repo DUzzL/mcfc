@@ -141,7 +141,11 @@ public final class FunctionCompilerReporter {
         Thread t = new Thread(() -> {
             try {
                 var response = HttpClient.newHttpClient().send(
-                        HttpRequest.newBuilder().uri(new URL(REPORT_URL).toURI()).POST(HttpRequest.BodyPublishers.ofString(new Gson().toJson(sendData))).build(),
+                        HttpRequest.newBuilder()
+                                .uri(new URL(REPORT_URL).toURI())
+                                .POST(HttpRequest.BodyPublishers.ofString(new Gson().toJson(sendData)))
+                                .setHeader("Content-Type", "application/json")
+                                .build(),
                         HttpResponse.BodyHandlers.ofString()
                 );
                 if(response.statusCode() == 400) {
