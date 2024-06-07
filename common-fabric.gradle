@@ -39,7 +39,7 @@ ksp {
     arg("accesswidener", file("src/main/resources/minecraftfunctioncompiler.v${project.minecraft_version.replaceAll("\\.", "_")}.accesswidener").absolutePath)
 }
 
-def targetJavaVersion = 17
+def targetJavaVersion = project.ext.java_version
 tasks.withType(JavaCompile).configureEach {
     it.options.encoding = "UTF-8"
     if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
@@ -86,5 +86,5 @@ jar {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(targetJavaVersion)
 }

@@ -1,0 +1,15 @@
+plugins {
+    id 'fabric-loom' version '1.6-SNAPSHOT'
+    id 'maven-publish'
+    id 'org.jetbrains.kotlin.jvm' version '1.9.21'
+    id 'com.google.devtools.ksp' version "1.9.21-1.0.16"
+}
+
+ext {
+    minecraft_version = "1.20.6"
+    loader_version = "0.14.23"
+    fabric_kotlin_version = "1.10.16+kotlin.1.9.21"
+    java_version = 21
+}
+
+apply from: "../common-fabric.gradle"

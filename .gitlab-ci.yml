@@ -1,4 +1,4 @@
-image: openjdk:17-jdk-oraclelinux7
+image: amazoncorretto:21.0.3-al2023-headless
 
 before_script:
   - GRADLE_USER_HOME="$(pwd)/.gradle"

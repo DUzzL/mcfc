@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "minecraftfunctioncompiler",
+  "version": "${version}",
+  "name": "Function Compiler",
+  "icon": "assets/minecraftfunctioncompiler/icon.png",
+  "description": "This mod allows the server to automatically compile most of the functions to Java bytecode",
+  "authors": [ "EpicPix" ],
+  "license": "LGPL-3.0-only",
+  "environment": "*",
+  "accessWidener": "minecraftfunctioncompiler.v1_20_6.accesswidener",
+  "entrypoints": {
+    "main": [
+      "dev.epicpix.minecraftfunctioncompiler.v1_20_6.FunctionCompilerMain"
+    ]
+  },
+  "mixins": [
+    "minecraftfunctioncompiler.v1_20_6.mixins.json"
+  ],
+  "contact": {
+    "homepage": "https://modrinth.com/mod/mcfc",
+    "sources": "https://gitlab.epicpix.dev/EpicPix/MinecraftFunctionCompiler",
+    "issues": "https://gitlab.epicpix.dev/EpicPix/MinecraftFunctionCompiler/-/issues",
+    "email": "epicpix@epicpix.dev"
+  },
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "minecraft": [
+      "1.20.5",
+      "1.20.6"
+    ],
+    "fabric-language-kotlin": ">=${fabric_kotlin_version}"
+  }
+}
