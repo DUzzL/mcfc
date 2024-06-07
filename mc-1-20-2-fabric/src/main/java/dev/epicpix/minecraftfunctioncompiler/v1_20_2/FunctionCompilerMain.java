@@ -3,6 +3,7 @@ package dev.epicpix.minecraftfunctioncompiler.v1_20_2;
 import dev.epicpix.minecraftfunctioncompiler.commands.SelectorParser;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.FloatRangeArgument;
+import dev.epicpix.minecraftfunctioncompiler.data.Gamemode;
 import dev.epicpix.minecraftfunctioncompiler.data.NegatableData;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.EmitterBaseOptions;
 import dev.epicpix.minecraftfunctioncompiler.v1_20_2.data.RegistryMapping;
@@ -36,10 +37,11 @@ public class FunctionCompilerMain implements ModInitializer {
                 var typeData = BuiltInRegistries.ENTITY_TYPE.getTag(tagKey);
                 types = typeData
                         .map(holders -> holders.stream()
-                                .map(it -> ExtensionsKt.toDataLocation(it
+                                .map(it -> it
                                         .unwrapKey()
                                         .get()
-                                        .location()))
+                                        .location())
+                                .map(it -> new DataLocation(it.getNamespace(), it.getPath()))
                                 .toList()
                         ).orElseGet(List::of);
             }
@@ -50,7 +52,12 @@ public class FunctionCompilerMain implements ModInitializer {
         });
         SelectorParser.registerSelectorOption("gamemode", (reader, data) -> {
             var negated = reader.skipIfNext('!');
-            data.gamemode = new NegatableData<>(ExtensionsKt.toGamemode(GameType.byName(reader.readWord(), GameType.DEFAULT_MODE)), negated);
+            data.gamemode = new NegatableData<>(switch(GameType.byName(reader.readWord(), GameType.DEFAULT_MODE)) {
+                case SURVIVAL -> Gamemode.SURVIVAL;
+                case CREATIVE -> Gamemode.CREATIVE;
+                case ADVENTURE -> Gamemode.ADVENTURE;
+                case SPECTATOR -> Gamemode.SPECTATOR;
+            }, negated);
             data.entityTypes = new NegatableData<>(List.of(new DataLocation("minecraft", "player")), false);
         });
         SelectorParser.registerSelectorOption("x_rotation", (reader, data) -> {

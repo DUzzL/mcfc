@@ -1,7 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_4.data;
 
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
-import dev.epicpix.minecraftfunctioncompiler.v1_20_4.ExtensionsKt;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
@@ -27,7 +26,8 @@ public final class RegistryMapping {
             if(EntityType.class.isAssignableFrom(field.getType()) && Modifier.isPublic(field.getModifiers()) && Modifier.isStatic(field.getModifiers()) && Modifier.isFinal(field.getModifiers())) {
                 var value = (EntityType<?>) field.get(null);
                 var type = (Class<?>) ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
-                entityTypeMappings.put(ExtensionsKt.toDataLocation(BuiltInRegistries.ENTITY_TYPE.getKey(value)), type);
+                var key = BuiltInRegistries.ENTITY_TYPE.getKey(value);
+                entityTypeMappings.put(new DataLocation(key.getNamespace(), key.getPath()), type);
             }
         }
         entityTypeMappings.put(new DataLocation("minecraft", "player"), ServerPlayer.class);
