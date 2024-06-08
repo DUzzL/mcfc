@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import dev.epicpix.minecraftfunctioncompiler.commands.CommandError;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.optimizer.OptimizationStatistics;
 
@@ -98,7 +99,8 @@ public final class FunctionCompilerReporter {
             double compileTime,
             double classLoadTime,
             double handleLoadTime,
-            List<List<OptimizationStatistics>> optimizationStats
+            List<List<OptimizationStatistics>> optimizationStats,
+            List<CommandError> commandErrors
         ) {
         JsonObject compilationStats = new JsonObject();
 
@@ -128,6 +130,15 @@ public final class FunctionCompilerReporter {
             optimizations.add(arr);
         }
         compilationStats.add("optimizations", optimizations);
+
+        JsonArray commandErrorsJson = new JsonArray();
+        for(var error : commandErrors) {
+            JsonObject obj = new JsonObject();
+            obj.addProperty("command", error.command());
+            obj.addProperty("error_message", error.errorMessage());
+            commandErrorsJson.add(obj);
+        }
+        compilationStats.add("command_errors", commandErrorsJson);
 
         reportRawData("compilation_stats", compilationStats);
     }

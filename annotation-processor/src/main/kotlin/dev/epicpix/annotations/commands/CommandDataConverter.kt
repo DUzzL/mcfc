@@ -205,7 +205,7 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
     }
 }
 
-private fun createError(str: String) = "throw new UnsupportedOperationException($str);"
+private fun createError(str: String) = "throw new CommandErrorException(new CommandError(reader.getString(), $str));"
 private fun createWrappedError(str: String) = createError("\"" + str.translateEscapes() + "\"")
 
 fun generateCommandsDataReader(data: ParsedCommandData): String {

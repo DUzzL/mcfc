@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler;
 
 import com.google.gson.JsonObject;
+import dev.epicpix.minecraftfunctioncompiler.commands.CommandError;
 import dev.epicpix.minecraftfunctioncompiler.compiler.CompilerKt;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
@@ -76,6 +77,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
             int foundFunctionCount,
             double parseTime,
             Map<DataLocation, List<Command>> definedFunctions,
+            List<CommandError> commandErrors,
             CodeFieldStorage fieldStorage,
             Object serverFunctionManager
         ) {
@@ -145,18 +147,20 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
             try {
                 registerFunction(loadedFunctions.get(key), key);
             }catch(Throwable e) {
-                logError.accept("Failed to create function handle ($key), clearing data");
+                logError.accept("Failed to create function handle (" + key + "), clearing data");
                 e.printStackTrace();
                 FunctionCompilerReporter.reportExceptionWithInstructions("load_function_class", e, compiledFunctions.get(key));
                 FunctionCompilerReporter.sendReports();
                 resetHandles();
-                logInfo.accept("Instruction dump:");
-                printInstructionList(compiledFunctions.get(key), logInfo, 0);
+                if(DEBUG) {
+                    logInfo.accept("Instruction dump:");
+                    printInstructionList(compiledFunctions.get(key), logInfo, 0);
+                }
                 break;
             }
         }
         var handleLoadTime = (System.nanoTime()-startHandles)/1000000000d;
-        FunctionCompilerReporter.reportCompilationStatistics(foundFunctionCount, definedFunctions.size(), compiledFunctions.size(), parseTime, compileTime, classLoadTime, handleLoadTime, optimizerStatistics);
+        FunctionCompilerReporter.reportCompilationStatistics(foundFunctionCount, definedFunctions.size(), compiledFunctions.size(), parseTime, compileTime, classLoadTime, handleLoadTime, optimizerStatistics, commandErrors);
 
         FunctionCompilerReporter.sendReports();
     }

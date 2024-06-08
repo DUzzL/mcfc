@@ -2,9 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.v1_20_4;
 
 import com.google.gson.JsonObject;
 import dev.epicpix.minecraftfunctioncompiler.FunctionCompilerClassLoader;
-import dev.epicpix.minecraftfunctioncompiler.commands.Command;
-import dev.epicpix.minecraftfunctioncompiler.commands.CommandParser;
-import dev.epicpix.minecraftfunctioncompiler.commands.IArgumentLookup;
+import dev.epicpix.minecraftfunctioncompiler.commands.*;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.TaggableLocation;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
@@ -62,6 +60,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
         };
 
         HashMap<DataLocation, List<Command>> definedFunctions = new HashMap<>();
+        ArrayList<CommandError> commandErrors = new ArrayList<>();
 
         var startParse = System.nanoTime();
         funcLoop: for(var entry : functions.entrySet()) {
@@ -78,8 +77,9 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
                     }
                     definedFunctions.put(new DataLocation(key.getNamespace(), key.getPath()), parsed);
                 }
-            } catch (UnsupportedOperationException e) {
+            } catch (CommandErrorException e) {
                 logWarn.accept("Unable to parse function " + key + " / " + e.getMessage());
+                commandErrors.add(e.error);
             } catch (Throwable e) {
                 logError.accept("Unable to parse function " + key);
                 e.printStackTrace();
@@ -87,7 +87,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
             }
         }
         var parseTime = (System.nanoTime()-startParse)/1000000000d;
-        loadFunctionClasses(functions.size(), parseTime, definedFunctions, createCodeFieldStorage(), serverFunctionManager);
+        loadFunctionClasses(functions.size(), parseTime, definedFunctions, commandErrors, createCodeFieldStorage(), serverFunctionManager);
     }
 
     public boolean hasFunctionLoaded(ResourceLocation location) {
