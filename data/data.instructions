@@ -314,7 +314,7 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 
 
 
-=SCORE_DATA(<net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <java.lang.Object> [ctx:score], boolean [instr:auto_create]) {
+=SCORE_DATA(<net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <dev.epicpix.minecraftfunctioncompiler.data.locations.Score> [ctx:score], boolean [instr:auto_create]) {
   (auto_create == false) => SCORE_DATA_NO_AUTO_CREATE;
   => SCORE_DATA_AUTO_CREATE;
 }

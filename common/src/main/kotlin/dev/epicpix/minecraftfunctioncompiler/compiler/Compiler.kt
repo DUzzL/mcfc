@@ -7,6 +7,9 @@ import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCompareOperation
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreboardOperation
 import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument
+import dev.epicpix.minecraftfunctioncompiler.data.locations.Vec2
+import dev.epicpix.minecraftfunctioncompiler.data.locations.Vec3
+import dev.epicpix.minecraftfunctioncompiler.data.locations.World
 import dev.epicpix.minecraftfunctioncompiler.il.*
 
 fun compile(commands: List<Command>): List<Instruction> {
@@ -22,7 +25,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
     when(command.type!!) {
         CommandType.EXECUTE_ALIGN -> {
             getPosition { positionId ->
-                val newPosition = LocationData.ofLocal(highestLocal)
+                val newPosition = LocationData.ofLocal<Vec3>(highestLocal)
                 val instruction = Instructions.alignPosition(positionId, newPosition, command["swizzle"])
                 with(highestLocal = highestLocal + 1, currentPosition = newPosition, addInstruction = instruction.children::add).compile(command["command"], result)
                 addInstruction(instruction)
@@ -35,9 +38,9 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
         }
         CommandType.EXECUTE_AT -> {
             forSelector(command["targets"]) { entity, _, _ ->
-                val world = LocationData.ofLocal(highestLocal)
-                val position = LocationData.ofLocal(highestLocal + 1)
-                val rotation = LocationData.ofLocal(highestLocal + 2)
+                val world = LocationData.ofLocal<World>(highestLocal)
+                val position = LocationData.ofLocal<Vec3>(highestLocal + 1)
+                val rotation = LocationData.ofLocal<Vec2>(highestLocal + 2)
                 val execInstruction = Instructions2.getEntityRotation(entity, rotation)
                 val instruction = Instructions2.getEntityWorld(entity, world).with(Instructions2.getEntityPosition(entity, position).with(execInstruction))
                 with(highestLocal = highestLocal + 3, currentWorld = world, currentPosition = position, currentRotation = rotation, addInstruction = execInstruction.children::add).compile(command["command"], result)
@@ -160,7 +163,7 @@ private fun CompilationContext.compile(command: Command?, result: ResultStorage 
             getObjective(command["objective"]) { objective ->
                 forScoreHolder(command["target"]) { name ->
                     getScoreData(objective, name, true) { scoreData ->
-                        val res = LocationData.ofLocal(highestLocal)
+                        val res = LocationData.ofLocal<Int>(highestLocal)
                         addInstruction(Instructions2.getScoreValue(scoreData, res).apply {
                             result.setResult(with(addInstruction = children::add), res)
                         })

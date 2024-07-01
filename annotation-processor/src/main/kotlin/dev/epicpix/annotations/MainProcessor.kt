@@ -328,9 +328,10 @@ class MainProcessor(
             val enumResultPackage = enumClass.substring(0, enumClass.lastIndexOf('.'))
             val enumResultClass = enumClass.substring(enumClass.lastIndexOf('.')+1)
 
-            val impl = codeGenerator.createNewFile(Dependencies.ALL_FILES, generatorResultPackage, generatorResultClass + "Impl", "kt")
-            impl.appendText("package $generatorResultPackage\n")
-            impl.appendText("data object $generatorResultClass {\n")
+            val impl = codeGenerator.createNewFile(Dependencies.ALL_FILES, generatorResultPackage, generatorResultClass, "java")
+            impl.appendText("package $generatorResultPackage;\n")
+            impl.appendText("import java.util.*;\n")
+            impl.appendText("public final class ${generatorResultClass} {\n")
 
             val types = codeGenerator.createNewFile(Dependencies.ALL_FILES, enumResultPackage, enumResultClass, "java")
             types.appendText("package $enumResultPackage;\n")
@@ -339,21 +340,45 @@ class MainProcessor(
 
             file.collapsableDefinitions.forEach {
                 val named = it.name.uppercase()
-                impl.appendText("fun ${named.snakeToLowerCamelCase()}(")
-                for((param, type) in it.params) {
+                impl.appendText("public static $instructionType ${named.snakeToLowerCamelCase()}(")
+                for(i in it.params.indices) {
+                    val (param, type) = it.params[i];
                     val typeName = when(param.scope) {
                         ParsedTokenValueAccessorScope.CONTEXT -> {
                             if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.SCOPE)) {
                                 "dev.epicpix.minecraftfunctioncompiler.il.ScopeData"
                             }else {
-                                "dev.epicpix.minecraftfunctioncompiler.il.LocationData"
+                                "dev.epicpix.minecraftfunctioncompiler.il.LocationData<${
+                                    if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)) {
+                                        "Integer"
+                                    }else if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)) {
+                                        "Boolean"
+                                    }else if(type is ParsedTokenExpressionTypeComplex) {
+                                        if(type.typeName.startsWith("net.minecraft.")) {
+                                            when(type.typeName) {
+                                                "net.minecraft.world.entity.Entity" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Entity"
+                                                "net.minecraft.server.level.ServerPlayer" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Player"
+                                                "net.minecraft.world.scores.Objective" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Objective"
+                                                "net.minecraft.world.scores.Score" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Score"
+                                                "net.minecraft.world.phys.Vec3" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Vec3"
+                                                "net.minecraft.world.phys.Vec2" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Vec2"
+                                                "net.minecraft.server.level.ServerLevel" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.World"
+                                                else -> throw IllegalArgumentException("Unknown minecraft class: ${type.typeName}")
+                                            }
+                                        }else {
+                                            type.typeName.run { if(startsWith("java.lang.")) substring(10) else this }
+                                        }
+                                    }else {
+                                        TODO("Unknown type: $type")
+                                    }
+                                }>"
                             }
                         }
                         ParsedTokenValueAccessorScope.INSTRUCTION -> {
                             if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)) {
-                                "Int"
+                                "int"
                             }else if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)) {
-                                "Boolean"
+                                "boolean"
                             }else if(type is ParsedTokenExpressionTypeComplex) {
                                 type.typeName.run { if(startsWith("java.lang.")) substring(10) else this }
                             }else {
@@ -367,17 +392,22 @@ class MainProcessor(
                             continue
                         }
                     }
-
-                    impl.appendText("${param.name.snakeToLowerCamelCase()}: $typeName, ")
+                    impl.appendText("$typeName ${param.name.snakeToLowerCamelCase()}")
+                    if(i < it.params.size - 1) {
+                        impl.appendText(", ")
+                    }
                 }
-                impl.appendText("): $instructionType {\n")
+                impl.appendText(") {\n")
                 fun mapValues(to: ParsedTokenInstructionDefinition) {
                     impl.appendText(to.name.uppercase().snakeToLowerCamelCase())
                     impl.appendText("(")
-                    for((value, _) in to.params) {
+                    for(i in to.params.indices) {
+                        val (value, _) = to.params[i]
                         if(value.scope != ParsedTokenValueAccessorScope.STATIC) {
                             impl.appendText(value.name)
-                            impl.appendText(", ")
+                            if(i < to.params.size - 1) {
+                                impl.appendText(", ")
+                            }
                         }
                     }
                     impl.appendText(")")
@@ -386,7 +416,7 @@ class MainProcessor(
                     if(cond.checks.isEmpty()) {
                         impl.appendText("        return ")
                         mapValues(file.definitions.find { def -> def.name == cond.instruction }!!)
-                        impl.appendText("\n")
+                        impl.appendText(";\n")
                         continue
                     }
                     impl.appendText("        if(")
@@ -410,7 +440,7 @@ class MainProcessor(
                     }
                     impl.appendText(") return ")
                     mapValues(file.definitions.find { def -> def.name == cond.instruction }!!)
-                    impl.appendText("\n")
+                    impl.appendText(";\n")
                 }
                 impl.appendText("    }\n")
             }
@@ -423,21 +453,45 @@ class MainProcessor(
                 writtenDefinitions.add(named)
                 types.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.il.InstructionType $named = new dev.epicpix.minecraftfunctioncompiler.il.InstructionType(\"$named\");\n")
 
-                impl.appendText("fun ${named.snakeToLowerCamelCase()}(")
-                for((param, type) in it.params) {
+                impl.appendText("public static $instructionType ${named.snakeToLowerCamelCase()}(")
+                for(i in it.params.indices) {
+                    val (param, type) = it.params[i];
                     val typeName = when(param.scope) {
                         ParsedTokenValueAccessorScope.CONTEXT -> {
                             if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.SCOPE)) {
                                 "dev.epicpix.minecraftfunctioncompiler.il.ScopeData"
                             }else {
-                                "dev.epicpix.minecraftfunctioncompiler.il.LocationData"
+                                "dev.epicpix.minecraftfunctioncompiler.il.LocationData<${
+                                    if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)) {
+                                        "Integer"
+                                    }else if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)) {
+                                        "Boolean"
+                                    }else if(type is ParsedTokenExpressionTypeComplex) {
+                                        if(type.typeName.startsWith("net.minecraft.")) {
+                                            when(type.typeName) {
+                                                "net.minecraft.world.entity.Entity" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Entity"
+                                                "net.minecraft.server.level.ServerPlayer" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Player"
+                                                "net.minecraft.world.scores.Objective" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Objective"
+                                                "net.minecraft.world.scores.Score" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Score"
+                                                "net.minecraft.world.phys.Vec3" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Vec3"
+                                                "net.minecraft.world.phys.Vec2" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Vec2"
+                                                "net.minecraft.server.level.ServerLevel" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.World"
+                                                else -> throw IllegalArgumentException("Unknown minecraft class: ${type.typeName}")
+                                            }
+                                        }else {
+                                            type.typeName.run { if(startsWith("java.lang.")) substring(10) else this }
+                                        }
+                                    }else {
+                                        TODO("Unknown type: $type")
+                                    }
+                                }>"
                             }
                         }
                         ParsedTokenValueAccessorScope.INSTRUCTION -> {
                             if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)) {
-                                "Int"
+                                "int"
                             }else if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)) {
-                                "Boolean"
+                                "boolean"
                             }else if(type is ParsedTokenExpressionTypeComplex) {
                                 type.typeName.run { if(startsWith("java.lang.")) substring(10) else this }
                             }else {
@@ -452,22 +506,20 @@ class MainProcessor(
                         }
                     }
 
-                    impl.appendText("${param.name.snakeToLowerCamelCase()}: $typeName, ")
+                    impl.appendText("$typeName ${param.name.snakeToLowerCamelCase()}")
+                    if(i < it.params.size - 1) {
+                        impl.appendText(", ")
+                    }
                 }
-                impl.appendText("): $instructionType = $instructionType($enumClass.$named, mapOf(")
-                val selfInfo = info[it.name]
+                impl.appendText(") {")
+                impl.appendText("HashMap<String, Object> hashMap = new HashMap<>();")
                 it.params.forEach param@{ (it, _) ->
                     if(it.scope == ParsedTokenValueAccessorScope.LOCAL || it.scope == ParsedTokenValueAccessorScope.STATIC) {
                         return@param
                     }
-                    impl.appendText("\"${it.name}\" to ${it.name.snakeToLowerCamelCase()}")
-                    if(it.scope == ParsedTokenValueAccessorScope.CONTEXT) {
-                        val stats = selfInfo?.find { s -> s.accessor == it } ?: AccessorStatistics(it)
-                        impl.appendText(".uses(/* source = */ ${stats.gets}, /* destination = */ ${stats.sets})")
-                    }
-                    impl.appendText(", ")
+                    impl.appendText("hashMap.put(\"${it.name}\", ${it.name.snakeToLowerCamelCase()});")
                 }
-                impl.appendText("))\n")
+                impl.appendText("return new $instructionType($enumClass.$named, hashMap); }\n")
             }
 
             val defs = mutableListOf<DefinitionPriorityTree>()
@@ -485,27 +537,27 @@ class MainProcessor(
                 }
             }
             val instructionEnumType = "dev.epicpix.minecraftfunctioncompiler.il.InstructionType"
-            impl.appendText("\n    fun addStaticRequirements(instructions: List<$instructionType>): $instructionType {\n")
-            impl.appendText("        val requirementInstructions = mutableSetOf<$instructionEnumType>()\n")
-            impl.appendText("        instructions.forEach { addStaticRequirementsInternal(it, requirementInstructions) }\n")
-            impl.appendText("        var baseInstruction = Instruction($enumClass.ROOT, mapOf(), instructions)\n")
+            impl.appendText("\n    public static $instructionType addStaticRequirements(List<$instructionType> instructions) {\n")
+            impl.appendText("        HashSet<$instructionEnumType> requirementInstructions = new HashSet<>();\n")
+            impl.appendText("        for(var it : instructions) { addStaticRequirementsInternal(it, requirementInstructions); }\n")
+            impl.appendText("        Instruction baseInstruction = new Instruction($enumClass.ROOT, new HashMap<>(), instructions);\n")
             val defPriorities = defs.map { it.def to it.length() }.sortedByDescending { it.second }
             for((def, _) in defPriorities) {
-                impl.appendText("        if(requirementInstructions.contains($enumClass.${def.name.uppercase()})) baseInstruction = $instructionType($enumClass.${def.name.uppercase()}, mapOf(), listOf(baseInstruction))\n")
+                impl.appendText("        if(requirementInstructions.contains($enumClass.${def.name.uppercase()})) baseInstruction = new $instructionType($enumClass.${def.name.uppercase()}, new HashMap<>(), List.of(baseInstruction));\n")
             }
-            impl.appendText("        return baseInstruction\n")
+            impl.appendText("        return baseInstruction;\n")
             impl.appendText("    }\n")
-            impl.appendText("    private fun addStaticRequirementsInternal(instruction: $instructionType, mutableSet: MutableSet<$instructionEnumType>) {\n")
-            impl.appendText("        instruction.children.forEach { addStaticRequirementsInternal(it, mutableSet) }\n")
+            impl.appendText("    private static void addStaticRequirementsInternal($instructionType instruction, HashSet<$instructionEnumType> mutableSet) {\n")
+            impl.appendText("        for(var it : instruction.children()) { addStaticRequirementsInternal(it, mutableSet); }\n")
             file.definitions.forEach {
                 val staticParams = it.params.filter { (param, _) -> param.scope == ParsedTokenValueAccessorScope.STATIC && param.name != "CommandSourceStack" && it.name.uppercase() != "static${param.name}".toUpperSnakeCase() }
                 if(staticParams.isNotEmpty()) {
-                    impl.appendText("        if(instruction.type == $enumClass.${it.name.uppercase()}) {\n")
+                    impl.appendText("        if(instruction.type() == $enumClass.${it.name.uppercase()}) {\n")
                     for(param in staticParams) {
                         val paramName = "static${param.first.name}".toUpperSnakeCase()
                         val reqs = defs.find { it.def.name.uppercase() == paramName }!!.getAll()
                         for(req in reqs) {
-                            impl.appendText("            mutableSet.add($enumClass.${req.def.name.uppercase()})\n")
+                            impl.appendText("            mutableSet.add($enumClass.${req.def.name.uppercase()});\n")
                         }
                     }
                     impl.appendText("        }\n")
@@ -533,9 +585,10 @@ class MainProcessor(
             val enumResultPackage = enumClass.substring(0, enumClass.lastIndexOf('.'))
             val enumResultClass = enumClass.substring(enumClass.lastIndexOf('.')+1)
 
-            val impl = codeGenerator.createNewFile(Dependencies(true, (it as KSClassDeclaration).containingFile!!), generatorResultPackage, generatorResultClass + "Impl", "kt")
-            impl.appendText("package $generatorResultPackage\n")
-            impl.appendText("data object $generatorResultClass {\n")
+            val impl = codeGenerator.createNewFile(Dependencies(true, (it as KSClassDeclaration).containingFile!!), generatorResultPackage, generatorResultClass, "java")
+            impl.appendText("package $generatorResultPackage;\n")
+            impl.appendText("import java.util.*;\n")
+            impl.appendText("public final class $generatorResultClass {\n")
 
             val types = codeGenerator.createNewFile(Dependencies(true, it.containingFile!!), enumResultPackage, enumResultClass, "java")
             types.appendText("package $enumResultPackage;\n")
@@ -549,43 +602,39 @@ class MainProcessor(
                         types.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.il.InstructionType $named = new dev.epicpix.minecraftfunctioncompiler.il.InstructionType(\"$named\");\n")
                         instructionMappings[named] = "$enumClass.$named"
                         val params = mutableListOf<InstructionParamData>()
-                        impl.appendText("fun ${def.simpleName.asString()}(")
-                        for(param in def.parameters) {
-                            var isSource = false
-                            var isDestination = false
-                            param.annotations.toList().forEach {
-                                val qualified = it.annotationType.resolve().declaration.qualifiedName?.asString()
-                                if(qualified == InstructionSource::class.java.name) isSource = true
-                                if(qualified == InstructionDestination::class.java.name) isDestination = true
-                            }
-
+                        val instructionType = "dev.epicpix.minecraftfunctioncompiler.il.Instruction"
+                        impl.appendText("public static $instructionType ${def.simpleName.asString()}(")
+                        for(i in def.parameters.indices) {
+                            val param = def.parameters[i]
                             val resolvedType = param.type.resolve()
-                            val typeName = resolvedType.declaration.qualifiedName!!.asString()
+                            val typeName = when(val typeName = resolvedType.declaration.qualifiedName!!.asString()) {
+                                "kotlin.Boolean" -> "boolean"
+                                "kotlin.collections.List" -> "List"
+                                "kotlin.collections.MutableList" -> "List"
+                                "kotlin.collections.Map" -> "Map"
+                                else -> typeName
+                            }
                             val typeArgs = resolvedType.arguments.joinToString { arg ->
-                                arg.type?.resolve()?.declaration?.qualifiedName?.asString() ?: "*"
+                                arg.type?.resolve()?.declaration?.qualifiedName?.asString() ?: "Object"
                             }
 
-                            val fullTypeName = (if(typeArgs.isNotEmpty()) "$typeName<$typeArgs>" else typeName).run { if(resolvedType.isMarkedNullable) "$this?" else this }
-                            impl.appendText("${param.name!!.asString()}: $fullTypeName, ")
+                            val fullTypeName = if(typeArgs.isNotEmpty()) "$typeName<$typeArgs>" else typeName
+                            impl.appendText("$fullTypeName ${param.name!!.asString()}")
+                            if(i < def.parameters.size - 1) {
+                                impl.appendText(", ")
+                            }
                             params.add(InstructionParamData(
                                 param.name!!.asString(),
                                 resolvedType.isMarkedNullable,
                                 resolvedType.declaration.qualifiedName!!.asString() == "kotlin.collections.List",
-                                resolvedType.declaration.qualifiedName!!.asString() == "kotlin.collections.Map",
-                                isSource,
-                                isDestination))
+                                resolvedType.declaration.qualifiedName!!.asString() == "kotlin.collections.Map"))
                         }
-                        val instructionType = "dev.epicpix.minecraftfunctioncompiler.il.Instruction"
-                        impl.appendText("): $instructionType = $instructionType($enumClass.$named, mapOf(")
+                        impl.appendText(") {")
+                        impl.appendText("HashMap<String, Object> hashMap = new HashMap<>();")
                         params.forEach {
-                            impl.appendText("\"${it.name}\" to ${it.name}")
-                            if(it.isSource) impl.appendText("${if(it.isNullable) "?" else ""}.source()")
-                            if(it.isDestination) impl.appendText("${if(it.isNullable) "?" else ""}.destination()")
-                            if(it.isList) impl.appendText("${if(it.isNullable) "?" else ""}.toList()")
-                            if(it.isMap) impl.appendText("${if(it.isNullable) "?" else ""}.toMap()")
-                            impl.appendText(", ")
+                            impl.appendText("hashMap.put(\"${it.name}\", ${it.name});")
                         }
-                        impl.appendText("))\n")
+                        impl.appendText("return new $instructionType($enumClass.$named, hashMap); }\n")
                     }
                 }
             }
@@ -602,7 +651,7 @@ class MainProcessor(
 fun String.toUpperSnakeCase() = split(Regex("(?=[A-Z])")).joinToString("_").uppercase()
 fun String.snakeToLowerCamelCase() = Regex("_[a-zA-Z]").replace(lowercase()) { it.value.replace("_","").uppercase() }
 
-data class InstructionParamData(val name: String, val isNullable: Boolean, val isList: Boolean, val isMap: Boolean, val isSource: Boolean, val isDestination: Boolean)
+data class InstructionParamData(val name: String, val isNullable: Boolean, val isList: Boolean, val isMap: Boolean)
 
 class MainProcessorProvider : SymbolProcessorProvider {
     override fun create(

@@ -29,7 +29,7 @@ object DeadCodeEliminationOptimization : Optimization {
         var newDce = dce
         when(instruction.type) {
             InstructionTypes2.IF_NOT_NULL -> {
-                val local = instruction.get<LocationData>("local")
+                val local = instruction.get<LocationData<Any>>("local")
                 if(local.local != null) {
                     if(newDce.knownNonNulls.contains(local.local)) {
                         return runOptimizations(instruction.children, newDce)

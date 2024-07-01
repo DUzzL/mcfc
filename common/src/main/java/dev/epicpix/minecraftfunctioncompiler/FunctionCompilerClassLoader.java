@@ -92,7 +92,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
                 ArrayList<OptimizationStatistics> stats = new ArrayList<>();
                 var optimized = Optimizer.optimize(compiled, stats);
                 optimizerStatistics.add(stats);
-                compiledFunctions.put(key, List.of(Instructions2.INSTANCE.addStaticRequirements(optimized)));
+                compiledFunctions.put(key, List.of(Instructions2.addStaticRequirements(optimized)));
                 if(DEBUG) {
                     logInfo.accept(" --- " + key + " ---");
                     printInstructionList(compiledFunctions.get(key), logInfo, 0);
@@ -174,7 +174,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
         mv.visitCode();
         var codeWriter = new CodeWriter(mv);
         codeWriter.defineLocal("static$CommandSourceStack", commandSourceStackClass, () -> {
-            new EmitterContext(fieldStorage, codeWriter, compiledFunctions, new HashMap<>(), new HashMap<>(), Instructions2.INSTANCE.root().withChildren(new ArrayList<>(instructions)), new HashMap<>(), new HashMap<>()).run();
+            new EmitterContext(fieldStorage, codeWriter, compiledFunctions, new HashMap<>(), new HashMap<>(), Instructions2.root().withChildren(new ArrayList<>(instructions)), new HashMap<>(), new HashMap<>()).run();
         });
 
         mv.visitLdcInsn(commandCount);

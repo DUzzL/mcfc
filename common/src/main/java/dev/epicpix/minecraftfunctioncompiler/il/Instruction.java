@@ -45,8 +45,8 @@ public record Instruction(InstructionType type, Map<String, Object> data, ArrayL
     public static Map<String, Object> remapInstructionData(Map<String, Object> data, Map<Integer, Integer> mappings) {
         HashMap<String, Object> result = new HashMap<>();
         for(var entry : data.entrySet()) {
-            if(entry.getValue() instanceof LocationData value && value.local() != null) {
-                result.put(entry.getKey(), new LocationData(mappings.getOrDefault(value.local(), value.local()), value.string(), value.integer(), value.isSource(), value.isDestination()));
+            if(entry.getValue() instanceof LocationData<?> value && value.local() != null) {
+                result.put(entry.getKey(), new LocationData<>(mappings.getOrDefault(value.local(), value.local()), value.string(), value.integer()));
             }else {
                 result.put(entry.getKey(), entry.getValue());
             }

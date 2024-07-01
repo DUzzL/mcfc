@@ -1,38 +1,25 @@
 package dev.epicpix.minecraftfunctioncompiler.il;
 
-public record LocationData(
+@SuppressWarnings("unused")
+public record LocationData<T>(
         Integer local,
         String string,
-        Integer integer,
-        boolean isSource,
-        boolean isDestination
+        Integer integer
 ) {
-    public static LocationData ofLocal(int local) {
-        return new LocationData(local, null, null, false, false);
+    public static <T> LocationData<T> ofLocal(int local) {
+        return new LocationData<>(local, null, null);
     }
 
-    public static LocationData ofString(String string) {
-        return new LocationData(null, string, null, false, false);
+    public static LocationData<String> ofString(String string) {
+        return new LocationData<>(null, string, null);
     }
 
-    public static LocationData ofInteger(int integer) {
-        return new LocationData(null, null, integer, false, false);
-    }
-
-    public LocationData source() {
-        return uses(true, false);
-    }
-    public LocationData destination() {
-        return uses(false, true);
-    }
-    public LocationData uses(boolean source, boolean destination) {
-        return new LocationData(local, string, integer, source, destination);
+    public static LocationData<Integer> ofInteger(int integer) {
+        return new LocationData<>(null, null, integer);
     }
 
     public String toString() {
         return (local != null ? "local " : "")
-                + (isSource ? "<in> " : "")
-                + (isDestination ? "<out> " : "")
                 + (local != null ? local : "")
                 + (string != null ? string.replace("\\", "\\\\").replace("\n", "\\n") : "")
                 + (integer != null ? integer : "");

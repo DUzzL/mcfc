@@ -4,6 +4,7 @@ import dev.epicpix.annotations.InstructionDestination;
 import dev.epicpix.annotations.InstructionSource;
 import dev.epicpix.annotations.InstructionSourceClass;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
+import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -12,13 +13,13 @@ import java.util.List;
 @InstructionSourceClass(enumClass = "dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes", generatorClass = "dev.epicpix.minecraftfunctioncompiler.il.Instructions")
 interface InstructionDefinitions {
     // Minecraft specific instructions
-    Instruction callFunctions(List<DataLocation> functions, @Nullable @InstructionSource LocationData entity, @Nullable @InstructionSource LocationData world, @Nullable @InstructionSource LocationData position, @Nullable @InstructionSource LocationData rotation);
-    Instruction checkInScoreRange(@InstructionSource LocationData score, IntRangeArgument range);
-    Instruction checkNotInScoreRange(@InstructionSource LocationData score, IntRangeArgument range);
-    Instruction checkScoreCompare(@InstructionSource LocationData target, @InstructionSource LocationData source, ScoreboardCompareOperation compareOperation);
-    Instruction applyPositionWorld(@InstructionSource LocationData from, @InstructionDestination LocationData to, WorldCoordinates position);
-    Instruction checkEntityTypes(@InstructionSource LocationData entity, List<DataLocation> types, boolean negated);
-    Instruction alignPosition(@InstructionSource LocationData position, @InstructionDestination LocationData result, SwizzleArgument swizzle);
-    Instruction checkRotationYaw(@InstructionSource LocationData rotation, @Nullable FloatRangeArgument yaw);
-    Instruction checkRotationPitch(@InstructionSource LocationData rotation, @Nullable FloatRangeArgument pitch);
+    Instruction callFunctions(List<DataLocation> functions, @Nullable @InstructionSource LocationData<Entity> entity, @Nullable @InstructionSource LocationData<World> world, @Nullable @InstructionSource LocationData<Vec3> position, @Nullable @InstructionSource LocationData<Vec2> rotation);
+    Instruction checkInScoreRange(@InstructionSource LocationData<Score> score, IntRangeArgument range);
+    Instruction checkNotInScoreRange(@InstructionSource LocationData<Score> score, IntRangeArgument range);
+    Instruction checkScoreCompare(@InstructionSource LocationData<Score> target, @InstructionSource LocationData<Score> source, ScoreboardCompareOperation compareOperation);
+    Instruction applyPositionWorld(@InstructionSource LocationData<Vec3> from, @InstructionDestination LocationData<Vec3> to, WorldCoordinates position);
+    Instruction checkEntityTypes(@InstructionSource LocationData<Entity> entity, List<DataLocation> types, boolean negated);
+    Instruction alignPosition(@InstructionSource LocationData<Vec3> position, @InstructionDestination LocationData<Vec3> result, SwizzleArgument swizzle);
+    Instruction checkRotationYaw(@InstructionSource LocationData<Vec2> rotation, @Nullable FloatRangeArgument yaw);
+    Instruction checkRotationPitch(@InstructionSource LocationData<Vec2> rotation, @Nullable FloatRangeArgument pitch);
 }

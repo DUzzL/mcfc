@@ -21,19 +21,19 @@ fun registerInstructionEmitters() {
                 fieldStorage.loadFunction(codeWriter, func)
             }
             codeWriter.loadLocal("static\$CommandSourceStack")
-            if(instruction.get<LocationData?>("entity") != null) {
+            if(instruction.get<LocationData<*>?>("entity") != null) {
                 load("entity")
                 callCommandSourceStack_withEntity(codeWriter)
             }
-            if(instruction.get<LocationData?>("world") != null) {
+            if(instruction.get<LocationData<*>?>("world") != null) {
                 load("world")
                 callCommandSourceStack_withLevel(codeWriter)
             }
-            if(instruction.get<LocationData?>("position") != null) {
+            if(instruction.get<LocationData<*>?>("position") != null) {
                 load("position")
                 callCommandSourceStack_withPosition(codeWriter)
             }
-            if(instruction.get<LocationData?>("rotation") != null) {
+            if(instruction.get<LocationData<*>?>("rotation") != null) {
                 load("rotation")
                 callCommandSourceStack_withRotation(codeWriter)
             }

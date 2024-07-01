@@ -7,19 +7,19 @@ import dev.epicpix.minecraftfunctioncompiler.commands.Command;
 
 public class ResultStorage {
 
-    public final LocationData result;
-    public final LocationData success;
+    public final LocationData<Integer> result;
+    public final LocationData<Integer> success;
 
-    private ResultStorage(LocationData result, LocationData success) {
+    private ResultStorage(LocationData<Integer> result, LocationData<Integer> success) {
         this.result = result;
         this.success = success;
     }
 
-    public static ResultStorage withResult(LocationData result) {
+    public static ResultStorage withResult(LocationData<Integer> result) {
         return new ResultStorage(result, null);
     }
 
-    public static ResultStorage withSuccess(LocationData success) {
+    public static ResultStorage withSuccess(LocationData<Integer> success) {
         return new ResultStorage(null, success);
     }
 
@@ -38,24 +38,24 @@ public class ResultStorage {
         return success != null;
     }
 
-    public void setResult(CompilationContext context, LocationData data) {
+    public void setResult(CompilationContext context, LocationData<Integer> data) {
         if(storesResult()) {
             updatedResult = true;
-            context.getAddInstruction().invoke(Instructions2.INSTANCE.setResultStorage(result, data));
+            context.getAddInstruction().invoke(Instructions2.setResultStorage(result, data));
         }
     }
 
-    public void addResult(CompilationContext context, LocationData data) {
+    public void addResult(CompilationContext context, LocationData<Integer> data) {
         if(storesResult()) {
             updatedResult = true;
-            context.getAddInstruction().invoke(Instructions2.INSTANCE.addResultStorage(result, data));
+            context.getAddInstruction().invoke(Instructions2.addResultStorage(result, data));
         }
     }
 
     public void updateSuccess(CompilationContext context, boolean failed) {
         if(storesSuccess()) {
             updatedSuccess = true;
-            context.getAddInstruction().invoke(Instructions2.INSTANCE.setResultStorage(success, LocationData.ofInteger(failed ? 0 : 1)));
+            context.getAddInstruction().invoke(Instructions2.setResultStorage(success, LocationData.ofInteger(failed ? 0 : 1)));
         }
     }
 
