@@ -8,7 +8,7 @@ public final class EmitterHelper {
     private EmitterHelper() {}
 
     public static void checkFloatRange(EmitterContext emitter, FloatRangeArgument range, Consumer<EmitterContext> exec) {
-        var cw = emitter.getCodeWriter();
+        var cw = emitter.codeWriter();
         var mv = cw.getMethodVisitor();
         if(range.minimum() != null && range.maximum() == null) {
             cw.writeFloat(range.minimum());

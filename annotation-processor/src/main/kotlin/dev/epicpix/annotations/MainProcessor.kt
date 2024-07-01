@@ -285,9 +285,9 @@ class MainProcessor(
         map.appendText("public class $resultName {\n")
         map.appendText("    public static void registerInstructionEmitters() {\n")
         map.appendText("        dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructionsKt.registerEmitterInstruction((context) -> {\n")
-        map.appendText("            var cw = context.getCodeWriter();\n")
+        map.appendText("            var cw = context.codeWriter();\n")
         map.appendText("            var mv = cw.getMethodVisitor();\n")
-        map.appendText("            var type = context.getInstruction().type();\n")
+        map.appendText("            var type = context.instruction().type();\n")
         val info = mutableMapOf<String, List<AccessorStatistics>>()
         file.definitions.forEach {
             if(it.usesObf != common) {

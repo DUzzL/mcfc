@@ -903,22 +903,22 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             val type = writerData.getAccessorType(expression)
             if(type.isSimpleType(ParsedTokenExpressionSimpleType.INTEGER)) {
                 if(keepResult) {
-                    output.appendText("cw.writeInt(context.getInstruction().<Integer>get(\"${expression.name}\"));\n")
+                    output.appendText("cw.writeInt(context.instruction().<Integer>get(\"${expression.name}\"));\n")
                 }
                 return uniqId
             }else if(type.isSimpleType(ParsedTokenExpressionSimpleType.BOOLEAN)) {
                 if(keepResult) {
-                    output.appendText("cw.writeInt(context.getInstruction().<Boolean>get(\"${expression.name}\") ? 1 : 0);\n")
+                    output.appendText("cw.writeInt(context.instruction().<Boolean>get(\"${expression.name}\") ? 1 : 0);\n")
                 }
                 return uniqId
             }else if(type is ParsedTokenExpressionTypeComplex && type.typeName == "java.lang.String") {
                 if(keepResult) {
-                    output.appendText("cw.writeString(context.getInstruction().<java.lang.String>get(\"${expression.name}\"));\n")
+                    output.appendText("cw.writeString(context.instruction().<java.lang.String>get(\"${expression.name}\"));\n")
                 }
                 return uniqId
             }else if(type is ParsedTokenExpressionTypeComplex && type.typeName == "java.util.UUID") {
                 if(keepResult) {
-                    output.appendText("context.getFieldStorage().loadUUID(cw, context.getInstruction().<java.util.UUID>get(\"${expression.name}\"));\n")
+                    output.appendText("context.fieldStorage().loadUUID(cw, context.instruction().<java.util.UUID>get(\"${expression.name}\"));\n")
                 }
                 return uniqId
             }
@@ -1136,7 +1136,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                     if(enumMappings.isNotEmpty()) {
                         var uid = uniqId
                         if(keepResult) {
-                            output.appendText("switch(context.getInstruction().<${sourceType.typeName}>get(\"${source.name}\")) {\n")
+                            output.appendText("switch(context.instruction().<${sourceType.typeName}>get(\"${source.name}\")) {\n")
                             for((k, v) in enumMappings) {
                                 output.appendText("    case $k -> ")
                                 val packageName = v.substringBeforeLast('.')
@@ -1293,13 +1293,13 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                 writerData.markSet(scopeAccessor)
                 val jumpLabel = "j${uid++}"
                 output.appendText("org.objectweb.asm.Label $jumpLabel = new org.objectweb.asm.Label();\n")
-                output.appendText("context.getNewScopes().put(context.getInstruction().<dev.epicpix.minecraftfunctioncompiler.il.ScopeData>get(\"${scopeAccessor.name}\").id(), $jumpLabel);\n")
+                output.appendText("context.newScopes().put(context.instruction().<dev.epicpix.minecraftfunctioncompiler.il.ScopeData>get(\"${scopeAccessor.name}\").id(), $jumpLabel);\n")
                 uid = writeCode(writerData.copyLocalTypes(), el.code!!, output, uid, yieldCallbacks)
                 output.appendText("mv.visitLabel($jumpLabel);\n")
             }else if(el.name == "exit_scope") {
                 val scopeAccessor = el.arguments[0] as ParsedTokenValueAccessor
                 writerData.markGet(scopeAccessor)
-                output.appendText("mv.visitJumpInsn(org.objectweb.asm.Opcodes.GOTO, context.getNewScopes().get(context.getInstruction().<dev.epicpix.minecraftfunctioncompiler.il.ScopeData>get(\"${scopeAccessor.name}\").id()));\n")
+                output.appendText("mv.visitJumpInsn(org.objectweb.asm.Opcodes.GOTO, context.newScopes().get(context.instruction().<dev.epicpix.minecraftfunctioncompiler.il.ScopeData>get(\"${scopeAccessor.name}\").id()));\n")
             }else if(el.name == "yield") {
                 val yieldObj = el.arguments[0] as ParsedTokenValueAccessor
                 writerData.markGet(yieldObj)
