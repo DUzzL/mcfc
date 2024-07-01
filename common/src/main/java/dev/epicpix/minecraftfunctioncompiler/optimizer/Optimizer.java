@@ -12,9 +12,9 @@ public final class Optimizer {
     private Optimizer() {}
 
     private static final Optimization[] OPTIMIZATIONS = new Optimization[]{
-            DeadCodeEliminationOptimization.INSTANCE,
+            new DeadCodeEliminationOptimization(),
             new CommonSubexpressionEliminationOptimization(),
-            ScopeInstructionMergeOptimization.INSTANCE,
+            new ScopeInstructionMergeOptimization(),
     };
 
     public static List<Instruction> optimize(List<Instruction> instructions, ArrayList<OptimizationStatistics> statistics) {

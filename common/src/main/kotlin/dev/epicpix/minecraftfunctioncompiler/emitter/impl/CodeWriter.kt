@@ -44,12 +44,6 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
         destroyLocal(localValue)
     }
 
-    inline fun defineLocal(local: String, type: Class<*>, exec: () -> Unit) {
-        val localValue = createLocal(local, type.descriptorString())
-        exec()
-        destroyLocal(localValue)
-    }
-
     fun writeLocalVariables() {
         if(DEBUG) {
             generatedLocals.forEach {
@@ -156,13 +150,6 @@ class CodeWriter(val methodVisitor: MethodVisitor) {
 
     fun generateUniqueLocal(): String {
         return "L:${generatedLocals.size}"
-    }
-
-    inline fun storeLocal(local: String, descriptor: Class<*>, exec: () -> Unit) {
-        defineLocal(local, descriptor) {
-            storeLocal(local)
-            exec()
-        }
     }
 
 }

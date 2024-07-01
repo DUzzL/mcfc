@@ -51,15 +51,15 @@ public final class CommonSubexpressionEliminationOptimization implements Optimiz
 
         if(instruction.type().equals(InstructionTypes2.GET_OBJECTIVE)) {
             var name = instruction.<String>get("name");
-            var objective = instruction.<LocationData>get("objective");
+            var objective = instruction.<LocationData<?>>get("objective");
             if (cse.objectives.get(name) == null) {
                 cse = cse.withObjectiveMapping(name, objective.local());
             } else {
                 return runOptimizations(instruction.children(), cse.withLocalMapping(objective.local(), cse.objectives.get(name)));
             }
         }else if(instruction.type().equals(InstructionTypes2.GET_SCOREBOARD_NAME)) {
-            var entity = instruction.<LocationData>get("entity");
-            var name = instruction.<LocationData>get("name");
+            var entity = instruction.<LocationData<?>>get("entity");
+            var name = instruction.<LocationData<?>>get("name");
             if (cse.scoreboardNames.get(entity.local()) == null) {
                 cse = cse.withScoreboardMapping(entity.local(), name.local());
             } else {
