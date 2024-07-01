@@ -9,6 +9,10 @@
   run();
 }
 
+@EMPTY() {
+  run();
+}
+
 @IF_NOT_NULL(<java.lang.Object> [ctx:local]) {
   if([ctx:local] != null) {
     run();

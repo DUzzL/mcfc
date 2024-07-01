@@ -18,6 +18,11 @@ public record LocationData<T>(
         return new LocationData<>(null, null, integer);
     }
 
+    @SuppressWarnings("unchecked")
+    public LocationData<Object> lower() {
+        return (LocationData<Object>) this;
+    }
+
     public String toString() {
         return (local != null ? "local " : "")
                 + (local != null ? local : "")

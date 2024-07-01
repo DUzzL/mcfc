@@ -1,6 +1,5 @@
 package dev.epicpix.minecraftfunctioncompiler.compiler;
 
-import dev.epicpix.minecraftfunctioncompiler.compiler.impl.CompilationContext;
 import dev.epicpix.minecraftfunctioncompiler.il.Instructions2;
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
 import dev.epicpix.minecraftfunctioncompiler.commands.Command;
@@ -38,24 +37,24 @@ public class ResultStorage {
         return success != null;
     }
 
-    public void setResult(CompilationContext context, LocationData<Integer> data) {
+    public void setResult(CompilationContextData context, LocationData<Integer> data) {
         if(storesResult()) {
             updatedResult = true;
-            context.getAddInstruction().invoke(Instructions2.setResultStorage(result, data));
+            context.addInstructionConsumer().accept(Instructions2.setResultStorage(result, data));
         }
     }
 
-    public void addResult(CompilationContext context, LocationData<Integer> data) {
+    public void addResult(CompilationContextData context, LocationData<Integer> data) {
         if(storesResult()) {
             updatedResult = true;
-            context.getAddInstruction().invoke(Instructions2.addResultStorage(result, data));
+            context.addInstructionConsumer().accept(Instructions2.addResultStorage(result, data));
         }
     }
 
-    public void updateSuccess(CompilationContext context, boolean failed) {
+    public void updateSuccess(CompilationContextData context, boolean failed) {
         if(storesSuccess()) {
             updatedSuccess = true;
-            context.getAddInstruction().invoke(Instructions2.setResultStorage(success, LocationData.ofInteger(failed ? 0 : 1)));
+            context.addInstructionConsumer().accept(Instructions2.setResultStorage(success, LocationData.ofInteger(failed ? 0 : 1)));
         }
     }
 

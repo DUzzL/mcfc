@@ -2,7 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler;
 
 import com.google.gson.JsonObject;
 import dev.epicpix.minecraftfunctioncompiler.commands.CommandError;
-import dev.epicpix.minecraftfunctioncompiler.compiler.CompilerKt;
+import dev.epicpix.minecraftfunctioncompiler.compiler.CommandCompiler;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
 import dev.epicpix.minecraftfunctioncompiler.emitter.GraphGenerator;
@@ -26,7 +26,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DATA_CLASS;
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DEBUG;
@@ -88,7 +87,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
             var key = func.getKey();
             var value = func.getValue();
             try {
-                var compiled = CompilerKt.compile(value);
+                var compiled = CommandCompiler.compile(value);
                 ArrayList<OptimizationStatistics> stats = new ArrayList<>();
                 var optimized = Optimizer.optimize(compiled, stats);
                 optimizerStatistics.add(stats);
