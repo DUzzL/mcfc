@@ -284,7 +284,7 @@ class MainProcessor(
         map.appendText("package $resultPackage;\n")
         map.appendText("public class $resultName {\n")
         map.appendText("    public static void registerInstructionEmitters() {\n")
-        map.appendText("        dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructionsKt.registerEmitterInstruction((context) -> {\n")
+        map.appendText("        dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructions.registerEmitterInstruction((context) -> {\n")
         map.appendText("            var cw = context.codeWriter();\n")
         map.appendText("            var mv = cw.methodVisitor();\n")
         map.appendText("            var type = context.instruction().type();\n")

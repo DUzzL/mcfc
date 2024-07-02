@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import static dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructionsKt.emitInstruction;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructions.emitInstruction;
 
 public record EmitterContext(
         CodeFieldStorage fieldStorage,

@@ -16,8 +16,6 @@ dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings loom.officialMojangMappings()
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation "net.fabricmc:fabric-language-kotlin:${project.fabric_kotlin_version}"
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 }
 
 project.ext.isJarTask = false
@@ -63,18 +61,16 @@ processResources {
     inputs.property "version", project.mod_version
     inputs.property "minecraft_version", project.minecraft_version
     inputs.property "loader_version", project.loader_version
-    inputs.property "fabric_kotlin_version", project.fabric_kotlin_version
     filteringCharset "UTF-8"
 
     filesMatching("fabric.mod.json") {
         expand "version": project.mod_version,
                 "minecraft_version": project.minecraft_version,
-                "loader_version": project.loader_version,
-                "fabric_kotlin_version": project.fabric_kotlin_version
+                "loader_version": project.loader_version
     }
 }
 
-compileKotlin {
+compileJava {
     dependsOn(':common:kspKotlin')
 }
 

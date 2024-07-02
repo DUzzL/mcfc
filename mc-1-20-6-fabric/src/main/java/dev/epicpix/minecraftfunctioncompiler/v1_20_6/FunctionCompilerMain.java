@@ -8,7 +8,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.NegatableData;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.EmitterBaseOptions;
 import dev.epicpix.minecraftfunctioncompiler.v1_20_6.data.RegistryMapping;
 import dev.epicpix.minecraftfunctioncompiler.v1_20_6.emitter.Emitter2;
-import dev.epicpix.minecraftfunctioncompiler.v1_20_6.emitter.EmitterKt;
+import dev.epicpix.minecraftfunctioncompiler.v1_20_6.emitter.Emitter;
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -23,7 +23,7 @@ public class FunctionCompilerMain implements ModInitializer {
     public void onInitialize() {
         EmitterBaseOptions.registerInstructionEmitters();
         Emitter2.registerInstructionEmitters();
-        EmitterKt.registerInstructionEmitters();
+        Emitter.registerInstructionEmitters();
         SelectorParser.initBaseSelectorOptions();
         SelectorParser.registerSelectorOption("type", (reader, data) -> {
             var negated = reader.skipIfNext('!');

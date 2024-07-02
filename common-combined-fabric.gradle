@@ -47,7 +47,6 @@ jar {
     modVersions.forEach { ver ->
         from(project(":mc-${ver.replace('.', '-')}-fabric").sourceSets.main.output) {
             exclude("mcfc-refmap.json")
-            exclude("META-INF/mcfc.kotlin_module")
             exclude("fabric.mod.json")
             rename("minecraftfunctioncompiler.v${ver.replace('.', '_')}.generated.accesswidener", "minecraftfunctioncompiler.v${ver.replace('.', '_')}.accesswidener")
             exclude("minecraftfunctioncompiler.v${ver.replace('.', '_')}.accesswidener")
