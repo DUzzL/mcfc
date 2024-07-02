@@ -1,10 +1,8 @@
 package dev.epicpix.minecraftfunctioncompiler.compiler;
 
 import dev.epicpix.minecraftfunctioncompiler.commands.Command;
-import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument;
-import dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCompareOperation;
-import dev.epicpix.minecraftfunctioncompiler.data.ScoreboardOperation;
-import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument;
+import dev.epicpix.minecraftfunctioncompiler.data.*;
+import dev.epicpix.minecraftfunctioncompiler.data.locations.AttributeInstance;
 import dev.epicpix.minecraftfunctioncompiler.data.locations.Vec2;
 import dev.epicpix.minecraftfunctioncompiler.data.locations.Vec3;
 import dev.epicpix.minecraftfunctioncompiler.data.locations.World;
@@ -31,6 +29,19 @@ public final class CommandCompiler {
 
     private static void compile(CompilationContext context, Command command, ResultStorage result) {
         switch(command.type()) {
+            case ATTRIBUTE_BASE_SET -> {
+                try(var selector = context.forSelector(command.get("target"))) {
+                    var attrLocation = LocationData.<AttributeInstance>ofLocal(selector.data().highestId());
+                    var instruction =
+                            Instructions.checkEntityTypes(selector.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
+                                    .with(Instructions2.getAttributeInstance(selector.content(), attrLocation, command.<AttributeData>get("attribute").location())
+                                            .with(Instructions2.ifNotNull(attrLocation.lower())
+                                                    .with(Instructions2.setAttributeBase(attrLocation, command.get("value")))
+                                            ));
+                    selector.writeInstruction(instruction);
+
+                }
+            }
             case EXECUTE_ALIGN -> {
                 try(var pos = context.getPosition()) {
                     var newPosition = LocationData.<Vec3>ofLocal(pos.data().highestId());

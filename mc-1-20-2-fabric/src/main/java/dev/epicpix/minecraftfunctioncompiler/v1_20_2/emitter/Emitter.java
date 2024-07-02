@@ -7,7 +7,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructions;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
-import dev.epicpix.minecraftfunctioncompiler.v1_20_2.data.RegistryMapping;
+import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.world.phys.Vec3;
 import org.objectweb.asm.Label;
@@ -140,7 +140,7 @@ public final class Emitter {
                 var label = new Label();
                 for(var res : context.instruction().<List<DataLocation>>get("types")) {
                     context.load("entity");
-                    var desc = RegistryMapping.mapEntityTypeClass(res).descriptorString();
+                    var desc = DataRegistries.ENTITY_CLASS.get(res).descriptorString();
                     methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, desc.substring(1, desc.length() - 1));
                     methodVisitor.visitJumpInsn(Opcodes.IFNE, label);
                 }

@@ -307,7 +307,7 @@ class MainProcessor(
                 if(matchesVersion) {
                     map.appendText("            if(type == ${file.fileInfo["enum_file"]}.${it.name.uppercase()}) {\n")
                     val output = ByteArrayOutputStream()
-                    info[it.name] = generateCode(mappingData, it, file, output, enums)
+                    info[it.name] = generateCode(mappingData, it, file, output, enums, majorVer, minorVer)
                     map.appendText(output.toByteArray().decodeToString().trimEnd().prependIndent("                "))
                     map.appendText("\n")
                     map.appendText("                return true;\n")
@@ -476,6 +476,7 @@ class MainProcessor(
                                                 "net.minecraft.world.phys.Vec3" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Vec3"
                                                 "net.minecraft.world.phys.Vec2" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Vec2"
                                                 "net.minecraft.server.level.ServerLevel" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.World"
+                                                "net.minecraft.world.entity.ai.attributes.AttributeInstance" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.AttributeInstance"
                                                 else -> throw IllegalArgumentException("Unknown minecraft class: ${type.typeName}")
                                             }
                                         }else {
@@ -492,6 +493,8 @@ class MainProcessor(
                                 "int"
                             }else if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)) {
                                 "boolean"
+                            }else if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.DOUBLE)) {
+                                "double"
                             }else if(type is ParsedTokenExpressionTypeComplex) {
                                 type.typeName.run { if(startsWith("java.lang.")) substring(10) else this }
                             }else {

@@ -111,6 +111,12 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
         builder.append("{ // ${data.argName} <${kindInfo}>\n")
         val argumentIndex = uniqueId.getAndIncrement()
         when(data.kind) {
+            "attribute" -> builder.append("    var a$argumentIndex = reader.readAttribute();\n")
+            "double" -> {
+                builder.append("    var a$argumentIndex = reader.readDouble();\n")
+                data.kindOptions["minimum"]?.toDouble()?.also { min -> builder.append("    if(a$argumentIndex < $min) ${createError("\"Double value of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }
+                data.kindOptions["maximum"]?.toDouble()?.also { max -> builder.append("    if(a$argumentIndex > $max) ${createError("\"Double value of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
+            }
             "entity_selector" -> {
                 val allowMultiple = data.kindOptions.getOrDefault("multiple", "true").toBoolean()
                 val playersOnly = data.kindOptions.getOrDefault("players", "false").toBoolean()

@@ -6,7 +6,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.FloatRangeArgument;
 import dev.epicpix.minecraftfunctioncompiler.data.Gamemode;
 import dev.epicpix.minecraftfunctioncompiler.data.NegatableData;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.EmitterBaseOptions;
-import dev.epicpix.minecraftfunctioncompiler.v1_20_4.data.RegistryMapping;
+import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import dev.epicpix.minecraftfunctioncompiler.v1_20_4.emitter.Emitter2;
 import dev.epicpix.minecraftfunctioncompiler.v1_20_4.emitter.Emitter;
 import net.fabricmc.api.ModInitializer;
@@ -46,7 +46,7 @@ public class FunctionCompilerMain implements ModInitializer {
                         ).orElseGet(List::of);
             }
             for(var it : types) {
-                if(RegistryMapping.mapEntityTypeClass(it) == null) throw new UnsupportedOperationException("Unsupported entity type: " + it);
+                if(DataRegistries.ENTITY_CLASS.get(it) == null) throw new UnsupportedOperationException("Unsupported entity type: " + it);
             }
             data.entityTypes = new NegatableData<>(types, negated);
         });

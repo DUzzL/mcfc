@@ -17,20 +17,33 @@ public final class CodeFieldStorage {
     private final Class<?> commandFunctionClass;
     private final Class<?> serverFunctionManagerClass;
     private final Class<?> minecraftServerClass;
+    private final Class<?> attributeHolderClass;
     private final TriConsumer<CodeFieldStorage, CodeWriter, DataLocation> mapFunction;
+    private final TriConsumer<CodeFieldStorage, CodeWriter, DataLocation> mapAttribute;
 
-    public CodeFieldStorage(Class<?> resourceLocationClass, Class<?> commandFunctionClass, Class<?> serverFunctionManagerClass, Class<?> minecraftServerClass, TriConsumer<CodeFieldStorage, CodeWriter, DataLocation> mapFunction) {
+    public CodeFieldStorage(
+            Class<?> resourceLocationClass,
+            Class<?> commandFunctionClass,
+            Class<?> serverFunctionManagerClass,
+            Class<?> minecraftServerClass,
+            Class<?> attributeHolderClass,
+            TriConsumer<CodeFieldStorage, CodeWriter, DataLocation> mapFunction,
+            TriConsumer<CodeFieldStorage, CodeWriter, DataLocation> mapAttribute
+    ) {
         this.resourceLocationClass = resourceLocationClass;
         this.commandFunctionClass = commandFunctionClass;
         this.serverFunctionManagerClass = serverFunctionManagerClass;
         this.minecraftServerClass = minecraftServerClass;
+        this.attributeHolderClass = attributeHolderClass;
         this.mapFunction = mapFunction;
+        this.mapAttribute = mapAttribute;
     }
 
 
     private final ArrayList<UUID> uuids = new ArrayList<>();
     private final ArrayList<DataLocation> resourceLocations = new ArrayList<>();
     private final ArrayList<DataLocation> functions = new ArrayList<>();
+    private final ArrayList<DataLocation> attributes = new ArrayList<>();
 
     private String getUuidName(UUID value) {
         return DEBUG
@@ -47,7 +60,13 @@ public final class CodeFieldStorage {
     private String getFunctionName(DataLocation value) {
         return DEBUG
                 ? "function$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
-                : "r" + functions.indexOf(value);
+                : "f" + functions.indexOf(value);
+    }
+
+    private String getAttributeName(DataLocation value) {
+        return DEBUG
+                ? "attribute$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
+                : "a" + attributes.indexOf(value);
     }
 
     public void loadUUID(CodeWriter cw, UUID value) {
@@ -64,6 +83,12 @@ public final class CodeFieldStorage {
         if(!resourceLocations.contains(value)) resourceLocations.add(value);
         if(!functions.contains(value)) functions.add(value);
         cw.getDataField(getFunctionName(value), commandFunctionClass);
+    }
+
+    public void loadAttribute(CodeWriter cw, DataLocation value) {
+        if(!resourceLocations.contains(value)) resourceLocations.add(value);
+        if(!attributes.contains(value)) attributes.add(value);
+        cw.getDataField(getAttributeName(value), attributeHolderClass);
     }
 
     public void loadServerFunctionManager(CodeWriter cw) {
@@ -99,6 +124,11 @@ public final class CodeFieldStorage {
             cw.setDataField(getFunctionName(value), commandFunctionClass);
         }
 
+        for(var value : attributes) {
+            mapAttribute.accept(this, cw, value);
+            cw.setDataField(getAttributeName(value), attributeHolderClass);
+        }
+
         mv.visitInsn(Opcodes.RETURN);
         mv.visitMaxs(0, 0);
         mv.visitEnd();
@@ -112,6 +142,9 @@ public final class CodeFieldStorage {
         }
         for(var value : functions) {
             classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getFunctionName(value), commandFunctionClass.descriptorString(), null, null);
+        }
+        for(var value : attributes) {
+            classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getAttributeName(value), attributeHolderClass.descriptorString(), null, null);
         }
 
     }

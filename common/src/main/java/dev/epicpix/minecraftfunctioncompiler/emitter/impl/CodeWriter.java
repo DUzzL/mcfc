@@ -103,7 +103,7 @@ public record CodeWriter(
 
     public void newObjectInit(Class<?> owner, Class<?>... types) {
         var ownerName = owner.descriptorString();
-        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, ownerName, "<init>", "(" + Arrays.stream(types).map(Class::descriptorString).collect(Collectors.joining("")) + ")V", false);
+        methodVisitor.visitMethodInsn(Opcodes.INVOKESPECIAL, ownerName.substring(1, ownerName.length() - 1), "<init>", "(" + Arrays.stream(types).map(Class::descriptorString).collect(Collectors.joining("")) + ")V", false);
     }
 
     public void getDataField(String name, Class<?> type) {

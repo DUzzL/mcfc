@@ -5,6 +5,9 @@ CommandSourceStack_withEntity = "net/minecraft/commands/CommandSourceStack:withE
 CommandSourceStack_withLevel = "net/minecraft/commands/CommandSourceStack:withLevel(Lnet/minecraft/server/level/ServerLevel;)Lnet/minecraft/commands/CommandSourceStack;@M"
 CommandSourceStack_withPosition = "net/minecraft/commands/CommandSourceStack:withPosition(Lnet/minecraft/world/phys/Vec3;)Lnet/minecraft/commands/CommandSourceStack;@M"
 CommandSourceStack_withRotation = "net/minecraft/commands/CommandSourceStack:withRotation(Lnet/minecraft/world/phys/Vec2;)Lnet/minecraft/commands/CommandSourceStack;@M"
+Registry_get = "net/minecraft/core/Registry:get(Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/Object;@IM"
+Registry_getHolder = "net/minecraft/core/Registry:getHolder(Lnet/minecraft/resources/ResourceLocation;)Ljava/util/Optional;@IM"
+Optional_get = "java/util/Optional:get()Ljava/lang/Object;@M"
 
 [definitions_functions.Score_getScore]
 "1.20.3+" = "net/minecraft/world/scores/ScoreAccess:get()I@IM"
@@ -23,6 +26,7 @@ Vec3_y = "net/minecraft/world/phys/Vec3:y:D@M"
 Vec3_z = "net/minecraft/world/phys/Vec3:z:D@M"
 Vec2_x = "net/minecraft/world/phys/Vec2:x:F@M"
 Vec2_y = "net/minecraft/world/phys/Vec2:y:F@M"
+BuiltInRegistries_ATTRIBUTE = "net/minecraft/core/registries/BuiltInRegistries:ATTRIBUTE:Lnet/minecraft/core/Registry;@S"
 
 [definitions_fields.ServerFunctionManager_context]
 "1.20.2-" = "net/minecraft/server/ServerFunctionManager:context:Lnet/minecraft/server/ServerFunctionManager$ExecutionContext;@M"

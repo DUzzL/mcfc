@@ -223,6 +223,7 @@ public class CompilationContext {
         var data = entityData.data();
         int stackCount = entityData.stackCount() + inStackCount;
         var nonNull = Instructions2.ifNotNull(entityData.content().lower());
+        entityData.writeInstruction(nonNull);
         var stacker = new InstructionStacker(nonNull);
         if(selector.entityTypes() != null) {
             stacker.stackInstruction(Instructions.checkEntityTypes(entityData.content(), new ArrayList<>(selector.entityTypes().data()), selector.entityTypes().negated()));

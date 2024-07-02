@@ -470,3 +470,12 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
       run();
     }
 }
+
+@GET_ATTRIBUTE_INSTANCE(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.entity.ai.attributes.AttributeInstance> [ctx:attribute], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:attributeName]) {
+    let [ctx:attribute] = cast([ctx:entity], <net.minecraft.world.entity.LivingEntity>).getAttributes().getInstance(map_attribute([instr:attributeName]));
+    run();
+}
+
+@SET_ATTRIBUTE_BASE(<net.minecraft.world.entity.ai.attributes.AttributeInstance> [ctx:attribute], double [instr:value]) {
+  [ctx:attribute].setBaseValue([instr:value]);
+}

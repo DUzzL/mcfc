@@ -7,15 +7,17 @@ import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.TaggableLocation;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
-import dev.epicpix.minecraftfunctioncompiler.v1_20_4.data.RegistryMapping;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.execution.tasks.BuildContexts;
 import net.minecraft.commands.functions.CommandFunction;
 import net.minecraft.commands.functions.PlainTextFunction;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerFunctionManager;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,8 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callMap_get;
-import static dev.epicpix.minecraftfunctioncompiler.v1_20_4.emitter.MappedUsageDefinitionsExtensions.loadServerFunctionLibrary_functions;
-import static dev.epicpix.minecraftfunctioncompiler.v1_20_4.emitter.MappedUsageDefinitionsExtensions.loadServerFunctionManager_library;
+import static dev.epicpix.minecraftfunctioncompiler.v1_20_4.emitter.MappedUsageDefinitionsExtensions.*;
 
 public class FunctionClassLoader extends FunctionCompilerClassLoader {
 
@@ -114,6 +115,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
                 CommandFunction.class,
                 ServerFunctionManager.class,
                 MinecraftServer.class,
+                Attribute.class,
                 (cf, cw, value) -> {
                         cf.loadServerFunctionManager(cw);
                         loadServerFunctionManager_library(cw);
@@ -121,6 +123,12 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
                         cf.loadResourceLocation(cw, value);
                         callMap_get(cw);
                         cw.castType(CommandFunction.class);
+                },
+                (cf, cw, value) -> {
+                    loadBuiltInRegistries_ATTRIBUTE(cw);
+                    cf.loadResourceLocation(cw, value);
+                    callRegistry_get(cw);
+                    cw.castType(Attribute.class);
                 }
         );
     }

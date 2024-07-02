@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.commands;
 
 import dev.epicpix.minecraftfunctioncompiler.data.*;
+import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
 public class StringCommandReader {
     private final String command;
@@ -321,6 +322,15 @@ public class StringCommandReader {
             case "><" -> ScoreboardOperation.SWAP;
             default -> throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_SCOREBOARD_OPERATION);
         };
+    }
+
+    public AttributeData readAttribute() {
+        DataLocation location = readDataLocation();
+        AttributeData attribute = DataRegistries.ATTRIBUTE.get(location);
+        if(attribute == null) {
+            throw new StringCommandReaderException(this, StringCommandReaderExceptionType.UNKNOWN_ATTRIBUTE);
+        }
+        return attribute;
     }
 
 }

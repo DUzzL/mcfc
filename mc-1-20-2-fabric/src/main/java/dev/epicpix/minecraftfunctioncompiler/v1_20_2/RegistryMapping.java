@@ -1,0 +1,36 @@
+package dev.epicpix.minecraftfunctioncompiler.v1_20_2;
+
+import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
+import dev.epicpix.minecraftfunctioncompiler.data.AttributeData;
+import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.RangedAttribute;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+
+public final class RegistryMapping {
+    private RegistryMapping() {}
+
+    public static void updateRegistryMaps() throws IllegalAccessException {
+        DataRegistries.ATTRIBUTE.reset();
+        BuiltInRegistries.ATTRIBUTE.entrySet().forEach(e -> DataRegistries.ATTRIBUTE.set(new DataLocation(e.getKey().location().getPath(), e.getKey().location().getNamespace()), new AttributeData(new DataLocation(e.getKey().location().getPath(), e.getKey().location().getNamespace()), e.getValue().getDefaultValue(), ((RangedAttribute) e.getValue()).getMinValue(), ((RangedAttribute) e.getValue()).getMaxValue())));
+        DataRegistries.ATTRIBUTE.freeze();
+        DataRegistries.ENTITY_CLASS.reset();
+        for(Field field : EntityType.class.getDeclaredFields()) {
+            if(EntityType.class.isAssignableFrom(field.getType()) && Modifier.isPublic(field.getModifiers()) && Modifier.isStatic(field.getModifiers()) && Modifier.isFinal(field.getModifiers())) {
+                var value = (EntityType<?>) field.get(null);
+                var type = (Class<?>) ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
+                var key = BuiltInRegistries.ENTITY_TYPE.getKey(value);
+                DataRegistries.ENTITY_CLASS.set(new DataLocation(key.getNamespace(), key.getPath()), type);
+            }
+        }
+        DataRegistries.ENTITY_CLASS.set(new DataLocation("minecraft", "player"), ServerPlayer.class);
+        DataRegistries.ENTITY_CLASS.set(new DataLocation("minecraftfunctioncompiler", "living_entity"), LivingEntity.class);
+        DataRegistries.ENTITY_CLASS.freeze();
+    }
+}

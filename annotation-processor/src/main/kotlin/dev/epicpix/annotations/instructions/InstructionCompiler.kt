@@ -250,6 +250,7 @@ private fun parseExpressionTypeWord(iter: ListIterator<LexToken>): ParsedTokenEx
     return when(word.word) {
         "boolean" -> ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)
         "int" -> ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)
+        "double" -> ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.DOUBLE)
         "scope" -> ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.SCOPE)
         "yield" -> {
             iter.expectTokenType(LexTokenSimpleType.OPEN_ANGLE_BRACKET)
@@ -264,6 +265,7 @@ private fun parseExpressionTypeWord(iter: ListIterator<LexToken>): ParsedTokenEx
             ParsedTokenExpressionTypeYield(when(t) {
                 "boolean" -> ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)
                 "int" -> ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)
+                "double" -> ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.DOUBLE)
                 "scope" -> ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.SCOPE)
                 else -> ParsedTokenExpressionTypeComplex(t)
             })
@@ -720,6 +722,8 @@ data class WriterData(
     val params: List<Pair<ParsedTokenValueAccessor, ParsedTokenExpressionType>>,
     val paramStatistics: List<AccessorStatistics> = params.map { AccessorStatistics(it.first) },
     val localReturn: String = "er",
+    val majorVersion: Int,
+    val minorVersion: Int,
 ) {
     fun copyLocalTypes() = copy(localTypes = localTypes.toMutableMap())
 
@@ -734,6 +738,12 @@ data class WriterData(
     }
     fun markSet(accessor: ParsedTokenValueAccessor) {
         paramStatistics.find { it.accessor == accessor }?.sets = true
+    }
+    fun isAboveVersion(major: Int, minor: Int): Boolean {
+        return majorVersion > major || (majorVersion == major && minorVersion > minor)
+    }
+    fun isBelowVersion(major: Int, minor: Int): Boolean {
+        return majorVersion < major || (majorVersion == major && minorVersion < minor)
     }
 }
 
@@ -764,7 +774,16 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
         return ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)
     }else if(expression is ParsedTokenStatementFunctionCall) {
         if(expression.instance == null) {
-            return (expression.arguments[1] as ParsedTokenExpressionTyped).type as ParsedTokenExpressionTypeComplex
+            if(expression.name == "cast" || expression.name == "map_enum") {
+                return (expression.arguments[1] as ParsedTokenExpressionTyped).type as ParsedTokenExpressionTypeComplex
+            }
+            if(expression.name == "map_attribute") {
+                if(writerData.isAboveVersion(20, 4)) {
+                    return ParsedTokenExpressionTypeComplex("net.minecraft.core.Holder")
+                }else {
+                    return ParsedTokenExpressionTypeComplex("net.minecraft.world.entity.ai.attributes.Attribute")
+                }
+            }
         }
         val paramTypes = expression.arguments.map { evaluateExpressionType(writerData, it) }
         val instance = expression.instance
@@ -909,6 +928,11 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             }else if(type.isSimpleType(ParsedTokenExpressionSimpleType.BOOLEAN)) {
                 if(keepResult) {
                     output.appendText("cw.writeInt(context.instruction().<Boolean>get(\"${expression.name}\") ? 1 : 0);\n")
+                }
+                return uniqId
+            }else if(type.isSimpleType(ParsedTokenExpressionSimpleType.DOUBLE)) {
+                if(keepResult) {
+                    output.appendText("cw.writeDouble(context.instruction().<Double>get(\"${expression.name}\"));\n")
                 }
                 return uniqId
             }else if(type is ParsedTokenExpressionTypeComplex && type.typeName == "java.lang.String") {
@@ -1146,6 +1170,18 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                             output.appendText("}\n")
                         }
                         return uid
+                    }
+                }
+            }
+            if(expression.name == "map_attribute") {
+                val source = expression.arguments[0] as ParsedTokenValueAccessor
+                if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
+                    val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
+                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.DataLocation") {
+                        if(keepResult) {
+                            output.appendText("context.fieldStorage().loadAttribute(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.DataLocation>get(\"${source.name}\"));\n")
+                        }
+                        return uniqId
                     }
                 }
             }
@@ -1387,9 +1423,9 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
 
 fun parseCode(inputCode: String) = parseTokens(lexTokens(inputCode).listIterator())
 
-fun generateCode(mappingData: MappingData?, definition: ParsedTokenInstructionDefinition, file: ParsedFile, output: OutputStream, enums: EnumList): List<AccessorStatistics> {
+fun generateCode(mappingData: MappingData?, definition: ParsedTokenInstructionDefinition, file: ParsedFile, output: OutputStream, enums: EnumList, majorVersion: Int, minorVersion: Int): List<AccessorStatistics> {
     val bout = ByteArrayOutputStream()
-    val writerData = WriterData(mappingData = mappingData, file = file, params = definition.params, enums = enums)
+    val writerData = WriterData(mappingData = mappingData, file = file, params = definition.params, enums = enums, majorVersion = majorVersion, minorVersion = minorVersion)
     try {
         bout.appendText("org.objectweb.asm.Label ${writerData.localReturn} = new org.objectweb.asm.Label();\n")
         writeCode(writerData, definition.code, bout, 0)
