@@ -66,14 +66,14 @@ public final class CommandCompiler {
                     var rotation = LocationData.<Vec2>ofLocal(selector.data().highestId() + 2);
                     var execInstruction = Instructions2.getEntityRotation(selector.content(), rotation);
                     var instruction = Instructions2.getEntityWorld(selector.content(), world).with(Instructions2.getEntityPosition(selector.content(), position).with(execInstruction));
-                    try(var ignored = context.enterWithoutValue(selector.data().incrementedId(3).withCurrentPosition(position).withCurrentRotation(rotation).withCurrentWorld(world).withBaseInstruction(instruction))) {
+                    try(var ignored = context.enterWithoutValue(selector.data().incrementedId(3).withCurrentPosition(position).withCurrentRotation(rotation).withCurrentWorld(world).withBaseInstruction(execInstruction))) {
                         compile(context, command.get("command"), result);
                     }
                     selector.writeInstruction(instruction);
                 }
             }
             case EXECUTE_IF_ENTITY -> {
-                try(var ignored = context.forSelector(command.<SelectorArgument>get("targets").limit(1))) {
+                try(var ignored = context.forSelector(command.<SelectorArgument>get("entities").limit(1))) {
                     compile(context, command.get("command"), result);
                 }
             }

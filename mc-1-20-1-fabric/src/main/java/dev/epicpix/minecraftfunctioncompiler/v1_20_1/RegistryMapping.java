@@ -18,7 +18,7 @@ public final class RegistryMapping {
 
     public static void updateRegistryMaps() throws IllegalAccessException {
         DataRegistries.ATTRIBUTE.reset();
-        BuiltInRegistries.ATTRIBUTE.entrySet().forEach(e -> DataRegistries.ATTRIBUTE.set(new DataLocation(e.getKey().location().getPath(), e.getKey().location().getNamespace()), new AttributeData(new DataLocation(e.getKey().location().getPath(), e.getKey().location().getNamespace()), e.getValue().getDefaultValue(), ((RangedAttribute) e.getValue()).getMinValue(), ((RangedAttribute) e.getValue()).getMaxValue())));
+        BuiltInRegistries.ATTRIBUTE.entrySet().forEach(e -> DataRegistries.ATTRIBUTE.set(new DataLocation(e.getKey().location().getNamespace(), e.getKey().location().getPath()), new AttributeData(new DataLocation(e.getKey().location().getNamespace(), e.getKey().location().getPath()), e.getValue().getDefaultValue(), ((RangedAttribute) e.getValue()).getMinValue(), ((RangedAttribute) e.getValue()).getMaxValue())));
         DataRegistries.ATTRIBUTE.freeze();
         DataRegistries.ENTITY_CLASS.reset();
         for(Field field : EntityType.class.getDeclaredFields()) {

@@ -181,7 +181,7 @@ public class CompilationContext {
             var name = LocationData.<String>ofLocal(selectorData.data().highestId());
             var instruction = Instructions2.getScoreboardName(selectorData.content(), name);
             selectorData.writeInstruction(Instructions2.ifNotNull(selectorData.content().lower()).with(instruction));
-            return enterWithValue(selectorData.data().incrementedId(1), name, selectorData.stackCount() + 1);
+            return enterWithValue(selectorData.data().incrementedId(1).withBaseInstruction(instruction), name, selectorData.stackCount() + 1);
         }else {
             throw new IllegalArgumentException("ScoreHolderArgument without any valid option: " + holder);
         }

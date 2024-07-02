@@ -23,6 +23,10 @@ public final class SelectorParser {
         return ScoreHolderArgument.selectNamed(name);
     }
 
+    private static void throwError(StringCommandReader reader, String message) {
+        throw new CommandErrorException(new CommandError(reader.getString(), message));
+    }
+
     public static SelectorArgument parseSelector(StringCommandReader reader, boolean allowEntities, boolean allowMultiple) {
         if(reader.peek() != '@') {
             try {
@@ -38,18 +42,18 @@ public final class SelectorParser {
         var data = new SelectorGeneratorBuilderData();
         switch (selectorType) {
             case 'e' -> {
-                if(!allowEntities) throw new UnsupportedOperationException("Unable to use @e with a player-only selector");
-                if(!allowMultiple) throw new UnsupportedOperationException("Unable to use @e with a single-only selector");
+                if(!allowEntities) throwError(reader, "Unable to use @e with a player-only selector");
+                if(!allowMultiple) throwError(reader, "Unable to use @e with a single-only selector");
             }
             case 's' -> {
                 data.self = true;
                 data.limit = 1;
             }
             case 'a' -> {
-                if(!allowMultiple) throw new UnsupportedOperationException("Unable to use @a with a single-only selector");
+                if(!allowMultiple) throwError(reader, "Unable to use @a with a single-only selector");
                 data.entityTypes = new NegatableData<>(List.of(new DataLocation("minecraft", "player")), false);
             }
-            default -> throw new UnsupportedOperationException("Unsupported selector type: @" + selectorType);
+            default -> throwError(reader, "Unsupported selector type: @" + selectorType);
         }
 
         if(reader.canRead() && reader.peek() == '[') {
@@ -58,17 +62,17 @@ public final class SelectorParser {
                 reader.skipWhitespace();
                 var key = reader.readString();
                 reader.skipWhitespace();
-                if(!reader.canRead() || reader.read() != '=') throw new UnsupportedOperationException("Cannot parse selector, missing '='");
+                if(!reader.canRead() || reader.read() != '=') throwError(reader, "Cannot parse selector, missing '='");
                 reader.skipWhitespace();
                 var option = selectorOptions.get(key);
-                if(option == null) throw new UnsupportedOperationException("Cannot parse selector key: " + key);
+                if(option == null) throwError(reader, "Cannot parse selector key: " + key);
                 option.accept(reader, data);
                 reader.skipWhitespace();
-                if(!reader.canRead()) throw new UnsupportedOperationException("Cannot parse selector, ran out of data");
+                if(!reader.canRead()) throwError(reader, "Cannot parse selector, ran out of data");
                 var next = reader.read();
                 if(next == ',') continue;
                 if(next == ']') break;
-                throw new UnsupportedOperationException("Cannot parse selector, ran out of data");
+                throwError(reader, "Cannot parse selector, ran out of data");
             }
         }
 
