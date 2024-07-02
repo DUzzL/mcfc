@@ -208,6 +208,7 @@ data class ParsedTokenStatementDefineVariable(val type: ParsedTokenExpressionTyp
 data class ParsedTokenStatementAssignVariable(val accessor: ParsedTokenValueAccessor, val expression: ParsedTokenExpression) : ParsedTokenStatement
 
 data class ParsedTokenExpressionField(val name: String, val instance: ParsedTokenInstanceType) : ParsedTokenExpression
+data class ParsedTokenExpressionBoolean(val value: Boolean) : ParsedTokenExpression
 data class ParsedTokenExpressionNumber(val number: Long) : ParsedTokenExpression
 data class ParsedTokenExpressionString(val string: String) : ParsedTokenExpression
 data class ParsedTokenExpressionTyped(val type: ParsedTokenExpressionType) : ParsedTokenExpression
@@ -396,10 +397,10 @@ private fun parseExpressionLowerBase(iter: ListIterator<LexToken>, valueDefiniti
         return ParsedTokenExpressionTyped(ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.NULL))
     }
     iter.tryNextTokenType(LexTokenSimpleType.KW_FALSE) {
-        return ParsedTokenExpressionNumber(0)
+        return ParsedTokenExpressionBoolean(false)
     }
     iter.tryNextTokenType(LexTokenSimpleType.KW_TRUE) {
-        return ParsedTokenExpressionNumber(1)
+        return ParsedTokenExpressionBoolean(true)
     }
     iter.tryNextTokenType(LexTokenSimpleType.KW_NEW) {
         val instanceOf = ParsedTokenInstanceStatic((parseExpressionTypeWord(iter) as ParsedTokenExpressionTypeComplex).typeName)
@@ -418,10 +419,13 @@ private fun parseExpressionLowerBase(iter: ListIterator<LexToken>, valueDefiniti
         if(iter.tryNextTokenType(LexTokenSimpleType.DOT)) {
             val classOf = ParsedTokenInstanceStatic((type as ParsedTokenExpressionTypeComplex).typeName)
             val name = iter.expectToken<LexTokenWord>()
-            iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
-            val params = parseFunctionCallParams(iter, valueDefinitions, usesObf)
-            iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
-            return ParsedTokenStatementFunctionCall(name.word, classOf, params, null)
+            if(iter.tryNextTokenType(LexTokenSimpleType.OPEN_PAREN)) {
+                val params = parseFunctionCallParams(iter, valueDefinitions, usesObf)
+                iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
+                return ParsedTokenStatementFunctionCall(name.word, classOf, params, null)
+            }else {
+                return ParsedTokenExpressionField(name.word, classOf)
+            }
         }else {
             return ParsedTokenExpressionTyped(type)
         }
@@ -772,6 +776,8 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
         return writerData.getAccessorType(expression)
     }else if(expression is ParsedTokenExpressionNumber) {
         return ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)
+    }else if(expression is ParsedTokenExpressionBoolean) {
+        return ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)
     }else if(expression is ParsedTokenStatementFunctionCall) {
         if(expression.instance == null) {
             if(expression.name == "cast" || expression.name == "map_enum") {
@@ -981,6 +987,15 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 output.appendText("mv.visitIntInsn(org.objectweb.asm.Opcodes.SIPUSH, $value);\n")
             } else {
                 output.appendText("mv.visitLdcInsn($value);\n")
+            }
+        }
+        return uniqId
+    }else if(expression is ParsedTokenExpressionBoolean) {
+        if(keepResult) {
+            if(expression.value) {
+                output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.ICONST_1);\n")
+            }else {
+                output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.ICONST_0);\n")
             }
         }
         return uniqId

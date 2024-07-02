@@ -148,6 +148,14 @@ public class StringCommandReader {
         }
     }
 
+    public float readFloat() {
+        try {
+            return Float.parseFloat(readNumberBase());
+        }catch(NumberFormatException e) {
+            throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_FLOAT);
+        }
+    }
+
     public double readDouble() {
         try {
             return Double.parseDouble(readNumberBase());
@@ -328,9 +336,20 @@ public class StringCommandReader {
         DataLocation location = readDataLocation();
         AttributeData attribute = DataRegistries.ATTRIBUTE.get(location);
         if(attribute == null) {
-            throw new StringCommandReaderException(this, StringCommandReaderExceptionType.UNKNOWN_ATTRIBUTE);
+            throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_ATTRIBUTE);
         }
         return attribute;
+    }
+
+    public int readTime() {
+        float length = readFloat();
+        String unit = readUntilSpace();
+        switch(unit) {
+            case "", "t" -> {}
+            case "s" -> length *= 20;
+            case "d" -> length *= 24000;
+        }
+        return Math.round(length);
     }
 
 }

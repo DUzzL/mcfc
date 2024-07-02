@@ -26,6 +26,7 @@ Not all commands are currently implemented in this mod, if a command is not list
 | `scoreboard players set`       | Partial[^1]  | No                     | No                      |
 | `tag add`                      | Partial[^1]  | No                     | No                      |
 | `tag remove`                   | Partial[^1]  | No                     | No                      |
+| `weather`                      | Yes          | No                     | No                      |
 
 [^1]: Not all selectors are currently supported.
 [^2]: Local positions (^ ^ ^) are not implemented, relative and absolute positions do work.

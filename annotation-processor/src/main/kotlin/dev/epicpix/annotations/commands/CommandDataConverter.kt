@@ -144,6 +144,11 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
             "score_holder" -> builder.append("    var a$argumentIndex = SelectorParser.parseScoreHolder(reader);\n")
             "scoreboard_operation" -> builder.append("    var a$argumentIndex = reader.readScoreboardOperation();\n")
             "swizzle" -> builder.append("    var a$argumentIndex = reader.readSwizzle();\n")
+            "time" -> {
+                builder.append("    var a$argumentIndex = reader.readTime();\n")
+                data.kindOptions["minimum"]?.toInt()?.also { min -> builder.append("    if(a$argumentIndex < $min) ${createError("\"Time value of \" + a$argumentIndex + \" ticks is below allowed value ($min ticks)\"")}\n") }
+                data.kindOptions["maximum"]?.toInt()?.also { max -> builder.append("    if(a$argumentIndex > $max) ${createError("\"Time value of \" + a$argumentIndex + \" ticks is above allowed value ($max ticks)\"")}\n") }
+            }
             "word" -> builder.append("    var a$argumentIndex = reader.readWord();\n")
             "vec3" -> builder.append("    var a$argumentIndex = reader.readVec3();\n")
             else -> {

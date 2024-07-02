@@ -274,6 +274,24 @@ public final class CommandCompiler {
                     entity.writeInstruction(Instructions2.removeEntityTag(entity.content(), command.get("name")));
                 }
             }
+            case WEATHER_CLEAR_TIMED -> {
+                context.current().addInstructionConsumer().accept(Instructions2.setWeatherStatic(command.get("duration"), 0, false, false));
+            }
+            case WEATHER_CLEAR -> {
+                context.current().addInstructionConsumer().accept(Instructions2.setWeatherDynamicClear());
+            }
+            case WEATHER_RAIN_TIMED -> {
+                context.current().addInstructionConsumer().accept(Instructions2.setWeatherStatic(0, command.get("duration"), true, false));
+            }
+            case WEATHER_RAIN -> {
+                context.current().addInstructionConsumer().accept(Instructions2.setWeatherDynamicRain());
+            }
+            case WEATHER_THUNDER_TIMED -> {
+                context.current().addInstructionConsumer().accept(Instructions2.setWeatherStatic(0, command.get("duration"), true, true));
+            }
+            case WEATHER_THUNDER -> {
+                context.current().addInstructionConsumer().accept(Instructions2.setWeatherDynamicThunder());
+            }
         }
     }
 

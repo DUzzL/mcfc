@@ -471,11 +471,27 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
     }
 }
 
-@GET_ATTRIBUTE_INSTANCE(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.entity.ai.attributes.AttributeInstance> [ctx:attribute], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:attributeName]) {
-    let [ctx:attribute] = cast([ctx:entity], <net.minecraft.world.entity.LivingEntity>).getAttributes().getInstance(map_attribute([instr:attributeName]));
+@GET_ATTRIBUTE_INSTANCE(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.entity.ai.attributes.AttributeInstance> [ctx:attribute], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:attribute_name]) {
+    let [ctx:attribute] = cast([ctx:entity], <net.minecraft.world.entity.LivingEntity>).getAttributes().getInstance(map_attribute([instr:attribute_name]));
     run();
 }
 
 @SET_ATTRIBUTE_BASE(<net.minecraft.world.entity.ai.attributes.AttributeInstance> [ctx:attribute], double [instr:value]) {
   [ctx:attribute].setBaseValue([instr:value]);
+}
+
+@SET_WEATHER_STATIC(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], int [instr:clear_weather_time], int [instr:rain_time], boolean [instr:raining], boolean [instr:thundering]) {
+  [static:MinecraftServer].overworld().setWeatherParameters([instr:clear_weather_time], [instr:rain_time], [instr:raining], [instr:thundering]);
+}
+
+@SET_WEATHER_DYNAMIC_CLEAR(<net.minecraft.server.MinecraftServer> [static:MinecraftServer]) {
+  [static:MinecraftServer].overworld().setWeatherParameters(<net.minecraft.server.level.ServerLevel>.RAIN_DELAY.sample([static:MinecraftServer].overworld().getRandom()), 0, false, false);
+}
+
+@SET_WEATHER_DYNAMIC_RAIN(<net.minecraft.server.MinecraftServer> [static:MinecraftServer]) {
+  [static:MinecraftServer].overworld().setWeatherParameters(0, <net.minecraft.server.level.ServerLevel>.RAIN_DURATION.sample([static:MinecraftServer].overworld().getRandom()), true, false);
+}
+
+@SET_WEATHER_DYNAMIC_THUNDER(<net.minecraft.server.MinecraftServer> [static:MinecraftServer]) {
+  [static:MinecraftServer].overworld().setWeatherParameters(0, <net.minecraft.server.level.ServerLevel>.THUNDER_DURATION.sample([static:MinecraftServer].overworld().getRandom()), true, true);
 }

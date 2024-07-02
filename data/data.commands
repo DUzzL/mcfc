@@ -23,3 +23,9 @@ SCOREBOARD_PLAYERS_RESET_ALL/scoreboard players reset <targets:score_holder>
 SCOREBOARD_PLAYERS_SET/scoreboard players set <targets:score_holder> <objective:objective> <score:int>
 TAG_ADD/tag <targets:entity_selector> add <name:word>
 TAG_REMOVE/tag <targets:entity_selector> remove <name:word>
+WEATHER_CLEAR_TIMED/weather clear <duration:time[minimum=1]>
+WEATHER_CLEAR/weather clear
+WEATHER_RAIN_TIMED/weather rain <duration:time[minimum=1]>
+WEATHER_RAIN/weather rain
+WEATHER_THUNDER_TIMED/weather thunder <duration:time[minimum=1]>
+WEATHER_THUNDER/weather thunder
