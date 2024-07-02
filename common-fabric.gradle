@@ -79,6 +79,7 @@ jar {
     from("LICENSE") {
         rename { "${it}_${project.archivesBaseName}"}
     }
+    exclude("minecraftfunctioncompiler.v${project.minecraft_version.replaceAll("\\.", "_")}.generated.accesswidener")
 }
 
 kotlin {
