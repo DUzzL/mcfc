@@ -172,9 +172,11 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
         var mv = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "run", "(" + commandSourceStackClass.descriptorString() + ")I", null, null);
         mv.visitCode();
         var codeWriter = new CodeWriter(mv);
-        codeWriter.defineLocal("static$CommandSourceStack", commandSourceStackClass, () -> {
-            new EmitterContext(fieldStorage, codeWriter, compiledFunctions, new HashMap<>(), new HashMap<>(), Instructions2.root().withChildren(new ArrayList<>(instructions)), new HashMap<>(), new HashMap<>()).run();
-        });
+
+
+        var localValue = codeWriter.createLocal("static$CommandSourceStack", commandSourceStackClass.descriptorString());
+        new EmitterContext(fieldStorage, codeWriter, compiledFunctions, new HashMap<>(), new HashMap<>(), Instructions2.root().withChildren(new ArrayList<>(instructions)), new HashMap<>(), new HashMap<>()).run();
+        codeWriter.destroyLocal(localValue);
 
         mv.visitLdcInsn(commandCount);
         mv.visitInsn(Opcodes.IRETURN);

@@ -247,7 +247,7 @@ class MainProcessor(
                     val isStatic = !callDetails.contains("M")
                     val isInterface = callDetails.contains("I")
                     val opcode = if(isStatic) 184 else if(isInterface) 185 else 182
-                    mapExtensions.appendText("    public static void call$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.getMethodVisitor().visitMethodInsn($opcode, \"$className\", \"$methodName\", \"$methodDescriptor\", $isInterface); }\n")
+                    mapExtensions.appendText("    public static void call$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.methodVisitor().visitMethodInsn($opcode, \"$className\", \"$methodName\", \"$methodDescriptor\", $isInterface); }\n")
                 }
             }
         }
@@ -262,11 +262,11 @@ class MainProcessor(
                 if(callDetails != null) {
                     val isStatic = !callDetails.contains("M")
                     if(isStatic) {
-                        mapExtensions.appendText("    public static void load$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.getMethodVisitor().visitFieldInsn(178, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n")
-                        mapExtensions.appendText("    public static void store$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.getMethodVisitor().visitFieldInsn(179, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n")
+                        mapExtensions.appendText("    public static void load$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.methodVisitor().visitFieldInsn(178, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n")
+                        mapExtensions.appendText("    public static void store$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.methodVisitor().visitFieldInsn(179, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n")
                     }else {
-                        mapExtensions.appendText("    public static void load$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.getMethodVisitor().visitFieldInsn(180, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n")
-                        mapExtensions.appendText("    public static void store$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.getMethodVisitor().visitFieldInsn(181, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n")
+                        mapExtensions.appendText("    public static void load$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.methodVisitor().visitFieldInsn(180, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n")
+                        mapExtensions.appendText("    public static void store$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.methodVisitor().visitFieldInsn(181, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n")
                     }
                 }
             }
@@ -286,7 +286,7 @@ class MainProcessor(
         map.appendText("    public static void registerInstructionEmitters() {\n")
         map.appendText("        dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructionsKt.registerEmitterInstruction((context) -> {\n")
         map.appendText("            var cw = context.codeWriter();\n")
-        map.appendText("            var mv = cw.getMethodVisitor();\n")
+        map.appendText("            var mv = cw.methodVisitor();\n")
         map.appendText("            var type = context.instruction().type();\n")
         val info = mutableMapOf<String, List<AccessorStatistics>>()
         file.definitions.forEach {

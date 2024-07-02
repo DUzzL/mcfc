@@ -11,7 +11,7 @@ public final class EmitterHelper {
 
     public static void checkFloatRange(EmitterContext emitter, FloatRangeArgument range, Consumer<EmitterContext> exec) {
         var cw = emitter.codeWriter();
-        var mv = cw.getMethodVisitor();
+        var mv = cw.methodVisitor();
         if(range.minimum() != null && range.maximum() == null) {
             cw.writeFloat(range.minimum());
             mv.visitInsn(Opcodes.FCMPL);
@@ -55,7 +55,7 @@ public final class EmitterHelper {
 
     public static void checkIntRange(EmitterContext emitter, IntRangeArgument range, Consumer<EmitterContext> exec) {
         var cw = emitter.codeWriter();
-        var mv = cw.getMethodVisitor();
+        var mv = cw.methodVisitor();
         if(range.minimum() != null && range.maximum() == null) {
             cw.writeInt(range.minimum());
             var endLabel = cw.executeIfLabeled(Opcodes.IF_ICMPGE);
@@ -90,7 +90,7 @@ public final class EmitterHelper {
 
     public static void checkNotIntRange(EmitterContext emitter, IntRangeArgument range, Consumer<EmitterContext> exec) {
         var cw = emitter.codeWriter();
-        var mv = cw.getMethodVisitor();
+        var mv = cw.methodVisitor();
         if(range.minimum() != null && range.maximum() == null) {
             cw.writeInt(range.minimum());
             var endLabel = cw.executeIfLabeled(Opcodes.IF_ICMPLT);

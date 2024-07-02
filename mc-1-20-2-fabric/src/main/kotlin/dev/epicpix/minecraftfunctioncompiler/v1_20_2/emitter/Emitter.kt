@@ -75,49 +75,51 @@ fun registerInstructionEmitters() {
         load("target")
         callScore_getScore(codeWriter)
 
-        codeWriter.executeIf(when(instruction.get<ScoreboardCompareOperation>("compareOperation")!!) {
+        val endLabel = codeWriter.executeIfLabeled(when(instruction.get<ScoreboardCompareOperation>("compareOperation")!!) {
             ScoreboardCompareOperation.LT -> Opcodes.IF_ICMPLT
             ScoreboardCompareOperation.LE -> Opcodes.IF_ICMPLE
             ScoreboardCompareOperation.EQ -> Opcodes.IF_ICMPEQ
             ScoreboardCompareOperation.NE -> Opcodes.IF_ICMPNE
             ScoreboardCompareOperation.GE -> Opcodes.IF_ICMPGE
             ScoreboardCompareOperation.GT -> Opcodes.IF_ICMPGT
-        }) { run() }
+        })
+        run()
+        codeWriter.methodVisitor.visitLabel(endLabel)
     }
     registerEmitterInstruction(InstructionTypes.APPLY_POSITION_WORLD) {
-        codeWriter.newObject(Vec3::class.java, Double::class.java, Double::class.java, Double::class.java) {
-            val pos = instruction.get<WorldCoordinates>("position")
-            if(pos.isXRelative) {
-                load("from")
-                loadVec3_x(codeWriter)
-                if(pos.x != 0.0) {
-                    codeWriter.writeDouble(pos.x)
-                    codeWriter.methodVisitor.visitInsn(Opcodes.DADD)
-                }
-            } else {
+        codeWriter.newObjectCreate(Vec3::class.java)
+        val pos = instruction.get<WorldCoordinates>("position")
+        if(pos.isXRelative) {
+            load("from")
+            loadVec3_x(codeWriter)
+            if(pos.x != 0.0) {
                 codeWriter.writeDouble(pos.x)
+                codeWriter.methodVisitor.visitInsn(Opcodes.DADD)
             }
-            if(pos.isYRelative) {
-                load("from")
-                loadVec3_y(codeWriter)
-                if(pos.y != 0.0) {
-                    codeWriter.writeDouble(pos.y)
-                    codeWriter.methodVisitor.visitInsn(Opcodes.DADD)
-                }
-            } else {
-                codeWriter.writeDouble(pos.y)
-            }
-            if(pos.isZRelative) {
-                load("from")
-                loadVec3_z(codeWriter)
-                if(pos.z != 0.0) {
-                    codeWriter.writeDouble(pos.z)
-                    codeWriter.methodVisitor.visitInsn(Opcodes.DADD)
-                }
-            } else {
-                codeWriter.writeDouble(pos.z)
-            }
+        } else {
+            codeWriter.writeDouble(pos.x)
         }
+        if(pos.isYRelative) {
+            load("from")
+            loadVec3_y(codeWriter)
+            if(pos.y != 0.0) {
+                codeWriter.writeDouble(pos.y)
+                codeWriter.methodVisitor.visitInsn(Opcodes.DADD)
+            }
+        } else {
+            codeWriter.writeDouble(pos.y)
+        }
+        if(pos.isZRelative) {
+            load("from")
+            loadVec3_z(codeWriter)
+            if(pos.z != 0.0) {
+                codeWriter.writeDouble(pos.z)
+                codeWriter.methodVisitor.visitInsn(Opcodes.DADD)
+            }
+        } else {
+            codeWriter.writeDouble(pos.z)
+        }
+        codeWriter.newObjectInit(Vec3::class.java, Double::class.java, Double::class.java, Double::class.java)
         runStored("to", Vec3::class.java)
     }
     registerEmitterInstruction(InstructionTypes.CHECK_ENTITY_TYPES) {
@@ -139,18 +141,18 @@ fun registerInstructionEmitters() {
         }
     }
     registerEmitterInstruction(InstructionTypes.ALIGN_POSITION) {
-        codeWriter.newObject(Vec3::class.java, Double::class.java, Double::class.java, Double::class.java) {
-            val swizzle = instruction.get<SwizzleArgument>("swizzle")
-            load("position")
-            loadVec3_x(codeWriter);
-            if(swizzle.x) callMath_floor(codeWriter)
-            load("position")
-            loadVec3_y(codeWriter);
-            if(swizzle.y) callMath_floor(codeWriter)
-            load("position")
-            loadVec3_z(codeWriter);
-            if(swizzle.z) callMath_floor(codeWriter)
-        }
+        codeWriter.newObjectCreate(Vec3::class.java)
+        val swizzle = instruction.get<SwizzleArgument>("swizzle")
+        load("position")
+        loadVec3_x(codeWriter);
+        if(swizzle.x) callMath_floor(codeWriter)
+        load("position")
+        loadVec3_y(codeWriter);
+        if(swizzle.y) callMath_floor(codeWriter)
+        load("position")
+        loadVec3_z(codeWriter);
+        if(swizzle.z) callMath_floor(codeWriter)
+        codeWriter.newObjectInit(Vec3::class.java, Double::class.java, Double::class.java, Double::class.java)
         runStored("result", Vec3::class.java)
     }
     registerEmitterInstruction(InstructionTypes.CHECK_ROTATION_YAW) {
