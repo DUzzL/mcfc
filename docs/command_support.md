@@ -3,6 +3,7 @@ Not all commands are currently implemented in this mod, if a command is not list
 | Command                        | Full Support | `store result` Support | `store success` Support |
 |--------------------------------|--------------|------------------------|-------------------------|
 | `attribute base set`           | Partial[^1]  | No                     | No                      |
+| `difficulty`                   | Partial[^4]  | No                     | No                      |
 | `execute align`                | Yes          | No                     | No                      |
 | `execute as`                   | Partial[^1]  | No                     | No                      |
 | `execute at`                   | Partial[^1]  | No                     | No                      |
@@ -31,3 +32,4 @@ Not all commands are currently implemented in this mod, if a command is not list
 [^1]: Not all selectors are currently supported.
 [^2]: Local positions (^ ^ ^) are not implemented, relative and absolute positions do work.
 [^3]: Functions do not accept macro arguments
+[^4]: Only `/difficulty` with the difficulty argument is supported

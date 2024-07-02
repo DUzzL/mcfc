@@ -42,6 +42,9 @@ public final class CommandCompiler {
 
                 }
             }
+            case DIFFICULTY_SET -> {
+                context.current().addInstructionConsumer().accept(Instructions2.setDifficulty(command.get("difficulty")));
+            }
             case EXECUTE_ALIGN -> {
                 try(var pos = context.getPosition()) {
                     var newPosition = LocationData.<Vec3>ofLocal(pos.data().highestId());

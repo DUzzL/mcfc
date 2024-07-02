@@ -352,4 +352,15 @@ public class StringCommandReader {
         return Math.round(length);
     }
 
+    public Difficulty readDifficulty() {
+        String str = readUntilSpace();
+        return switch (str) {
+            case "peaceful" -> Difficulty.PEACEFUL;
+            case "easy" -> Difficulty.EASY;
+            case "normal" -> Difficulty.NORMAL;
+            case "hard" -> Difficulty.HARD;
+            default -> throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_DIFFICULTY);
+        };
+    }
+
 }

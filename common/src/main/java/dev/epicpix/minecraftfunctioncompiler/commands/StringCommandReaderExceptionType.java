@@ -17,4 +17,5 @@ public enum StringCommandReaderExceptionType {
     INVALID_SCOREBOARD_OPERATION,
     INVALID_ATTRIBUTE,
     INVALID_TIME_KIND,
+    INVALID_DIFFICULTY,
 }

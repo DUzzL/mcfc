@@ -1,4 +1,5 @@
 ATTRIBUTE_BASE_SET/attribute <target:entity_selector[multiple=false]> <attribute:attribute> base set <value:double>
+DIFFICULTY_SET/difficulty <difficulty:difficulty>
 EXECUTE_ALIGN/execute align <swizzle:swizzle> <command:execute_subcommand>
 EXECUTE_AS/execute as <targets:entity_selector> <command:execute_subcommand>
 EXECUTE_AT/execute at <targets:entity_selector> <command:execute_subcommand>

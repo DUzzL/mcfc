@@ -495,3 +495,7 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 @SET_WEATHER_DYNAMIC_THUNDER(<net.minecraft.server.MinecraftServer> [static:MinecraftServer]) {
   [static:MinecraftServer].overworld().setWeatherParameters(0, <net.minecraft.server.level.ServerLevel>.THUNDER_DURATION.sample([static:MinecraftServer].overworld().getRandom()), true, true);
 }
+
+@SET_DIFFICULTY(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <dev.epicpix.minecraftfunctioncompiler.data.Difficulty> [instr:difficulty]) {
+  [static:MinecraftServer].setDifficulty(map_enum([instr:difficulty], <net.minecraft.world.Difficulty>), true);
+}
