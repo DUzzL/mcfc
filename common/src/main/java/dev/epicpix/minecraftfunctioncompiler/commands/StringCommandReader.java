@@ -273,6 +273,9 @@ public class StringCommandReader {
     }
 
     public WorldCoordinates readVec3() {
+        if(peek() == '^') {
+            throw new StringCommandReaderException(this, StringCommandReaderExceptionType.LOCAL_VEC3_NOT_SUPPORTED);
+        }
         boolean relativeX = skipIfNext('~');
         String x = readNumberBase();
         if(!relativeX && !x.contains(".")) x += ".5";

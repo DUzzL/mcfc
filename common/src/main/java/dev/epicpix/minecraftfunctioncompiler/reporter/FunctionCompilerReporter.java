@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
 import dev.epicpix.minecraftfunctioncompiler.commands.CommandError;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.optimizer.OptimizationStatistics;
@@ -35,6 +36,7 @@ public final class FunctionCompilerReporter {
 
     public static void setMinecraftVersion(String version, String versionType) {
         if(minecraftVersionName != null) throw new RuntimeException("Tried to set minecraft version twice");
+        MinecraftVersion.setCurrentVersion(MinecraftVersion.getByName(version));
         minecraftVersionName = version;
         minecraftVersionType = versionType;
     }

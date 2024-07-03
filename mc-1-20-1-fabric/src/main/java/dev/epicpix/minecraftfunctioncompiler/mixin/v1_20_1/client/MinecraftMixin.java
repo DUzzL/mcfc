@@ -16,7 +16,7 @@ public class MinecraftMixin {
 
     @Shadow @Final private String versionType;
 
-    @Inject(method = "<init>", at = @At("TAIL"))
+    @Inject(method = "<init>", at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;versionType:Ljava/lang/String;", shift = At.Shift.AFTER))
     public void init(GameConfig gameConfig, CallbackInfo ci) {
         FunctionCompilerReporter.setMinecraftVersion(DetectedVersion.BUILT_IN.getName(), versionType);
     }
