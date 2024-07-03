@@ -4,18 +4,18 @@ Not all commands are currently implemented in this mod, if a command is not list
 |--------------------------------|--------------|------------------------|-------------------------|
 | `attribute base set`           | Partial[^1]  | No                     | No                      |
 | `difficulty`                   | Partial[^4]  | No                     | No                      |
-| `execute align`                | Yes          | No                     | No                      |
-| `execute as`                   | Partial[^1]  | No                     | No                      |
-| `execute at`                   | Partial[^1]  | No                     | No                      |
+| `execute align`                | Yes          | No result by itself    | No result by itself     |
+| `execute as`                   | Partial[^1]  | No result by itself    | No result by itself     |
+| `execute at`                   | Partial[^1]  | No result by itself    | No result by itself     |
 | `execute if entity`            | Partial[^1]  | No                     | No                      |
 | `execute if score`             | Partial[^1]  | No                     | No                      |
-| `execute positioned`           | Partial[^2]  | No                     | No                      |
-| `execute positioned as`        | Partial[^1]  | No                     | No                      |
-| `execute positioned over`      | No           | No                     | No                      |
-| `execute rotated`              | Yes          | No                     | No                      |
-| `execute rotated as`           | Partial[^1]  | No                     | No                      |
-| `execute run`                  | Yes          | No                     | No                      |
-| `execute store result score`   | Partial[^1]  | No                     | No                      |
+| `execute positioned`           | Partial[^2]  | No result by itself    | No result by itself     |
+| `execute positioned as`        | Partial[^1]  | No result by itself    | No result by itself     |
+| `execute positioned over`      | No           | No result by itself    | No result by itself     |
+| `execute rotated`              | Yes          | No result by itself    | No result by itself     |
+| `execute rotated as`           | Partial[^1]  | No result by itself    | No result by itself     |
+| `execute run`                  | Yes          | No result by itself    | No result by itself     |
+| `execute store result score`   | Partial[^1]  | No result by itself    | No result by itself     |
 | `execute unless entity`        | Partial[^1]  | No                     | No                      |
 | `execute unless score`         | Partial[^1]  | No                     | No                      |
 | `function`                     | Partial[^3]  | No                     | No                      |
