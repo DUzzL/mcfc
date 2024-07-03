@@ -289,14 +289,20 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 }
 
 @CHECK_IS_TEAM(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:team]) {
-  if(<java.util.Objects>.equals([ctx:entity].getTeam(), [instr:team]) == true) {
-    run();
+  if([ctx:entity].getTeam() != null) {
+    if(<java.util.Objects>.equals([ctx:entity].getTeam().getName(), [instr:team]) == true) {
+      run();
+    }
   }
 }
 
 @CHECK_NOT_IS_TEAM(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:team]) {
-  if(<java.util.Objects>.equals([ctx:entity].getTeam(), [instr:team]) == false) {
+  if([ctx:entity].getTeam() == null) {
     run();
+  }else {
+    if(<java.util.Objects>.equals([ctx:entity].getTeam().getName(), [instr:team]) == false) {
+      run();
+    }
   }
 }
 

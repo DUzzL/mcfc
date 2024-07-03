@@ -156,12 +156,16 @@ public class StringCommandReader {
         }
     }
 
-    public double readDouble() {
+    private double parseDouble(String str) {
         try {
-            return Double.parseDouble(readNumberBase());
+            return Double.parseDouble(str);
         }catch(NumberFormatException e) {
             throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_DOUBLE);
         }
+    }
+
+    public double readDouble() {
+        return parseDouble(readNumberBase());
     }
 
     public FloatRangeArgument readFloatRange() {
@@ -279,26 +283,31 @@ public class StringCommandReader {
         boolean relativeX = skipIfNext('~');
         String x = readNumberBase();
         if(!relativeX && !x.contains(".")) x += ".5";
+        else if(relativeX && x.isEmpty()) x = "0";
         if(!skipArgumentWhitespace()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_VEC3);
         boolean relativeY = skipIfNext('~');
         String y = readNumberBase();
         if(!relativeY && !y.contains(".")) y += ".5";
+        else if(relativeY && y.isEmpty()) y = "0";
         if(!skipArgumentWhitespace()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_VEC3);
         boolean relativeZ = skipIfNext('~');
         String z = readNumberBase();
         if(!relativeZ && !z.contains(".")) z += ".5";
-        return new WorldCoordinates(Double.parseDouble(x), relativeX, Double.parseDouble(y), relativeY, Double.parseDouble(z), relativeZ);
+        else if(relativeZ && z.isEmpty()) z = "0";
+        return new WorldCoordinates(parseDouble(x), relativeX, parseDouble(y), relativeY, parseDouble(z), relativeZ);
     }
 
     public RotationCoordinates readRotation() {
         boolean relativeYaw = skipIfNext('~');
         String yaw = readNumberBase();
         if(!relativeYaw && !yaw.contains(".")) yaw += ".5";
+        else if(relativeYaw && yaw.isEmpty()) yaw = "0";
         if(!skipArgumentWhitespace()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_ROTATION);
         boolean relativePitch = skipIfNext('~');
         String pitch = readNumberBase();
         if(!relativePitch && !pitch.contains(".")) pitch += ".5";
-        return new RotationCoordinates(Double.parseDouble(yaw), relativeYaw, Double.parseDouble(pitch), relativePitch);
+        else if(relativePitch && pitch.isEmpty()) pitch = "0";
+        return new RotationCoordinates(parseDouble(yaw), relativeYaw, parseDouble(pitch), relativePitch);
     }
 
     public Gamemode readGamemode() {
