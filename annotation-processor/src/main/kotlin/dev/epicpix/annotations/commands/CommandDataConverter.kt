@@ -117,6 +117,14 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 data.kindOptions["minimum"]?.toDouble()?.also { min -> builder.append("    if(a$argumentIndex < $min) ${createError("\"Double value of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }
                 data.kindOptions["maximum"]?.toDouble()?.also { max -> builder.append("    if(a$argumentIndex > $max) ${createError("\"Double value of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
             }
+            "command" -> {
+                val root = data.kindOptions["command"]
+                if(root != null) {
+                    builder.append("    var a$argumentIndex = parseCommand_$root(reader, lookup);\n")
+                }else {
+                    builder.append("    var a$argumentIndex = parseCommand(reader, lookup);\n")
+                }
+            }
             "difficulty" -> builder.append("    var a$argumentIndex = reader.readDifficulty();\n")
             "entity_selector" -> {
                 val allowMultiple = data.kindOptions.getOrDefault("multiple", "true").toBoolean()
@@ -126,7 +134,6 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 }
                 builder.append("    var a$argumentIndex = SelectorParser.parseSelector(reader, ${!playersOnly}, $allowMultiple);\n")
             }
-            "execute_subcommand" -> builder.append("    var a$argumentIndex = parseCommand_execute(reader, lookup);\n")
             "function" -> builder.append("    var a$argumentIndex = lookup.lookupFunctions(reader.readTag());\n")
             "gamemode" -> builder.append("    var a$argumentIndex = reader.readGamemode();\n")
             "int" -> {
@@ -140,7 +147,6 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 data.kindOptions["maximum"]?.toInt()?.also { max -> builder.append("    if(a$argumentIndex.maximum() > $max) ${createError("\"Integer range maximum of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
             }
             "objective" -> builder.append("    var a$argumentIndex = reader.readWord();\n")
-            "root_command" -> builder.append("    var a$argumentIndex = parseCommand(reader, lookup);\n")
             "score_comparison" -> builder.append("    var a$argumentIndex = reader.readScoreboardCompareOperation();\n")
             "score_holder" -> builder.append("    var a$argumentIndex = SelectorParser.parseScoreHolder(reader);\n")
             "scoreboard_operation" -> builder.append("    var a$argumentIndex = reader.readScoreboardOperation();\n")
