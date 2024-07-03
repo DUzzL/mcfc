@@ -80,9 +80,9 @@ public final class Emitter {
                 return true;
             }
             if(context.instruction().type() == InstructionTypes.CHECK_SCORE_COMPARE) {
-                context.load("source");
-                callScore_getScore(codeWriter);
                 context.load("target");
+                callScore_getScore(codeWriter);
+                context.load("source");
                 callScore_getScore(codeWriter);
 
                 var endLabel = codeWriter.executeIfLabeled(switch(context.instruction().<ScoreboardCompareOperation>get("compareOperation")) {
