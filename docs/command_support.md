@@ -10,7 +10,7 @@ Not all commands are currently implemented in this mod, if a command is not list
 | `execute if entity`            | Partial[^1]  | No                     | No                      |
 | `execute if score`             | Partial[^1]  | No                     | No                      |
 | `execute positioned`           | Partial[^2]  | No                     | No                      |
-| `execute positioned as`        | No           | No                     | No                      |
+| `execute positioned as`        | Partial[^1]  | No                     | No                      |
 | `execute positioned over`      | No           | No                     | No                      |
 | `execute store result score`   | Partial[^1]  | No                     | No                      |
 | `execute unless entity`        | Partial[^1]  | No                     | No                      |

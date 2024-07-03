@@ -112,6 +112,16 @@ public final class CommandCompiler {
                     }
                 }
             }
+            case EXECUTE_POSITIONED_AS -> {
+                try(var targets = context.forSelector(command.<SelectorArgument>get("targets"))) {
+                    var position = LocationData.<Vec3>ofLocal(targets.data().highestId());
+                    var instruction = Instructions2.getEntityPosition(targets.content(), position);
+                    try(var ignored = context.enterWithoutValue(targets.data().incrementedId(1).withCurrentPosition(position).withBaseInstruction(instruction))) {
+                        compile(context, command.get("command"), result);
+                    }
+                    targets.writeInstruction(instruction);
+                }
+            }
             case EXECUTE_POSITIONED_POS -> {
                 try(var position = context.applyPosition(command.get("pos"))) {
                     try(var ignored = context.enterWithoutValue(position.data().withCurrentPosition(position.content()))) {
