@@ -113,7 +113,7 @@ public final class CommandCompiler {
                 }
             }
             case EXECUTE_POSITIONED_POS -> {
-                try(var position = context.applyPosition(command.get("position"))) {
+                try(var position = context.applyPosition(command.get("pos"))) {
                     try(var ignored = context.enterWithoutValue(position.data().withCurrentPosition(position.content()))) {
                         compile(context, command.get("command"), result);
                     }
