@@ -1,5 +1,3 @@
-=DEFINE/tp/teleport
-
 ATTRIBUTE_BASE_SET/attribute <target:entity_selector[multiple=false]> <attribute:attribute> base set <value:double>
 DIFFICULTY_SET/difficulty <difficulty:difficulty>
 EXECUTE_ALIGN/execute align <swizzle:swizzle> <command:command[root=execute]>
@@ -8,6 +6,8 @@ EXECUTE_AT/execute at <targets:entity_selector> <command:command[root=execute]>
 EXECUTE_IF_ENTITY/execute if entity <entities:entity_selector> <command:command[root=execute]>
 EXECUTE_IF_SCORE_RANGE/execute if score <target:score_holder> <targetObjective:objective> matches <range:int_range> <command:command[root=execute]>
 EXECUTE_IF_SCORE_COMPARE/execute if score <target:score_holder> <targetObjective:objective> <comparison:score_comparison> <source:score_holder> <sourceObjective:objective> <command:command[root=execute]>
+EXECUTE_ROTATED_AS/execute rotated as <targets:entity_selector> <command:command[root=execute]>
+EXECUTE_ROTATED_ROT/execute rotated <rot:rotation> <command:command[root=execute]>
 EXECUTE_RUN/execute run <command:command>
 EXECUTE_POSITIONED_AS/execute positioned as <targets:entity_selector> <command:command[root=execute]>
 EXECUTE_POSITIONED_POS/execute positioned <pos:vec3> <command:command[root=execute]>
@@ -27,10 +27,6 @@ SCOREBOARD_PLAYERS_RESET_ALL/scoreboard players reset <targets:score_holder>
 SCOREBOARD_PLAYERS_SET/scoreboard players set <targets:score_holder> <objective:objective> <score:int>
 TAG_ADD/tag <targets:entity_selector> add <name:word>
 TAG_REMOVE/tag <targets:entity_selector> remove <name:word>
-TELEPORT_ENTITY/teleport <location:entity_selector[multiple=false]>
-TELEPORT_POS/teleport <pos:vec3>
-TELEPORT_ENTITIES_ENTITY/teleport <targets:entity_selector> <location:entity_selector[multiple=false]>
-TELEPORT_ENTITIES_POS/teleport <targets:entity_selector> <pos:vec3>
 WEATHER_CLEAR_TIMED/weather clear <duration:time[minimum=1]>
 WEATHER_CLEAR/weather clear
 WEATHER_RAIN_TIMED/weather rain <duration:time[minimum=1]>

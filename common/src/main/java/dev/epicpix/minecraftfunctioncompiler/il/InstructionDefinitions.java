@@ -18,6 +18,7 @@ interface InstructionDefinitions {
     Instruction checkNotInScoreRange(@InstructionSource LocationData<Score> score, IntRangeArgument range);
     Instruction checkScoreCompare(@InstructionSource LocationData<Score> target, @InstructionSource LocationData<Score> source, ScoreboardCompareOperation compareOperation);
     Instruction applyPositionWorld(@InstructionSource LocationData<Vec3> from, @InstructionDestination LocationData<Vec3> to, WorldCoordinates position);
+    Instruction applyRotationWorld(@InstructionSource LocationData<Vec2> from, @InstructionDestination LocationData<Vec2> to, RotationCoordinates rotation);
     Instruction checkEntityTypes(@InstructionSource LocationData<Entity> entity, List<DataLocation> types, boolean negated);
     Instruction alignPosition(@InstructionSource LocationData<Vec3> position, @InstructionDestination LocationData<Vec3> result, SwizzleArgument swizzle);
     Instruction checkRotationYaw(@InstructionSource LocationData<Vec2> rotation, @Nullable FloatRangeArgument yaw);

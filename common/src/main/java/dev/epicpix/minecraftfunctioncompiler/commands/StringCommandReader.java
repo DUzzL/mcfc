@@ -298,7 +298,6 @@ public class StringCommandReader {
         boolean relativePitch = skipIfNext('~');
         String pitch = readNumberBase();
         if(!relativePitch && !pitch.contains(".")) pitch += ".5";
-        if(!skipArgumentWhitespace()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_ROTATION);
         return new RotationCoordinates(Double.parseDouble(yaw), relativeYaw, Double.parseDouble(pitch), relativePitch);
     }
 

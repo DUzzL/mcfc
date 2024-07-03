@@ -1,14 +1,12 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_4.emitter;
 
-import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
-import dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCompareOperation;
-import dev.epicpix.minecraftfunctioncompiler.data.SwizzleArgument;
-import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates;
+import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructions;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.Opcodes;
@@ -123,6 +121,33 @@ public final class Emitter {
                 }
                 codeWriter.newObjectInit(Vec3.class, double.class, double.class, double.class);
                 context.runStored("to", Vec3.class);
+                return true;
+            }
+            if(context.instruction().type() == InstructionTypes.APPLY_ROTATION_WORLD) {
+                codeWriter.newObjectCreate(Vec2.class);
+                var rot = context.instruction().<RotationCoordinates>get("rotation");
+                if(rot.isYawRelative()) {
+                    context.load("from");
+                    loadVec3_x(codeWriter);
+                    if(rot.yaw() != 0.0) {
+                        codeWriter.writeFloat((float) rot.yaw());
+                        methodVisitor.visitInsn(Opcodes.FADD);
+                    }
+                } else {
+                    codeWriter.writeFloat((float) rot.yaw());
+                }
+                if(rot.isPitchRelative()) {
+                    context.load("from");
+                    loadVec3_y(codeWriter);
+                    if(rot.pitch() != 0.0) {
+                        codeWriter.writeFloat((float) rot.pitch());
+                        methodVisitor.visitInsn(Opcodes.FADD);
+                    }
+                } else {
+                    codeWriter.writeFloat((float) rot.pitch());
+                }
+                codeWriter.newObjectInit(Vec2.class, float.class, float.class);
+                context.runStored("to", Vec2.class);
                 return true;
             }
             if(context.instruction().type() == InstructionTypes.CHECK_ENTITY_TYPES) {

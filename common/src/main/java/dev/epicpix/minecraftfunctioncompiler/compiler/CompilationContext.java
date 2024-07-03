@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.compiler;
 
+import dev.epicpix.minecraftfunctioncompiler.data.RotationCoordinates;
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument;
 import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument;
 import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates;
@@ -91,12 +92,33 @@ public class CompilationContext {
         }
     }
 
+    public CompilationData<LocationData<Vec2>> getRotation() {
+        if(stack.peek().currentRotation() != null) {
+            var data = stack.peek();
+            return new CompilationData<>(this, data, data.currentRotation(), 0);
+        }else {
+            var entityData = getCurrentEntity();
+            LocationData<Vec2> rotation = LocationData.ofLocal(entityData.data().highestId());
+            var instruction = Instructions2.getEntityRotation(entityData.content(), rotation);
+            entityData.writeInstruction(Instructions2.ifNotNull(entityData.content().lower()).with(instruction));
+            return enterWithValue(entityData.data().incrementedId(1).withBaseInstruction(instruction).withCurrentRotation(rotation), rotation, entityData.stackCount() + 1);
+        }
+    }
+
     public CompilationData<LocationData<Vec3>> applyPosition(WorldCoordinates pos) {
         var positionData = getPosition();
         var position = LocationData.<Vec3>ofLocal(positionData.data().highestId());
         var instruction = Instructions.applyPositionWorld(positionData.content(), position, pos);
         positionData.writeInstruction(instruction);
         return enterWithValue(positionData.data().incrementedId(1).withBaseInstruction(instruction), position, positionData.stackCount() + 1);
+    }
+
+    public CompilationData<LocationData<Vec2>> applyRotation(RotationCoordinates rot) {
+        var rotationData = getRotation();
+        var rotation = LocationData.<Vec2>ofLocal(rotationData.data().highestId());
+        var instruction = Instructions.applyRotationWorld(rotationData.content(), rotation, rot);
+        rotationData.writeInstruction(instruction);
+        return enterWithValue(rotationData.data().incrementedId(1).withBaseInstruction(instruction), rotation, rotationData.stackCount() + 1);
     }
 
     public CompilationData<LocationData<Entity>> forEntity(UUID entityUuid) {

@@ -14,6 +14,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
 import java.util.ArrayList;
 import java.util.List;
 
+@SuppressWarnings("RedundantLabeledSwitchRuleCodeBlock")
 public final class CommandCompiler {
     private CommandCompiler() {}
 
@@ -125,6 +126,23 @@ public final class CommandCompiler {
             case EXECUTE_POSITIONED_POS -> {
                 try(var position = context.applyPosition(command.get("pos"))) {
                     try(var ignored = context.enterWithoutValue(position.data().withCurrentPosition(position.content()))) {
+                        compile(context, command.get("command"), result);
+                    }
+                }
+            }
+            case EXECUTE_ROTATED_AS -> {
+                try(var targets = context.forSelector(command.<SelectorArgument>get("targets"))) {
+                    var rotation = LocationData.<Vec2>ofLocal(targets.data().highestId());
+                    var instruction = Instructions2.getEntityRotation(targets.content(), rotation);
+                    try(var ignored = context.enterWithoutValue(targets.data().incrementedId(1).withCurrentRotation(rotation).withBaseInstruction(instruction))) {
+                        compile(context, command.get("command"), result);
+                    }
+                    targets.writeInstruction(instruction);
+                }
+            }
+            case EXECUTE_ROTATED_ROT -> {
+                try(var rotation = context.applyRotation(command.get("rot"))) {
+                    try(var ignored = context.enterWithoutValue(rotation.data().withCurrentRotation(rotation.content()))) {
                         compile(context, command.get("command"), result);
                     }
                 }
@@ -286,18 +304,6 @@ public final class CommandCompiler {
                 try(var entity = context.forSelector(command.get("targets"))) {
                     entity.writeInstruction(Instructions2.removeEntityTag(entity.content(), command.get("name")));
                 }
-            }
-            case TELEPORT_ENTITY -> {
-                throw new UnsupportedOperationException("Unsupported command: " + command);
-            }
-            case TELEPORT_POS -> {
-                throw new UnsupportedOperationException("Unsupported command: " + command);
-            }
-            case TELEPORT_ENTITIES_ENTITY -> {
-                throw new UnsupportedOperationException("Unsupported command: " + command);
-            }
-            case TELEPORT_ENTITIES_POS -> {
-                throw new UnsupportedOperationException("Unsupported command: " + command);
             }
             case WEATHER_CLEAR_TIMED -> {
                 context.current().addInstructionConsumer().accept(Instructions2.setWeatherStatic(command.get("duration"), 0, false, false));
