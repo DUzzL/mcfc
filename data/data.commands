@@ -1,3 +1,5 @@
+=DEFINE/tp/teleport
+
 ATTRIBUTE_BASE_SET/attribute <target:entity_selector[multiple=false]> <attribute:attribute> base set <value:double>
 DIFFICULTY_SET/difficulty <difficulty:difficulty>
 EXECUTE_ALIGN/execute align <swizzle:swizzle> <command:command[root=execute]>
@@ -25,6 +27,10 @@ SCOREBOARD_PLAYERS_RESET_ALL/scoreboard players reset <targets:score_holder>
 SCOREBOARD_PLAYERS_SET/scoreboard players set <targets:score_holder> <objective:objective> <score:int>
 TAG_ADD/tag <targets:entity_selector> add <name:word>
 TAG_REMOVE/tag <targets:entity_selector> remove <name:word>
+TELEPORT_ENTITY/teleport <location:entity_selector[multiple=false]>
+TELEPORT_POS/teleport <pos:vec3>
+TELEPORT_ENTITIES_ENTITY/teleport <targets:entity_selector> <location:entity_selector[multiple=false]>
+TELEPORT_ENTITIES_POS/teleport <targets:entity_selector> <pos:vec3>
 WEATHER_CLEAR_TIMED/weather clear <duration:time[minimum=1]>
 WEATHER_CLEAR/weather clear
 WEATHER_RAIN_TIMED/weather rain <duration:time[minimum=1]>

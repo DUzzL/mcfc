@@ -12,6 +12,7 @@ data class ParsedCommandArgument(
 )
 
 data class ParsedCommandData(
+    val commandRedirects: List<Pair<String, String>>,
     val commands: List<Pair<String, String>>,
     val commandTree: MutableMap<String, ParsedCommandArgument>,
 )
@@ -55,15 +56,21 @@ private fun parseCommandLine(command: String, tree: MutableMap<String, ParsedCom
 }
 
 fun parseCommandsData(file: String): ParsedCommandData {
+    val commandRedirects = mutableListOf<Pair<String, String>>()
     val commands = mutableListOf<Pair<String, String>>()
     val commandTree = mutableMapOf<String, ParsedCommandArgument>()
     for(line in file.lineSequence()) {
         if(line.isBlank()) continue
         val slashPart = line.split("/", limit = 2)
-        commands.add(slashPart[0] to slashPart[1])
-        parseCommandLine(slashPart[1], commandTree, slashPart[0])
+        if(slashPart[0] == "=DEFINE") {
+            val aliasData = slashPart[1].split("/", limit = 2)
+            commandRedirects.add(aliasData[0] to aliasData[1])
+        } else {
+            commands.add(slashPart[0] to slashPart[1])
+            parseCommandLine(slashPart[1], commandTree, slashPart[0])
+        }
     }
-    return ParsedCommandData(commands, commandTree)
+    return ParsedCommandData(commandRedirects, commands, commandTree)
 }
 
 private fun generateCommandReturn(builder: StringBuilder, uniqueId: AtomicInteger, executableCommand: String, arguments: Map<String, String>, forced: Boolean = false) {
@@ -86,23 +93,42 @@ private fun generateCommandReturn(builder: StringBuilder, uniqueId: AtomicIntege
     }
 }
 
+private fun generateArgumentReaderChildren(name: String, data: ParsedCommandArgument, builder: StringBuilder, uniqueId: AtomicInteger, argumentPath: String, arguments: Map<String, String>, indent: String) {
+    var reachable = true
+    val entries = data.children.entries.toList().sortedBy { it.value.kind != "literal" }
+    for(i in entries.indices) {
+        val (k, v) = entries[i]
+        if(reachable) {
+            val innerBuilder = StringBuilder()
+            val suppressException = entries.subList(i + 1, entries.size).any { it.value.kind != "literal" } && v.kind != "literal"
+            if(suppressException) {
+                val locationIndex = uniqueId.getAndIncrement()
+                builder.append("${indent}var z$locationIndex = reader.getIndex();\n")
+                builder.append("${indent}try {\n")
+                if(generateArgumentReader(k, v, innerBuilder, uniqueId, "$argumentPath $name", arguments)) {
+                    innerBuilder.append("reader.setIndex(z$locationIndex);\n")
+                }
+                builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent("$indent    ") + "\n")
+                builder.append("$indent} catch(CommandErrorException ignored) {\n")
+                builder.append("$indent    reader.setIndex(z$locationIndex);\n")
+                builder.append("$indent}\n")
+            }else {
+                reachable = generateArgumentReader(k, v, innerBuilder, uniqueId, "$argumentPath $name", arguments)
+                builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent(indent) + "\n")
+            }
+        }
+    }
+    if(reachable) {
+        builder.append("    ${createWrappedError("Failed to parse any options @$argumentPath $name")}\n")
+    }
+}
+
 private fun generateArgumentReader(name: String, data: ParsedCommandArgument, builder: StringBuilder, uniqueId: AtomicInteger, argumentPath: String, arguments: Map<String, String>, fromRoot: Boolean = false): Boolean {
-    val locationIndex = uniqueId.getAndIncrement();
     if(fromRoot) {
         if(data.executableCommand != null) {
             builder.append("if(!reader.canRead()) return new Command(CommandType.${data.executableCommand}, Map.of());\n")
         }
-        var reachable = true
-        for((k, v) in data.children) {
-            if(reachable) {
-                val innerBuilder = StringBuilder()
-                reachable = generateArgumentReader(k, v, innerBuilder, uniqueId, "$argumentPath $name", arguments)
-                builder.append(innerBuilder.toString().substringBeforeLast('\n') + "\n")
-            }
-        }
-        if(reachable) {
-            builder.append("${createWrappedError("Failed to parse any options @$argumentPath $name")}\n")
-        }
+        generateArgumentReaderChildren(name, data, builder, uniqueId, argumentPath, arguments, "")
         return true
     }else if(data.kind != "literal") {
         val kindInfo = data.kind +
@@ -118,7 +144,7 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 data.kindOptions["maximum"]?.toDouble()?.also { max -> builder.append("    if(a$argumentIndex > $max) ${createError("\"Double value of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
             }
             "command" -> {
-                val root = data.kindOptions["command"]
+                val root = data.kindOptions["root"]
                 if(root != null) {
                     builder.append("    var a$argumentIndex = parseCommand_$root(reader, lookup);\n")
                 }else {
@@ -147,6 +173,7 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 data.kindOptions["maximum"]?.toInt()?.also { max -> builder.append("    if(a$argumentIndex.maximum() > $max) ${createError("\"Integer range maximum of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
             }
             "objective" -> builder.append("    var a$argumentIndex = reader.readWord();\n")
+            "rotation" -> builder.append("    var a$argumentIndex = reader.readRotation();\n")
             "score_comparison" -> builder.append("    var a$argumentIndex = reader.readScoreboardCompareOperation();\n")
             "score_holder" -> builder.append("    var a$argumentIndex = SelectorParser.parseScoreHolder(reader);\n")
             "scoreboard_operation" -> builder.append("    var a$argumentIndex = reader.readScoreboardOperation();\n")
@@ -163,7 +190,7 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
             }
         }
         val newArguments = arguments + mapOf(data.argName!! to "a$argumentIndex")
-        if(data.kind == "execute_subcommand" || data.kind == "root_command") {
+        if(data.kind == "command") {
             generateCommandReturn(builder, uniqueId, data.executableCommand!!, newArguments)
             builder.append("}\n")
             return false
@@ -177,20 +204,11 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
             }
         }
         builder.append("    if(!reader.skipArgumentWhitespace()) ${createWrappedError("Missing space after argument @$argumentPath $name")}\n")
-        var reachable = true
-        for((k, v) in data.children) {
-            if(reachable) {
-                val innerBuilder = StringBuilder()
-                reachable = generateArgumentReader(k, v, innerBuilder, uniqueId, "$argumentPath $name", newArguments)
-                builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent("    ") + "\n")
-            }
-        }
-        if(reachable) {
-            builder.append("    ${createWrappedError("Failed to parse any options @$argumentPath $name")}\n")
-        }
+        generateArgumentReaderChildren(name, data, builder, uniqueId, argumentPath, newArguments, "    ")
         builder.append("}\n")
         return false
     }else {
+        val locationIndex = uniqueId.getAndIncrement()
         builder.append("{ // $name\n")
         builder.append("    var z$locationIndex = reader.getIndex();\n")
         builder.append("    if(reader.canRead() && reader.readWord().equals(\"$name\")) {\n")
@@ -205,17 +223,7 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
             builder.append("    }\n")
         }
         builder.append("        if(!reader.skipArgumentWhitespace()) ${createWrappedError("Missing space after argument @$argumentPath $name")}\n")
-        var reachable = true
-        for((k, v) in data.children) {
-            if(reachable) {
-                val innerBuilder = StringBuilder()
-                reachable = generateArgumentReader(k, v, innerBuilder, uniqueId, "$argumentPath $name", arguments)
-                builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent("        ") + "\n")
-            }
-        }
-        if(reachable) {
-            builder.append("        ${createWrappedError("Failed to parse any options @$argumentPath $name")}\n")
-        }
+        generateArgumentReaderChildren(name, data, builder, uniqueId, argumentPath, arguments, "        ")
         builder.append("    }\n")
         builder.append("    reader.setIndex(z$locationIndex);\n")
         builder.append("}\n")
@@ -239,6 +247,9 @@ fun generateCommandsDataReader(data: ParsedCommandData): String {
     builder.append("    switch(commandName) {\n")
     for((k, _) in data.commandTree) {
         builder.append("        case \"$k\" -> { return parseCommand_$k(reader, lookup); }\n")
+    }
+    for((k, v) in data.commandRedirects) {
+        builder.append("        case \"$k\" -> { return parseCommand_$v(reader, lookup); }\n")
     }
     builder.append("        default -> ${createError("\"Unknown command: \" + commandName")}\n")
     builder.append("    }\n")

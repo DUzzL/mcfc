@@ -290,6 +290,18 @@ public class StringCommandReader {
         return new WorldCoordinates(Double.parseDouble(x), relativeX, Double.parseDouble(y), relativeY, Double.parseDouble(z), relativeZ);
     }
 
+    public RotationCoordinates readRotation() {
+        boolean relativeYaw = skipIfNext('~');
+        String yaw = readNumberBase();
+        if(!relativeYaw && !yaw.contains(".")) yaw += ".5";
+        if(!skipArgumentWhitespace()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_ROTATION);
+        boolean relativePitch = skipIfNext('~');
+        String pitch = readNumberBase();
+        if(!relativePitch && !pitch.contains(".")) pitch += ".5";
+        if(!skipArgumentWhitespace()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_ROTATION);
+        return new RotationCoordinates(Double.parseDouble(yaw), relativeYaw, Double.parseDouble(pitch), relativePitch);
+    }
+
     public Gamemode readGamemode() {
         String gamemode = readWord();
         return switch (gamemode) {

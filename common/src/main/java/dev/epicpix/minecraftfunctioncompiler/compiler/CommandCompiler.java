@@ -287,6 +287,18 @@ public final class CommandCompiler {
                     entity.writeInstruction(Instructions2.removeEntityTag(entity.content(), command.get("name")));
                 }
             }
+            case TELEPORT_ENTITY -> {
+                throw new UnsupportedOperationException("Unsupported command: " + command);
+            }
+            case TELEPORT_POS -> {
+                throw new UnsupportedOperationException("Unsupported command: " + command);
+            }
+            case TELEPORT_ENTITIES_ENTITY -> {
+                throw new UnsupportedOperationException("Unsupported command: " + command);
+            }
+            case TELEPORT_ENTITIES_POS -> {
+                throw new UnsupportedOperationException("Unsupported command: " + command);
+            }
             case WEATHER_CLEAR_TIMED -> {
                 context.current().addInstructionConsumer().accept(Instructions2.setWeatherStatic(command.get("duration"), 0, false, false));
             }
