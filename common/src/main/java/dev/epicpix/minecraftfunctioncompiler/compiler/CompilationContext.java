@@ -156,9 +156,10 @@ public class CompilationContext {
     public CompilationData<LocationData<Objective>> getObjective(String objectiveName) {
         var data = stack.peek();
         LocationData<Objective> objective = LocationData.ofLocal(data.highestId());
-        var instruction = Instructions2.getObjective(objective, objectiveName);
+        var execInstruction = Instructions2.ifNotNull(objective.lower());
+        var instruction = Instructions2.getObjective(objective, objectiveName).with(execInstruction);
         data.addInstructionConsumer().accept(instruction);
-        return enterWithValue(data.incrementedId(1).withBaseInstruction(instruction), objective);
+        return enterWithValue(data.incrementedId(1).withBaseInstruction(execInstruction), objective);
     }
 
     public CompilationData<LocationData<String>> getScoreboardName(LocationData<Entity> entity) {
