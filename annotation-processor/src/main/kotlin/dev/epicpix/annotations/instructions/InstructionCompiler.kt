@@ -1123,7 +1123,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                             var uid = uniqueId
                             uid = writeExpression(writerData.copyLocalTypes().copy(accessorMappings = writerData.accessorMappings + newMappings, params = writerData.params + func.params), param, output, uid)
                             if(evaluateExpressionType(writerData, param) != expectedType) {
-                                output.appendText("mv.visitTypeInsn(org.objectweb.asm.Opcodes.CHECKCAST, \"${(expectedType as ParsedTokenExpressionTypeComplex).typeName.replace('.', '/')}\");\n")
+                                output.appendText("mv.visitTypeInsn(org.objectweb.asm.Opcodes.CHECKCAST, \"${writerData.mappingData.getClassName((expectedType as ParsedTokenExpressionTypeComplex).typeName.replace('.', '/'))}\");\n")
                             }
                             val yieldFuncAccessor = expression.arguments.last() as ParsedTokenValueAccessor
                             writerData.markSet(yieldFuncAccessor)

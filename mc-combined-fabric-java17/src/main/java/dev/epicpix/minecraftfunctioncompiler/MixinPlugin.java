@@ -35,7 +35,7 @@ public class MixinPlugin implements IMixinConfigPlugin {
 
     public List<String> getMixins() {
         var envType = FabricLoader.getInstance().getEnvironmentType();
-        var rawMixins = List.of("ServerFunctionManagerMixin", envType == EnvType.CLIENT ? "client.MinecraftMixin" : "server.DedicatedServerMixin");
+        var rawMixins = List.of("ServerFunctionManagerMixin", envType == EnvType.CLIENT ? "client.MinecraftMixin" : "server.MinecraftServerMixin");
         var convertedMixins = rawMixins.stream().map(x -> "v" + McVersion.getVersion().getMixinVersionName().replaceAll("\\.", "_") + "." + x).toList();
         return convertedMixins;
     }

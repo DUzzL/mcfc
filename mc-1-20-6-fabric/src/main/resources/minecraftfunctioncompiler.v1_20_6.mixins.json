@@ -7,7 +7,7 @@
     "ServerFunctionManagerMixin"
   ],
   "server": [
-    "server.DedicatedServerMixin"
+    "server.MinecraftServerMixin"
   ],
   "client": [
     "client.MinecraftMixin"
