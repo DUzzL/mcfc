@@ -58,7 +58,7 @@ public final class SelectorParser {
 
         if(reader.canRead() && reader.peek() == '[') {
             reader.skip();
-            while(reader.canRead()) {
+            while(reader.canRead() && reader.peek() != ']') {
                 reader.skipWhitespace();
                 var key = reader.readString();
                 reader.skipWhitespace();
@@ -68,11 +68,19 @@ public final class SelectorParser {
                 if(option == null) throwError(reader, "Cannot parse selector key: " + key);
                 option.accept(reader, data);
                 reader.skipWhitespace();
-                if(!reader.canRead()) throwError(reader, "Cannot parse selector, ran out of data");
-                var next = reader.read();
-                if(next == ',') continue;
+                if(!reader.canRead()) throwError(reader, "Cannot parse selector, ran out of data expecting ',' or ']'");
+                var next = reader.peek();
+                if(next == ',') {
+                    reader.skip();
+                    continue;
+                }
                 if(next == ']') break;
-                throwError(reader, "Cannot parse selector, ran out of data");
+                throwError(reader, "Cannot parse selector, ran out of data, invalid value '" + next + "' expected ',' or ']'");
+            }
+            if(reader.peek() == ']') {
+                reader.skip();
+            }else {
+                throwError(reader, "Cannot parse selector, ran out of data, invalid value '" + reader.peek() + "', expected ']'");
             }
         }
 
