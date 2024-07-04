@@ -12,7 +12,7 @@ public class SelectorGeneratorBuilderData {
     public NegatableData<List<DataLocation>> entityTypes = null;
     public final ArrayList<NegatableData<String>> tags = new ArrayList<>();
     public Boolean hasTags = null;
-    public NegatableData<String> team = null;
+    public List<NegatableData<String>> teams = new ArrayList<>();
     public Boolean hasTeam = null;
     public Integer limit = null;
     public final HashMap<String, IntRangeArgument> scores = new HashMap<>();
@@ -30,7 +30,7 @@ public class SelectorGeneratorBuilderData {
                 hasTags,
                 List.copyOf(tags),
                 hasTeam,
-                team,
+                List.copyOf(teams),
                 Map.copyOf(scores),
                 gamemode,
                 yaw,

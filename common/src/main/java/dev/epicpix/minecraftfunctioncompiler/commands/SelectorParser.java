@@ -118,7 +118,7 @@ public final class SelectorParser {
             if(team.isEmpty()) {
                 data.hasTeam = !negated;
             }else {
-                data.team = new NegatableData<>(team, negated);
+                data.teams.add(new NegatableData<>(team, negated));
             }
         });
     }

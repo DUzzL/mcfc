@@ -268,8 +268,8 @@ public class CompilationContext {
             stackCount++;
             enterWith(data);
         }
-        if(selector.team() != null) {
-            stacker.stackInstruction(Instructions2.checkTeam(entityData.content(), selector.team().data(), selector.team().negated()));
+        for(var team : selector.teams()) {
+            stacker.stackInstruction(Instructions2.checkTeam(entityData.content(), team.data(), team.negated()));
         }
         if(selector.hasTeam() != null) {
             stacker.stackInstruction(Instructions2.hasTeam(entityData.content(), selector.hasTeam()));
@@ -288,7 +288,7 @@ public class CompilationContext {
                 var instr = Instructions.checkInScoreRange(scoreData.content(), entry.getValue());
                 scoreData.writeInstruction(instr);
                 stackCount++;
-                enterWith(data.withBaseInstruction(instr));
+                enterWith(scoreData.data().withBaseInstruction(instr));
                 stacker.current = instr;
             }
             data = stack.peek();

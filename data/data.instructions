@@ -195,6 +195,7 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 
 @FOR_SINGLE_SCORE_HOLDER(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [ctx:name]) {
   let [local:array]<java.util.ArrayList> = new <java.util.ArrayList>([static:Scoreboard].playerScores.keySet());
+  let [ctx:name];
   for_each_list_indexed([local:array], [ctx:name]) {
     run();
   }
@@ -297,13 +298,12 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 }
 
 @CHECK_NOT_IS_TEAM(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:team]) {
-  if([ctx:entity].getTeam() == null) {
-    run();
-  }else {
-    if(<java.util.Objects>.equals([ctx:entity].getTeam().getName(), [instr:team]) == false) {
-      run();
+  if([ctx:entity].getTeam() != null) {
+    if(<java.util.Objects>.equals([ctx:entity].getTeam().getName(), [instr:team]) == true) {
+      return;
     }
   }
+  run();
 }
 
 @RESET_SCORE [-1.20.2] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name]) {
