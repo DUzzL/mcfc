@@ -1,5 +1,7 @@
 ATTRIBUTE_BASE_SET/attribute <target:entity_selector[multiple=false]> <attribute:attribute> base set <value:double>
+
 DIFFICULTY_SET/difficulty <difficulty:difficulty>
+
 EFFECT_CLEAR/effect clear
 EFFECT_CLEAR_ENTITIES/effect clear <targets:entity_selector>
 EFFECT_CLEAR_ENTITIES_EFFECT/effect clear <targets:entity_selector> <effect:mob_effect>
@@ -10,6 +12,7 @@ EFFECT_GIVE_DUR_AMP_SHOW/effect give <targets:entity_selector> <effect:mob_effec
 EFFECT_GIVE_INF/effect give <targets:entity_selector> <effect:mob_effect> infinite
 EFFECT_GIVE_INF_AMP/effect give <targets:entity_selector> <effect:mob_effect> infinite <amplifier:int[minimum=0,maximum=255]>
 EFFECT_GIVE_INF_AMP_SHOW/effect give <targets:entity_selector> <effect:mob_effect> infinite <amplifier:int[minimum=0,maximum=255]> <hide_particles:boolean>
+
 EXECUTE_ALIGN/execute align <swizzle:swizzle> <command:command[root=execute]>
 EXECUTE_AS/execute as <targets:entity_selector> <command:command[root=execute]>
 EXECUTE_AT/execute at <targets:entity_selector> <command:command[root=execute]>
@@ -25,9 +28,21 @@ EXECUTE_STORE_RESULT_SCORE/execute store result score <targets:score_holder> <ob
 EXECUTE_UNLESS_ENTITY/execute unless entity <entities:entity_selector> <command:command[root=execute]>
 EXECUTE_UNLESS_SCORE_RANGE/execute unless score <target:score_holder> <targetObjective:objective> matches <range:int_range> <command:command[root=execute]>
 EXECUTE_UNLESS_SCORE_COMPARE/execute unless score <target:score_holder> <targetObjective:objective> <comparison:score_comparison> <source:score_holder> <sourceObjective:objective> <command:command[root=execute]>
+
+=DEFINE/xp/experience
+EXPERIENCE_ADD/experience add <targets:entity_selector[players]> <amount:int>
+EXPERIENCE_ADD_POINTS/experience add <targets:entity_selector[players]> <amount:int> points
+EXPERIENCE_ADD_LEVELS/experience add <targets:entity_selector[players]> <amount:int> levels
+EXPERIENCE_SET/experience set <targets:entity_selector[players]> <amount:int[minimum=0]>
+EXPERIENCE_SET_POINTS/experience set <targets:entity_selector[players]> <amount:int[minimum=0]> points
+EXPERIENCE_SET_LEVELS/experience set <targets:entity_selector[players]> <amount:int[minimum=0]> levels
+
 FUNCTION/function <functions:function>
+
 GAMEMODE/gamemode <gamemode:gamemode> <targets:entity_selector[players]:self>
+
 KILL/kill <targets:entity_selector:self>
+
 SCOREBOARD_PLAYERS_ADD/scoreboard players add <targets:score_holder> <objective:objective> <score:int[minimum=0]>
 SCOREBOARD_PLAYERS_GET/scoreboard players get <targets:score_holder> <objective:objective>
 SCOREBOARD_PLAYERS_OPERATION/scoreboard players operation <targets:score_holder> <targetObjective:objective> <operation:scoreboard_operation> <source:score_holder> <sourceObjective:objective>
@@ -35,8 +50,10 @@ SCOREBOARD_PLAYERS_REMOVE/scoreboard players remove <targets:score_holder> <obje
 SCOREBOARD_PLAYERS_RESET_OBJECTIVE/scoreboard players reset <targets:score_holder> <objective:objective>
 SCOREBOARD_PLAYERS_RESET_ALL/scoreboard players reset <targets:score_holder>
 SCOREBOARD_PLAYERS_SET/scoreboard players set <targets:score_holder> <objective:objective> <score:int>
+
 TAG_ADD/tag <targets:entity_selector> add <name:word>
 TAG_REMOVE/tag <targets:entity_selector> remove <name:word>
+
 WEATHER_CLEAR_TIMED/weather clear <duration:time[minimum=1]>
 WEATHER_CLEAR/weather clear
 WEATHER_RAIN_TIMED/weather rain <duration:time[minimum=1]>

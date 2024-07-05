@@ -5,6 +5,8 @@ Not all commands are currently implemented in this mod, if a command is not list
 | `attribute base set`           | Partial[^1]  | No                     | No                      |
 | `difficulty`                   | Partial[^4]  | No                     | No                      |
 | `effect`                       | Partial[^1]  | No                     | No                      |
+| `experience add`               | Partial[^1]  | No                     | No                      |
+| `experience set`               | Partial[^1]  | No                     | No                      |
 | `execute align`                | Yes          | No result by itself    | No result by itself     |
 | `execute as`                   | Partial[^1]  | No result by itself    | No result by itself     |
 | `execute at`                   | Partial[^1]  | No result by itself    | No result by itself     |
@@ -32,6 +34,8 @@ Not all commands are currently implemented in this mod, if a command is not list
 | `tag add`                      | Partial[^1]  | No                     | No                      |
 | `tag remove`                   | Partial[^1]  | No                     | No                      |
 | `weather`                      | Yes          | No                     | No                      |
+| `xp add`                       | Partial[^1]  | No                     | No                      |
+| `xp set`                       | Partial[^1]  | No                     | No                      |
 
 [^1]: Not all selectors are currently supported.
 [^2]: Local positions (^ ^ ^) are not implemented, relative and absolute positions do work.

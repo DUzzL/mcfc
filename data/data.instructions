@@ -517,3 +517,22 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 @GIVE_EFFECT(<net.minecraft.world.entity.Entity> [ctx:from_entity], <net.minecraft.world.entity.Entity> [ctx:to_entity], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:effect_name], int [instr:duration], int [instr:amplifier], boolean [instr:show_particles]) {
   cast([ctx:to_entity], <net.minecraft.world.entity.LivingEntity>).addEffect(new <net.minecraft.world.effect.MobEffectInstance>(map_mob_effect([instr:effect_name]), [instr:duration], [instr:amplifier], false, [instr:show_particles]), [ctx:from_entity]);
 }
+
+@ADD_EXPERIENCE_POINTS(<net.minecraft.world.entity.Entity> [ctx:entity], int [instr:points]) {
+  cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>).giveExperiencePoints([instr:points]);
+}
+
+@ADD_EXPERIENCE_LEVELS(<net.minecraft.world.entity.Entity> [ctx:entity], int [instr:levels]) {
+  cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>).giveExperienceLevels([instr:levels]);
+}
+
+@SET_EXPERIENCE_POINTS(<net.minecraft.world.entity.Entity> [ctx:entity], int [instr:points]) {
+  let [local:player]<net.minecraft.server.level.ServerPlayer> = cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>);
+  if([instr:points] < [local:player].getXpNeededForNextLevel()) {
+    [local:player].setExperiencePoints([instr:points]);
+  }
+}
+
+@SET_EXPERIENCE_LEVELS(<net.minecraft.world.entity.Entity> [ctx:entity], int [instr:levels]) {
+  cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>).setExperienceLevels([instr:levels]);
+}

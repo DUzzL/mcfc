@@ -304,6 +304,34 @@ public final class CommandCompiler {
                     }
                 }
             }
+            case EXPERIENCE_ADD, EXPERIENCE_ADD_POINTS -> {
+                try(var targets = context.forSelector(command.get("targets"))) {
+                    targets.writeInstruction(
+                            Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraft", "player")), false)
+                                    .with(Instructions2.addExperiencePoints(targets.content(), command.get("amount"))));
+                }
+            }
+            case EXPERIENCE_ADD_LEVELS -> {
+                try(var targets = context.forSelector(command.get("targets"))) {
+                    targets.writeInstruction(
+                            Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraft", "player")), false)
+                                    .with(Instructions2.addExperienceLevels(targets.content(), command.get("amount"))));
+                }
+            }
+            case EXPERIENCE_SET, EXPERIENCE_SET_POINTS -> {
+                try(var targets = context.forSelector(command.get("targets"))) {
+                    targets.writeInstruction(
+                            Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraft", "player")), false)
+                                    .with(Instructions2.setExperiencePoints(targets.content(), command.get("amount"))));
+                }
+            }
+            case EXPERIENCE_SET_LEVELS -> {
+                try(var targets = context.forSelector(command.get("targets"))) {
+                    targets.writeInstruction(
+                            Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraft", "player")), false)
+                                    .with(Instructions2.setExperienceLevels(targets.content(), command.get("amount"))));
+                }
+            }
             case FUNCTION -> {
                 var current = context.current();
                 current.addInstructionConsumer().accept(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation()));
