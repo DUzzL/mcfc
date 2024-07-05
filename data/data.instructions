@@ -505,3 +505,15 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 @SET_DIFFICULTY(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <dev.epicpix.minecraftfunctioncompiler.data.Difficulty> [instr:difficulty]) {
   [static:MinecraftServer].setDifficulty(map_enum([instr:difficulty], <net.minecraft.world.Difficulty>), true);
 }
+
+@CLEAR_ALL_EFFECTS( <net.minecraft.world.entity.Entity> [ctx:entity]) {
+  cast([ctx:entity], <net.minecraft.world.entity.LivingEntity>).removeAllEffects();
+}
+
+@CLEAR_EFFECT(<net.minecraft.world.entity.Entity> [ctx:entity], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:effect_name]) {
+  cast([ctx:entity], <net.minecraft.world.entity.LivingEntity>).removeEffect(map_mob_effect([instr:effect_name]));
+}
+
+@GIVE_EFFECT(<net.minecraft.world.entity.Entity> [ctx:from_entity], <net.minecraft.world.entity.Entity> [ctx:to_entity], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:effect_name], int [instr:duration], int [instr:amplifier], boolean [instr:show_particles]) {
+  cast([ctx:to_entity], <net.minecraft.world.entity.LivingEntity>).addEffect(new <net.minecraft.world.effect.MobEffectInstance>(map_mob_effect([instr:effect_name]), [instr:duration], [instr:amplifier], false, [instr:show_particles]), [ctx:from_entity]);
+}

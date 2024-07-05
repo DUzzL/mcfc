@@ -2,6 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.v1_20_6;
 
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.AttributeData;
+import dev.epicpix.minecraftfunctioncompiler.data.MobEffectData;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerPlayer;
@@ -20,6 +21,9 @@ public final class RegistryMapping {
         DataRegistries.ATTRIBUTE.reset();
         BuiltInRegistries.ATTRIBUTE.entrySet().forEach(e -> DataRegistries.ATTRIBUTE.set(new DataLocation(e.getKey().location().getNamespace(), e.getKey().location().getPath()), new AttributeData(new DataLocation(e.getKey().location().getNamespace(), e.getKey().location().getPath()), e.getValue().getDefaultValue(), ((RangedAttribute) e.getValue()).getMinValue(), ((RangedAttribute) e.getValue()).getMaxValue())));
         DataRegistries.ATTRIBUTE.freeze();
+        DataRegistries.MOB_EFFECT.reset();
+        BuiltInRegistries.MOB_EFFECT.entrySet().forEach(e -> DataRegistries.MOB_EFFECT.set(new DataLocation(e.getKey().location().getNamespace(), e.getKey().location().getPath()), new MobEffectData(new DataLocation(e.getKey().location().getNamespace(), e.getKey().location().getPath()), e.getValue().isInstantenous())));
+        DataRegistries.MOB_EFFECT.freeze();
         DataRegistries.ENTITY_CLASS.reset();
         for(Field field : EntityType.class.getDeclaredFields()) {
             if(EntityType.class.isAssignableFrom(field.getType()) && Modifier.isPublic(field.getModifiers()) && Modifier.isStatic(field.getModifiers()) && Modifier.isFinal(field.getModifiers())) {

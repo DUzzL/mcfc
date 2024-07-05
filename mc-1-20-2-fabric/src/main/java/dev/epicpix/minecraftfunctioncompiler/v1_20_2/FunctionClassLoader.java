@@ -15,6 +15,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerFunctionManager;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -109,6 +110,12 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
             cf.loadResourceLocation(cw, value);
             callRegistry_get(cw);
             cw.castType(Attribute.class);
+        }));
+        enumMap.put(CodeFieldStorageMapEnum.EFFECT, new CodeFieldStorageMapValue(MobEffect.class, (cf, cw, value) -> {
+            loadBuiltInRegistries_MOB_EFFECT(cw);
+            cf.loadResourceLocation(cw, value);
+            callRegistry_get(cw);
+            cw.castType(MobEffect.class);
         }));
         enumMap.put(CodeFieldStorageMapEnum.FUNCTION, new CodeFieldStorageMapValue(CommandFunction.class, (cf, cw, value) -> {
             cf.loadServerFunctionManager(cw);

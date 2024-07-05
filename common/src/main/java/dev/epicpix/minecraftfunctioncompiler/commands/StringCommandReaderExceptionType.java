@@ -3,6 +3,7 @@ package dev.epicpix.minecraftfunctioncompiler.commands;
 public enum StringCommandReaderExceptionType {
     INVALID_STRING_QUOTE,
     INVALID_NUMBER_CHARACTER,
+    INVALID_BOOLEAN,
     INVALID_INTEGER,
     INVALID_FLOAT,
     INVALID_DOUBLE_CHARACTER,
@@ -20,4 +21,5 @@ public enum StringCommandReaderExceptionType {
     INVALID_ATTRIBUTE,
     INVALID_TIME_KIND,
     INVALID_DIFFICULTY,
+    INVALID_MOB_EFFECT,
 }

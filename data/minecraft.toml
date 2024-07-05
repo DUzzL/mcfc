@@ -28,6 +28,7 @@ Vec3_z = "net/minecraft/world/phys/Vec3:z:D@M"
 Vec2_x = "net/minecraft/world/phys/Vec2:x:F@M"
 Vec2_y = "net/minecraft/world/phys/Vec2:y:F@M"
 BuiltInRegistries_ATTRIBUTE = "net/minecraft/core/registries/BuiltInRegistries:ATTRIBUTE:Lnet/minecraft/core/Registry;@S"
+BuiltInRegistries_MOB_EFFECT = "net/minecraft/core/registries/BuiltInRegistries:MOB_EFFECT:Lnet/minecraft/core/Registry;@S"
 
 [definitions_fields.ServerFunctionManager_context]
 "1.20.2-" = "net/minecraft/server/ServerFunctionManager:context:Lnet/minecraft/server/ServerFunctionManager$ExecutionContext;@M"

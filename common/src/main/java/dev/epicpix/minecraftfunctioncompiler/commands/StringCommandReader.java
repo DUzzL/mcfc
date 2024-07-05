@@ -140,6 +140,17 @@ public class StringCommandReader {
         return command.substring(start, index);
     }
 
+    public boolean readBoolean() {
+        String str = readString();
+        if(str.equals("true")) {
+            return true;
+        }else if(str.equalsIgnoreCase("false")) {
+            return false;
+        }else {
+            throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_BOOLEAN);
+        }
+    }
+
     public int readInt() {
         try {
             return Integer.parseInt(readNumberBase());
@@ -384,6 +395,15 @@ public class StringCommandReader {
             case "hard" -> Difficulty.HARD;
             default -> throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_DIFFICULTY);
         };
+    }
+
+    public MobEffectData readMobEffect() {
+        DataLocation location = readDataLocation();
+        MobEffectData attribute = DataRegistries.MOB_EFFECT.get(location);
+        if(attribute == null) {
+            throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_MOB_EFFECT);
+        }
+        return attribute;
     }
 
 }

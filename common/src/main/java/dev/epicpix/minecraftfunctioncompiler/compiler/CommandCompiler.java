@@ -46,6 +46,107 @@ public final class CommandCompiler {
             case DIFFICULTY_SET -> {
                 context.current().addInstructionConsumer().accept(Instructions2.setDifficulty(command.get("difficulty")));
             }
+            case EFFECT_CLEAR -> {
+                try(var self = context.getCurrentEntity()) {
+                    self.writeInstruction(
+                            Instructions2.ifNotNull(self.content().lower())
+                                .with(Instructions.checkEntityTypes(self.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
+                                        .with(Instructions2.clearAllEffects(self.content()))));
+                }
+            }
+            case EFFECT_CLEAR_ENTITIES -> {
+                try(var targets = context.forSelector(command.get("targets"))) {
+                    targets.writeInstruction(
+                            Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
+                                .with(Instructions2.clearAllEffects(targets.content())));
+                }
+            }
+            case EFFECT_CLEAR_ENTITIES_EFFECT -> {
+                try(var targets = context.forSelector(command.get("targets"))) {
+                    targets.writeInstruction(
+                            Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
+                                    .with(Instructions2.clearEffect(targets.content(), command.<MobEffectData>get("effect").location())));
+                }
+            }
+            case EFFECT_GIVE -> {
+                MobEffectData effect = command.get("effect");
+                try(var self = context.getCurrentEntity()) {
+                    try(var targets = context.forSelector(command.get("targets"))) {
+                        targets.writeInstruction(
+                                Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
+                                        .with(Instructions2.giveEffect(self.content(), targets.content(), effect.location(), effect.instant() ? 1 : 600, 0, true)));
+                    }
+                }
+            }
+            case EFFECT_GIVE_DUR -> {
+                MobEffectData effect = command.get("effect");
+                int duration = command.get("duration");
+                try(var self = context.getCurrentEntity()) {
+                    try(var targets = context.forSelector(command.get("targets"))) {
+                        targets.writeInstruction(
+                                Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
+                                        .with(Instructions2.giveEffect(self.content(), targets.content(), effect.location(), effect.instant() ? duration : duration * 20, 0, true)));
+                    }
+                }
+            }
+            case EFFECT_GIVE_DUR_AMP -> {
+                MobEffectData effect = command.get("effect");
+                int duration = command.get("duration");
+                int amplifier = command.get("amplifier");
+                try(var self = context.getCurrentEntity()) {
+                    try(var targets = context.forSelector(command.get("targets"))) {
+                        targets.writeInstruction(
+                                Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
+                                        .with(Instructions2.giveEffect(self.content(), targets.content(), effect.location(), effect.instant() ? duration : duration * 20, amplifier, true)));
+                    }
+                }
+            }
+            case EFFECT_GIVE_DUR_AMP_SHOW -> {
+                MobEffectData effect = command.get("effect");
+                int duration = command.get("duration");
+                int amplifier = command.get("amplifier");
+                boolean hideParticles = command.get("hide_particles");
+                try(var self = context.getCurrentEntity()) {
+                    try(var targets = context.forSelector(command.get("targets"))) {
+                        targets.writeInstruction(
+                                Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
+                                        .with(Instructions2.giveEffect(self.content(), targets.content(), effect.location(), effect.instant() ? duration : duration * 20, amplifier, !hideParticles)));
+                    }
+                }
+            }
+            case EFFECT_GIVE_INF -> {
+                MobEffectData effect = command.get("effect");
+                try(var self = context.getCurrentEntity()) {
+                    try(var targets = context.forSelector(command.get("targets"))) {
+                        targets.writeInstruction(
+                                Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
+                                        .with(Instructions2.giveEffect(self.content(), targets.content(), effect.location(), -1, 0, true)));
+                    }
+                }
+            }
+            case EFFECT_GIVE_INF_AMP -> {
+                MobEffectData effect = command.get("effect");
+                int amplifier = command.get("amplifier");
+                try(var self = context.getCurrentEntity()) {
+                    try(var targets = context.forSelector(command.get("targets"))) {
+                        targets.writeInstruction(
+                                Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
+                                        .with(Instructions2.giveEffect(self.content(), targets.content(), effect.location(), -1, amplifier, true)));
+                    }
+                }
+            }
+            case EFFECT_GIVE_INF_AMP_SHOW -> {
+                MobEffectData effect = command.get("effect");
+                int amplifier = command.get("amplifier");
+                boolean hideParticles = command.get("hide_particles");
+                try(var self = context.getCurrentEntity()) {
+                    try(var targets = context.forSelector(command.get("targets"))) {
+                        targets.writeInstruction(
+                                Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
+                                        .with(Instructions2.giveEffect(self.content(), targets.content(), effect.location(), -1, amplifier, !hideParticles)));
+                    }
+                }
+            }
             case EXECUTE_ALIGN -> {
                 try(var pos = context.getPosition()) {
                     var newPosition = LocationData.<Vec3>ofLocal(pos.data().highestId());

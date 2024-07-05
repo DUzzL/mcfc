@@ -32,20 +32,21 @@ public final class CodeFieldStorage {
 
 
     private final ArrayList<UUID> uuids = new ArrayList<>();
-    private final ArrayList<DataLocation> resourceLocations = new ArrayList<>();
-    private final ArrayList<DataLocation> functions = new ArrayList<>();
     private final ArrayList<DataLocation> attributes = new ArrayList<>();
+    private final ArrayList<DataLocation> effects = new ArrayList<>();
+    private final ArrayList<DataLocation> functions = new ArrayList<>();
+    private final ArrayList<DataLocation> resourceLocations = new ArrayList<>();
 
-    private String getUuidName(UUID value) {
+    private String getAttributeName(DataLocation value) {
         return DEBUG
-                ? "uuid$" + value.toString().replace("-", "")
-                : "u" + uuids.indexOf(value);
+                ? "attribute$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
+                : "a" + attributes.indexOf(value);
     }
 
-    private String getResourceLocationName(DataLocation value) {
+    private String getEffectName(DataLocation value) {
         return DEBUG
-                ? "resourceLocation$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
-                : "r" + resourceLocations.indexOf(value);
+                ? "effect$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
+                : "e" + effects.indexOf(value);
     }
 
     private String getFunctionName(DataLocation value) {
@@ -54,20 +55,28 @@ public final class CodeFieldStorage {
                 : "f" + functions.indexOf(value);
     }
 
-    private String getAttributeName(DataLocation value) {
+    private String getResourceLocationName(DataLocation value) {
         return DEBUG
-                ? "attribute$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
-                : "a" + attributes.indexOf(value);
+                ? "resourceLocation$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
+                : "r" + resourceLocations.indexOf(value);
     }
 
-    public void loadUUID(CodeWriter cw, UUID value) {
-        if(!uuids.contains(value)) uuids.add(value);
-        cw.getDataField(getUuidName(value), UUID.class);
+    private String getUuidName(UUID value) {
+        return DEBUG
+                ? "uuid$" + value.toString().replace("-", "")
+                : "u" + uuids.indexOf(value);
     }
 
-    public void loadResourceLocation(CodeWriter cw, DataLocation value) {
+    public void loadAttribute(CodeWriter cw, DataLocation value) {
         if(!resourceLocations.contains(value)) resourceLocations.add(value);
-        cw.getDataField(getResourceLocationName(value), enumMap.get(CodeFieldStorageMapEnum.RESOURCE_LOCATION).clazz());
+        if(!attributes.contains(value)) attributes.add(value);
+        cw.getDataField(getAttributeName(value), enumMap.get(CodeFieldStorageMapEnum.ATTRIBUTE).clazz());
+    }
+
+    public void loadEffect(CodeWriter cw, DataLocation value) {
+        if(!resourceLocations.contains(value)) resourceLocations.add(value);
+        if(!effects.contains(value)) effects.add(value);
+        cw.getDataField(getEffectName(value), enumMap.get(CodeFieldStorageMapEnum.EFFECT).clazz());
     }
 
     public void loadFunction(CodeWriter cw, DataLocation value) {
@@ -76,10 +85,14 @@ public final class CodeFieldStorage {
         cw.getDataField(getFunctionName(value), enumMap.get(CodeFieldStorageMapEnum.FUNCTION).clazz());
     }
 
-    public void loadAttribute(CodeWriter cw, DataLocation value) {
+    public void loadResourceLocation(CodeWriter cw, DataLocation value) {
         if(!resourceLocations.contains(value)) resourceLocations.add(value);
-        if(!attributes.contains(value)) attributes.add(value);
-        cw.getDataField(getAttributeName(value), enumMap.get(CodeFieldStorageMapEnum.ATTRIBUTE).clazz());
+        cw.getDataField(getResourceLocationName(value), enumMap.get(CodeFieldStorageMapEnum.RESOURCE_LOCATION).clazz());
+    }
+
+    public void loadUUID(CodeWriter cw, UUID value) {
+        if(!uuids.contains(value)) uuids.add(value);
+        cw.getDataField(getUuidName(value), UUID.class);
     }
 
     public void loadServerFunctionManager(CodeWriter cw) {
@@ -112,6 +125,11 @@ public final class CodeFieldStorage {
             cw.setDataField(getFunctionName(value), enumMap.get(CodeFieldStorageMapEnum.FUNCTION).clazz());
         }
 
+        for(var value : effects) {
+            enumMap.get(CodeFieldStorageMapEnum.EFFECT).mapper().accept(this, cw, value);
+            cw.setDataField(getEffectName(value), enumMap.get(CodeFieldStorageMapEnum.EFFECT).clazz());
+        }
+
         for(var value : attributes) {
             enumMap.get(CodeFieldStorageMapEnum.ATTRIBUTE).mapper().accept(this, cw, value);
             cw.setDataField(getAttributeName(value), enumMap.get(CodeFieldStorageMapEnum.ATTRIBUTE).clazz());
@@ -130,6 +148,9 @@ public final class CodeFieldStorage {
         }
         for(var value : functions) {
             classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getFunctionName(value), enumMap.get(CodeFieldStorageMapEnum.FUNCTION).clazz().descriptorString(), null, null);
+        }
+        for(var value : effects) {
+            classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getEffectName(value), enumMap.get(CodeFieldStorageMapEnum.EFFECT).clazz().descriptorString(), null, null);
         }
         for(var value : attributes) {
             classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getAttributeName(value), enumMap.get(CodeFieldStorageMapEnum.ATTRIBUTE).clazz().descriptorString(), null, null);

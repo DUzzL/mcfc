@@ -1,6 +1,5 @@
 package dev.epicpix.annotations
 
-import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import org.objectweb.asm.*
@@ -55,7 +54,6 @@ private fun fixKotlinDesc(from: String): String {
     }
 }
 
-@OptIn(KspExperimental::class)
 fun loadClassInfo(className: String): ClassInfo {
     loadedClasses[className]?.also { return it }
     val found = privateJarInfo?.second?.entries?.find { (k, _) -> k.replace('/', '.').replace('$', '.') == "$className.class" }
@@ -88,7 +86,7 @@ fun loadClassInfo(className: String): ClassInfo {
             )
         }.getOrElse {
             val classDecl = privateResolver!!.getClassDeclarationByName(privateResolver!!.getKSNameFromString(className))
-                ?: throw IllegalArgumentException("Class not found", it)
+                ?: throw IllegalArgumentException("Class not found: $className", it)
             val methods = classDecl.declarations.filter { it is KSFunctionDeclaration }.map { it as KSFunctionDeclaration }.toList()
             loadedClasses[className] = ClassInfo(
                 name = classDecl.qualifiedName!!.asString(),

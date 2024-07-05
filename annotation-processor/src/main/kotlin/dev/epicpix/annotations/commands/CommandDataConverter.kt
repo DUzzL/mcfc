@@ -138,11 +138,7 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
         val argumentIndex = uniqueId.getAndIncrement()
         when(data.kind) {
             "attribute" -> builder.append("    var a$argumentIndex = reader.readAttribute();\n")
-            "double" -> {
-                builder.append("    var a$argumentIndex = reader.readDouble();\n")
-                data.kindOptions["minimum"]?.toDouble()?.also { min -> builder.append("    if(a$argumentIndex < $min) ${createError("\"Double value of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }
-                data.kindOptions["maximum"]?.toDouble()?.also { max -> builder.append("    if(a$argumentIndex > $max) ${createError("\"Double value of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
-            }
+            "boolean" -> builder.append("    var a$argumentIndex = reader.readBoolean();\n")
             "command" -> {
                 val root = data.kindOptions["root"]
                 if(root != null) {
@@ -152,6 +148,11 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 }
             }
             "difficulty" -> builder.append("    var a$argumentIndex = reader.readDifficulty();\n")
+            "double" -> {
+                builder.append("    var a$argumentIndex = reader.readDouble();\n")
+                data.kindOptions["minimum"]?.toDouble()?.also { min -> builder.append("    if(a$argumentIndex < $min) ${createError("\"Double value of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }
+                data.kindOptions["maximum"]?.toDouble()?.also { max -> builder.append("    if(a$argumentIndex > $max) ${createError("\"Double value of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
+            }
             "entity_selector" -> {
                 val allowMultiple = data.kindOptions.getOrDefault("multiple", "true").toBoolean()
                 val playersOnly = data.kindOptions.getOrDefault("players", "false").toBoolean()
@@ -172,6 +173,7 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 data.kindOptions["minimum"]?.toInt()?.also { min -> builder.append("    if(a$argumentIndex.minimum() < $min) ${createError("\"Integer range minimum of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }
                 data.kindOptions["maximum"]?.toInt()?.also { max -> builder.append("    if(a$argumentIndex.maximum() > $max) ${createError("\"Integer range maximum of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
             }
+            "mob_effect" -> builder.append("    var a$argumentIndex = reader.readMobEffect();\n")
             "objective" -> builder.append("    var a$argumentIndex = reader.readWord();\n")
             "rotation" -> builder.append("    var a$argumentIndex = reader.readRotation();\n")
             "score_comparison" -> builder.append("    var a$argumentIndex = reader.readScoreboardCompareOperation();\n")

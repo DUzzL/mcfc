@@ -790,6 +790,13 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
                     return ParsedTokenExpressionTypeComplex("net.minecraft.world.entity.ai.attributes.Attribute")
                 }
             }
+            if(expression.name == "map_mob_effect") {
+                if(writerData.isAboveVersion(20, 4)) {
+                    return ParsedTokenExpressionTypeComplex("net.minecraft.core.Holder")
+                }else {
+                    return ParsedTokenExpressionTypeComplex("net.minecraft.world.effect.MobEffect")
+                }
+            }
         }
         val paramTypes = expression.arguments.map { evaluateExpressionType(writerData, it) }
         val instance = expression.instance
@@ -830,7 +837,7 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             return ParsedTokenExpressionTypeComplex(def.className)
         }
         if(expression.name == "<init>") {
-            return ParsedTokenExpressionTypeComplex(functionMatches[0].owner)
+            return ParsedTokenExpressionTypeComplex(functionMatches[0].owner.replace('/', '.').replace('$', '.'))
         }
         throw IllegalArgumentException(def.descriptor)
     }else if(expression is ParsedTokenExpressionField) {
@@ -1195,6 +1202,18 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                     if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.DataLocation") {
                         if(keepResult) {
                             output.appendText("context.fieldStorage().loadAttribute(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.DataLocation>get(\"${source.name}\"));\n")
+                        }
+                        return uniqId
+                    }
+                }
+            }
+            if(expression.name == "map_mob_effect") {
+                val source = expression.arguments[0] as ParsedTokenValueAccessor
+                if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
+                    val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
+                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.DataLocation") {
+                        if(keepResult) {
+                            output.appendText("context.fieldStorage().loadEffect(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.DataLocation>get(\"${source.name}\"));\n")
                         }
                         return uniqId
                     }
