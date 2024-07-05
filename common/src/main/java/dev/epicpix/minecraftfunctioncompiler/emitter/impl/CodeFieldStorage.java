@@ -1,11 +1,11 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter.impl;
 
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
-import dev.epicpix.minecraftfunctioncompiler.util.TriConsumer;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.UUID;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DEBUG;
@@ -13,30 +13,21 @@ import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.EMIT_SERVER_
 
 public final class CodeFieldStorage {
 
-    private final Class<?> resourceLocationClass;
-    private final Class<?> commandFunctionClass;
     private final Class<?> serverFunctionManagerClass;
     private final Class<?> minecraftServerClass;
-    private final Class<?> attributeHolderClass;
-    private final TriConsumer<CodeFieldStorage, CodeWriter, DataLocation> mapFunction;
-    private final TriConsumer<CodeFieldStorage, CodeWriter, DataLocation> mapAttribute;
+    private final EnumMap<CodeFieldStorageMapEnum, CodeFieldStorageMapValue> enumMap;
 
     public CodeFieldStorage(
-            Class<?> resourceLocationClass,
-            Class<?> commandFunctionClass,
             Class<?> serverFunctionManagerClass,
             Class<?> minecraftServerClass,
-            Class<?> attributeHolderClass,
-            TriConsumer<CodeFieldStorage, CodeWriter, DataLocation> mapFunction,
-            TriConsumer<CodeFieldStorage, CodeWriter, DataLocation> mapAttribute
+            EnumMap<CodeFieldStorageMapEnum, CodeFieldStorageMapValue> enumMap
     ) {
-        this.resourceLocationClass = resourceLocationClass;
-        this.commandFunctionClass = commandFunctionClass;
         this.serverFunctionManagerClass = serverFunctionManagerClass;
         this.minecraftServerClass = minecraftServerClass;
-        this.attributeHolderClass = attributeHolderClass;
-        this.mapFunction = mapFunction;
-        this.mapAttribute = mapAttribute;
+        this.enumMap = enumMap.clone();
+        if(this.enumMap.size() != CodeFieldStorageMapEnum.values().length) {
+            throw new IllegalArgumentException("EnumMap does not map every enum value");
+        }
     }
 
 
@@ -76,19 +67,19 @@ public final class CodeFieldStorage {
 
     public void loadResourceLocation(CodeWriter cw, DataLocation value) {
         if(!resourceLocations.contains(value)) resourceLocations.add(value);
-        cw.getDataField(getResourceLocationName(value), resourceLocationClass);
+        cw.getDataField(getResourceLocationName(value), enumMap.get(CodeFieldStorageMapEnum.RESOURCE_LOCATION).clazz());
     }
 
     public void loadFunction(CodeWriter cw, DataLocation value) {
         if(!resourceLocations.contains(value)) resourceLocations.add(value);
         if(!functions.contains(value)) functions.add(value);
-        cw.getDataField(getFunctionName(value), commandFunctionClass);
+        cw.getDataField(getFunctionName(value), enumMap.get(CodeFieldStorageMapEnum.FUNCTION).clazz());
     }
 
     public void loadAttribute(CodeWriter cw, DataLocation value) {
         if(!resourceLocations.contains(value)) resourceLocations.add(value);
         if(!attributes.contains(value)) attributes.add(value);
-        cw.getDataField(getAttributeName(value), attributeHolderClass);
+        cw.getDataField(getAttributeName(value), enumMap.get(CodeFieldStorageMapEnum.ATTRIBUTE).clazz());
     }
 
     public void loadServerFunctionManager(CodeWriter cw) {
@@ -112,21 +103,18 @@ public final class CodeFieldStorage {
         }
 
         for(var value : resourceLocations) {
-            cw.newObjectCreate(resourceLocationClass);
-            cw.writeString(value.namespace());
-            cw.writeString(value.path());
-            cw.newObjectInit(resourceLocationClass, String.class, String.class);
-            cw.setDataField(getResourceLocationName(value), resourceLocationClass);
+            enumMap.get(CodeFieldStorageMapEnum.RESOURCE_LOCATION).mapper().accept(this, cw, value);
+            cw.setDataField(getResourceLocationName(value), enumMap.get(CodeFieldStorageMapEnum.RESOURCE_LOCATION).clazz());
         }
 
         for(var value : functions) {
-            mapFunction.accept(this, cw, value);
-            cw.setDataField(getFunctionName(value), commandFunctionClass);
+            enumMap.get(CodeFieldStorageMapEnum.FUNCTION).mapper().accept(this, cw, value);
+            cw.setDataField(getFunctionName(value), enumMap.get(CodeFieldStorageMapEnum.FUNCTION).clazz());
         }
 
         for(var value : attributes) {
-            mapAttribute.accept(this, cw, value);
-            cw.setDataField(getAttributeName(value), attributeHolderClass);
+            enumMap.get(CodeFieldStorageMapEnum.ATTRIBUTE).mapper().accept(this, cw, value);
+            cw.setDataField(getAttributeName(value), enumMap.get(CodeFieldStorageMapEnum.ATTRIBUTE).clazz());
         }
 
         mv.visitInsn(Opcodes.RETURN);
@@ -138,13 +126,13 @@ public final class CodeFieldStorage {
             classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getUuidName(value), UUID.class.descriptorString(), null, null);
         }
         for(var value : resourceLocations) {
-            classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getResourceLocationName(value), resourceLocationClass.descriptorString(), null, null);
+            classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getResourceLocationName(value), enumMap.get(CodeFieldStorageMapEnum.RESOURCE_LOCATION).clazz().descriptorString(), null, null);
         }
         for(var value : functions) {
-            classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getFunctionName(value), commandFunctionClass.descriptorString(), null, null);
+            classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getFunctionName(value), enumMap.get(CodeFieldStorageMapEnum.FUNCTION).clazz().descriptorString(), null, null);
         }
         for(var value : attributes) {
-            classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getAttributeName(value), attributeHolderClass.descriptorString(), null, null);
+            classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getAttributeName(value), enumMap.get(CodeFieldStorageMapEnum.ATTRIBUTE).clazz().descriptorString(), null, null);
         }
 
     }
