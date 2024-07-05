@@ -1,5 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_6;
 
+import dev.epicpix.minecraftfunctioncompiler.commands.CommandError;
+import dev.epicpix.minecraftfunctioncompiler.commands.CommandErrorException;
 import dev.epicpix.minecraftfunctioncompiler.commands.SelectorParser;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.FloatRangeArgument;
@@ -46,7 +48,7 @@ public class FunctionCompilerMain implements ModInitializer {
                         ).orElseGet(List::of);
             }
             for(var it : types) {
-                if(DataRegistries.ENTITY_CLASS.get(it) == null) throw new UnsupportedOperationException("Unsupported entity type: " + it);
+                if(DataRegistries.ENTITY_CLASS.get(it) == null) throw new CommandErrorException(new CommandError(reader.getString(), "Unsupported entity type: " + it));
             }
             data.entityTypes = new NegatableData<>(types, negated);
         });
@@ -59,6 +61,7 @@ public class FunctionCompilerMain implements ModInitializer {
                 case SPECTATOR -> Gamemode.SPECTATOR;
             }, negated);
             data.entityTypes = new NegatableData<>(List.of(new DataLocation("minecraft", "player")), false);
+            data.requirePlayer = true;
         });
         SelectorParser.registerSelectorOption("x_rotation", (reader, data) -> {
             var bounds = reader.readFloatRange();

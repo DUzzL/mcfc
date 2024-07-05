@@ -604,7 +604,7 @@ class MainProcessor(
                         val named = def.simpleName.asString().toUpperSnakeCase()
                         types.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.il.InstructionType $named = new dev.epicpix.minecraftfunctioncompiler.il.InstructionType(\"$named\");\n")
                         instructionMappings[named] = "$enumClass.$named"
-                        val params = mutableListOf<InstructionParamData>()
+                        val params = mutableListOf<String>()
                         val instructionType = "dev.epicpix.minecraftfunctioncompiler.il.Instruction"
                         impl.appendText("public static $instructionType ${def.simpleName.asString()}(")
                         for(i in def.parameters.indices) {
@@ -612,13 +612,18 @@ class MainProcessor(
                             val resolvedType = param.type.resolve()
                             val typeName = when(val typeName = resolvedType.declaration.qualifiedName!!.asString()) {
                                 "kotlin.Boolean" -> "boolean"
+                                "kotlin.Int" -> "int"
                                 "kotlin.collections.List" -> "List"
                                 "kotlin.collections.MutableList" -> "List"
                                 "kotlin.collections.Map" -> "Map"
                                 else -> typeName
                             }
                             val typeArgs = resolvedType.arguments.joinToString { arg ->
-                                arg.type?.resolve()?.declaration?.qualifiedName?.asString() ?: "Object"
+                                arg.type?.resolve()?.declaration?.qualifiedName?.asString()?.run {
+                                    if(this == "kotlin.Int") {
+                                        "Integer"
+                                    }else this
+                                } ?: "Object"
                             }
 
                             val fullTypeName = if(typeArgs.isNotEmpty()) "$typeName<$typeArgs>" else typeName
@@ -626,16 +631,12 @@ class MainProcessor(
                             if(i < def.parameters.size - 1) {
                                 impl.appendText(", ")
                             }
-                            params.add(InstructionParamData(
-                                param.name!!.asString(),
-                                resolvedType.isMarkedNullable,
-                                resolvedType.declaration.qualifiedName!!.asString() == "kotlin.collections.List",
-                                resolvedType.declaration.qualifiedName!!.asString() == "kotlin.collections.Map"))
+                            params.add(param.name!!.asString())
                         }
                         impl.appendText(") {")
                         impl.appendText("HashMap<String, Object> hashMap = new HashMap<>();")
                         params.forEach {
-                            impl.appendText("hashMap.put(\"${it.name}\", ${it.name});")
+                            impl.appendText("hashMap.put(\"$it\", $it);")
                         }
                         impl.appendText("return new $instructionType($enumClass.$named, hashMap); }\n")
                     }
@@ -653,8 +654,6 @@ class MainProcessor(
 
 fun String.toUpperSnakeCase() = split(Regex("(?=[A-Z])")).joinToString("_").uppercase()
 fun String.snakeToLowerCamelCase() = Regex("_[a-zA-Z]").replace(lowercase()) { it.value.replace("_","").uppercase() }
-
-data class InstructionParamData(val name: String, val isNullable: Boolean, val isList: Boolean, val isMap: Boolean)
 
 class MainProcessorProvider : SymbolProcessorProvider {
     override fun create(

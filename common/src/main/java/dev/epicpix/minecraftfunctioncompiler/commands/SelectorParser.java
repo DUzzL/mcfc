@@ -52,6 +52,7 @@ public final class SelectorParser {
             case 'a' -> {
                 if(!allowMultiple) throwError(reader, "Unable to use @a with a single-only selector");
                 data.entityTypes = new NegatableData<>(List.of(new DataLocation("minecraft", "player")), false);
+                data.requirePlayer = true;
             }
             default -> throwError(reader, "Unsupported selector type: @" + selectorType);
         }
@@ -105,6 +106,13 @@ public final class SelectorParser {
         });
         registerSelectorOption("limit", (reader, data) -> {
             data.limit = reader.readInt();
+        });
+        registerSelectorOption("level", (reader, data) -> {
+            data.level = reader.readIntRange();
+            if((data.level.minimum() != null && data.level.minimum() < 0) || (data.level.maximum() != null && data.level.maximum() < 0)) {
+                throwError(reader, "Minimum/maximum level cannot be negative: " + data.level);
+            }
+            data.requirePlayer = true;
         });
         registerSelectorOption("scores", (reader, data) -> {
             reader.skip();

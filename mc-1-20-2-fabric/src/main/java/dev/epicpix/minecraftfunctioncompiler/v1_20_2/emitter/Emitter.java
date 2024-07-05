@@ -197,6 +197,11 @@ public final class Emitter {
                 context.runStored("result", Vec3.class);
                 return true;
             }
+            if(context.instruction().type() == InstructionTypes.CHECK_INT_RANGE) {
+                context.load("value");
+                checkIntRange(context, context.instruction().get("range"), EmitterContext::run);
+                return true;
+            }
             if(context.instruction().type() == InstructionTypes.CHECK_ROTATION_YAW) {
                 context.load("rotation");
                 loadVec2_x(codeWriter);

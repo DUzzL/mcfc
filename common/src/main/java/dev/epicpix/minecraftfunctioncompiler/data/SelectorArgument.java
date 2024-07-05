@@ -10,12 +10,14 @@ public record SelectorArgument(
     boolean self,
     Integer limit,
     NegatableData<List<DataLocation>> entityTypes,
+    boolean requirePlayer,
     Boolean hasTags,
     List<NegatableData<String>> tags,
     Boolean hasTeam,
     List<NegatableData<String>> teams,
     Map<String, IntRangeArgument> scores,
     NegatableData<Gamemode> gamemode,
+    IntRangeArgument level,
     FloatRangeArgument yaw,
     FloatRangeArgument pitch
 ) {
@@ -27,11 +29,13 @@ public record SelectorArgument(
                 self,
                 null,
                 null,
+                false,
                 null,
                 List.of(),
                 null,
                 null,
                 Map.of(),
+                null,
                 null,
                 null,
                 null
@@ -57,12 +61,14 @@ public record SelectorArgument(
                 self,
                 limit,
                 entityTypes,
+                requirePlayer,
                 hasTags,
                 tags,
                 hasTeam,
                 teams,
                 scores,
                 gamemode,
+                level,
                 yaw,
                 pitch
         );
@@ -73,6 +79,29 @@ public record SelectorArgument(
                 && !entityTypes.negated()
                 && entityTypes.data().size() == 1
                 && entityTypes.data().get(0).equals(new DataLocation("minecraft", "player"));
+    }
+
+    public boolean excludesPlayers() {
+        if(entityTypes != null) {
+            if(entityTypes.negated()) {
+                for(var type : entityTypes.data()) {
+                    if(type.equals(new DataLocation("minecraft", "player"))) {
+                        return true;
+                    }
+                }
+            }else {
+                if(entityTypes.data().isEmpty()) {
+                    return false;
+                }
+                for(var type : entityTypes.data()) {
+                    if(type.equals(new DataLocation("minecraft", "player"))) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+        return false;
     }
 
 }

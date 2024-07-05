@@ -21,6 +21,7 @@ interface InstructionDefinitions {
     Instruction applyRotationWorld(@InstructionSource LocationData<Vec2> from, @InstructionDestination LocationData<Vec2> to, RotationCoordinates rotation);
     Instruction checkEntityTypes(@InstructionSource LocationData<Entity> entity, List<DataLocation> types, boolean negated);
     Instruction alignPosition(@InstructionSource LocationData<Vec3> position, @InstructionDestination LocationData<Vec3> result, SwizzleArgument swizzle);
+    Instruction checkIntRange(@InstructionSource LocationData<Integer> value, @Nullable IntRangeArgument range);
     Instruction checkRotationYaw(@InstructionSource LocationData<Vec2> rotation, @Nullable FloatRangeArgument yaw);
     Instruction checkRotationPitch(@InstructionSource LocationData<Vec2> rotation, @Nullable FloatRangeArgument pitch);
 }

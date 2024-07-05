@@ -1,16 +1,10 @@
 package dev.epicpix.minecraftfunctioncompiler.compiler;
 
-import dev.epicpix.minecraftfunctioncompiler.data.RotationCoordinates;
-import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument;
-import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument;
-import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates;
+import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
 
-import java.util.ArrayList;
-import java.util.Objects;
-import java.util.Stack;
-import java.util.UUID;
+import java.util.*;
 
 public class CompilationContext {
 
@@ -212,6 +206,13 @@ public class CompilationContext {
 
     @SuppressWarnings("resource")
     public CompilationData<LocationData<Entity>> forSelector(SelectorArgument selector) {
+        if(selector.requirePlayer() && selector.excludesPlayers()) {
+            var data = stack.peek();
+            LocationData<Entity> entity = LocationData.ofLocal(data.highestId());
+            var instr = Instructions2.never();
+            data.addInstructionConsumer().accept(instr);
+            return new CompilationData<>(this, data.incrementedId(1).withBaseInstruction(instr), entity, 0);
+        }
         var scope = forScope();
         if(selector.limit() != null && selector.limit() != 1) {
             var data = stack.peek();
@@ -248,6 +249,9 @@ public class CompilationContext {
         var nonNull = Instructions2.ifNotNull(entityData.content().lower());
         entityData.writeInstruction(nonNull);
         var stacker = new InstructionStacker(nonNull);
+        if(selector.requirePlayer()) {
+            stacker.stackInstruction(Instructions.checkEntityTypes(entityData.content(), List.of(new DataLocation("minecraft", "player")), false));
+        }
         if(selector.entityTypes() != null) {
             stacker.stackInstruction(Instructions.checkEntityTypes(entityData.content(), new ArrayList<>(selector.entityTypes().data()), selector.entityTypes().negated()));
         }
@@ -259,6 +263,14 @@ public class CompilationContext {
         }
         if(selector.hasTags() != null) {
             stacker.stackInstruction(Instructions2.checkEntityTags(entityData.content(), selector.hasTags()));
+        }
+        if(selector.level() != null) {
+            var levelLocal = LocationData.<Integer>ofLocal(data.highestId());
+            stacker.stackInstruction(Instructions2.getExperienceLevel(entityData.content(), levelLocal));
+            stacker.stackInstruction(Instructions.checkIntRange(levelLocal, selector.level()));
+            data = data.incrementedId(1);
+            stackCount++;
+            enterWith(data);
         }
         if(selector.yaw() != null || selector.pitch() != null) {
             var rotationLocal = LocationData.<Vec2>ofLocal(data.highestId());
@@ -294,7 +306,7 @@ public class CompilationContext {
             }
             data = stack.peek();
         }
-        var execBase = Instructions2.empty();
+        var execBase = Instructions2.always();
         stacker.current.with(execBase);
         if(Objects.equals(selector.limit(), 1)) {
             stacker.current.with(Instructions2.exitScope(breakScope));

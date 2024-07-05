@@ -10,6 +10,7 @@ import java.util.Map;
 public class SelectorGeneratorBuilderData {
     public boolean self = false;
     public NegatableData<List<DataLocation>> entityTypes = null;
+    public boolean requirePlayer = false;
     public final ArrayList<NegatableData<String>> tags = new ArrayList<>();
     public Boolean hasTags = null;
     public List<NegatableData<String>> teams = new ArrayList<>();
@@ -17,6 +18,7 @@ public class SelectorGeneratorBuilderData {
     public Integer limit = null;
     public final HashMap<String, IntRangeArgument> scores = new HashMap<>();
     public NegatableData<Gamemode> gamemode = null;
+    public IntRangeArgument level = null;
     public FloatRangeArgument yaw = null;
     public FloatRangeArgument pitch = null;
 
@@ -27,12 +29,14 @@ public class SelectorGeneratorBuilderData {
                 self,
                 limit,
                 entityTypes != null ? new NegatableData<>(List.copyOf(entityTypes.data()), entityTypes.negated()) : null,
+                requirePlayer,
                 hasTags,
                 List.copyOf(tags),
                 hasTeam,
                 List.copyOf(teams),
                 Map.copyOf(scores),
                 gamemode,
+                level,
                 yaw,
                 pitch
         );

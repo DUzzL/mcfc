@@ -9,9 +9,11 @@
   run();
 }
 
-@EMPTY() {
+@ALWAYS() {
   run();
 }
+
+@NEVER() {}
 
 @IF_NOT_NULL(<java.lang.Object> [ctx:local]) {
   if([ctx:local] != null) {
@@ -535,4 +537,9 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 
 @SET_EXPERIENCE_LEVELS(<net.minecraft.world.entity.Entity> [ctx:entity], int [instr:levels]) {
   cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>).setExperienceLevels([instr:levels]);
+}
+
+@GET_EXPERIENCE_LEVEL(<net.minecraft.world.entity.Entity> [ctx:entity], int [ctx:level]) {
+  let [ctx:level] = cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>).experienceLevel;
+  run();
 }

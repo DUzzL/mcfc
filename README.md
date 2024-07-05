@@ -22,7 +22,7 @@ The list of commands supported currently as of `0.2.1-alpha.4` can be found in t
 
 ## Supported Selectors
 
-Not all selectors are supported as well. Currently, the only supported selectors are by UUID, player name, `@e`, `@a`, `@s`, and the allowed selector parameters are `gamemode`, `limit`, `tag`, `team`, `type`, `scores`, `x_rotation` and `y_rotation`.
+Not all selectors are supported as well. Currently, the only supported selectors are by UUID, player name, `@e`, `@a`, `@s`, and the allowed selector parameters are `gamemode`, `level`, `limit`, `tag`, `team`, `type`, `scores`, `x_rotation` and `y_rotation`.
 
 ## How it works
 
