@@ -85,6 +85,12 @@ public final class FunctionCompilerReporter {
         reportRawData("exception", json);
     }
 
+    public static void reportExceptionWithCommand(String step, Throwable exception, String command) {
+        JsonObject json = new JsonObject();
+        json.addProperty("command", command);
+        reportException(step, exception, json);
+    }
+
     public static void reportExceptionWithInstructions(String step, Throwable exception, List<Instruction> instructions) {
         JsonObject json = new JsonObject();
         var instructionResult = new StringBuilder();

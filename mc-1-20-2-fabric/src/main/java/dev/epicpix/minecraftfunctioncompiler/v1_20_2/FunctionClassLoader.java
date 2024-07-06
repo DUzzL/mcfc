@@ -63,22 +63,27 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
         funcLoop: for(var entry : functions.entrySet()) {
             var key = entry.getKey();
             var value = entry.getValue();
+            String currentCommand = null;
             try {
                 ArrayList<Command> parsed = new ArrayList<>();
                 for(var cmd : value.getEntries()) {
                     if(!(cmd instanceof CommandFunction.CommandEntry commandEntry)) {
                         continue funcLoop;
                     }
-                    parsed.add(CommandParser.parseCommand(commandEntry.parse.getReader().getString(), lookup));
+                    currentCommand = commandEntry.parse.getReader().getString();
+                    parsed.add(CommandParser.parseCommand(currentCommand, lookup));
                 }
                 definedFunctions.put(new DataLocation(key.getNamespace(), key.getPath()), parsed);
             } catch (CommandErrorException e) {
                 logWarn.accept("Unable to parse function " + key + " / " + e.getMessage());
                 commandErrors.add(e.error);
+            } catch (StringCommandReaderException e) {
+                logWarn.accept("Unable to parse function " + key + " / " + e.getMessage() + " / " + currentCommand);
+                FunctionCompilerReporter.reportExceptionWithCommand("parse_command", e, currentCommand);
             } catch (Throwable e) {
                 logError.accept("Unable to parse function " + key);
                 e.printStackTrace();
-                FunctionCompilerReporter.reportException("parse_command", e, new JsonObject());
+                FunctionCompilerReporter.reportExceptionWithCommand("parse_command", e, currentCommand);
             }
         }
         var parseTime = (System.nanoTime()-startParse)/1000000000d;
