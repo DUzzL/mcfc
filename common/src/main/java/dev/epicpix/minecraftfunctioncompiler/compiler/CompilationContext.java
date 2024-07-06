@@ -305,11 +305,13 @@ public class CompilationContext {
                 var scoreData = getScoreData(objectiveData.content(), nameData.content(), false);
                 stackCount += scoreData.stackCount();
 
-                var instr = Instructions.checkInScoreRange(scoreData.content(), entry.getValue());
-                scoreData.writeInstruction(instr);
+                var scoreValue = LocationData.<Integer>ofLocal(scoreData.data().highestId());
+                var execInstruction = Instructions.checkIntRange(scoreValue, entry.getValue());
+                var baseInstruction = Instructions2.getScoreValue(scoreData.content(), scoreValue).with(execInstruction);
+                scoreData.writeInstruction(baseInstruction);
                 stackCount++;
-                enterWith(scoreData.data().withBaseInstruction(instr));
-                stacker.current = instr;
+                enterWith(scoreData.data().withBaseInstruction(baseInstruction).incrementedId(1));
+                stacker.current = baseInstruction;
             }
             data = stack.peek();
         }

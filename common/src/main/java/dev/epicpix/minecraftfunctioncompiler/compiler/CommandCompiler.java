@@ -194,11 +194,13 @@ public final class CommandCompiler {
                 try(var objective = context.getObjective(command.get("targetObjective"))) {
                     try(var name = context.forScoreHolder(command.<ScoreHolderArgument>get("target").selectSingle())) {
                         try(var scoreData = context.getScoreData(objective.content(), name.content(), false)) {
-                            var instr = Instructions.checkInScoreRange(scoreData.content(), command.get("range"));
-                            try(var ignored = context.enterWithoutValueUsingInstruction(instr)) {
+                            var scoreValue = LocationData.<Integer>ofLocal(scoreData.data().highestId());
+                            var execInstruction = Instructions.checkIntRange(scoreValue, command.get("range"));
+                            var baseInstruction = Instructions2.getScoreValue(scoreData.content(), scoreValue);
+                            try(var ignored = context.enterWithoutValue(scoreData.data().incrementedId(1).withBaseInstruction(execInstruction))) {
                                 compile(context, command.get("command"), result);
                             }
-                            scoreData.writeInstruction(instr);
+                            scoreData.writeInstruction(baseInstruction);
                         }
                     }
                 }
@@ -284,11 +286,13 @@ public final class CommandCompiler {
                 try(var objective = context.getObjective(command.get("targetObjective"))) {
                     try(var name = context.forScoreHolder(command.<ScoreHolderArgument>get("target").selectSingle())) {
                         try(var scoreData = context.getScoreData(objective.content(), name.content(), false)) {
-                            var instr = Instructions.checkNotInScoreRange(scoreData.content(), command.get("range"));
-                            try(var ignored = context.enterWithoutValueUsingInstruction(instr)) {
+                            var scoreValue = LocationData.<Integer>ofLocal(scoreData.data().highestId());
+                            var execInstruction = Instructions.checkNotIntRange(scoreValue, command.get("range"));
+                            var baseInstruction = Instructions2.getScoreValue(scoreData.content(), scoreValue).with(execInstruction);
+                            try(var ignored = context.enterWithoutValue(scoreData.data().incrementedId(1).withBaseInstruction(execInstruction))) {
                                 compile(context, command.get("command"), result);
                             }
-                            scoreData.writeInstruction(instr);
+                            scoreData.writeInstruction(baseInstruction);
                         }
                     }
                 }

@@ -221,13 +221,13 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
   run();
 }
 
-@GET_SCORE_VALUE [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:score], int [ctx:scoreValue]) {
-  let [ctx:scoreValue] = [ctx:score].getScore();
+@GET_SCORE_VALUE [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:score], int [ctx:score_value]) {
+  let [ctx:score_value] = [ctx:score].getScore();
   run();
 }
 
-@GET_SCORE_VALUE [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:score], int [ctx:scoreValue]) {
-  let [ctx:scoreValue] = [ctx:score].get();
+@GET_SCORE_VALUE [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:score], int [ctx:score_value]) {
+  let [ctx:score_value] = [ctx:score].get();
   run();
 }
 

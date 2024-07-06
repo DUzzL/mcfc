@@ -56,18 +56,6 @@ public final class Emitter {
                 }
                 return true;
             }
-            if(context.instruction().type() == InstructionTypes.CHECK_IN_SCORE_RANGE) {
-                context.load("score");
-                callScore_getScore(codeWriter);
-                checkIntRange(context, context.instruction().get("range"), EmitterContext::run);
-                return true;
-            }
-            if(context.instruction().type() == InstructionTypes.CHECK_NOT_IN_SCORE_RANGE) {
-                context.load("score");
-                callScore_getScore(codeWriter);
-                checkNotIntRange(context, context.instruction().get("range"), EmitterContext::run);
-                return true;
-            }
             if(context.instruction().type() == InstructionTypes.CHECK_SCORE_COMPARE) {
                 context.load("target");
                 callScore_getScore(codeWriter);
@@ -187,6 +175,11 @@ public final class Emitter {
                 return true;
             }
             if(context.instruction().type() == InstructionTypes.CHECK_INT_RANGE) {
+                context.load("value");
+                checkIntRange(context, context.instruction().get("range"), EmitterContext::run);
+                return true;
+            }
+            if(context.instruction().type() == InstructionTypes.CHECK_NOT_INT_RANGE) {
                 context.load("value");
                 checkIntRange(context, context.instruction().get("range"), EmitterContext::run);
                 return true;
