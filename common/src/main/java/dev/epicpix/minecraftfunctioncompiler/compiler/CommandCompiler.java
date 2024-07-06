@@ -355,7 +355,7 @@ public final class CommandCompiler {
             case GAMEMODE -> {
                 try(var selector = context.forSelector(command.get("targets"))) {
                     var playerLocation = LocationData.<Player>ofLocal(selector.data().highestId());
-                    selector.writeInstruction(Instructions2.tryAsPlayer(selector.content(), playerLocation).with(Instructions2.setGamemode(playerLocation, command.get("gamemodes"))));
+                    selector.writeInstruction(Instructions2.tryAsPlayer(selector.content(), playerLocation).with(Instructions2.setGamemode(playerLocation, command.get("gamemode"))));
                 }
             }
             case KILL -> {
