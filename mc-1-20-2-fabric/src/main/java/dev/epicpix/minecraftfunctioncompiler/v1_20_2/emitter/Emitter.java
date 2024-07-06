@@ -139,7 +139,7 @@ public final class Emitter {
                 var rot = context.instruction().<RotationCoordinates>get("rotation");
                 if(rot.isYawRelative()) {
                     context.load("from");
-                    loadVec3_x(codeWriter);
+                    loadVec2_x(codeWriter);
                     if(rot.yaw() != 0.0) {
                         codeWriter.writeFloat((float) rot.yaw());
                         methodVisitor.visitInsn(Opcodes.FADD);
@@ -149,7 +149,7 @@ public final class Emitter {
                 }
                 if(rot.isPitchRelative()) {
                     context.load("from");
-                    loadVec3_y(codeWriter);
+                    loadVec2_y(codeWriter);
                     if(rot.pitch() != 0.0) {
                         codeWriter.writeFloat((float) rot.pitch());
                         methodVisitor.visitInsn(Opcodes.FADD);
