@@ -118,6 +118,12 @@ public final class SelectorParser {
                 throwError(reader, "Minimum/maximum level cannot be negative: " + data.level);
             }
         });
+        registerSelectorOption("distance", (reader, data) -> {
+            data.distance = reader.readDoubleRange();
+            if((data.distance.minimum() != null && data.distance.minimum() < 0) || (data.distance.maximum() != null && data.distance.maximum() < 0)) {
+                throwError(reader, "Minimum/maximum distance cannot be negative: " + data.distance);
+            }
+        });
         registerSelectorOption("scores", (reader, data) -> {
             reader.skip();
             reader.skipWhitespace();

@@ -21,6 +21,8 @@ interface InstructionDefinitions {
     Instruction alignPosition(@InstructionSource LocationData<Vec3> position, @InstructionDestination LocationData<Vec3> result, SwizzleArgument swizzle);
     Instruction checkIntRange(@InstructionSource LocationData<Integer> value, @Nullable IntRangeArgument range);
     Instruction checkNotIntRange(@InstructionSource LocationData<Integer> value, @Nullable IntRangeArgument range);
+    Instruction checkFloatRange(@InstructionSource LocationData<Float> value, @Nullable FloatRangeArgument range);
+    Instruction checkDoubleRange(@InstructionSource LocationData<Double> value, @Nullable DoubleRangeArgument range);
     Instruction checkRotationYaw(@InstructionSource LocationData<Vec2> rotation, @Nullable FloatRangeArgument yaw);
     Instruction checkRotationPitch(@InstructionSource LocationData<Vec2> rotation, @Nullable FloatRangeArgument pitch);
 }

@@ -179,6 +179,41 @@ public class StringCommandReader {
         return parseDouble(readNumberBase());
     }
 
+    public DoubleRangeArgument readDoubleRange() {
+        var base1 = readNumberBase();
+        Double min = null;
+        if(!base1.isEmpty()) {
+            try {
+                min = Double.parseDouble(base1);
+            }catch(NumberFormatException e) {
+                throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_DOUBLE);
+            }
+        }
+        if(canRead(2) && peek() == '.' && peek(1) == '.') {
+            skip();
+            skip();
+            var base2 = readNumberBase();
+            Double max = null;
+            if(!base2.isEmpty()) {
+                try {
+                    max = Double.parseDouble(base2);
+                    if(min != null && min > max) {
+                        throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_RANGE);
+                    }
+                }catch(NumberFormatException e) {
+                    throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_DOUBLE);
+                }
+            }else {
+                if(min == null) {
+                    throw new StringCommandReaderException(this, StringCommandReaderExceptionType.NO_RANGE);
+                }
+            }
+            return new DoubleRangeArgument(min, max);
+        }else {
+            return new DoubleRangeArgument(min, min);
+        }
+    }
+
     public FloatRangeArgument readFloatRange() {
         var base1 = readNumberBase();
         Float min = null;
@@ -190,6 +225,8 @@ public class StringCommandReader {
             }
         }
         if(canRead(2) && peek() == '.' && peek(1) == '.') {
+            skip();
+            skip();
             var base2 = readNumberBase();
             Float max = null;
             if(!base2.isEmpty()) {

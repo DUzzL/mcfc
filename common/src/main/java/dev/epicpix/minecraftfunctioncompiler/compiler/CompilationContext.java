@@ -294,6 +294,26 @@ public class CompilationContext {
         if(selector.hasTeam() != null) {
             stacker.stackInstruction(Instructions2.hasTeam(entityData.content(), selector.hasTeam()));
         }
+        if(selector.distance() != null) {
+            stackCount++;
+            enterWith(data.withBaseInstruction(stacker.current));
+
+            var positionData = getPosition();
+            stackCount += positionData.stackCount();
+            var instr = Instructions2.ifNotNull(positionData.content().lower());
+            positionData.writeInstruction(instr);
+            stacker.current = instr;
+
+            LocationData<Vec3> thisPosition = LocationData.ofLocal(positionData.data().highestId());
+            stacker.stackInstruction(Instructions2.getEntityPosition(entityData.content(), thisPosition));
+            LocationData<Double> distance = LocationData.ofLocal(positionData.data().highestId() + 1);
+            stacker.stackInstruction(Instructions2.getDistanceSquared(positionData.content(), thisPosition, distance));
+            stacker.stackInstruction(Instructions.checkDoubleRange(distance, selector.distance().square()));
+            enterWith(positionData.data().incrementedId(2).withBaseInstruction(stacker.current));
+            stackCount++;
+
+            data = stack.peek();
+        }
         if(!selector.scores().isEmpty()) {
             stackCount++;
             enterWith(data.withBaseInstruction(stacker.current));

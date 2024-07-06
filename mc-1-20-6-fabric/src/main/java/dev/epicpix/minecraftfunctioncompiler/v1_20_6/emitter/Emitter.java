@@ -181,7 +181,17 @@ public final class Emitter {
             }
             if(context.instruction().type() == InstructionTypes.CHECK_NOT_INT_RANGE) {
                 context.load("value");
-                checkIntRange(context, context.instruction().get("range"), EmitterContext::run);
+                checkNotIntRange(context, context.instruction().get("range"), EmitterContext::run);
+                return true;
+            }
+            if(context.instruction().type() == InstructionTypes.CHECK_FLOAT_RANGE) {
+                context.load("value");
+                checkFloatRange(context, context.instruction().get("range"), EmitterContext::run);
+                return true;
+            }
+            if(context.instruction().type() == InstructionTypes.CHECK_DOUBLE_RANGE) {
+                context.load("value");
+                checkDoubleRange(context, context.instruction().get("range"), EmitterContext::run);
                 return true;
             }
             if(context.instruction().type() == InstructionTypes.CHECK_ROTATION_YAW) {

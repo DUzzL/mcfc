@@ -345,14 +345,16 @@ class MainProcessor(
                     val (param, type) = it.params[i];
                     val typeName = when(param.scope) {
                         ParsedTokenValueAccessorScope.CONTEXT -> {
-                            if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.SCOPE)) {
+                            if(type == ParsedTokenExpressionSimpleType.SCOPE) {
                                 "dev.epicpix.minecraftfunctioncompiler.il.ScopeData"
                             }else {
                                 "dev.epicpix.minecraftfunctioncompiler.il.LocationData<${
-                                    if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)) {
+                                    if(type == ParsedTokenExpressionSimpleType.INTEGER) {
                                         "Integer"
-                                    }else if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)) {
+                                    }else if(type == ParsedTokenExpressionSimpleType.BOOLEAN) {
                                         "Boolean"
+                                    }else if(type == ParsedTokenExpressionSimpleType.DOUBLE) {
+                                        "Double"
                                     }else if(type is ParsedTokenExpressionTypeComplex) {
                                         if(type.typeName.startsWith("net.minecraft.")) {
                                             when(type.typeName) {
@@ -375,9 +377,9 @@ class MainProcessor(
                             }
                         }
                         ParsedTokenValueAccessorScope.INSTRUCTION -> {
-                            if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)) {
+                            if(type == ParsedTokenExpressionSimpleType.INTEGER) {
                                 "int"
-                            }else if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)) {
+                            }else if(type == ParsedTokenExpressionSimpleType.BOOLEAN) {
                                 "boolean"
                             }else if(type is ParsedTokenExpressionTypeComplex) {
                                 type.typeName.run { if(startsWith("java.lang.")) substring(10) else this }
@@ -428,7 +430,7 @@ class MainProcessor(
                             ParsedTokenInstructionConditionOperator.NE -> impl.appendText("!=")
                         }
                         val param = it.params.find { (param, _) -> param.name == check.param }!!
-                        if(param.second is ParsedTokenExpressionSimpleTyped && (param.second as ParsedTokenExpressionSimpleTyped).type == ParsedTokenExpressionSimpleType.BOOLEAN) {
+                        if(param.second == ParsedTokenExpressionSimpleType.BOOLEAN) {
                             if(check.value == 0L) {
                                 impl.appendText("false")
                             }else {
@@ -458,14 +460,16 @@ class MainProcessor(
                     val (param, type) = it.params[i];
                     val typeName = when(param.scope) {
                         ParsedTokenValueAccessorScope.CONTEXT -> {
-                            if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.SCOPE)) {
+                            if(type == ParsedTokenExpressionSimpleType.SCOPE) {
                                 "dev.epicpix.minecraftfunctioncompiler.il.ScopeData"
                             }else {
                                 "dev.epicpix.minecraftfunctioncompiler.il.LocationData<${
-                                    if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)) {
+                                    if(type == ParsedTokenExpressionSimpleType.INTEGER) {
                                         "Integer"
-                                    }else if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)) {
+                                    }else if(type == ParsedTokenExpressionSimpleType.BOOLEAN) {
                                         "Boolean"
+                                    }else if(type == ParsedTokenExpressionSimpleType.DOUBLE) {
+                                        "Double"
                                     }else if(type is ParsedTokenExpressionTypeComplex) {
                                         if(type.typeName.startsWith("net.minecraft.")) {
                                             when(type.typeName) {
@@ -490,11 +494,11 @@ class MainProcessor(
                             }
                         }
                         ParsedTokenValueAccessorScope.INSTRUCTION -> {
-                            if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)) {
+                            if(type == ParsedTokenExpressionSimpleType.INTEGER) {
                                 "int"
-                            }else if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)) {
+                            }else if(type == ParsedTokenExpressionSimpleType.BOOLEAN) {
                                 "boolean"
-                            }else if(type == ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.DOUBLE)) {
+                            }else if(type == ParsedTokenExpressionSimpleType.DOUBLE) {
                                 "double"
                             }else if(type is ParsedTokenExpressionTypeComplex) {
                                 type.typeName.run { if(startsWith("java.lang.")) substring(10) else this }
@@ -621,9 +625,12 @@ class MainProcessor(
                             }
                             val typeArgs = resolvedType.arguments.joinToString { arg ->
                                 arg.type?.resolve()?.declaration?.qualifiedName?.asString()?.run {
-                                    if(this == "kotlin.Int") {
-                                        "Integer"
-                                    }else this
+                                    when(this) {
+                                        "kotlin.Int" -> "Integer"
+                                        "kotlin.Float" -> "Float"
+                                        "kotlin.Double" -> "Double"
+                                        else -> this
+                                    }
                                 } ?: "Object"
                             }
 

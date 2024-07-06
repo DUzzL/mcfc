@@ -7,5 +7,6 @@ public record Local(
         String descriptor,
         Label start,
         Label end,
-        int index
+        int index,
+        boolean longKind
 ) {}

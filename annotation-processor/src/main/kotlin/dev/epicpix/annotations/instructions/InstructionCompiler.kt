@@ -16,9 +16,8 @@ private data class LexTokenFunctionDefinition(val name: String) : LexToken
 private data class LexTokenNumber(val number: String) : LexToken
 private data class LexTokenWord(val word: String) : LexToken
 private data class LexTokenString(val content: String) : LexToken
-private data class LexTokenSimple(val type: LexTokenSimpleType) : LexToken
 
-private enum class LexTokenSimpleType {
+private enum class LexTokenSimpleType : LexToken {
     OPEN_BRACE,
     CLOSE_BRACE,
     OPEN_BRACKET,
@@ -68,39 +67,39 @@ private fun lexTokens(code: String): List<LexToken> {
             if(index >= code.length) return null
         }
         when(res.first()) {
-            '{' -> return LexTokenSimple(LexTokenSimpleType.OPEN_BRACE)
-            '}' -> return LexTokenSimple(LexTokenSimpleType.CLOSE_BRACE)
-            '[' -> return LexTokenSimple(LexTokenSimpleType.OPEN_BRACKET)
-            ']' -> return LexTokenSimple(LexTokenSimpleType.CLOSE_BRACKET)
-            '(' -> return LexTokenSimple(LexTokenSimpleType.OPEN_PAREN)
-            ')' -> return LexTokenSimple(LexTokenSimpleType.CLOSE_PAREN)
-            '<' -> return LexTokenSimple(LexTokenSimpleType.OPEN_ANGLE_BRACKET)
-            '>' -> return LexTokenSimple(LexTokenSimpleType.CLOSE_ANGLE_BRACKET)
-            '.' -> return LexTokenSimple(LexTokenSimpleType.DOT)
-            ',' -> return LexTokenSimple(LexTokenSimpleType.COMMA)
-            '+' -> return LexTokenSimple(LexTokenSimpleType.PLUS)
-            '-' -> return LexTokenSimple(LexTokenSimpleType.MINUS)
-            '/' -> return LexTokenSimple(LexTokenSimpleType.SLASH)
-            '*' -> return LexTokenSimple(LexTokenSimpleType.STAR)
-            ';' -> return LexTokenSimple(LexTokenSimpleType.SEMICOLON)
-            ':' -> return LexTokenSimple(LexTokenSimpleType.COLON)
+            '{' -> return LexTokenSimpleType.OPEN_BRACE
+            '}' -> return LexTokenSimpleType.CLOSE_BRACE
+            '[' -> return LexTokenSimpleType.OPEN_BRACKET
+            ']' -> return LexTokenSimpleType.CLOSE_BRACKET
+            '(' -> return LexTokenSimpleType.OPEN_PAREN
+            ')' -> return LexTokenSimpleType.CLOSE_PAREN
+            '<' -> return LexTokenSimpleType.OPEN_ANGLE_BRACKET
+            '>' -> return LexTokenSimpleType.CLOSE_ANGLE_BRACKET
+            '.' -> return LexTokenSimpleType.DOT
+            ',' -> return LexTokenSimpleType.COMMA
+            '+' -> return LexTokenSimpleType.PLUS
+            '-' -> return LexTokenSimpleType.MINUS
+            '/' -> return LexTokenSimpleType.SLASH
+            '*' -> return LexTokenSimpleType.STAR
+            ';' -> return LexTokenSimpleType.SEMICOLON
+            ':' -> return LexTokenSimpleType.COLON
         }
         if(res == "=" || res == "!") {
             if(index < code.length && code[index] == '=') {
                 index++
                 if(res == "=") {
-                    return LexTokenSimple(LexTokenSimpleType.EQ)
+                    return LexTokenSimpleType.EQ
                 }else {
-                    return LexTokenSimple(LexTokenSimpleType.NE)
+                    return LexTokenSimpleType.NE
                 }
             }
         }
         if(res == "=") {
             if(index < code.length && code[index] == '>') {
                 index++
-                return LexTokenSimple(LexTokenSimpleType.ARROW)
+                return LexTokenSimpleType.ARROW
             }
-            return LexTokenSimple(LexTokenSimpleType.ASSIGN)
+            return LexTokenSimpleType.ASSIGN
         }
         if(res.first() == '@') {
             res = ""
@@ -128,15 +127,15 @@ private fun lexTokens(code: String): List<LexToken> {
                 res += code[index++]
             }
             return when(res) {
-                "if" -> LexTokenSimple(LexTokenSimpleType.KW_IF)
-                "else" -> LexTokenSimple(LexTokenSimpleType.KW_ELSE)
-                "while" -> LexTokenSimple(LexTokenSimpleType.KW_WHILE)
-                "null" -> LexTokenSimple(LexTokenSimpleType.KW_NULL)
-                "let" -> LexTokenSimple(LexTokenSimpleType.KW_LET)
-                "false" -> LexTokenSimple(LexTokenSimpleType.KW_FALSE)
-                "true" -> LexTokenSimple(LexTokenSimpleType.KW_TRUE)
-                "return" -> LexTokenSimple(LexTokenSimpleType.KW_RETURN)
-                "new" -> LexTokenSimple(LexTokenSimpleType.KW_NEW)
+                "if" -> LexTokenSimpleType.KW_IF
+                "else" -> LexTokenSimpleType.KW_ELSE
+                "while" -> LexTokenSimpleType.KW_WHILE
+                "null" -> LexTokenSimpleType.KW_NULL
+                "let" -> LexTokenSimpleType.KW_LET
+                "false" -> LexTokenSimpleType.KW_FALSE
+                "true" -> LexTokenSimpleType.KW_TRUE
+                "return" -> LexTokenSimpleType.KW_RETURN
+                "new" -> LexTokenSimpleType.KW_NEW
                 else -> LexTokenWord(res)
             }
         }
@@ -219,11 +218,10 @@ enum class ParsedTokenValueAccessorScope {
 }
 
 interface ParsedTokenExpressionType
-data class ParsedTokenExpressionSimpleTyped(val type: ParsedTokenExpressionSimpleType) : ParsedTokenExpressionType
 data class ParsedTokenExpressionTypeComplex(val typeName: String) : ParsedTokenExpressionType
 data class ParsedTokenExpressionTypeYield(val yieldType: ParsedTokenExpressionType) : ParsedTokenExpressionType
 
-enum class ParsedTokenExpressionSimpleType {
+enum class ParsedTokenExpressionSimpleType : ParsedTokenExpressionType {
     NULL, BOOLEAN, INTEGER, LONG, FLOAT, DOUBLE, SCOPE, OBJECT,
 }
 
@@ -249,10 +247,10 @@ private fun parseExpressionTypeWord(iter: ListIterator<LexToken>): ParsedTokenEx
     }
     val word = iter.expectToken<LexTokenWord>()
     return when(word.word) {
-        "boolean" -> ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)
-        "int" -> ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)
-        "double" -> ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.DOUBLE)
-        "scope" -> ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.SCOPE)
+        "boolean" -> ParsedTokenExpressionSimpleType.BOOLEAN
+        "int" -> ParsedTokenExpressionSimpleType.INTEGER
+        "double" -> ParsedTokenExpressionSimpleType.DOUBLE
+        "scope" -> ParsedTokenExpressionSimpleType.SCOPE
         "yield" -> {
             iter.expectTokenType(LexTokenSimpleType.OPEN_ANGLE_BRACKET)
             var t = ""
@@ -264,10 +262,10 @@ private fun parseExpressionTypeWord(iter: ListIterator<LexToken>): ParsedTokenEx
                 }
             }
             ParsedTokenExpressionTypeYield(when(t) {
-                "boolean" -> ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)
-                "int" -> ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)
-                "double" -> ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.DOUBLE)
-                "scope" -> ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.SCOPE)
+                "boolean" -> ParsedTokenExpressionSimpleType.BOOLEAN
+                "int" -> ParsedTokenExpressionSimpleType.INTEGER
+                "double" -> ParsedTokenExpressionSimpleType.DOUBLE
+                "scope" -> ParsedTokenExpressionSimpleType.SCOPE
                 else -> ParsedTokenExpressionTypeComplex(t)
             })
         }
@@ -394,7 +392,7 @@ private fun parseExpressionLowerBase(iter: ListIterator<LexToken>, valueDefiniti
         return ParsedTokenExpressionNumber(it.number.toLong())
     }
     iter.tryNextTokenType(LexTokenSimpleType.KW_NULL) {
-        return ParsedTokenExpressionTyped(ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.NULL))
+        return ParsedTokenExpressionTyped(ParsedTokenExpressionSimpleType.NULL)
     }
     iter.tryNextTokenType(LexTokenSimpleType.KW_FALSE) {
         return ParsedTokenExpressionBoolean(false)
@@ -494,9 +492,10 @@ private fun parseCode(iter: ListIterator<LexToken>, valueDefinitions: List<Parse
                     }
                 }
                 when(t) {
-                    "boolean" -> ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)
-                    "int" -> ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)
-                    "scope" -> ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.SCOPE)
+                    "boolean" -> ParsedTokenExpressionSimpleType.BOOLEAN
+                    "int" -> ParsedTokenExpressionSimpleType.INTEGER
+                    "double" -> ParsedTokenExpressionSimpleType.DOUBLE
+                    "scope" -> ParsedTokenExpressionSimpleType.SCOPE
                     else -> ParsedTokenExpressionTypeComplex(t)
                 }
             }else null
@@ -556,7 +555,7 @@ private fun parseVersionNumber(iter: ListIterator<LexToken>): String {
     val res = StringBuilder()
     while(iter.hasNext()) {
         val token = iter.next()
-        if(token is LexTokenSimple && token.type == LexTokenSimpleType.DOT) {
+        if(token == LexTokenSimpleType.DOT) {
             res.append(".")
         } else if(token is LexTokenNumber) {
             res.append(token.number)
@@ -613,42 +612,40 @@ private fun parseTokens(iter: ListIterator<LexToken>): ParsedFile {
             iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
             val code = parseCode(iter, params.map { it.first }, usesObf)
             funcDefs.add(ParsedTokenFunctionDefinition(next.name, params, code, usesObf.get()))
-        }else if(next is LexTokenSimple) {
-            if(next.type == LexTokenSimpleType.ASSIGN) {
-                val name = iter.expectToken<LexTokenWord>()
-                val usesObf = AtomicBoolean()
-                iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
-                val params = parseFunctionDefinitionParams(iter, usesObf)
-                iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
-                iter.expectTokenType(LexTokenSimpleType.OPEN_BRACE)
-                val conditions = mutableListOf<ParsedTokenInstructionCondition>()
-                while(!iter.tryNextTokenType(LexTokenSimpleType.CLOSE_BRACE)) {
-                    val checks = mutableListOf<ParsedTokenInstructionConditionComparison>()
-                    if(iter.tryNextTokenType(LexTokenSimpleType.OPEN_PAREN)) {
-                        while(!iter.tryNextTokenType(LexTokenSimpleType.CLOSE_PAREN)) {
-                            val instrInput = iter.expectToken<LexTokenWord>().word
-                            val op = when(iter.expectToken<LexTokenSimple>().type) {
-                                LexTokenSimpleType.EQ -> ParsedTokenInstructionConditionOperator.EQ
-                                LexTokenSimpleType.NE -> ParsedTokenInstructionConditionOperator.NE
-                                else -> throw IllegalStateException("Invalid operator")
-                            }
-                            val value = if(iter.tryNextTokenType(LexTokenSimpleType.KW_TRUE)) {
-                                1
-                            } else if(iter.tryNextTokenType(LexTokenSimpleType.KW_FALSE)) {
-                                0
-                            } else {
-                                iter.expectToken<LexTokenNumber>().number.toLong()
-                            }
-                            checks.add(ParsedTokenInstructionConditionComparison(instrInput, op, value))
+        }else if(next == LexTokenSimpleType.ASSIGN) {
+            val name = iter.expectToken<LexTokenWord>()
+            val usesObf = AtomicBoolean()
+            iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
+            val params = parseFunctionDefinitionParams(iter, usesObf)
+            iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
+            iter.expectTokenType(LexTokenSimpleType.OPEN_BRACE)
+            val conditions = mutableListOf<ParsedTokenInstructionCondition>()
+            while(!iter.tryNextTokenType(LexTokenSimpleType.CLOSE_BRACE)) {
+                val checks = mutableListOf<ParsedTokenInstructionConditionComparison>()
+                if(iter.tryNextTokenType(LexTokenSimpleType.OPEN_PAREN)) {
+                    while(!iter.tryNextTokenType(LexTokenSimpleType.CLOSE_PAREN)) {
+                        val instrInput = iter.expectToken<LexTokenWord>().word
+                        val op = when(iter.expectToken<LexTokenSimpleType>()) {
+                            LexTokenSimpleType.EQ -> ParsedTokenInstructionConditionOperator.EQ
+                            LexTokenSimpleType.NE -> ParsedTokenInstructionConditionOperator.NE
+                            else -> throw IllegalStateException("Invalid operator")
                         }
+                        val value = if(iter.tryNextTokenType(LexTokenSimpleType.KW_TRUE)) {
+                            1
+                        } else if(iter.tryNextTokenType(LexTokenSimpleType.KW_FALSE)) {
+                            0
+                        } else {
+                            iter.expectToken<LexTokenNumber>().number.toLong()
+                        }
+                        checks.add(ParsedTokenInstructionConditionComparison(instrInput, op, value))
                     }
-                    iter.expectTokenType(LexTokenSimpleType.ARROW)
-                    val instr = iter.expectToken<LexTokenWord>().word
-                    iter.expectTokenType(LexTokenSimpleType.SEMICOLON)
-                    conditions.add(ParsedTokenInstructionCondition(checks, instr))
                 }
-                collapsableInstrDefs.add(ParsedTokenCollapsableInstructionDefinition(name.word, params, conditions, usesObf.get()))
+                iter.expectTokenType(LexTokenSimpleType.ARROW)
+                val instr = iter.expectToken<LexTokenWord>().word
+                iter.expectTokenType(LexTokenSimpleType.SEMICOLON)
+                conditions.add(ParsedTokenInstructionCondition(checks, instr))
             }
+            collapsableInstrDefs.add(ParsedTokenCollapsableInstructionDefinition(name.word, params, conditions, usesObf.get()))
         }
     }
     return ParsedFile(fileInfo, instrDefs, funcDefs, collapsableInstrDefs)
@@ -657,7 +654,7 @@ private fun parseTokens(iter: ListIterator<LexToken>): ParsedFile {
 private fun ListIterator<LexToken>.expectTokenType(type: LexTokenSimpleType) {
     if(!hasNext()) throw IllegalStateException("Expected token type '$type', got EOF")
     val got = next()
-    if(!(got is LexTokenSimple && got.type == type)) {
+    if(got != type) {
         throw IllegalStateException("Expected token type '$type', got '$got'")
     }
 }
@@ -666,16 +663,13 @@ private fun ListIterator<LexToken>.peekNextTokenType(type: LexTokenSimpleType): 
     if(!hasNext()) return false
     val got = next()
     previous()
-    if(!(got is LexTokenSimple && got.type == type)) {
-        return false
-    }
-    return true
+    return got == type
 }
 
 private fun ListIterator<LexToken>.tryNextTokenType(type: LexTokenSimpleType): Boolean {
     if(!hasNext()) return false
     val got = next()
-    if(!(got is LexTokenSimple && got.type == type)) {
+    if(got != type) {
         previous()
         return false
     }
@@ -758,33 +752,36 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
         val a = evaluateExpressionType(writerData, expression.a)
         val b = evaluateExpressionType(writerData, expression.b)
         if(expression.op == ParsedTokenExpressionOperator.ADD || expression.op == ParsedTokenExpressionOperator.SUB || expression.op == ParsedTokenExpressionOperator.MUL) {
-            if(a.isSimpleType(ParsedTokenExpressionSimpleType.INTEGER) && b.isSimpleType(ParsedTokenExpressionSimpleType.INTEGER)) {
-                return ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)
+            if(a == ParsedTokenExpressionSimpleType.INTEGER && b == ParsedTokenExpressionSimpleType.INTEGER) {
+                return ParsedTokenExpressionSimpleType.INTEGER
+            }
+            if(a == ParsedTokenExpressionSimpleType.DOUBLE && b == ParsedTokenExpressionSimpleType.DOUBLE) {
+                return ParsedTokenExpressionSimpleType.DOUBLE
             }
         }else if(expression.op == ParsedTokenExpressionOperator.NE || expression.op == ParsedTokenExpressionOperator.EQ) {
             if(a.isIntegerLikeType() && b.isIntegerLikeType()) {
-                return ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)
+                return ParsedTokenExpressionSimpleType.BOOLEAN
             }else if(a.isObjectLike() && b.isObjectLike()) {
-                return ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)
+                return ParsedTokenExpressionSimpleType.BOOLEAN
             }
         }else if(expression.op == ParsedTokenExpressionOperator.LT || expression.op == ParsedTokenExpressionOperator.GT) {
             if(a.isIntegerLikeType() && b.isIntegerLikeType()) {
-                return ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)
+                return ParsedTokenExpressionSimpleType.BOOLEAN
             }
         }
     }else if(expression is ParsedTokenValueAccessor) {
         return writerData.getAccessorType(expression)
     }else if(expression is ParsedTokenExpressionNumber) {
-        return ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)
+        return ParsedTokenExpressionSimpleType.INTEGER
     }else if(expression is ParsedTokenExpressionBoolean) {
-        return ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)
+        return ParsedTokenExpressionSimpleType.BOOLEAN
     }else if(expression is ParsedTokenStatementFunctionCall) {
         if(expression.instance == null) {
             if(expression.name == "cast" || expression.name == "map_enum") {
                 return (expression.arguments[1] as ParsedTokenExpressionTyped).type as ParsedTokenExpressionTypeComplex
             }
             if(expression.name == "is") {
-                return ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)
+                return ParsedTokenExpressionSimpleType.BOOLEAN
             }
             if(expression.name == "map_attribute") {
                 if(writerData.isAboveVersion(20, 4)) {
@@ -831,10 +828,13 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
         }
         val def = Type.getMethodType(functionMatches[0].descriptor).returnType
         if(def == Type.BOOLEAN_TYPE) {
-            return ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)
+            return ParsedTokenExpressionSimpleType.BOOLEAN
         }
         if(def == Type.INT_TYPE) {
-            return ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)
+            return ParsedTokenExpressionSimpleType.INTEGER
+        }
+        if(def == Type.DOUBLE_TYPE) {
+            return ParsedTokenExpressionSimpleType.DOUBLE
         }
         if(def.sort == Type.OBJECT) {
             return ParsedTokenExpressionTypeComplex(def.className)
@@ -866,10 +866,10 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
         }
         val def = Type.getType(fieldMatch.descriptor)
         if(def == Type.BOOLEAN_TYPE) {
-            return ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)
+            return ParsedTokenExpressionSimpleType.BOOLEAN
         }
         if(def == Type.INT_TYPE) {
-            return ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.INTEGER)
+            return ParsedTokenExpressionSimpleType.INTEGER
         }
         if(def.sort == Type.OBJECT) {
             return ParsedTokenExpressionTypeComplex(def.className)
@@ -880,34 +880,30 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
 }
 
 private fun ParsedTokenExpressionType.isObjectLike(): Boolean {
-    return this is ParsedTokenExpressionTypeComplex || isSimpleType(ParsedTokenExpressionSimpleType.NULL) || isSimpleType(ParsedTokenExpressionSimpleType.OBJECT)
-}
-
-private fun ParsedTokenExpressionType.isSimpleType(type: ParsedTokenExpressionSimpleType): Boolean {
-    return this is ParsedTokenExpressionSimpleTyped && this.type == type
+    return this is ParsedTokenExpressionTypeComplex || this == ParsedTokenExpressionSimpleType.NULL || this == ParsedTokenExpressionSimpleType.OBJECT
 }
 
 private fun ParsedTokenExpressionType.isIntegerLikeType(): Boolean {
-    return this is ParsedTokenExpressionSimpleTyped && (this.type == ParsedTokenExpressionSimpleType.INTEGER || this.type == ParsedTokenExpressionSimpleType.BOOLEAN)
+    return this == ParsedTokenExpressionSimpleType.INTEGER || this == ParsedTokenExpressionSimpleType.BOOLEAN
 }
 
 private fun isExpressionSimpleType(writerData: WriterData, expression: ParsedTokenExpression, type: ParsedTokenExpressionSimpleType): Boolean {
-    return evaluateExpressionType(writerData, expression).isSimpleType(type)
+    return evaluateExpressionType(writerData, expression) == type
 }
 
 private fun doesArgumentTypeMatch(matchType: ParsedTokenExpressionType, expectedType: Type): Boolean {
     if(expectedType == Type.BOOLEAN_TYPE) {
-        return matchType.isSimpleType(ParsedTokenExpressionSimpleType.BOOLEAN)
+        return matchType == ParsedTokenExpressionSimpleType.BOOLEAN
     }else if(expectedType == Type.INT_TYPE) {
-        return matchType.isSimpleType(ParsedTokenExpressionSimpleType.INTEGER)
+        return matchType == ParsedTokenExpressionSimpleType.INTEGER
     }else if(expectedType == Type.LONG_TYPE) {
-        return matchType.isSimpleType(ParsedTokenExpressionSimpleType.LONG)
+        return matchType == ParsedTokenExpressionSimpleType.LONG
     }else if(expectedType == Type.FLOAT_TYPE) {
-        return matchType.isSimpleType(ParsedTokenExpressionSimpleType.FLOAT)
+        return matchType == ParsedTokenExpressionSimpleType.FLOAT
     }else if(expectedType == Type.DOUBLE_TYPE) {
-        return matchType.isSimpleType(ParsedTokenExpressionSimpleType.DOUBLE)
+        return matchType == ParsedTokenExpressionSimpleType.DOUBLE
     }else if(expectedType.sort == Type.OBJECT) {
-        return matchType.isSimpleType(ParsedTokenExpressionSimpleType.NULL) || (matchType is ParsedTokenExpressionTypeComplex && (getClassLowerBounds(expectedType.className).any { matchType.typeName == it } || getClassLowerBounds(matchType.typeName).any { expectedType.className == it }))
+        return matchType == ParsedTokenExpressionSimpleType.NULL || (matchType is ParsedTokenExpressionTypeComplex && (getClassLowerBounds(expectedType.className).any { matchType.typeName == it } || getClassLowerBounds(matchType.typeName).any { expectedType.className == it }))
     }else {
         TODO(expectedType.descriptor)
     }
@@ -936,17 +932,17 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             return uniqId
         }else if(expression.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
             val type = writerData.getAccessorType(expression)
-            if(type.isSimpleType(ParsedTokenExpressionSimpleType.INTEGER)) {
+            if(type == ParsedTokenExpressionSimpleType.INTEGER) {
                 if(keepResult) {
                     output.appendText("cw.writeInt(context.instruction().<Integer>get(\"${expression.name}\"));\n")
                 }
                 return uniqId
-            }else if(type.isSimpleType(ParsedTokenExpressionSimpleType.BOOLEAN)) {
+            }else if(type == ParsedTokenExpressionSimpleType.BOOLEAN) {
                 if(keepResult) {
                     output.appendText("cw.writeInt(context.instruction().<Boolean>get(\"${expression.name}\") ? 1 : 0);\n")
                 }
                 return uniqId
-            }else if(type.isSimpleType(ParsedTokenExpressionSimpleType.DOUBLE)) {
+            }else if(type == ParsedTokenExpressionSimpleType.DOUBLE) {
                 if(keepResult) {
                     output.appendText("cw.writeDouble(context.instruction().<Double>get(\"${expression.name}\"));\n")
                 }
@@ -969,6 +965,9 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             if(keepResult) {
                 if(writerData.getAccessorType(expression).isIntegerLikeType()) {
                     output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ILOAD, ${writerData.localTypes[expression.name]!!.mapping}.index());\n")
+                    return uniqId
+                }else if(writerData.getAccessorType(expression) == ParsedTokenExpressionSimpleType.DOUBLE) {
+                    output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.DLOAD, ${writerData.localTypes[expression.name]!!.mapping}.index());\n")
                     return uniqId
                 }else {
                     output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, ${writerData.localTypes[expression.name]!!.mapping}.index());\n")
@@ -1010,7 +1009,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
         }
         return uniqId
     }else if(expression is ParsedTokenExpressionTyped) {
-        if(expression.type.isSimpleType(ParsedTokenExpressionSimpleType.NULL)) {
+        if(expression.type == ParsedTokenExpressionSimpleType.NULL) {
             output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.ACONST_NULL);\n")
             return uniqId
         }
@@ -1027,6 +1026,18 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 }
                 return uid
             }
+            if(isExpressionSimpleType(writerData, expression, ParsedTokenExpressionSimpleType.DOUBLE)) {
+                var uid = uniqId
+                uid = writeExpression(writerData.copyLocalTypes(), expression.a, output, uid)
+                uid = writeExpression(writerData.copyLocalTypes(), expression.b, output, uid)
+                if(keepResult) {
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.DADD);\n")
+                }else {
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.POP2);\n")
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.POP2);\n")
+                }
+                return uid
+            }
         }else if(expression.op == ParsedTokenExpressionOperator.SUB) {
             if(isExpressionSimpleType(writerData, expression, ParsedTokenExpressionSimpleType.INTEGER)) {
                 var uid = uniqId
@@ -1039,6 +1050,18 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 }
                 return uid
             }
+            if(isExpressionSimpleType(writerData, expression, ParsedTokenExpressionSimpleType.DOUBLE)) {
+                var uid = uniqId
+                uid = writeExpression(writerData.copyLocalTypes(), expression.a, output, uid)
+                uid = writeExpression(writerData.copyLocalTypes(), expression.b, output, uid)
+                if(keepResult) {
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.DSUB);\n")
+                }else {
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.POP2);\n")
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.POP2);\n")
+                }
+                return uid
+            }
         }else if(expression.op == ParsedTokenExpressionOperator.MUL) {
             if(isExpressionSimpleType(writerData, expression, ParsedTokenExpressionSimpleType.INTEGER)) {
                 var uid = uniqId
@@ -1047,6 +1070,18 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 if(keepResult) {
                     output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.IMUL);\n")
                 }else {
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.POP2);\n")
+                }
+                return uid
+            }
+            if(isExpressionSimpleType(writerData, expression, ParsedTokenExpressionSimpleType.DOUBLE)) {
+                var uid = uniqId
+                uid = writeExpression(writerData.copyLocalTypes(), expression.a, output, uid)
+                uid = writeExpression(writerData.copyLocalTypes(), expression.b, output, uid)
+                if(keepResult) {
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.DMUL);\n")
+                }else {
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.POP2);\n")
                     output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.POP2);\n")
                 }
                 return uid
@@ -1398,8 +1433,10 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                 uid = writeExpression(writerData.copyLocalTypes(), el.expression, output, uid)
             }
             val type = if(el.accessor.scope == ParsedTokenValueAccessorScope.LOCAL) el.type!! else writerData.getAccessorType(el.accessor)
-            val assignType = if(type.isSimpleType(ParsedTokenExpressionSimpleType.INTEGER)) {
+            val assignType = if(type == ParsedTokenExpressionSimpleType.INTEGER) {
                 "I"
+            }else if(type == ParsedTokenExpressionSimpleType.DOUBLE) {
+                "D"
             }else if(type is ParsedTokenExpressionTypeComplex) {
                 "L${writerData.mappingData.getClassName(type.typeName.replace('.', '/'))};"
             }else throw UnsupportedOperationException("Unknown type: ${el.accessor} : $type")
@@ -1431,6 +1468,8 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                         throw IllegalArgumentException("Invalid assign, wrong type: $expressionType, expected $type")
                     }
                     output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, $storageLocal.index());\n")
+                }else if(assignType.first() == 'D') {
+                    output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.DSTORE, $storageLocal.index());\n")
                 } else {
                     throw IllegalStateException("Unknown assign type: $assignType")
                 }

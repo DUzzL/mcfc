@@ -19,6 +19,7 @@ public class SelectorGeneratorBuilderData {
     public Integer limit = null;
     public final HashMap<String, IntRangeArgument> scores = new HashMap<>();
     public final ArrayList<NegatableData<Gamemode>> gamemodes = new ArrayList<>();
+    public DoubleRangeArgument distance = null;
     public IntRangeArgument level = null;
     public FloatRangeArgument yaw = null;
     public FloatRangeArgument pitch = null;
@@ -38,6 +39,7 @@ public class SelectorGeneratorBuilderData {
                 List.copyOf(teams),
                 Map.copyOf(scores),
                 List.copyOf(gamemodes),
+                distance,
                 level,
                 yaw,
                 pitch

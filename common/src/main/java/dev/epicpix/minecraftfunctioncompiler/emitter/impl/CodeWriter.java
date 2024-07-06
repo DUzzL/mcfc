@@ -4,51 +4,76 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DATA_CLASS;
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DEBUG;
 
-public record CodeWriter(
-        MethodVisitor methodVisitor,
+public final class CodeWriter {
+    private final MethodVisitor methodVisitor;
+    private final HashMap<String, Local> locals;
+    private int localsUsage = 0;
+    private final HashSet<Integer> availableLocals;
+    private final ArrayList<Local> generatedLocals;
 
-        HashMap<String, Local> locals,
-        HashSet<Integer> availableLocals,
-        ArrayList<Local> generatedLocals
-) {
+    public CodeWriter(
+            MethodVisitor methodVisitor,
+
+            HashMap<String, Local> locals,
+            HashSet<Integer> availableLocals,
+            ArrayList<Local> generatedLocals
+    ) {
+        this.methodVisitor = methodVisitor;
+        this.locals = locals;
+        this.availableLocals = availableLocals;
+        this.generatedLocals = generatedLocals;
+    }
 
     public CodeWriter(MethodVisitor methodVisitor) {
         this(methodVisitor, new HashMap<>(), new HashSet<>(), new ArrayList<>());
     }
 
-    private int allocateLocalIndex() {
-        int localIndex;
-        if(availableLocals.isEmpty()) {
-            localIndex = locals.size();
-        }else {
-            localIndex = availableLocals.toArray(new Integer[0])[0];
-            availableLocals.remove(localIndex);
+    private int allocateLocalIndex(boolean longKind) {
+        if(!availableLocals.isEmpty()) {
+            if(!longKind) {
+                int localIndex = availableLocals.toArray(new Integer[0])[0];
+                availableLocals.remove(localIndex);
+                return localIndex;
+            }else {
+                Integer[] available = availableLocals.toArray(new Integer[0]);
+                var definedLocals = new HashSet<>(locals.values().stream().map(Local::index).toList());
+                for(Integer avl : available) {
+                    if(availableLocals.contains(avl + 1) || !definedLocals.contains(avl + 1)) {
+                        availableLocals.remove(avl);
+                        availableLocals.remove(avl + 1);
+                        return avl;
+                    }
+                }
+            }
         }
-        return localIndex;
+        return localsUsage;
     }
 
     public Local createLocal(String local, String type) {
         var localStart = new Label();
         methodVisitor.visitLabel(localStart);
-        var localValue = new Local(local, type, localStart, new Label(), allocateLocalIndex());
+        boolean longKind = type.equals("J") || type.equals("D");
+        var localValue = new Local(local, type, localStart, new Label(), allocateLocalIndex(longKind), longKind);
         locals.put(local, localValue);
         generatedLocals.add(localValue);
+        localsUsage += longKind ? 2 : 1;
         return localValue;
     }
 
     public void destroyLocal(Local local) {
         methodVisitor.visitLabel(local.end());
         locals.remove(local.name());
+        localsUsage -= local.longKind() ? 2 : 1;
         availableLocals.add(local.index());
+        if(local.longKind()) {
+            availableLocals.add(local.index() + 1);
+        }
     }
 
     public void writeLocalVariables() {
@@ -64,6 +89,7 @@ public record CodeWriter(
         switch(localVar.descriptor()) {
             case "I" -> methodVisitor.visitVarInsn(Opcodes.ILOAD, localVar.index());
             case "F" -> methodVisitor.visitVarInsn(Opcodes.FLOAD, localVar.index());
+            case "D" -> methodVisitor.visitVarInsn(Opcodes.DLOAD, localVar.index());
             default -> methodVisitor.visitVarInsn(Opcodes.ALOAD, localVar.index());
         }
     }
@@ -73,6 +99,7 @@ public record CodeWriter(
         switch(localVar.descriptor()) {
             case "I" -> methodVisitor.visitVarInsn(Opcodes.ISTORE, localVar.index());
             case "F" -> methodVisitor.visitVarInsn(Opcodes.FSTORE, localVar.index());
+            case "D" -> methodVisitor.visitVarInsn(Opcodes.DSTORE, localVar.index());
             default -> methodVisitor.visitVarInsn(Opcodes.ASTORE, localVar.index());
         }
     }
@@ -143,6 +170,10 @@ public record CodeWriter(
 
     public String generateUniqueLocal() {
         return "L:" + generatedLocals.size();
+    }
+
+    public MethodVisitor methodVisitor() {
+        return methodVisitor;
     }
 
 }

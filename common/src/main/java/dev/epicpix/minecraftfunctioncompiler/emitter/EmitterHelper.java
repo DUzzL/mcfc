@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter;
 
+import dev.epicpix.minecraftfunctioncompiler.data.DoubleRangeArgument;
 import dev.epicpix.minecraftfunctioncompiler.data.FloatRangeArgument;
 import dev.epicpix.minecraftfunctioncompiler.data.IntRangeArgument;
 import org.objectweb.asm.Label;
@@ -8,6 +9,50 @@ import java.util.function.Consumer;
 
 public final class EmitterHelper {
     private EmitterHelper() {}
+
+    public static void checkDoubleRange(EmitterContext emitter, DoubleRangeArgument range, Consumer<EmitterContext> exec) {
+        var cw = emitter.codeWriter();
+        var mv = cw.methodVisitor();
+        if(range.minimum() != null && range.maximum() == null) {
+            cw.writeDouble(range.minimum());
+            mv.visitInsn(Opcodes.DCMPL);
+            cw.writeInt(-1);
+            var endLabel = cw.executeIfLabeled(Opcodes.IF_ICMPNE);
+            exec.accept(emitter);
+            mv.visitLabel(endLabel);
+        }else if(range.minimum() == null && range.maximum() != null) {
+            cw.writeDouble(range.maximum());
+            mv.visitInsn(Opcodes.DCMPG);
+            cw.writeInt(1);
+            var endLabel = cw.executeIfLabeled(Opcodes.IF_ICMPNE);
+            exec.accept(emitter);
+            mv.visitLabel(endLabel);
+        }else if(range.minimum() != null && range.minimum().equals(range.maximum())) {
+            cw.writeDouble(range.minimum());
+            mv.visitInsn(Opcodes.DCMPG);
+            var endLabel = cw.executeIfLabeled(Opcodes.IFNE);
+            exec.accept(emitter);
+            mv.visitLabel(endLabel);
+        }else {
+            var uid = cw.generateUniqueLocal();
+            var localValue = cw.createLocal(uid, "D");
+            cw.storeLocal(uid);
+            cw.loadLocal(uid);
+            cw.writeDouble(range.minimum());
+            mv.visitInsn(Opcodes.DCMPL);
+            cw.writeInt(-1);
+            var endLabel1 = cw.executeIfLabeled(Opcodes.IF_ICMPNE);
+            cw.loadLocal(uid);
+            cw.writeDouble(range.maximum());
+            mv.visitInsn(Opcodes.DCMPG);
+            cw.writeInt(1);
+            var endLabel2 = cw.executeIfLabeled(Opcodes.IF_ICMPNE);
+            exec.accept(emitter);
+            mv.visitLabel(endLabel2);
+            mv.visitLabel(endLabel1);
+            cw.destroyLocal(localValue);
+        }
+    }
 
     public static void checkFloatRange(EmitterContext emitter, FloatRangeArgument range, Consumer<EmitterContext> exec) {
         var cw = emitter.codeWriter();
