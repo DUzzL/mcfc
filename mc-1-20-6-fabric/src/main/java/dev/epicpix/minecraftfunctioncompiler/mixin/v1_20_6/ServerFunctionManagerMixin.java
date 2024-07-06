@@ -14,6 +14,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.FUNCTION_RUN_MIXIN_ENABLED;
+
 @Mixin(ServerFunctionManager.class)
 public class ServerFunctionManagerMixin {
 
@@ -29,7 +31,7 @@ public class ServerFunctionManagerMixin {
 
     @Inject(method = "execute", at = @At("HEAD"), cancellable = true)
     public void run(CommandFunction<CommandSourceStack> commandFunction, CommandSourceStack commandSourceStack, CallbackInfo ci) {
-        if(classLoader != null) {
+        if(FUNCTION_RUN_MIXIN_ENABLED && classLoader != null) {
             if(classLoader.hasFunctionLoaded(commandFunction.id())) {
                 classLoader.runFunction(commandFunction.id(), commandSourceStack);
                 ci.cancel();
