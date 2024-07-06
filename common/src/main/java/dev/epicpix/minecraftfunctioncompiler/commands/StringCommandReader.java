@@ -189,7 +189,7 @@ public class StringCommandReader {
                 throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_FLOAT);
             }
         }
-        if(peek() == '.' && peek(1) == '.') {
+        if(canRead(2) && peek() == '.' && peek(1) == '.') {
             var base2 = readNumberBase();
             Float max = null;
             if(!base2.isEmpty()) {
@@ -222,7 +222,7 @@ public class StringCommandReader {
                 throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_INTEGER);
             }
         }
-        if(peek() == '.' && peek(1) == '.') {
+        if(canRead(2) && peek() == '.' && peek(1) == '.') {
             skip();
             skip();
             var base2 = readNumberBase();
