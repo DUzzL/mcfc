@@ -104,6 +104,11 @@ public final class SelectorParser {
             var gamemode = reader.readGamemode();
             data.gamemodes.add(new NegatableData<>(gamemode, negated));
         });
+        SelectorParser.registerSelectorOption("name", (reader, data) -> {
+            var negated = reader.skipIfNext('!');
+            var name = reader.readString();
+            data.names.add(new NegatableData<>(name, negated));
+        });
         registerSelectorOption("limit", (reader, data) -> {
             data.limit = reader.readInt();
         });

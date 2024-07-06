@@ -235,7 +235,7 @@ public class CompilationContext {
             entityData = forEntity(selector.entityUuid());
         }else if(selector.self()) {
             entityData = getCurrentEntity();
-        }else if(selector.selectPlayers()) {
+        }else if(selector.requirePlayer()) {
             entityData = forEachPlayer().changeType();
         }else {
             entityData = forEachEntity();
@@ -249,9 +249,6 @@ public class CompilationContext {
         var nonNull = Instructions2.ifNotNull(entityData.content().lower());
         entityData.writeInstruction(nonNull);
         var stacker = new InstructionStacker(nonNull);
-        if(selector.requirePlayer()) {
-            stacker.stackInstruction(Instructions.checkEntityTypes(entityData.content(), List.of(new DataLocation("minecraft", "player")), false));
-        }
         if(selector.entityTypes() != null) {
             stacker.stackInstruction(Instructions.checkEntityTypes(entityData.content(), new ArrayList<>(selector.entityTypes().data()), selector.entityTypes().negated()));
         }
@@ -262,6 +259,9 @@ public class CompilationContext {
             data = data.incrementedId(1);
             stackCount++;
             enterWith(data);
+        }
+        for(var name : selector.names()) {
+            stacker.stackInstruction(Instructions2.checkEntityName(entityData.content(), name.data(), name.negated()));
         }
         for(var tag : selector.tags()) {
             stacker.stackInstruction(Instructions2.checkEntityTag(entityData.content(), tag.data(), tag.negated()));

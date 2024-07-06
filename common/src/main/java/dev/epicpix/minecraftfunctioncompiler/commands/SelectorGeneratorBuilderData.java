@@ -11,6 +11,7 @@ public class SelectorGeneratorBuilderData {
     public boolean self = false;
     public NegatableData<List<DataLocation>> entityTypes = null;
     public boolean requirePlayer = false;
+    public ArrayList<NegatableData<String>> names = new ArrayList<>();
     public final ArrayList<NegatableData<String>> tags = new ArrayList<>();
     public Boolean hasTags = null;
     public final ArrayList<NegatableData<String>> teams = new ArrayList<>();
@@ -30,6 +31,7 @@ public class SelectorGeneratorBuilderData {
                 limit,
                 entityTypes != null ? new NegatableData<>(List.copyOf(entityTypes.data()), entityTypes.negated()) : null,
                 requirePlayer,
+                List.copyOf(names),
                 hasTags,
                 List.copyOf(tags),
                 hasTeam,

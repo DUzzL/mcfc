@@ -556,3 +556,20 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
     run();
   }
 }
+
+=CHECK_ENTITY_NAME(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:name], boolean [instr:negated]) {
+  (negated == false) => CHECK_ENTITY_IS_NAME;
+  => CHECK_ENTITY_NOT_IS_NAME;
+}
+
+@CHECK_ENTITY_IS_NAME(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:name]) {
+    if([ctx:entity].getName().getString().equals([instr:name]) == true) {
+      run();
+    }
+}
+
+@CHECK_ENTITY_NOT_IS_NAME(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:name]) {
+    if([ctx:entity].getName().getString().equals([instr:name]) == false) {
+      run();
+    }
+}
