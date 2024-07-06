@@ -1,12 +1,8 @@
 package dev.epicpix.minecraftfunctioncompiler.commands;
 
-import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
-import dev.epicpix.minecraftfunctioncompiler.data.NegatableData;
-import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument;
-import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument;
+import dev.epicpix.minecraftfunctioncompiler.data.*;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.UUID;
 
 public final class SelectorParser {
@@ -51,7 +47,6 @@ public final class SelectorParser {
             }
             case 'a' -> {
                 if(!allowMultiple) throwError(reader, "Unable to use @a with a single-only selector");
-                data.entityTypes = new NegatableData<>(List.of(new DataLocation("minecraft", "player")), false);
                 data.requirePlayer = true;
             }
             default -> throwError(reader, "Unsupported selector type: @" + selectorType);
@@ -104,6 +99,11 @@ public final class SelectorParser {
                 data.tags.add(new NegatableData<>(tag, negated));
             }
         });
+        SelectorParser.registerSelectorOption("gamemode", (reader, data) -> {
+            var negated = reader.skipIfNext('!');
+            var gamemode = reader.readGamemode();
+            data.gamemodes.add(new NegatableData<>(gamemode, negated));
+        });
         registerSelectorOption("limit", (reader, data) -> {
             data.limit = reader.readInt();
         });
@@ -112,7 +112,6 @@ public final class SelectorParser {
             if((data.level.minimum() != null && data.level.minimum() < 0) || (data.level.maximum() != null && data.level.maximum() < 0)) {
                 throwError(reader, "Minimum/maximum level cannot be negative: " + data.level);
             }
-            data.requirePlayer = true;
         });
         registerSelectorOption("scores", (reader, data) -> {
             reader.skip();
@@ -137,6 +136,22 @@ public final class SelectorParser {
                 data.teams.add(new NegatableData<>(team, negated));
             }
         });
+        registerSelectorOption("x_rotation", (reader, data) -> {
+            var bounds = reader.readFloatRange();
+            data.pitch = new FloatRangeArgument(bounds.minimum() != null ? wrapDegrees(bounds.minimum()) : null, bounds.maximum() != null ? wrapDegrees(bounds.maximum()) : null);
+        });
+        registerSelectorOption("y_rotation", (reader, data) -> {
+            var bounds = reader.readFloatRange();
+            data.yaw = new FloatRangeArgument(bounds.minimum() != null ? wrapDegrees(bounds.minimum()) : null, bounds.maximum() != null ? wrapDegrees(bounds.maximum()) : null);
+        });
+    }
+
+
+    private static float wrapDegrees(float angle) {
+        angle %= 360.0F;
+        if(angle >= 180.0F) angle -= 360.0F;
+        if(angle < -180.0F) angle += 360.0F;
+        return angle;
     }
 
 }

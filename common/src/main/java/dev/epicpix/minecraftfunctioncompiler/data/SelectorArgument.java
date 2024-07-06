@@ -16,7 +16,7 @@ public record SelectorArgument(
     Boolean hasTeam,
     List<NegatableData<String>> teams,
     Map<String, IntRangeArgument> scores,
-    NegatableData<Gamemode> gamemode,
+    List<NegatableData<Gamemode>> gamemodes,
     IntRangeArgument level,
     FloatRangeArgument yaw,
     FloatRangeArgument pitch
@@ -67,7 +67,7 @@ public record SelectorArgument(
                 hasTeam,
                 teams,
                 scores,
-                gamemode,
+                gamemodes,
                 level,
                 yaw,
                 pitch

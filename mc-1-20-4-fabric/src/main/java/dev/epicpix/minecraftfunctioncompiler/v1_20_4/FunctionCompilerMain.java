@@ -2,20 +2,16 @@ package dev.epicpix.minecraftfunctioncompiler.v1_20_4;
 
 import dev.epicpix.minecraftfunctioncompiler.commands.SelectorParser;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
-import dev.epicpix.minecraftfunctioncompiler.data.FloatRangeArgument;
-import dev.epicpix.minecraftfunctioncompiler.data.Gamemode;
 import dev.epicpix.minecraftfunctioncompiler.data.NegatableData;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.EmitterBaseOptions;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
-import dev.epicpix.minecraftfunctioncompiler.v1_20_4.emitter.Emitter2;
 import dev.epicpix.minecraftfunctioncompiler.v1_20_4.emitter.Emitter;
+import dev.epicpix.minecraftfunctioncompiler.v1_20_4.emitter.Emitter2;
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
-import net.minecraft.util.Mth;
-import net.minecraft.world.level.GameType;
 
 import java.util.List;
 
@@ -49,24 +45,6 @@ public class FunctionCompilerMain implements ModInitializer {
                 if(DataRegistries.ENTITY_CLASS.get(it) == null) throw new UnsupportedOperationException("Unsupported entity type: " + it);
             }
             data.entityTypes = new NegatableData<>(types, negated);
-        });
-        SelectorParser.registerSelectorOption("gamemode", (reader, data) -> {
-            var negated = reader.skipIfNext('!');
-            data.gamemode = new NegatableData<>(switch(GameType.byName(reader.readWord(), GameType.DEFAULT_MODE)) {
-                case SURVIVAL -> Gamemode.SURVIVAL;
-                case CREATIVE -> Gamemode.CREATIVE;
-                case ADVENTURE -> Gamemode.ADVENTURE;
-                case SPECTATOR -> Gamemode.SPECTATOR;
-            }, negated);
-            data.entityTypes = new NegatableData<>(List.of(new DataLocation("minecraft", "player")), false);
-        });
-        SelectorParser.registerSelectorOption("x_rotation", (reader, data) -> {
-            var bounds = reader.readFloatRange();
-            data.pitch = new FloatRangeArgument(bounds.minimum() != null ? Mth.wrapDegrees(bounds.minimum()) : null, bounds.maximum() != null ? Mth.wrapDegrees(bounds.maximum()) : null);
-        });
-        SelectorParser.registerSelectorOption("y_rotation", (reader, data) -> {
-            var bounds = reader.readFloatRange();
-            data.yaw = new FloatRangeArgument(bounds.minimum() != null ? Mth.wrapDegrees(bounds.minimum()) : null, bounds.maximum() != null ? Mth.wrapDegrees(bounds.maximum()) : null);
         });
     }
 }

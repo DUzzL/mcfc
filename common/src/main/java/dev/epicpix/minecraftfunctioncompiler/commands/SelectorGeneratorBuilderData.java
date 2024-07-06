@@ -13,11 +13,11 @@ public class SelectorGeneratorBuilderData {
     public boolean requirePlayer = false;
     public final ArrayList<NegatableData<String>> tags = new ArrayList<>();
     public Boolean hasTags = null;
-    public List<NegatableData<String>> teams = new ArrayList<>();
+    public final ArrayList<NegatableData<String>> teams = new ArrayList<>();
     public Boolean hasTeam = null;
     public Integer limit = null;
     public final HashMap<String, IntRangeArgument> scores = new HashMap<>();
-    public NegatableData<Gamemode> gamemode = null;
+    public final ArrayList<NegatableData<Gamemode>> gamemodes = new ArrayList<>();
     public IntRangeArgument level = null;
     public FloatRangeArgument yaw = null;
     public FloatRangeArgument pitch = null;
@@ -35,7 +35,7 @@ public class SelectorGeneratorBuilderData {
                 hasTeam,
                 List.copyOf(teams),
                 Map.copyOf(scores),
-                gamemode,
+                List.copyOf(gamemodes),
                 level,
                 yaw,
                 pitch

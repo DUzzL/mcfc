@@ -255,10 +255,10 @@ public class CompilationContext {
         if(selector.entityTypes() != null) {
             stacker.stackInstruction(Instructions.checkEntityTypes(entityData.content(), new ArrayList<>(selector.entityTypes().data()), selector.entityTypes().negated()));
         }
-        if(selector.gamemode() != null) {
+        for(var gamemode : selector.gamemodes()) {
             var playerLocal = LocationData.<Player>ofLocal(data.highestId());
             stacker.stackInstruction(Instructions2.tryAsPlayer(entityData.content(), playerLocal));
-            stacker.stackInstruction(Instructions2.checkGamemode(playerLocal, selector.gamemode().data(), selector.gamemode().negated()));
+            stacker.stackInstruction(Instructions2.checkGamemode(playerLocal, gamemode.data(), gamemode.negated()));
             data = data.incrementedId(1);
             stackCount++;
             enterWith(data);
