@@ -256,7 +256,12 @@ public class CompilationContext {
             stacker.stackInstruction(Instructions.checkEntityTypes(entityData.content(), new ArrayList<>(selector.entityTypes().data()), selector.entityTypes().negated()));
         }
         if(selector.gamemode() != null) {
-            stacker.stackInstruction(Instructions2.checkGamemode(entityData.content(), selector.gamemode().data(), selector.gamemode().negated()));
+            var playerLocal = LocationData.<Player>ofLocal(data.highestId());
+            stacker.stackInstruction(Instructions2.tryAsPlayer(entityData.content(), playerLocal));
+            stacker.stackInstruction(Instructions2.checkGamemode(playerLocal, selector.gamemode().data(), selector.gamemode().negated()));
+            data = data.incrementedId(1);
+            stackCount++;
+            enterWith(data);
         }
         for(var tag : selector.tags()) {
             stacker.stackInstruction(Instructions2.checkEntityTag(entityData.content(), tag.data(), tag.negated()));
@@ -265,10 +270,12 @@ public class CompilationContext {
             stacker.stackInstruction(Instructions2.checkEntityTags(entityData.content(), selector.hasTags()));
         }
         if(selector.level() != null) {
-            var levelLocal = LocationData.<Integer>ofLocal(data.highestId());
-            stacker.stackInstruction(Instructions2.getExperienceLevel(entityData.content(), levelLocal));
+            var playerLocal = LocationData.<Player>ofLocal(data.highestId());
+            var levelLocal = LocationData.<Integer>ofLocal(data.highestId() + 1);
+            stacker.stackInstruction(Instructions2.tryAsPlayer(entityData.content(), playerLocal));
+            stacker.stackInstruction(Instructions2.getExperienceLevel(playerLocal, levelLocal));
             stacker.stackInstruction(Instructions.checkIntRange(levelLocal, selector.level()));
-            data = data.incrementedId(1);
+            data = data.incrementedId(2);
             stackCount++;
             enterWith(data);
         }

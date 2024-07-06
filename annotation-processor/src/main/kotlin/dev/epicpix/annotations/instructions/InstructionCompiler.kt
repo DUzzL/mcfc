@@ -783,6 +783,9 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             if(expression.name == "cast" || expression.name == "map_enum") {
                 return (expression.arguments[1] as ParsedTokenExpressionTyped).type as ParsedTokenExpressionTypeComplex
             }
+            if(expression.name == "is") {
+                return ParsedTokenExpressionSimpleTyped(ParsedTokenExpressionSimpleType.BOOLEAN)
+            }
             if(expression.name == "map_attribute") {
                 if(writerData.isAboveVersion(20, 4)) {
                     return ParsedTokenExpressionTypeComplex("net.minecraft.core.Holder")
@@ -1171,6 +1174,13 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 val className = ((expression.arguments[1] as ParsedTokenExpressionTyped).type as ParsedTokenExpressionTypeComplex).typeName.replace('.', '/')
                 val convertedClassName = writerData.mappingData.getClassName(className)
                 output.appendText("mv.visitTypeInsn(org.objectweb.asm.Opcodes.CHECKCAST, \"$convertedClassName\");\n")
+                return uid
+            }
+            if(expression.name == "is") {
+                val uid = writeExpression(writerData, expression.arguments[0], output, uniqId, true)
+                val className = ((expression.arguments[1] as ParsedTokenExpressionTyped).type as ParsedTokenExpressionTypeComplex).typeName.replace('.', '/')
+                val convertedClassName = writerData.mappingData.getClassName(className)
+                output.appendText("mv.visitTypeInsn(org.objectweb.asm.Opcodes.INSTANCEOF, \"$convertedClassName\");\n")
                 return uid
             }
             if(expression.name == "map_enum") {

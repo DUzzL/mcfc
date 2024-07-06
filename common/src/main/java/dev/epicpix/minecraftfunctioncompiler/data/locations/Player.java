@@ -1,3 +1,3 @@
 package dev.epicpix.minecraftfunctioncompiler.data.locations;
 
-public interface Player extends Entity {}
+public interface Player extends LivingEntity {}

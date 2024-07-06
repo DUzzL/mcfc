@@ -458,29 +458,29 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
   run();
 }
 
-@SET_GAMEMODE(<net.minecraft.world.entity.Entity> [ctx:entity], <dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:gamemode]) {
-    cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>).setGameMode(map_enum([instr:gamemode], <net.minecraft.world.level.GameType>));
+@SET_GAMEMODE(<net.minecraft.server.level.ServerPlayer> [ctx:player], <dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:gamemode]) {
+    [ctx:player].setGameMode(map_enum([instr:gamemode], <net.minecraft.world.level.GameType>));
 }
 
-=CHECK_GAMEMODE(<net.minecraft.world.entity.Entity> [ctx:entity], <dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:gamemode], boolean [instr:negated]) {
+=CHECK_GAMEMODE(<net.minecraft.server.level.ServerPlayer> [ctx:player], <dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:gamemode], boolean [instr:negated]) {
   (negated == false) => CHECK_IS_GAMEMODE;
   => CHECK_NOT_IS_GAMEMODE;
 }
 
-@CHECK_IS_GAMEMODE(<net.minecraft.world.entity.Entity> [ctx:entity], <dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:gamemode]) {
-    if(cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>).gameMode.getGameModeForPlayer() == map_enum([instr:gamemode], <net.minecraft.world.level.GameType>)) {
+@CHECK_IS_GAMEMODE(<net.minecraft.server.level.ServerPlayer> [ctx:player], <dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:gamemode]) {
+    if([ctx:player].gameMode.getGameModeForPlayer() == map_enum([instr:gamemode], <net.minecraft.world.level.GameType>)) {
       run();
     }
 }
 
-@CHECK_NOT_IS_GAMEMODE(<net.minecraft.world.entity.Entity> [ctx:entity], <dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:gamemode]) {
-    if(cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>).gameMode.getGameModeForPlayer() != map_enum([instr:gamemode], <net.minecraft.world.level.GameType>)) {
+@CHECK_NOT_IS_GAMEMODE(<net.minecraft.server.level.ServerPlayer> [ctx:player], <dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:gamemode]) {
+    if([ctx:player].gameMode.getGameModeForPlayer() != map_enum([instr:gamemode], <net.minecraft.world.level.GameType>)) {
       run();
     }
 }
 
-@GET_ATTRIBUTE_INSTANCE(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.entity.ai.attributes.AttributeInstance> [ctx:attribute], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:attribute_name]) {
-    let [ctx:attribute] = cast([ctx:entity], <net.minecraft.world.entity.LivingEntity>).getAttributes().getInstance(map_attribute([instr:attribute_name]));
+@GET_ATTRIBUTE_INSTANCE(<net.minecraft.world.entity.LivingEntity> [ctx:entity], <net.minecraft.world.entity.ai.attributes.AttributeInstance> [ctx:attribute], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:attribute_name]) {
+    let [ctx:attribute] = [ctx:entity].getAttributes().getInstance(map_attribute([instr:attribute_name]));
     run();
 }
 
@@ -508,38 +508,51 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
   [static:MinecraftServer].setDifficulty(map_enum([instr:difficulty], <net.minecraft.world.Difficulty>), true);
 }
 
-@CLEAR_ALL_EFFECTS( <net.minecraft.world.entity.Entity> [ctx:entity]) {
-  cast([ctx:entity], <net.minecraft.world.entity.LivingEntity>).removeAllEffects();
+@CLEAR_ALL_EFFECTS(<net.minecraft.world.entity.LivingEntity> [ctx:entity]) {
+  [ctx:entity].removeAllEffects();
 }
 
-@CLEAR_EFFECT(<net.minecraft.world.entity.Entity> [ctx:entity], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:effect_name]) {
-  cast([ctx:entity], <net.minecraft.world.entity.LivingEntity>).removeEffect(map_mob_effect([instr:effect_name]));
+@CLEAR_EFFECT(<net.minecraft.world.entity.LivingEntity> [ctx:entity], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:effect_name]) {
+  [ctx:entity].removeEffect(map_mob_effect([instr:effect_name]));
 }
 
-@GIVE_EFFECT(<net.minecraft.world.entity.Entity> [ctx:from_entity], <net.minecraft.world.entity.Entity> [ctx:to_entity], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:effect_name], int [instr:duration], int [instr:amplifier], boolean [instr:show_particles]) {
-  cast([ctx:to_entity], <net.minecraft.world.entity.LivingEntity>).addEffect(new <net.minecraft.world.effect.MobEffectInstance>(map_mob_effect([instr:effect_name]), [instr:duration], [instr:amplifier], false, [instr:show_particles]), [ctx:from_entity]);
+@GIVE_EFFECT(<net.minecraft.world.entity.Entity> [ctx:from_entity], <net.minecraft.world.entity.LivingEntity> [ctx:to_entity], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:effect_name], int [instr:duration], int [instr:amplifier], boolean [instr:show_particles]) {
+  [ctx:to_entity].addEffect(new <net.minecraft.world.effect.MobEffectInstance>(map_mob_effect([instr:effect_name]), [instr:duration], [instr:amplifier], false, [instr:show_particles]), [ctx:from_entity]);
 }
 
-@ADD_EXPERIENCE_POINTS(<net.minecraft.world.entity.Entity> [ctx:entity], int [instr:points]) {
-  cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>).giveExperiencePoints([instr:points]);
+@ADD_EXPERIENCE_POINTS(<net.minecraft.server.level.ServerPlayer> [ctx:player], int [instr:points]) {
+  [ctx:player].giveExperiencePoints([instr:points]);
 }
 
-@ADD_EXPERIENCE_LEVELS(<net.minecraft.world.entity.Entity> [ctx:entity], int [instr:levels]) {
-  cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>).giveExperienceLevels([instr:levels]);
+@ADD_EXPERIENCE_LEVELS(<net.minecraft.server.level.ServerPlayer> [ctx:player], int [instr:levels]) {
+  [ctx:player].giveExperienceLevels([instr:levels]);
 }
 
-@SET_EXPERIENCE_POINTS(<net.minecraft.world.entity.Entity> [ctx:entity], int [instr:points]) {
-  let [local:player]<net.minecraft.server.level.ServerPlayer> = cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>);
-  if([instr:points] < [local:player].getXpNeededForNextLevel()) {
-    [local:player].setExperiencePoints([instr:points]);
+@SET_EXPERIENCE_POINTS(<net.minecraft.server.level.ServerPlayer> [ctx:player], int [instr:points]) {
+  if([instr:points] < [ctx:player].getXpNeededForNextLevel()) {
+    [ctx:player].setExperiencePoints([instr:points]);
   }
 }
 
-@SET_EXPERIENCE_LEVELS(<net.minecraft.world.entity.Entity> [ctx:entity], int [instr:levels]) {
-  cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>).setExperienceLevels([instr:levels]);
+@SET_EXPERIENCE_LEVELS(<net.minecraft.server.level.ServerPlayer> [ctx:player], int [instr:levels]) {
+  [ctx:player].setExperienceLevels([instr:levels]);
 }
 
-@GET_EXPERIENCE_LEVEL(<net.minecraft.world.entity.Entity> [ctx:entity], int [ctx:level]) {
-  let [ctx:level] = cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>).experienceLevel;
+@GET_EXPERIENCE_LEVEL(<net.minecraft.server.level.ServerPlayer> [ctx:player], int [ctx:level]) {
+  let [ctx:level] = [ctx:player].experienceLevel;
   run();
+}
+
+@TRY_AS_LIVING_ENTITY(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.entity.LivingEntity> [ctx:living_entity]) {
+  if(is([ctx:entity], <net.minecraft.world.entity.LivingEntity>) == true) {
+    let [ctx:living_entity] = cast([ctx:entity], <net.minecraft.world.entity.LivingEntity>);
+    run();
+  }
+}
+
+@TRY_AS_PLAYER(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.server.level.ServerPlayer> [ctx:player]) {
+  if(is([ctx:entity], <net.minecraft.server.level.ServerPlayer>) == true) {
+    let [ctx:player] = cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>);
+    run();
+  }
 }

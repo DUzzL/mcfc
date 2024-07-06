@@ -2,10 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.compiler;
 
 import dev.epicpix.minecraftfunctioncompiler.commands.Command;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.AttributeInstance;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.Vec2;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.Vec3;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.World;
+import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.il.Instructions;
 import dev.epicpix.minecraftfunctioncompiler.il.Instructions2;
@@ -32,10 +29,11 @@ public final class CommandCompiler {
         switch(command.type()) {
             case ATTRIBUTE_BASE_SET -> {
                 try(var selector = context.forSelector(command.get("target"))) {
-                    var attrLocation = LocationData.<AttributeInstance>ofLocal(selector.data().highestId());
+                    var livingEntityLocation = LocationData.<LivingEntity>ofLocal(selector.data().highestId());
+                    var attrLocation = LocationData.<AttributeInstance>ofLocal(selector.data().highestId() + 1);
                     var instruction =
-                            Instructions.checkEntityTypes(selector.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
-                                    .with(Instructions2.getAttributeInstance(selector.content(), attrLocation, command.<AttributeData>get("attribute").location())
+                            Instructions2.tryAsLivingEntity(selector.content(), livingEntityLocation)
+                                    .with(Instructions2.getAttributeInstance(livingEntityLocation, attrLocation, command.<AttributeData>get("attribute").location())
                                             .with(Instructions2.ifNotNull(attrLocation.lower())
                                                     .with(Instructions2.setAttributeBase(attrLocation, command.get("value")))
                                             ));
@@ -48,33 +46,37 @@ public final class CommandCompiler {
             }
             case EFFECT_CLEAR -> {
                 try(var self = context.getCurrentEntity()) {
+                    var livingEntityLocation = LocationData.<LivingEntity>ofLocal(self.data().highestId());
                     self.writeInstruction(
                             Instructions2.ifNotNull(self.content().lower())
-                                .with(Instructions.checkEntityTypes(self.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
-                                        .with(Instructions2.clearAllEffects(self.content()))));
+                                .with(Instructions2.tryAsLivingEntity(self.content(), livingEntityLocation)
+                                        .with(Instructions2.clearAllEffects(livingEntityLocation))));
                 }
             }
             case EFFECT_CLEAR_ENTITIES -> {
                 try(var targets = context.forSelector(command.get("targets"))) {
+                    var livingEntityLocation = LocationData.<LivingEntity>ofLocal(targets.data().highestId());
                     targets.writeInstruction(
-                            Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
-                                .with(Instructions2.clearAllEffects(targets.content())));
+                            Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation)
+                                .with(Instructions2.clearAllEffects(livingEntityLocation)));
                 }
             }
             case EFFECT_CLEAR_ENTITIES_EFFECT -> {
                 try(var targets = context.forSelector(command.get("targets"))) {
+                    var livingEntityLocation = LocationData.<LivingEntity>ofLocal(targets.data().highestId());
                     targets.writeInstruction(
-                            Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
-                                    .with(Instructions2.clearEffect(targets.content(), command.<MobEffectData>get("effect").location())));
+                            Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation)
+                                    .with(Instructions2.clearEffect(livingEntityLocation, command.<MobEffectData>get("effect").location())));
                 }
             }
             case EFFECT_GIVE -> {
                 MobEffectData effect = command.get("effect");
                 try(var self = context.getCurrentEntity()) {
                     try(var targets = context.forSelector(command.get("targets"))) {
+                        var livingEntityLocation = LocationData.<LivingEntity>ofLocal(targets.data().highestId());
                         targets.writeInstruction(
-                                Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
-                                        .with(Instructions2.giveEffect(self.content(), targets.content(), effect.location(), effect.instant() ? 1 : 600, 0, true)));
+                                Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation)
+                                        .with(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), effect.instant() ? 1 : 600, 0, true)));
                     }
                 }
             }
@@ -83,9 +85,10 @@ public final class CommandCompiler {
                 int duration = command.get("duration");
                 try(var self = context.getCurrentEntity()) {
                     try(var targets = context.forSelector(command.get("targets"))) {
+                        var livingEntityLocation = LocationData.<LivingEntity>ofLocal(targets.data().highestId());
                         targets.writeInstruction(
-                                Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
-                                        .with(Instructions2.giveEffect(self.content(), targets.content(), effect.location(), effect.instant() ? duration : duration * 20, 0, true)));
+                                Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation)
+                                        .with(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), effect.instant() ? duration : duration * 20, 0, true)));
                     }
                 }
             }
@@ -95,9 +98,10 @@ public final class CommandCompiler {
                 int amplifier = command.get("amplifier");
                 try(var self = context.getCurrentEntity()) {
                     try(var targets = context.forSelector(command.get("targets"))) {
+                        var livingEntityLocation = LocationData.<LivingEntity>ofLocal(targets.data().highestId());
                         targets.writeInstruction(
-                                Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
-                                        .with(Instructions2.giveEffect(self.content(), targets.content(), effect.location(), effect.instant() ? duration : duration * 20, amplifier, true)));
+                                Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation)
+                                        .with(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), effect.instant() ? duration : duration * 20, amplifier, true)));
                     }
                 }
             }
@@ -108,9 +112,10 @@ public final class CommandCompiler {
                 boolean hideParticles = command.get("hide_particles");
                 try(var self = context.getCurrentEntity()) {
                     try(var targets = context.forSelector(command.get("targets"))) {
+                        var livingEntityLocation = LocationData.<LivingEntity>ofLocal(targets.data().highestId());
                         targets.writeInstruction(
-                                Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
-                                        .with(Instructions2.giveEffect(self.content(), targets.content(), effect.location(), effect.instant() ? duration : duration * 20, amplifier, !hideParticles)));
+                                Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation)
+                                        .with(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), effect.instant() ? duration : duration * 20, amplifier, !hideParticles)));
                     }
                 }
             }
@@ -118,9 +123,10 @@ public final class CommandCompiler {
                 MobEffectData effect = command.get("effect");
                 try(var self = context.getCurrentEntity()) {
                     try(var targets = context.forSelector(command.get("targets"))) {
+                        var livingEntityLocation = LocationData.<LivingEntity>ofLocal(targets.data().highestId());
                         targets.writeInstruction(
-                                Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
-                                        .with(Instructions2.giveEffect(self.content(), targets.content(), effect.location(), -1, 0, true)));
+                                Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation)
+                                        .with(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), -1, 0, true)));
                     }
                 }
             }
@@ -129,9 +135,10 @@ public final class CommandCompiler {
                 int amplifier = command.get("amplifier");
                 try(var self = context.getCurrentEntity()) {
                     try(var targets = context.forSelector(command.get("targets"))) {
+                        var livingEntityLocation = LocationData.<LivingEntity>ofLocal(targets.data().highestId());
                         targets.writeInstruction(
-                                Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
-                                        .with(Instructions2.giveEffect(self.content(), targets.content(), effect.location(), -1, amplifier, true)));
+                                Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation)
+                                        .with(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), -1, amplifier, true)));
                     }
                 }
             }
@@ -141,9 +148,10 @@ public final class CommandCompiler {
                 boolean hideParticles = command.get("hide_particles");
                 try(var self = context.getCurrentEntity()) {
                     try(var targets = context.forSelector(command.get("targets"))) {
+                        var livingEntityLocation = LocationData.<LivingEntity>ofLocal(targets.data().highestId());
                         targets.writeInstruction(
-                                Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraftfunctioncompiler", "living_entity")), false)
-                                        .with(Instructions2.giveEffect(self.content(), targets.content(), effect.location(), -1, amplifier, !hideParticles)));
+                                Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation)
+                                        .with(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), -1, amplifier, !hideParticles)));
                     }
                 }
             }
@@ -306,30 +314,34 @@ public final class CommandCompiler {
             }
             case EXPERIENCE_ADD, EXPERIENCE_ADD_POINTS -> {
                 try(var targets = context.forSelector(command.get("targets"))) {
+                    var playerLocation = LocationData.<Player>ofLocal(targets.data().highestId());
                     targets.writeInstruction(
-                            Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraft", "player")), false)
-                                    .with(Instructions2.addExperiencePoints(targets.content(), command.get("amount"))));
+                            Instructions2.tryAsPlayer(targets.content(), playerLocation)
+                                    .with(Instructions2.addExperiencePoints(playerLocation, command.get("amount"))));
                 }
             }
             case EXPERIENCE_ADD_LEVELS -> {
                 try(var targets = context.forSelector(command.get("targets"))) {
+                    var playerLocation = LocationData.<Player>ofLocal(targets.data().highestId());
                     targets.writeInstruction(
-                            Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraft", "player")), false)
-                                    .with(Instructions2.addExperienceLevels(targets.content(), command.get("amount"))));
+                            Instructions2.tryAsPlayer(targets.content(), playerLocation)
+                                    .with(Instructions2.addExperienceLevels(playerLocation, command.get("amount"))));
                 }
             }
             case EXPERIENCE_SET, EXPERIENCE_SET_POINTS -> {
                 try(var targets = context.forSelector(command.get("targets"))) {
+                    var playerLocation = LocationData.<Player>ofLocal(targets.data().highestId());
                     targets.writeInstruction(
-                            Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraft", "player")), false)
-                                    .with(Instructions2.setExperiencePoints(targets.content(), command.get("amount"))));
+                            Instructions2.tryAsPlayer(targets.content(), playerLocation)
+                                    .with(Instructions2.setExperiencePoints(playerLocation, command.get("amount"))));
                 }
             }
             case EXPERIENCE_SET_LEVELS -> {
                 try(var targets = context.forSelector(command.get("targets"))) {
+                    var playerLocation = LocationData.<Player>ofLocal(targets.data().highestId());
                     targets.writeInstruction(
-                            Instructions.checkEntityTypes(targets.content(), List.of(new DataLocation("minecraft", "player")), false)
-                                    .with(Instructions2.setExperienceLevels(targets.content(), command.get("amount"))));
+                            Instructions2.tryAsPlayer(targets.content(), playerLocation)
+                                    .with(Instructions2.setExperienceLevels(playerLocation, command.get("amount"))));
                 }
             }
             case FUNCTION -> {
@@ -338,7 +350,8 @@ public final class CommandCompiler {
             }
             case GAMEMODE -> {
                 try(var selector = context.forSelector(command.get("targets"))) {
-                    selector.writeInstruction(Instructions2.setGamemode(selector.content(), command.get("gamemode")));
+                    var playerLocation = LocationData.<Player>ofLocal(selector.data().highestId());
+                    selector.writeInstruction(Instructions2.tryAsPlayer(selector.content(), playerLocation).with(Instructions2.setGamemode(playerLocation, command.get("gamemode"))));
                 }
             }
             case KILL -> {
