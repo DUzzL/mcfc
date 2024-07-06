@@ -6,7 +6,8 @@ import net.minecraft.world.scores.PlayerScores;
 import net.minecraft.world.scores.ScoreAccess;
 import net.minecraft.world.scores.ScoreHolder;
 
-@SuppressWarnings("UnusedReturnValue")
+// Used in bytecode instructions, to not insert too much code at once
+@SuppressWarnings("unused")
 public class ExtensionFunctions {
 
     public static ScoreAccess getScore(ServerScoreboard scoreboard, ScoreHolder player, Objective objective) {

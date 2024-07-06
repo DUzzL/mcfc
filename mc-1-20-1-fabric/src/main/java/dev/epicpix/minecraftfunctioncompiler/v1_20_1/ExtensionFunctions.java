@@ -6,7 +6,8 @@ import net.minecraft.world.scores.Score;
 
 import java.util.Map;
 
-@SuppressWarnings("UnusedReturnValue")
+// Used in bytecode instructions, to not insert too much code at once
+@SuppressWarnings("unused")
 public class ExtensionFunctions {
 
     public static Score getScore(ServerScoreboard scoreboard, String player, Objective objective) {

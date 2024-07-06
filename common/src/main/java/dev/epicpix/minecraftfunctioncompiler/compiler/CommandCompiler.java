@@ -196,7 +196,7 @@ public final class CommandCompiler {
                         try(var scoreData = context.getScoreData(objective.content(), name.content(), false)) {
                             var scoreValue = LocationData.<Integer>ofLocal(scoreData.data().highestId());
                             var execInstruction = Instructions.checkIntRange(scoreValue, command.get("range"));
-                            var baseInstruction = Instructions2.getScoreValue(scoreData.content(), scoreValue);
+                            var baseInstruction = Instructions2.getScoreValue(scoreData.content(), scoreValue).with(execInstruction);
                             try(var ignored = context.enterWithoutValue(scoreData.data().incrementedId(1).withBaseInstruction(execInstruction))) {
                                 compile(context, command.get("command"), result);
                             }

@@ -310,8 +310,8 @@ public class CompilationContext {
                 var baseInstruction = Instructions2.getScoreValue(scoreData.content(), scoreValue).with(execInstruction);
                 scoreData.writeInstruction(baseInstruction);
                 stackCount++;
-                enterWith(scoreData.data().withBaseInstruction(baseInstruction).incrementedId(1));
-                stacker.current = baseInstruction;
+                enterWith(scoreData.data().withBaseInstruction(execInstruction).incrementedId(1));
+                stacker.current = execInstruction;
             }
             data = stack.peek();
         }
