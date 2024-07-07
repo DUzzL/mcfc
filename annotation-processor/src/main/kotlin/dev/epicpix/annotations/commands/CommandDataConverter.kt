@@ -174,7 +174,11 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 data.kindOptions["maximum"]?.toInt()?.also { max -> builder.append("    if(a$argumentIndex.maximum() > $max) ${createError("\"Integer range maximum of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
             }
             "mob_effect" -> builder.append("    var a$argumentIndex = reader.readMobEffect();\n")
+            "nbt_compound" -> builder.append("    var a$argumentIndex = NbtParser.readNbtCompound(reader);\n")
+            "nbt_path" -> builder.append("    var a$argumentIndex = NbtParser.readNbtPath(reader);\n")
+            "nbt_value" -> builder.append("    var a$argumentIndex = NbtParser.readNbtValue(reader);\n")
             "objective" -> builder.append("    var a$argumentIndex = reader.readWord();\n")
+            "resource_location" -> builder.append("    var a$argumentIndex = reader.readDataLocation();\n")
             "rotation" -> builder.append("    var a$argumentIndex = reader.readRotation();\n")
             "score_comparison" -> builder.append("    var a$argumentIndex = reader.readScoreboardCompareOperation();\n")
             "score_holder" -> builder.append("    var a$argumentIndex = SelectorParser.parseScoreHolder(reader);\n")

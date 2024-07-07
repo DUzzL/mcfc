@@ -96,6 +96,18 @@ public class StringCommandReader {
         return command.substring(start, index);
     }
 
+    private static boolean isNbtWordCharacter(char c) {
+        return c != ' ' && c != '"' && c != '\'' && c != '[' && c != ']' && c != '.' && c != '{' && c != '}';
+    }
+
+    public String readNbtWord() {
+        int start = index;
+        while (canRead() && isNbtWordCharacter(peek())) {
+            skip();
+        }
+        return command.substring(start, index);
+    }
+
     public String readString() {
         if(!canRead()) return "";
         char quoteChar = peek();

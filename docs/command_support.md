@@ -5,8 +5,6 @@ Not all commands are currently implemented in this mod, if a command is not list
 | `attribute base set`           | Partial[^1]  | No                     | No                      |
 | `difficulty`                   | Partial[^4]  | No                     | No                      |
 | `effect`                       | Partial[^1]  | No                     | No                      |
-| `experience add`               | Partial[^1]  | No                     | No                      |
-| `experience set`               | Partial[^1]  | No                     | No                      |
 | `execute align`                | Yes          | No result by itself    | No result by itself     |
 | `execute as`                   | Partial[^1]  | No result by itself    | No result by itself     |
 | `execute at`                   | Partial[^1]  | No result by itself    | No result by itself     |
@@ -21,6 +19,8 @@ Not all commands are currently implemented in this mod, if a command is not list
 | `execute store result score`   | Partial[^1]  | No result by itself    | No result by itself     |
 | `execute unless entity`        | Partial[^1]  | No                     | No                      |
 | `execute unless score`         | Partial[^1]  | No                     | No                      |
+| `experience add`               | Partial[^1]  | No                     | No                      |
+| `experience set`               | Partial[^1]  | No                     | No                      |
 | `function`                     | Partial[^3]  | No                     | No                      |
 | `gamemode`                     | Partial[^1]  | No                     | No                      |
 | `kill`                         | Partial[^1]  | No                     | No                      |
