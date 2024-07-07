@@ -27,8 +27,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Consumer;
 
-import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DATA_CLASS;
-import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DEBUG;
+import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.*;
 import static dev.epicpix.minecraftfunctioncompiler.il.Instruction.printInstructionList;
 import static org.objectweb.asm.ClassWriter.COMPUTE_FRAMES;
 
@@ -130,7 +129,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
             return;
         }
         var classLoadTime = (System.nanoTime()-startLoader)/1000000000d;
-        if(DEBUG) {
+        if(DEBUG_GENERATE_GRAPH) {
             try { Files.createDirectory(generatedDir); } catch(Exception ignored) {}
             var startGraph = System.nanoTime();
             try {

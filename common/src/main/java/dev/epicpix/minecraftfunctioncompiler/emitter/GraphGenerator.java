@@ -14,13 +14,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DEBUG;
+import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DEBUG_GENERATE_GRAPH;
 
 public final class GraphGenerator {
     private GraphGenerator() {}
 
     private static void visitInstructionFunc(Instruction instruction, StringBuilder stringBuilder, DataLocation base, ArrayList<Pair<DataLocation, DataLocation>> calls) {
-        if(!DEBUG) return;
+        if(!DEBUG_GENERATE_GRAPH) return;
 
         for(var it : instruction.children()) {
             visitInstructionFunc(it, stringBuilder, base, calls);
@@ -37,7 +37,7 @@ public final class GraphGenerator {
     }
 
     private static void generateFunctionGraphFunc(List<Instruction> instructions, DataLocation funcId, StringBuilder builder, ArrayList<Pair<DataLocation, DataLocation>> calls) {
-        if(!DEBUG) return;
+        if(!DEBUG_GENERATE_GRAPH) return;
 
         var base = "func_" + funcId.namespace() + "_" + funcId.path().replace('.', '_').replace('/', '_').replace('-', '_');
         builder.append(base).append("[label=\"").append(funcId).append("\"]\n");
@@ -47,7 +47,7 @@ public final class GraphGenerator {
     }
 
     private static int visitInstruction(Instruction instruction, StringBuilder stringBuilder, StringBuilder post, int uid) {
-        if(!DEBUG) return 0;
+        if(!DEBUG_GENERATE_GRAPH) return 0;
 
         var instrDescription = instruction.data().entrySet().stream().map(it -> it.getKey() + "=" + Objects.toString(it.getValue()).replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")).collect(Collectors.joining("\n"));
         stringBuilder.append("    x").append(uid).append("[label=\"").append(instruction.type()).append("\n").append(instrDescription).append("\",shape=box];\n");
@@ -66,7 +66,7 @@ public final class GraphGenerator {
     }
 
     private static int generateFunctionGraph(List<Instruction> instructions, DataLocation funcId, StringBuilder builder, StringBuilder post, int uid) {
-        if(!DEBUG) return 0;
+        if(!DEBUG_GENERATE_GRAPH) return 0;
 
         var safeName = funcId.namespace() + "_" + funcId.path().replace('.', '_').replace('/', '_').replace('-', '_');
 
@@ -85,7 +85,7 @@ public final class GraphGenerator {
     }
 
     private static void generateFullGraph(Map<DataLocation, List<Instruction>> functions, Path resultDir) throws IOException, InterruptedException {
-        if(!DEBUG) return;
+        if(!DEBUG_GENERATE_GRAPH) return;
 
         var builder = new StringBuilder();
         var post = new StringBuilder();
@@ -104,7 +104,7 @@ public final class GraphGenerator {
     }
 
     private static void generateCallGraph(Map<DataLocation, List<Instruction>> functions, Path resultDir) throws IOException, InterruptedException {
-        if(!DEBUG) return;
+        if(!DEBUG_GENERATE_GRAPH) return;
 
         var calls = new ArrayList<Pair<DataLocation, DataLocation>>();
         var builder = new StringBuilder();
@@ -122,7 +122,7 @@ public final class GraphGenerator {
     }
 
     public static void generateGraphs(Map<DataLocation, List<Instruction>> functions, Path resultDir) throws IOException, InterruptedException {
-        if(!DEBUG) return;
+        if(!DEBUG_GENERATE_GRAPH) return;
         generateFullGraph(functions, resultDir);
         generateCallGraph(functions, resultDir);
     }
