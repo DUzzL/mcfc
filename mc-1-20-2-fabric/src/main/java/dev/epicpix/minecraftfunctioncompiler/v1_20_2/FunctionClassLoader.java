@@ -1,12 +1,12 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_2;
 
-import com.google.gson.JsonObject;
 import dev.epicpix.minecraftfunctioncompiler.FunctionCompilerClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.commands.*;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.TaggableLocation;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
-import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapEnum;
+import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMap;
+import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapValue;
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
 import net.fabricmc.loader.api.FabricLoader;
@@ -109,33 +109,6 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
     }
 
     private CodeFieldStorage createCodeFieldStorage() {
-        EnumMap<CodeFieldStorageMapEnum, CodeFieldStorageMapValue> enumMap = new EnumMap<>(CodeFieldStorageMapEnum.class);
-        enumMap.put(CodeFieldStorageMapEnum.ATTRIBUTE, new CodeFieldStorageMapValue(Attribute.class, (cf, cw, value) -> {
-            loadBuiltInRegistries_ATTRIBUTE(cw);
-            cf.loadResourceLocation(cw, value);
-            callRegistry_get(cw);
-            cw.castType(Attribute.class);
-        }));
-        enumMap.put(CodeFieldStorageMapEnum.EFFECT, new CodeFieldStorageMapValue(MobEffect.class, (cf, cw, value) -> {
-            loadBuiltInRegistries_MOB_EFFECT(cw);
-            cf.loadResourceLocation(cw, value);
-            callRegistry_get(cw);
-            cw.castType(MobEffect.class);
-        }));
-        enumMap.put(CodeFieldStorageMapEnum.FUNCTION, new CodeFieldStorageMapValue(CommandFunction.class, (cf, cw, value) -> {
-            cf.loadServerFunctionManager(cw);
-            loadServerFunctionManager_library(cw);
-            loadServerFunctionLibrary_functions(cw);
-            cf.loadResourceLocation(cw, value);
-            callMap_get(cw);
-            cw.castType(CommandFunction.class);
-        }));
-        enumMap.put(CodeFieldStorageMapEnum.RESOURCE_LOCATION, new CodeFieldStorageMapValue(ResourceLocation.class, (cf, cw, value) -> {
-            cw.newObjectCreate(ResourceLocation.class);
-            cw.writeString(value.namespace());
-            cw.writeString(value.path());
-            cw.newObjectInit(ResourceLocation.class, String.class, String.class);
-        }));
-        return new CodeFieldStorage(ServerFunctionManager.class, MinecraftServer.class, enumMap);
+        return new CodeFieldStorage(ServerFunctionManager.class, MinecraftServer.class, CodeFieldStorageMapImpl.INSTANCE);
     }
 }
