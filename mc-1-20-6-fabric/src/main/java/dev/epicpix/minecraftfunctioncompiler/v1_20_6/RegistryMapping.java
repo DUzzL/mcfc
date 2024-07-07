@@ -19,7 +19,14 @@ public final class RegistryMapping {
 
     public static void updateRegistryMaps() throws IllegalAccessException {
         DataRegistries.ATTRIBUTE.reset();
-        BuiltInRegistries.ATTRIBUTE.entrySet().forEach(e -> DataRegistries.ATTRIBUTE.set(new DataLocation(e.getKey().location().getNamespace(), e.getKey().location().getPath()), new AttributeData(new DataLocation(e.getKey().location().getNamespace(), e.getKey().location().getPath()), e.getValue().getDefaultValue(), ((RangedAttribute) e.getValue()).getMinValue(), ((RangedAttribute) e.getValue()).getMaxValue())));
+        BuiltInRegistries.ATTRIBUTE.entrySet().forEach(e -> {
+            DataLocation location = new DataLocation(e.getKey().location().getNamespace(), e.getKey().location().getPath());
+            if(e.getValue() instanceof RangedAttribute ranged) {
+                DataRegistries.ATTRIBUTE.set(location, new AttributeData(location, e.getValue().getDefaultValue(), ranged.getMinValue(), ranged.getMaxValue()));
+            }else {
+                DataRegistries.ATTRIBUTE.set(location, new AttributeData(location, e.getValue().getDefaultValue(), Double.MIN_VALUE, Double.MAX_VALUE));
+            }
+        });
         DataRegistries.ATTRIBUTE.freeze();
         DataRegistries.MOB_EFFECT.reset();
         BuiltInRegistries.MOB_EFFECT.entrySet().forEach(e -> DataRegistries.MOB_EFFECT.set(new DataLocation(e.getKey().location().getNamespace(), e.getKey().location().getPath()), new MobEffectData(new DataLocation(e.getKey().location().getNamespace(), e.getKey().location().getPath()), e.getValue().isInstantenous())));
