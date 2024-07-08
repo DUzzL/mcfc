@@ -482,6 +482,8 @@ class MainProcessor(
                                                 "net.minecraft.world.phys.Vec2" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Vec2"
                                                 "net.minecraft.server.level.ServerLevel" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.World"
                                                 "net.minecraft.world.entity.ai.attributes.AttributeInstance" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.AttributeInstance"
+                                                "net.minecraft.nbt.CompoundTag" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.NbtCompound"
+                                                "net.minecraft.nbt.Tag" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.NbtTag"
                                                 else -> throw IllegalArgumentException("Unknown minecraft class: ${type.typeName}")
                                             }
                                         }else {
@@ -618,6 +620,7 @@ class MainProcessor(
                             val typeName = when(val typeName = resolvedType.declaration.qualifiedName!!.asString()) {
                                 "kotlin.Boolean" -> "boolean"
                                 "kotlin.Int" -> "int"
+                                "kotlin.String" -> "String"
                                 "kotlin.collections.List" -> "List"
                                 "kotlin.collections.MutableList" -> "List"
                                 "kotlin.collections.Map" -> "Map"
@@ -629,6 +632,7 @@ class MainProcessor(
                                         "kotlin.Int" -> "Integer"
                                         "kotlin.Float" -> "Float"
                                         "kotlin.Double" -> "Double"
+                                        "kotlin.String" -> "String"
                                         else -> this
                                     }
                                 } ?: "Object"

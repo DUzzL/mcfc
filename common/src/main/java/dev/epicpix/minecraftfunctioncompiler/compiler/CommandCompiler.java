@@ -3,13 +3,13 @@ package dev.epicpix.minecraftfunctioncompiler.compiler;
 import dev.epicpix.minecraftfunctioncompiler.commands.Command;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
-import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
-import dev.epicpix.minecraftfunctioncompiler.il.Instructions;
-import dev.epicpix.minecraftfunctioncompiler.il.Instructions2;
-import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
+import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPath;
+import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPathPart;
+import dev.epicpix.minecraftfunctioncompiler.il.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 @SuppressWarnings("RedundantLabeledSwitchRuleCodeBlock")
 public final class CommandCompiler {
@@ -40,6 +40,35 @@ public final class CommandCompiler {
                     selector.writeInstruction(instruction);
 
                 }
+            }
+            case DATA_MODIFY_STORAGE_SET_VALUE -> {
+                var storageLocal = LocationData.<NbtCompound>ofLocal(context.current().highestId());
+                var setCountLocal = LocationData.<Integer>ofLocal(context.current().highestId() + 1);
+
+                var stacker = new InstructionStacker(Instructions2.always());
+
+                stacker.stackInstruction(Instructions2.getNbtStorage(command.get("storage"), storageLocal));
+                var resultStorage = Instructions2.createResultStorage(setCountLocal);
+                stacker.stackInstruction(resultStorage);
+
+                var parts = command.<NbtPath>get("path").parts();
+                try(var ignored = context.enterWithoutValue(context.current().incrementedId(2).withBaseInstruction(resultStorage))) {
+                    getNbtPathValue(context, storageLocal.forceCast(), parts.subList(0, parts.size() - 1), (value) -> {
+                        var last = parts.get(parts.size() - 1);
+                        if(last instanceof NbtPathPart.Named named) {
+                            var tagLocal = LocationData.<NbtTag>ofLocal(context.current().highestId());
+                            context.current().addInstructionConsumer().accept(Instructions2.loadNbtValue(command.get("value"), tagLocal).with(Instructions2.setNbtInCompound(value, named.name(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
+                        }else {
+                            throw new UnsupportedOperationException("Cannot set nbt value from path " + last);
+                        }
+                    });
+                }
+                stacker.stackInstruction(Instructions2.isNotResultStorage(setCountLocal, 0));
+                try(var data = context.enterWithoutValue(context.current().incrementedId(2).withBaseInstruction(stacker.current))) {
+                    data.writeInstruction(Instructions2.setNbtStorage(command.get("storage"), storageLocal));
+                }
+
+                context.current().addInstructionConsumer().accept(stacker.base);
             }
             case DIFFICULTY_SET -> {
                 context.current().addInstructionConsumer().accept(Instructions2.setDifficulty(command.get("difficulty")));
@@ -469,6 +498,25 @@ public final class CommandCompiler {
             case WEATHER_THUNDER -> {
                 context.current().addInstructionConsumer().accept(Instructions2.setWeatherDynamicThunder());
             }
+        }
+    }
+
+    private static void getNbtPathValue(CompilationContext context, LocationData<NbtTag> source, List<NbtPathPart> parts, Consumer<LocationData<NbtTag>> valueConsumer) {
+        if(!parts.isEmpty()) {
+            var currentPart = parts.get(0);
+            var otherParts = parts.subList(1, parts.size());
+            if(currentPart instanceof NbtPathPart.Named named) {
+                var storage = LocationData.<NbtTag>ofLocal(context.current().highestId());
+                var instr = Instructions2.getNbtFromCompoundOrCreate(source, named.name(), storage);
+                context.current().addInstructionConsumer().accept(instr);
+                try(var ignored = context.enterWithoutValue(context.current().incrementedId(1).withBaseInstruction(instr))) {
+                    getNbtPathValue(context, storage, otherParts, valueConsumer);
+                }
+            }else {
+                throw new UnsupportedOperationException("Cannot get nbt path from " + currentPart);
+            }
+        }else {
+            valueConsumer.accept(source);
         }
     }
 

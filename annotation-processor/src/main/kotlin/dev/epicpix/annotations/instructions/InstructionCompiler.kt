@@ -797,6 +797,12 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
                     return ParsedTokenExpressionTypeComplex("net.minecraft.world.effect.MobEffect")
                 }
             }
+            if(expression.name == "map_resource_location") {
+                return ParsedTokenExpressionTypeComplex("net.minecraft.resources.ResourceLocation")
+            }
+            if(expression.name == "map_nbt_value") {
+                return ParsedTokenExpressionTypeComplex("net.minecraft.nbt.Tag")
+            }
         }
         val paramTypes = expression.arguments.map { evaluateExpressionType(writerData, it) }
         val instance = expression.instance
@@ -1117,7 +1123,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             }else {
                 throw IllegalArgumentException("Cannot run function on unknown instance: $instance")
             }
-            val def = functionMatches[0]
+            val def = functionMatches[0].run { if(owner == "java/lang/Object" && name == "<init>" && descriptor == "()V") ClassMethodInfo((instance as ParsedTokenInstanceStatic).className.replace('.', '/'), "<init>", "()V", false) else this }
             val classOwner = loadClassInfo(def.owner.replace('/', '.').replace('$', '.'))
             val className = writerData.mappingData.getClassName(def.owner)
             val methodName = writerData.mappingData.getMethodName(def.owner, def.name, def.descriptor)
@@ -1259,6 +1265,30 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                     if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.DataLocation") {
                         if(keepResult) {
                             output.appendText("context.fieldStorage().loadEffect(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.DataLocation>get(\"${source.name}\"));\n")
+                        }
+                        return uniqId
+                    }
+                }
+            }
+            if(expression.name == "map_resource_location") {
+                val source = expression.arguments[0] as ParsedTokenValueAccessor
+                if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
+                    val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
+                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.DataLocation") {
+                        if(keepResult) {
+                            output.appendText("context.fieldStorage().loadResourceLocation(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.DataLocation>get(\"${source.name}\"));\n")
+                        }
+                        return uniqId
+                    }
+                }
+            }
+            if(expression.name == "map_nbt_value") {
+                val source = expression.arguments[0] as ParsedTokenValueAccessor
+                if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
+                    val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
+                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue") {
+                        if(keepResult) {
+                            output.appendText("context.fieldStorage().loadNbtValue(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue>get(\"${source.name}\"));\n")
                         }
                         return uniqId
                     }

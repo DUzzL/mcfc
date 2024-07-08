@@ -1,5 +1,7 @@
 ATTRIBUTE_BASE_SET/attribute <target:entity_selector[multiple=false]> <attribute:attribute> base set <value:double>
 
+DATA_MODIFY_STORAGE_SET_VALUE/data modify storage <storage:resource_location> <path:nbt_path> set value <value:nbt_value>
+
 DIFFICULTY_SET/difficulty <difficulty:difficulty>
 
 EFFECT_CLEAR/effect clear

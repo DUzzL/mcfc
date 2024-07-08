@@ -23,6 +23,11 @@ public record LocationData<T>(
         return (LocationData<Object>) this;
     }
 
+    @SuppressWarnings("unchecked")
+    public <R> LocationData<R> forceCast() {
+        return (LocationData<R>) this;
+    }
+
     public String toString() {
         return (local != null ? "local " : "")
                 + (local != null ? local : "")
