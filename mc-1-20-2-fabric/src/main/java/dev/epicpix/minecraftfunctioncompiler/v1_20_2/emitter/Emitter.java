@@ -6,6 +6,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructions;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import org.objectweb.asm.Label;
@@ -57,7 +58,12 @@ public final class Emitter {
                         methodVisitor.visitInsn(Opcodes.POP);
                     }else {
                         codeWriter.writeNull();
-                        codeWriter.writeNull();
+                        if(context.instruction().get("arguments") != null) {
+                            context.load("arguments");
+                            codeWriter.castType(CompoundTag.class);
+                        }else {
+                            codeWriter.writeNull();
+                        }
                         callServerFunctionManager_execute(codeWriter);
                         methodVisitor.visitInsn(Opcodes.POP);
                         context.fieldStorage().loadServerFunctionManager(codeWriter);

@@ -614,6 +614,23 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
     run();
 }
 
+@SET_NBT_VALUE(<net.minecraft.nbt.Tag> [ctx:input], <net.minecraft.nbt.Tag> [ctx:output]) {
+    let [ctx:output] = [ctx:input];
+    run();
+}
+
+@CLONE_NBT_VALUE(<net.minecraft.nbt.Tag> [ctx:input], <net.minecraft.nbt.Tag> [ctx:output]) {
+    let [ctx:output] = [ctx:input].copy();
+    run();
+}
+
+@CHECK_IS_COMPOUND(<net.minecraft.nbt.Tag> [ctx:tag], <net.minecraft.nbt.CompoundTag> [ctx:compound]) {
+    if(is([ctx:tag], <net.minecraft.nbt.CompoundTag>) == true) {
+        let [ctx:compound] = cast([ctx:tag], <net.minecraft.nbt.CompoundTag>);
+        run();
+    }
+}
+
 @SET_NBT_IN_COMPOUND(<net.minecraft.nbt.Tag> [ctx:in], <java.lang.String> [instr:name], <net.minecraft.nbt.Tag> [ctx:value]) {
     if(is([ctx:in], <net.minecraft.nbt.CompoundTag>) == true) {
         cast([ctx:in], <net.minecraft.nbt.CompoundTag>).put([instr:name], [ctx:value]);
@@ -631,4 +648,18 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
       }
       run();
     }
+}
+
+@GET_NBT_FROM_COMPOUND(<net.minecraft.nbt.Tag> [ctx:from], <java.lang.String> [instr:name], <net.minecraft.nbt.Tag> [ctx:value]) {
+    if(is([ctx:from], <net.minecraft.nbt.CompoundTag>) == true) {
+      let [ctx:value] = cast([ctx:from], <net.minecraft.nbt.CompoundTag>).get([instr:name]);
+      if([ctx:value] != null) {
+        run();
+      }
+    }
+}
+
+@CREATE_NULL_TAG(<net.minecraft.nbt.Tag> [ctx:output]) {
+    let [ctx:output] = null;
+    run();
 }

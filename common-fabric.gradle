@@ -55,6 +55,7 @@ java {
 
 loom {
     accessWidenerPath = file("src/main/resources/minecraftfunctioncompiler.v${project.minecraft_version.replaceAll("\\.", "_")}.accesswidener")
+    java.withSourcesJar()
 }
 
 processResources {

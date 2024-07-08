@@ -1493,9 +1493,11 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                     output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ISTORE, $storageLocal.index());\n")
                 } else if(assignType.first() == 'L') {
                     val expressionType = evaluateExpressionType(writerData, el.expression)
-                    val expressionClasses = getClassLowerBounds((expressionType as ParsedTokenExpressionTypeComplex).typeName.replace('/', '.'))
-                    if(!expressionClasses.contains((type as ParsedTokenExpressionTypeComplex).typeName)) {
-                        throw IllegalArgumentException("Invalid assign, wrong type: $expressionType, expected $type")
+                    if(expressionType != ParsedTokenExpressionSimpleType.NULL) {
+                        val expressionClasses = getClassLowerBounds((expressionType as ParsedTokenExpressionTypeComplex).typeName.replace('/', '.'))
+                        if(!expressionClasses.contains((type as ParsedTokenExpressionTypeComplex).typeName)) {
+                            throw IllegalArgumentException("Invalid assign, wrong type: $expressionType, expected $type")
+                        }
                     }
                     output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, $storageLocal.index());\n")
                 }else if(assignType.first() == 'D') {

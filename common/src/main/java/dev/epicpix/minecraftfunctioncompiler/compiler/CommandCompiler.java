@@ -53,7 +53,7 @@ public final class CommandCompiler {
 
                 var parts = command.<NbtPath>get("path").parts();
                 try(var ignored = context.enterWithoutValue(context.current().incrementedId(2).withBaseInstruction(resultStorage))) {
-                    getNbtPathValue(context, storageLocal.forceCast(), parts.subList(0, parts.size() - 1), (value) -> {
+                    getOrCreateNbtPathValue(context, storageLocal.forceCast(), parts.subList(0, parts.size() - 1), (value) -> {
                         var last = parts.get(parts.size() - 1);
                         if(last instanceof NbtPathPart.Named named) {
                             var tagLocal = LocationData.<NbtTag>ofLocal(context.current().highestId());
@@ -379,7 +379,43 @@ public final class CommandCompiler {
             }
             case FUNCTION -> {
                 var current = context.current();
-                current.addInstructionConsumer().accept(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation()));
+                current.addInstructionConsumer().accept(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), null));
+            }
+            case FUNCTION_ARGS -> {
+                var current = context.current();
+                var arguments = LocationData.<NbtCompound>ofLocal(current.highestId());
+                current.addInstructionConsumer().accept(Instructions2.loadNbtValue(command.get("arguments"), arguments.forceCast()).with(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), arguments)));
+            }
+            case FUNCTION_ARGS_STORAGE -> {
+                var current = context.current();
+                var arguments = LocationData.<NbtCompound>ofLocal(current.highestId());
+                var clonedArguments = LocationData.<NbtTag>ofLocal(current.highestId() + 1);
+                var validArguments = LocationData.<NbtCompound>ofLocal(current.highestId() + 2);
+                current.addInstructionConsumer().accept(Instructions2.getNbtStorage(command.get("storage"), arguments).with(Instructions2.cloneNbtValue(arguments.forceCast(), clonedArguments).with(Instructions2.checkIsCompound(clonedArguments, validArguments).with(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), validArguments)))));
+            }
+            case FUNCTION_ARGS_STORAGE_PATH -> {
+                var current = context.current();
+                var scope = ScopeData.ofId(current.highestId());
+                var currentTag = LocationData.<NbtTag>ofLocal(current.highestId() + 1);
+                var storageLocal = LocationData.<NbtCompound>ofLocal(context.current().highestId() + 2);
+                var stacker = new InstructionStacker(Instructions2.createNullTag(currentTag));
+                stacker.stackInstruction(Instructions2.scope(scope));
+                stacker.stackInstruction(Instructions2.getNbtStorage(command.get("storage"), storageLocal));
+
+                var parts = command.<NbtPath>get("path").parts();
+                try(var ignored = context.enterWithoutValue(context.current().incrementedId(3).withBaseInstruction(stacker.current))) {
+                    getNbtPathValue(context, storageLocal.forceCast(), parts, (value) -> {
+                        context.current().addInstructionConsumer().accept(Instructions2.ifNotNull(currentTag.lower()).with(Instructions2.exitScope(scope)));
+                        context.current().addInstructionConsumer().accept(Instructions2.setNbtValue(value, currentTag));
+                    });
+                }
+                stacker.stackInstruction(Instructions2.ifNotNull(currentTag.lower()));
+                var clonedTag = LocationData.<NbtTag>ofLocal(current.highestId() + 3);
+                stacker.stackInstruction(Instructions2.cloneNbtValue(currentTag, clonedTag));
+                var compoundTag = LocationData.<NbtCompound>ofLocal(current.highestId() + 4);
+                stacker.stackInstruction(Instructions2.checkIsCompound(clonedTag, compoundTag));
+                stacker.stackInstruction(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), compoundTag));
+                current.addInstructionConsumer().accept(stacker.base);
             }
             case GAMEMODE -> {
                 try(var selector = context.forSelector(command.get("targets"))) {
@@ -501,13 +537,32 @@ public final class CommandCompiler {
         }
     }
 
-    private static void getNbtPathValue(CompilationContext context, LocationData<NbtTag> source, List<NbtPathPart> parts, Consumer<LocationData<NbtTag>> valueConsumer) {
+    private static void getOrCreateNbtPathValue(CompilationContext context, LocationData<NbtTag> source, List<NbtPathPart> parts, Consumer<LocationData<NbtTag>> valueConsumer) {
         if(!parts.isEmpty()) {
             var currentPart = parts.get(0);
             var otherParts = parts.subList(1, parts.size());
             if(currentPart instanceof NbtPathPart.Named named) {
                 var storage = LocationData.<NbtTag>ofLocal(context.current().highestId());
                 var instr = Instructions2.getNbtFromCompoundOrCreate(source, named.name(), storage);
+                context.current().addInstructionConsumer().accept(instr);
+                try(var ignored = context.enterWithoutValue(context.current().incrementedId(1).withBaseInstruction(instr))) {
+                    getOrCreateNbtPathValue(context, storage, otherParts, valueConsumer);
+                }
+            }else {
+                throw new UnsupportedOperationException("Cannot get nbt path from " + currentPart);
+            }
+        }else {
+            valueConsumer.accept(source);
+        }
+    }
+
+    private static void getNbtPathValue(CompilationContext context, LocationData<NbtTag> source, List<NbtPathPart> parts, Consumer<LocationData<NbtTag>> valueConsumer) {
+        if(!parts.isEmpty()) {
+            var currentPart = parts.get(0);
+            var otherParts = parts.subList(1, parts.size());
+            if(currentPart instanceof NbtPathPart.Named named) {
+                var storage = LocationData.<NbtTag>ofLocal(context.current().highestId());
+                var instr = Instructions2.getNbtFromCompound(source, named.name(), storage);
                 context.current().addInstructionConsumer().accept(instr);
                 try(var ignored = context.enterWithoutValue(context.current().incrementedId(1).withBaseInstruction(instr))) {
                     getNbtPathValue(context, storage, otherParts, valueConsumer);

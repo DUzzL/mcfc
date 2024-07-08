@@ -35,6 +35,18 @@ public enum MinecraftVersion {
         }
     }
 
+    public static boolean isCurrentVersionInRange(MinecraftVersion min, MinecraftVersion max) {
+        if(min != null) {
+            if(currentVersion.ordinal() < min.ordinal()) {
+                return false;
+            }
+        }
+        if(max != null) {
+            return currentVersion.ordinal() <= max.ordinal();
+        }
+        return true;
+    }
+
     public static MinecraftVersion getCurrentVersion() {
         return currentVersion;
     }

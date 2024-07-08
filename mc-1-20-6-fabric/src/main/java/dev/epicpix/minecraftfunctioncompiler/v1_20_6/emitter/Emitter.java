@@ -6,6 +6,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructions;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import org.objectweb.asm.Label;
@@ -51,7 +52,13 @@ public final class Emitter {
                         methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, ("function/" + func.namespace() + "/" + func.path()).replace('.', '$'), "run", "(" + CommandSourceStack.class.descriptorString() + ")I", false);
                         methodVisitor.visitInsn(Opcodes.POP);
                     }else {
-                        callServerFunctionManager_execute(codeWriter);
+                        if(context.instruction().get("arguments") != null) {
+                            context.load("arguments");
+                            codeWriter.castType(CompoundTag.class);
+                            callExtensionFunctions_executeFunction(codeWriter);
+                        }else {
+                            callServerFunctionManager_execute(codeWriter);
+                        }
                     }
                 }
                 return true;

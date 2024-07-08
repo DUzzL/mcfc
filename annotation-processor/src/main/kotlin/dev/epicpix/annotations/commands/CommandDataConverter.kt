@@ -9,6 +9,7 @@ data class ParsedCommandArgument(
     val kindOptions: MutableMap<String, String> = mutableMapOf(),
     val kindDefaults: String? = null,
     var executableCommand: String? = null,
+    var versionRange: Pair<String?, String?>? = null,
 )
 
 data class ParsedCommandData(
@@ -17,8 +18,12 @@ data class ParsedCommandData(
     val commandTree: MutableMap<String, ParsedCommandArgument>,
 )
 
-private fun parseCommandPart(parts: List<String>, current: ParsedCommandArgument, commandId: String) {
+private fun parseCommandPart(parts: List<String>, current: ParsedCommandArgument, commandId: String, range: Pair<String?, String?>?) {
+    if(range == null && current.versionRange != null) {
+        current.versionRange = null
+    }
     if(parts.isEmpty()) {
+        current.versionRange = range
         current.executableCommand = commandId
     }else {
         val nextPart = parts[0]
@@ -40,11 +45,11 @@ private fun parseCommandPart(parts: List<String>, current: ParsedCommandArgument
                         }
                     }
                 }
-                ParsedCommandArgument(argName = split[0], kind = kind, kindOptions = options, kindDefaults = split.getOrNull(2))
+                ParsedCommandArgument(argName = split[0], kind = kind, kindOptions = options, kindDefaults = split.getOrNull(2), versionRange = range)
             }else {
-                ParsedCommandArgument()
+                ParsedCommandArgument(versionRange = range)
             }
-        }, commandId)
+        }, commandId, range)
     }
 }
 
@@ -52,7 +57,20 @@ private fun parseCommandLine(command: String, tree: MutableMap<String, ParsedCom
     val parts = command.split(" ").toMutableList()
     val cmd = parts[0]
     val argument = tree.getOrPut(cmd) { ParsedCommandArgument() }
-    parseCommandPart(parts.subList(1, parts.size), argument, commandId)
+    val split = commandId.split("<")
+    val range = if(split.size > 1) {
+        val range = split[1].split(">")[0].split("..", limit = 2)
+        if(range.size == 1) {
+            range[0] to range[0]
+        }else {
+            if(range[0].isEmpty()) {
+                null to range[1]
+            }else {
+                range[0] to null
+            }
+        }
+    }else null
+    parseCommandPart(parts.subList(1, parts.size), argument, split[0], range)
 }
 
 fun parseCommandsData(file: String): ParsedCommandData {
@@ -66,7 +84,8 @@ fun parseCommandsData(file: String): ParsedCommandData {
             val aliasData = slashPart[1].split("/", limit = 2)
             commandRedirects.add(aliasData[0] to aliasData[1])
         } else {
-            commands.add(slashPart[0] to slashPart[1])
+            val baseCommand = slashPart[0].split("<")[0]
+            commands.add(baseCommand to slashPart[1])
             parseCommandLine(slashPart[1], commandTree, slashPart[0])
         }
     }
@@ -105,7 +124,7 @@ private fun generateArgumentReaderChildren(name: String, data: ParsedCommandArgu
                 val locationIndex = uniqueId.getAndIncrement()
                 builder.append("${indent}var z$locationIndex = reader.getIndex();\n")
                 builder.append("${indent}try {\n")
-                if(generateArgumentReader(k, v, innerBuilder, uniqueId, "$argumentPath $name", arguments)) {
+                if(generateArgumentReaderVersionCheck(k, v, innerBuilder, uniqueId, "$argumentPath $name", arguments)) {
                     innerBuilder.append("reader.setIndex(z$locationIndex);\n")
                 }
                 builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent("$indent    ") + "\n")
@@ -113,13 +132,28 @@ private fun generateArgumentReaderChildren(name: String, data: ParsedCommandArgu
                 builder.append("$indent    reader.setIndex(z$locationIndex);\n")
                 builder.append("$indent}\n")
             }else {
-                reachable = generateArgumentReader(k, v, innerBuilder, uniqueId, "$argumentPath $name", arguments)
+                reachable = generateArgumentReaderVersionCheck(k, v, innerBuilder, uniqueId, "$argumentPath $name", arguments)
                 builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent(indent) + "\n")
             }
         }
     }
     if(reachable) {
         builder.append("    ${createWrappedError("Failed to parse any options @$argumentPath $name")}\n")
+    }
+}
+
+private fun generateArgumentReaderVersionCheck(name: String, data: ParsedCommandArgument, builder: StringBuilder, uniqueId: AtomicInteger, argumentPath: String, arguments: Map<String, String>, fromRoot: Boolean = false): Boolean {
+    if(data.versionRange != null) {
+        val innerBuilder = StringBuilder()
+        val min = data.versionRange!!.first.let { if(it == null) "null" else "MinecraftVersion.MC_${it.replace('.', '_')}" }
+        val max = data.versionRange!!.second.let { if(it == null) "null" else "MinecraftVersion.MC_${it.replace('.', '_')}" }
+        builder.append("if(MinecraftVersion.isCurrentVersionInRange($min, $max)) {\n")
+        generateArgumentReader(name, data, innerBuilder, uniqueId, argumentPath, arguments, fromRoot)
+        builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent("    ") + "\n")
+        builder.append("}\n")
+        return true
+    }else {
+        return generateArgumentReader(name, data, builder, uniqueId, argumentPath, arguments, fromRoot)
     }
 }
 
@@ -264,7 +298,7 @@ fun generateCommandsDataReader(data: ParsedCommandData): String {
     for((k, v) in data.commandTree) {
         builder.append("public static Command parseCommand_$k(StringCommandReader reader, IArgumentLookup lookup) {\n")
         val innerBuilder = StringBuilder()
-        generateArgumentReader(k, v, innerBuilder, uid, "", mapOf(), true)
+        generateArgumentReaderVersionCheck(k, v, innerBuilder, uid, "", mapOf(), true)
         builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent("    ") + "\n")
         builder.append("}\n")
     }

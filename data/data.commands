@@ -40,6 +40,9 @@ EXPERIENCE_SET_POINTS/experience set <targets:entity_selector[players]> <amount:
 EXPERIENCE_SET_LEVELS/experience set <targets:entity_selector[players]> <amount:int[minimum=0]> levels
 
 FUNCTION/function <functions:function>
+FUNCTION_ARGS<1.20.2..>/function <functions:function> <arguments:nbt_compound>
+FUNCTION_ARGS_STORAGE<1.20.2..>/function <functions:function> with storage <storage:resource_location>
+FUNCTION_ARGS_STORAGE_PATH<1.20.2..>/function <functions:function> with storage <storage:resource_location> <path:nbt_path>
 
 GAMEMODE/gamemode <gamemode:gamemode> <targets:entity_selector[players]:self>
 

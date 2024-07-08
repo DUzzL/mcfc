@@ -5,6 +5,7 @@ accessible method net/minecraft/world/scores/Scoreboard getOrCreatePlayerInfo (L
 accessible class net/minecraft/world/scores/PlayerScores
 accessible field net/minecraft/commands/arguments/ScoreHolderArgument$SelectorResult selector Lnet/minecraft/commands/arguments/selector/EntitySelector;
 accessible field net/minecraft/server/ServerFunctionManager library Lnet/minecraft/server/ServerFunctionLibrary;
+accessible field net/minecraft/server/ServerFunctionManager server Lnet/minecraft/server/MinecraftServer;
 accessible field net/minecraft/server/ServerFunctionLibrary functions Ljava/util/Map;
 accessible field net/minecraft/server/ServerFunctionLibrary dispatcher Lcom/mojang/brigadier/CommandDispatcher;
 accessible field net/minecraft/server/ServerFunctionLibrary functionCompilationLevel I

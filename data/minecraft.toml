@@ -20,14 +20,15 @@ Registry_get."1.20.4-" = "net/minecraft/core/Registry:get(Lnet/minecraft/resourc
 Registry_getHolder."1.20.5+" = "net/minecraft/core/Registry:getHolder(Lnet/minecraft/resources/ResourceLocation;)Ljava/util/Optional;@IM"
 Optional_get."1.20.5+" = "java/util/Optional:get()Ljava/lang/Object;@M"
 
-[definitions_functions.Score_getScore]
-"1.20.3+" = "net/minecraft/world/scores/ScoreAccess:get()I@IM"
-"1.20.2-" = "net/minecraft/world/scores/Score:getScore()I@M"
+Score_getScore."1.20.3+" = "net/minecraft/world/scores/ScoreAccess:get()I@IM"
+Score_getScore."1.20.2-" = "net/minecraft/world/scores/Score:getScore()I@M"
 
-[definitions_functions.ServerFunctionManager_execute]
-"1.20.3+" = "net/minecraft/server/ServerFunctionManager:execute(Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;)V@M"
-"1.20.2+" = "net/minecraft/server/ServerFunctionManager:execute(Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;Lnet/minecraft/nbt/CompoundTag;)I@M"
-"1.20.1-" = "net/minecraft/server/ServerFunctionManager:execute(Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;)I@M"
+ServerFunctionManager_execute."1.20.3+" = "net/minecraft/server/ServerFunctionManager:execute(Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;)V@M"
+ServerFunctionManager_execute."1.20.2+" = "net/minecraft/server/ServerFunctionManager:execute(Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;Lnet/minecraft/nbt/CompoundTag;)I@M"
+ServerFunctionManager_execute."1.20.1-" = "net/minecraft/server/ServerFunctionManager:execute(Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;)I@M"
+
+ExtensionFunctions_executeFunction."1.20.4" = "dev/epicpix/minecraftfunctioncompiler/v1_20_4/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@S"
+ExtensionFunctions_executeFunction."1.20.6" = "dev/epicpix/minecraftfunctioncompiler/v1_20_6/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@S"
 
 [definitions_fields]
 ServerFunctionManager_library = "net/minecraft/server/ServerFunctionManager:library:Lnet/minecraft/server/ServerFunctionLibrary;@M"
@@ -40,5 +41,4 @@ Vec2_y = "net/minecraft/world/phys/Vec2:y:F@M"
 BuiltInRegistries_ATTRIBUTE = "net/minecraft/core/registries/BuiltInRegistries:ATTRIBUTE:Lnet/minecraft/core/Registry;@S"
 BuiltInRegistries_MOB_EFFECT = "net/minecraft/core/registries/BuiltInRegistries:MOB_EFFECT:Lnet/minecraft/core/Registry;@S"
 
-[definitions_fields.ServerFunctionManager_context]
-"1.20.2-" = "net/minecraft/server/ServerFunctionManager:context:Lnet/minecraft/server/ServerFunctionManager$ExecutionContext;@M"
+ServerFunctionManager_context."1.20.2-" = "net/minecraft/server/ServerFunctionManager:context:Lnet/minecraft/server/ServerFunctionManager$ExecutionContext;@M"

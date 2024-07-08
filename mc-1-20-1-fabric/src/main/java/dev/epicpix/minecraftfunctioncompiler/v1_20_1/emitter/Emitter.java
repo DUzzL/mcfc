@@ -52,6 +52,7 @@ public final class Emitter {
                         context.load("rotation");
                         callCommandSourceStack_withRotation(codeWriter);
                     }
+                    if(context.instruction().get("arguments") != null) throw new IllegalArgumentException("Macro arguments are not supported in 1.20.1");
                     if(context.compiledFunctions().contains(func)) {
                         methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, ("function/" + func.namespace() + "/" + func.path()).replace('.', '$'), "run", "(" + CommandSourceStack.class.descriptorString() + ")I", false);
                         methodVisitor.visitInsn(Opcodes.POP);
