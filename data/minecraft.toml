@@ -6,6 +6,16 @@ CommandSourceStack_withLevel = "net/minecraft/commands/CommandSourceStack:withLe
 CommandSourceStack_withPosition = "net/minecraft/commands/CommandSourceStack:withPosition(Lnet/minecraft/world/phys/Vec3;)Lnet/minecraft/commands/CommandSourceStack;@M"
 CommandSourceStack_withRotation = "net/minecraft/commands/CommandSourceStack:withRotation(Lnet/minecraft/world/phys/Vec2;)Lnet/minecraft/commands/CommandSourceStack;@M"
 
+CollectionTag_add = "net/minecraft/nbt/CollectionTag:add(ILnet/minecraft/nbt/Tag;)V@M"
+ByteTag_valueOf = "net/minecraft/nbt/ByteTag:valueOf(B)Lnet/minecraft/nbt/ByteTag;@S"
+CompoundTag_put = "net/minecraft/nbt/CompoundTag:put(Ljava/lang/String;Lnet/minecraft/nbt/Tag;)Lnet/minecraft/nbt/Tag;@M"
+DoubleTag_valueOf = "net/minecraft/nbt/DoubleTag:valueOf(D)Lnet/minecraft/nbt/DoubleTag;@S"
+FloatTag_valueOf = "net/minecraft/nbt/FloatTag:valueOf(F)Lnet/minecraft/nbt/FloatTag;@S"
+IntTag_valueOf = "net/minecraft/nbt/IntTag:valueOf(I)Lnet/minecraft/nbt/IntTag;@S"
+LongTag_valueOf = "net/minecraft/nbt/LongTag:valueOf(J)Lnet/minecraft/nbt/LongTag;@S"
+ShortTag_valueOf = "net/minecraft/nbt/ShortTag:valueOf(S)Lnet/minecraft/nbt/ShortTag;@S"
+StringTag_valueOf = "net/minecraft/nbt/StringTag:valueOf(Ljava/lang/String;)Lnet/minecraft/nbt/StringTag;@S"
+
 Registry_get."1.20.4-" = "net/minecraft/core/Registry:get(Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/Object;@IM"
 Registry_getHolder."1.20.5+" = "net/minecraft/core/Registry:getHolder(Lnet/minecraft/resources/ResourceLocation;)Ljava/util/Optional;@IM"
 Optional_get."1.20.5+" = "java/util/Optional:get()Ljava/lang/Object;@M"

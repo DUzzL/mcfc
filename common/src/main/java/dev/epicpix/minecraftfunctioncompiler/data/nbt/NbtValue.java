@@ -9,14 +9,14 @@ public interface NbtValue {
     interface TypedArray extends ArrayKind {}
 
     record Array(List<NbtValue> values) implements ArrayKind {}
-    record ByteArray(byte[] value) implements TypedArray {}
+    record ByteArray(byte[] values) implements TypedArray {}
     record ByteLiteral(byte value) implements NbtValue {}
     record Compound(Map<String, NbtValue> values) implements NbtValue {}
     record DoubleLiteral(double value) implements NbtValue {}
     record FloatLiteral(float value) implements NbtValue {}
     record IntegerArray(int[] values) implements TypedArray { }
     record IntegerLiteral(int value) implements NbtValue {}
-    record LongArray(long[] value) implements TypedArray {}
+    record LongArray(long[] values) implements TypedArray {}
     record LongLiteral(long value) implements NbtValue {}
     record ShortLiteral(short value) implements NbtValue { }
     record StringLiteral(String value) implements NbtValue {}

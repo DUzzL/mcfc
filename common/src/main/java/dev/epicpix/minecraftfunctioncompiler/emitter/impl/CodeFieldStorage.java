@@ -48,6 +48,10 @@ public final class CodeFieldStorage {
                 : "f" + map.checkIndex(CodeFieldStorageMapKind.FUNCTION, value);
     }
 
+    private String getNbtValueName(NbtValue value) {
+        return "n" + map.checkIndex(CodeFieldStorageMapKind.NBT_VALUE, value);
+    }
+
     private String getResourceLocationName(DataLocation value) {
         return DEBUG
                 ? "resourceLocation$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
@@ -76,6 +80,11 @@ public final class CodeFieldStorage {
         map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, value);
         map.writeValue(CodeFieldStorageMapKind.FUNCTION, value);
         cw.getDataField(getFunctionName(value), map.getValueClass(CodeFieldStorageMapKind.FUNCTION));
+    }
+
+    public void loadNbtValue(CodeWriter cw, NbtValue value) {
+        map.writeValue(CodeFieldStorageMapKind.NBT_VALUE, value);
+        cw.getDataField(getNbtValueName(value), map.getValueClass(CodeFieldStorageMapKind.NBT_VALUE));
     }
 
     public void loadResourceLocation(CodeWriter cw, DataLocation value) {
@@ -128,6 +137,11 @@ public final class CodeFieldStorage {
             cw.setDataField(getAttributeName(value), map.getValueClass(CodeFieldStorageMapKind.ATTRIBUTE));
         }
 
+        for(var value : map.getStorage(CodeFieldStorageMapKind.NBT_VALUE)) {
+            map.writeCode(CodeFieldStorageMapKind.NBT_VALUE, this, cw, value);
+            cw.setDataField(getNbtValueName(value), map.getValueClass(CodeFieldStorageMapKind.NBT_VALUE));
+        }
+
         mv.visitInsn(Opcodes.RETURN);
         mv.visitMaxs(0, 0);
         mv.visitEnd();
@@ -147,6 +161,9 @@ public final class CodeFieldStorage {
         }
         for(var value : map.getStorage(CodeFieldStorageMapKind.ATTRIBUTE)) {
             classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getAttributeName(value), map.getValueClass(CodeFieldStorageMapKind.ATTRIBUTE).descriptorString(), null, null);
+        }
+        for(var value : map.getStorage(CodeFieldStorageMapKind.NBT_VALUE)) {
+            classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getNbtValueName(value), map.getValueClass(CodeFieldStorageMapKind.NBT_VALUE).descriptorString(), null, null);
         }
 
     }
