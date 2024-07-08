@@ -51,11 +51,16 @@ java {
         toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
     }
     archivesBaseName = project.archives_base_name
+    withSourcesJar()
+
+    tasks.named("sourcesJar") {
+        from project(':common').sourceSets.main.java
+        from project(':common').sourceSets.main.resources
+    }
 }
 
 loom {
     accessWidenerPath = file("src/main/resources/minecraftfunctioncompiler.v${project.minecraft_version.replaceAll("\\.", "_")}.accesswidener")
-    java.withSourcesJar()
 }
 
 processResources {
