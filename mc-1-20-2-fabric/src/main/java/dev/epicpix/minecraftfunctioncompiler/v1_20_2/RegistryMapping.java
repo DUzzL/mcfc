@@ -41,7 +41,6 @@ public final class RegistryMapping {
             }
         }
         DataRegistries.ENTITY_CLASS.set(new DataLocation("minecraft", "player"), ServerPlayer.class);
-        DataRegistries.ENTITY_CLASS.set(new DataLocation("minecraftfunctioncompiler", "living_entity"), LivingEntity.class);
         DataRegistries.ENTITY_CLASS.freeze();
     }
 }
