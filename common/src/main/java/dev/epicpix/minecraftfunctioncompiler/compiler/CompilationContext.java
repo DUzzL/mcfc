@@ -219,6 +219,7 @@ public class CompilationContext {
             ScopeData limiterScope = ScopeData.ofId(data.highestId());
             LocationData<Integer> limiterCounter = LocationData.ofLocal(data.highestId() + 1);
             var instr = Instructions2.limiter(limiterScope, limiterCounter, selector.limit());
+            data.addInstructionConsumer().accept(instr);
             enterWith(data.incrementedId(2).withBaseInstruction(instr));
             return forSelectorSelect(selector, limiterScope, limiterCounter, scope.content(), scope.stackCount() + 1);
         }else {
@@ -246,6 +247,7 @@ public class CompilationContext {
     private CompilationData<LocationData<Entity>> forSelectorBase(CompilationData<LocationData<Entity>> entityData, SelectorArgument selector, ScopeData limiterScope, LocationData<Integer> limiterCounter, ScopeData breakScope, int inStackCount) {
         var data = entityData.data();
         int stackCount = entityData.stackCount() + inStackCount;
+        int stackStart = stack.size();
         var nonNull = Instructions2.ifNotNull(entityData.content().lower());
         entityData.writeInstruction(nonNull);
         var stacker = new InstructionStacker(nonNull);
@@ -257,7 +259,6 @@ public class CompilationContext {
             stacker.stackInstruction(Instructions2.tryAsPlayer(entityData.content(), playerLocal));
             stacker.stackInstruction(Instructions2.checkGamemode(playerLocal, gamemode.data(), gamemode.negated()));
             data = data.incrementedId(1);
-            stackCount++;
             enterWith(data);
         }
         for(var name : selector.names()) {
@@ -276,7 +277,6 @@ public class CompilationContext {
             stacker.stackInstruction(Instructions2.getExperienceLevel(playerLocal, levelLocal));
             stacker.stackInstruction(Instructions.checkIntRange(levelLocal, selector.level()));
             data = data.incrementedId(2);
-            stackCount++;
             enterWith(data);
         }
         if(selector.yaw() != null || selector.pitch() != null) {
@@ -285,7 +285,6 @@ public class CompilationContext {
             if(selector.yaw() != null) stacker.stackInstruction(Instructions.checkRotationYaw(rotationLocal, selector.yaw()));
             if(selector.pitch() != null) stacker.stackInstruction(Instructions.checkRotationPitch(rotationLocal, selector.pitch()));
             data = data.incrementedId(1);
-            stackCount++;
             enterWith(data);
         }
         for(var team : selector.teams()) {
@@ -295,11 +294,9 @@ public class CompilationContext {
             stacker.stackInstruction(Instructions2.hasTeam(entityData.content(), selector.hasTeam()));
         }
         if(selector.distance() != null) {
-            stackCount++;
             enterWith(data.withBaseInstruction(stacker.current));
 
             var positionData = getPosition();
-            stackCount += positionData.stackCount();
             var instr = Instructions2.ifNotNull(positionData.content().lower());
             positionData.writeInstruction(instr);
             stacker.current = instr;
@@ -310,31 +307,26 @@ public class CompilationContext {
             stacker.stackInstruction(Instructions2.getDistanceSquared(positionData.content(), thisPosition, distance));
             stacker.stackInstruction(Instructions.checkDoubleRange(distance, selector.distance().square()));
             enterWith(positionData.data().incrementedId(2).withBaseInstruction(stacker.current));
-            stackCount++;
 
             data = stack.peek();
         }
         if(!selector.scores().isEmpty()) {
-            stackCount++;
             enterWith(data.withBaseInstruction(stacker.current));
             for(var entry : selector.scores().entrySet()) {
                 var objectiveData = getObjective(entry.getKey());
-                stackCount += objectiveData.stackCount();
                 var nameData = getScoreboardName(entityData.content());
-                stackCount += nameData.stackCount();
                 var scoreData = getScoreData(objectiveData.content(), nameData.content(), false);
-                stackCount += scoreData.stackCount();
 
                 var scoreValue = LocationData.<Integer>ofLocal(scoreData.data().highestId());
                 var execInstruction = Instructions.checkIntRange(scoreValue, entry.getValue());
                 var baseInstruction = Instructions2.getScoreValue(scoreData.content(), scoreValue).with(execInstruction);
                 scoreData.writeInstruction(baseInstruction);
-                stackCount++;
                 enterWith(scoreData.data().withBaseInstruction(execInstruction).incrementedId(1));
                 stacker.current = execInstruction;
             }
             data = stack.peek();
         }
+        stackCount += stack.size() - stackStart;
         var execBase = Instructions2.always();
         stacker.current.with(execBase);
         if(Objects.equals(selector.limit(), 1)) {
