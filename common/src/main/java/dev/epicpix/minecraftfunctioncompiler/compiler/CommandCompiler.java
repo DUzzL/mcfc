@@ -310,6 +310,55 @@ public final class CommandCompiler {
                     }
                 }
             }
+            case EXECUTE_STORE_RESULT_STORAGE -> {
+                if(command.get("store_type") == ResultStoreType.INT) {
+                    if(command.<Double>get("scale") == 1.0d) {
+                        try(var res = context.withResultStorage(true, false)) {
+                            compile(context, command.get("command"), res.content());
+                            res.content().checkRequirements(command.get("command"));
+
+                            var storageLocal = LocationData.<NbtCompound>ofLocal(context.current().highestId());
+                            var setCountLocal = LocationData.<Integer>ofLocal(context.current().highestId() + 1);
+
+                            var stacker = new InstructionStacker(Instructions2.always());
+
+                            stacker.stackInstruction(Instructions2.getNbtStorage(command.get("storage"), storageLocal));
+                            var resultStorage = Instructions2.createResultStorage(setCountLocal);
+                            stacker.stackInstruction(resultStorage);
+
+                            var parts = command.<NbtPath>get("path").parts();
+                            try(var ignored = context.enterWithoutValue(context.current().incrementedId(2).withBaseInstruction(resultStorage))) {
+                                getNbtPathValue(context, storageLocal.forceCast(), parts.subList(0, parts.size() - 1), true, (value) -> {
+                                    var last = parts.get(parts.size() - 1);
+                                    if(last instanceof NbtPathPart.Named named) {
+                                        var tagLocal = LocationData.<NbtTag>ofLocal(context.current().highestId());
+                                        context.current().addInstructionConsumer().accept(Instructions2.createIntTag(res.content().result, tagLocal).with(Instructions2.setNbtInCompound(value, named.name(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
+                                    }else if(last instanceof NbtPathPart.ArrayIndexInteger indexed) {
+                                        var tagLocal = LocationData.<NbtTag>ofLocal(context.current().highestId());
+                                        if(indexed.index() >= 0) {
+                                            context.current().addInstructionConsumer().accept(Instructions2.createIntTag(res.content().result, tagLocal).with(Instructions2.setNbtInListForward(value, indexed.index(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
+                                        }else {
+                                            context.current().addInstructionConsumer().accept(Instructions2.createIntTag(res.content().result, tagLocal).with(Instructions2.setNbtInListBackward(value, -indexed.index(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
+                                        }
+                                    }else {
+                                        throw new UnsupportedOperationException("Cannot set nbt value from path " + last);
+                                    }
+                                });
+                            }
+                            stacker.stackInstruction(Instructions2.isNotResultStorage(setCountLocal, 0));
+                            try(var data = context.enterWithoutValue(context.current().incrementedId(2).withBaseInstruction(stacker.current))) {
+                                data.writeInstruction(Instructions2.setNbtStorage(command.get("storage"), storageLocal));
+                            }
+
+                            context.current().addInstructionConsumer().accept(stacker.base);
+                        }
+                    }else {
+                        throw new UnsupportedOperationException("Storing into storage with a non 1.0 scale is not yet implemented");
+                    }
+                }else {
+                    throw new UnsupportedOperationException("Storing into storage with a non-int type is not yet implemented");
+                }
+            }
             case EXECUTE_UNLESS_ENTITY -> {
                 try(var scope = context.forScope()) {
                     try(var selector = context.forSelector(command.<SelectorArgument>get("entities").limit(1))) {

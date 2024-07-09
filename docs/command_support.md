@@ -1,47 +1,48 @@
 Not all commands are currently implemented in this mod, if a command is not listed at all, it means that it is not implemented at all.
 
-| Command                                 | Full Support | `store result` Support | `store success` Support |
-|-----------------------------------------|--------------|------------------------|-------------------------|
-| `attribute base set`                    | Partial[^1]  | No                     | No                      |
-| `data modify storage ... set value ...` | Partial[^4]  | No                     | No                      |
-| `difficulty`                            | Partial[^3]  | No                     | No                      |
-| `effect`                                | Partial[^1]  | No                     | No                      |
-| `execute align`                         | Yes          | No result by itself    | No result by itself     |
-| `execute as`                            | Partial[^1]  | No result by itself    | No result by itself     |
-| `execute at`                            | Partial[^1]  | No result by itself    | No result by itself     |
-| `execute if entity`                     | Partial[^1]  | No                     | No                      |
-| `execute if score`                      | Partial[^1]  | No                     | No                      |
-| `execute positioned`                    | Partial[^2]  | No result by itself    | No result by itself     |
-| `execute positioned as`                 | Partial[^1]  | No result by itself    | No result by itself     |
-| `execute positioned over`               | No           | No result by itself    | No result by itself     |
-| `execute rotated`                       | Yes          | No result by itself    | No result by itself     |
-| `execute rotated as`                    | Partial[^1]  | No result by itself    | No result by itself     |
-| `execute run`                           | Yes          | No result by itself    | No result by itself     |
-| `execute store result score`            | Partial[^1]  | No result by itself    | No result by itself     |
-| `execute unless entity`                 | Partial[^1]  | No                     | No                      |
-| `execute unless score`                  | Partial[^1]  | No                     | No                      |
-| `experience add`                        | Partial[^1]  | No                     | No                      |
-| `experience set`                        | Partial[^1]  | No                     | No                      |
-| `function ... with block`               | No           | No                     | No                      |
-| `function ... with entity`              | No           | No                     | No                      |
-| `function ... with storage ...`         | Yes          | No                     | No                      |
-| `function ... with storage ... <path>`  | Partial[^4]  | No                     | No                      |
-| `function ... <arguments>`              | Yes          | No                     | No                      |
-| `function`                              | Yes          | No                     | No                      |
-| `gamemode`                              | Partial[^1]  | No                     | No                      |
-| `kill`                                  | Partial[^1]  | No                     | No                      |
-| `scoreboard players add`                | Partial[^1]  | No                     | No                      |
-| `scoreboard players enable`             | No           | No                     | No                      |
-| `scoreboard players get`                | Partial[^1]  | Yes                    | No                      |
-| `scoreboard players operation`          | Partial[^1]  | No                     | No                      |
-| `scoreboard players remove`             | Partial[^1]  | No                     | No                      |
-| `scoreboard players reset`              | Partial[^1]  | No                     | No                      |
-| `scoreboard players set`                | Partial[^1]  | No                     | No                      |
-| `tag add`                               | Partial[^1]  | No                     | No                      |
-| `tag remove`                            | Partial[^1]  | No                     | No                      |
-| `weather`                               | Yes          | No                     | No                      |
-| `xp add`                                | Partial[^1]  | No                     | No                      |
-| `xp set`                                | Partial[^1]  | No                     | No                      |
+| Command                                  | Full Support | `store result` Support | `store success` Support |
+|------------------------------------------|--------------|------------------------|-------------------------|
+| `attribute base set`                     | Partial[^1]  | No                     | No                      |
+| `data modify storage ... set value ...`  | Partial[^4]  | No                     | No                      |
+| `difficulty`                             | Partial[^3]  | No                     | No                      |
+| `effect`                                 | Partial[^1]  | No                     | No                      |
+| `execute align`                          | Yes          | No result by itself    | No result by itself     |
+| `execute as`                             | Partial[^1]  | No result by itself    | No result by itself     |
+| `execute at`                             | Partial[^1]  | No result by itself    | No result by itself     |
+| `execute if entity`                      | Partial[^1]  | No                     | No                      |
+| `execute if score`                       | Partial[^1]  | No                     | No                      |
+| `execute positioned`                     | Partial[^2]  | No result by itself    | No result by itself     |
+| `execute positioned as`                  | Partial[^1]  | No result by itself    | No result by itself     |
+| `execute positioned over`                | No           | No result by itself    | No result by itself     |
+| `execute rotated`                        | Yes          | No result by itself    | No result by itself     |
+| `execute rotated as`                     | Partial[^1]  | No result by itself    | No result by itself     |
+| `execute run`                            | Yes          | No result by itself    | No result by itself     |
+| `execute store result storage ... int 1` | Partial[^4]  | No result by itself    | No result by itself     |
+| `execute store result score`             | Partial[^1]  | No result by itself    | No result by itself     |
+| `execute unless entity`                  | Partial[^1]  | No                     | No                      |
+| `execute unless score`                   | Partial[^1]  | No                     | No                      |
+| `experience add`                         | Partial[^1]  | No                     | No                      |
+| `experience set`                         | Partial[^1]  | No                     | No                      |
+| `function ... with block`                | No           | No                     | No                      |
+| `function ... with entity`               | No           | No                     | No                      |
+| `function ... with storage ...`          | Yes          | No                     | No                      |
+| `function ... with storage ... <path>`   | Partial[^4]  | No                     | No                      |
+| `function ... <arguments>`               | Yes          | No                     | No                      |
+| `function`                               | Yes          | No                     | No                      |
+| `gamemode`                               | Partial[^1]  | No                     | No                      |
+| `kill`                                   | Partial[^1]  | No                     | No                      |
+| `scoreboard players add`                 | Partial[^1]  | No                     | No                      |
+| `scoreboard players enable`              | No           | No                     | No                      |
+| `scoreboard players get`                 | Partial[^1]  | Yes                    | No                      |
+| `scoreboard players operation`           | Partial[^1]  | No                     | No                      |
+| `scoreboard players remove`              | Partial[^1]  | No                     | No                      |
+| `scoreboard players reset`               | Partial[^1]  | No                     | No                      |
+| `scoreboard players set`                 | Partial[^1]  | No                     | No                      |
+| `tag add`                                | Partial[^1]  | No                     | No                      |
+| `tag remove`                             | Partial[^1]  | No                     | No                      |
+| `weather`                                | Yes          | No                     | No                      |
+| `xp add`                                 | Partial[^1]  | No                     | No                      |
+| `xp set`                                 | Partial[^1]  | No                     | No                      |
 
 [^1]: Not all selectors are currently supported.
 [^2]: Local positions (^ ^ ^) are not implemented, relative and absolute positions do work.

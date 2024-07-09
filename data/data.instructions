@@ -709,3 +709,8 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
   let [ctx:output] = null;
   run();
 }
+
+@CREATE_INT_TAG(int [ctx:value], <net.minecraft.nbt.Tag> [ctx:output]) {
+  let [ctx:output] = <net.minecraft.nbt.IntTag>.valueOf([ctx:value]);
+  run();
+}

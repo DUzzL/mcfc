@@ -213,6 +213,7 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
             "nbt_value" -> builder.append("    var a$argumentIndex = NbtParser.readNbtValue(reader);\n")
             "objective" -> builder.append("    var a$argumentIndex = reader.readWord();\n")
             "resource_location" -> builder.append("    var a$argumentIndex = reader.readDataLocation();\n")
+            "result_store_type" -> builder.append("    var a$argumentIndex = reader.readResultStoreType();\n")
             "rotation" -> builder.append("    var a$argumentIndex = reader.readRotation();\n")
             "score_comparison" -> builder.append("    var a$argumentIndex = reader.readScoreboardCompareOperation();\n")
             "score_holder" -> builder.append("    var a$argumentIndex = SelectorParser.parseScoreHolder(reader);\n")

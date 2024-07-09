@@ -455,4 +455,17 @@ public class StringCommandReader {
         return attribute;
     }
 
+    public ResultStoreType readResultStoreType() {
+        String str = readWord();
+        return switch (str) {
+            case "byte" -> ResultStoreType.BYTE;
+            case "double" -> ResultStoreType.DOUBLE;
+            case "float" -> ResultStoreType.FLOAT;
+            case "int" -> ResultStoreType.INT;
+            case "long" -> ResultStoreType.LONG;
+            case "short" -> ResultStoreType.SHORT;
+            default -> throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_RESULT_STORE_TYPE);
+        };
+    }
+
 }

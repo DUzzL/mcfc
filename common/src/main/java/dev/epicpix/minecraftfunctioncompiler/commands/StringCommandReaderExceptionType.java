@@ -22,4 +22,5 @@ public enum StringCommandReaderExceptionType {
     INVALID_TIME_KIND,
     INVALID_DIFFICULTY,
     INVALID_MOB_EFFECT,
+    INVALID_RESULT_STORE_TYPE,
 }
