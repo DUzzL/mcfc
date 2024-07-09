@@ -94,7 +94,7 @@ public final class FunctionCompilerReporter {
     public static void reportExceptionWithInstructions(String step, Throwable exception, List<Instruction> instructions) {
         JsonObject json = new JsonObject();
         var instructionResult = new StringBuilder();
-        printInstructionList(instructions, (it) -> instructionResult.append(it).append("\n"), 0);
+        printInstructionList(instructions, (it) -> instructionResult.append(it).append("\n"));
         json.addProperty("instructions", instructionResult.toString());
         reportException(step, exception, json);
     }

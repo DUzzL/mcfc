@@ -22,6 +22,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -91,10 +92,6 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
                 var optimized = Optimizer.optimize(compiled, stats);
                 optimizerStatistics.add(stats);
                 compiledFunctions.put(key, List.of(Instructions2.addStaticRequirements(optimized)));
-                if(DEBUG) {
-                    logInfo.accept(" --- " + key + " ---");
-                    printInstructionList(compiledFunctions.get(key), logInfo, 0);
-                }
             }catch(UnsupportedOperationException e) {
                 logWarn.accept("Failed to compile function " + key + " / " + e.getMessage());
             }catch(Throwable e) {
@@ -104,6 +101,27 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
             }
         }
         var compileTime = (System.nanoTime()-startCompile)/1000000000d;
+        if(DEBUG) {
+            StringBuilder instructionDump = new StringBuilder();
+            var entries = new ArrayList<>(compiledFunctions.entrySet());
+            entries.sort((a, b) -> a.toString().compareToIgnoreCase(b.toString()));
+            for(var entry : entries) {
+                instructionDump.append("┌──\n");
+                instructionDump.append("│ function ").append(entry.getKey()).append("\n");
+                instructionDump.append("│\n");
+                printInstructionList(entry.getValue(), line -> instructionDump.append("│ ").append(line).append("\n"));
+                instructionDump.append("└──\n");
+                instructionDump.append("\n");
+            }
+            try {
+                Files.createDirectory(generatedDir);
+            }catch(Exception ignored) {}
+            try {
+                String instructionDumpStr = instructionDump.toString();
+                Files.writeString(generatedDir.resolve("instruction_dump.txt"), instructionDumpStr);
+                logInfo.accept("Wrote " + instructionDumpStr.lines().count() + " lines into instruction_dump.txt");
+            }catch(Exception ignored) {}
+        }
         var compiledFunctionSet = new HashSet<>(compiledFunctions.keySet());
         var loadedFunctions = new HashMap<DataLocation, Class<?>>();
         var startLoader = System.nanoTime();
@@ -152,7 +170,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
                 resetHandles();
                 if(DEBUG) {
                     logInfo.accept("Instruction dump:");
-                    printInstructionList(compiledFunctions.get(key), logInfo, 0);
+                    printInstructionList(compiledFunctions.get(key), logInfo);
                 }
                 break;
             }

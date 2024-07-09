@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public record Instruction(InstructionType type, Map<String, Object> data, ArrayList<Instruction> children) {
 
@@ -54,10 +56,36 @@ public record Instruction(InstructionType type, Map<String, Object> data, ArrayL
         return result;
     }
 
-    public static void printInstructionList(List<Instruction> instructions, Consumer<String> log, int currentDepth) {
-        for(var instruction : instructions) {
-            log.accept("-".repeat(currentDepth) + instruction.type + " - " + instruction.data);
-            printInstructionList(instruction.children, log, currentDepth + 1);
+    public static void printInstructionList(List<Instruction> instructions, Consumer<String> lineConsumer) {
+        for(var instr : instructions) printInstruction(instr, (data, ignored) -> lineConsumer.accept(data));
+    }
+
+    private static void printInstruction(Instruction instruction, BiConsumer<String, Boolean> writer) {
+        var entries = new ArrayList<>(instruction.data.entrySet());
+        entries.sort((a, b) -> a.toString().compareToIgnoreCase(b.toString()));
+        String args = entries.isEmpty() ? "" : " -> { " + entries.stream().map(it -> it.getKey() + "=" + (it.getValue() instanceof String str ? "\"" + str.translateEscapes() + "\"" : it.getValue())).collect(Collectors.joining(", ")) + " }";
+
+        writer.accept(instruction.type.name() + args, true);
+
+        ArrayList<Instruction> instructions = instruction.children;
+        for(int i = 0; i < instructions.size(); i++) {
+            var child = instructions.get(i);
+            boolean hasNext = i + 1 < instructions.size();
+            printInstruction(child, (data, first) -> {
+                if(!hasNext) {
+                    if(first) {
+                        writer.accept("┗━ " + data, false);
+                    }else {
+                        writer.accept("   " + data, false);
+                    }
+                }else {
+                    if(first) {
+                        writer.accept("┣━ " + data, false);
+                    }else {
+                        writer.accept("┃  " + data, false);
+                    }
+                }
+            });
         }
     }
 }
