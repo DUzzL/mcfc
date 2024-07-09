@@ -181,7 +181,7 @@ public final class Emitter {
                 context.load("position");
                 loadVec3_z(codeWriter);
                 if(swizzle.z()) callMath_floor(codeWriter);
-                codeWriter.newObjectInit(Vec3.class, Double.class, Double.class, Double.class);
+                codeWriter.newObjectInit(Vec3.class, double.class, double.class, double.class);
                 context.runStored("result", Vec3.class);
                 return true;
             }
