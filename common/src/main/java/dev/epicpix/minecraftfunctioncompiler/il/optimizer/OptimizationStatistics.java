@@ -1,4 +1,4 @@
-package dev.epicpix.minecraftfunctioncompiler.optimizer;
+package dev.epicpix.minecraftfunctioncompiler.il.optimizer;
 
 public record OptimizationStatistics(
         String type,

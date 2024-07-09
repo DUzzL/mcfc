@@ -458,6 +458,9 @@ private fun parseValueAccessor(iter: ListIterator<LexToken>, valueDefinitions: L
 
 private fun parseCode(iter: ListIterator<LexToken>, valueDefinitions: List<ParsedTokenValueAccessor>, usesObf: AtomicBoolean): List<ParsedTokenStatement> {
     val res = mutableListOf<ParsedTokenStatement>()
+    if(iter.peekNextTokenType(LexTokenSimpleType.SEMICOLON)) {
+        return res
+    }
     iter.expectTokenType(LexTokenSimpleType.OPEN_BRACE)
     while(!iter.tryNextTokenType(LexTokenSimpleType.CLOSE_BRACE)) {
         if(iter.tryNextTokenType(LexTokenSimpleType.KW_RETURN)) {
@@ -1545,12 +1548,14 @@ fun parseCode(inputCode: String) = parseTokens(lexTokens(inputCode).listIterator
 fun generateCode(mappingData: MappingData?, definition: ParsedTokenInstructionDefinition, file: ParsedFile, output: OutputStream, enums: EnumList, majorVersion: Int, minorVersion: Int): List<AccessorStatistics> {
     val bout = ByteArrayOutputStream()
     val writerData = WriterData(mappingData = mappingData, file = file, params = definition.params, enums = enums, majorVersion = majorVersion, minorVersion = minorVersion)
-    try {
-        bout.appendText("org.objectweb.asm.Label ${writerData.localReturn} = new org.objectweb.asm.Label();\n")
-        writeCode(writerData, definition.code, bout, 0)
-        bout.appendText("mv.visitLabel(${writerData.localReturn});\n")
-    }catch(e: Exception) {
-        throw RuntimeException("Failed to write code for instruction definition ${definition.name}", e)
+    if(definition.code.isNotEmpty()) {
+        try {
+            bout.appendText("org.objectweb.asm.Label ${writerData.localReturn} = new org.objectweb.asm.Label();\n")
+            writeCode(writerData, definition.code, bout, 0)
+            bout.appendText("mv.visitLabel(${writerData.localReturn});\n")
+        }catch(e: Exception) {
+            throw RuntimeException("Failed to write code for instruction definition ${definition.name}", e)
+        }
     }
     output.appendText("// ${definition.name}\n")
     output.write(bout.toByteArray())

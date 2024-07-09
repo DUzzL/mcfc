@@ -13,7 +13,7 @@
   run();
 }
 
-@NEVER() {}
+@NEVER();
 
 @IF_NOT_NULL(<java.lang.Object> [ctx:local]) {
   if([ctx:local] != null) {
@@ -615,7 +615,7 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 }
 
 @SET_NBT_VALUE(<net.minecraft.nbt.Tag> [ctx:input], <net.minecraft.nbt.Tag> [ctx:output]) {
-  let [ctx:output] = [ctx:input];
+  [ctx:output] = [ctx:input];
   run();
 }
 

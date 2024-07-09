@@ -7,7 +7,7 @@ import com.google.gson.JsonObject;
 import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
 import dev.epicpix.minecraftfunctioncompiler.commands.CommandError;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
-import dev.epicpix.minecraftfunctioncompiler.optimizer.OptimizationStatistics;
+import dev.epicpix.minecraftfunctioncompiler.il.optimizer.OptimizationStatistics;
 
 import java.net.URL;
 import java.net.http.HttpClient;
