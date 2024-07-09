@@ -50,7 +50,10 @@ private fun fixKotlinDesc(from: String): String {
         "kotlin.Unit" -> "V"
         "kotlin.Int" -> "I"
         "kotlin.String" -> "Ljava/lang/String;"
-        else -> "L${from.replace('.', '/')};"
+        else -> {
+            if(from.startsWith("kotlin.")) throw IllegalArgumentException("Unknown kotlin class: $from")
+            "L${from.replace('.', '/')};"
+        }
     }
 }
 
@@ -177,6 +180,14 @@ fun getClassAccessibleMethods(className: String): Set<ClassMethodInfo> {
     clz.interfaces.forEach { result.addAll(getClassAccessibleMethods(it.replace('/', '.').replace('$', '.')).filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } }) }
     result.addAll(clz.methods.filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } })
     return result
+}
+
+fun checkClassDistance(from: String, to: String, currentDepth: Int = 0): Int? {
+    if(from == to) return currentDepth
+    val fromInfo = loadClassInfo(from)
+    if(fromInfo.superClass != null) checkClassDistance(fromInfo.superClass.replace('/', '.').replace('$', '.'), to, currentDepth + 1)?.let { return it }
+    for(face in fromInfo.interfaces) checkClassDistance(face.replace('/', '.').replace('$', '.'), to, currentDepth + 1)?.let { return it }
+    return null
 }
 
 fun getClassLowerBounds(className: String): Set<String> {

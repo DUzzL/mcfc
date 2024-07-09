@@ -80,7 +80,7 @@ public final class NbtParser {
         char kind = reader.read();
         reader.skip();
         reader.skipWhitespace();
-        var result = switch(kind) {
+        return switch(kind) {
             case 'B' -> {
                 ArrayList<Byte> byteList = new ArrayList<>();
                 while(reader.peek() != ']') {
@@ -149,7 +149,6 @@ public final class NbtParser {
             }
             default -> throw new CommandErrorException(new CommandError(reader.getString(), "Expected 'B', 'I', or 'L' while reading nbt typed array, but got '" + reader.peek() + "'"));
         };
-        return result;
     }
 
     private static boolean isIntegerLike(String str) {
@@ -157,7 +156,7 @@ public final class NbtParser {
         if(str.charAt(0) == '-' || str.charAt(0) == '+') index++;
         if(str.charAt(index) == '0') return str.length() == index + 1;
         while(index < str.length()) {
-            char c = str.charAt(0);
+            char c = str.charAt(index);
             if(c < '0' || c > '9') {
                 return false;
             }
@@ -172,7 +171,7 @@ public final class NbtParser {
         boolean wroteNumber = false;
         boolean foundDot = false;
         while(index < str.length()) {
-            char c = str.charAt(0);
+            char c = str.charAt(index);
             if(c == '.') {
                 if(foundDot) return false;
                 foundDot = true;
@@ -189,7 +188,7 @@ public final class NbtParser {
             if(index >= str.length() || (str.charAt(index) != '-' && str.charAt(index) != '+')) return false;
             index++;
             while(index < str.length()) {
-                char c = str.charAt(0);
+                char c = str.charAt(index);
                 if(c < '0' || c > '9') {
                     return false;
                 }

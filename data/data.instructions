@@ -581,85 +581,131 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 }
 
 @CHECK_ENTITY_IS_NAME(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:name]) {
-    if([ctx:entity].getName().getString().equals([instr:name]) == true) {
-      run();
-    }
+  if([ctx:entity].getName().getString().equals([instr:name]) == true) {
+    run();
+  }
 }
 
 @CHECK_ENTITY_NOT_IS_NAME(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:name]) {
-    if([ctx:entity].getName().getString().equals([instr:name]) == false) {
-      run();
-    }
+  if([ctx:entity].getName().getString().equals([instr:name]) == false) {
+    run();
+  }
 }
 
 @GET_DISTANCE_SQUARED(<net.minecraft.world.phys.Vec3> [ctx:position_a], <net.minecraft.world.phys.Vec3> [ctx:position_b], double [ctx:distance]) {
-    let [local:x]<double> = [ctx:position_a].x() - [ctx:position_b].x();
-    let [local:y]<double> = [ctx:position_a].y() - [ctx:position_b].y();
-    let [local:z]<double> = [ctx:position_a].z() - [ctx:position_b].z();
-    let [ctx:distance] = [local:x]*[local:x] + [local:y]*[local:y] + [local:z]*[local:z];
-    run();
+  let [local:x]<double> = [ctx:position_a].x() - [ctx:position_b].x();
+  let [local:y]<double> = [ctx:position_a].y() - [ctx:position_b].y();
+  let [local:z]<double> = [ctx:position_a].z() - [ctx:position_b].z();
+  let [ctx:distance] = [local:x]*[local:x] + [local:y]*[local:y] + [local:z]*[local:z];
+  run();
 }
 
 @GET_NBT_STORAGE(<net.minecraft.world.level.storage.CommandStorage> [static:CommandStorage], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:storage_name], <net.minecraft.nbt.CompoundTag> [ctx:tag]) {
-    let [ctx:tag] = [static:CommandStorage].get(map_resource_location([instr:storage_name]));
-    run();
+  let [ctx:tag] = [static:CommandStorage].get(map_resource_location([instr:storage_name]));
+  run();
 }
 
 @SET_NBT_STORAGE(<net.minecraft.world.level.storage.CommandStorage> [static:CommandStorage], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:storage_name], <net.minecraft.nbt.CompoundTag> [ctx:tag]) {
-    [static:CommandStorage].set(map_resource_location([instr:storage_name]), [ctx:tag]);
+  [static:CommandStorage].set(map_resource_location([instr:storage_name]), [ctx:tag]);
 }
 
 @LOAD_NBT_VALUE(<dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue> [instr:nbt], <net.minecraft.nbt.Tag> [ctx:tag]) {
-    let [ctx:tag] = map_nbt_value([instr:nbt]).copy();
-    run();
+  let [ctx:tag] = map_nbt_value([instr:nbt]).copy();
+  run();
 }
 
 @SET_NBT_VALUE(<net.minecraft.nbt.Tag> [ctx:input], <net.minecraft.nbt.Tag> [ctx:output]) {
-    let [ctx:output] = [ctx:input];
-    run();
+  let [ctx:output] = [ctx:input];
+  run();
 }
 
 @CLONE_NBT_VALUE(<net.minecraft.nbt.Tag> [ctx:input], <net.minecraft.nbt.Tag> [ctx:output]) {
-    let [ctx:output] = [ctx:input].copy();
-    run();
+  let [ctx:output] = [ctx:input].copy();
+  run();
 }
 
 @CHECK_IS_COMPOUND(<net.minecraft.nbt.Tag> [ctx:tag], <net.minecraft.nbt.CompoundTag> [ctx:compound]) {
-    if(is([ctx:tag], <net.minecraft.nbt.CompoundTag>) == true) {
-        let [ctx:compound] = cast([ctx:tag], <net.minecraft.nbt.CompoundTag>);
-        run();
-    }
+  if(is([ctx:tag], <net.minecraft.nbt.CompoundTag>) == true) {
+    let [ctx:compound] = cast([ctx:tag], <net.minecraft.nbt.CompoundTag>);
+    run();
+  }
 }
 
 @SET_NBT_IN_COMPOUND(<net.minecraft.nbt.Tag> [ctx:in], <java.lang.String> [instr:name], <net.minecraft.nbt.Tag> [ctx:value]) {
-    if(is([ctx:in], <net.minecraft.nbt.CompoundTag>) == true) {
-        cast([ctx:in], <net.minecraft.nbt.CompoundTag>).put([instr:name], [ctx:value]);
-        run();
-    }
+  if(is([ctx:in], <net.minecraft.nbt.CompoundTag>) == true) {
+    cast([ctx:in], <net.minecraft.nbt.CompoundTag>).put([instr:name], [ctx:value]);
+    run();
+  }
 }
 
 @GET_NBT_FROM_COMPOUND_OR_CREATE(<net.minecraft.nbt.Tag> [ctx:from], <java.lang.String> [instr:name], <net.minecraft.nbt.Tag> [ctx:value]) {
-    if(is([ctx:from], <net.minecraft.nbt.CompoundTag>) == true) {
-      let [local:from_compound]<net.minecraft.nbt.CompoundTag> = cast([ctx:from], <net.minecraft.nbt.CompoundTag>);
-      let [ctx:value] = [local:from_compound].get([instr:name]);
-      if([ctx:value] == null) {
-        [ctx:value] = new <net.minecraft.nbt.CompoundTag>();
-        [local:from_compound].put([instr:name], [ctx:value]);
-      }
-      run();
+  if(is([ctx:from], <net.minecraft.nbt.CompoundTag>) == true) {
+    let [local:from_compound]<net.minecraft.nbt.CompoundTag> = cast([ctx:from], <net.minecraft.nbt.CompoundTag>);
+    let [ctx:value] = [local:from_compound].get([instr:name]);
+    if([ctx:value] == null) {
+      [ctx:value] = new <net.minecraft.nbt.CompoundTag>();
+      [local:from_compound].put([instr:name], [ctx:value]);
     }
+    run();
+  }
 }
 
 @GET_NBT_FROM_COMPOUND(<net.minecraft.nbt.Tag> [ctx:from], <java.lang.String> [instr:name], <net.minecraft.nbt.Tag> [ctx:value]) {
-    if(is([ctx:from], <net.minecraft.nbt.CompoundTag>) == true) {
-      let [ctx:value] = cast([ctx:from], <net.minecraft.nbt.CompoundTag>).get([instr:name]);
+  if(is([ctx:from], <net.minecraft.nbt.CompoundTag>) == true) {
+    let [ctx:value] = cast([ctx:from], <net.minecraft.nbt.CompoundTag>).get([instr:name]);
+    if([ctx:value] != null) {
+      run();
+    }
+  }
+}
+
+@GET_NBT_FROM_LIST_FORWARD(<net.minecraft.nbt.Tag> [ctx:from], int [instr:index], <net.minecraft.nbt.Tag> [ctx:value]) {
+  if(is([ctx:from], <net.minecraft.nbt.ListTag>) == true) {
+    let [local:list]<net.minecraft.nbt.ListTag> = cast([ctx:from], <net.minecraft.nbt.ListTag>);
+    if([local:list].size() > [instr:index]) {
+      let [ctx:value] = [local:list].get([instr:index]);
       if([ctx:value] != null) {
         run();
       }
     }
+  }
+}
+
+@GET_NBT_FROM_LIST_BACKWARD(<net.minecraft.nbt.Tag> [ctx:from], int [instr:index], <net.minecraft.nbt.Tag> [ctx:value]) {
+  if(is([ctx:from], <net.minecraft.nbt.ListTag>) == true) {
+    let [local:list]<net.minecraft.nbt.ListTag> = cast([ctx:from], <net.minecraft.nbt.ListTag>);
+    if([local:list].size() > [instr:index]) {
+      let [ctx:value] = [local:list].get([local:list].size() - [instr:index]);
+      if([ctx:value] != null) {
+        run();
+      }
+    }
+  }
+}
+
+@SET_NBT_IN_LIST_FORWARD(<net.minecraft.nbt.Tag> [ctx:in], int [instr:index], <net.minecraft.nbt.Tag> [ctx:value]) {
+  if(is([ctx:in], <net.minecraft.nbt.ListTag>) == true) {
+    let [local:list]<net.minecraft.nbt.ListTag> = cast([ctx:in], <net.minecraft.nbt.ListTag>);
+    if([local:list].size() > [instr:index]) {
+      if([local:list].setTag([instr:index], [ctx:value]) == true) {
+        run();
+      }
+    }
+  }
+}
+
+@SET_NBT_IN_LIST_BACKWARD(<net.minecraft.nbt.Tag> [ctx:in], int [instr:index], <net.minecraft.nbt.Tag> [ctx:value]) {
+  if(is([ctx:in], <net.minecraft.nbt.ListTag>) == true) {
+    let [local:list]<net.minecraft.nbt.ListTag> = cast([ctx:in], <net.minecraft.nbt.ListTag>);
+    if([local:list].size() > [instr:index]) {
+      if([local:list].setTag([local:list].size() - [instr:index], [ctx:value]) == true) {
+        run();
+      }
+    }
+  }
 }
 
 @CREATE_NULL_TAG(<net.minecraft.nbt.Tag> [ctx:output]) {
-    let [ctx:output] = null;
-    run();
+  let [ctx:output] = null;
+  run();
 }

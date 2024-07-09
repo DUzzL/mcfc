@@ -46,4 +46,4 @@ Not all commands are currently implemented in this mod, if a command is not list
 [^1]: Not all selectors are currently supported.
 [^2]: Local positions (^ ^ ^) are not implemented, relative and absolute positions do work.
 [^3]: Only `/difficulty` with the difficulty argument is supported
-[^4]: Only accessing named paths (for example `a.b.c`, `a` and not `a[0]`) is supported
+[^4]: Only named `a.b`, and by index `a[0]` paths are allowed

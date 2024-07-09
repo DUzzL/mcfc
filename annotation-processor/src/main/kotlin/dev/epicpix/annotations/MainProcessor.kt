@@ -81,6 +81,41 @@ fun remapType(type: Type, mappingData: MappingData?): Type {
     return Type.getType("L" + (mappingData.getClassName(type.descriptor!!.run { substring(1, length - 1) })) + ";")
 }
 
+fun kotlinToJavaType(type: String, genericUsage: Boolean): String {
+    return when(type) {
+        "kotlin.Boolean" -> if(!genericUsage) "boolean" else "Boolean"
+        "kotlin.Double" -> if(!genericUsage) "double" else "Double"
+        "kotlin.Float" -> if(!genericUsage) "float" else "Float"
+        "kotlin.Int" -> if(!genericUsage) "int" else "Integer"
+        "kotlin.String" -> "String"
+        "kotlin.collections.List" -> "List"
+        "kotlin.collections.MutableList" -> "List"
+        "kotlin.collections.Map" -> "Map"
+        else -> if(type.startsWith("kotlin.")) throw UnsupportedOperationException("Unknown kotlin type: $type") else type
+    }
+}
+
+fun javaToMinecraftGenericType(type: String): String {
+    if(type.startsWith("net.minecraft.")) {
+        return when(type) {
+            "net.minecraft.world.entity.Entity" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Entity"
+            "net.minecraft.world.entity.LivingEntity" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.LivingEntity"
+            "net.minecraft.server.level.ServerPlayer" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Player"
+            "net.minecraft.world.scores.Objective" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Objective"
+            "net.minecraft.world.scores.Score" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Score"
+            "net.minecraft.world.phys.Vec3" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Vec3"
+            "net.minecraft.world.phys.Vec2" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Vec2"
+            "net.minecraft.server.level.ServerLevel" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.World"
+            "net.minecraft.world.entity.ai.attributes.AttributeInstance" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.AttributeInstance"
+            "net.minecraft.nbt.CompoundTag" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.NbtCompound"
+            "net.minecraft.nbt.Tag" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.NbtTag"
+            else -> throw IllegalArgumentException("Unknown minecraft class: $type")
+        }
+    }else {
+        return kotlinToJavaType(type, true)
+    }
+}
+
 class MainProcessor(
     private val codeGenerator: CodeGenerator,
     private val options: Map<String, String>
@@ -263,11 +298,11 @@ class MainProcessor(
                 if(callDetails != null) {
                     val isStatic = !callDetails.contains("M")
                     if(isStatic) {
-                        mapExtensions.appendText("    public static void load$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.methodVisitor().visitFieldInsn(178, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n")
-                        mapExtensions.appendText("    public static void store$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.methodVisitor().visitFieldInsn(179, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n")
+                        if(callDetails.contains("R")) mapExtensions.appendText("    public static void load$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.methodVisitor().visitFieldInsn(178, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n")
+                        if(callDetails.contains("W")) mapExtensions.appendText("    public static void store$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.methodVisitor().visitFieldInsn(179, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n")
                     }else {
-                        mapExtensions.appendText("    public static void load$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.methodVisitor().visitFieldInsn(180, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n")
-                        mapExtensions.appendText("    public static void store$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.methodVisitor().visitFieldInsn(181, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n")
+                        if(callDetails.contains("R")) mapExtensions.appendText("    public static void load$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.methodVisitor().visitFieldInsn(180, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n")
+                        if(callDetails.contains("W")) mapExtensions.appendText("    public static void store$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { codeWriter.methodVisitor().visitFieldInsn(181, \"$className\", \"$fieldName\", \"$fieldDescriptor\"); }\n")
                     }
                 }
             }
@@ -357,20 +392,7 @@ class MainProcessor(
                                     }else if(type == ParsedTokenExpressionSimpleType.DOUBLE) {
                                         "Double"
                                     }else if(type is ParsedTokenExpressionTypeComplex) {
-                                        if(type.typeName.startsWith("net.minecraft.")) {
-                                            when(type.typeName) {
-                                                "net.minecraft.world.entity.Entity" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Entity"
-                                                "net.minecraft.server.level.ServerPlayer" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Player"
-                                                "net.minecraft.world.scores.Objective" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Objective"
-                                                "net.minecraft.world.scores.Score" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Score"
-                                                "net.minecraft.world.phys.Vec3" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Vec3"
-                                                "net.minecraft.world.phys.Vec2" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Vec2"
-                                                "net.minecraft.server.level.ServerLevel" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.World"
-                                                else -> throw IllegalArgumentException("Unknown minecraft class: ${type.typeName}")
-                                            }
-                                        }else {
-                                            type.typeName.run { if(startsWith("java.lang.")) substring(10) else this }
-                                        }
+                                        javaToMinecraftGenericType(type.typeName)
                                     }else {
                                         TODO("Unknown type: $type")
                                     }
@@ -383,7 +405,7 @@ class MainProcessor(
                             }else if(type == ParsedTokenExpressionSimpleType.BOOLEAN) {
                                 "boolean"
                             }else if(type is ParsedTokenExpressionTypeComplex) {
-                                type.typeName.run { if(startsWith("java.lang.")) substring(10) else this }
+                                kotlinToJavaType(type.typeName, false)
                             }else {
                                 TODO()
                             }
@@ -455,7 +477,9 @@ class MainProcessor(
                 }
                 writtenDefinitions.add(named)
                 types.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.il.InstructionType $named = new dev.epicpix.minecraftfunctioncompiler.il.InstructionType(\"$named\");\n")
-
+                if(named.startsWith("STATIC_")) {
+                    return@forEach
+                }
                 impl.appendText("public static $instructionType ${named.snakeToLowerCamelCase()}(")
                 for(i in it.params.indices) {
                     val (param, type) = it.params[i];
@@ -472,24 +496,7 @@ class MainProcessor(
                                     }else if(type == ParsedTokenExpressionSimpleType.DOUBLE) {
                                         "Double"
                                     }else if(type is ParsedTokenExpressionTypeComplex) {
-                                        if(type.typeName.startsWith("net.minecraft.")) {
-                                            when(type.typeName) {
-                                                "net.minecraft.world.entity.Entity" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Entity"
-                                                "net.minecraft.world.entity.LivingEntity" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.LivingEntity"
-                                                "net.minecraft.server.level.ServerPlayer" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Player"
-                                                "net.minecraft.world.scores.Objective" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Objective"
-                                                "net.minecraft.world.scores.Score" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Score"
-                                                "net.minecraft.world.phys.Vec3" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Vec3"
-                                                "net.minecraft.world.phys.Vec2" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Vec2"
-                                                "net.minecraft.server.level.ServerLevel" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.World"
-                                                "net.minecraft.world.entity.ai.attributes.AttributeInstance" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.AttributeInstance"
-                                                "net.minecraft.nbt.CompoundTag" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.NbtCompound"
-                                                "net.minecraft.nbt.Tag" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.NbtTag"
-                                                else -> throw IllegalArgumentException("Unknown minecraft class: ${type.typeName}")
-                                            }
-                                        }else {
-                                            type.typeName.run { if(startsWith("java.lang.")) substring(10) else this }
-                                        }
+                                        javaToMinecraftGenericType(type.typeName)
                                     }else {
                                         TODO("Unknown type: $type")
                                     }
@@ -504,7 +511,7 @@ class MainProcessor(
                             }else if(type == ParsedTokenExpressionSimpleType.DOUBLE) {
                                 "double"
                             }else if(type is ParsedTokenExpressionTypeComplex) {
-                                type.typeName.run { if(startsWith("java.lang.")) substring(10) else this }
+                                kotlinToJavaType(type.typeName, false)
                             }else {
                                 TODO()
                             }
@@ -618,24 +625,10 @@ class MainProcessor(
                         for(i in def.parameters.indices) {
                             val param = def.parameters[i]
                             val resolvedType = param.type.resolve()
-                            val typeName = when(val typeName = resolvedType.declaration.qualifiedName!!.asString()) {
-                                "kotlin.Boolean" -> "boolean"
-                                "kotlin.Int" -> "int"
-                                "kotlin.String" -> "String"
-                                "kotlin.collections.List" -> "List"
-                                "kotlin.collections.MutableList" -> "List"
-                                "kotlin.collections.Map" -> "Map"
-                                else -> typeName
-                            }
+                            val typeName = kotlinToJavaType(resolvedType.declaration.qualifiedName!!.asString(), false)
                             val typeArgs = resolvedType.arguments.joinToString { arg ->
                                 arg.type?.resolve()?.declaration?.qualifiedName?.asString()?.run {
-                                    when(this) {
-                                        "kotlin.Int" -> "Integer"
-                                        "kotlin.Float" -> "Float"
-                                        "kotlin.Double" -> "Double"
-                                        "kotlin.String" -> "String"
-                                        else -> this
-                                    }
+                                    kotlinToJavaType(this, true)
                                 } ?: "Object"
                             }
 

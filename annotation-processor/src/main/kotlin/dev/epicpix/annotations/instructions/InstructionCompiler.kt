@@ -811,12 +811,14 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             if(instanceType !is ParsedTokenExpressionTypeComplex) {
                 throw IllegalArgumentException("Cannot run functions on a primitive type: $instanceType")
             }
-            val matches = getClassAccessibleMethods(instanceType.typeName).filter { !it.isStatic && it.name == expression.name && Type.getArgumentCount(it.descriptor) == paramTypes.size && Type.getArgumentTypes(it.descriptor).mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }
+            val matches = getClassAccessibleMethods(instanceType.typeName).filter { !it.isStatic && it.name == expression.name && Type.getArgumentCount(it.descriptor) == paramTypes.size && Type.getArgumentTypes(it.descriptor).mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }.toMutableList()
             if(matches.size < 1) {
                 throw IllegalArgumentException("Failed to find function [${instanceType.typeName}].${expression.name}(${paramTypes.joinToString()})")
             }
             if(matches.size > 1) {
-                throw IllegalArgumentException("Found too many functions matching [${instanceType.typeName}].${expression.name}(${paramTypes.joinToString()}): $matches")
+                val closest = matches.map { it to checkClassDistance(it.owner.replace('/', '.').replace('$', '.'), instanceType.typeName) }.reduce { a, b -> if(a.second == null || a.second!! > b.second!!) b else a }
+                matches.clear()
+                matches.add(closest.first)
             }
             matches
         }else if(instance is ParsedTokenInstanceStatic) {
@@ -1102,12 +1104,14 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 if(instanceType !is ParsedTokenExpressionTypeComplex) {
                     throw IllegalArgumentException("Cannot run functions on a primitive type: $instanceType")
                 }
-                val matches = getClassAccessibleMethods(instanceType.typeName).filter { !it.isStatic && it.name == expression.name && Type.getArgumentCount(it.descriptor) == paramTypes.size && Type.getArgumentTypes(it.descriptor).mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }
+                val matches = getClassAccessibleMethods(instanceType.typeName).filter { !it.isStatic && it.name == expression.name && Type.getArgumentCount(it.descriptor) == paramTypes.size && Type.getArgumentTypes(it.descriptor).mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }.toMutableList()
                 if(matches.size < 1) {
                     throw IllegalArgumentException("Failed to find function [${instanceType.typeName}].${expression.name}(${paramTypes.joinToString()})")
                 }
                 if(matches.size > 1) {
-                    throw IllegalArgumentException("Found too many functions matching [${instanceType.typeName}].${expression.name}(${paramTypes.joinToString()}): $matches")
+                    val closest = matches.map { it to checkClassDistance(it.owner.replace('/', '.').replace('$', '.'), instanceType.typeName) }.reduce { a, b -> if(a.second == null || a.second!! > b.second!!) b else a }
+                    matches.clear()
+                    matches.add(closest.first)
                 }
                 matches
             }else if(instance is ParsedTokenInstanceStatic) {

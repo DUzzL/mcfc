@@ -53,11 +53,18 @@ public final class CommandCompiler {
 
                 var parts = command.<NbtPath>get("path").parts();
                 try(var ignored = context.enterWithoutValue(context.current().incrementedId(2).withBaseInstruction(resultStorage))) {
-                    getOrCreateNbtPathValue(context, storageLocal.forceCast(), parts.subList(0, parts.size() - 1), (value) -> {
+                    getNbtPathValue(context, storageLocal.forceCast(), parts.subList(0, parts.size() - 1), true, (value) -> {
                         var last = parts.get(parts.size() - 1);
                         if(last instanceof NbtPathPart.Named named) {
                             var tagLocal = LocationData.<NbtTag>ofLocal(context.current().highestId());
                             context.current().addInstructionConsumer().accept(Instructions2.loadNbtValue(command.get("value"), tagLocal).with(Instructions2.setNbtInCompound(value, named.name(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
+                        }else if(last instanceof NbtPathPart.ArrayIndexInteger indexed) {
+                            var tagLocal = LocationData.<NbtTag>ofLocal(context.current().highestId());
+                            if(indexed.index() >= 0) {
+                                context.current().addInstructionConsumer().accept(Instructions2.loadNbtValue(command.get("value"), tagLocal).with(Instructions2.setNbtInListForward(value, indexed.index(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
+                            }else {
+                                context.current().addInstructionConsumer().accept(Instructions2.loadNbtValue(command.get("value"), tagLocal).with(Instructions2.setNbtInListBackward(value, -indexed.index(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
+                            }
                         }else {
                             throw new UnsupportedOperationException("Cannot set nbt value from path " + last);
                         }
@@ -404,7 +411,7 @@ public final class CommandCompiler {
 
                 var parts = command.<NbtPath>get("path").parts();
                 try(var ignored = context.enterWithoutValue(context.current().incrementedId(3).withBaseInstruction(stacker.current))) {
-                    getNbtPathValue(context, storageLocal.forceCast(), parts, (value) -> {
+                    getNbtPathValue(context, storageLocal.forceCast(), parts, false, (value) -> {
                         context.current().addInstructionConsumer().accept(Instructions2.ifNotNull(currentTag.lower()).with(Instructions2.exitScope(scope)));
                         context.current().addInstructionConsumer().accept(Instructions2.setNbtValue(value, currentTag));
                     });
@@ -537,35 +544,27 @@ public final class CommandCompiler {
         }
     }
 
-    private static void getOrCreateNbtPathValue(CompilationContext context, LocationData<NbtTag> source, List<NbtPathPart> parts, Consumer<LocationData<NbtTag>> valueConsumer) {
+    private static void getNbtPathValue(CompilationContext context, LocationData<NbtTag> source, List<NbtPathPart> parts, boolean tryCreate, Consumer<LocationData<NbtTag>> valueConsumer) {
         if(!parts.isEmpty()) {
             var currentPart = parts.get(0);
             var otherParts = parts.subList(1, parts.size());
             if(currentPart instanceof NbtPathPart.Named named) {
                 var storage = LocationData.<NbtTag>ofLocal(context.current().highestId());
-                var instr = Instructions2.getNbtFromCompoundOrCreate(source, named.name(), storage);
+                var instr = tryCreate
+                        ? Instructions2.getNbtFromCompoundOrCreate(source, named.name(), storage)
+                        : Instructions2.getNbtFromCompound(source, named.name(), storage);
                 context.current().addInstructionConsumer().accept(instr);
                 try(var ignored = context.enterWithoutValue(context.current().incrementedId(1).withBaseInstruction(instr))) {
-                    getOrCreateNbtPathValue(context, storage, otherParts, valueConsumer);
+                    getNbtPathValue(context, storage, otherParts, tryCreate, valueConsumer);
                 }
-            }else {
-                throw new UnsupportedOperationException("Cannot get nbt path from " + currentPart);
-            }
-        }else {
-            valueConsumer.accept(source);
-        }
-    }
-
-    private static void getNbtPathValue(CompilationContext context, LocationData<NbtTag> source, List<NbtPathPart> parts, Consumer<LocationData<NbtTag>> valueConsumer) {
-        if(!parts.isEmpty()) {
-            var currentPart = parts.get(0);
-            var otherParts = parts.subList(1, parts.size());
-            if(currentPart instanceof NbtPathPart.Named named) {
+            }else if(currentPart instanceof NbtPathPart.ArrayIndexInteger indexed) {
                 var storage = LocationData.<NbtTag>ofLocal(context.current().highestId());
-                var instr = Instructions2.getNbtFromCompound(source, named.name(), storage);
+                var instr = indexed.index() >= 0
+                        ? Instructions2.getNbtFromListForward(source, indexed.index(), storage)
+                        : Instructions2.getNbtFromListBackward(source, -indexed.index(), storage);
                 context.current().addInstructionConsumer().accept(instr);
                 try(var ignored = context.enterWithoutValue(context.current().incrementedId(1).withBaseInstruction(instr))) {
-                    getNbtPathValue(context, storage, otherParts, valueConsumer);
+                    getNbtPathValue(context, storage, otherParts, tryCreate, valueConsumer);
                 }
             }else {
                 throw new UnsupportedOperationException("Cannot get nbt path from " + currentPart);
