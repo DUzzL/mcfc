@@ -18,6 +18,7 @@ import net.minecraft.tags.TagKey;
 import java.util.List;
 
 public class FunctionCompilerMain implements ModInitializer {
+    public static FunctionClassLoader functionClassLoader;
     public void onInitialize() {
         EmitterBaseOptions.registerInstructionEmitters();
         Emitter2.registerInstructionEmitters();
