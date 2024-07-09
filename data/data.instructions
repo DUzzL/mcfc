@@ -513,6 +513,12 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
     }
 }
 
+@CHECK_IS_ALIVE(<net.minecraft.world.entity.Entity> [ctx:entity]) {
+    if([ctx:entity].isAlive() == true) {
+      run();
+    }
+}
+
 @GET_ATTRIBUTE_INSTANCE(<net.minecraft.world.entity.LivingEntity> [ctx:entity], <net.minecraft.world.entity.ai.attributes.AttributeInstance> [ctx:attribute], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:attribute_name]) {
     let [ctx:attribute] = [ctx:entity].getAttributes().getInstance(map_attribute([instr:attribute_name]));
     run();

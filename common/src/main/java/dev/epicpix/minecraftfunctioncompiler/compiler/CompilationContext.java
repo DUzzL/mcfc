@@ -276,6 +276,9 @@ public class CompilationContext {
         var nonNull = Instructions2.ifNotNull(entityData.content().lower());
         entityData.writeInstruction(nonNull);
         var stacker = new InstructionStacker(nonNull);
+        if(selector.requireAlive()) {
+            stacker.stackInstruction(Instructions2.checkIsAlive(entityData.content()));
+        }
         if(selector.entityTypes() != null) {
             stacker.stackInstruction(Instructions.checkEntityTypes(entityData.content(), new ArrayList<>(selector.entityTypes().data()), selector.entityTypes().negated()));
         }

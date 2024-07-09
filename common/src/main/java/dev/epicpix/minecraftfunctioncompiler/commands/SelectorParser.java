@@ -40,6 +40,7 @@ public final class SelectorParser {
             case 'e' -> {
                 if(!allowEntities) throwError(reader, "Unable to use @e with a player-only selector");
                 if(!allowMultiple) throwError(reader, "Unable to use @e with a single-only selector");
+                data.requireAlive = true;
             }
             case 's' -> {
                 data.self = true;
