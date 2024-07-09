@@ -45,6 +45,22 @@
   }
 }
 
+@CREATE_MUTABLE_LIST(<java.util.List> [ctx:list]) {
+  let [ctx:list] = new <java.util.ArrayList>();
+  run();
+}
+
+@ADD_LIST_ELEMENT(<java.util.List> [ctx:list], <java.lang.Object> [ctx:element]) {
+  [ctx:list].add([ctx:element]);
+}
+
+@FOR_EACH_LIST_ELEMENT(<java.util.List> [ctx:list], <java.lang.Object> [ctx:element]) {
+  let [ctx:element];
+  for_each_list_indexed([ctx:list], [ctx:element]) {
+    run();
+  }
+}
+
 @CREATE_RESULT_STORAGE(int [ctx:storage]) {
   let [ctx:storage] = 0;
   run();
@@ -71,11 +87,11 @@
 }
 
 
-$for_each_list_indexed(<java.util.List> [ctx:list], yield<java.lang.Object> [ctx:element]) {
+$for_each_list_indexed(<java.util.List> [ctx:list], yield<java.lang.Object> [ctx:res_element]) {
   let [local:index]<int> = 0;
   let [local:size]<int> = [ctx:list].size();
   while([local:index] < [local:size]) {
-    yield([ctx:element], [ctx:list].get([local:index]));
+    yield([ctx:res_element], [ctx:list].get([local:index]));
     [local:index] = [local:index] + 1;
   }
 }
@@ -559,6 +575,13 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 @GET_EXPERIENCE_LEVEL(<net.minecraft.server.level.ServerPlayer> [ctx:player], int [ctx:level]) {
   let [ctx:level] = [ctx:player].experienceLevel;
   run();
+}
+
+@TRY_AS_ENTITY(<java.lang.Object> [ctx:object], <net.minecraft.world.entity.Entity> [ctx:entity]) {
+  if(is([ctx:object], <net.minecraft.world.entity.Entity>) == true) {
+    let [ctx:entity] = cast([ctx:object], <net.minecraft.world.entity.Entity>);
+    run();
+  }
 }
 
 @TRY_AS_LIVING_ENTITY(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.entity.LivingEntity> [ctx:living_entity]) {

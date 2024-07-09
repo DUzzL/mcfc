@@ -88,9 +88,10 @@ fun kotlinToJavaType(type: String, genericUsage: Boolean): String {
         "kotlin.Float" -> if(!genericUsage) "float" else "Float"
         "kotlin.Int" -> if(!genericUsage) "int" else "Integer"
         "kotlin.String" -> "String"
-        "kotlin.collections.List" -> "List"
-        "kotlin.collections.MutableList" -> "List"
+        "kotlin.collections.List" -> if(!genericUsage) "List" else "List<?>"
+        "kotlin.collections.MutableList" -> if(!genericUsage) "List" else "List<?>"
         "kotlin.collections.Map" -> "Map"
+        "java.util.List" -> if(!genericUsage) "List" else "List<?>"
         else -> if(type.startsWith("kotlin.")) throw UnsupportedOperationException("Unknown kotlin type: $type") else type
     }
 }

@@ -204,31 +204,56 @@ public class CompilationContext {
         }
     }
 
-    @SuppressWarnings("resource")
     public CompilationData<LocationData<Entity>> forSelector(SelectorArgument selector) {
+        var data = stack.peek();
         if(selector.requirePlayer() && selector.excludesPlayers()) {
-            var data = stack.peek();
             LocationData<Entity> entity = LocationData.ofLocal(data.highestId());
             var instr = Instructions2.never();
             data.addInstructionConsumer().accept(instr);
             return new CompilationData<>(this, data.incrementedId(1).withBaseInstruction(instr), entity, 0);
         }
-        var scope = forScope();
-        if(selector.limit() != null && selector.limit() != 1) {
-            var data = stack.peek();
-            ScopeData limiterScope = ScopeData.ofId(data.highestId());
-            LocationData<Integer> limiterCounter = LocationData.ofLocal(data.highestId() + 1);
-            var instr = Instructions2.limiter(limiterScope, limiterCounter, selector.limit());
-            data.addInstructionConsumer().accept(instr);
-            enterWith(data.incrementedId(2).withBaseInstruction(instr));
-            return forSelectorSelect(selector, limiterScope, limiterCounter, scope.content(), scope.stackCount() + 1);
+        LocationData<List<?>> entityList = LocationData.ofLocal(data.highestId());
+        var entityListInstruction = Instructions2.createMutableList(entityList);
+        data.addInstructionConsumer().accept(entityListInstruction);
+        enterWith(data.incrementedId(1).withBaseInstruction(entityListInstruction));
+        try(var selectorData = forSelectorSelect(selector)) {
+            selectorData.writeInstruction(Instructions2.addListElement(entityList, selectorData.content().lower()));
+        }
+        LocationData<Object> objectLocation = LocationData.ofLocal(data.highestId() + 1);
+        LocationData<Entity> entityLocation = LocationData.ofLocal(data.highestId() + 2);
+        if(selector.limit() != null) {
+            if(selector.limit() == 1) {
+                var execInstr = Instructions2.always();
+                ScopeData earlyScope = ScopeData.ofId(data.highestId() + 3);
+                var instr = Instructions2.scope(earlyScope)
+                        .with(Instructions2.forEachListElement(entityList, objectLocation)
+                                .with(Instructions2.tryAsEntity(objectLocation, entityLocation)
+                                        .with(execInstr)
+                                        .with(Instructions2.exitScope(earlyScope))));
+                entityListInstruction.with(instr);
+                return enterWithValue(data.incrementedId(4).withBaseInstruction(execInstr), entityLocation, 2);
+            }else {
+                var execInstr = Instructions2.always();
+                ScopeData limiterScope = ScopeData.ofId(data.highestId() + 3);
+                LocationData<Integer> limiterCounter = LocationData.ofLocal(data.highestId() + 4);
+                var instr = Instructions2.limiter(limiterScope, limiterCounter, selector.limit())
+                        .with(Instructions2.forEachListElement(entityList, objectLocation)
+                                .with(Instructions2.tryAsEntity(objectLocation, entityLocation)
+                                        .with(execInstr)
+                                        .with(Instructions2.checkLimit(limiterScope, limiterCounter))));
+                entityListInstruction.with(instr);
+                return enterWithValue(data.incrementedId(5).withBaseInstruction(execInstr), entityLocation, 2);
+            }
         }else {
-            return forSelectorSelect(selector, null, null, scope.content(), scope.stackCount());
+            var tryEntityInstr = Instructions2.tryAsEntity(objectLocation, entityLocation);
+            var instr = Instructions2.forEachListElement(entityList, objectLocation).with(tryEntityInstr);
+            entityListInstruction.with(instr);
+            return enterWithValue(data.incrementedId(3).withBaseInstruction(tryEntityInstr), entityLocation, 2);
         }
     }
 
     @SuppressWarnings("resource")
-    private CompilationData<LocationData<Entity>> forSelectorSelect(SelectorArgument selector, ScopeData limiterScope, LocationData<Integer> limitedCounter, ScopeData breakScope, int stackCount) {
+    private CompilationData<LocationData<Entity>> forSelectorSelect(SelectorArgument selector) {
         CompilationData<LocationData<Entity>> entityData;
         if(selector.playerName() != null) {
             entityData = forPlayer(selector.playerName()).changeType();
@@ -241,12 +266,12 @@ public class CompilationContext {
         }else {
             entityData = forEachEntity();
         }
-        return forSelectorBase(entityData, selector, limiterScope, limitedCounter, breakScope, stackCount);
+        return forSelectorBase(entityData, selector);
     }
 
-    private CompilationData<LocationData<Entity>> forSelectorBase(CompilationData<LocationData<Entity>> entityData, SelectorArgument selector, ScopeData limiterScope, LocationData<Integer> limiterCounter, ScopeData breakScope, int inStackCount) {
+    private CompilationData<LocationData<Entity>> forSelectorBase(CompilationData<LocationData<Entity>> entityData, SelectorArgument selector) {
         var data = entityData.data();
-        int stackCount = entityData.stackCount() + inStackCount;
+        int stackCount = entityData.stackCount();
         int stackStart = stack.size();
         var nonNull = Instructions2.ifNotNull(entityData.content().lower());
         entityData.writeInstruction(nonNull);
@@ -327,14 +352,7 @@ public class CompilationContext {
             data = stack.peek();
         }
         stackCount += stack.size() - stackStart;
-        var execBase = Instructions2.always();
-        stacker.current.with(execBase);
-        if(Objects.equals(selector.limit(), 1)) {
-            stacker.current.with(Instructions2.exitScope(breakScope));
-        }else if(selector.limit() != null) {
-            stacker.current.with(Instructions2.checkLimit(limiterScope, limiterCounter));
-        }
-        return enterWithValue(data.withBaseInstruction(execBase), entityData.content(), stackCount + 1);
+        return enterWithValue(data.withBaseInstruction(stacker.current), entityData.content(), stackCount + 1);
     }
 
 }

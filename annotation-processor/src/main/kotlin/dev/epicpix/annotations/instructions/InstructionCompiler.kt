@@ -851,6 +851,9 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             return ParsedTokenExpressionTypeComplex(def.className)
         }
         if(expression.name == "<init>") {
+            if(functionMatches[0].owner == "java/lang/Object" && functionMatches[0].name == "<init>" && functionMatches[0].descriptor == "()V") {
+                return ParsedTokenExpressionTypeComplex((instance as ParsedTokenInstanceStatic).className.replace('/', '.').replace('$', '.'))
+            }
             return ParsedTokenExpressionTypeComplex(functionMatches[0].owner.replace('/', '.').replace('$', '.'))
         }
         throw IllegalArgumentException(def.descriptor)
@@ -929,7 +932,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 val expression = expression as ParsedTokenValueAccessor
                 it.key.name == expression.name && writerData.getAccessorType(it.key) == writerData.getAccessorType(expression) && it.key.scope == expression.scope
             }?.value
-            if(mapping != null) {
+            if(mapping != null && expression != mapping) {
                 expression = mapping
             }else {
                 break
