@@ -108,6 +108,10 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
             for(var entry : entries) {
                 instructionDump.append("┌──\n");
                 instructionDump.append("│ function ").append(entry.getKey()).append("\n");
+                var commandCount = definedFunctions.get(entry.getKey()).size();
+                instructionDump.append("│ ┣━ ").append(commandCount).append(" command").append(commandCount != 1 ? "s" : "").append("\n");
+                var instructionCount = Instruction.countInstructions(compiledFunctions.get(entry.getKey()));
+                instructionDump.append("│ ┗━ ").append(instructionCount).append(" instruction").append(instructionCount != 1 ? "s" : "").append(" (around ").append(String.format("%.02f", commandCount == 0 ? 0d : (double)instructionCount / commandCount)).append(" instructions per command)").append("\n");
                 instructionDump.append("│\n");
                 printInstructionList(entry.getValue(), line -> instructionDump.append("│ ").append(line).append("\n"));
                 instructionDump.append("└──\n");
