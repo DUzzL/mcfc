@@ -5,6 +5,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static dev.epicpix.minecraftfunctioncompiler.il.optimizer.OptimizationInput.addPathIndex;
 
@@ -15,6 +16,7 @@ public final class Optimizations {
             Optimizations::removeExitScopeDeadCode,
             Optimizations::inlineListAccess,
             Optimizations::removeUnnecessaryInstructions,
+            Optimizations::removeDuplicateNullChecks,
     };
 
     private static OptimizationResult removeUnnecessaryInstructions(OptimizationInput input) {
@@ -83,6 +85,18 @@ public final class Optimizations {
                 }
             }else if(addInstructions.isEmpty()) {
                 return OptimizationResultTypes.REMOVE_SELF;
+            }
+        }
+        return OptimizationResultTypes.KEEP;
+    }
+
+    private static OptimizationResult removeDuplicateNullChecks(OptimizationInput input) {
+        var instr = input.instruction();
+        if(instr.type() == InstructionTypes2.IF_NOT_NULL) {
+            var checkLoc = instr.<LocationData<Object>>get("local");
+            var isNotNull = input.anyInstructionFromPath(it -> it.data().containsValue(checkLoc) && (it.type() == InstructionTypes2.IF_NOT_NULL || it.type() == InstructionTypes2.GET_CURRENT_ENTITY || it.type() == InstructionTypes2.FOR_EACH_ENTITY || it.type() == InstructionTypes2.FOR_EACH_PLAYER || (it.type() == InstructionTypes2.TRY_AS_ENTITY && it.data().get("entity").equals(checkLoc)) || (it.type() == InstructionTypes2.TRY_AS_LIVING_ENTITY && it.data().get("living_entity").equals(checkLoc)) || (it.type() == InstructionTypes2.TRY_AS_PLAYER && it.data().get("player").equals(checkLoc))));
+            if(isNotNull) {
+                return OptimizationResultTypes.INLINE_AND_REMOVE_SELF;
             }
         }
         return OptimizationResultTypes.KEEP;

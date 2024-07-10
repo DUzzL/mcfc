@@ -65,6 +65,17 @@ public record OptimizationInput(Instruction instruction, List<Integer> thisPath,
         return result;
     }
 
+    public boolean anyInstructionFromPath(Function<Instruction, Boolean> func) {
+        var locInstr = new LocatedInstruction(List.of(), root, true);
+        for(int index : thisPath) {
+            if (func.apply(locInstr.instruction())) {
+                return true;
+            }
+            locInstr = new LocatedInstruction(addPathIndex(locInstr.path(), index), locInstr.instruction().children().get(index), true);
+        }
+        return false;
+    }
+
     public LocatedInstruction getChild(Function<LocatedInstruction, Boolean> func) {
         Stack<LocatedInstruction> instructions = new Stack<>();
         {

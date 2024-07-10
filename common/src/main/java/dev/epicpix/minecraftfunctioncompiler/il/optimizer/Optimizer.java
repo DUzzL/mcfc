@@ -115,18 +115,11 @@ public final class Optimizer {
                     for(var reused : commonReused) {
                         remap.putIfAbsent(reused, nextId++);
                     }
-//                    ArrayList<Instruction> remapped = new ArrayList<>();
-//                    for(var toRemap : toInstr.children()) {
-//                        remapped.add(remapInstruction(toRemap, remap));
-//                    }
-//                    fromInstrBottom.children().addAll(remapped);
                     fromInstrBottom.children().addAll(toInstr.children());
                     toInstr.children().clear();
                     if(moveInfo.includeSelf()) {
-//                        toInstr.children().add(fromInstr);
                         toInstr.children().add(remapInstruction(fromInstr, remap));
                     }else {
-//                        toInstr.children().addAll(fromInstr.children());
                         for(var toRemap : fromInstr.children()) {
                             toInstr.children().add(remapInstruction(toRemap, remap));
                         }
