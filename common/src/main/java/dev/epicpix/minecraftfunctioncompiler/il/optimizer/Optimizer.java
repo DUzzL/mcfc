@@ -50,6 +50,30 @@ public final class Optimizer {
         }
         var preNew = new Instruction(input.type(), input.data(), newChildren);
         var result = optimization.runOptimization(new OptimizationInput(preNew));
+        if(result.isFlagSet(OptimizationResult.MODIFY_CHILDREN)) {
+            var modifications = new ArrayList<>(result.modifications());
+            modifications.sort((a, b) -> {
+                int length = Math.min(a.path().size(), b.path().size());
+                for(int i = 0; i<length; i++) {
+                    int va = a.path().get(i);
+                    int vb = b.path().get(i);
+                    int c = Integer.compare(va, vb);
+                    if(c == 0) continue;
+                    return -c;
+                }
+                return -Integer.compare(a.path().size(), b.path().size());
+            });
+            for(var modification : modifications) {
+                var beforePath = modification.path().subList(0, modification.path().size() - 1);
+                var instr = preNew;
+                for(var loc : beforePath) {
+                    instr = instr.children().get(loc);
+                }
+                if(modification.type() == InstructionModificationType.REMOVE) {
+                    instr.children().remove((int) modification.path().get(modification.path().size() - 1));
+                }
+            }
+        }
         if(result.isFlagSet(OptimizationResult.REMOVE_SELF_AND_INLINE_CHILDREN)) {
             if(result.isFlagSet(OptimizationResult.REPLACE_CHILDREN)) {
                 return result.instructions();
