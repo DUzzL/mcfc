@@ -50,6 +50,16 @@ public final class SelectorParser {
                 if(!allowMultiple) throwError(reader, "Unable to use @a with a single-only selector");
                 data.requirePlayer = true;
             }
+            case 'p' -> {
+                data.requirePlayer = true;
+                data.sort = SelectorSort.NEAREST;
+                data.limit = 1;
+            }
+            case 'r' -> {
+                data.requirePlayer = true;
+                data.sort = SelectorSort.RANDOM;
+                data.limit = 1;
+            }
             default -> throwError(reader, "Unsupported selector type: @" + selectorType);
         }
 
@@ -104,6 +114,9 @@ public final class SelectorParser {
             var negated = reader.skipIfNext('!');
             var gamemode = reader.readGamemode();
             data.gamemodes.add(new NegatableData<>(gamemode, negated));
+        });
+        SelectorParser.registerSelectorOption("sort", (reader, data) -> {
+            data.sort = reader.readSelectorSort();
         });
         SelectorParser.registerSelectorOption("name", (reader, data) -> {
             var negated = reader.skipIfNext('!');

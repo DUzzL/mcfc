@@ -468,4 +468,15 @@ public class StringCommandReader {
         };
     }
 
+    public SelectorSort readSelectorSort() {
+        String str = readWord();
+        return switch (str) {
+            case "arbitrary" -> SelectorSort.ARBITRARY;
+            case "furthest" -> SelectorSort.FURTHEST;
+            case "nearest" -> SelectorSort.NEAREST;
+            case "random" -> SelectorSort.RANDOM;
+            default -> throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_SELECTOR_SORT);
+        };
+    }
+
 }

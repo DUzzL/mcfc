@@ -219,6 +219,20 @@ public class CompilationContext {
         try(var selectorData = forSelectorSelect(selector)) {
             selectorData.writeInstruction(Instructions2.addListElement(entityList, selectorData.content().lower()));
         }
+        if(selector.sort() == SelectorSort.NEAREST || selector.sort() == SelectorSort.FURTHEST) {
+            try(var pos = getPosition()) {
+                switch(selector.sort()) {
+                    case FURTHEST -> {
+                        pos.writeInstruction(Instructions2.sortListEntityFurthest(pos.content(), entityList));
+                    }
+                    case NEAREST -> {
+                        pos.writeInstruction(Instructions2.sortListEntityNearest(pos.content(), entityList));
+                    }
+                }
+            }
+        }else if(selector.sort() == SelectorSort.RANDOM) {
+            entityListInstruction.with(Instructions2.shuffleList(entityList));
+        }
         LocationData<Object> objectLocation = LocationData.ofLocal(data.highestId() + 1);
         LocationData<Entity> entityLocation = LocationData.ofLocal(data.highestId() + 2);
         if(selector.limit() != null) {

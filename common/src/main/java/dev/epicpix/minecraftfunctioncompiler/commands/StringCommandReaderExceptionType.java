@@ -23,4 +23,5 @@ public enum StringCommandReaderExceptionType {
     INVALID_DIFFICULTY,
     INVALID_MOB_EFFECT,
     INVALID_RESULT_STORE_TYPE,
+    INVALID_SELECTOR_SORT,
 }

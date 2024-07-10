@@ -12,12 +12,17 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.ServerFunctionManager;
 import net.minecraft.server.ServerScoreboard;
 import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerScores;
 import net.minecraft.world.scores.ScoreAccess;
 import net.minecraft.world.scores.ScoreHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Comparator;
+import java.util.List;
 
 // Used in bytecode instructions, to not insert too much code at once
 @SuppressWarnings("unused")
@@ -47,6 +52,14 @@ public class ExtensionFunctions {
         } finally {
             profilerFiller.pop();
         }
+    }
+
+    public static void sortEntitiesClosest(Vec3 origin, List<Entity> list) {
+        list.sort(Comparator.comparingDouble(a -> a.distanceToSqr(origin)));
+    }
+
+    public static void sortEntitiesFurthest(Vec3 origin, List<Entity> list) {
+        list.sort(Comparator.comparingDouble(a -> -a.distanceToSqr(origin)));
     }
 
 }

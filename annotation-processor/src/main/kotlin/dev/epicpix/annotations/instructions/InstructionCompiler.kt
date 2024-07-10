@@ -530,25 +530,31 @@ private fun parseCode(iter: ListIterator<LexToken>, valueDefinitions: List<Parse
                 res.add(ParsedTokenStatementAssignVariable(accessor, expression))
             }
         }else {
-            val name = iter.expectToken<LexTokenWord>()
-            iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
-            val params = parseFunctionCallParams(iter, valueDefinitions, usesObf)
-            iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
-            val code = if(iter.peekNextTokenType(LexTokenSimpleType.SEMICOLON) || iter.peekNextTokenType(LexTokenSimpleType.DOT)) null else parseCode(iter, valueDefinitions, usesObf)
-            var expr = ParsedTokenStatementFunctionCall(name.word, null, params, code)
-            var readMore = false
-            while(iter.tryNextTokenType(LexTokenSimpleType.DOT)) {
-                val name2 = iter.expectToken<LexTokenWord>()
-                iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
-                val params2 = parseFunctionCallParams(iter, valueDefinitions, usesObf)
-                iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
-                expr = ParsedTokenStatementFunctionCall(name2.word, ParsedTokenInstanceValue(expr), params2, null)
-                readMore = true
-            }
-            if(code == null || readMore) {
+            if(iter.peekNextTokenType(LexTokenSimpleType.OPEN_ANGLE_BRACKET)) {
+                val expression = parseExpression(iter, valueDefinitions, usesObf)
                 iter.expectTokenType(LexTokenSimpleType.SEMICOLON)
+                res.add(expression as ParsedTokenStatementFunctionCall)
+            }else {
+                val name = iter.expectToken<LexTokenWord>()
+                iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
+                val params = parseFunctionCallParams(iter, valueDefinitions, usesObf)
+                iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
+                val code = if(iter.peekNextTokenType(LexTokenSimpleType.SEMICOLON) || iter.peekNextTokenType(LexTokenSimpleType.DOT)) null else parseCode(iter, valueDefinitions, usesObf)
+                var expr = ParsedTokenStatementFunctionCall(name.word, null, params, code)
+                var readMore = false
+                while(iter.tryNextTokenType(LexTokenSimpleType.DOT)) {
+                    val name2 = iter.expectToken<LexTokenWord>()
+                    iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
+                    val params2 = parseFunctionCallParams(iter, valueDefinitions, usesObf)
+                    iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
+                    expr = ParsedTokenStatementFunctionCall(name2.word, ParsedTokenInstanceValue(expr), params2, null)
+                    readMore = true
+                }
+                if(code == null || readMore) {
+                    iter.expectTokenType(LexTokenSimpleType.SEMICOLON)
+                }
+                res.add(expr)
             }
-            res.add(expr)
         }
     }
     return res

@@ -22,6 +22,7 @@ public class SelectorGeneratorBuilderData {
     public final ArrayList<NegatableData<Gamemode>> gamemodes = new ArrayList<>();
     public DoubleRangeArgument distance = null;
     public IntRangeArgument level = null;
+    public SelectorSort sort = SelectorSort.ARBITRARY;
     public FloatRangeArgument yaw = null;
     public FloatRangeArgument pitch = null;
 
@@ -43,6 +44,7 @@ public class SelectorGeneratorBuilderData {
                 List.copyOf(gamemodes),
                 distance,
                 level,
+                sort,
                 yaw,
                 pitch
         );

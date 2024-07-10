@@ -21,6 +21,7 @@ public record SelectorArgument(
     List<NegatableData<Gamemode>> gamemodes,
     DoubleRangeArgument distance,
     IntRangeArgument level,
+    SelectorSort sort,
     FloatRangeArgument yaw,
     FloatRangeArgument pitch
 ) {
@@ -40,6 +41,7 @@ public record SelectorArgument(
                 null,
                 null,
                 Map.of(),
+                null,
                 null,
                 null,
                 null,
@@ -78,6 +80,7 @@ public record SelectorArgument(
                 gamemodes,
                 distance,
                 level,
+                sort,
                 yaw,
                 pitch
         );

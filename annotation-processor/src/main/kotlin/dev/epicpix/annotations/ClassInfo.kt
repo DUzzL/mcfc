@@ -50,6 +50,7 @@ private fun fixKotlinDesc(from: String): String {
         "kotlin.Unit" -> "V"
         "kotlin.Int" -> "I"
         "kotlin.String" -> "Ljava/lang/String;"
+        "kotlin.collections.MutableList" -> "Ljava/util/List;"
         else -> {
             if(from.startsWith("kotlin.")) throw IllegalArgumentException("Unknown kotlin class: $from")
             "L${from.replace('.', '/')};"

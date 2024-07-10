@@ -61,6 +61,10 @@
   }
 }
 
+@SHUFFLE_LIST(<java.util.List> [ctx:list]) {
+  <java.util.Collections>.shuffle([ctx:list]);
+}
+
 @CREATE_RESULT_STORAGE(int [ctx:storage]) {
   let [ctx:storage] = 0;
   run();
@@ -742,4 +746,37 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 @CREATE_INT_TAG(int [ctx:value], <net.minecraft.nbt.Tag> [ctx:output]) {
   let [ctx:output] = <net.minecraft.nbt.IntTag>.valueOf([ctx:value]);
   run();
+}
+
+
+@SORT_LIST_ENTITY_NEAREST [1.20.1] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
+  <dev.epicpix.minecraftfunctioncompiler.v1_20_1.ExtensionFunctions>.sortEntitiesClosest([ctx:position], [ctx:list]);
+}
+
+@SORT_LIST_ENTITY_NEAREST [1.20.2] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
+  <dev.epicpix.minecraftfunctioncompiler.v1_20_2.ExtensionFunctions>.sortEntitiesClosest([ctx:position], [ctx:list]);
+}
+
+@SORT_LIST_ENTITY_NEAREST [1.20.3-1.20.4] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
+  <dev.epicpix.minecraftfunctioncompiler.v1_20_4.ExtensionFunctions>.sortEntitiesClosest([ctx:position], [ctx:list]);
+}
+
+@SORT_LIST_ENTITY_NEAREST [1.20.5-1.20.6] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
+  <dev.epicpix.minecraftfunctioncompiler.v1_20_6.ExtensionFunctions>.sortEntitiesClosest([ctx:position], [ctx:list]);
+}
+
+@SORT_LIST_ENTITY_FURTHEST [1.20.1] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
+  <dev.epicpix.minecraftfunctioncompiler.v1_20_1.ExtensionFunctions>.sortEntitiesFurthest([ctx:position], [ctx:list]);
+}
+
+@SORT_LIST_ENTITY_FURTHEST [1.20.2] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
+  <dev.epicpix.minecraftfunctioncompiler.v1_20_2.ExtensionFunctions>.sortEntitiesFurthest([ctx:position], [ctx:list]);
+}
+
+@SORT_LIST_ENTITY_FURTHEST [1.20.3-1.20.4] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
+  <dev.epicpix.minecraftfunctioncompiler.v1_20_4.ExtensionFunctions>.sortEntitiesFurthest([ctx:position], [ctx:list]);
+}
+
+@SORT_LIST_ENTITY_FURTHEST [1.20.5-1.20.6] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
+  <dev.epicpix.minecraftfunctioncompiler.v1_20_6.ExtensionFunctions>.sortEntitiesFurthest([ctx:position], [ctx:list]);
 }

@@ -22,7 +22,7 @@ The list of commands supported currently as of `0.2.1-alpha.6` can be found in t
 
 ## Supported Selectors
 
-Not all selectors are supported as well. Currently, the only supported selectors are by UUID, player name, `@e`, `@a`, `@s`, and the allowed selector parameters are `distance`, `gamemode`, `level`, `limit`, `name`, `tag`, `team`, `type`, `scores`, `x_rotation` and `y_rotation`.
+Currently, the majority of selector parameters are implemented, the only ones not implemented are `advancements`, `dx`, `dy`, `dz`, `nbt`, `predicate`, `x`, `y`, `z`.
 
 ## How it works
 
