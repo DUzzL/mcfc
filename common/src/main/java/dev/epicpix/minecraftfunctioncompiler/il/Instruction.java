@@ -44,18 +44,6 @@ public record Instruction(InstructionType type, Map<String, Object> data, ArrayL
         return res;
     }
 
-    public static Map<String, Object> remapInstructionData(Map<String, Object> data, Map<Integer, Integer> mappings) {
-        HashMap<String, Object> result = new HashMap<>();
-        for(var entry : data.entrySet()) {
-            if(entry.getValue() instanceof LocationData<?> value && value.local() != null) {
-                result.put(entry.getKey(), new LocationData<>(mappings.getOrDefault(value.local(), value.local()), value.string(), value.integer()));
-            }else {
-                result.put(entry.getKey(), entry.getValue());
-            }
-        }
-        return result;
-    }
-
     public static void printInstructionList(List<Instruction> instructions, Consumer<String> lineConsumer) {
         for(var instr : instructions) printInstruction(instr, (data, ignored) -> lineConsumer.accept(data));
     }
