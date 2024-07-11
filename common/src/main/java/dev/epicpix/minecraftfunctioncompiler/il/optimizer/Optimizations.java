@@ -1,6 +1,5 @@
 package dev.epicpix.minecraftfunctioncompiler.il.optimizer;
 
-import dev.epicpix.minecraftfunctioncompiler.data.locations.Entity;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
 
 import java.util.ArrayList;
@@ -124,6 +123,16 @@ public final class Optimizations {
                 remap.put(instr.<LocationData<?>>get("entity").local(), checkLoc.local());
                 return new OptimizationResult(null, null, remap, REMOVE_SELF_AND_INLINE_CHILDREN | REMAP_VALUES);
             }
+
+            var alreadyCasted = input.collectInstructionsFromPath(it -> it.instruction().data().containsValue(checkLoc) && ((it.instruction().type() == InstructionTypes2.TRY_AS_ENTITY && it.instruction().data().get("object").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.TRY_AS_LIVING_ENTITY && it.instruction().data().get("entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER && it.instruction().data().get("entity").equals(checkLoc))));
+            if(!alreadyCasted.isEmpty()) {
+                var castInstr = alreadyCasted.get(0);
+                var remap = new HashMap<Integer, Integer>();
+                if(castInstr.instruction().type() == InstructionTypes2.TRY_AS_ENTITY) remap.put(instr.<LocationData<?>>get("entity").local(), castInstr.instruction().<LocationData<?>>get("entity").local());
+                if(castInstr.instruction().type() == InstructionTypes2.TRY_AS_LIVING_ENTITY) remap.put(instr.<LocationData<?>>get("entity").local(), castInstr.instruction().<LocationData<?>>get("living_entity").local());
+                if(castInstr.instruction().type() == InstructionTypes2.TRY_AS_PLAYER) remap.put(instr.<LocationData<?>>get("entity").local(), castInstr.instruction().<LocationData<?>>get("player").local());
+                return new OptimizationResult(null, null, remap, REMOVE_SELF_AND_INLINE_CHILDREN | REMAP_VALUES);
+            }
         }else if(instr.type() == InstructionTypes2.TRY_AS_LIVING_ENTITY) {
             var checkLoc = instr.<LocationData<Object>>get("entity");
             var isCastReapplied = input.anyInstructionFromPath(it -> it.instruction().data().containsValue(checkLoc) && ((it.instruction().type() == InstructionTypes2.TRY_AS_LIVING_ENTITY && it.instruction().data().get("living_entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER && it.instruction().data().get("player").equals(checkLoc))));
@@ -132,12 +141,29 @@ public final class Optimizations {
                 remap.put(instr.<LocationData<?>>get("living_entity").local(), checkLoc.local());
                 return new OptimizationResult(null, null, remap, REMOVE_SELF_AND_INLINE_CHILDREN | REMAP_VALUES);
             }
+
+            var alreadyCasted = input.collectInstructionsFromPath(it -> it.instruction().data().containsValue(checkLoc) && ((it.instruction().type() == InstructionTypes2.TRY_AS_LIVING_ENTITY && it.instruction().data().get("entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER && it.instruction().data().get("entity").equals(checkLoc))));
+            if(!alreadyCasted.isEmpty()) {
+                var castInstr = alreadyCasted.get(0);
+                var remap = new HashMap<Integer, Integer>();
+                if(castInstr.instruction().type() == InstructionTypes2.TRY_AS_LIVING_ENTITY) remap.put(instr.<LocationData<?>>get("entity").local(), castInstr.instruction().<LocationData<?>>get("living_entity").local());
+                if(castInstr.instruction().type() == InstructionTypes2.TRY_AS_PLAYER) remap.put(instr.<LocationData<?>>get("entity").local(), castInstr.instruction().<LocationData<?>>get("player").local());
+                return new OptimizationResult(null, null, remap, REMOVE_SELF_AND_INLINE_CHILDREN | REMAP_VALUES);
+            }
         }else if(instr.type() == InstructionTypes2.TRY_AS_PLAYER) {
             var checkLoc = instr.<LocationData<Object>>get("entity");
             var isCastReapplied = input.anyInstructionFromPath(it -> it.instruction().data().containsValue(checkLoc) && (it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER && it.instruction().data().get("player").equals(checkLoc)));
             if(isCastReapplied) {
                 var remap = new HashMap<Integer, Integer>();
                 remap.put(instr.<LocationData<?>>get("player").local(), checkLoc.local());
+                return new OptimizationResult(null, null, remap, REMOVE_SELF_AND_INLINE_CHILDREN | REMAP_VALUES);
+            }
+
+            var alreadyCasted = input.collectInstructionsFromPath(it -> it.instruction().data().containsValue(checkLoc) && (it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER && it.instruction().data().get("entity").equals(checkLoc)));
+            if(!alreadyCasted.isEmpty()) {
+                var castInstr = alreadyCasted.get(0);
+                var remap = new HashMap<Integer, Integer>();
+                remap.put(instr.<LocationData<?>>get("entity").local(), castInstr.instruction().<LocationData<?>>get("player").local());
                 return new OptimizationResult(null, null, remap, REMOVE_SELF_AND_INLINE_CHILDREN | REMAP_VALUES);
             }
         }
