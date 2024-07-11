@@ -65,10 +65,25 @@ public record OptimizationInput(Instruction instruction, List<Integer> thisPath,
         return result;
     }
 
-    public boolean anyInstructionFromPath(Function<Instruction, Boolean> func) {
+    public List<LocatedInstruction> collectInstructionsFromPath(Function<LocatedInstruction, Boolean> func) {
+        List<LocatedInstruction> result = List.of();
         var locInstr = new LocatedInstruction(List.of(), root, true);
         for(int index : thisPath) {
-            if (func.apply(locInstr.instruction())) {
+            if(func.apply(locInstr)) {
+                if(result.isEmpty()) {
+                    result = new ArrayList<>();
+                }
+                result.add(locInstr);
+            }
+            locInstr = new LocatedInstruction(addPathIndex(locInstr.path(), index), locInstr.instruction().children().get(index), true);
+        }
+        return result;
+    }
+
+    public boolean anyInstructionFromPath(Function<LocatedInstruction, Boolean> func) {
+        var locInstr = new LocatedInstruction(List.of(), root, true);
+        for(int index : thisPath) {
+            if (func.apply(locInstr)) {
                 return true;
             }
             locInstr = new LocatedInstruction(addPathIndex(locInstr.path(), index), locInstr.instruction().children().get(index), true);
@@ -123,6 +138,14 @@ public record OptimizationInput(Instruction instruction, List<Integer> thisPath,
             current = current.children().get(v);
         }
         return new LocatedInstruction(path, current, false);
+    }
+
+    public LocatedInstruction getByAbsolutePath(List<Integer> path) {
+        var current = root;
+        for(var v : path) {
+            current = current.children().get(v);
+        }
+        return new LocatedInstruction(path, current, true);
     }
 
     public LocatedInstruction getDirectChild(LocatedInstruction locInstr) {

@@ -59,6 +59,13 @@ public final class Optimizer {
         }
         var preNew = new Instruction(input.type(), input.data(), newChildren);
         var result = optimization.runOptimization(new OptimizationInput(preNew, path, root));
+        if(result.isFlagSet(OptimizationResult.REMAP_VALUES)) {
+            ArrayList<Instruction> children = new ArrayList<>();
+            for(var child : newChildren) {
+                children.add(remapInstruction(child, result.remap()));
+            }
+            newChildren = children;
+        }
         if(result.isFlagSet(OptimizationResult.MODIFY_CHILDREN)) {
             var modifications = new ArrayList<>(result.modifications());
             modifications.sort((a, b) -> {
