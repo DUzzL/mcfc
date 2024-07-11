@@ -132,7 +132,7 @@ public final class Optimizations {
                 return OptimizationResult.remapWithFlags(remap, REMOVE_SELF_AND_INLINE_CHILDREN);
             }
 
-            var alreadyIsType = input.anyInstructionFromPath(it -> it.instruction().type() == InstructionTypes2.GET_CURRENT_ENTITY || (it.instruction().type() == InstructionTypes2.FOR_EACH_PLAYER && it.instruction().data().get("entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.FOR_EACH_ENTITY && it.instruction().data().get("entity").equals(checkLoc)));
+            var alreadyIsType = input.anyInstructionFromPath(it -> (it.instruction().type() == InstructionTypes2.GET_CURRENT_ENTITY && it.instruction().data().get("entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.FOR_EACH_PLAYER && it.instruction().data().get("entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.FOR_EACH_ENTITY && it.instruction().data().get("entity").equals(checkLoc)));
             if(alreadyIsType) {
                 var remap = new HashMap<Integer, Integer>();
                 remap.put(instr.<LocationData<?>>get("entity").local(), instr.<LocationData<?>>get("object").local());

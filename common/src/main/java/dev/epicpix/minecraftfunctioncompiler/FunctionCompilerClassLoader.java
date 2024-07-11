@@ -22,7 +22,6 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.InvocationTargetException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -44,6 +43,8 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
     public final Consumer<String> logInfo;
     public final Consumer<String> logWarn;
     public final Consumer<String> logError;
+
+    private boolean ready;
 
     public FunctionCompilerClassLoader(ClassLoader parent, Path generatedDir, Class<?> commandSourceStackClass, Class<?> minecraftServerClass, Class<?> serverFunctionManagerClass, Object minecraftServer, Consumer<String> logInfo, Consumer<String> logWarn, Consumer<String> logError) {
         super(parent);
@@ -72,6 +73,21 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
         handles.clear();
     }
 
+    public boolean isReady() {
+        return ready;
+    }
+
+    private Thread backgroundThread;
+
+    protected boolean compileInBackground(Runnable run) {
+        if(ready) return true;
+        if(backgroundThread == Thread.currentThread()) return false;
+        backgroundThread = new Thread(run);
+        backgroundThread.setName("Function Compiler");
+        backgroundThread.start();
+        return true;
+    }
+
     public void loadFunctionClasses(
             int foundFunctionCount,
             double parseTime,
@@ -80,6 +96,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
             CodeFieldStorage fieldStorage,
             Object serverFunctionManager
         ) {
+        logInfo.accept("Compiling functions");
         HashMap<DataLocation, List<Instruction>> compiledFunctions = new HashMap<>();
         ArrayList<List<OptimizationStatistics>> optimizerStatistics = new ArrayList<>();
         var startCompile = System.nanoTime();
@@ -183,6 +200,8 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
         FunctionCompilerReporter.reportCompilationStatistics(foundFunctionCount, definedFunctions.size(), compiledFunctions.size(), parseTime, compileTime, classLoadTime, handleLoadTime, optimizerStatistics, commandErrors);
 
         FunctionCompilerReporter.sendReports();
+        logInfo.accept("Switched over to running compiled functions");
+        ready = true;
     }
 
     private Class<?> defineFunction(DataLocation funcId, CodeFieldStorage fieldStorage, List<Instruction> instructions, int commandCount, Set<DataLocation> compiledFunctions) {

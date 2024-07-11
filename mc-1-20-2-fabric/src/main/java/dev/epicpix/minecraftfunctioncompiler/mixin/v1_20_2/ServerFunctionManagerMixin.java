@@ -33,7 +33,7 @@ public class ServerFunctionManagerMixin {
 
     @Inject(method = "execute(Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;Lnet/minecraft/nbt/CompoundTag;)I", at = @At("HEAD"), cancellable = true)
     public void run(CommandFunction commandFunction, CommandSourceStack commandSourceStack, ServerFunctionManager.TraceCallbacks traceCallbacks, CompoundTag compoundTag, CallbackInfoReturnable<Integer> cir) {
-        if(FUNCTION_RUN_MIXIN_ENABLED && classLoader != null) {
+        if(FUNCTION_RUN_MIXIN_ENABLED && classLoader != null && classLoader.isReady()) {
             if(classLoader.hasFunctionLoaded(commandFunction.getId())) {
                 int res = classLoader.runFunction(commandFunction.getId(), commandSourceStack);
                 cir.setReturnValue(res);

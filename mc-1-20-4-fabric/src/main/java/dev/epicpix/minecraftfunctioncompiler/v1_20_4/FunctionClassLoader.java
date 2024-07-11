@@ -5,9 +5,6 @@ import dev.epicpix.minecraftfunctioncompiler.commands.*;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.TaggableLocation;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
-import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMap;
-import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
-import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapValue;
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;
@@ -17,16 +14,11 @@ import net.minecraft.commands.functions.PlainTextFunction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerFunctionManager;
-import net.minecraft.world.effect.MobEffect;
-import net.minecraft.world.entity.ai.attributes.Attribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.MethodHandle;
 import java.util.*;
-
-import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callMap_get;
-import static dev.epicpix.minecraftfunctioncompiler.v1_20_4.emitter.MappedUsageDefinitionsExtensions.*;
 
 public class FunctionClassLoader extends FunctionCompilerClassLoader {
 
@@ -40,6 +32,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
 
     public void loadFunctions(ServerFunctionManager serverFunctionManager) {
         if(functions.isEmpty()) return;
+        if(compileInBackground(() -> loadFunctions(serverFunctionManager))) return;
         try {
             RegistryMapping.updateRegistryMaps();
         } catch (IllegalAccessException e) {

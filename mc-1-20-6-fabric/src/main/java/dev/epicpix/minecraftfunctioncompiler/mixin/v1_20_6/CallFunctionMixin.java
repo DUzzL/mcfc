@@ -18,7 +18,7 @@ public class CallFunctionMixin<T extends ExecutionCommandSource<T>> {
 
     @Inject(method = "execute(Lnet/minecraft/commands/ExecutionCommandSource;Lnet/minecraft/commands/execution/ExecutionContext;Lnet/minecraft/commands/execution/Frame;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/commands/execution/ExecutionContext;incrementCost()V", shift = At.Shift.AFTER), cancellable = true)
     public void execute(T source, ExecutionContext<T> executionContext, Frame frame, CallbackInfo ci) {
-        if(FUNCTION_RUN_MIXIN_ENABLED && source instanceof CommandSourceStack stack && functionClassLoader != null) {
+        if(FUNCTION_RUN_MIXIN_ENABLED && source instanceof CommandSourceStack stack && functionClassLoader != null && functionClassLoader.isReady()) {
             var id = ((CallFunction<?>) (Object) this).function.id();
             if(functionClassLoader.hasFunctionLoaded(id)) {
                 functionClassLoader.runFunction(id, stack);

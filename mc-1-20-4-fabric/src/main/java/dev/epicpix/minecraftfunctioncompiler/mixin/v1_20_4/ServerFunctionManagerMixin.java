@@ -33,7 +33,7 @@ public class ServerFunctionManagerMixin {
 
     @Inject(method = "execute", at = @At("HEAD"), cancellable = true)
     public void run(CommandFunction<CommandSourceStack> commandFunction, CommandSourceStack commandSourceStack, CallbackInfo ci) {
-        if(FUNCTION_RUN_MIXIN_ENABLED && classLoader != null) {
+        if(FUNCTION_RUN_MIXIN_ENABLED && classLoader != null && classLoader.isReady()) {
             if(classLoader.hasFunctionLoaded(commandFunction.id())) {
                 classLoader.runFunction(commandFunction.id(), commandSourceStack);
                 ci.cancel();
