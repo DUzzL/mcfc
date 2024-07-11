@@ -58,7 +58,7 @@ public final class Optimizer {
             index++;
         }
         var preNew = new Instruction(input.type(), input.data(), newChildren);
-        var result = optimization.runOptimization(new OptimizationInput(preNew, path, root));
+        var result = optimization.runOptimization(new OptimizationInput(preNew, path, root, usedLocations));
         if(result.isFlagSet(OptimizationResult.REPLACE_SELF_DATA)) {
             preNew = new Instruction(preNew.type(), Map.copyOf(result.newData()), preNew.children());
         }
@@ -97,10 +97,6 @@ public final class Optimizer {
                     }
                 }else if(modification instanceof InstructionModification.MoveChildrenFromToNested moveInfo) {
                     var fromInstr = moveInfo.from().traverse(preNew);
-                    var fromInstrBottom = fromInstr;
-                    while(fromInstrBottom.children().size() > 1) {
-                        fromInstrBottom = fromInstrBottom.children().get(0);
-                    }
                     var toInstr = moveInfo.to().traverse(preNew);
                     if(!moveInfo.from().isEmptyPath()) {
                         var instr = moveInfo.from().pathExceptLast().traverse(preNew);
@@ -109,27 +105,24 @@ public final class Optimizer {
                             modifications.add(i, modifications.remove(i).updatePathsAfterRemoval(moveInfo.from()));
                         }
                     }
-                    var commonReused = new HashSet<>(getUsedLocations(usedLocations, fromInstr));
-                    var toUsed = new HashSet<>(getUsedLocations(usedLocations, toInstr));
-                    var allUsed = new HashSet<>(usedLocations);
-                    allUsed.addAll(commonReused);
-                    allUsed.addAll(toUsed);
-                    commonReused.retainAll(toUsed);
-                    commonReused.removeAll(usedLocations);
-                    int nextId = allUsed.stream().max(Comparator.naturalOrder()).orElse(0) + 1;
-                    var remap = new HashMap<>(moveInfo.remapData());
-                    for(var reused : commonReused) {
-                        remap.putIfAbsent(reused, nextId++);
-                    }
-                    fromInstrBottom.children().addAll(toInstr.children());
+                    var oldToInstr = new ArrayList<>(toInstr.children());
                     toInstr.children().clear();
+                    var fromInstrRemapped = new ArrayList<Instruction>();
                     if(moveInfo.includeSelf()) {
-                        toInstr.children().add(remapInstruction(fromInstr, remap));
+                        fromInstrRemapped.add(remapInstruction(fromInstr, moveInfo.remapData()));
                     }else {
                         for(var toRemap : fromInstr.children()) {
-                            toInstr.children().add(remapInstruction(toRemap, remap));
+                            fromInstrRemapped.add(remapInstruction(toRemap, moveInfo.remapData()));
                         }
                     }
+                    var fromInstrBottom = fromInstrRemapped.get(0);
+                    if(moveInfo.stack()) {
+                        while (fromInstrBottom.children().size() > 1) {
+                            fromInstrBottom = fromInstrBottom.children().get(0);
+                        }
+                    }
+                    fromInstrBottom.children().addAll(oldToInstr);
+                    toInstr.children().addAll(fromInstrRemapped);
                 }
             }
         }
@@ -145,8 +138,15 @@ public final class Optimizer {
         return List.of(preNew);
     }
 
-    private static Set<Integer> getUsedLocations(Set<Integer> base, Instruction instr) {
+    public static Set<Integer> getUsedLocations(Set<Integer> base, InstructionPath path, Instruction instr) {
         HashSet<Integer> used = new HashSet<>(base);
+        for(var v : path.path()) {
+            for (var value : instr.data().values()) {
+                if (value instanceof LocationData<?> loc && loc.local() != null) used.add(loc.local());
+                if (value instanceof ScopeData scope) used.add(scope.id());
+            }
+            instr = instr.children().get(v);
+        }
         Stack<Instruction> stack = new Stack<>();
         stack.push(instr);
         while(!stack.isEmpty()) {

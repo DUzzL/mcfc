@@ -5,6 +5,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.*;
 import java.util.*;
 
 import static dev.epicpix.minecraftfunctioncompiler.il.optimizer.OptimizationResult.*;
+import static dev.epicpix.minecraftfunctioncompiler.il.optimizer.Optimizer.getUsedLocations;
 
 public final class Optimizations {
     private Optimizations() {}
@@ -27,6 +28,7 @@ public final class Optimizations {
             var scope = instr.<ScopeData>get("scope");
             if(!input.anyChildren(it -> it.data().containsValue(scope))) return OptimizationResultTypes.INLINE_AND_REMOVE_SELF;
         }
+        if(instr.type() == InstructionTypes2.IF_NOT_NULL && instr.children().isEmpty()) return OptimizationResultTypes.REMOVE_SELF;
         return OptimizationResultTypes.KEEP;
     }
 
@@ -50,11 +52,13 @@ public final class Optimizations {
             }
         }else if(instr.type() == InstructionTypes2.EXIT_SCOPE) {
             var scope = instr.<ScopeData>get("scope");
-            var scopeDefinition = input.collectInstructionsFromPath(it -> it.instruction().type() == InstructionTypes2.SCOPE && it.instruction().data().get("scope").equals(scope)).get(0);
-            var isFlowSafe = !input.anyInstructionFromPath(it -> it.path().depth() > scopeDefinition.path().depth() && (it.instruction().type() == InstructionTypes2.FOR_EACH_PLAYER || it.instruction().type() == InstructionTypes2.FOR_EACH_ENTITY || it.instruction().type() == InstructionTypes2.FOR_EACH_LIST_ELEMENT));
-            var isLastElement = !input.anyInstructionFromPath(it -> it.path().depth() > scopeDefinition.path().depth() && Objects.equals(input.thisPath().lastIndex(), input.getByPath(it.path().pathExceptLast()).instruction().children().size()));
-            if(isFlowSafe && isLastElement) {
-                return OptimizationResultTypes.REMOVE_SELF;
+            var scopeDefinition = input.getInstructionFromPath(it -> it.instruction().type() == InstructionTypes2.SCOPE && it.instruction().data().get("scope").equals(scope));
+            if(scopeDefinition != null) {
+                var isFlowSafe = !input.anyInstructionFromPath(it -> it.path().depth() > scopeDefinition.path().depth() && (it.instruction().type() == InstructionTypes2.FOR_EACH_PLAYER || it.instruction().type() == InstructionTypes2.FOR_EACH_ENTITY || it.instruction().type() == InstructionTypes2.FOR_EACH_LIST_ELEMENT));
+                var isLastElement = !input.anyInstructionFromPath(it -> it.path().depth() > scopeDefinition.path().depth() && input.thisPath().path().get(it.path().depth() - 1) == input.getByPath(it.path().pathExceptLast()).instruction().children().size());
+                if (isFlowSafe && isLastElement) {
+                    return OptimizationResultTypes.REMOVE_SELF;
+                }
             }
         }
         return OptimizationResultTypes.KEEP;
@@ -76,15 +80,26 @@ public final class Optimizations {
                         var forEachInstruction = input.getChild(it -> it.instruction().type() == InstructionTypes2.FOR_EACH_LIST_ELEMENT && it.instruction().data().containsValue(listLocation));
                         if(forEachInstruction != null) {
                             var forEachDirectChild = input.getDirectChild(forEachInstruction);
-                            var isSafeToInline = sourceInstructionType == InstructionTypes2.GET_CURRENT_ENTITY || !input.anyChildrenIn(forEachInstruction, it -> it.type() == InstructionTypes.CALL_FUNCTIONS || it.type() == InstructionTypes2.KILL_ENTITY);
+                            var isSafeToInline = elementSourceInstruction.path().absolute() || sourceInstructionType == InstructionTypes2.GET_CURRENT_ENTITY || !input.anyChildrenIn(forEachInstruction, it -> it.type() == InstructionTypes.CALL_FUNCTIONS || it.type() == InstructionTypes2.KILL_ENTITY);
                             if (isSafeToInline) {
+                                var commonReused = new HashSet<>(getUsedLocations(input.usedLocations(), input.getDirectChild(addInstruction).path(), instr));
+                                var toUsed = new HashSet<>(getUsedLocations(input.usedLocations(), forEachDirectChild.path(), instr));
+                                var allUsed = new HashSet<>(input.usedLocations());
+                                allUsed.addAll(commonReused);
+                                allUsed.addAll(toUsed);
+                                commonReused.retainAll(toUsed);
+                                commonReused.removeAll(input.usedLocations());
+                                int nextId = allUsed.stream().max(Comparator.naturalOrder()).orElse(0) + 1;
                                 var remapData = new HashMap<Integer, Integer>();
+                                for(var reused : commonReused) {
+                                    remapData.putIfAbsent(reused, nextId++);
+                                }
                                 remapData.put(forEachInstruction.instruction().<LocationData<?>>get("element").local(), addInstruction.instruction().<LocationData<?>>get("element").local());
                                 ArrayList<InstructionModification> modifications = new ArrayList<>();
                                 modifications.add(new InstructionModification.RemoveInstruction(addInstruction.path(), 2));
-                                modifications.add(new InstructionModification.MoveChildrenFromToNested(forEachInstruction.path(), addInstruction.path().pathExceptLast(), remapData, false, 1));
+                                modifications.add(new InstructionModification.MoveChildrenFromToNested(forEachInstruction.path(), addInstruction.path().pathExceptLast(), remapData, false, false, 1));
                                 if (!forEachDirectChild.path().equals(forEachInstruction.path())) {
-                                    modifications.add(new InstructionModification.MoveChildrenFromToNested(forEachDirectChild.path(), InstructionPath.emptyRelative(), new HashMap<>(), true, 0));
+                                    modifications.add(new InstructionModification.MoveChildrenFromToNested(forEachDirectChild.path(), InstructionPath.emptyRelative(), remapData, true, true, 0));
                                 }
                                 return OptimizationResult.modificationsWithFlags(modifications, OptimizationResult.REMOVE_SELF_AND_INLINE_CHILDREN);
                             }
@@ -121,9 +136,8 @@ public final class Optimizations {
                 return OptimizationResult.remapWithFlags(remap, REMOVE_SELF_AND_INLINE_CHILDREN);
             }
 
-            var alreadyCasted = input.collectInstructionsFromPath(it -> it.instruction().data().containsValue(checkLoc) && ((it.instruction().type() == InstructionTypes2.TRY_AS_ENTITY && it.instruction().data().get("object").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.TRY_AS_LIVING_ENTITY && it.instruction().data().get("entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER && it.instruction().data().get("entity").equals(checkLoc))));
-            if(!alreadyCasted.isEmpty()) {
-                var castInstr = alreadyCasted.get(0);
+            var castInstr = input.getInstructionFromPath(it -> it.instruction().data().containsValue(checkLoc) && ((it.instruction().type() == InstructionTypes2.TRY_AS_ENTITY && it.instruction().data().get("object").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.TRY_AS_LIVING_ENTITY && it.instruction().data().get("entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER && it.instruction().data().get("entity").equals(checkLoc))));
+            if(castInstr != null) {
                 var remap = new HashMap<Integer, Integer>();
                 if(castInstr.instruction().type() == InstructionTypes2.TRY_AS_ENTITY) remap.put(instr.<LocationData<?>>get("entity").local(), castInstr.instruction().<LocationData<?>>get("entity").local());
                 if(castInstr.instruction().type() == InstructionTypes2.TRY_AS_LIVING_ENTITY) remap.put(instr.<LocationData<?>>get("entity").local(), castInstr.instruction().<LocationData<?>>get("living_entity").local());
@@ -146,9 +160,8 @@ public final class Optimizations {
                 return OptimizationResult.remapWithFlags(remap, REMOVE_SELF_AND_INLINE_CHILDREN);
             }
 
-            var alreadyCasted = input.collectInstructionsFromPath(it -> it.instruction().data().containsValue(checkLoc) && ((it.instruction().type() == InstructionTypes2.TRY_AS_LIVING_ENTITY && it.instruction().data().get("entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER && it.instruction().data().get("entity").equals(checkLoc))));
-            if(!alreadyCasted.isEmpty()) {
-                var castInstr = alreadyCasted.get(0);
+            var castInstr = input.getInstructionFromPath(it -> it.instruction().data().containsValue(checkLoc) && ((it.instruction().type() == InstructionTypes2.TRY_AS_LIVING_ENTITY && it.instruction().data().get("entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER && it.instruction().data().get("entity").equals(checkLoc))));
+            if(castInstr != null) {
                 var remap = new HashMap<Integer, Integer>();
                 if(castInstr.instruction().type() == InstructionTypes2.TRY_AS_LIVING_ENTITY) remap.put(instr.<LocationData<?>>get("entity").local(), castInstr.instruction().<LocationData<?>>get("living_entity").local());
                 if(castInstr.instruction().type() == InstructionTypes2.TRY_AS_PLAYER) remap.put(instr.<LocationData<?>>get("entity").local(), castInstr.instruction().<LocationData<?>>get("player").local());
@@ -170,9 +183,8 @@ public final class Optimizations {
                 return OptimizationResult.remapWithFlags(remap, REMOVE_SELF_AND_INLINE_CHILDREN);
             }
 
-            var alreadyCasted = input.collectInstructionsFromPath(it -> it.instruction().data().containsValue(checkLoc) && (it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER && it.instruction().data().get("entity").equals(checkLoc)));
-            if(!alreadyCasted.isEmpty()) {
-                var castInstr = alreadyCasted.get(0);
+            var castInstr = input.getInstructionFromPath(it -> it.instruction().data().containsValue(checkLoc) && (it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER && it.instruction().data().get("entity").equals(checkLoc)));
+            if(castInstr != null) {
                 var remap = new HashMap<Integer, Integer>();
                 remap.put(instr.<LocationData<?>>get("entity").local(), castInstr.instruction().<LocationData<?>>get("player").local());
                 return OptimizationResult.remapWithFlags(remap, REMOVE_SELF_AND_INLINE_CHILDREN);
@@ -192,9 +204,8 @@ public final class Optimizations {
         var instr = input.instruction();
         if(instr.type() == InstructionTypes2.FOR_EACH_ENTITY) {
             var entityLoc = instr.<LocationData<Object>>get("entity");
-            var playerCasts = input.collectChildren(it -> it.instruction().data().containsValue(entityLoc) && it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER);
-            if(!playerCasts.isEmpty()) {
-                var playerCast = playerCasts.get(0);
+            var playerCast = input.getChild(it -> it.instruction().data().containsValue(entityLoc) && it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER);
+            if(playerCast != null) {
                 var isLastElement = !input.anyInstructionFromPath(it -> it.path().depth() > playerCast.path().depth() && Objects.equals(input.thisPath().lastIndex(), input.getByPath(it.path().pathExceptLast()).instruction().children().size()));
                 if(isLastElement) {
                     return new OptimizationResult(null, null, null, InstructionTypes2.FOR_EACH_PLAYER, null, REPLACE_SELF_TYPE);
@@ -208,18 +219,63 @@ public final class Optimizations {
         var instr = input.instruction();
         if(instr.type() == InstructionTypes2.GET_CURRENT_ENTITY) {
             var entityLoc = instr.<LocationData<Object>>get("entity");
-            var previousCurrentEntities = input.collectInstructionsFromPath(it -> it.instruction().type() == InstructionTypes2.GET_CURRENT_ENTITY);
-            if(!previousCurrentEntities.isEmpty()) {
-                var previousCurrentEntity = previousCurrentEntities.get(0);
+            var previousCurrentEntity = input.getInstructionFromPath(it -> it.instruction().type() == InstructionTypes2.GET_CURRENT_ENTITY);
+            if(previousCurrentEntity != null) {
                 return OptimizationResult.remapWithFlags(Map.of(entityLoc.local(), previousCurrentEntity.instruction().<LocationData<?>>get("entity").local()), REMOVE_SELF_AND_INLINE_CHILDREN);
             }
         }else if(instr.type() == InstructionTypes2.GET_SCOREBOARD_NAME) {
             var entityLoc = instr.<LocationData<Object>>get("entity");
-            var previousScoreboardNames = input.collectInstructionsFromPath(it -> it.instruction().type() == InstructionTypes2.GET_SCOREBOARD_NAME && it.instruction().get("entity").equals(entityLoc));
-            if(!previousScoreboardNames.isEmpty()) {
-                var previousScoreboardName = previousScoreboardNames.get(0);
+            var previousScoreboardName = input.getInstructionFromPath(it -> it.instruction().type() == InstructionTypes2.GET_SCOREBOARD_NAME && it.instruction().get("entity").equals(entityLoc));
+            if(previousScoreboardName != null) {
                 var nameLoc = instr.<LocationData<Object>>get("name");
                 return OptimizationResult.remapWithFlags(Map.of(nameLoc.local(), previousScoreboardName.instruction().<LocationData<?>>get("name").local()), REMOVE_SELF_AND_INLINE_CHILDREN);
+            }
+        }else if(instr.type() == InstructionTypes2.GET_OBJECTIVE) {
+            var nameLoc = instr.<String>get("name");
+            var objectiveLoc = instr.<LocationData<Object>>get("objective");
+            var previousObjectiveSetter = input.getInstructionFromPath(it -> it.instruction().type() == InstructionTypes2.GET_OBJECTIVE && it.instruction().get("name").equals(nameLoc));
+            if(previousObjectiveSetter != null) {
+                var anyLoops = input.anyInstructionFromPath(it -> it.path().depth() > previousObjectiveSetter.path().depth() && (it.instruction().type() == InstructionTypes2.FOR_EACH_PLAYER || it.instruction().type() == InstructionTypes2.FOR_EACH_ENTITY || it.instruction().type() == InstructionTypes2.FOR_EACH_LIST_ELEMENT));
+                if(!anyLoops) {
+                    return OptimizationResult.remapWithFlags(Map.of(objectiveLoc.local(), previousObjectiveSetter.instruction().<LocationData<?>>get("objective").local()), REMOVE_SELF_AND_INLINE_CHILDREN);
+                }else {
+                    var hasFunctionCalls = input.anyChildren(it -> it.type() == InstructionTypes.CALL_FUNCTIONS);
+                    if(!hasFunctionCalls) {
+                        return OptimizationResult.remapWithFlags(Map.of(objectiveLoc.local(), previousObjectiveSetter.instruction().<LocationData<?>>get("objective").local()), REMOVE_SELF_AND_INLINE_CHILDREN);
+                    }
+                }
+            }
+        }else if(instr.type() == InstructionTypes2.SCORE_DATA_NO_AUTO_CREATE) {
+            var nameLoc = instr.<LocationData<Object>>get("name");
+            var objectiveLoc = instr.<LocationData<Object>>get("objective");
+            var scoreLoc = instr.<LocationData<Object>>get("score");
+            var previousScoreGetter = input.getInstructionFromPath(it -> (it.instruction().type() == InstructionTypes2.SCORE_DATA_NO_AUTO_CREATE || it.instruction().type() == InstructionTypes2.SCORE_DATA_AUTO_CREATE) && it.instruction().get("name").equals(nameLoc) && it.instruction().get("objective").equals(objectiveLoc));
+            if(previousScoreGetter != null) {
+                var anyLoops = input.anyInstructionFromPath(it -> it.path().depth() > previousScoreGetter.path().depth() && (it.instruction().type() == InstructionTypes2.FOR_EACH_PLAYER || it.instruction().type() == InstructionTypes2.FOR_EACH_ENTITY || it.instruction().type() == InstructionTypes2.FOR_EACH_LIST_ELEMENT));
+                if(!anyLoops) {
+                    return OptimizationResult.remapWithFlags(Map.of(scoreLoc.local(), previousScoreGetter.instruction().<LocationData<?>>get("score").local()), REMOVE_SELF_AND_INLINE_CHILDREN);
+                }else {
+                    var hasFunctionCalls = input.anyChildren(it -> it.type() == InstructionTypes.CALL_FUNCTIONS);
+                    if(!hasFunctionCalls) {
+                        return OptimizationResult.remapWithFlags(Map.of(scoreLoc.local(), previousScoreGetter.instruction().<LocationData<?>>get("score").local()), REMOVE_SELF_AND_INLINE_CHILDREN);
+                    }
+                }
+            }
+        }else if(instr.type() == InstructionTypes2.SCORE_DATA_AUTO_CREATE) {
+            var nameLoc = instr.<LocationData<Object>>get("name");
+            var objectiveLoc = instr.<LocationData<Object>>get("objective");
+            var scoreLoc = instr.<LocationData<Object>>get("score");
+            var previousScoreGetter = input.getInstructionFromPath(it -> it.instruction().type() == InstructionTypes2.SCORE_DATA_AUTO_CREATE && it.instruction().get("name").equals(nameLoc) && it.instruction().get("objective").equals(objectiveLoc));
+            if(previousScoreGetter != null) {
+                var anyLoops = input.anyInstructionFromPath(it -> it.path().depth() > previousScoreGetter.path().depth() && (it.instruction().type() == InstructionTypes2.FOR_EACH_PLAYER || it.instruction().type() == InstructionTypes2.FOR_EACH_ENTITY || it.instruction().type() == InstructionTypes2.FOR_EACH_LIST_ELEMENT));
+                if(!anyLoops) {
+                    return OptimizationResult.remapWithFlags(Map.of(scoreLoc.local(), previousScoreGetter.instruction().<LocationData<?>>get("score").local()), REMOVE_SELF_AND_INLINE_CHILDREN);
+                }else {
+                    var hasFunctionCalls = input.anyChildren(it -> it.type() == InstructionTypes.CALL_FUNCTIONS);
+                    if(!hasFunctionCalls) {
+                        return OptimizationResult.remapWithFlags(Map.of(scoreLoc.local(), previousScoreGetter.instruction().<LocationData<?>>get("score").local()), REMOVE_SELF_AND_INLINE_CHILDREN);
+                    }
+                }
             }
         }
         return OptimizationResultTypes.KEEP;

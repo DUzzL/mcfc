@@ -6,7 +6,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
 import java.util.*;
 import java.util.function.Function;
 
-public record OptimizationInput(Instruction instruction, InstructionPath thisPath, Instruction root) {
+public record OptimizationInput(Instruction instruction, InstructionPath thisPath, Instruction root, Set<Integer> usedLocations) {
 
     public boolean anyChildrenIn(LocatedInstruction in, Function<Instruction, Boolean> func) {
         Stack<Instruction> instructions = new Stack<>();
@@ -63,6 +63,17 @@ public record OptimizationInput(Instruction instruction, InstructionPath thisPat
         return result;
     }
 
+    public LocatedInstruction getInstructionFromPath(Function<LocatedInstruction, Boolean> func) {
+        var locInstr = new LocatedInstruction(InstructionPath.emptyAbsolute(), root);
+        for(int index : thisPath.path()) {
+            if(func.apply(locInstr)) {
+                return locInstr;
+            }
+            locInstr = locInstr.getIndexed(index);
+        }
+        return null;
+    }
+
     public List<LocatedInstruction> collectInstructionsFromPath(Function<LocatedInstruction, Boolean> func) {
         List<LocatedInstruction> result = List.of();
         var locInstr = new LocatedInstruction(InstructionPath.emptyAbsolute(), root);
@@ -114,7 +125,7 @@ public record OptimizationInput(Instruction instruction, InstructionPath thisPat
 
     public LocatedInstruction getInstructionDefinitionInPath(InstructionPath path, LocationData<?> loc) {
         Instruction current;
-        if(path.absolute()) {
+        if(!path.absolute()) {
             current = root;
             int index = 0;
             for(var v : thisPath.path()) {

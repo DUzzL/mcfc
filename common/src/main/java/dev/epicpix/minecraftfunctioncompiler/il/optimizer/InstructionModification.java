@@ -25,17 +25,14 @@ public interface InstructionModification {
         }
     }
 
-    record MoveChildrenFromToNested(InstructionPath from, InstructionPath to, Map<Integer, Integer> remapData, boolean includeSelf, int priority) implements InstructionModification {
-        public MoveChildrenFromToNested(InstructionPath from, InstructionPath to, Map<Integer, Integer> remapData, boolean includeSelf) {
-            this(from, to, remapData, includeSelf, 0);
-        }
+    record MoveChildrenFromToNested(InstructionPath from, InstructionPath to, Map<Integer, Integer> remapData, boolean includeSelf, boolean stack, int priority) implements InstructionModification {
 
         public InstructionPath path() {
             return to;
         }
 
         public InstructionModification updatePathsAfterRemoval(InstructionPath removed) {
-            return new MoveChildrenFromToNested(from.updatePathAfterRemoval(removed), to.updatePathAfterRemoval(removed), remapData, includeSelf, priority);
+            return new MoveChildrenFromToNested(from.updatePathAfterRemoval(removed), to.updatePathAfterRemoval(removed), remapData, includeSelf, stack, priority);
         }
 
         public int priority() {

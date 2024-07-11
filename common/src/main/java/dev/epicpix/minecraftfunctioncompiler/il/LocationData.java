@@ -29,10 +29,9 @@ public record LocationData<T>(
     }
 
     public String toString() {
-        return (local != null ? "local<" : "")
-                + (local != null ? local : "")
-                + (string != null ? string.replace("\\", "\\\\").replace("\n", "\\n") : "")
-                + (integer != null ? integer : "")
-                + ">";
+        if(local != null) return "local<" + local + ">";
+        if(string != null) return "\"" + string.translateEscapes() + "\"";
+        if(integer != null) return integer.toString();
+        return "unknown";
     }
 }
