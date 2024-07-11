@@ -14,6 +14,7 @@ public final class Optimizations {
             Optimizations::removeExitScopeDeadCode,
             Optimizations::inlineListAccess,
             Optimizations::removeUnnecessaryInstructions,
+            Optimizations::mergePureInstructions,
             Optimizations::removeDuplicateNullChecks,
             Optimizations::upgradeEntityToPlayerSelector,
             Optimizations::coalesceEntityCasts,
@@ -131,7 +132,7 @@ public final class Optimizations {
                 return OptimizationResult.remapWithFlags(remap, REMOVE_SELF_AND_INLINE_CHILDREN);
             }
 
-            var alreadyIsType = input.anyInstructionFromPath(it -> (it.instruction().type() == InstructionTypes2.FOR_EACH_PLAYER && it.instruction().data().get("entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.FOR_EACH_ENTITY && it.instruction().data().get("entity").equals(checkLoc)));
+            var alreadyIsType = input.anyInstructionFromPath(it -> it.instruction().type() == InstructionTypes2.GET_CURRENT_ENTITY || (it.instruction().type() == InstructionTypes2.FOR_EACH_PLAYER && it.instruction().data().get("entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.FOR_EACH_ENTITY && it.instruction().data().get("entity").equals(checkLoc)));
             if(alreadyIsType) {
                 var remap = new HashMap<Integer, Integer>();
                 remap.put(instr.<LocationData<?>>get("entity").local(), instr.<LocationData<?>>get("object").local());
@@ -199,6 +200,27 @@ public final class Optimizations {
                 if(isLastElement) {
                     return new OptimizationResult(null, null, null, InstructionTypes2.FOR_EACH_PLAYER, null, REPLACE_SELF_TYPE);
                 }
+            }
+        }
+        return OptimizationResultTypes.KEEP;
+    }
+
+    private static OptimizationResult mergePureInstructions(OptimizationInput input) {
+        var instr = input.instruction();
+        if(instr.type() == InstructionTypes2.GET_CURRENT_ENTITY) {
+            var entityLoc = instr.<LocationData<Object>>get("entity");
+            var previousCurrentEntities = input.collectInstructionsFromPath(it -> it.instruction().type() == InstructionTypes2.GET_CURRENT_ENTITY);
+            if(!previousCurrentEntities.isEmpty()) {
+                var previousCurrentEntity = previousCurrentEntities.get(0);
+                return OptimizationResult.remapWithFlags(Map.of(entityLoc.local(), previousCurrentEntity.instruction().<LocationData<?>>get("entity").local()), REMOVE_SELF_AND_INLINE_CHILDREN);
+            }
+        }else if(instr.type() == InstructionTypes2.GET_SCOREBOARD_NAME) {
+            var entityLoc = instr.<LocationData<Object>>get("entity");
+            var previousScoreboardNames = input.collectInstructionsFromPath(it -> it.instruction().type() == InstructionTypes2.GET_SCOREBOARD_NAME && it.instruction().get("entity").equals(entityLoc));
+            if(!previousScoreboardNames.isEmpty()) {
+                var previousScoreboardName = previousScoreboardNames.get(0);
+                var nameLoc = instr.<LocationData<Object>>get("name");
+                return OptimizationResult.remapWithFlags(Map.of(nameLoc.local(), previousScoreboardName.instruction().<LocationData<?>>get("name").local()), REMOVE_SELF_AND_INLINE_CHILDREN);
             }
         }
         return OptimizationResultTypes.KEEP;
