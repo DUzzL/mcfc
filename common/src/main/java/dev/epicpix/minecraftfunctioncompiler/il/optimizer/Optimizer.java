@@ -37,12 +37,12 @@ public final class Optimizer {
     private static List<Instruction> applyOptimization(List<Instruction> instructions, Optimization optimization) {
         ArrayList<Instruction> result = new ArrayList<>();
         for(var instr : instructions) {
-            result.addAll(applyOptimizationInner(instr, List.of(), instr, Set.of(), optimization));
+            result.addAll(applyOptimizationInner(instr, InstructionPath.emptyAbsolute(), instr, Set.of(), optimization));
         }
         return result;
     }
 
-    private static List<Instruction> applyOptimizationInner(Instruction input, List<Integer> path, Instruction root, Set<Integer> usedLocations, Optimization optimization) {
+    private static List<Instruction> applyOptimizationInner(Instruction input, InstructionPath path, Instruction root, Set<Integer> usedLocations, Optimization optimization) {
         ArrayList<Instruction> newChildren = new ArrayList<>();
         usedLocations = new HashSet<>(usedLocations);
         for(var value : input.data().values()) {
@@ -54,7 +54,7 @@ public final class Optimizer {
         }
         int index = 0;
         for(var child : input.children()) {
-            newChildren.addAll(applyOptimizationInner(child, OptimizationInput.addPathIndex(path, index), root, Set.copyOf(usedLocations), optimization));
+            newChildren.addAll(applyOptimizationInner(child, path.addPathNode(index), root, Set.copyOf(usedLocations), optimization));
             index++;
         }
         var preNew = new Instruction(input.type(), input.data(), newChildren);
@@ -77,44 +77,37 @@ public final class Optimizer {
             modifications.sort((a, b) -> {
                 int priority = Integer.compare(a.priority(), b.priority());
                 if(priority != 0) return -priority;
-                int length = Math.min(a.path().size(), b.path().size());
+                int length = Math.min(a.path().depth(), b.path().depth());
                 for(int i = 0; i<length; i++) {
-                    int va = a.path().get(i);
-                    int vb = b.path().get(i);
+                    int va = a.path().path().get(i);
+                    int vb = b.path().path().get(i);
                     int c = Integer.compare(va, vb);
                     if(c == 0) continue;
                     return -c;
                 }
-                return -Integer.compare(a.path().size(), b.path().size());
+                return -Integer.compare(a.path().depth(), b.path().depth());
             });
-            for(var modification : modifications) {
+            for(int modIndex = 0; modIndex<modifications.size(); modIndex++) {
+                var modification = modifications.get(modIndex);
                 if(modification instanceof InstructionModification.RemoveInstruction) {
-                    var beforePath = modification.path().subList(0, modification.path().size() - 1);
-                    var instr = preNew;
-                    for(var loc : beforePath) {
-                        instr = instr.children().get(loc);
+                    var instr = modification.path().pathExceptLast().traverse(preNew);
+                    instr.children().remove(modification.path().lastIndex());
+                    for(int i = modIndex + 1; i<modifications.size(); i++) {
+                        modifications.add(i, modifications.remove(i).updatePathsAfterRemoval(modification.path()));
                     }
-                    instr.children().remove((int) modification.path().get(modification.path().size() - 1));
                 }else if(modification instanceof InstructionModification.MoveChildrenFromToNested moveInfo) {
-                    var fromInstr = preNew;
-                    for(var loc : moveInfo.from()) {
-                        fromInstr = fromInstr.children().get(loc);
-                    }
+                    var fromInstr = moveInfo.from().traverse(preNew);
                     var fromInstrBottom = fromInstr;
                     while(fromInstrBottom.children().size() > 1) {
                         fromInstrBottom = fromInstrBottom.children().get(0);
                     }
-                    var toInstr = preNew;
-                    for(var loc : moveInfo.to()) {
-                        toInstr = toInstr.children().get(loc);
-                    }
-                    if(!moveInfo.from().isEmpty()) {
-                        var beforePath = moveInfo.from().subList(0, moveInfo.from().size() - 1);
-                        var instr = preNew;
-                        for(var loc : beforePath) {
-                            instr = instr.children().get(loc);
+                    var toInstr = moveInfo.to().traverse(preNew);
+                    if(!moveInfo.from().isEmptyPath()) {
+                        var instr = moveInfo.from().pathExceptLast().traverse(preNew);
+                        instr.children().remove(moveInfo.from().lastIndex());
+                        for(int i = modIndex + 1; i<modifications.size(); i++) {
+                            modifications.add(i, modifications.remove(i).updatePathsAfterRemoval(moveInfo.from()));
                         }
-                        instr.children().remove((int) moveInfo.from().get(moveInfo.from().size() - 1));
                     }
                     var commonReused = new HashSet<>(getUsedLocations(usedLocations, fromInstr));
                     var toUsed = new HashSet<>(getUsedLocations(usedLocations, toInstr));

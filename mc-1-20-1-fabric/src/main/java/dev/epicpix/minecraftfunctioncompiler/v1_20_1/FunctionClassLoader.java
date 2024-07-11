@@ -31,7 +31,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
     public void loadFunctions(ServerFunctionManager serverFunctionManager) {
         if(functions.isEmpty()) return;
         if(compileInBackground(() -> loadFunctions(serverFunctionManager))) return;
-        logInfo.accept("Loading functions");
+        logInfo.accept("Starting compilation");
         try {
             RegistryMapping.updateRegistryMaps();
         } catch (IllegalAccessException e) {

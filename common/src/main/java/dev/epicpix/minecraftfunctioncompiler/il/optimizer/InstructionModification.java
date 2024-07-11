@@ -1,21 +1,23 @@
 package dev.epicpix.minecraftfunctioncompiler.il.optimizer;
 
-import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
-
-import java.util.List;
 import java.util.Map;
 
 public interface InstructionModification {
-    List<Integer> path();
+    InstructionPath path();
+    InstructionModification updatePathsAfterRemoval(InstructionPath removed);
     int priority();
 
-    record RemoveInstruction(List<Integer> path, int priority) implements InstructionModification {
-        public RemoveInstruction(List<Integer> path) {
+    record RemoveInstruction(InstructionPath path, int priority) implements InstructionModification {
+        public RemoveInstruction(InstructionPath path) {
             this(path, 0);
         }
 
-        public List<Integer> path() {
+        public InstructionPath path() {
             return path;
+        }
+
+        public InstructionModification updatePathsAfterRemoval(InstructionPath removed) {
+            return new RemoveInstruction(path.updatePathAfterRemoval(removed), priority);
         }
 
         public int priority() {
@@ -23,13 +25,17 @@ public interface InstructionModification {
         }
     }
 
-    record MoveChildrenFromToNested(List<Integer> from, List<Integer> to, Map<Integer, Integer> remapData, boolean includeSelf, int priority) implements InstructionModification {
-        public MoveChildrenFromToNested(List<Integer> from, List<Integer> to, Map<Integer, Integer> remapData, boolean includeSelf) {
+    record MoveChildrenFromToNested(InstructionPath from, InstructionPath to, Map<Integer, Integer> remapData, boolean includeSelf, int priority) implements InstructionModification {
+        public MoveChildrenFromToNested(InstructionPath from, InstructionPath to, Map<Integer, Integer> remapData, boolean includeSelf) {
             this(from, to, remapData, includeSelf, 0);
         }
 
-        public List<Integer> path() {
+        public InstructionPath path() {
             return to;
+        }
+
+        public InstructionModification updatePathsAfterRemoval(InstructionPath removed) {
+            return new MoveChildrenFromToNested(from.updatePathAfterRemoval(removed), to.updatePathAfterRemoval(removed), remapData, includeSelf, priority);
         }
 
         public int priority() {

@@ -3,12 +3,10 @@ package dev.epicpix.minecraftfunctioncompiler.il.optimizer;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Stack;
+import java.util.*;
 import java.util.function.Function;
 
-public record OptimizationInput(Instruction instruction, List<Integer> thisPath, Instruction root) {
+public record OptimizationInput(Instruction instruction, InstructionPath thisPath, Instruction root) {
 
     public boolean anyChildrenIn(LocatedInstruction in, Function<Instruction, Boolean> func) {
         Stack<Instruction> instructions = new Stack<>();
@@ -43,7 +41,7 @@ public record OptimizationInput(Instruction instruction, List<Integer> thisPath,
         {
             int index = 0;
             for(var child : instruction.children()) {
-                instructions.push(new LocatedInstruction(List.of(index), child, false));
+                instructions.push(new LocatedInstruction(InstructionPath.fromSingleRelative(index), child));
                 index++;
             }
         }
@@ -58,7 +56,7 @@ public record OptimizationInput(Instruction instruction, List<Integer> thisPath,
             }
             int index = 0;
             for(var child : locInstr.instruction().children()) {
-                instructions.push(new LocatedInstruction(addPathIndex(locInstr.path(), index), child, false));
+                instructions.push(new LocatedInstruction(locInstr.path().addPathNode(index), child));
                 index++;
             }
         }
@@ -67,26 +65,26 @@ public record OptimizationInput(Instruction instruction, List<Integer> thisPath,
 
     public List<LocatedInstruction> collectInstructionsFromPath(Function<LocatedInstruction, Boolean> func) {
         List<LocatedInstruction> result = List.of();
-        var locInstr = new LocatedInstruction(List.of(), root, true);
-        for(int index : thisPath) {
+        var locInstr = new LocatedInstruction(InstructionPath.emptyAbsolute(), root);
+        for(int index : thisPath.path()) {
             if(func.apply(locInstr)) {
                 if(result.isEmpty()) {
                     result = new ArrayList<>();
                 }
                 result.add(locInstr);
             }
-            locInstr = new LocatedInstruction(addPathIndex(locInstr.path(), index), locInstr.instruction().children().get(index), true);
+            locInstr = locInstr.getIndexed(index);
         }
         return result;
     }
 
     public boolean anyInstructionFromPath(Function<LocatedInstruction, Boolean> func) {
-        var locInstr = new LocatedInstruction(List.of(), root, true);
-        for(int index : thisPath) {
+        var locInstr = new LocatedInstruction(InstructionPath.emptyAbsolute(), root);
+        for(int index : thisPath.path()) {
             if (func.apply(locInstr)) {
                 return true;
             }
-            locInstr = new LocatedInstruction(addPathIndex(locInstr.path(), index), locInstr.instruction().children().get(index), true);
+            locInstr = locInstr.getIndexed(index);
         }
         return false;
     }
@@ -96,7 +94,7 @@ public record OptimizationInput(Instruction instruction, List<Integer> thisPath,
         {
             int index = 0;
             for(var child : instruction.children()) {
-                instructions.push(new LocatedInstruction(List.of(index), child, false));
+                instructions.push(new LocatedInstruction(InstructionPath.fromSingleRelative(index), child));
                 index++;
             }
         }
@@ -107,58 +105,49 @@ public record OptimizationInput(Instruction instruction, List<Integer> thisPath,
             }
             int index = 0;
             for(var child : locInstr.instruction().children()) {
-                instructions.push(new LocatedInstruction(addPathIndex(locInstr.path(), index), child, false));
+                instructions.push(new LocatedInstruction(locInstr.path().addPathNode(index), child));
                 index++;
             }
         }
         return null;
     }
 
-    public LocatedInstruction getInstructionDefinitionInPath(List<Integer> path, LocationData<?> loc) {
-        var current = root;
+    public LocatedInstruction getInstructionDefinitionInPath(InstructionPath path, LocationData<?> loc) {
+        Instruction current;
+        if(path.absolute()) {
+            current = root;
+            int index = 0;
+            for(var v : thisPath.path()) {
+                if(current.data().containsValue(loc)) return new LocatedInstruction(thisPath.subPath(0, index), current);
+                current = current.children().get(v);
+                index++;
+            }
+        }else {
+            current = instruction;
+        }
         int index = 0;
-        for(var v : thisPath) {
-            if(current.data().containsValue(loc)) return new LocatedInstruction(thisPath.subList(0, index), current, true);
+        for(var v : path.path()) {
+            if(current.data().containsValue(loc)) return new LocatedInstruction(path.subPath(0, index), current);
             current = current.children().get(v);
             index++;
         }
-        index = 0;
-        for(var v : path) {
-            if(current.data().containsValue(loc)) return new LocatedInstruction(path.subList(0, index), current, false);
-            current = current.children().get(v);
-            index++;
-        }
-        if(current.data().containsValue(loc)) return new LocatedInstruction(path, current, false);
+        if(current.data().containsValue(loc)) return new LocatedInstruction(path, current);
         throw new IllegalStateException("Failed to find definition for: " + loc);
     }
 
-    public LocatedInstruction getByPath(List<Integer> path) {
-        var current = instruction;
-        for(var v : path) {
+    public LocatedInstruction getByPath(InstructionPath path) {
+        var current = path.absolute() ? root : instruction;
+        for(var v : path.path()) {
             current = current.children().get(v);
         }
-        return new LocatedInstruction(path, current, false);
-    }
-
-    public LocatedInstruction getByAbsolutePath(List<Integer> path) {
-        var current = root;
-        for(var v : path) {
-            current = current.children().get(v);
-        }
-        return new LocatedInstruction(path, current, true);
+        return new LocatedInstruction(path, current);
     }
 
     public LocatedInstruction getDirectChild(LocatedInstruction locInstr) {
-        if(!locInstr.absolute() && !locInstr.path().isEmpty()) {
-            return getByPath(locInstr.path().subList(0, 1));
+        if(!locInstr.path().absolute() && !locInstr.path().path().isEmpty()) {
+            return getByPath(locInstr.path().subPath(0, 1));
         }
         throw new IllegalArgumentException("Cannot get direct child of " + locInstr);
-    }
-
-    public static List<Integer> addPathIndex(List<Integer> list, int index) {
-        var newPath = new ArrayList<>(list);
-        newPath.add(index);
-        return newPath;
     }
 
 }
