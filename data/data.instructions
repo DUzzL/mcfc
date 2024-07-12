@@ -399,6 +399,11 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
   run();
 }
 
+@SCORE_DATA_NO_AUTO_CREATE [1.21-1.21] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <net.minecraft.world.scores.ScoreAccess> [ctx:score]) {
+  let [ctx:score] = <dev.epicpix.minecraftfunctioncompiler.v1_21.ExtensionFunctions>.getScore([static:Scoreboard], <net.minecraft.world.scores.ScoreHolder>.forNameOnly([ctx:name]), [ctx:objective]);
+  run();
+}
+
 @RUN_SCORE_OPERATION_SET [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) {
   [ctx:target].setScore([ctx:source].getScore());
 }
@@ -765,6 +770,10 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
   <dev.epicpix.minecraftfunctioncompiler.v1_20_6.ExtensionFunctions>.sortEntitiesClosest([ctx:position], [ctx:list]);
 }
 
+@SORT_LIST_ENTITY_NEAREST [1.21-1.21] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
+  <dev.epicpix.minecraftfunctioncompiler.v1_21.ExtensionFunctions>.sortEntitiesClosest([ctx:position], [ctx:list]);
+}
+
 @SORT_LIST_ENTITY_FURTHEST [1.20.1] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
   <dev.epicpix.minecraftfunctioncompiler.v1_20_1.ExtensionFunctions>.sortEntitiesFurthest([ctx:position], [ctx:list]);
 }
@@ -779,4 +788,8 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 
 @SORT_LIST_ENTITY_FURTHEST [1.20.5-1.20.6] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
   <dev.epicpix.minecraftfunctioncompiler.v1_20_6.ExtensionFunctions>.sortEntitiesFurthest([ctx:position], [ctx:list]);
+}
+
+@SORT_LIST_ENTITY_FURTHEST [1.21-1.21] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
+  <dev.epicpix.minecraftfunctioncompiler.v1_21.ExtensionFunctions>.sortEntitiesFurthest([ctx:position], [ctx:list]);
 }

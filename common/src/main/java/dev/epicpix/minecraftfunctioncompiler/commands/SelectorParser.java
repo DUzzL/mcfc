@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.commands;
 
+import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 
 import java.util.HashMap;
@@ -58,6 +59,12 @@ public final class SelectorParser {
             case 'r' -> {
                 data.requirePlayer = true;
                 data.sort = SelectorSort.RANDOM;
+                data.limit = 1;
+            }
+            case 'n' -> {
+                if(!MinecraftVersion.isCurrentVersionInRange(MinecraftVersion.MC_1_21, null)) throwError(reader, "Selector @n is not available on versions below 1.21");
+                data.requirePlayer = true;
+                data.sort = SelectorSort.NEAREST;
                 data.limit = 1;
             }
             default -> throwError(reader, "Unsupported selector type: @" + selectorType);

@@ -29,6 +29,9 @@ ServerFunctionManager_execute."1.20.1-" = "net/minecraft/server/ServerFunctionMa
 
 ExtensionFunctions_executeFunction."1.20.4" = "dev/epicpix/minecraftfunctioncompiler/v1_20_4/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@S"
 ExtensionFunctions_executeFunction."1.20.6" = "dev/epicpix/minecraftfunctioncompiler/v1_20_6/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@S"
+ExtensionFunctions_executeFunction."1.21" = "dev/epicpix/minecraftfunctioncompiler/v1_21/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@S"
+
+ResourceLocation_fromNamespaceAndPath."1.21+" = "net/minecraft/resources/ResourceLocation:fromNamespaceAndPath(Ljava/lang/String;Ljava/lang/String;)Lnet/minecraft/resources/ResourceLocation;@S"
 
 [definitions_fields]
 ServerFunctionManager_library = "net/minecraft/server/ServerFunctionManager:library:Lnet/minecraft/server/ServerFunctionLibrary;@MR"

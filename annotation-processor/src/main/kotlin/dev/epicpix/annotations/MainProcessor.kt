@@ -258,8 +258,8 @@ class MainProcessor(
                     k as String
                     v as String
                     val minecraftVersion = k.split(".")
-                    val cMajor = minecraftVersion[1].toInt()
-                    val cMinor = minecraftVersion[2].filter { it.isDigit() }.toIntOrNull() ?: 0
+                    val cMajor = minecraftVersion[1].replace("+", "").replace("-", "").toInt()
+                    val cMinor = minecraftVersion.getOrNull(2)?.filter { it.isDigit() }?.toIntOrNull() ?: 0
                     if(cMajor == majorVer && cMinor == minorVer) return v
                     else if( k.endsWith("+") && ((majorVer == cMajor && minorVer >= cMinor) || (majorVer > cMajor))) {
                         return v
