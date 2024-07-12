@@ -49,8 +49,8 @@ public final class Emitter {
                         callCommandSourceStack_withRotation(codeWriter);
                     }
                     if(context.compiledFunctions().contains(func)) {
-                        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, ("function/" + func.namespace() + "/" + func.path()).replace('.', '$'), "run", "(" + CommandSourceStack.class.descriptorString() + ")I", false);
-                        methodVisitor.visitInsn(Opcodes.POP);
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, ("function/" + func.namespace() + "/" + func.path()).replace('.', '$'), "run", "(" + CommandSourceStack.class.descriptorString() + ")J", false);
+                        methodVisitor.visitInsn(Opcodes.POP2);
                     }else {
                         if(context.instruction().get("arguments") != null) {
                             context.load("arguments");

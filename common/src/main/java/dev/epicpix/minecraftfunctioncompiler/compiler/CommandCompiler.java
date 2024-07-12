@@ -484,6 +484,12 @@ public final class CommandCompiler {
                     selector.writeInstruction(Instructions2.killEntity(selector.content()));
                 }
             }
+            case RETURN_FAIL -> {
+                context.current().addInstructionConsumer().accept(Instructions2.returnFail());
+            }
+            case RETURN_VALUE -> {
+                context.current().addInstructionConsumer().accept(Instructions2.returnSuccess(LocationData.ofInteger(command.get("value"))));
+            }
             case SCOREBOARD_PLAYERS_ADD -> {
                 try(var objective = context.getObjective(command.get("objective"))) {
                     try(var name = context.forScoreHolder(command.get("targets"))) {

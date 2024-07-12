@@ -31,6 +31,9 @@ Not all commands are currently implemented in this mod, if a command is not list
 | `function`                               | Yes          | No                     | No                      |
 | `gamemode`                               | Partial[^1]  | No                     | No                      |
 | `kill`                                   | Partial[^1]  | No                     | No                      |
+| `return <value>`                         | Yes          | No                     | No                      |
+| `return fail`                            | Yes          | No                     | No                      |
+| `return run`                             | No           | No                     | No                      |
 | `scoreboard players add`                 | Partial[^1]  | No                     | No                      |
 | `scoreboard players enable`              | No           | No                     | No                      |
 | `scoreboard players get`                 | Partial[^1]  | Yes                    | No                      |

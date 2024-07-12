@@ -54,8 +54,8 @@ public final class Emitter {
                     }
                     if(context.instruction().get("arguments") != null) throw new IllegalArgumentException("Macro arguments are not supported in 1.20.1");
                     if(context.compiledFunctions().contains(func)) {
-                        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, ("function/" + func.namespace() + "/" + func.path()).replace('.', '$'), "run", "(" + CommandSourceStack.class.descriptorString() + ")I", false);
-                        methodVisitor.visitInsn(Opcodes.POP);
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, ("function/" + func.namespace() + "/" + func.path()).replace('.', '$'), "run", "(" + CommandSourceStack.class.descriptorString() + ")J", false);
+                        methodVisitor.visitInsn(Opcodes.POP2);
                     }else {
                         codeWriter.writeNull();
                         callServerFunctionManager_execute(codeWriter);

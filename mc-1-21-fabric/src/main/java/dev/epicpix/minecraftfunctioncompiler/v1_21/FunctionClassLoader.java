@@ -98,9 +98,9 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
         handles.put(ResourceLocation.fromNamespaceAndPath(key.namespace(), key.path()), handle);
     }
 
-    public int runFunction(ResourceLocation location, CommandSourceStack stack) {
+    public long runFunction(ResourceLocation location, CommandSourceStack stack) {
         try {
-            return (Integer) handles.get(location).invoke(stack);
+            return (long) handles.get(location).invoke(stack);
         } catch (Throwable e) {
             logError.accept("Failed to run function " + location);
             e.printStackTrace();

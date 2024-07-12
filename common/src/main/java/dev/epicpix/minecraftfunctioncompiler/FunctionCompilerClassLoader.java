@@ -65,7 +65,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
 
     public void registerFunction(Class<?> clazz, DataLocation key) {
         try {
-            setHandle(key, MethodHandles.lookup().findStatic(clazz, "run", MethodType.methodType(int.class, commandSourceStackClass)));
+            setHandle(key, MethodHandles.lookup().findStatic(clazz, "run", MethodType.methodType(long.class, commandSourceStackClass)));
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }
@@ -214,7 +214,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
 
         var cw = createClassWriter();
         cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL, className, null, "java/lang/Object", null);
-        var mv = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "run", "(" + commandSourceStackClass.descriptorString() + ")I", null, null);
+        var mv = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "run", "(" + commandSourceStackClass.descriptorString() + ")J", null, null);
         mv.visitCode();
         var codeWriter = new CodeWriter(mv);
 
@@ -223,8 +223,8 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
         new EmitterContext(fieldStorage, codeWriter, compiledFunctions, new HashMap<>(), new HashMap<>(), Instructions2.root().withChildren(new ArrayList<>(instructions)), new HashMap<>(), new HashMap<>()).run();
         codeWriter.destroyLocal(localValue);
 
-        mv.visitLdcInsn(commandCount);
-        mv.visitInsn(Opcodes.IRETURN);
+        codeWriter.writeLong(commandCount | (0x2L << 32));
+        mv.visitInsn(Opcodes.LRETURN);
         codeWriter.writeLocalVariables();
         try {
             mv.visitMaxs(0, 0);

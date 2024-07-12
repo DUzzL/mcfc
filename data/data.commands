@@ -49,6 +49,9 @@ GAMEMODE/gamemode <gamemode:gamemode> <targets:entity_selector[players]:self>
 
 KILL/kill <targets:entity_selector:self>
 
+RETURN_FAIL<1.20.3..>/return fail
+RETURN_VALUE<1.20..>/return <value:int>
+
 SCOREBOARD_PLAYERS_ADD/scoreboard players add <targets:score_holder> <objective:objective> <score:int[minimum=0]>
 SCOREBOARD_PLAYERS_GET/scoreboard players get <targets:score_holder> <objective:objective>
 SCOREBOARD_PLAYERS_OPERATION/scoreboard players operation <targets:score_holder> <targetObjective:objective> <operation:scoreboard_operation> <source:score_holder> <sourceObjective:objective>

@@ -90,6 +90,14 @@
   }
 }
 
+@RETURN_FAIL() {
+  return_fail();
+}
+
+@RETURN_SUCCESS(int [ctx:value]) {
+  return_success([ctx:value]);
+}
+
 
 $for_each_list_indexed(<java.util.List> [ctx:list], yield<java.lang.Object> [ctx:res_element]) {
   let [local:index]<int> = 0;

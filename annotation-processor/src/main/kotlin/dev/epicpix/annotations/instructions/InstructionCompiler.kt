@@ -1310,6 +1310,20 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                     }
                 }
             }
+            if(expression.name == "return_fail") {
+                output.appendText("cw.writeLong(${1L shl 32}L);\n")
+                output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.LRETURN);\n")
+                return uniqId
+            }
+            if(expression.name == "return_success") {
+                val sourceType = evaluateExpressionType(writerData, expression.arguments[0])
+                if(sourceType == ParsedTokenExpressionSimpleType.INTEGER) {
+                    val uid = writeExpression(writerData, expression.arguments[0], output, uniqId, true)
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.I2L);\n")
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.LRETURN);\n")
+                    return uid
+                }
+            }
             throw UnsupportedOperationException("Unknown function call: ${expression.name} / ${expression}")
         }
     }else if(expression is ParsedTokenExpressionField) {
