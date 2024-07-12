@@ -260,6 +260,17 @@ public final class CommandCompiler {
                     }
                 }
             }
+            case EXECUTE_ON_VEHICLE -> {
+                try(var currentEntity = context.getCurrentEntity()) {
+                    var vehicle = LocationData.<Entity>ofLocal(currentEntity.data().highestId());
+                    var ifNotNull = Instructions2.ifNotNull(vehicle.lower());
+                    var instruction = Instructions2.getEntityVehicle(currentEntity.content(), vehicle).with(ifNotNull);
+                    try(var ignored = context.enterWithoutValue(currentEntity.data().incrementedId(1).withCurrentEntity(vehicle).withBaseInstruction(ifNotNull))) {
+                        compile(context, command.get("command"), result);
+                    }
+                    currentEntity.writeInstruction(instruction);
+                }
+            }
             case EXECUTE_POSITIONED_AS -> {
                 try(var targets = context.forSelector(command.<SelectorArgument>get("targets"))) {
                     var position = LocationData.<Vec3>ofLocal(targets.data().highestId());

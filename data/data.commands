@@ -21,11 +21,12 @@ EXECUTE_AT/execute at <targets:entity_selector> <command:command[root=execute]>
 EXECUTE_IF_ENTITY/execute if entity <entities:entity_selector> <command:command[root=execute]>
 EXECUTE_IF_SCORE_RANGE/execute if score <target:score_holder> <targetObjective:objective> matches <range:int_range> <command:command[root=execute]>
 EXECUTE_IF_SCORE_COMPARE/execute if score <target:score_holder> <targetObjective:objective> <comparison:score_comparison> <source:score_holder> <sourceObjective:objective> <command:command[root=execute]>
+EXECUTE_ON_VEHICLE/execute on vehicle <command:command[root=execute]>
+EXECUTE_POSITIONED_AS/execute positioned as <targets:entity_selector> <command:command[root=execute]>
+EXECUTE_POSITIONED_POS/execute positioned <pos:vec3> <command:command[root=execute]>
 EXECUTE_ROTATED_AS/execute rotated as <targets:entity_selector> <command:command[root=execute]>
 EXECUTE_ROTATED_ROT/execute rotated <rot:rotation> <command:command[root=execute]>
 EXECUTE_RUN/execute run <command:command>
-EXECUTE_POSITIONED_AS/execute positioned as <targets:entity_selector> <command:command[root=execute]>
-EXECUTE_POSITIONED_POS/execute positioned <pos:vec3> <command:command[root=execute]>
 EXECUTE_STORE_RESULT_SCORE/execute store result score <targets:score_holder> <objective:objective> <command:command[root=execute]>
 EXECUTE_STORE_RESULT_STORAGE/execute store result storage <storage:resource_location> <path:nbt_path> <store_type:result_store_type> <scale:double> <command:command[root=execute]>
 EXECUTE_UNLESS_ENTITY/execute unless entity <entities:entity_selector> <command:command[root=execute]>

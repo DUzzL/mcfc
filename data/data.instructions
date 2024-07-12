@@ -801,3 +801,8 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 @SORT_LIST_ENTITY_FURTHEST [1.21-1.21] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
   <dev.epicpix.minecraftfunctioncompiler.v1_21.ExtensionFunctions>.sortEntitiesFurthest([ctx:position], [ctx:list]);
 }
+
+@GET_ENTITY_VEHICLE(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.entity.Entity> [ctx:vehicle]) {
+  let [ctx:vehicle] = [ctx:entity].getVehicle();
+  run();
+}
