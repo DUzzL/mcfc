@@ -28,21 +28,14 @@ public final class Optimizer {
     }
 
     private static List<Instruction> runOptimizations(List<Instruction> instructions) {
-        for(var optimization : Optimizations.OPTIMIZATIONS) {
-            instructions = applyOptimization(instructions, optimization);
-        }
-        return instructions;
-    }
-
-    private static List<Instruction> applyOptimization(List<Instruction> instructions, Optimization optimization) {
         ArrayList<Instruction> result = new ArrayList<>();
         for(var instr : instructions) {
-            result.addAll(applyOptimizationInner(instr, InstructionPath.emptyAbsolute(), instr, Set.of(), optimization));
+            result.addAll(applyOptimizationsInner(instr, InstructionPath.emptyAbsolute(), instr, Set.of()));
         }
         return result;
     }
 
-    private static List<Instruction> applyOptimizationInner(Instruction input, InstructionPath path, Instruction root, Set<Integer> usedLocations, Optimization optimization) {
+    private static List<Instruction> applyOptimizationsInner(Instruction input, InstructionPath path, Instruction root, Set<Integer> usedLocations) {
         ArrayList<Instruction> newChildren = new ArrayList<>();
         usedLocations = new HashSet<>(usedLocations);
         for(var value : input.data().values()) {
@@ -54,11 +47,16 @@ public final class Optimizer {
         }
         int index = 0;
         for(var child : input.children()) {
-            newChildren.addAll(applyOptimizationInner(child, path.addPathNode(index), root, Set.copyOf(usedLocations), optimization));
+            newChildren.addAll(applyOptimizationsInner(child, path.addPathNode(index), root, Set.copyOf(usedLocations)));
             index++;
         }
         var preNew = new Instruction(input.type(), input.data(), newChildren);
-        var result = optimization.runOptimization(new OptimizationInput(preNew, path, root, usedLocations));
+        var optInput = new OptimizationInput(preNew, path, root, usedLocations);
+        var result = OptimizationResultTypes.KEEP;
+        for(var opt : Optimizations.OPTIMIZATIONS) {
+            result = opt.runOptimization(optInput);
+            if(result.flags() != 0) break;
+        }
         if(result.isFlagSet(OptimizationResult.REPLACE_SELF_DATA)) {
             preNew = new Instruction(preNew.type(), Map.copyOf(result.newData()), preNew.children());
         }
@@ -107,22 +105,24 @@ public final class Optimizer {
                     }
                     var oldToInstr = new ArrayList<>(toInstr.children());
                     toInstr.children().clear();
-                    var fromInstrRemapped = new ArrayList<Instruction>();
+                    var fromInstrRemapped = remapInstruction(fromInstr, moveInfo.remapData());
+                    var updated = new ArrayList<Instruction>();
                     if(moveInfo.includeSelf()) {
-                        fromInstrRemapped.add(remapInstruction(fromInstr, moveInfo.remapData()));
+                        updated.add(fromInstrRemapped);
                     }else {
-                        for(var toRemap : fromInstr.children()) {
-                            fromInstrRemapped.add(remapInstruction(toRemap, moveInfo.remapData()));
-                        }
+                        updated.addAll(fromInstrRemapped.children());
                     }
-                    var fromInstrBottom = fromInstrRemapped.get(0);
                     if(moveInfo.stack()) {
-                        while (fromInstrBottom.children().size() > 1) {
-                            fromInstrBottom = fromInstrBottom.children().get(0);
+                        var bottom = updated.get(0);
+                        while(bottom.children().size() == 1) {
+                            bottom = bottom.children().get(0);
                         }
+                        bottom.children().addAll(oldToInstr);
+                        toInstr.children().addAll(updated);
+                    }else {
+                        toInstr.children().addAll(updated);
+                        toInstr.children().addAll(oldToInstr);
                     }
-                    fromInstrBottom.children().addAll(oldToInstr);
-                    toInstr.children().addAll(fromInstrRemapped);
                 }
             }
         }

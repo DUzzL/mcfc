@@ -97,9 +97,13 @@ public final class Optimizations {
                                 remapData.put(forEachInstruction.instruction().<LocationData<?>>get("element").local(), addInstruction.instruction().<LocationData<?>>get("element").local());
                                 ArrayList<InstructionModification> modifications = new ArrayList<>();
                                 modifications.add(new InstructionModification.RemoveInstruction(addInstruction.path(), 2));
-                                modifications.add(new InstructionModification.MoveChildrenFromToNested(forEachInstruction.path(), addInstruction.path().pathExceptLast(), remapData, false, false, 1));
-                                if (!forEachDirectChild.path().equals(forEachInstruction.path())) {
-                                    modifications.add(new InstructionModification.MoveChildrenFromToNested(forEachDirectChild.path(), InstructionPath.emptyRelative(), remapData, true, true, 0));
+                                if(addInstruction.path().depth() > 1) {
+                                    modifications.add(new InstructionModification.MoveChildrenFromToNested(forEachInstruction.path(), addInstruction.path().pathExceptLast(), remapData, false, false, 1));
+                                    if (!forEachDirectChild.path().equals(forEachInstruction.path())) {
+                                        modifications.add(new InstructionModification.MoveChildrenFromToNested(forEachDirectChild.path(), InstructionPath.emptyRelative(), remapData, true, true, 0));
+                                    }
+                                }else {
+                                    modifications.add(new InstructionModification.MoveChildrenFromToNested(addInstruction.path(), addInstruction.path(), remapData, true, false, 1));
                                 }
                                 return OptimizationResult.modificationsWithFlags(modifications, OptimizationResult.REMOVE_SELF_AND_INLINE_CHILDREN);
                             }
