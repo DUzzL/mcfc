@@ -71,6 +71,8 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
                         parsed.add(CommandParser.parseCommand(currentCommand, lookup));
                     }
                     definedFunctions.put(new DataLocation(key.getNamespace(), key.getPath()), parsed);
+                }else {
+                    logWarn.accept("Unable to parse function " + key + " / Functions with macros are not yet supported");
                 }
             } catch (CommandErrorException e) {
                 logWarn.accept("Unable to parse function " + key + " / " + e.getMessage());

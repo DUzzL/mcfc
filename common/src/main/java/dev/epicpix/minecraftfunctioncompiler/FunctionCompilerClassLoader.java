@@ -14,6 +14,8 @@ import dev.epicpix.minecraftfunctioncompiler.il.optimizer.OptimizationStatistics
 import dev.epicpix.minecraftfunctioncompiler.il.optimizer.Optimizer;
 import dev.epicpix.minecraftfunctioncompiler.commands.Command;
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
+import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCountsData;
+import dev.epicpix.minecraftfunctioncompiler.reporter.TimingData;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 
@@ -197,7 +199,10 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
             }
         }
         var handleLoadTime = (System.nanoTime()-startHandles)/1000000000d;
-        FunctionCompilerReporter.reportCompilationStatistics(foundFunctionCount, definedFunctions.size(), compiledFunctions.size(), parseTime, compileTime, classLoadTime, handleLoadTime, optimizerStatistics, commandErrors);
+
+        var functionCountsData = new FunctionCountsData(foundFunctionCount, definedFunctions.size(), compiledFunctions.size());
+        var timingData = new TimingData(parseTime, compileTime, classLoadTime, handleLoadTime);
+        FunctionCompilerReporter.reportCompilationStatistics(functionCountsData, timingData, optimizerStatistics, commandErrors);
 
         FunctionCompilerReporter.sendReports();
         logInfo.accept("Switched over to running compiled functions");

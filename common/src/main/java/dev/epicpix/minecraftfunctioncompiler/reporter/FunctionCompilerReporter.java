@@ -100,30 +100,25 @@ public final class FunctionCompilerReporter {
     }
 
     public static void reportCompilationStatistics(
-            int foundFunctionCount,
-            int parsedFunctionCount,
-            int compiledFunctionCount,
-            double parseTime,
-            double compileTime,
-            double classLoadTime,
-            double handleLoadTime,
+            FunctionCountsData functionCounts,
+            TimingData timings,
             List<List<OptimizationStatistics>> optimizationStats,
             List<CommandError> commandErrors
         ) {
         JsonObject compilationStats = new JsonObject();
 
-        JsonObject functionCounts = new JsonObject();
-        functionCounts.addProperty("found", foundFunctionCount);
-        functionCounts.addProperty("parsed", parsedFunctionCount);
-        functionCounts.addProperty("compiled", compiledFunctionCount);
-        compilationStats.add("function_counts", functionCounts);
+        JsonObject functionCountsJson = new JsonObject();
+        functionCountsJson.addProperty("found", functionCounts.foundFunctionCount());
+        functionCountsJson.addProperty("parsed", functionCounts.parsedFunctionCount());
+        functionCountsJson.addProperty("compiled", functionCounts.compiledFunctionCount());
+        compilationStats.add("function_counts", functionCountsJson);
 
-        JsonObject timings = new JsonObject();
-        timings.addProperty("parse", parseTime);
-        timings.addProperty("compile", compileTime);
-        timings.addProperty("class_load", classLoadTime);
-        timings.addProperty("handle_load", handleLoadTime);
-        compilationStats.add("timings", timings);
+        JsonObject timingsJson = new JsonObject();
+        timingsJson.addProperty("parse", timings.parse());
+        timingsJson.addProperty("compile", timings.compile());
+        timingsJson.addProperty("class_load", timings.classLoad());
+        timingsJson.addProperty("handle_load", timings.handleLoad());
+        compilationStats.add("timings", timingsJson);
 
         JsonArray optimizations = new JsonArray();
         for(var optimizationData : optimizationStats) {
