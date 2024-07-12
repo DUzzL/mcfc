@@ -146,6 +146,10 @@ public record OptimizationInput(Instruction instruction, InstructionPath thisPat
         throw new IllegalStateException("Failed to find definition for: " + loc);
     }
 
+    public LocatedInstruction getByDirectIndex(int index) {
+        return new LocatedInstruction(InstructionPath.fromSingleRelative(index), instruction.children().get(index));
+    }
+
     public LocatedInstruction getByPath(InstructionPath path) {
         var current = path.absolute() ? root : instruction;
         for(var v : path.path()) {

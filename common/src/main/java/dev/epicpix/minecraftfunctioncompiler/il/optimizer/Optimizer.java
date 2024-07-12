@@ -9,30 +9,30 @@ import java.util.*;
 public final class Optimizer {
     private Optimizer() {}
 
-    public static List<Instruction> optimize(List<Instruction> instructions, ArrayList<OptimizationStatistics> statistics) {
-        statistics.add(new OptimizationStatistics("start", Instruction.countInstructions(instructions), 0.0));
+    public static Instruction optimize(Instruction instruction, ArrayList<OptimizationStatistics> statistics) {
+        statistics.add(new OptimizationStatistics("start", instruction.countInstructions(), 0.0));
         var start = System.nanoTime();
 
-        List<Instruction> prev;
+        Instruction prev;
         do {
-            prev = instructions;
+            prev = instruction;
             var startOptimization = System.nanoTime();
-            instructions = runOptimizations(instructions);
+            instruction = runOptimizations(instruction);
             var endOptimization = System.nanoTime();
-            statistics.add(new OptimizationStatistics("optimization_pass", Instruction.countInstructions(instructions), (endOptimization - startOptimization)/1000000000.0));
-        } while(!prev.equals(instructions));
+            statistics.add(new OptimizationStatistics("optimization_pass", instruction.countInstructions(), (endOptimization - startOptimization)/1000000000.0));
+        } while(!prev.equals(instruction));
 
         var end = System.nanoTime();
-        statistics.add(new OptimizationStatistics("end", Instruction.countInstructions(instructions), (end - start)/1000000000.0));
-        return instructions;
+        statistics.add(new OptimizationStatistics("end", instruction.countInstructions(), (end - start)/1000000000.0));
+        return instruction;
     }
 
-    private static List<Instruction> runOptimizations(List<Instruction> instructions) {
-        ArrayList<Instruction> result = new ArrayList<>();
-        for(var instr : instructions) {
-            result.addAll(applyOptimizationsInner(instr, InstructionPath.emptyAbsolute(), instr, Set.of()));
+    private static Instruction runOptimizations(Instruction instruction) {
+        var result = applyOptimizationsInner(instruction, InstructionPath.emptyAbsolute(), instruction, Set.of());
+        if(result.size() != 1) {
+            throw new IllegalStateException("Invalid amount of instructions returned from optimized: " + result.size() + ", expected 1");
         }
-        return result;
+        return result.get(0);
     }
 
     private static List<Instruction> applyOptimizationsInner(Instruction input, InstructionPath path, Instruction root, Set<Integer> usedLocations) {
@@ -120,8 +120,8 @@ public final class Optimizer {
                         bottom.children().addAll(oldToInstr);
                         toInstr.children().addAll(updated);
                     }else {
-                        toInstr.children().addAll(updated);
                         toInstr.children().addAll(oldToInstr);
+                        toInstr.children().addAll(updated);
                     }
                 }
             }
@@ -158,6 +158,20 @@ public final class Optimizer {
             for(var child : currentInstr.children()) stack.push(child);
         }
         return used;
+    }
+
+    public static int getFirstFreeLocal(Set<Integer> usedLocations, Instruction source, InstructionPath pathA, InstructionPath pathB, HashSet<Integer> commonReusedResult) {
+        var commonReused = new HashSet<>(getUsedLocations(usedLocations, pathA, source));
+        var toUsed = new HashSet<>(getUsedLocations(usedLocations, pathB, source));
+        var allUsed = new HashSet<>(usedLocations);
+        allUsed.addAll(commonReused);
+        allUsed.addAll(toUsed);
+        if(commonReusedResult != null) {
+            commonReused.retainAll(toUsed);
+            commonReused.removeAll(usedLocations);
+            commonReusedResult.addAll(commonReused);
+        }
+        return allUsed.stream().max(Comparator.naturalOrder()).orElse(0) + 1;
     }
 
     private static Instruction remapInstruction(Instruction instruction, Map<Integer, Integer> mappings) {

@@ -26,6 +26,9 @@ public interface InstructionModification {
     }
 
     record MoveChildrenFromToNested(InstructionPath from, InstructionPath to, Map<Integer, Integer> remapData, boolean includeSelf, boolean stack, int priority) implements InstructionModification {
+        public MoveChildrenFromToNested(InstructionPath from, InstructionPath to, Map<Integer, Integer> remapData, boolean includeSelf, boolean stack) {
+            this(from, to, remapData, includeSelf, stack, 0);
+        }
 
         public InstructionPath path() {
             return to;

@@ -106,7 +106,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
             var key = func.getKey();
             var value = func.getValue();
             try {
-                var compiled = CommandCompiler.compile(value);
+                var compiled = Instructions2.root().withChildren(new ArrayList<>(CommandCompiler.compile(value)));
                 ArrayList<OptimizationStatistics> stats = new ArrayList<>();
                 var optimized = Optimizer.optimize(compiled, stats);
                 optimizerStatistics.add(stats);

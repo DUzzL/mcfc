@@ -5,7 +5,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.*;
 import java.util.*;
 
 import static dev.epicpix.minecraftfunctioncompiler.il.optimizer.OptimizationResult.*;
-import static dev.epicpix.minecraftfunctioncompiler.il.optimizer.Optimizer.getUsedLocations;
+import static dev.epicpix.minecraftfunctioncompiler.il.optimizer.Optimizer.getFirstFreeLocal;
 
 public final class Optimizations {
     private Optimizations() {}
@@ -18,6 +18,8 @@ public final class Optimizations {
             Optimizations::removeDuplicateNullChecks,
             Optimizations::upgradeEntityToPlayerSelector,
             Optimizations::coalesceEntityCasts,
+            Optimizations::combineObjectiveGetters,
+            Optimizations::combineNullChecks,
     };
 
     private static OptimizationResult removeUnnecessaryInstructions(OptimizationInput input) {
@@ -82,14 +84,8 @@ public final class Optimizations {
                             var forEachDirectChild = input.getDirectChild(forEachInstruction);
                             var isSafeToInline = elementSourceInstruction.path().absolute() || sourceInstructionType == InstructionTypes2.GET_CURRENT_ENTITY || !input.anyChildrenIn(forEachInstruction, it -> it.type() == InstructionTypes.CALL_FUNCTIONS || it.type() == InstructionTypes2.KILL_ENTITY);
                             if (isSafeToInline) {
-                                var commonReused = new HashSet<>(getUsedLocations(input.usedLocations(), input.getDirectChild(addInstruction).path(), instr));
-                                var toUsed = new HashSet<>(getUsedLocations(input.usedLocations(), forEachDirectChild.path(), instr));
-                                var allUsed = new HashSet<>(input.usedLocations());
-                                allUsed.addAll(commonReused);
-                                allUsed.addAll(toUsed);
-                                commonReused.retainAll(toUsed);
-                                commonReused.removeAll(input.usedLocations());
-                                int nextId = allUsed.stream().max(Comparator.naturalOrder()).orElse(0) + 1;
+                                var commonReused = new HashSet<Integer>();
+                                int nextId = getFirstFreeLocal(input.usedLocations(), instr, input.getDirectChild(addInstruction).path(), forEachDirectChild.path(), commonReused);
                                 var remapData = new HashMap<Integer, Integer>();
                                 for(var reused : commonReused) {
                                     remapData.putIfAbsent(reused, nextId++);
@@ -281,6 +277,63 @@ public final class Optimizations {
                     }
                 }
             }
+        }
+        return OptimizationResultTypes.KEEP;
+    }
+
+    private static OptimizationResult combineObjectiveGetters(OptimizationInput input) {
+        var instr = input.instruction();
+        ArrayList<InstructionModification> modifications = new ArrayList<>();
+        LocatedInstruction previous = null;
+        for(int i = 0; i<instr.children().size(); i++) {
+            var child = input.getByDirectIndex(i);
+            if(child.instruction().type() == InstructionTypes2.GET_OBJECTIVE) {
+                var canMerge = previous != null && Objects.equals(previous.instruction().data().get("name"), child.instruction().data().get("name"));
+                if(canMerge) {
+                    if(!Objects.equals(child.instruction().<LocationData<?>>get("objective").local(), previous.instruction().<LocationData<?>>get("objective").local())) {
+                        int nextId = getFirstFreeLocal(input.usedLocations(), instr, child.path(), previous.path(), null);
+                        modifications.add(new InstructionModification.MoveChildrenFromToNested(child.path(), previous.path(), Map.of(child.instruction().<LocationData<?>>get("objective").local(), previous.instruction().<LocationData<?>>get("objective").local(), previous.instruction().<LocationData<?>>get("objective").local(), nextId), false, false));
+                    }else {
+                        modifications.add(new InstructionModification.MoveChildrenFromToNested(child.path(), previous.path(), Map.of(child.instruction().<LocationData<?>>get("objective").local(), previous.instruction().<LocationData<?>>get("objective").local()), false, false));
+                    }
+                }
+                if(!input.anyChildrenIn(child, it -> it.type() == InstructionTypes.CALL_FUNCTIONS)) {
+                    if(!canMerge) {
+                        previous = child;
+                    }
+                    continue;
+                }
+            }
+            previous = null;
+        }
+        if(!modifications.isEmpty()) {
+            return OptimizationResult.modificationsWithFlags(modifications, 0);
+        }
+        return OptimizationResultTypes.KEEP;
+    }
+
+    private static OptimizationResult combineNullChecks(OptimizationInput input) {
+        var instr = input.instruction();
+        ArrayList<InstructionModification> modifications = new ArrayList<>();
+        LocatedInstruction previous = null;
+        for(int i = 0; i<instr.children().size(); i++) {
+            var child = input.getByDirectIndex(i);
+            if(child.instruction().type() == InstructionTypes2.IF_NOT_NULL) {
+                var canMerge = previous != null && Objects.equals(previous.instruction().data().get("local"), child.instruction().data().get("local"));
+                if(canMerge) {
+                    modifications.add(new InstructionModification.MoveChildrenFromToNested(child.path(), previous.path(), Map.of(), false, false));
+                }
+                if(!input.anyChildrenIn(child, it -> it.type() == InstructionTypes2.SET_NBT_VALUE && it.data().containsValue(child.instruction().data().get("local")))) {
+                    if(!canMerge) {
+                        previous = child;
+                    }
+                    continue;
+                }
+            }
+            previous = null;
+        }
+        if(!modifications.isEmpty()) {
+            return OptimizationResult.modificationsWithFlags(modifications, 0);
         }
         return OptimizationResultTypes.KEEP;
     }

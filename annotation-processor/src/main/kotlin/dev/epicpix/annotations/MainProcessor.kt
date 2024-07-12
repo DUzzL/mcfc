@@ -556,10 +556,10 @@ class MainProcessor(
                 }
             }
             val instructionEnumType = "dev.epicpix.minecraftfunctioncompiler.il.InstructionType"
-            impl.appendText("\n    public static $instructionType addStaticRequirements(List<$instructionType> instructions) {\n")
+            impl.appendText("\n    public static $instructionType addStaticRequirements($instructionType instruction) {\n")
             impl.appendText("        HashSet<$instructionEnumType> requirementInstructions = new HashSet<>();\n")
-            impl.appendText("        for(var it : instructions) { addStaticRequirementsInternal(it, requirementInstructions); }\n")
-            impl.appendText("        Instruction baseInstruction = new Instruction($enumClass.ROOT, new HashMap<>(), instructions);\n")
+            impl.appendText("        addStaticRequirementsInternal(instruction, requirementInstructions);\n")
+            impl.appendText("        Instruction baseInstruction = instruction;\n")
             val defPriorities = defs.map { it.def to it.length() }.sortedByDescending { it.second }
             for((def, _) in defPriorities) {
                 impl.appendText("        if(requirementInstructions.contains($enumClass.${def.name.uppercase()})) baseInstruction = new $instructionType($enumClass.${def.name.uppercase()}, new HashMap<>(), List.of(baseInstruction));\n")
