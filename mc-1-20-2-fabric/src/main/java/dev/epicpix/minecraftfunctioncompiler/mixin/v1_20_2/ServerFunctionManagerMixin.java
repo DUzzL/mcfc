@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.mixin.v1_20_2;
 
 import dev.epicpix.minecraftfunctioncompiler.v1_20_2.FunctionClassLoader;
+import dev.epicpix.minecraftfunctioncompiler.v1_20_2.FunctionCompilerMain;
 import net.minecraft.commands.CommandFunction;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
@@ -16,8 +17,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.FUNCTION_RUN_MIXIN_ENABLED;
-
 @Mixin(ServerFunctionManager.class)
 public class ServerFunctionManagerMixin {
 
@@ -29,11 +28,12 @@ public class ServerFunctionManagerMixin {
     public void postReload(ServerFunctionLibrary serverFunctionLibrary, CallbackInfo ci) {
         classLoader = new FunctionClassLoader(getClass().getClassLoader(), library.getFunctions(), server);
         classLoader.loadFunctions((ServerFunctionManager) (Object) this);
+        FunctionCompilerMain.functionClassLoader = classLoader;
     }
 
     @Inject(method = "execute(Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;Lnet/minecraft/nbt/CompoundTag;)I", at = @At("HEAD"), cancellable = true)
     public void run(CommandFunction commandFunction, CommandSourceStack commandSourceStack, ServerFunctionManager.TraceCallbacks traceCallbacks, CompoundTag compoundTag, CallbackInfoReturnable<Integer> cir) {
-        if(FUNCTION_RUN_MIXIN_ENABLED && classLoader != null && classLoader.isReady()) {
+        if(classLoader != null && classLoader.isUseReady()) {
             if(classLoader.hasFunctionLoaded(commandFunction.getId())) {
                 int res = (int) classLoader.runFunction(commandFunction.getId(), commandSourceStack);
                 commandSourceStack.getReturnValueConsumer().accept(res);

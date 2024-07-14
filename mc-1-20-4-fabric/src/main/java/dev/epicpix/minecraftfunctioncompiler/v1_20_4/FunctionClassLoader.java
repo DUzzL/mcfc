@@ -32,13 +32,15 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
 
     public void loadFunctions(ServerFunctionManager serverFunctionManager) {
         if(functions.isEmpty()) return;
-        if(compileInBackground(() -> loadFunctions(serverFunctionManager))) return;
+        if(compileInBackground(() -> {
+            try {
+                RegistryMapping.updateRegistryMaps();
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+            loadFunctions(serverFunctionManager);
+        })) return;
         logInfo.accept("Starting compilation");
-        try {
-            RegistryMapping.updateRegistryMaps();
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
         resetHandles();
         var lookup = new IArgumentLookup() {
             public List<DataLocation> lookupFunctions(TaggableLocation functions) {
@@ -81,8 +83,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
                 logWarn.accept("Unable to parse function " + key + " / " + e.getMessage() + " / " + currentCommand);
                 FunctionCompilerReporter.reportExceptionWithCommand("parse_command", e, currentCommand);
             } catch (Throwable e) {
-                logError.accept("Unable to parse function " + key);
-                e.printStackTrace();
+                logError.accept("Unable to parse function " + key, e);
                 FunctionCompilerReporter.reportExceptionWithCommand("parse_command", e, currentCommand);
             }
         }
@@ -94,6 +95,10 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
         return handles.containsKey(location);
     }
 
+    public int totalFunctionCount() {
+        return functions.size();
+    }
+
     public void setHandle(DataLocation key, MethodHandle handle) {
         handles.put(new ResourceLocation(key.namespace(), key.path()), handle);
     }
@@ -102,9 +107,8 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
         try {
             return (long) handles.get(location).invoke(stack);
         } catch (Throwable e) {
-            logError.accept("Failed to run function " + location);
-            e.printStackTrace();
-            throw new RuntimeException(e);
+            logError.accept("Failed to run function " + location, e);
+            return 3L << 32;
         }
     }
 

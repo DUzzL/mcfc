@@ -16,7 +16,9 @@ import dev.epicpix.minecraftfunctioncompiler.commands.Command;
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCountsData;
 import dev.epicpix.minecraftfunctioncompiler.reporter.TimingData;
+import org.objectweb.asm.ClassTooLargeException;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.MethodTooLargeException;
 import org.objectweb.asm.Opcodes;
 
 import java.io.IOException;
@@ -27,6 +29,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.*;
@@ -44,11 +47,21 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
     private final Object minecraftServer;
     public final Consumer<String> logInfo;
     public final Consumer<String> logWarn;
-    public final Consumer<String> logError;
+    public final BiConsumer<String, Throwable> logError;
 
-    private boolean ready;
+    private State state = State.NOTHING_LOADED;
 
-    public FunctionCompilerClassLoader(ClassLoader parent, Path generatedDir, Class<?> commandSourceStackClass, Class<?> minecraftServerClass, Class<?> serverFunctionManagerClass, Object minecraftServer, Consumer<String> logInfo, Consumer<String> logWarn, Consumer<String> logError) {
+    public enum State {
+        FAILED,
+        NOTHING_LOADED,
+        PARSING,
+        COMPILING,
+        LOADING,
+        READY_OFF,
+        READY_ON,
+    }
+
+    public FunctionCompilerClassLoader(ClassLoader parent, Path generatedDir, Class<?> commandSourceStackClass, Class<?> minecraftServerClass, Class<?> serverFunctionManagerClass, Object minecraftServer, Consumer<String> logInfo, Consumer<String> logWarn, BiConsumer<String, Throwable> logError) {
         super(parent);
         this.parent = parent;
         this.generatedDir = generatedDir;
@@ -75,15 +88,40 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
         handles.clear();
     }
 
-    public boolean isReady() {
-        return ready;
+    public final boolean isUseReady() {
+        return state == State.READY_ON;
+    }
+
+    public final State getState() {
+        return state;
+    }
+
+    private void setState(State newState) {
+        state = newState;
+    }
+
+    public void tryOff() {
+        if(state == State.READY_ON) {
+            setState(State.READY_OFF);
+        }
+    }
+
+    public void tryOn() {
+        if(state == State.READY_OFF) {
+            setState(State.READY_ON);
+        }
+    }
+
+    public int loadedFunctionCount() {
+        return handles.size();
     }
 
     private Thread backgroundThread;
 
     protected boolean compileInBackground(Runnable run) {
-        if(ready) return true;
         if(backgroundThread == Thread.currentThread()) return false;
+        if(state != State.NOTHING_LOADED) return true;
+        setState(State.PARSING);
         backgroundThread = new Thread(run);
         backgroundThread.setName("Function Compiler");
         backgroundThread.start();
@@ -98,6 +136,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
             CodeFieldStorage fieldStorage,
             Object serverFunctionManager
         ) {
+        setState(State.COMPILING);
         logInfo.accept("Compiling functions");
         HashMap<DataLocation, List<Instruction>> compiledFunctions = new HashMap<>();
         ArrayList<List<OptimizationStatistics>> optimizerStatistics = new ArrayList<>();
@@ -114,8 +153,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
             }catch(UnsupportedOperationException e) {
                 logWarn.accept("Failed to compile function " + key + " / " + e.getMessage());
             }catch(Throwable e) {
-                logError.accept("Failed to compile function " + key);
-                e.printStackTrace();
+                logError.accept("Failed to compile function " + key, e);
                 FunctionCompilerReporter.reportException("compile_function", e, new JsonObject());
             }
         }
@@ -147,13 +185,14 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
         }
         var compiledFunctionSet = new HashSet<>(compiledFunctions.keySet());
         var loadedFunctions = new HashMap<DataLocation, Class<?>>();
+        setState(State.LOADING);
         var startLoader = System.nanoTime();
         for(var key : compiledFunctions.keySet()) {
             try {
                 loadedFunctions.put(key, defineFunction(key, fieldStorage, compiledFunctions.get(key), definedFunctions.get(key).size(), compiledFunctionSet));
             }catch(Throwable e) {
-                logError.accept("Failed to load function (" + key + "), skipping function compilation");
-                e.printStackTrace();
+                logError.accept("Failed to load function (" + key + "), skipping function compilation", e);
+                setState(State.FAILED);
                 FunctionCompilerReporter.reportExceptionWithInstructions("define_function", e, compiledFunctions.get(key));
                 FunctionCompilerReporter.sendReports();
                 return;
@@ -163,8 +202,8 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
         try {
             loadData(fieldStorage, serverFunctionManager);
         }catch(Throwable e) {
-            logError.accept("Failed to load data, clearing data");
-            e.printStackTrace();
+            logError.accept("Failed to load data", e);
+            setState(State.FAILED);
             FunctionCompilerReporter.reportException("define_data_class", e, new JsonObject());
             FunctionCompilerReporter.sendReports();
             return;
@@ -186,8 +225,8 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
             try {
                 registerFunction(loadedFunctions.get(key), key);
             }catch(Throwable e) {
-                logError.accept("Failed to create function handle (" + key + "), clearing data");
-                e.printStackTrace();
+                logError.accept("Failed to create function handle (" + key + "), clearing data", e);
+                setState(State.FAILED);
                 FunctionCompilerReporter.reportExceptionWithInstructions("load_function_class", e, compiledFunctions.get(key));
                 FunctionCompilerReporter.sendReports();
                 resetHandles();
@@ -195,7 +234,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
                     logInfo.accept("Instruction dump:");
                     printInstructionList(compiledFunctions.get(key), logInfo);
                 }
-                break;
+                return;
             }
         }
         var handleLoadTime = (System.nanoTime()-startHandles)/1000000000d;
@@ -206,7 +245,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
 
         FunctionCompilerReporter.sendReports();
         logInfo.accept("Switched over to running compiled functions");
-        ready = true;
+        setState(State.READY_ON);
     }
 
     private Class<?> defineFunction(DataLocation funcId, CodeFieldStorage fieldStorage, List<Instruction> instructions, int commandCount, Set<DataLocation> compiledFunctions) {
@@ -237,18 +276,14 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
         return defineClass(className.replace('/', '.'), cw.toByteArray());
     }
 
-    private Class<?> loadData(CodeFieldStorage fieldStorage, Object serverFunctionManager) {
+    private Class<?> loadData(CodeFieldStorage fieldStorage, Object serverFunctionManager) throws Throwable {
         var cw = createClassWriter();
         cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL, DATA_CLASS, null, "java/lang/Object", null);
         fieldStorage.generate(cw);
         cw.visitEnd();
 
         var defined = defineClass(DATA_CLASS.replace('/', '.'), cw.toByteArray());
-        try {
-            defined.getDeclaredMethod("load", minecraftServerClass, serverFunctionManagerClass).invoke(null, minecraftServer, serverFunctionManager);
-        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-            throw new RuntimeException(e);
-        }
+        defined.getDeclaredMethod("load", minecraftServerClass, serverFunctionManagerClass).invoke(null, minecraftServer, serverFunctionManager);
         return defined;
     }
 

@@ -13,7 +13,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.FUNCTION_RUN_MIXIN_ENABLED;
 import static dev.epicpix.minecraftfunctioncompiler.v1_21.FunctionCompilerMain.functionClassLoader;
 
 @Mixin(CallFunction.class)
@@ -23,7 +22,7 @@ public class CallFunctionMixin<T extends ExecutionCommandSource<T>> {
 
     @Inject(method = "execute(Lnet/minecraft/commands/ExecutionCommandSource;Lnet/minecraft/commands/execution/ExecutionContext;Lnet/minecraft/commands/execution/Frame;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/commands/execution/ExecutionContext;incrementCost()V", shift = At.Shift.AFTER), cancellable = true)
     public void execute(T source, ExecutionContext<T> executionContext, Frame frame, CallbackInfo ci) {
-        if(FUNCTION_RUN_MIXIN_ENABLED && source instanceof CommandSourceStack stack && functionClassLoader != null && functionClassLoader.isReady()) {
+        if(source instanceof CommandSourceStack stack && functionClassLoader != null && functionClassLoader.isUseReady()) {
             var id = ((CallFunction<?>) (Object) this).function.id();
             if(functionClassLoader.hasFunctionLoaded(id)) {
                 long res = functionClassLoader.runFunction(id, stack);
