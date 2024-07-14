@@ -7,8 +7,7 @@ import org.objectweb.asm.Opcodes;
 
 import java.util.*;
 
-import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DEBUG;
-import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.EMIT_SERVER_FUNCTION_MANAGER_NAME;
+import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.*;
 
 public final class CodeFieldStorage {
 
@@ -101,7 +100,26 @@ public final class CodeFieldStorage {
         cw.getDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerClass);
     }
 
+    private int currentFunctionDefinition;
+    private int cost;
+
+    private CodeWriter getCurrentFunction(CodeWriter cw, ClassWriter classWriter) {
+        if(cost >= 60000) {
+            currentFunctionDefinition++;
+            cost = 0;
+            cw.methodVisitor().visitMethodInsn(Opcodes.INVOKESTATIC, DATA_CLASS, "load" + currentFunctionDefinition, "()V", false);
+            cw.methodVisitor().visitInsn(Opcodes.RETURN);
+            cw.methodVisitor().visitMaxs(0, 0);
+            cw.methodVisitor().visitEnd();
+            var mv = classWriter.visitMethod(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC, "load" + currentFunctionDefinition, "()V", null, null);
+            mv.visitCode();
+            return new CodeWriter(mv);
+        }
+        return cw;
+    }
+
     public void generate(ClassWriter classWriter) {
+        currentFunctionDefinition = 1;
         var mv = classWriter.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "load", "(" + minecraftServerClass.descriptorString() + serverFunctionManagerClass.descriptorString() + ")V", null, null);
         mv.visitCode();
         var cw = new CodeWriter(mv);
@@ -115,36 +133,43 @@ public final class CodeFieldStorage {
             cw.writeLong(value.getLeastSignificantBits());
             cw.newObjectInit(UUID.class, long.class, long.class);
             cw.setDataField(getUuidName(value), UUID.class);
+            cost += 16;
+            cw = getCurrentFunction(cw, classWriter);
         }
 
         for(var value : map.getStorage(CodeFieldStorageMapKind.RESOURCE_LOCATION)) {
-            map.writeCode(CodeFieldStorageMapKind.RESOURCE_LOCATION, this, cw, value);
+            cost += map.writeCode(CodeFieldStorageMapKind.RESOURCE_LOCATION, this, cw, value) + 3;
             cw.setDataField(getResourceLocationName(value), map.getValueClass(CodeFieldStorageMapKind.RESOURCE_LOCATION));
+            cw = getCurrentFunction(cw, classWriter);
         }
 
         for(var value : map.getStorage(CodeFieldStorageMapKind.FUNCTION)) {
-            map.writeCode(CodeFieldStorageMapKind.FUNCTION, this, cw, value);
+            cost += map.writeCode(CodeFieldStorageMapKind.FUNCTION, this, cw, value) + 3;
             cw.setDataField(getFunctionName(value), map.getValueClass(CodeFieldStorageMapKind.FUNCTION));
+            cw = getCurrentFunction(cw, classWriter);
         }
 
         for(var value : map.getStorage(CodeFieldStorageMapKind.EFFECT)) {
-            map.writeCode(CodeFieldStorageMapKind.EFFECT, this, cw, value);
+            cost += map.writeCode(CodeFieldStorageMapKind.EFFECT, this, cw, value) + 3;
             cw.setDataField(getEffectName(value), map.getValueClass(CodeFieldStorageMapKind.EFFECT));
+            cw = getCurrentFunction(cw, classWriter);
         }
 
         for(var value : map.getStorage(CodeFieldStorageMapKind.ATTRIBUTE)) {
-            map.writeCode(CodeFieldStorageMapKind.ATTRIBUTE, this, cw, value);
+            cost += map.writeCode(CodeFieldStorageMapKind.ATTRIBUTE, this, cw, value) + 3;
             cw.setDataField(getAttributeName(value), map.getValueClass(CodeFieldStorageMapKind.ATTRIBUTE));
+            cw = getCurrentFunction(cw, classWriter);
         }
 
         for(var value : map.getStorage(CodeFieldStorageMapKind.NBT_VALUE)) {
-            map.writeCode(CodeFieldStorageMapKind.NBT_VALUE, this, cw, value);
+            cost += map.writeCode(CodeFieldStorageMapKind.NBT_VALUE, this, cw, value) + 3;
             cw.setDataField(getNbtValueName(value), map.getValueClass(CodeFieldStorageMapKind.NBT_VALUE));
+            cw = getCurrentFunction(cw, classWriter);
         }
 
-        mv.visitInsn(Opcodes.RETURN);
-        mv.visitMaxs(0, 0);
-        mv.visitEnd();
+        cw.methodVisitor().visitInsn(Opcodes.RETURN);
+        cw.methodVisitor().visitMaxs(0, 0);
+        cw.methodVisitor().visitEnd();
 
         classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerClass.descriptorString(), null, null);
         for(var value : uuids) {

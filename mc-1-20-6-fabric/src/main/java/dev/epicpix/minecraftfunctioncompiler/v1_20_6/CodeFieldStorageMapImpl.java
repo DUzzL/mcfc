@@ -26,6 +26,7 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
             callRegistry_getHolder(cw);
             callOptional_get(cw);
             cw.castType(Holder.class);
+            return 15;
         }));
         set(CodeFieldStorageMapKind.EFFECT, new CodeFieldStorageMapValue<>(Holder.class, (cf, cw, value) -> {
             loadBuiltInRegistries_MOB_EFFECT(cw);
@@ -33,6 +34,7 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
             callRegistry_getHolder(cw);
             callOptional_get(cw);
             cw.castType(Holder.class);
+            return 15;
         }));
         set(CodeFieldStorageMapKind.FUNCTION, new CodeFieldStorageMapValue<>(CommandFunction.class, (cf, cw, value) -> {
             cf.loadServerFunctionManager(cw);
@@ -41,6 +43,7 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
             cf.loadResourceLocation(cw, value);
             callMap_get(cw);
             cw.castType(CommandFunction.class);
+            return 18;
         }));
         set(CodeFieldStorageMapKind.NBT_VALUE, new CodeFieldStorageMapValue<>(Tag.class, (cf, cw, value) -> writeNbtValue(value, cw)));
         set(CodeFieldStorageMapKind.RESOURCE_LOCATION, new CodeFieldStorageMapValue<>(ResourceLocation.class, (cf, cw, value) -> {
@@ -48,20 +51,23 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
             cw.writeString(value.namespace());
             cw.writeString(value.path());
             cw.newObjectInit(ResourceLocation.class, String.class, String.class);
+            return 13;
         }));
     }
 
-    private static void writeNbtValue(NbtValue value, CodeWriter cw) {
+    private static int writeNbtValue(NbtValue value, CodeWriter cw) {
         if(value instanceof NbtValue.Array arr) {
             cw.newObjectCreate(ListTag.class);
             cw.newObjectInit(ListTag.class);
             List<NbtValue> values = arr.values();
+            int cost = 7;
             for(int i = 0; i < values.size(); i++) {
                 cw.methodVisitor().visitInsn(Opcodes.DUP);
                 cw.writeInt(i);
-                writeNbtValue(values.get(i), cw);
+                cost += writeNbtValue(values.get(i), cw) + 7;
                 callCollectionTag_add(cw);
             }
+            return cost;
         }else if(value instanceof NbtValue.ByteArray barr) {
             cw.newObjectCreate(ByteArrayTag.class);
             cw.writeInt(barr.values().length);
@@ -74,25 +80,31 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
                 cw.methodVisitor().visitInsn(Opcodes.BASTORE);
             }
             cw.newObjectInit(ByteArrayTag.class, byte[].class);
+            return 12 + values.length * 7;
         }else if(value instanceof NbtValue.ByteLiteral bl) {
             cw.writeInt(bl.value());
             callByteTag_valueOf(cw);
+            return 6;
         }else if(value instanceof NbtValue.Compound comp) {
             cw.newObjectCreate(CompoundTag.class);
             cw.newObjectInit(CompoundTag.class);
+            int cost = 7;
             for(var entry : comp.values().entrySet()) {
                 cw.methodVisitor().visitInsn(Opcodes.DUP);
                 cw.writeString(entry.getKey());
-                writeNbtValue(entry.getValue(), cw);
+                cost += writeNbtValue(entry.getValue(), cw) + 8;
                 callCompoundTag_put(cw);
                 cw.methodVisitor().visitInsn(Opcodes.POP);
             }
+            return cost;
         }else if(value instanceof NbtValue.DoubleLiteral dl) {
             cw.writeDouble(dl.value());
             callDoubleTag_valueOf(cw);
+            return 6;
         }else if(value instanceof NbtValue.FloatLiteral fl) {
             cw.writeFloat(fl.value());
             callFloatTag_valueOf(cw);
+            return 6;
         }else if(value instanceof NbtValue.IntegerArray iarr) {
             cw.newObjectCreate(IntArrayTag.class);
             cw.writeInt(iarr.values().length);
@@ -105,9 +117,11 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
                 cw.methodVisitor().visitInsn(Opcodes.IASTORE);
             }
             cw.newObjectInit(IntArrayTag.class, int[].class);
+            return 12 + values.length * 7;
         }else if(value instanceof NbtValue.IntegerLiteral il) {
             cw.writeInt(il.value());
             callIntTag_valueOf(cw);
+            return 6;
         }else if(value instanceof NbtValue.LongArray larr) {
             cw.newObjectCreate(LongArrayTag.class);
             cw.writeInt(larr.values().length);
@@ -120,15 +134,21 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
                 cw.methodVisitor().visitInsn(Opcodes.LASTORE);
             }
             cw.newObjectInit(LongArrayTag.class, long[].class);
+            return 12 + values.length * 7;
         }else if(value instanceof NbtValue.LongLiteral ll) {
             cw.writeLong(ll.value());
             callLongTag_valueOf(cw);
+            return 6;
         }else if(value instanceof NbtValue.ShortLiteral sl) {
             cw.writeInt(sl.value());
             callShortTag_valueOf(cw);
+            return 6;
         }else if(value instanceof NbtValue.StringLiteral sl) {
             cw.writeString(sl.value());
             callStringTag_valueOf(cw);
+            return 6;
+        }else {
+            throw new IllegalArgumentException("Invalid nbt value: " + value);
         }
     }
 }

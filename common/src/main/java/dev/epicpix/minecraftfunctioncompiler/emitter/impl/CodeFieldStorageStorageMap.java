@@ -22,8 +22,8 @@ public final class CodeFieldStorageStorageMap {
         return getValue(key).clazz();
     }
 
-    public <T> void writeCode(CodeFieldStorageMapKind<T> key, CodeFieldStorage fieldStorage, CodeWriter writer, T value) {
-        getValue(key).mapper().accept(fieldStorage, writer, value);
+    public <T> int writeCode(CodeFieldStorageMapKind<T> key, CodeFieldStorage fieldStorage, CodeWriter writer, T value) {
+        return getValue(key).mapper().accept(fieldStorage, writer, value);
     }
 
     @SuppressWarnings("unchecked")
