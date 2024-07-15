@@ -76,10 +76,10 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
                 commandErrors.add(e.error);
             } catch (StringCommandReaderException e) {
                 logWarn.accept("Unable to parse function " + key + " / " + e.getMessage() + " / " + currentCommand);
-                FunctionCompilerReporter.reportExceptionWithCommand("parse_command", e, currentCommand);
+                commandErrors.add(new CommandError(currentCommand, e.getMessage()));
             } catch (Throwable e) {
                 logError.accept("Unable to parse function " + key, e);
-                FunctionCompilerReporter.reportExceptionWithCommand("parse_command", e, currentCommand);
+                commandErrors.add(new CommandError(currentCommand, e.getMessage(), CommandError.Step.PARSE, e));
             }
         }
         var parseTime = (System.nanoTime()-startParse)/1000000000d;

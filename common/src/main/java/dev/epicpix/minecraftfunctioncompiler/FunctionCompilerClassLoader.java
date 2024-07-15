@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler;
 
 import com.google.gson.JsonObject;
+import dev.epicpix.minecraftfunctioncompiler.commands.Command;
 import dev.epicpix.minecraftfunctioncompiler.commands.CommandError;
 import dev.epicpix.minecraftfunctioncompiler.compiler.CommandCompiler;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
@@ -12,20 +13,16 @@ import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.il.Instructions2;
 import dev.epicpix.minecraftfunctioncompiler.il.optimizer.OptimizationStatistics;
 import dev.epicpix.minecraftfunctioncompiler.il.optimizer.Optimizer;
-import dev.epicpix.minecraftfunctioncompiler.commands.Command;
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCountsData;
 import dev.epicpix.minecraftfunctioncompiler.reporter.TimingData;
-import org.objectweb.asm.ClassTooLargeException;
 import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.MethodTooLargeException;
 import org.objectweb.asm.Opcodes;
 
 import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -132,7 +129,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
             int foundFunctionCount,
             double parseTime,
             Map<DataLocation, List<Command>> definedFunctions,
-            List<CommandError> commandErrors,
+            ArrayList<CommandError> commandErrors,
             CodeFieldStorage fieldStorage,
             Object serverFunctionManager
         ) {
@@ -152,9 +149,10 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
                 compiledFunctions.put(key, List.of(Instructions2.addStaticRequirements(optimized)));
             }catch(UnsupportedOperationException e) {
                 logWarn.accept("Failed to compile function " + key + " / " + e.getMessage());
+                commandErrors.add(new CommandError(e.getMessage()));
             }catch(Throwable e) {
                 logError.accept("Failed to compile function " + key, e);
-                FunctionCompilerReporter.reportException("compile_function", e, new JsonObject());
+                commandErrors.add(new CommandError(null, e.getMessage(), CommandError.Step.COMPILE, e));
             }
         }
         var compileTime = (System.nanoTime()-startCompile)/1000000000d;

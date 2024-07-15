@@ -30,6 +30,7 @@ public final class FunctionCompilerReporter {
 
     private static final UUID runUuid = UUID.randomUUID();
     private static final String REPORT_URL = "https://mcfc.mods.epicpix.dev/api/v1/send_reports";
+    private static final HttpClient httpClient = HttpClient.newHttpClient();
 
     private static String minecraftVersionName = null;
     private static String minecraftVersionType = null;
@@ -45,8 +46,10 @@ public final class FunctionCompilerReporter {
 
     @SuppressWarnings("ConstantValue")
     public static void reportRawData(String type, JsonElement data) {
+        if(!dataReportingEnabled) return;
+
         JsonObject sendData = new JsonObject();
-        sendData.addProperty("is_dev", isDevelopmentEnvironment || versionCommit == null);
+        sendData.addProperty("is_dev", isDevelopmentEnvironment || "development".equals(versionCommit));
         sendData.addProperty("is_ide", isDevelopmentEnvironment);
         sendData.addProperty("version_commit", versionCommit);
         sendData.addProperty("version", versionName);
@@ -57,9 +60,7 @@ public final class FunctionCompilerReporter {
         sendData.addProperty("report_type", type);
         sendData.add("data", data);
 
-        if(dataReportingEnabled) {
-            reportQueue.add(sendData);
-        }
+        reportQueue.add(sendData);
     }
 
     private static void writeExceptionJson(Throwable exception, JsonObject json) {
@@ -83,12 +84,6 @@ public final class FunctionCompilerReporter {
         writeExceptionJson(exception, json);
         json.add("extra", extra);
         reportRawData("exception", json);
-    }
-
-    public static void reportExceptionWithCommand(String step, Throwable exception, String command) {
-        JsonObject json = new JsonObject();
-        json.addProperty("command", command);
-        reportException(step, exception, json);
     }
 
     public static void reportExceptionWithInstructions(String step, Throwable exception, List<Instruction> instructions) {
@@ -139,6 +134,12 @@ public final class FunctionCompilerReporter {
             JsonObject obj = new JsonObject();
             obj.addProperty("command", error.command());
             obj.addProperty("error_message", error.errorMessage());
+            obj.addProperty("step", error.step().toString().toLowerCase());
+            if(error.cause() != null) {
+                JsonObject exception = new JsonObject();
+                writeExceptionJson(error.cause(), exception);
+                obj.add("cause", exception);
+            }
             commandErrorsJson.add(obj);
         }
         compilationStats.add("command_errors", commandErrorsJson);
@@ -154,7 +155,7 @@ public final class FunctionCompilerReporter {
 
         Thread t = new Thread(() -> {
             try {
-                var response = HttpClient.newHttpClient().send(
+                var response = httpClient.send(
                         HttpRequest.newBuilder()
                                 .uri(new URL(REPORT_URL).toURI())
                                 .POST(HttpRequest.BodyPublishers.ofString(new Gson().toJson(sendData)))
