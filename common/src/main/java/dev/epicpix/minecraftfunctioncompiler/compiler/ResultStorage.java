@@ -40,21 +40,21 @@ public class ResultStorage {
     public void setResult(CompilationContextData context, LocationData<Integer> data) {
         if(storesResult()) {
             updatedResult = true;
-            context.addInstructionConsumer().accept(Instructions2.setResultStorage(result, data));
+            context.writeInstruction(Instructions2.setResultStorage(result, data));
         }
     }
 
     public void addResult(CompilationContextData context, LocationData<Integer> data) {
         if(storesResult()) {
             updatedResult = true;
-            context.addInstructionConsumer().accept(Instructions2.addResultStorage(result, data));
+            context.writeInstruction(Instructions2.addResultStorage(result, data));
         }
     }
 
     public void updateSuccess(CompilationContextData context, boolean failed) {
         if(storesSuccess()) {
             updatedSuccess = true;
-            context.addInstructionConsumer().accept(Instructions2.setResultStorage(success, LocationData.ofInteger(failed ? 0 : 1)));
+            context.writeInstruction(Instructions2.setResultStorage(success, LocationData.ofInteger(failed ? 0 : 1)));
         }
     }
 

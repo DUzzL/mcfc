@@ -18,6 +18,10 @@ public record CompilationContextData(
         Consumer<Instruction> addInstructionConsumer
 ) {
 
+    public void writeInstruction(Instruction instruction) {
+        addInstructionConsumer.accept(instruction);
+    }
+
     public static CompilationContextData create(Consumer<Instruction> addInstructionConsumer) {
         return new CompilationContextData(0, null, null, null, null, addInstructionConsumer);
     }

@@ -12,7 +12,7 @@ public class SelectorGeneratorBuilderData {
     public NegatableData<List<DataLocation>> entityTypes = null;
     public boolean requireAlive = false;
     public boolean requirePlayer = false;
-    public ArrayList<NegatableData<String>> names = new ArrayList<>();
+    public final ArrayList<NegatableData<String>> names = new ArrayList<>();
     public final ArrayList<NegatableData<String>> tags = new ArrayList<>();
     public Boolean hasTags = null;
     public final ArrayList<NegatableData<String>> teams = new ArrayList<>();

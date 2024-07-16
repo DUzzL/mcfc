@@ -23,10 +23,6 @@ public final class DataRegistry<T> {
         values = Map.copyOf(values);
     }
 
-    public Set<DataLocation> keySet() {
-        return Set.copyOf(values.keySet());
-    }
-
     public T get(DataLocation location) {
         return values.get(location);
     }

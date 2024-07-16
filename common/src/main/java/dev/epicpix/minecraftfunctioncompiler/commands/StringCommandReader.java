@@ -431,6 +431,7 @@ public class StringCommandReader {
             case "", "t" -> {}
             case "s" -> length *= 20;
             case "d" -> length *= 24000;
+            default -> throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_TIME_KIND);
         }
         return Math.round(length);
     }

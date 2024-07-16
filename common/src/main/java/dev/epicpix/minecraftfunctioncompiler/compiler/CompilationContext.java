@@ -43,6 +43,10 @@ public class CompilationContext {
         stack.pop();
     }
 
+    public void writeInstruction(Instruction instruction) {
+        current().writeInstruction(instruction);
+    }
+
     public CompilationData<ResultStorage> withResultStorage(boolean requireResultValue, boolean requireSuccessValue) {
         if(requireResultValue == requireSuccessValue) throw new UnsupportedOperationException("calling withResultStorage() with requireResultValue == requireSuccessValue is not supported");
         var data = stack.peek();

@@ -57,13 +57,13 @@ public final class CommandCompiler {
                         var last = parts.get(parts.size() - 1);
                         if(last instanceof NbtPathPart.Named named) {
                             var tagLocal = LocationData.<NbtTag>ofLocal(context.current().highestId());
-                            context.current().addInstructionConsumer().accept(Instructions2.loadNbtValue(command.get("value"), tagLocal).with(Instructions2.setNbtInCompound(value, named.name(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
+                            context.writeInstruction(Instructions2.loadNbtValue(command.get("value"), tagLocal).with(Instructions2.setNbtInCompound(value, named.name(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
                         }else if(last instanceof NbtPathPart.ArrayIndexInteger indexed) {
                             var tagLocal = LocationData.<NbtTag>ofLocal(context.current().highestId());
                             if(indexed.index() >= 0) {
-                                context.current().addInstructionConsumer().accept(Instructions2.loadNbtValue(command.get("value"), tagLocal).with(Instructions2.setNbtInListForward(value, indexed.index(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
+                                context.writeInstruction(Instructions2.loadNbtValue(command.get("value"), tagLocal).with(Instructions2.setNbtInListForward(value, indexed.index(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
                             }else {
-                                context.current().addInstructionConsumer().accept(Instructions2.loadNbtValue(command.get("value"), tagLocal).with(Instructions2.setNbtInListBackward(value, -indexed.index(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
+                                context.writeInstruction(Instructions2.loadNbtValue(command.get("value"), tagLocal).with(Instructions2.setNbtInListBackward(value, -indexed.index(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
                             }
                         }else {
                             throw new UnsupportedOperationException("Cannot set nbt value from path " + last);
@@ -75,10 +75,10 @@ public final class CommandCompiler {
                     data.writeInstruction(Instructions2.setNbtStorage(command.get("storage"), storageLocal));
                 }
 
-                context.current().addInstructionConsumer().accept(stacker.base);
+                context.writeInstruction(stacker.base);
             }
             case DIFFICULTY_SET -> {
-                context.current().addInstructionConsumer().accept(Instructions2.setDifficulty(command.get("difficulty")));
+                context.writeInstruction(Instructions2.setDifficulty(command.get("difficulty")));
             }
             case EFFECT_CLEAR -> {
                 try(var self = context.getCurrentEntity()) {
@@ -272,7 +272,7 @@ public final class CommandCompiler {
                 }
             }
             case EXECUTE_POSITIONED_AS -> {
-                try(var targets = context.forSelector(command.<SelectorArgument>get("targets"))) {
+                try(var targets = context.forSelector(command.get("targets"))) {
                     var position = LocationData.<Vec3>ofLocal(targets.data().highestId());
                     var instruction = Instructions2.getEntityPosition(targets.content(), position);
                     try(var ignored = context.enterWithoutValue(targets.data().incrementedId(1).withCurrentPosition(position).withBaseInstruction(instruction))) {
@@ -289,7 +289,7 @@ public final class CommandCompiler {
                 }
             }
             case EXECUTE_ROTATED_AS -> {
-                try(var targets = context.forSelector(command.<SelectorArgument>get("targets"))) {
+                try(var targets = context.forSelector(command.get("targets"))) {
                     var rotation = LocationData.<Vec2>ofLocal(targets.data().highestId());
                     var instruction = Instructions2.getEntityRotation(targets.content(), rotation);
                     try(var ignored = context.enterWithoutValue(targets.data().incrementedId(1).withCurrentRotation(rotation).withBaseInstruction(instruction))) {
@@ -343,13 +343,13 @@ public final class CommandCompiler {
                                     var last = parts.get(parts.size() - 1);
                                     if(last instanceof NbtPathPart.Named named) {
                                         var tagLocal = LocationData.<NbtTag>ofLocal(context.current().highestId());
-                                        context.current().addInstructionConsumer().accept(Instructions2.createIntTag(res.content().result, tagLocal).with(Instructions2.setNbtInCompound(value, named.name(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
+                                        context.writeInstruction(Instructions2.createIntTag(res.content().result, tagLocal).with(Instructions2.setNbtInCompound(value, named.name(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
                                     }else if(last instanceof NbtPathPart.ArrayIndexInteger indexed) {
                                         var tagLocal = LocationData.<NbtTag>ofLocal(context.current().highestId());
                                         if(indexed.index() >= 0) {
-                                            context.current().addInstructionConsumer().accept(Instructions2.createIntTag(res.content().result, tagLocal).with(Instructions2.setNbtInListForward(value, indexed.index(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
+                                            context.writeInstruction(Instructions2.createIntTag(res.content().result, tagLocal).with(Instructions2.setNbtInListForward(value, indexed.index(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
                                         }else {
-                                            context.current().addInstructionConsumer().accept(Instructions2.createIntTag(res.content().result, tagLocal).with(Instructions2.setNbtInListBackward(value, -indexed.index(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
+                                            context.writeInstruction(Instructions2.createIntTag(res.content().result, tagLocal).with(Instructions2.setNbtInListBackward(value, -indexed.index(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
                                         }
                                     }else {
                                         throw new UnsupportedOperationException("Cannot set nbt value from path " + last);
@@ -361,7 +361,7 @@ public final class CommandCompiler {
                                 data.writeInstruction(Instructions2.setNbtStorage(command.get("storage"), storageLocal));
                             }
 
-                            context.current().addInstructionConsumer().accept(stacker.base);
+                            context.writeInstruction(stacker.base);
                         }
                     }else {
                         throw new UnsupportedOperationException("Storing into storage with a non 1.0 scale is not yet implemented");
@@ -446,19 +446,19 @@ public final class CommandCompiler {
             }
             case FUNCTION -> {
                 var current = context.current();
-                current.addInstructionConsumer().accept(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), null));
+                current.writeInstruction(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), null));
             }
             case FUNCTION_ARGS -> {
                 var current = context.current();
                 var arguments = LocationData.<NbtCompound>ofLocal(current.highestId());
-                current.addInstructionConsumer().accept(Instructions2.loadNbtValue(command.get("arguments"), arguments.forceCast()).with(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), arguments)));
+                current.writeInstruction(Instructions2.loadNbtValue(command.get("arguments"), arguments.forceCast()).with(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), arguments)));
             }
             case FUNCTION_ARGS_STORAGE -> {
                 var current = context.current();
                 var arguments = LocationData.<NbtCompound>ofLocal(current.highestId());
                 var clonedArguments = LocationData.<NbtTag>ofLocal(current.highestId() + 1);
                 var validArguments = LocationData.<NbtCompound>ofLocal(current.highestId() + 2);
-                current.addInstructionConsumer().accept(Instructions2.getNbtStorage(command.get("storage"), arguments).with(Instructions2.cloneNbtValue(arguments.forceCast(), clonedArguments).with(Instructions2.checkIsCompound(clonedArguments, validArguments).with(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), validArguments)))));
+                current.writeInstruction(Instructions2.getNbtStorage(command.get("storage"), arguments).with(Instructions2.cloneNbtValue(arguments.forceCast(), clonedArguments).with(Instructions2.checkIsCompound(clonedArguments, validArguments).with(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), validArguments)))));
             }
             case FUNCTION_ARGS_STORAGE_PATH -> {
                 var current = context.current();
@@ -472,8 +472,8 @@ public final class CommandCompiler {
                 var parts = command.<NbtPath>get("path").parts();
                 try(var ignored = context.enterWithoutValue(context.current().incrementedId(3).withBaseInstruction(stacker.current))) {
                     getNbtPathValue(context, storageLocal.forceCast(), parts, false, (value) -> {
-                        context.current().addInstructionConsumer().accept(Instructions2.ifNotNull(currentTag.lower()).with(Instructions2.exitScope(scope)));
-                        context.current().addInstructionConsumer().accept(Instructions2.setNbtValue(value, currentTag));
+                        context.writeInstruction(Instructions2.ifNotNull(currentTag.lower()).with(Instructions2.exitScope(scope)));
+                        context.writeInstruction(Instructions2.setNbtValue(value, currentTag));
                     });
                 }
                 stacker.stackInstruction(Instructions2.ifNotNull(currentTag.lower()));
@@ -482,7 +482,7 @@ public final class CommandCompiler {
                 var compoundTag = LocationData.<NbtCompound>ofLocal(current.highestId() + 4);
                 stacker.stackInstruction(Instructions2.checkIsCompound(clonedTag, compoundTag));
                 stacker.stackInstruction(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), compoundTag));
-                current.addInstructionConsumer().accept(stacker.base);
+                current.writeInstruction(stacker.base);
             }
             case GAMEMODE -> {
                 try(var selector = context.forSelector(command.get("targets"))) {
@@ -496,10 +496,10 @@ public final class CommandCompiler {
                 }
             }
             case RETURN_FAIL -> {
-                context.current().addInstructionConsumer().accept(Instructions2.returnFail());
+                context.writeInstruction(Instructions2.returnFail());
             }
             case RETURN_VALUE -> {
-                context.current().addInstructionConsumer().accept(Instructions2.returnSuccess(LocationData.ofInteger(command.get("value"))));
+                context.writeInstruction(Instructions2.returnSuccess(LocationData.ofInteger(command.get("value"))));
             }
             case SCOREBOARD_PLAYERS_ADD -> {
                 try(var objective = context.getObjective(command.get("objective"))) {
@@ -590,22 +590,22 @@ public final class CommandCompiler {
                 }
             }
             case WEATHER_CLEAR_TIMED -> {
-                context.current().addInstructionConsumer().accept(Instructions2.setWeatherStatic(command.get("duration"), 0, false, false));
+                context.writeInstruction(Instructions2.setWeatherStatic(command.get("duration"), 0, false, false));
             }
             case WEATHER_CLEAR -> {
-                context.current().addInstructionConsumer().accept(Instructions2.setWeatherDynamicClear());
+                context.writeInstruction(Instructions2.setWeatherDynamicClear());
             }
             case WEATHER_RAIN_TIMED -> {
-                context.current().addInstructionConsumer().accept(Instructions2.setWeatherStatic(0, command.get("duration"), true, false));
+                context.writeInstruction(Instructions2.setWeatherStatic(0, command.get("duration"), true, false));
             }
             case WEATHER_RAIN -> {
-                context.current().addInstructionConsumer().accept(Instructions2.setWeatherDynamicRain());
+                context.writeInstruction(Instructions2.setWeatherDynamicRain());
             }
             case WEATHER_THUNDER_TIMED -> {
-                context.current().addInstructionConsumer().accept(Instructions2.setWeatherStatic(0, command.get("duration"), true, true));
+                context.writeInstruction(Instructions2.setWeatherStatic(0, command.get("duration"), true, true));
             }
             case WEATHER_THUNDER -> {
-                context.current().addInstructionConsumer().accept(Instructions2.setWeatherDynamicThunder());
+                context.writeInstruction(Instructions2.setWeatherDynamicThunder());
             }
         }
     }
@@ -619,7 +619,7 @@ public final class CommandCompiler {
                 var instr = tryCreate
                         ? Instructions2.getNbtFromCompoundOrCreate(source, named.name(), storage)
                         : Instructions2.getNbtFromCompound(source, named.name(), storage);
-                context.current().addInstructionConsumer().accept(instr);
+                context.writeInstruction(instr);
                 try(var ignored = context.enterWithoutValue(context.current().incrementedId(1).withBaseInstruction(instr))) {
                     getNbtPathValue(context, storage, otherParts, tryCreate, valueConsumer);
                 }
@@ -628,7 +628,7 @@ public final class CommandCompiler {
                 var instr = indexed.index() >= 0
                         ? Instructions2.getNbtFromListForward(source, indexed.index(), storage)
                         : Instructions2.getNbtFromListBackward(source, -indexed.index(), storage);
-                context.current().addInstructionConsumer().accept(instr);
+                context.writeInstruction(instr);
                 try(var ignored = context.enterWithoutValue(context.current().incrementedId(1).withBaseInstruction(instr))) {
                     getNbtPathValue(context, storage, otherParts, tryCreate, valueConsumer);
                 }

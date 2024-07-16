@@ -14,11 +14,6 @@ public class CodeFieldStorageMap {
         map.put(key, value);
     }
 
-    @SuppressWarnings("unchecked")
-    public <T> CodeFieldStorageMapValue<T> get(CodeFieldStorageMapKind<T> key) {
-        return (CodeFieldStorageMapValue<T>) map.get(key);
-    }
-
     public void checkEntryCount() {
         if(map.size() != CodeFieldStorageMapKind.values().length) {
             throw new IllegalArgumentException("CodeFieldStorageMap does not map every kind value");
