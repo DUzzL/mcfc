@@ -13,8 +13,9 @@ import java.util.List;
 @InstructionSourceClass(enumClass = "dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes", generatorClass = "dev.epicpix.minecraftfunctioncompiler.il.Instructions")
 interface InstructionDefinitions {
     // Minecraft specific instructions
-    Instruction callFunctions(List<DataLocation> functions, @Nullable @InstructionSource LocationData<Entity> entity, @Nullable @InstructionSource LocationData<World> world, @Nullable @InstructionSource LocationData<Vec3> position, @Nullable @InstructionSource LocationData<Vec2> rotation, @Nullable @InstructionSource LocationData<NbtCompound> arguments);
+    Instruction callFunctions(List<DataLocation> functions, @Nullable @InstructionSource LocationData<Entity> entity, @Nullable @InstructionSource LocationData<World> world, @Nullable @InstructionSource LocationData<Vec3> position, @Nullable @InstructionSource LocationData<Vec2> rotation, @Nullable @InstructionSource LocationAnchor anchor, @Nullable @InstructionSource LocationData<NbtCompound> arguments);
     Instruction checkScoreCompare(@InstructionSource LocationData<Score> target, @InstructionSource LocationData<Score> source, ScoreboardCompareOperation compareOperation);
+    Instruction applyLocalPositionWorld(@InstructionSource LocationData<Vec3> fromPosition, @InstructionSource LocationData<Vec2> fromRotation, @InstructionSource LocationData<Double> yOffset, @InstructionDestination LocationData<Vec3> to, WorldCoordinates position);
     Instruction applyPositionWorld(@InstructionSource LocationData<Vec3> from, @InstructionDestination LocationData<Vec3> to, WorldCoordinates position);
     Instruction applyRotationWorld(@InstructionSource LocationData<Vec2> from, @InstructionDestination LocationData<Vec2> to, RotationCoordinates rotation);
     Instruction checkEntityTypes(@InstructionSource LocationData<Entity> entity, List<DataLocation> types, boolean negated);

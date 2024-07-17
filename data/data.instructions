@@ -305,8 +305,18 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
   [ctx:entity].kill();
 }
 
+@GET_STACK_POSITION(<net.minecraft.commands.CommandSourceStack> [static:CommandSourceStack], <net.minecraft.world.phys.Vec3> [ctx:position]) {
+  let [ctx:position] = [static:CommandSourceStack].getPosition();
+  run();
+}
+
 @GET_ENTITY_POSITION(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.phys.Vec3> [ctx:position]) {
   let [ctx:position] = [ctx:entity].position();
+  run();
+}
+
+@GET_STACK_ROTATION(<net.minecraft.commands.CommandSourceStack> [static:CommandSourceStack], <net.minecraft.world.phys.Vec2> [ctx:rotation]) {
+  let [ctx:rotation] = [static:CommandSourceStack].getRotation();
   run();
 }
 
@@ -804,5 +814,20 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 
 @GET_ENTITY_VEHICLE(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.entity.Entity> [ctx:vehicle]) {
   let [ctx:vehicle] = [ctx:entity].getVehicle();
+  run();
+}
+
+@GET_ANCHOR_OFFSET(<net.minecraft.commands.CommandSourceStack> [static:CommandSourceStack], <net.minecraft.world.entity.Entity> [ctx:entity], double [ctx:result]) {
+  let [ctx:result];
+  if([static:CommandSourceStack].getAnchor() == <net.minecraft.commands.arguments.EntityAnchorArgument.Anchor>.EYES) {
+    [ctx:result] = to_double([ctx:entity].getEyeHeight());
+  }else {
+    [ctx:result] = to_double(0);
+  }
+  run();
+}
+
+@GET_EYE_HEIGHT(<net.minecraft.world.entity.Entity> [ctx:entity], double [ctx:result]) {
+  let [ctx:result] = to_double([ctx:entity].getEyeHeight());
   run();
 }

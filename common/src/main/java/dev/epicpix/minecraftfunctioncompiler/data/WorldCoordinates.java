@@ -6,5 +6,6 @@ public record WorldCoordinates(
         double y,
         boolean isYRelative,
         double z,
-        boolean isZRelative
+        boolean isZRelative,
+        boolean localCoordinates
 ) {}

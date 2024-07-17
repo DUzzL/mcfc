@@ -5,6 +5,7 @@ CommandSourceStack_withEntity = "net/minecraft/commands/CommandSourceStack:withE
 CommandSourceStack_withLevel = "net/minecraft/commands/CommandSourceStack:withLevel(Lnet/minecraft/server/level/ServerLevel;)Lnet/minecraft/commands/CommandSourceStack;@M"
 CommandSourceStack_withPosition = "net/minecraft/commands/CommandSourceStack:withPosition(Lnet/minecraft/world/phys/Vec3;)Lnet/minecraft/commands/CommandSourceStack;@M"
 CommandSourceStack_withRotation = "net/minecraft/commands/CommandSourceStack:withRotation(Lnet/minecraft/world/phys/Vec2;)Lnet/minecraft/commands/CommandSourceStack;@M"
+CommandSourceStack_withAnchor = "net/minecraft/commands/CommandSourceStack:withAnchor(Lnet/minecraft/commands/arguments/EntityAnchorArgument$Anchor;)Lnet/minecraft/commands/CommandSourceStack;@M"
 
 CollectionTag_add = "net/minecraft/nbt/CollectionTag:add(ILnet/minecraft/nbt/Tag;)V@M"
 ByteTag_valueOf = "net/minecraft/nbt/ByteTag:valueOf(B)Lnet/minecraft/nbt/ByteTag;@S"
@@ -27,6 +28,12 @@ ServerFunctionManager_execute."1.20.3+" = "net/minecraft/server/ServerFunctionMa
 ServerFunctionManager_execute."1.20.2+" = "net/minecraft/server/ServerFunctionManager:execute(Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;Lnet/minecraft/nbt/CompoundTag;)I@M"
 ServerFunctionManager_execute."1.20.1-" = "net/minecraft/server/ServerFunctionManager:execute(Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;)I@M"
 
+ExtensionFunctions_calculateLocalCoordinates."1.20.1" = "dev/epicpix/minecraftfunctioncompiler/v1_20_1/ExtensionFunctions:calculateLocalCoordinates(FFDDDDDD)Lnet/minecraft/world/phys/Vec3;@S"
+ExtensionFunctions_calculateLocalCoordinates."1.20.2" = "dev/epicpix/minecraftfunctioncompiler/v1_20_2/ExtensionFunctions:calculateLocalCoordinates(FFDDDDDD)Lnet/minecraft/world/phys/Vec3;@S"
+ExtensionFunctions_calculateLocalCoordinates."1.20.4" = "dev/epicpix/minecraftfunctioncompiler/v1_20_4/ExtensionFunctions:calculateLocalCoordinates(FFDDDDDD)Lnet/minecraft/world/phys/Vec3;@S"
+ExtensionFunctions_calculateLocalCoordinates."1.20.6" = "dev/epicpix/minecraftfunctioncompiler/v1_20_6/ExtensionFunctions:calculateLocalCoordinates(FFDDDDDD)Lnet/minecraft/world/phys/Vec3;@S"
+ExtensionFunctions_calculateLocalCoordinates."1.21" = "dev/epicpix/minecraftfunctioncompiler/v1_21/ExtensionFunctions:calculateLocalCoordinates(FFDDDDDD)Lnet/minecraft/world/phys/Vec3;@S"
+
 ExtensionFunctions_executeFunction."1.20.4" = "dev/epicpix/minecraftfunctioncompiler/v1_20_4/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@S"
 ExtensionFunctions_executeFunction."1.20.6" = "dev/epicpix/minecraftfunctioncompiler/v1_20_6/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@S"
 ExtensionFunctions_executeFunction."1.21" = "dev/epicpix/minecraftfunctioncompiler/v1_21/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@S"
@@ -43,5 +50,8 @@ Vec2_x = "net/minecraft/world/phys/Vec2:x:F@MR"
 Vec2_y = "net/minecraft/world/phys/Vec2:y:F@MR"
 BuiltInRegistries_ATTRIBUTE = "net/minecraft/core/registries/BuiltInRegistries:ATTRIBUTE:Lnet/minecraft/core/Registry;@SR"
 BuiltInRegistries_MOB_EFFECT = "net/minecraft/core/registries/BuiltInRegistries:MOB_EFFECT:Lnet/minecraft/core/Registry;@SR"
+
+Anchor_EYES = "net/minecraft/commands/arguments/EntityAnchorArgument$Anchor:EYES:Lnet/minecraft/commands/arguments/EntityAnchorArgument$Anchor;@SR"
+Anchor_FEET = "net/minecraft/commands/arguments/EntityAnchorArgument$Anchor:FEET:Lnet/minecraft/commands/arguments/EntityAnchorArgument$Anchor;@SR"
 
 ServerFunctionManager_context."1.20.2-" = "net/minecraft/server/ServerFunctionManager:context:Lnet/minecraft/server/ServerFunctionManager$ExecutionContext;@MRW"

@@ -338,7 +338,18 @@ public class StringCommandReader {
 
     public WorldCoordinates readVec3() {
         if(peek() == '^') {
-            throw new StringCommandReaderException(this, StringCommandReaderExceptionType.LOCAL_VEC3_NOT_SUPPORTED);
+            if(!skipIfNext('^')) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_VEC3_LOCAL);
+            String x = readNumberBase();
+            if(x.isEmpty()) x = "0";
+            if(!skipArgumentWhitespace()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_VEC3_LOCAL);
+            if(!skipIfNext('^')) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_VEC3_LOCAL);
+            String y = readNumberBase();
+            if(y.isEmpty()) y = "0";
+            if(!skipArgumentWhitespace()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_VEC3_LOCAL);
+            if(!skipIfNext('^')) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_VEC3_LOCAL);
+            String z = readNumberBase();
+            if(z.isEmpty()) z = "0";
+            return new WorldCoordinates(parseDouble(x), true, parseDouble(y), true, parseDouble(z), true, true);
         }
         boolean relativeX = skipIfNext('~');
         String x = readNumberBase();
@@ -354,7 +365,7 @@ public class StringCommandReader {
         String z = readNumberBase();
         if(!relativeZ && !z.contains(".")) z += ".5";
         else if(relativeZ && z.isEmpty()) z = "0";
-        return new WorldCoordinates(parseDouble(x), relativeX, parseDouble(y), relativeY, parseDouble(z), relativeZ);
+        return new WorldCoordinates(parseDouble(x), relativeX, parseDouble(y), relativeY, parseDouble(z), relativeZ, false);
     }
 
     public RotationCoordinates readRotation() {
@@ -477,6 +488,15 @@ public class StringCommandReader {
             case "nearest" -> SelectorSort.NEAREST;
             case "random" -> SelectorSort.RANDOM;
             default -> throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_SELECTOR_SORT);
+        };
+    }
+
+    public LocationAnchor readLocationAnchor() {
+        String str = readWord();
+        return switch (str) {
+            case "eyes" -> LocationAnchor.EYES;
+            case "feet" -> LocationAnchor.FEET;
+            default -> throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_LOCATION_ANCHOR);
         };
     }
 

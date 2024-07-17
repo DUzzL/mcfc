@@ -186,7 +186,7 @@ public final class Optimizer {
         HashMap<String, Object> result = new HashMap<>();
         for(var entry : data.entrySet()) {
             if(entry.getValue() instanceof LocationData<?> value && value.local() != null) {
-                result.put(entry.getKey(), new LocationData<>(mappings.getOrDefault(value.local(), value.local()), value.string(), value.integer()));
+                result.put(entry.getKey(), new LocationData<>(mappings.getOrDefault(value.local(), value.local()), value.string(), value.integer(), value.doubleValue()));
             }else if(entry.getValue() instanceof ScopeData scope) {
                 result.put(entry.getKey(), new ScopeData(mappings.getOrDefault(scope.id(), scope.id())));
             }else {

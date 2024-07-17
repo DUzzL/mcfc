@@ -16,6 +16,7 @@ EFFECT_GIVE_INF_AMP/effect give <targets:entity_selector> <effect:mob_effect> in
 EFFECT_GIVE_INF_AMP_SHOW/effect give <targets:entity_selector> <effect:mob_effect> infinite <amplifier:int[minimum=0,maximum=255]> <hide_particles:boolean>
 
 EXECUTE_ALIGN/execute align <swizzle:swizzle> <command:command[root=execute]>
+EXECUTE_ANCHORED/execute anchored <anchor:location_anchor> <command:command[root=execute]>
 EXECUTE_AS/execute as <targets:entity_selector> <command:command[root=execute]>
 EXECUTE_AT/execute at <targets:entity_selector> <command:command[root=execute]>
 EXECUTE_IF_ENTITY/execute if entity <entities:entity_selector> <command:command[root=execute]>

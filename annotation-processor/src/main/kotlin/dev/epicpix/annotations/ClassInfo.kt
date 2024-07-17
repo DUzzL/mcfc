@@ -46,6 +46,8 @@ fun setResolver(resolver: Resolver) {
 
 private fun fixKotlinDesc(from: String): String {
     return when(from) {
+        "kotlin.Double" -> "D"
+        "kotlin.Float" -> "F"
         "kotlin.Boolean" -> "Z"
         "kotlin.Unit" -> "V"
         "kotlin.Int" -> "I"

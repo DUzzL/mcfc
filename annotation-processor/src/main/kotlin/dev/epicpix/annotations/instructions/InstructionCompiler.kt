@@ -812,6 +812,9 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             if(expression.name == "map_nbt_value") {
                 return ParsedTokenExpressionTypeComplex("net.minecraft.nbt.Tag")
             }
+            if(expression.name == "to_double") {
+                return ParsedTokenExpressionSimpleType.DOUBLE
+            }
         }
         val paramTypes = expression.arguments.map { evaluateExpressionType(writerData, it) }
         val instance = expression.instance
@@ -849,6 +852,9 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
         }
         if(def == Type.INT_TYPE) {
             return ParsedTokenExpressionSimpleType.INTEGER
+        }
+        if(def == Type.FLOAT_TYPE) {
+            return ParsedTokenExpressionSimpleType.FLOAT
         }
         if(def == Type.DOUBLE_TYPE) {
             return ParsedTokenExpressionSimpleType.DOUBLE
@@ -1324,6 +1330,18 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                     return uid
                 }
             }
+            if(expression.name == "to_double") {
+                val sourceType = evaluateExpressionType(writerData, expression.arguments[0])
+                if(sourceType == ParsedTokenExpressionSimpleType.INTEGER) {
+                    val uid = writeExpression(writerData, expression.arguments[0], output, uniqId, true)
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.I2D);\n")
+                    return uid
+                }else if(sourceType == ParsedTokenExpressionSimpleType.FLOAT) {
+                    val uid = writeExpression(writerData, expression.arguments[0], output, uniqId, true)
+                    output.appendText("mv.visitInsn(org.objectweb.asm.Opcodes.F2D);\n")
+                    return uid
+                }
+            }
             throw UnsupportedOperationException("Unknown function call: ${expression.name} / ${expression}")
         }
     }else if(expression is ParsedTokenExpressionField) {
@@ -1550,6 +1568,8 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                     val type = writerData.getAccessorType(el.accessor)
                     if(type.isIntegerLikeType()) {
                         output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ISTORE, ${writerData.localTypes[el.accessor.name]!!.mapping}.index());\n")
+                    }else if(type == ParsedTokenExpressionSimpleType.DOUBLE) {
+                        output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.DSTORE, ${writerData.localTypes[el.accessor.name]!!.mapping}.index());\n")
                     }else if(type.isObjectLike()) {
                         output.appendText("mv.visitVarInsn(org.objectweb.asm.Opcodes.ASTORE, ${writerData.localTypes[el.accessor.name]!!.mapping}.index());\n")
                     }else {

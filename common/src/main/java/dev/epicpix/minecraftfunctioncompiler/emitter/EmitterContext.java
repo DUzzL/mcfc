@@ -63,6 +63,8 @@ public record EmitterContext(
             codeWriter.loadLocal(newTransforms.get(loc.local()));
         }else if(loc.integer() != null) {
             codeWriter.writeInt(loc.integer());
+        }else if(loc.doubleValue() != null) {
+            codeWriter.writeDouble(loc.doubleValue());
         }else {
             throw new IllegalArgumentException("Loading imaginary data from " + location);
         }

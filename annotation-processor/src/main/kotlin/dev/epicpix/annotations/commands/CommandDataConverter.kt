@@ -207,6 +207,7 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 data.kindOptions["minimum"]?.toInt()?.also { min -> builder.append("    if(a$argumentIndex.minimum() < $min) ${createError("\"Integer range minimum of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }
                 data.kindOptions["maximum"]?.toInt()?.also { max -> builder.append("    if(a$argumentIndex.maximum() > $max) ${createError("\"Integer range maximum of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
             }
+            "location_anchor" -> builder.append("    var a$argumentIndex = reader.readLocationAnchor();\n")
             "mob_effect" -> builder.append("    var a$argumentIndex = reader.readMobEffect();\n")
             "nbt_compound" -> builder.append("    var a$argumentIndex = NbtParser.readNbtCompound(reader);\n")
             "nbt_path" -> builder.append("    var a$argumentIndex = NbtParser.readNbtPath(reader);\n")

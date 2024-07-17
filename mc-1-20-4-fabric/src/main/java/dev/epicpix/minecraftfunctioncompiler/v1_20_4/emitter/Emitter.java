@@ -48,6 +48,15 @@ public final class Emitter {
                         context.load("rotation");
                         callCommandSourceStack_withRotation(codeWriter);
                     }
+                    if(context.instruction().get("anchor") != null) {
+                        var anchor = context.instruction().<LocationAnchor>get("anchor");
+                        if(anchor == LocationAnchor.EYES) {
+                            loadAnchor_EYES(codeWriter);
+                        }else {
+                            loadAnchor_FEET(codeWriter);
+                        }
+                        callCommandSourceStack_withAnchor(codeWriter);
+                    }
                     if(context.compiledFunctions().contains(func)) {
                         methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, ("function/" + func.namespace() + "/" + func.path()).replace('.', '$'), "run", "(" + CommandSourceStack.class.descriptorString() + ")J", false);
                         methodVisitor.visitInsn(Opcodes.POP2);
@@ -81,9 +90,34 @@ public final class Emitter {
                 methodVisitor.visitLabel(endLabel);
                 return true;
             }
-            if(context.instruction().type() == InstructionTypes.APPLY_POSITION_WORLD) {
-                codeWriter.newObjectCreate(Vec3.class);
+            if(context.instruction().type() == InstructionTypes.APPLY_LOCAL_POSITION_WORLD) {
                 var pos = context.instruction().<WorldCoordinates>get("position");
+                if(!pos.localCoordinates()) throw new UnsupportedOperationException("Cannot run APPLY_LOCAL_POSITION_WORLD with non-local coordinates");
+                context.load("fromRotation");
+                loadVec2_x(codeWriter);
+                context.load("fromRotation");
+                loadVec2_y(codeWriter);
+                context.load("fromPosition");
+                loadVec3_x(codeWriter);
+                context.load("fromPosition");
+                loadVec3_y(codeWriter);
+                if(context.instruction().get("yOffset") != null) {
+                    context.load("yOffset");
+                    methodVisitor.visitInsn(Opcodes.DADD);
+                }
+                context.load("fromPosition");
+                loadVec3_z(codeWriter);
+                codeWriter.writeDouble(pos.x());
+                codeWriter.writeDouble(pos.y());
+                codeWriter.writeDouble(pos.z());
+                callExtensionFunctions_calculateLocalCoordinates(codeWriter);
+                context.runStored("to", Vec3.class);
+                return true;
+            }
+            if(context.instruction().type() == InstructionTypes.APPLY_POSITION_WORLD) {
+                var pos = context.instruction().<WorldCoordinates>get("position");
+                if(pos.localCoordinates()) throw new UnsupportedOperationException("Cannot run APPLY_POSITION_WORLD with local coordinates");
+                codeWriter.newObjectCreate(Vec3.class);
                 if(pos.isXRelative()) {
                     context.load("from");
                     loadVec3_x(codeWriter);

@@ -82,11 +82,11 @@ public class CompilationContext {
             var data = stack.peek();
             return new CompilationData<>(this, data, data.currentPosition(), 0);
         }else {
-            var entityData = getCurrentEntity();
-            LocationData<Vec3> position = LocationData.ofLocal(entityData.data().highestId());
-            var instruction = Instructions2.getEntityPosition(entityData.content(), position);
-            entityData.writeInstruction(Instructions2.ifNotNull(entityData.content().lower()).with(instruction));
-            return enterWithValue(entityData.data().incrementedId(1).withBaseInstruction(instruction).withCurrentPosition(position), position, entityData.stackCount() + 1);
+            var current = current();
+            LocationData<Vec3> position = LocationData.ofLocal(current.highestId());
+            var instruction = Instructions2.getStackPosition(position);
+            writeInstruction(instruction);
+            return enterWithValue(current.incrementedId(1).withBaseInstruction(instruction).withCurrentPosition(position), position);
         }
     }
 
@@ -95,15 +95,33 @@ public class CompilationContext {
             var data = stack.peek();
             return new CompilationData<>(this, data, data.currentRotation(), 0);
         }else {
-            var entityData = getCurrentEntity();
-            LocationData<Vec2> rotation = LocationData.ofLocal(entityData.data().highestId());
-            var instruction = Instructions2.getEntityRotation(entityData.content(), rotation);
-            entityData.writeInstruction(Instructions2.ifNotNull(entityData.content().lower()).with(instruction));
-            return enterWithValue(entityData.data().incrementedId(1).withBaseInstruction(instruction).withCurrentRotation(rotation), rotation, entityData.stackCount() + 1);
+            var current = current();
+            LocationData<Vec2> rotation = LocationData.ofLocal(current.highestId());
+            var instruction = Instructions2.getStackRotation(rotation);
+            writeInstruction(instruction);
+            return enterWithValue(current.incrementedId(1).withBaseInstruction(instruction).withCurrentRotation(rotation), rotation);
         }
     }
 
     public CompilationData<LocationData<Vec3>> applyPosition(WorldCoordinates pos) {
+        if(pos.localCoordinates()) {
+            var entityData = getCurrentEntity();
+            var positionData = getPosition();
+            var rotationData = getRotation();
+            var offset = LocationData.<Double>ofLocal(rotationData.data().highestId());
+            var position = LocationData.<Vec3>ofLocal(rotationData.data().highestId() + 1);
+            var stacker = new InstructionStacker(Instructions2.always());
+            if(rotationData.data().currentAnchor() == LocationAnchor.EYES) {
+                stacker.stackInstruction(Instructions2.getEyeHeight(entityData.content(), offset));
+            }else if(rotationData.data().currentAnchor() == LocationAnchor.FEET) {
+                offset = LocationData.ofDouble(0.0);
+            }else {
+                stacker.stackInstruction(Instructions2.getAnchorOffset(entityData.content(), offset));
+            }
+            stacker.stackInstruction(Instructions.applyLocalPositionWorld(positionData.content(), rotationData.content(), offset, position, pos));
+            rotationData.writeInstruction(stacker.base);
+            return enterWithValue(rotationData.data().incrementedId(2).withBaseInstruction(stacker.current), position, entityData.stackCount() + positionData.stackCount() + rotationData.stackCount() + 1);
+        }
         var positionData = getPosition();
         var position = LocationData.<Vec3>ofLocal(positionData.data().highestId());
         var instruction = Instructions.applyPositionWorld(positionData.content(), position, pos);

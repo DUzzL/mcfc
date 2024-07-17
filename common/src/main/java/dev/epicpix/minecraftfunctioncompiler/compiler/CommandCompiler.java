@@ -201,6 +201,11 @@ public final class CommandCompiler {
                     pos.writeInstruction(instruction);
                 }
             }
+            case EXECUTE_ANCHORED -> {
+                try(var ignored = context.enterWithoutValue(context.current().withCurrentAnchor(command.get("anchor")))) {
+                    compile(context, command.get("command"), result);
+                }
+            }
             case EXECUTE_AS -> {
                 try(var selector = context.forSelector(command.get("targets"))) {
                     try(var ignored = context.enterWithoutValue(selector.data().withCurrentEntity(selector.content()))) {
@@ -283,7 +288,7 @@ public final class CommandCompiler {
             }
             case EXECUTE_POSITIONED_POS -> {
                 try(var position = context.applyPosition(command.get("pos"))) {
-                    try(var ignored = context.enterWithoutValue(position.data().withCurrentPosition(position.content()))) {
+                    try(var ignored = context.enterWithoutValue(position.data().withCurrentPosition(position.content()).withCurrentAnchor(LocationAnchor.FEET))) {
                         compile(context, command.get("command"), result);
                     }
                 }
@@ -446,19 +451,19 @@ public final class CommandCompiler {
             }
             case FUNCTION -> {
                 var current = context.current();
-                current.writeInstruction(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), null));
+                current.writeInstruction(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor(), null));
             }
             case FUNCTION_ARGS -> {
                 var current = context.current();
                 var arguments = LocationData.<NbtCompound>ofLocal(current.highestId());
-                current.writeInstruction(Instructions2.loadNbtValue(command.get("arguments"), arguments.forceCast()).with(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), arguments)));
+                current.writeInstruction(Instructions2.loadNbtValue(command.get("arguments"), arguments.forceCast()).with(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor(), arguments)));
             }
             case FUNCTION_ARGS_STORAGE -> {
                 var current = context.current();
                 var arguments = LocationData.<NbtCompound>ofLocal(current.highestId());
                 var clonedArguments = LocationData.<NbtTag>ofLocal(current.highestId() + 1);
                 var validArguments = LocationData.<NbtCompound>ofLocal(current.highestId() + 2);
-                current.writeInstruction(Instructions2.getNbtStorage(command.get("storage"), arguments).with(Instructions2.cloneNbtValue(arguments.forceCast(), clonedArguments).with(Instructions2.checkIsCompound(clonedArguments, validArguments).with(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), validArguments)))));
+                current.writeInstruction(Instructions2.getNbtStorage(command.get("storage"), arguments).with(Instructions2.cloneNbtValue(arguments.forceCast(), clonedArguments).with(Instructions2.checkIsCompound(clonedArguments, validArguments).with(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor(), validArguments)))));
             }
             case FUNCTION_ARGS_STORAGE_PATH -> {
                 var current = context.current();
@@ -481,7 +486,7 @@ public final class CommandCompiler {
                 stacker.stackInstruction(Instructions2.cloneNbtValue(currentTag, clonedTag));
                 var compoundTag = LocationData.<NbtCompound>ofLocal(current.highestId() + 4);
                 stacker.stackInstruction(Instructions2.checkIsCompound(clonedTag, compoundTag));
-                stacker.stackInstruction(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), compoundTag));
+                stacker.stackInstruction(Instructions.callFunctions(command.get("functions"), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor(), compoundTag));
                 current.writeInstruction(stacker.base);
             }
             case GAMEMODE -> {
