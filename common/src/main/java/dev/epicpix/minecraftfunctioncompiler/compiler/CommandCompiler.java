@@ -6,6 +6,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPath;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPathPart;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
+import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
 import java.util.ArrayList;
 import java.util.List;
