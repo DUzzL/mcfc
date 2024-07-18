@@ -831,3 +831,22 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
   let [ctx:result] = to_double([ctx:entity].getEyeHeight());
   run();
 }
+
+@GET_OBJECTIVE_CRITERION(<net.minecraft.world.scores.Objective> [ctx:objective], <net.minecraft.world.scores.criteria.ObjectiveCriteria> [ctx:criterion]) {
+  let [ctx:criterion] = [ctx:objective].getCriteria();
+  run();
+}
+
+@CHECK_IS_CRITERION(<net.minecraft.world.scores.criteria.ObjectiveCriteria> [ctx:criterion], <dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCriterionData> [instr:other]) {
+  if([ctx:criterion] == map_scoreboard_criterion([instr:other])) {
+    run();
+  }
+}
+
+@SCORE_UNLOCK [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target]) {
+  [ctx:target].setLocked(false);
+}
+
+@SCORE_UNLOCK [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target]) {
+  [ctx:target].unlock();
+}

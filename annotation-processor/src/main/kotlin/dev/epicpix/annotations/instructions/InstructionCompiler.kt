@@ -812,6 +812,9 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             if(expression.name == "map_nbt_value") {
                 return ParsedTokenExpressionTypeComplex("net.minecraft.nbt.Tag")
             }
+            if(expression.name == "map_scoreboard_criterion") {
+                return ParsedTokenExpressionTypeComplex("net.minecraft.world.scores.criteria.ObjectiveCriteria")
+            }
             if(expression.name == "to_double") {
                 return ParsedTokenExpressionSimpleType.DOUBLE
             }
@@ -1311,6 +1314,18 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                     if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue") {
                         if(keepResult) {
                             output.appendText("context.fieldStorage().loadNbtValue(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue>get(\"${source.name}\"));\n")
+                        }
+                        return uniqId
+                    }
+                }
+            }
+            if(expression.name == "map_scoreboard_criterion") {
+                val source = expression.arguments[0] as ParsedTokenValueAccessor
+                if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
+                    val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
+                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCriterionData") {
+                        if(keepResult) {
+                            output.appendText("context.fieldStorage().loadScoreboardCriterion(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCriterionData>get(\"${source.name}\").name());\n")
                         }
                         return uniqId
                     }

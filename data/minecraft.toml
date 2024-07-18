@@ -17,9 +17,11 @@ LongTag_valueOf = "net/minecraft/nbt/LongTag:valueOf(J)Lnet/minecraft/nbt/LongTa
 ShortTag_valueOf = "net/minecraft/nbt/ShortTag:valueOf(S)Lnet/minecraft/nbt/ShortTag;@S"
 StringTag_valueOf = "net/minecraft/nbt/StringTag:valueOf(Ljava/lang/String;)Lnet/minecraft/nbt/StringTag;@S"
 
+ObjectiveCriteria_byName = "net/minecraft/world/scores/criteria/ObjectiveCriteria:byName(Ljava/lang/String;)Ljava/util/Optional;@S"
+Optional_get = "java/util/Optional:get()Ljava/lang/Object;@M"
+
 Registry_get."1.20.4-" = "net/minecraft/core/Registry:get(Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/Object;@IM"
 Registry_getHolder."1.20.5+" = "net/minecraft/core/Registry:getHolder(Lnet/minecraft/resources/ResourceLocation;)Ljava/util/Optional;@IM"
-Optional_get."1.20.5+" = "java/util/Optional:get()Ljava/lang/Object;@M"
 
 Score_getScore."1.20.3+" = "net/minecraft/world/scores/ScoreAccess:get()I@IM"
 Score_getScore."1.20.2-" = "net/minecraft/world/scores/Score:getScore()I@M"

@@ -1,6 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_2;
 
-import dev.epicpix.minecraftfunctioncompiler.data.CriteriaData;
+import dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCriterionData;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.AttributeData;
 import dev.epicpix.minecraftfunctioncompiler.data.MobEffectData;
@@ -32,13 +32,13 @@ public final class RegistryMapping {
             }
         });
         DataRegistries.ATTRIBUTE.freeze();
-        DataRegistries.CRITERIA.reset();
-        ObjectiveCriteria.getCustomCriteriaNames().forEach(it -> DataRegistries.CRITERIA.set(it, new CriteriaData(it, ObjectiveCriteria.byName(it).get().isReadOnly())));
+        DataRegistries.SCOREBOARD_CRITERIA.reset();
+        ObjectiveCriteria.getCustomCriteriaNames().forEach(it -> DataRegistries.SCOREBOARD_CRITERIA.set(it, new ScoreboardCriterionData(it, ObjectiveCriteria.byName(it).get().isReadOnly())));
         BuiltInRegistries.STAT_TYPE.forEach(it -> it.getRegistry().forEach(it2 -> {
             String string = Stat.buildName((StatType<Object>) it, it2);
-            DataRegistries.CRITERIA.set(string, new CriteriaData(string, false));
+            DataRegistries.SCOREBOARD_CRITERIA.set(string, new ScoreboardCriterionData(string, false));
         }));
-        DataRegistries.CRITERIA.freeze();
+        DataRegistries.SCOREBOARD_CRITERIA.freeze();
         DataRegistries.MOB_EFFECT.reset();
         BuiltInRegistries.MOB_EFFECT.entrySet().forEach(e -> DataRegistries.MOB_EFFECT.set(new DataLocation(e.getKey().location().getNamespace(), e.getKey().location().getPath()), new MobEffectData(new DataLocation(e.getKey().location().getNamespace(), e.getKey().location().getPath()), e.getValue().isInstantenous())));
         DataRegistries.MOB_EFFECT.freeze();

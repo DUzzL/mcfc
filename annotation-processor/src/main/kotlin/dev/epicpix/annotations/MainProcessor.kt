@@ -110,6 +110,7 @@ fun javaToMinecraftGenericType(type: String): String {
             "net.minecraft.world.entity.ai.attributes.AttributeInstance" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.AttributeInstance"
             "net.minecraft.nbt.CompoundTag" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.NbtCompound"
             "net.minecraft.nbt.Tag" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.NbtTag"
+            "net.minecraft.world.scores.criteria.ObjectiveCriteria" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.ScoreboardCriterion"
             else -> throw IllegalArgumentException("Unknown minecraft class: $type")
         }
     }else {

@@ -9,6 +9,7 @@ import net.minecraft.commands.functions.CommandFunction;
 import net.minecraft.core.Holder;
 import net.minecraft.nbt.*;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import org.objectweb.asm.Opcodes;
 
 import java.util.List;
@@ -52,6 +53,13 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
             cw.writeString(value.path());
             cw.newObjectInit(ResourceLocation.class, String.class, String.class);
             return 13;
+        }));
+        set(CodeFieldStorageMapKind.SCOREBOARD_CRITERION, new CodeFieldStorageMapValue<>(ObjectiveCriteria.class, (cf, cw, value) -> {
+            cw.writeString(value);
+            callObjectiveCriteria_byName(cw);
+            callOptional_get(cw);
+            cw.castType(ObjectiveCriteria.class);
+            return 12;
         }));
     }
 

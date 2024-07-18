@@ -26,6 +26,12 @@ public class RawDataRegistry<K, T> {
         return values.get(location);
     }
 
+    public T getOrThrow(K location) {
+        var value = get(location);
+        if(value == null) throw new IllegalArgumentException("Failed to get value from key \"" + location + "\" from registry");
+        return value;
+    }
+
     public void set(K location, T value) {
         if(frozen) {
             throw new IllegalStateException("Tried to modify a frozen registry");

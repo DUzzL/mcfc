@@ -57,6 +57,12 @@ public final class CodeFieldStorage {
                 : "r" + map.checkIndex(CodeFieldStorageMapKind.RESOURCE_LOCATION, value);
     }
 
+    private String getScoreboardCriterionName(String value) {
+        return DEBUG
+                ? "scoreboardCriterion$" + value.replace(':', '$').replace('.', '$')
+                : "s" + map.checkIndex(CodeFieldStorageMapKind.SCOREBOARD_CRITERION, value);
+    }
+
     private String getUuidName(UUID value) {
         return DEBUG
                 ? "uuid$" + value.toString().replace("-", "")
@@ -89,6 +95,11 @@ public final class CodeFieldStorage {
     public void loadResourceLocation(CodeWriter cw, DataLocation value) {
         map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, value);
         cw.getDataField(getResourceLocationName(value), map.getValueClass(CodeFieldStorageMapKind.RESOURCE_LOCATION));
+    }
+
+    public void loadScoreboardCriterion(CodeWriter cw, String value) {
+        map.writeValue(CodeFieldStorageMapKind.SCOREBOARD_CRITERION, value);
+        cw.getDataField(getScoreboardCriterionName(value), map.getValueClass(CodeFieldStorageMapKind.SCOREBOARD_CRITERION));
     }
 
     public void loadUUID(CodeWriter cw, UUID value) {
@@ -161,6 +172,12 @@ public final class CodeFieldStorage {
             cw = getCurrentFunction(cw, classWriter);
         }
 
+        for(var value : map.getStorage(CodeFieldStorageMapKind.SCOREBOARD_CRITERION)) {
+            cost += map.writeCode(CodeFieldStorageMapKind.SCOREBOARD_CRITERION, this, cw, value) + 3;
+            cw.setDataField(getScoreboardCriterionName(value), map.getValueClass(CodeFieldStorageMapKind.SCOREBOARD_CRITERION));
+            cw = getCurrentFunction(cw, classWriter);
+        }
+
         for(var value : map.getStorage(CodeFieldStorageMapKind.NBT_VALUE)) {
             cost += map.writeCode(CodeFieldStorageMapKind.NBT_VALUE, this, cw, value) + 3;
             cw.setDataField(getNbtValueName(value), map.getValueClass(CodeFieldStorageMapKind.NBT_VALUE));
@@ -186,6 +203,9 @@ public final class CodeFieldStorage {
         }
         for(var value : map.getStorage(CodeFieldStorageMapKind.ATTRIBUTE)) {
             classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getAttributeName(value), map.getValueClass(CodeFieldStorageMapKind.ATTRIBUTE).descriptorString(), null, null);
+        }
+        for(var value : map.getStorage(CodeFieldStorageMapKind.SCOREBOARD_CRITERION)) {
+            classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getScoreboardCriterionName(value), map.getValueClass(CodeFieldStorageMapKind.SCOREBOARD_CRITERION).descriptorString(), null, null);
         }
         for(var value : map.getStorage(CodeFieldStorageMapKind.NBT_VALUE)) {
             classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getNbtValueName(value), map.getValueClass(CodeFieldStorageMapKind.NBT_VALUE).descriptorString(), null, null);

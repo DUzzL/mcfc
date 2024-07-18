@@ -516,6 +516,20 @@ public final class CommandCompiler {
                     }
                 }
             }
+            case SCOREBOARD_PLAYERS_ENABLE -> {
+                try(var objective = context.getObjective(command.get("objective"))) {
+                    var criterion = LocationData.<ScoreboardCriterion>ofLocal(objective.data().highestId());
+                    var execInstr = Instructions2.checkIsCriterion(criterion, DataRegistries.SCOREBOARD_CRITERIA.getOrThrow("trigger"));
+                    objective.writeInstruction(Instructions2.getObjectiveCriterion(objective.content(), criterion).with(execInstr));
+                    try(var ignored = context.enterWithoutValue(objective.data().withBaseInstruction(execInstr))) {
+                        try(var name = context.forScoreHolder(command.get("targets"))) {
+                            try(var scoreData = context.getScoreData(objective.content(), name.content(), true)) {
+                                scoreData.writeInstruction(Instructions2.scoreUnlock(scoreData.content()));
+                            }
+                        }
+                    }
+                }
+            }
             case SCOREBOARD_PLAYERS_GET -> {
                 try(var objective = context.getObjective(command.get("objective"))) {
                     try(var name = context.forScoreHolder(command.get("targets"))) {

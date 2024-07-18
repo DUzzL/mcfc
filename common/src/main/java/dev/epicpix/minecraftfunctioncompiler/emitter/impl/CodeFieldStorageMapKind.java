@@ -25,6 +25,7 @@ public final class CodeFieldStorageMapKind<T> {
     public static final CodeFieldStorageMapKind<DataLocation> FUNCTION = new CodeFieldStorageMapKind<>("FUNCTION");
     public static final CodeFieldStorageMapKind<NbtValue> NBT_VALUE = new CodeFieldStorageMapKind<>("NBT_VALUE");
     public static final CodeFieldStorageMapKind<DataLocation> RESOURCE_LOCATION = new CodeFieldStorageMapKind<>("RESOURCE_LOCATION");
+    public static final CodeFieldStorageMapKind<String> SCOREBOARD_CRITERION = new CodeFieldStorageMapKind<>("SCOREBOARD_CRITERION");
 
     @Override
     public String toString() {
