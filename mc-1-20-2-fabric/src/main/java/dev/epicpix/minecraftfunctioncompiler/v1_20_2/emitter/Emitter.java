@@ -193,7 +193,7 @@ public final class Emitter {
                 var label = new Label();
                 for(var res : context.instruction().<List<DataLocation>>get("types")) {
                     context.load("entity");
-                    var desc = DataRegistries.ENTITY_CLASS.get(res).descriptorString();
+                    var desc = DataRegistries.ENTITY_CLASS.get(res).clazz().descriptorString();
                     methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, desc.substring(1, desc.length() - 1));
                     methodVisitor.visitJumpInsn(Opcodes.IFNE, label);
                 }

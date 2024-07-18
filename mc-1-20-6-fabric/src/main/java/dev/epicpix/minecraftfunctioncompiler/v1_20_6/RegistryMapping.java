@@ -1,9 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_6;
 
-import dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCriterionData;
-import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
-import dev.epicpix.minecraftfunctioncompiler.data.AttributeData;
-import dev.epicpix.minecraftfunctioncompiler.data.MobEffectData;
+import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerPlayer;
@@ -48,10 +45,10 @@ public final class RegistryMapping {
                 var value = (EntityType<?>) field.get(null);
                 var type = (Class<?>) ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
                 var key = BuiltInRegistries.ENTITY_TYPE.getKey(value);
-                DataRegistries.ENTITY_CLASS.set(new DataLocation(key.getNamespace(), key.getPath()), type);
+                DataRegistries.ENTITY_CLASS.set(new DataLocation(key.getNamespace(), key.getPath()), new EntityData(type, value.canSummon()));
             }
         }
-        DataRegistries.ENTITY_CLASS.set(new DataLocation("minecraft", "player"), ServerPlayer.class);
+        DataRegistries.ENTITY_CLASS.set(new DataLocation("minecraft", "player"), new EntityData(ServerPlayer.class, false));
         DataRegistries.ENTITY_CLASS.freeze();
     }
 }
