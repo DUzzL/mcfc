@@ -18,6 +18,7 @@ public final class EmitterInstructions {
                 return;
             }
         }
+        throw new IllegalArgumentException("Failed to write instruction for type: " + context.instruction().type());
     }
 
 }

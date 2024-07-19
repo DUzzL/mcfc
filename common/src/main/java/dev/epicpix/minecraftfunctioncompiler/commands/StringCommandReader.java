@@ -1,14 +1,22 @@
 package dev.epicpix.minecraftfunctioncompiler.commands;
 
+import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
+import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidator;
+import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidators;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class StringCommandReader {
     private final String command;
+    private final boolean allowMacros;
     private int index;
 
-    public StringCommandReader(String command) {
+    public StringCommandReader(String command, boolean allowMacros) {
         this.command = command;
+        this.allowMacros = allowMacros;
     }
 
     public String getString() {
@@ -31,7 +39,12 @@ public class StringCommandReader {
         return index + 1 <= command.length();
     }
 
+    private boolean isMacro() {
+        return allowMacros && canRead(2) && command.charAt(index) == '$' && command.charAt(index + 1) == '(';
+    }
+
     public void skip() {
+        if(isMacro()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.UNSUPPORTED_MACRO_LOCATION);
         index++;
     }
 
@@ -44,7 +57,35 @@ public class StringCommandReader {
     }
 
     public char read() {
+        if(isMacro()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.UNSUPPORTED_MACRO_LOCATION);
         return command.charAt(index++);
+    }
+
+    private static boolean isMacroCharacter(char c) {
+        return Character.isLetterOrDigit(c) || c == '_';
+    }
+
+    public MacroTemplate.MacroKind readMacro(List<MacroValidator> validators) {
+        if(!isMacro()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.NOT_MACRO);
+        index += 2;
+        for(int i = index; i<command.length(); i++) {
+            if(command.charAt(i) == ')') {
+                if(index == i) break;
+                String name = command.substring(index, i);
+                index = i + 1;
+                return new MacroTemplate.MacroKind(name, validators);
+            }else if(!isMacroCharacter(command.charAt(i))) {
+                break;
+            }
+        }
+        throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_MACRO_NAME);
+    }
+
+    public MacroTemplate.MacroPart readMacroChar(List<MacroValidator> validators) {
+        if(isMacro()) {
+            return readMacro(validators);
+        }
+        return new MacroTemplate.LiteralKind(Character.toString(read()));
     }
 
     public boolean skipIfNext(char c) {
@@ -78,6 +119,17 @@ public class StringCommandReader {
             skip();
         }
         return command.substring(start, index);
+    }
+
+    public MacroTemplate<String> readUntilSpaceWithTemplate(List<MacroValidator> validators) {
+        if(!allowMacros) return MacroTemplate.fromLiteral(readUntilSpace());
+        ArrayList<MacroTemplate.MacroPart> parts = new ArrayList<>();
+        ArrayList<MacroValidator> inputValidators = new ArrayList<>(validators);
+        inputValidators.add(MacroValidators.NO_SPACE);
+        while(canRead() && peek() != ' ') {
+            parts.add(readMacroChar(inputValidators));
+        }
+        return new MacroTemplate<>(MacroTemplate.mergeParts(parts));
     }
 
     private static boolean isWordCharacter(char c) {

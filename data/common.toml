@@ -3,3 +3,4 @@ definition_file = "dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsage
 [definitions_functions]
 Map_get = "java/util/Map:get(Ljava/lang/Object;)Ljava/lang/Object;@IM"
 Math_floor = "java/lang/Math:floor(D)D@S"
+String_contains = "java/lang/String:contains(Ljava/lang/CharSequence;)Z@M"

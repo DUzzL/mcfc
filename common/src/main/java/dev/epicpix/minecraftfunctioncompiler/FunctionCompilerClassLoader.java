@@ -135,11 +135,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
         return true;
     }
 
-    public void loadFunctionClasses(
-            IArgumentLookup lookup,
-            CodeFieldStorage fieldStorage,
-            Object serverFunctionManager
-        ) {
+    public void loadFunctionClasses(IArgumentLookup lookup, CodeFieldStorage fieldStorage, Object serverFunctionManager) {
         HashMap<DataLocation, List<Command>> definedFunctions = new HashMap<>();
         ArrayList<CommandError> commandErrors = new ArrayList<>();
 
@@ -162,9 +158,10 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
                     currentCommand = value.toString();
                     if(currentCommand.isEmpty() || currentCommand.startsWith("#")) continue;
                     if(MinecraftVersion.isCurrentVersionInRange(MinecraftVersion.MC_1_20_2, null) && currentCommand.startsWith("$")) {
-                        throw new CommandErrorException(new CommandError(currentCommand, "Macros are not yet supported"));
+                        parsed.add(CommandParser.parseCommand(currentCommand.substring(1), true, lookup));
+                    }else {
+                        parsed.add(CommandParser.parseCommand(currentCommand, false, lookup));
                     }
-                    parsed.add(CommandParser.parseCommand(currentCommand, lookup));
                 }
                 definedFunctions.put(key, parsed);
             } catch (CommandErrorException e) {

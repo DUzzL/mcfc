@@ -279,8 +279,8 @@ private fun createWrappedError(str: String) = createError("\"" + str.translateEs
 fun generateCommandsDataReader(data: ParsedCommandData): String {
     val builder = StringBuilder()
     val uid = AtomicInteger()
-    builder.append("public static Command parseCommand(String command, IArgumentLookup lookup) {\n")
-    builder.append("    return parseCommand(new StringCommandReader(command), lookup);\n")
+    builder.append("public static Command parseCommand(String command, boolean allowMacros, IArgumentLookup lookup) {\n")
+    builder.append("    return parseCommand(new StringCommandReader(command, allowMacros), lookup);\n")
     builder.append("}\n")
     builder.append("\n")
     builder.append("public static Command parseCommand(StringCommandReader reader, IArgumentLookup lookup) {\n")
