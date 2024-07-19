@@ -286,7 +286,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
 
         FunctionCompilerReporter.sendReports();
         logInfo.accept("Switched over to running compiled functions");
-        setState(State.READY_OFF);
+        setState(State.READY_ON);
     }
 
     protected abstract void nbtTagToString(CodeWriter writer, String key, Label errorLabel);
