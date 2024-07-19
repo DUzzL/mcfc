@@ -399,19 +399,19 @@ public final class CommandCompiler {
             }
             case EXECUTE_UNLESS_SCORE_COMPARE -> {
                 try(var targetObjective = context.getObjective(command.get("targetObjective"))) {
-                    try(var scope = context.forScope()) {
-                        try (var targetName = context.forScoreHolder(command.<ScoreHolderArgument>get("target").selectSingle())) {
-                            try (var sourceObjective = context.getObjective(command.get("sourceObjective"))) {
-                                try (var sourceName = context.forScoreHolder(command.<ScoreHolderArgument>get("source").selectSingle())) {
-                                    try (var targetScore = context.getScoreData(targetObjective.content(), targetName.content(), false)) {
-                                        try (var sourceScore = context.getScoreData(sourceObjective.content(), sourceName.content(), false)) {
+                    try(var sourceObjective = context.getObjective(command.get("sourceObjective"))) {
+                        try(var scope = context.forScope()) {
+                            try(var targetName = context.forScoreHolder(command.<ScoreHolderArgument>get("target").selectSingle())) {
+                                try(var sourceName = context.forScoreHolder(command.<ScoreHolderArgument>get("source").selectSingle())) {
+                                    try(var targetScore = context.getScoreData(targetObjective.content(), targetName.content(), false)) {
+                                        try(var sourceScore = context.getScoreData(sourceObjective.content(), sourceName.content(), false)) {
                                             sourceScore.writeInstruction(Instructions.checkScoreCompare(targetScore.content(), sourceScore.content(), command.<ScoreboardCompareOperation>get("comparison")).with(Instructions2.exitScope(scope.content())));
                                         }
                                     }
                                 }
                             }
+                            compile(context, command.get("command"), result);
                         }
-                        compile(context, command.get("command"), result);
                     }
                 }
             }
@@ -545,8 +545,8 @@ public final class CommandCompiler {
                         try(var targetName = context.forScoreHolder(command.get("targets"))) {
                             try(var sourceObjective = context.getObjective(command.get("sourceObjective"))) {
                                 try(var sourceName = context.forScoreHolder(command.get("source"))) {
-                                    try(var targetScore = context.getScoreData(targetObjective.content(), targetName.content(), false)) {
-                                        try(var sourceScore = context.getScoreData(sourceObjective.content(), sourceName.content(), false)) {
+                                    try(var targetScore = context.getScoreData(targetObjective.content(), targetName.content(), true)) {
+                                        try(var sourceScore = context.getScoreData(sourceObjective.content(), sourceName.content(), true)) {
                                             switch(command.<ScoreboardOperation>get("operation")) {
                                                 case SET -> sourceScore.writeInstruction(Instructions2.runScoreOperationSet(targetScore.content(), sourceScore.content()));
                                                 case ADD -> sourceScore.writeInstruction(Instructions2.runScoreOperationPlus(targetScore.content(), sourceScore.content()));
@@ -624,6 +624,7 @@ public final class CommandCompiler {
             case WEATHER_THUNDER -> {
                 context.writeInstruction(Instructions2.setWeatherDynamicThunder());
             }
+            default -> throw new UnsupportedOperationException("Not implemented command: " + command.type());
         }
     }
 
