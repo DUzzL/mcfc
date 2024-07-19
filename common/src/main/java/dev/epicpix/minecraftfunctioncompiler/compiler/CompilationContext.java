@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.compiler;
 
+import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
@@ -45,6 +46,17 @@ public class CompilationContext {
 
     public void writeInstruction(Instruction instruction) {
         current().writeInstruction(instruction);
+    }
+
+    public CompilationData<LocationData<String>> getResolvedMacro(MacroTemplate<String> macro) {
+        var data = stack.peek();
+        if(macro.parts().size() == 1 && macro.parts().get(0) instanceof MacroTemplate.LiteralKind literal) {
+            return new CompilationData<>(this, data, LocationData.ofString(literal.literal()), 0);
+        }
+        var macroString = LocationData.<String>ofLocal(data.highestId());
+        var instr = Instructions.loadMacro(macro, macroString);
+        writeInstruction(instr);
+        return enterWithValue(data.incrementedId(1).withBaseInstruction(instr), macroString);
     }
 
     public CompilationData<ResultStorage> withResultStorage(boolean requireResultValue, boolean requireSuccessValue) {
@@ -212,7 +224,7 @@ public class CompilationContext {
         if(holder.all()) {
             return forEachScoreHolder(holder.single());
         }else if(holder.name() != null) {
-            return new CompilationData<>(this, stack.peek(), LocationData.ofString(holder.name()), 0);
+            return getResolvedMacro(holder.name());
         }else if(holder.selector() != null) {
             var selector = holder.single() ? holder.selector().limit(1) : holder.selector();
             @SuppressWarnings("resource")

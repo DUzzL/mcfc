@@ -1,8 +1,10 @@
 package dev.epicpix.minecraftfunctioncompiler.data;
 
+import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
+
 public record ScoreHolderArgument(
         boolean all,
-        String name,
+        MacroTemplate<String> name,
         SelectorArgument selector,
         boolean single
 ) {
@@ -11,7 +13,7 @@ public record ScoreHolderArgument(
         return new ScoreHolderArgument(true, null, null, false);
     }
 
-    public static ScoreHolderArgument selectNamed(String name) {
+    public static ScoreHolderArgument selectNamed(MacroTemplate<String> name) {
         return new ScoreHolderArgument(false, name, null, false);
     }
 

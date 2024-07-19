@@ -1,9 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.il;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -30,6 +27,23 @@ public record Instruction(InstructionType type, Map<String, Object> data, ArrayL
 
     public Instruction withChildren(ArrayList<Instruction> children) {
         return new Instruction(type, data, children);
+    }
+
+    public static List<Instruction> findTyped(List<Instruction> input, InstructionType type) {
+        Stack<Instruction> instructions = new Stack<>();
+        instructions.addAll(input);
+        List<Instruction> result = List.of();
+        while(!instructions.isEmpty()) {
+            var instr = instructions.pop();
+            if(instr.type == type) {
+                if(result.isEmpty()) {
+                    result = new ArrayList<>();
+                }
+                result.add(instr);
+            }
+            instructions.addAll(instr.children());
+        }
+        return result;
     }
 
     public int countInstructions() {

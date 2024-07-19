@@ -34,7 +34,7 @@ public class ServerFunctionManagerMixin {
     public void run(CommandFunction<CommandSourceStack> commandFunction, CommandSourceStack commandSourceStack, CallbackInfo ci) {
         if(classLoader != null && classLoader.isUseReady()) {
             if(classLoader.hasFunctionLoaded(commandFunction.id())) {
-                classLoader.runFunction(commandFunction.id(), commandSourceStack);
+                classLoader.runFunction(commandFunction.id(), commandSourceStack, null);
                 ci.cancel();
             }
         }

@@ -11,8 +11,8 @@ import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.*;
 
 public final class CodeFieldStorage {
 
-    private final Class<?> serverFunctionManagerClass;
-    private final Class<?> minecraftServerClass;
+    public final Class<?> serverFunctionManagerClass;
+    public final Class<?> minecraftServerClass;
     private final CodeFieldStorageStorageMap map;
 
     public CodeFieldStorage(
@@ -26,6 +26,9 @@ public final class CodeFieldStorage {
         this.map = map.toStorageMap();
     }
 
+    public CodeFieldStorageStorageMap getMap() {
+        return map;
+    }
 
     private final ArrayList<UUID> uuids = new ArrayList<>();
 

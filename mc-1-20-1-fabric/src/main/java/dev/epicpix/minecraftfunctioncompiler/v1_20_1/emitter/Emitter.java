@@ -1,8 +1,10 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_1.emitter;
 
+import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructions;
+import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import net.minecraft.commands.CommandSourceStack;
@@ -24,6 +26,12 @@ public final class Emitter {
         EmitterInstructions.registerEmitterInstruction(context -> {
             var codeWriter = context.codeWriter();
             var methodVisitor = codeWriter.methodVisitor();
+            if(context.instruction().type() == InstructionTypes.LOAD_MACRO) {
+                var template = context.instruction().<MacroTemplate<String>>get("macroTemplate");
+                template.writeBytecode(context);
+                context.runStored("string", String.class);
+                return true;
+            }
             if(context.instruction().type() == InstructionTypes.CALL_FUNCTIONS) {
                 for(var func : context.instruction().<List<DataLocation>>get("functions")) {
                     if(!context.compiledFunctions().contains(func)) {
@@ -63,12 +71,12 @@ public final class Emitter {
                     }
                     if(context.instruction().get("arguments") != null) throw new IllegalArgumentException("Macro arguments are not supported in 1.20.1");
                     if(context.compiledFunctions().contains(func)) {
-                        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, ("function/" + func.namespace() + "/" + func.path()).replace('.', '$'), "run", "(" + CommandSourceStack.class.descriptorString() + ")J", false);
+                        codeWriter.writeNull();
+                        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, ("function/" + func.namespace() + "/" + func.path()).replace('.', '$'), "run", "(" + CommandSourceStack.class.descriptorString() + context.fieldStorage().getMap().getValueClass(CodeFieldStorageMapKind.NBT_COMPOUND).descriptorString() + ")J", false);
                         methodVisitor.visitInsn(Opcodes.POP2);
                     }else {
                         codeWriter.writeNull();
-                        callServerFunctionManager_execute(codeWriter);
-                        methodVisitor.visitInsn(Opcodes.POP);
+                        callExtensionFunctions_executeFunction(codeWriter);
                         context.fieldStorage().loadServerFunctionManager(codeWriter);
                         methodVisitor.visitInsn(Opcodes.SWAP);
                         storeServerFunctionManager_context(codeWriter);

@@ -16,3 +16,4 @@ accessible field net/minecraft/commands/arguments/coordinates/WorldCoordinate re
 accessible field net/minecraft/commands/arguments/coordinates/WorldCoordinate value D
 accessible field net/minecraft/world/entity/EntityType factory Lnet/minecraft/world/entity/EntityType$EntityFactory;
 accessible field net/minecraft/commands/execution/tasks/CallFunction function Lnet/minecraft/commands/functions/InstantiatedFunction;
+accessible method net/minecraft/commands/functions/MacroFunction stringify (Lnet/minecraft/nbt/Tag;)Ljava/lang/String;

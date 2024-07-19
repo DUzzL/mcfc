@@ -5,11 +5,14 @@ import dev.epicpix.minecraftfunctioncompiler.commands.IArgumentLookup;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.TaggableLocation;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
+import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerFunctionManager;
+import org.objectweb.asm.Label;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +24,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
     private static final Logger LOGGER = LoggerFactory.getLogger("minecraftfunctioncompiler");
 
     public FunctionClassLoader(ClassLoader parent, Object minecraftServer, SourceFileProvider sourceFileProvider) {
-        super(parent, FabricLoader.getInstance().getGameDir().resolve("generated"), CommandSourceStack.class, MinecraftServer.class, ServerFunctionManager.class, minecraftServer, LOGGER::info, LOGGER::warn, LOGGER::error, sourceFileProvider.mcfc$getSourceFiles());
+        super(parent, FabricLoader.getInstance().getGameDir().resolve("generated"), CommandSourceStack.class, minecraftServer, LOGGER::info, LOGGER::warn, LOGGER::error, sourceFileProvider.mcfc$getSourceFiles());
     }
 
     public void loadFunctions(ServerFunctionManager serverFunctionManager) {
@@ -59,9 +62,13 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
         handles.put(new ResourceLocation(key.namespace(), key.path()), handle);
     }
 
-    public long runFunction(ResourceLocation location, CommandSourceStack stack) {
+    protected void nbtTagToString(CodeWriter writer, String key, Label errorLabel) {
+        throw new UnsupportedOperationException("Cannot convert nbt tag to string in this version");
+    }
+
+    public long runFunction(ResourceLocation location, CommandSourceStack stack, CompoundTag compound) {
         try {
-            return (long) handles.get(location).invoke(stack);
+            return (long) handles.get(location).invoke(stack, compound);
         } catch (Throwable e) {
             logError.accept("Failed to run function " + location, e);
             return 3L << 32;

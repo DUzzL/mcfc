@@ -1,9 +1,12 @@
 package dev.epicpix.minecraftfunctioncompiler.commands;
 
 import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
+import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
+import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidators;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 
 public final class SelectorParser {
@@ -13,8 +16,8 @@ public final class SelectorParser {
         if(scoreHolder.peek() == '@') {
             return ScoreHolderArgument.selectSelector(parseSelector(scoreHolder, true, true));
         }
-        String name = scoreHolder.readUntilSpace();
-        if(name.equals("*")) {
+        MacroTemplate<String> name = scoreHolder.readUntilSpaceWithTemplate(List.of(MacroValidators.NO_STAR));
+        if(name.isLiteral("*")) {
             return ScoreHolderArgument.selectAll();
         }
         return ScoreHolderArgument.selectNamed(name);

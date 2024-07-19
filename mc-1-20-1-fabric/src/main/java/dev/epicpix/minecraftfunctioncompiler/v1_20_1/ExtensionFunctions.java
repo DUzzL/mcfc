@@ -1,12 +1,16 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_1;
 
+import net.minecraft.commands.CommandFunction;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.ServerFunctionManager;
 import net.minecraft.server.ServerScoreboard;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.Score;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Comparator;
 import java.util.List;
@@ -20,6 +24,23 @@ public class ExtensionFunctions {
         Map<Objective, Score> map = scoreboard.playerScores.get(player);
         if (map == null) return null;
         return map.get(objective);
+    }
+
+    public static void executeFunction(ServerFunctionManager manager, CommandFunction commandFunction, CommandSourceStack commandSourceStack, @Nullable ServerFunctionManager.TraceCallbacks traceCallbacks) {
+        if (manager.context != null) {
+            if (traceCallbacks != null) {
+                manager.context.reportError(Component.translatable("commands.debug.function.noRecursion").getString());
+                return;
+            }
+            manager.context.delayFunctionCall(commandFunction, commandSourceStack);
+            return;
+        }
+        try {
+            manager.context = manager.new ExecutionContext(traceCallbacks);
+            manager.context.runTopCommand(commandFunction, commandSourceStack);
+        } finally {
+            manager.context = null;
+        }
     }
 
     public static void sortEntitiesClosest(Vec3 origin, List<Entity> list) {

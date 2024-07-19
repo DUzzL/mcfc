@@ -25,7 +25,7 @@ public class ServerFunctionLibraryMixin implements FunctionCompilerClassLoader.S
 
     @Inject(method = "method_29451", at = @At(value = "INVOKE", target = "Lnet/minecraft/commands/CommandFunction;fromLines(Lnet/minecraft/resources/ResourceLocation;Lcom/mojang/brigadier/CommandDispatcher;Lnet/minecraft/commands/CommandSourceStack;Ljava/util/List;)Lnet/minecraft/commands/CommandFunction;", shift = At.Shift.BEFORE), locals = LocalCapture.CAPTURE_FAILHARD)
     public void loadFunction(Map.Entry<ResourceLocation, Resource> entry, ResourceLocation resourceLocation, CommandSourceStack commandSourceStack, CallbackInfoReturnable<CommandFunction> cir, List<String> lines) {
-        sources.put(new DataLocation(entry.getKey().getNamespace(), entry.getKey().getPath()), lines);
+        sources.put(new DataLocation(resourceLocation.getNamespace(), resourceLocation.getPath()), lines);
     }
 
     public Map<DataLocation, List<String>> mcfc$getSourceFiles() {

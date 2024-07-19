@@ -36,7 +36,7 @@ public class ServerFunctionManagerMixin {
     public void run(CommandFunction commandFunction, CommandSourceStack commandSourceStack, ServerFunctionManager.TraceCallbacks traceCallbacks, CompoundTag compoundTag, CallbackInfoReturnable<Integer> cir) {
         if(classLoader != null && classLoader.isUseReady()) {
             if(classLoader.hasFunctionLoaded(commandFunction.getId())) {
-                int res = (int) classLoader.runFunction(commandFunction.getId(), commandSourceStack);
+                int res = (int) classLoader.runFunction(commandFunction.getId(), commandSourceStack, compoundTag);
                 commandSourceStack.getReturnValueConsumer().accept(res);
                 cir.setReturnValue(res);
             }

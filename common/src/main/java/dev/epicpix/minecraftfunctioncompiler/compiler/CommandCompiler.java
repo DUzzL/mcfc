@@ -386,35 +386,32 @@ public final class CommandCompiler {
             }
             case EXECUTE_UNLESS_SCORE_RANGE -> {
                 try(var objective = context.getObjective(command.get("targetObjective"))) {
-                    try(var name = context.forScoreHolder(command.<ScoreHolderArgument>get("target").selectSingle())) {
-                        try(var scoreData = context.getScoreData(objective.content(), name.content(), false)) {
-                            var scoreValue = LocationData.<Integer>ofLocal(scoreData.data().highestId());
-                            var execInstruction = Instructions.checkNotIntRange(scoreValue, command.get("range"));
-                            var baseInstruction = Instructions2.getScoreValue(scoreData.content(), scoreValue).with(execInstruction);
-                            try(var ignored = context.enterWithoutValue(scoreData.data().incrementedId(1).withBaseInstruction(execInstruction))) {
-                                compile(context, command.get("command"), result);
+                    try(var scope = context.forScope()) {
+                        try(var name = context.forScoreHolder(command.<ScoreHolderArgument>get("target").selectSingle())) {
+                            try(var scoreData = context.getScoreData(objective.content(), name.content(), false)) {
+                                var scoreValue = LocationData.<Integer>ofLocal(scoreData.data().highestId());
+                                scoreData.writeInstruction(Instructions2.getScoreValue(scoreData.content(), scoreValue).with(Instructions.checkIntRange(scoreValue, command.get("range")).with(Instructions2.exitScope(scope.content()))));
                             }
-                            scoreData.writeInstruction(baseInstruction);
                         }
+                        compile(context, command.get("command"), result);
                     }
                 }
             }
             case EXECUTE_UNLESS_SCORE_COMPARE -> {
                 try(var targetObjective = context.getObjective(command.get("targetObjective"))) {
-                    try(var targetName = context.forScoreHolder(command.<ScoreHolderArgument>get("target").selectSingle())) {
-                        try(var sourceObjective = context.getObjective(command.get("sourceObjective"))) {
-                            try(var sourceName = context.forScoreHolder(command.<ScoreHolderArgument>get("source").selectSingle())) {
-                                try(var targetScore = context.getScoreData(targetObjective.content(), targetName.content(), false)) {
-                                    try(var sourceScore = context.getScoreData(sourceObjective.content(), sourceName.content(), false)) {
-                                        var instr = Instructions.checkScoreCompare(targetScore.content(), sourceScore.content(), command.<ScoreboardCompareOperation>get("comparison").negate());
-                                        try(var ignored = context.enterWithoutValueUsingInstruction(instr)) {
-                                            compile(context, command.get("command"), result);
+                    try(var scope = context.forScope()) {
+                        try (var targetName = context.forScoreHolder(command.<ScoreHolderArgument>get("target").selectSingle())) {
+                            try (var sourceObjective = context.getObjective(command.get("sourceObjective"))) {
+                                try (var sourceName = context.forScoreHolder(command.<ScoreHolderArgument>get("source").selectSingle())) {
+                                    try (var targetScore = context.getScoreData(targetObjective.content(), targetName.content(), false)) {
+                                        try (var sourceScore = context.getScoreData(sourceObjective.content(), sourceName.content(), false)) {
+                                            sourceScore.writeInstruction(Instructions.checkScoreCompare(targetScore.content(), sourceScore.content(), command.<ScoreboardCompareOperation>get("comparison")).with(Instructions2.exitScope(scope.content())));
                                         }
-                                        sourceScore.writeInstruction(instr);
                                     }
                                 }
                             }
                         }
+                        compile(context, command.get("command"), result);
                     }
                 }
             }

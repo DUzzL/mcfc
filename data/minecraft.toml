@@ -17,6 +17,10 @@ LongTag_valueOf = "net/minecraft/nbt/LongTag:valueOf(J)Lnet/minecraft/nbt/LongTa
 ShortTag_valueOf = "net/minecraft/nbt/ShortTag:valueOf(S)Lnet/minecraft/nbt/ShortTag;@S"
 StringTag_valueOf = "net/minecraft/nbt/StringTag:valueOf(Ljava/lang/String;)Lnet/minecraft/nbt/StringTag;@S"
 
+CompoundTag_get = "net/minecraft/nbt/CompoundTag:get(Ljava/lang/String;)Lnet/minecraft/nbt/Tag;@M"
+Tag_stringify."1.20.2" = "net/minecraft/commands/CommandFunction$CommandMacro:stringify(Lnet/minecraft/nbt/Tag;)Ljava/lang/String;@S"
+Tag_stringify."1.20.3+" = "net/minecraft/commands/functions/MacroFunction:stringify(Lnet/minecraft/nbt/Tag;)Ljava/lang/String;@S"
+
 ObjectiveCriteria_byName = "net/minecraft/world/scores/criteria/ObjectiveCriteria:byName(Ljava/lang/String;)Ljava/util/Optional;@S"
 Optional_get = "java/util/Optional:get()Ljava/lang/Object;@M"
 
@@ -36,6 +40,8 @@ ExtensionFunctions_calculateLocalCoordinates."1.20.4" = "dev/epicpix/minecraftfu
 ExtensionFunctions_calculateLocalCoordinates."1.20.6" = "dev/epicpix/minecraftfunctioncompiler/v1_20_6/ExtensionFunctions:calculateLocalCoordinates(FFDDDDDD)Lnet/minecraft/world/phys/Vec3;@S"
 ExtensionFunctions_calculateLocalCoordinates."1.21" = "dev/epicpix/minecraftfunctioncompiler/v1_21/ExtensionFunctions:calculateLocalCoordinates(FFDDDDDD)Lnet/minecraft/world/phys/Vec3;@S"
 
+ExtensionFunctions_executeFunction."1.20.1" = "dev/epicpix/minecraftfunctioncompiler/v1_20_1/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;)V@S"
+ExtensionFunctions_executeFunction."1.20.2" = "dev/epicpix/minecraftfunctioncompiler/v1_20_2/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;Lnet/minecraft/nbt/CompoundTag;)V@S"
 ExtensionFunctions_executeFunction."1.20.4" = "dev/epicpix/minecraftfunctioncompiler/v1_20_4/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@S"
 ExtensionFunctions_executeFunction."1.20.6" = "dev/epicpix/minecraftfunctioncompiler/v1_20_6/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@S"
 ExtensionFunctions_executeFunction."1.21" = "dev/epicpix/minecraftfunctioncompiler/v1_21/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@S"

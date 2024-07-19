@@ -25,7 +25,7 @@ public class CallFunctionMixin<T extends ExecutionCommandSource<T>> {
         if(source instanceof CommandSourceStack stack && functionClassLoader != null && functionClassLoader.isUseReady()) {
             var id = ((CallFunction<?>) (Object) this).function.id();
             if(functionClassLoader.hasFunctionLoaded(id)) {
-                long res = functionClassLoader.runFunction(id, stack);
+                long res = functionClassLoader.runFunction(id, stack, null);
                 if(res >> 32 < 2) {
                     if (res >> 32 == 1) resultCallback.onFailure();
                     else resultCallback.onSuccess((int) res);

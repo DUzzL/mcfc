@@ -11,3 +11,8 @@ accessible field net/minecraft/commands/arguments/coordinates/WorldCoordinates z
 accessible field net/minecraft/commands/arguments/coordinates/WorldCoordinate relative Z
 accessible field net/minecraft/commands/arguments/coordinates/WorldCoordinate value D
 accessible field net/minecraft/world/entity/EntityType factory Lnet/minecraft/world/entity/EntityType$EntityFactory;
+accessible class net/minecraft/server/ServerFunctionManager$ExecutionContext
+accessible method net/minecraft/server/ServerFunctionManager$ExecutionContext <init> (Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;)V
+accessible method net/minecraft/server/ServerFunctionManager$ExecutionContext reportError (Ljava/lang/String;)V
+accessible method net/minecraft/server/ServerFunctionManager$ExecutionContext delayFunctionCall (Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;)V
+accessible method net/minecraft/server/ServerFunctionManager$ExecutionContext runTopCommand (Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;)I

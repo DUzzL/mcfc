@@ -19,13 +19,14 @@ public record EmitterContext(
         Set<DataLocation> compiledFunctions,
         Map<Integer, String> transforms,
         Map<Integer, Label> scopes,
+        Map<String, String> macroLocations,
 
         Instruction instruction,
         HashMap<Integer, String> newTransforms,
         HashMap<Integer, Label> newScopes
 ) {
     public EmitterContext cloneWith(Instruction instruction) {
-        return new EmitterContext(fieldStorage, codeWriter, compiledFunctions, newTransforms, newScopes, instruction, new HashMap<>(newTransforms), new HashMap<>(newScopes));
+        return new EmitterContext(fieldStorage, codeWriter, compiledFunctions, newTransforms, newScopes, macroLocations, instruction, new HashMap<>(newTransforms), new HashMap<>(newScopes));
     }
 
     public void run() {

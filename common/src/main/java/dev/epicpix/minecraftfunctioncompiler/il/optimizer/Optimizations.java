@@ -52,17 +52,19 @@ public final class Optimizations {
             if(!modifications.isEmpty()) {
                 return OptimizationResult.modificationsWithFlags(modifications, 0);
             }
-        }else if(instr.type() == InstructionTypes2.EXIT_SCOPE) {
-            var scope = instr.<ScopeData>get("scope");
-            var scopeDefinition = input.getInstructionFromPath(it -> it.instruction().type() == InstructionTypes2.SCOPE && it.instruction().data().get("scope").equals(scope));
-            if(scopeDefinition != null) {
-                var isFlowSafe = !input.anyInstructionFromPath(it -> it.path().depth() > scopeDefinition.path().depth() && (it.instruction().type() == InstructionTypes2.FOR_EACH_PLAYER || it.instruction().type() == InstructionTypes2.FOR_EACH_ENTITY || it.instruction().type() == InstructionTypes2.FOR_EACH_LIST_ELEMENT));
-                var isLastElement = !input.anyInstructionFromPath(it -> it.path().depth() > scopeDefinition.path().depth() && input.thisPath().path().get(it.path().depth() - 1) == input.getByPath(it.path().pathExceptLast()).instruction().children().size());
-                if (isFlowSafe && isLastElement) {
-                    return OptimizationResultTypes.REMOVE_SELF;
-                }
-            }
         }
+        // TODO: Some check here is not correct
+//        else if(instr.type() == InstructionTypes2.EXIT_SCOPE) {
+//            var scope = instr.<ScopeData>get("scope");
+//            var scopeDefinition = input.getInstructionFromPath(it -> it.instruction().type() == InstructionTypes2.SCOPE && it.instruction().data().get("scope").equals(scope));
+//            if(scopeDefinition != null) {
+//                var isFlowSafe = !input.anyInstructionFromPath(it -> it.path().depth() > scopeDefinition.path().depth() && (it.instruction().type() == InstructionTypes2.FOR_EACH_PLAYER || it.instruction().type() == InstructionTypes2.FOR_EACH_ENTITY || it.instruction().type() == InstructionTypes2.FOR_EACH_LIST_ELEMENT));
+//                var isLastElement = !input.anyInstructionFromPath(it -> it.path().depth() > scopeDefinition.path().depth() && input.thisPath().path().get(it.path().depth() - 1) == input.getByPath(it.path().pathExceptLast()).instruction().children().size());
+//                if (isFlowSafe && isLastElement) {
+//                    return OptimizationResultTypes.REMOVE_SELF;
+//                }
+//            }
+//        }
         return OptimizationResultTypes.KEEP;
     }
 

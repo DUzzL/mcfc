@@ -2,20 +2,24 @@ package dev.epicpix.minecraftfunctioncompiler;
 
 import com.google.gson.JsonObject;
 import dev.epicpix.minecraftfunctioncompiler.commands.*;
+import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
+import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidator;
 import dev.epicpix.minecraftfunctioncompiler.compiler.CommandCompiler;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
 import dev.epicpix.minecraftfunctioncompiler.emitter.GraphGenerator;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
+import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter;
-import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
-import dev.epicpix.minecraftfunctioncompiler.il.Instructions2;
+import dev.epicpix.minecraftfunctioncompiler.emitter.impl.Local;
+import dev.epicpix.minecraftfunctioncompiler.il.*;
 import dev.epicpix.minecraftfunctioncompiler.il.optimizer.OptimizationStatistics;
 import dev.epicpix.minecraftfunctioncompiler.il.optimizer.Optimizer;
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCountsData;
 import dev.epicpix.minecraftfunctioncompiler.reporter.TimingData;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.Opcodes;
 
 import java.io.IOException;
@@ -43,8 +47,6 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
     public final ClassLoader parent;
     private final Path generatedDir;
     private final Class<?> commandSourceStackClass;
-    private final Class<?> minecraftServerClass;
-    private final Class<?> serverFunctionManagerClass;
     private final Object minecraftServer;
     public final Consumer<String> logInfo;
     public final Consumer<String> logWarn;
@@ -63,13 +65,11 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
         READY_ON,
     }
 
-    public FunctionCompilerClassLoader(ClassLoader parent, Path generatedDir, Class<?> commandSourceStackClass, Class<?> minecraftServerClass, Class<?> serverFunctionManagerClass, Object minecraftServer, Consumer<String> logInfo, Consumer<String> logWarn, BiConsumer<String, Throwable> logError, Map<DataLocation, List<String>> sourceFiles) {
+    public FunctionCompilerClassLoader(ClassLoader parent, Path generatedDir, Class<?> commandSourceStackClass, Object minecraftServer, Consumer<String> logInfo, Consumer<String> logWarn, BiConsumer<String, Throwable> logError, Map<DataLocation, List<String>> sourceFiles) {
         super(parent);
         this.parent = parent;
         this.generatedDir = generatedDir;
         this.commandSourceStackClass = commandSourceStackClass;
-        this.minecraftServerClass = minecraftServerClass;
-        this.serverFunctionManagerClass = serverFunctionManagerClass;
         this.minecraftServer = minecraftServer;
         this.logInfo = logInfo;
         this.logWarn = logWarn;
@@ -79,9 +79,9 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
 
     protected abstract void setHandle(DataLocation key, MethodHandle handle);
 
-    public void registerFunction(Class<?> clazz, DataLocation key) {
+    public void registerFunction(Class<?> clazz, DataLocation key, CodeFieldStorage fieldStorage) {
         try {
-            setHandle(key, MethodHandles.lookup().findStatic(clazz, "run", MethodType.methodType(long.class, commandSourceStackClass)));
+            setHandle(key, MethodHandles.lookup().findStatic(clazz, "run", MethodType.methodType(long.class, commandSourceStackClass, fieldStorage.getMap().getValueClass(CodeFieldStorageMapKind.NBT_COMPOUND))));
         } catch (NoSuchMethodException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }
@@ -264,7 +264,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
         var startHandles = System.nanoTime();
         for(var key : compiledFunctions.keySet()) {
             try {
-                registerFunction(loadedFunctions.get(key), key);
+                registerFunction(loadedFunctions.get(key), key, fieldStorage);
             }catch(Throwable e) {
                 logError.accept("Failed to create function handle (" + key + "), clearing data", e);
                 setState(State.FAILED);
@@ -286,32 +286,129 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
 
         FunctionCompilerReporter.sendReports();
         logInfo.accept("Switched over to running compiled functions");
-        setState(State.READY_ON);
+        setState(State.READY_OFF);
+    }
+
+    protected abstract void nbtTagToString(CodeWriter writer, String key, Label errorLabel);
+
+    private void writeMacroInstanceCreation(String className, Label errorLabel, CodeWriter writer, List<Instruction> macroInstructions, List<String> macroInputs) {
+        writer.loadLocal("static$FunctionCompound");
+        writer.methodVisitor().visitJumpInsn(Opcodes.IFNULL, errorLabel);
+
+        HashMap<String, HashSet<MacroValidator>> generatedValidators = new HashMap<>();
+
+        for(var macroInstr : macroInstructions) {
+            var macros = macroInstr.<MacroTemplate<String>>get("macroTemplate").extractMacros();
+            for(var macro : macros) {
+                var generated = generatedValidators.computeIfAbsent(macro.source(), k -> new HashSet<>());
+                if(generated.containsAll(macro.validators())) {
+                    continue;
+                }
+                nbtTagToString(writer, macro.source(), errorLabel);
+                var local = writer.createLocal("macroCheck", String.class.descriptorString());
+                writer.storeLocal("macroCheck");
+                for(var validator : macro.validators()) {
+                    if(generated.add(validator)) {
+                        validator.validateGenerated("macroCheck", writer, errorLabel);
+                    }
+                }
+                writer.destroyLocal(local);
+            }
+        }
+
+        writer.loadLocal("static$CommandSourceStack");
+
+        for(String macro : macroInputs) {
+            nbtTagToString(writer, macro, null);
+        }
+
+        writer.methodVisitor().visitMethodInsn(Opcodes.INVOKESTATIC, className, "runInstanced", "(" + commandSourceStackClass.descriptorString() + "Ljava/lang/String;".repeat(macroInputs.size()) + ")J", false);
+        writer.methodVisitor().visitInsn(Opcodes.LRETURN);
     }
 
     private Class<?> defineFunction(DataLocation funcId, CodeFieldStorage fieldStorage, List<Instruction> instructions, int commandCount, Set<DataLocation> compiledFunctions) {
+        var macroInstructions = Instruction.findTyped(instructions, InstructionTypes.LOAD_MACRO);
+        var macroInputs = new ArrayList<String>();
+        for(var macroInstr : macroInstructions) {
+            var macros = macroInstr.<MacroTemplate<String>>get("macroTemplate").extractMacros();
+            for(var macro : macros) {
+                if(!macroInputs.contains(macro.source())) {
+                    macroInputs.add(macro.source());
+                }
+            }
+        }
+
         var className = ("function/" + funcId.namespace() + "/" + funcId.path()).replace('.', '$');
 
         var cw = createClassWriter();
-        cw.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL, className, null, "java/lang/Object", null);
-        var mv = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "run", "(" + commandSourceStackClass.descriptorString() + ")J", null, null);
-        mv.visitCode();
-        var codeWriter = new CodeWriter(mv);
+        cw.visit(Opcodes.V16, Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL, className, null, "java/lang/Object", null);
+
+
+        var mvBase = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "run", "(" + commandSourceStackClass.descriptorString() + fieldStorage.getMap().getValueClass(CodeFieldStorageMapKind.NBT_COMPOUND).descriptorString() + ")J", null, null);
+        mvBase.visitCode();
+        var codeWriter = new CodeWriter(mvBase);
 
 
         var localValue = codeWriter.createLocal("static$CommandSourceStack", commandSourceStackClass.descriptorString());
-        new EmitterContext(fieldStorage, codeWriter, compiledFunctions, new HashMap<>(), new HashMap<>(), Instructions2.root().withChildren(new ArrayList<>(instructions)), new HashMap<>(), new HashMap<>()).run();
+        var localValueNbt = codeWriter.createLocal("static$FunctionCompound", fieldStorage.getMap().getValueClass(CodeFieldStorageMapKind.NBT_COMPOUND).descriptorString());
+        if(macroInstructions.isEmpty()) {
+            new EmitterContext(fieldStorage, codeWriter, compiledFunctions, new HashMap<>(), new HashMap<>(), null, Instructions2.root().withChildren(new ArrayList<>(instructions)), new HashMap<>(), new HashMap<>()).run();
+        }else {
+            var errorLabel = new Label();
+            writeMacroInstanceCreation(className, errorLabel, codeWriter, macroInstructions, macroInputs);
+            codeWriter.methodVisitor().visitLabel(errorLabel);
+            var instr = Instructions2.root().with(Instructions.callFunctions(List.of(funcId), null, null, null, null, null, LocationData.ofLocal(-1)));
+            new EmitterContext(fieldStorage, codeWriter, Collections.emptySet(), new HashMap<>(), new HashMap<>(), null, instr, new HashMap<>(Map.of(-1, "static$FunctionCompound")), new HashMap<>()).run();
+        }
+        codeWriter.destroyLocal(localValueNbt);
         codeWriter.destroyLocal(localValue);
 
-        codeWriter.writeLong(commandCount | (0x2L << 32));
-        mv.visitInsn(Opcodes.LRETURN);
+        if(macroInstructions.isEmpty()) {
+            codeWriter.writeLong(commandCount | (0x3L << 32));
+        }else {
+            codeWriter.writeLong(0x1L << 32);
+        }
+        mvBase.visitInsn(Opcodes.LRETURN);
         codeWriter.writeLocalVariables();
         try {
-            mv.visitMaxs(0, 0);
+            mvBase.visitMaxs(0, 0);
         } catch(Exception e) {
-            throw new IllegalStateException("Failed to visit maxs", e);
+            throw new IllegalStateException("Failed to visit maxs (run)", e);
         }
-        mv.visitEnd();
+        mvBase.visitEnd();
+
+        if(!macroInstructions.isEmpty()) {
+            var mv = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "runInstanced", "(" + commandSourceStackClass.descriptorString() + "Ljava/lang/String;".repeat(macroInputs.size()) + ")J", null, null);
+            mv.visitCode();
+            codeWriter = new CodeWriter(mv);
+
+            localValue = codeWriter.createLocal("static$CommandSourceStack", commandSourceStackClass.descriptorString());
+            HashMap<String, Local> macroLocals = new HashMap<>();
+            HashMap<String, String> macroLocations = new HashMap<>();
+            for(var macro : macroInputs) {
+                macroLocals.put(macro, codeWriter.createLocal("macroArg$" + macro, "Ljava/lang/String;"));
+                macroLocations.put(macro, "macroArg$" + macro);
+            }
+            new EmitterContext(fieldStorage, codeWriter, compiledFunctions, new HashMap<>(), new HashMap<>(), macroLocations, Instructions2.root().withChildren(new ArrayList<>(instructions)), new HashMap<>(), new HashMap<>()).run();
+            Collections.reverse(macroInputs);
+            for(var macro : macroInputs) {
+                codeWriter.destroyLocal(macroLocals.get(macro));
+            }
+            codeWriter.destroyLocal(localValue);
+
+            codeWriter.writeLong(commandCount | (0x2L << 32));
+            mv.visitInsn(Opcodes.LRETURN);
+            codeWriter.writeLocalVariables();
+            try {
+                mv.visitMaxs(0, 0);
+            } catch(Exception e) {
+                throw new IllegalStateException("Failed to visit maxs (runInstanced)", e);
+            }
+            mv.visitEnd();
+
+            cw.visitInnerClass("java/lang/invoke/MethodHandles$Lookup", "java/lang/invoke/MethodHandles", "Lookup", Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL);
+        }
+
 
         cw.visitEnd();
         return defineClass(className.replace('/', '.'), cw.toByteArray());
@@ -324,7 +421,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
         cw.visitEnd();
 
         var defined = defineClass(DATA_CLASS.replace('/', '.'), cw.toByteArray());
-        defined.getDeclaredMethod("load", minecraftServerClass, serverFunctionManagerClass).invoke(null, minecraftServer, serverFunctionManager);
+        defined.getDeclaredMethod("load", fieldStorage.minecraftServerClass, fieldStorage.serverFunctionManagerClass).invoke(null, minecraftServer, serverFunctionManager);
         return defined;
     }
 
