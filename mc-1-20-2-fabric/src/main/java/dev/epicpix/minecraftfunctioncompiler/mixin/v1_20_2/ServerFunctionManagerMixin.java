@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.mixin.v1_20_2;
 
+import dev.epicpix.minecraftfunctioncompiler.FunctionCompilerClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.v1_20_2.FunctionClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.v1_20_2.FunctionCompilerMain;
 import net.minecraft.commands.CommandFunction;
@@ -26,7 +27,7 @@ public class ServerFunctionManagerMixin {
 
     @Inject(method = "postReload", at = @At("TAIL"))
     public void postReload(ServerFunctionLibrary serverFunctionLibrary, CallbackInfo ci) {
-        classLoader = new FunctionClassLoader(getClass().getClassLoader(), library.getFunctions(), server);
+        classLoader = new FunctionClassLoader(getClass().getClassLoader(), server, (FunctionCompilerClassLoader.SourceFileProvider) library);
         classLoader.loadFunctions((ServerFunctionManager) (Object) this);
         FunctionCompilerMain.functionClassLoader = classLoader;
     }

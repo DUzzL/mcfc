@@ -1,16 +1,12 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_4;
 
 import dev.epicpix.minecraftfunctioncompiler.FunctionCompilerClassLoader;
-import dev.epicpix.minecraftfunctioncompiler.commands.*;
+import dev.epicpix.minecraftfunctioncompiler.commands.IArgumentLookup;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.TaggableLocation;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
-import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.execution.tasks.BuildContexts;
-import net.minecraft.commands.functions.CommandFunction;
-import net.minecraft.commands.functions.PlainTextFunction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerFunctionManager;
@@ -18,20 +14,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.MethodHandle;
-import java.util.*;
+import java.util.List;
 
 public class FunctionClassLoader extends FunctionCompilerClassLoader {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("minecraftfunctioncompiler");
-    private final Map<ResourceLocation, CommandFunction<CommandSourceStack>> functions;
 
-    public FunctionClassLoader(ClassLoader parent, Map<ResourceLocation, CommandFunction<CommandSourceStack>> functions, Object minecraftServer) {
-        super(parent, FabricLoader.getInstance().getGameDir().resolve("generated"), CommandSourceStack.class, MinecraftServer.class, ServerFunctionManager.class, minecraftServer, LOGGER::info, LOGGER::warn, LOGGER::error);
-        this.functions = functions;
+    public FunctionClassLoader(ClassLoader parent, Object minecraftServer, SourceFileProvider sourceFileProvider) {
+        super(parent, FabricLoader.getInstance().getGameDir().resolve("generated"), CommandSourceStack.class, MinecraftServer.class, ServerFunctionManager.class, minecraftServer, LOGGER::info, LOGGER::warn, LOGGER::error, sourceFileProvider.mcfc$getSourceFiles());
     }
 
     public void loadFunctions(ServerFunctionManager serverFunctionManager) {
-        if(functions.isEmpty()) return;
+        if(totalFunctionCount() == 0) return;
         if(compileInBackground(() -> {
             try {
                 RegistryMapping.updateRegistryMaps();
@@ -54,49 +48,11 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
             }
         };
 
-        HashMap<DataLocation, List<Command>> definedFunctions = new HashMap<>();
-        ArrayList<CommandError> commandErrors = new ArrayList<>();
-
-        var startParse = System.nanoTime();
-        funcLoop: for(var entry : functions.entrySet()) {
-            var key = entry.getKey();
-            var value = entry.getValue();
-            String currentCommand = null;
-            try {
-                if(value instanceof PlainTextFunction<?> plainFunction) {
-                    ArrayList<Command> parsed = new ArrayList<>();
-                    for (var cmd : plainFunction.entries()) {
-                        if (!(cmd instanceof BuildContexts.Unbound<?> commandEntry)) {
-                            continue funcLoop;
-                        }
-                        currentCommand = commandEntry.commandInput;
-                        parsed.add(CommandParser.parseCommand(currentCommand, lookup));
-                    }
-                    definedFunctions.put(new DataLocation(key.getNamespace(), key.getPath()), parsed);
-                }else {
-                    logWarn.accept("Unable to parse function " + key + " / Functions with macros are not yet supported");
-                }
-            } catch (CommandErrorException e) {
-                logWarn.accept("Unable to parse function " + key + " / " + e.getMessage());
-                commandErrors.add(e.error);
-            } catch (StringCommandReaderException e) {
-                logWarn.accept("Unable to parse function " + key + " / " + e.getMessage() + " / " + currentCommand);
-                commandErrors.add(new CommandError(currentCommand, e.getMessage()));
-            } catch (Throwable e) {
-                logError.accept("Unable to parse function " + key, e);
-                commandErrors.add(new CommandError(currentCommand, e.getMessage(), CommandError.Step.PARSE, e));
-            }
-        }
-        var parseTime = (System.nanoTime()-startParse)/1000000000d;
-        loadFunctionClasses(functions.size(), parseTime, definedFunctions, commandErrors, createCodeFieldStorage(), serverFunctionManager);
+        loadFunctionClasses(lookup, createCodeFieldStorage(), serverFunctionManager);
     }
 
     public boolean hasFunctionLoaded(ResourceLocation location) {
         return handles.containsKey(location);
-    }
-
-    public int totalFunctionCount() {
-        return functions.size();
     }
 
     public void setHandle(DataLocation key, MethodHandle handle) {

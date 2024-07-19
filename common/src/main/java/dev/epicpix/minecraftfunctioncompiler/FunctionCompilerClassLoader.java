@@ -1,8 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler;
 
 import com.google.gson.JsonObject;
-import dev.epicpix.minecraftfunctioncompiler.commands.Command;
-import dev.epicpix.minecraftfunctioncompiler.commands.CommandError;
+import dev.epicpix.minecraftfunctioncompiler.commands.*;
 import dev.epicpix.minecraftfunctioncompiler.compiler.CommandCompiler;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
@@ -34,6 +33,11 @@ import static dev.epicpix.minecraftfunctioncompiler.il.Instruction.printInstruct
 import static org.objectweb.asm.ClassWriter.COMPUTE_FRAMES;
 
 public abstract class FunctionCompilerClassLoader extends ClassLoader {
+
+    public interface SourceFileProvider {
+        Map<DataLocation, List<String>> mcfc$getSourceFiles();
+    }
+
     protected final HashMap<Object, MethodHandle> handles = new HashMap<>();
 
     public final ClassLoader parent;
@@ -45,6 +49,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
     public final Consumer<String> logInfo;
     public final Consumer<String> logWarn;
     public final BiConsumer<String, Throwable> logError;
+    private final HashMap<DataLocation, List<String>> sourceFiles;
 
     private State state = State.NOTHING_LOADED;
 
@@ -58,7 +63,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
         READY_ON,
     }
 
-    public FunctionCompilerClassLoader(ClassLoader parent, Path generatedDir, Class<?> commandSourceStackClass, Class<?> minecraftServerClass, Class<?> serverFunctionManagerClass, Object minecraftServer, Consumer<String> logInfo, Consumer<String> logWarn, BiConsumer<String, Throwable> logError) {
+    public FunctionCompilerClassLoader(ClassLoader parent, Path generatedDir, Class<?> commandSourceStackClass, Class<?> minecraftServerClass, Class<?> serverFunctionManagerClass, Object minecraftServer, Consumer<String> logInfo, Consumer<String> logWarn, BiConsumer<String, Throwable> logError, Map<DataLocation, List<String>> sourceFiles) {
         super(parent);
         this.parent = parent;
         this.generatedDir = generatedDir;
@@ -69,6 +74,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
         this.logInfo = logInfo;
         this.logWarn = logWarn;
         this.logError = logError;
+        this.sourceFiles = new HashMap<>(sourceFiles);
     }
 
     protected abstract void setHandle(DataLocation key, MethodHandle handle);
@@ -113,6 +119,10 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
         return handles.size();
     }
 
+    public int totalFunctionCount() {
+        return sourceFiles.size();
+    }
+
     private Thread backgroundThread;
 
     protected boolean compileInBackground(Runnable run) {
@@ -126,13 +136,49 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
     }
 
     public void loadFunctionClasses(
-            int foundFunctionCount,
-            double parseTime,
-            Map<DataLocation, List<Command>> definedFunctions,
-            ArrayList<CommandError> commandErrors,
+            IArgumentLookup lookup,
             CodeFieldStorage fieldStorage,
             Object serverFunctionManager
         ) {
+        HashMap<DataLocation, List<Command>> definedFunctions = new HashMap<>();
+        ArrayList<CommandError> commandErrors = new ArrayList<>();
+
+        var startParse = System.nanoTime();
+        for(var entry : sourceFiles.entrySet()) {
+            var key = entry.getKey();
+            var values = entry.getValue();
+            String currentCommand = null;
+            try {
+                ArrayList<Command> parsed = new ArrayList<>();
+                for(int i = 0; i<values.size(); i++) {
+                    StringBuilder value = new StringBuilder(values.get(i).trim());
+                    if(MinecraftVersion.isCurrentVersionInRange(MinecraftVersion.MC_1_20_2, null)) {
+                        while(value.toString().endsWith("\\")) {
+                            String next = values.get(++i).trim();
+                            value.deleteCharAt(value.length() - 1);
+                            value.append(next);
+                        }
+                    }
+                    currentCommand = value.toString();
+                    if(currentCommand.isEmpty() || currentCommand.startsWith("#")) continue;
+                    if(MinecraftVersion.isCurrentVersionInRange(MinecraftVersion.MC_1_20_2, null) && currentCommand.startsWith("$")) {
+                        throw new CommandErrorException(new CommandError(currentCommand, "Macros are not yet supported"));
+                    }
+                    parsed.add(CommandParser.parseCommand(currentCommand, lookup));
+                }
+                definedFunctions.put(key, parsed);
+            } catch (CommandErrorException e) {
+                logWarn.accept("Unable to parse function " + key + " / " + e.getMessage());
+                commandErrors.add(e.error);
+            } catch (StringCommandReaderException e) {
+                logWarn.accept("Unable to parse function " + key + " / " + e.getMessage() + " / " + currentCommand);
+                commandErrors.add(new CommandError(currentCommand, e.getMessage()));
+            } catch (Throwable e) {
+                logError.accept("Unable to parse function " + key, e);
+                commandErrors.add(new CommandError(currentCommand, e.getMessage(), CommandError.Step.PARSE, e));
+            }
+        }
+        var parseTime = (System.nanoTime()-startParse)/1000000000d;
         setState(State.COMPILING);
         logInfo.accept("Compiling functions");
         HashMap<DataLocation, List<Instruction>> compiledFunctions = new HashMap<>();
@@ -237,7 +283,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
         }
         var handleLoadTime = (System.nanoTime()-startHandles)/1000000000d;
 
-        var functionCountsData = new FunctionCountsData(foundFunctionCount, definedFunctions.size(), compiledFunctions.size());
+        var functionCountsData = new FunctionCountsData(sourceFiles.size(), definedFunctions.size(), compiledFunctions.size());
         var timingData = new TimingData(parseTime, compileTime, classLoadTime, handleLoadTime);
         FunctionCompilerReporter.reportCompilationStatistics(functionCountsData, timingData, optimizerStatistics, commandErrors);
 

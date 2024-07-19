@@ -7,6 +7,7 @@
     "CallFunctionMixin",
     "CommandsMixin",
     "MinecraftServerMixin",
+    "ServerFunctionLibraryMixin",
     "ServerFunctionManagerMixin"
   ],
   "server": [
