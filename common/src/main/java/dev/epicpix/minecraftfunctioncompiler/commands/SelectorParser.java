@@ -86,6 +86,7 @@ public final class SelectorParser {
                 option.accept(reader, data);
                 reader.skipWhitespace();
                 if(!reader.canRead()) throwError(reader, "Cannot parse selector, ran out of data expecting ',' or ']'");
+                reader.checkMacro(false);
                 var next = reader.peek();
                 if(next == ',') {
                     reader.skip();
@@ -94,6 +95,7 @@ public final class SelectorParser {
                 if(next == ']') break;
                 throwError(reader, "Cannot parse selector, ran out of data, invalid value '" + next + "' expected ',' or ']'");
             }
+            reader.checkMacro(false);
             if(reader.peek() == ']') {
                 reader.skip();
             }else {

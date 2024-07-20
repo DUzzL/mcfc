@@ -43,8 +43,13 @@ public class StringCommandReader {
         return allowMacros && canRead(2) && command.charAt(index) == '$' && command.charAt(index + 1) == '(';
     }
 
+    public void checkMacro(boolean wantMacro) {
+        if(!wantMacro && isMacro()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.UNSUPPORTED_MACRO_LOCATION);
+        if(wantMacro && !isMacro()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.NOT_MACRO);
+    }
+
     public void skip() {
-        if(isMacro()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.UNSUPPORTED_MACRO_LOCATION);
+        checkMacro(false);
         index++;
     }
 
@@ -57,7 +62,7 @@ public class StringCommandReader {
     }
 
     public char read() {
-        if(isMacro()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.UNSUPPORTED_MACRO_LOCATION);
+        checkMacro(false);
         return command.charAt(index++);
     }
 
@@ -66,7 +71,7 @@ public class StringCommandReader {
     }
 
     public MacroTemplate.MacroKind readMacro(List<MacroValidator> validators) {
-        if(!isMacro()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.NOT_MACRO);
+        checkMacro(true);
         index += 2;
         for(int i = index; i<command.length(); i++) {
             if(command.charAt(i) == ')') {
@@ -194,6 +199,7 @@ public class StringCommandReader {
             if(canRead(2) && peek(0) == '.' && peek(1) == '.') {
                 break;
             }
+            checkMacro(false);
             char peeked = peek();
             if((peeked >= '0' && peeked <= '9') || peeked == '-' || peeked == '.') {
                 skip();
