@@ -211,19 +211,65 @@ public class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
     }
 
     private static int writeTextValue(Text text, CodeWriter cw, CodeFieldStorage cf) {
+        int cost = 6;
         if(text.content() instanceof TextContent.LiteralText literal) {
             cw.writeString(literal.value());
             callComponent_literal(cw);
-            cf.loadTextStyle(cw, text.style());
-            callMutableComponent_withStyle(cw);
-            int cost = 12;
-            for(var child : text.siblings()) {
-                cost += writeTextValue(child, cw, cf) + 3;
-                callMutableComponent_append(cw);
+            cost += 6;
+        }else if(text.content() instanceof TextContent.KeybindText keybind) {
+            cw.writeString(keybind.keybind());
+            callComponent_keybind(cw);
+            cost += 6;
+        }else if(text.content() instanceof TextContent.TranslatableText translatable) {
+            cw.writeString(translatable.key());
+            if(translatable.fallback() != null) {
+                cw.writeString(translatable.fallback());
+                cost += 3;
             }
-            return cost;
+            if(translatable.args().isEmpty()) {
+                if(translatable.fallback() == null) {
+                    callComponent_translatableEmpty(cw);
+                    cost += 3;
+                }else {
+                    callComponent_translatableFallbackEmpty(cw);
+                    cost += 3;
+                }
+            }else {
+                cw.writeInt(translatable.args().size());
+                cw.methodVisitor().visitTypeInsn(Opcodes.ANEWARRAY, "java/lang/Object");
+                var values = translatable.args();
+                for(int i = 0; i < values.size(); i++) {
+                    cw.methodVisitor().visitInsn(Opcodes.DUP);
+                    cw.writeInt(i);
+                    if(values.get(i) instanceof String str) {
+                        cw.writeString(str);
+                        cost += 3;
+                    }else if(values.get(i) instanceof Text t) {
+                        cost += writeTextValue(t, cw, cf);
+                    }else {
+                        throw new IllegalArgumentException("Cannot write " + values.get(i) + " in 'translatable' args");
+                    }
+                    cw.methodVisitor().visitInsn(Opcodes.AASTORE);
+                }
+                cost += 6 + values.size() * 5;
+                if(translatable.fallback() == null) {
+                    callComponent_translatableArguments(cw);
+                }else {
+                    callComponent_translatableFallbackArguments(cw);
+                }
+                cost += 3;
+            }
         }else {
             throw new IllegalArgumentException("Invalid text content: " + text.content());
         }
+        if(!text.style().isEmpty()) {
+            cf.loadTextStyle(cw, text.style());
+            callMutableComponent_withStyle(cw);
+        }
+        for(var child : text.siblings()) {
+            cost += writeTextValue(child, cw, cf) + 3;
+            callMutableComponent_append(cw);
+        }
+        return cost;
     }
 }

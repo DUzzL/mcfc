@@ -55,4 +55,4 @@ Not all commands are currently implemented in this mod, if a command is not list
 [^1]: Not all selectors are currently supported.
 [^2]: Only `/difficulty` with the difficulty argument is supported.
 [^3]: Only named `a.b`, and by index `a[0]` paths are allowed.
-[^4]: The following text components are not supported: `score`, `nbt`, `selector`, `translate`, `keybind`.
+[^4]: The following text components are not supported: `score`, `nbt`, `selector`.

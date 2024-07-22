@@ -57,6 +57,24 @@ public final class TextParser {
             if(obj.has("text")) {
                 var rawText = obj.get("text").getAsString();
                 content = new TextContent.LiteralText(rawText);
+            }else if(obj.has("keybind")) {
+                var keybind = obj.get("keybind").getAsString();
+                content = new TextContent.KeybindText(keybind);
+            }else if(obj.has("translate")) {
+                var key = obj.get("translate").getAsString();
+                var fallback = obj.has("fallback") ? obj.get("fallback").getAsString() : null;
+                List<Object> args = List.of();
+                if(obj.has("with")) {
+                    args = new ArrayList<>();
+                    for(var extra : obj.getAsJsonArray("with")) {
+                        if(extra instanceof JsonPrimitive prim && prim.isString()) {
+                            args.add(prim.getAsString());
+                        }else {
+                            args.add(jsonToText(extra));
+                        }
+                    }
+                }
+                content = new TextContent.TranslatableText(key, fallback, args);
             }else {
                 throw new CommandErrorException(new CommandError("Cannot turn \"" + element + "\" into Text"));
             }

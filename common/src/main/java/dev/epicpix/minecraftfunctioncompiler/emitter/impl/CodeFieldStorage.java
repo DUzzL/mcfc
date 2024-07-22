@@ -117,9 +117,11 @@ public final class CodeFieldStorage {
 
     public void loadText(CodeWriter cw, Text value) {
         value.forEachComponent(text -> {
-            map.writeValue(CodeFieldStorageMapKind.TEXT_STYLE, text.style());
-            if(text.style().font() != null) {
-                map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, text.style().font());
+            if(!text.style().isEmpty()) {
+                map.writeValue(CodeFieldStorageMapKind.TEXT_STYLE, text.style());
+                if (text.style().font() != null) {
+                    map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, text.style().font());
+                }
             }
         });
         map.writeValue(CodeFieldStorageMapKind.TEXT, value);
