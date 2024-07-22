@@ -1,15 +1,22 @@
 package dev.epicpix.minecraftfunctioncompiler.commands;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonSyntaxException;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidator;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidators;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
+import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class StringCommandReader {
+    private static final Gson GSON = new Gson();
+
     private final String command;
     private final boolean allowMacros;
     private int index;
@@ -556,6 +563,60 @@ public class StringCommandReader {
             case "feet" -> LocationAnchor.FEET;
             default -> throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_LOCATION_ANCHOR);
         };
+    }
+
+    private int estimateJsonLength() {
+        if(!canRead()) return 0;
+        int start = index;
+        char peeked = peek();
+        if(peeked == '"') {
+            readString();
+        }else if(peeked == '[') {
+            skip();
+            readJsonUntil(']');
+        }else if(peeked == '{') {
+            skip();
+            readJsonUntil('}');
+        }else if((peeked == '-' || peeked == '+') || (peeked >= '0' && peeked <= '9')) {
+            readNumberBase();
+        }
+        int end = index;
+        index = start;
+        return end - start;
+    }
+
+    private void readJsonUntil(char c) {
+        while(canRead()) {
+            char peeked = peek();
+            if(peeked == '"') {
+                readString();
+            }else if(peeked == '[') {
+                skip();
+                readJsonUntil(']');
+            }else if(peeked == '{') {
+                skip();
+                readJsonUntil('}');
+            }else if((peeked == '-' || peeked == '+') || (peeked >= '0' && peeked <= '9')) {
+                readNumberBase();
+            }else if(peeked == c) {
+                skip();
+                return;
+            }else {
+                skip();
+            }
+        }
+    }
+
+    public JsonElement readJson() {
+        if(allowMacros) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.UNSUPPORTED_MACRO_LOCATION);
+        int length = estimateJsonLength();
+        String jsonString = command.substring(index, index + length);
+        index += length;
+        try {
+            return GSON.fromJson(jsonString, JsonElement.class);
+        }catch(JsonSyntaxException e) {
+            throw new CommandErrorException(new CommandError(command, "Tried to parse JSON, but failed", CommandError.Step.PARSE, e));
+        }
     }
 
 }

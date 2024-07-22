@@ -624,7 +624,7 @@ public final class CommandCompiler {
             case WEATHER_THUNDER -> {
                 context.writeInstruction(Instructions2.setWeatherDynamicThunder());
             }
-            default -> throw new UnsupportedOperationException("Not implemented command: " + command.type());
+            default -> throw new UnsupportedOperationException("Not implemented command: " + command);
         }
     }
 

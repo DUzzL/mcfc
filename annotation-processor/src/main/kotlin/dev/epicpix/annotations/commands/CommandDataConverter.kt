@@ -220,6 +220,7 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
             "score_holder" -> builder.append("    var a$argumentIndex = SelectorParser.parseScoreHolder(reader);\n")
             "scoreboard_operation" -> builder.append("    var a$argumentIndex = reader.readScoreboardOperation();\n")
             "swizzle" -> builder.append("    var a$argumentIndex = reader.readSwizzle();\n")
+            "text" -> builder.append("    var a$argumentIndex = TextParser.readText(reader);\n")
             "time" -> {
                 builder.append("    var a$argumentIndex = reader.readTime();\n")
                 data.kindOptions["minimum"]?.toInt()?.also { min -> builder.append("    if(a$argumentIndex < $min) ${createError("\"Time value of \" + a$argumentIndex + \" ticks is below allowed value ($min ticks)\"")}\n") }
