@@ -850,3 +850,12 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 @SCORE_UNLOCK [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target]) {
   [ctx:target].unlock();
 }
+
+@LOAD_TEXT(<dev.epicpix.minecraftfunctioncompiler.data.text.Text> [instr:in_text], <net.minecraft.network.chat.Component> [ctx:text]) {
+  let [ctx:text] = map_text([instr:in_text]).copy();
+  run();
+}
+
+@SEND_SYSTEM_MESSAGE(<net.minecraft.server.level.ServerPlayer> [ctx:player], <net.minecraft.network.chat.Component> [ctx:text]) {
+  [ctx:player].sendSystemMessage([ctx:text], false);
+}

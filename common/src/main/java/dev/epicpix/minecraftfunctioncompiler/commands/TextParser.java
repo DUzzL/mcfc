@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.commands;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
@@ -22,7 +23,7 @@ public final class TextParser {
     private static Integer stringToColor(String str) {
         if(str.length() == 7 && str.charAt(0) == '#') {
             try {
-                return Integer.parseInt(str.substring(1));
+                return Integer.parseInt(str.substring(1), 16);
             }catch(NumberFormatException ignored) {
                 return null;
             }
@@ -80,6 +81,13 @@ public final class TextParser {
             if(obj.has("hoverEvent")) throw new CommandErrorException(new CommandError("\"hoverEvent\" in text is not yet supported"));
 
             return new Text(siblings, new TextStyle(color, bold, italic, underlined, strikethrough, obfuscated,null, null, insertion, font), content);
+        }else if(element instanceof JsonArray arr) {
+            Text text = jsonToText(arr.get(0));
+            var siblings = new ArrayList<>(text.siblings());
+            for(int i = 1; i<arr.size(); i++) {
+                siblings.add(jsonToText(arr.get(i)));
+            }
+            return new Text(siblings, text.style(), text.content());
         }else {
             throw new CommandErrorException(new CommandError("Cannot turn \"" + element + "\" into Text"));
         }

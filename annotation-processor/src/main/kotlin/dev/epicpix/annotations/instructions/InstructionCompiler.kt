@@ -815,6 +815,9 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             if(expression.name == "map_scoreboard_criterion") {
                 return ParsedTokenExpressionTypeComplex("net.minecraft.world.scores.criteria.ObjectiveCriteria")
             }
+            if(expression.name == "map_text") {
+                return ParsedTokenExpressionTypeComplex("net.minecraft.network.chat.Component")
+            }
             if(expression.name == "to_double") {
                 return ParsedTokenExpressionSimpleType.DOUBLE
             }
@@ -1326,6 +1329,18 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                     if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCriterionData") {
                         if(keepResult) {
                             output.appendText("context.fieldStorage().loadScoreboardCriterion(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCriterionData>get(\"${source.name}\").name());\n")
+                        }
+                        return uniqId
+                    }
+                }
+            }
+            if(expression.name == "map_text") {
+                val source = expression.arguments[0] as ParsedTokenValueAccessor
+                if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
+                    val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
+                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.text.Text") {
+                        if(keepResult) {
+                            output.appendText("context.fieldStorage().loadText(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.text.Text>get(\"${source.name}\"));\n")
                         }
                         return uniqId
                     }

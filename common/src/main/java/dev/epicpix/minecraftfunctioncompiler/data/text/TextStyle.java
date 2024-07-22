@@ -6,4 +6,22 @@ public record TextStyle(Integer color, Boolean bold, Boolean italic, Boolean und
     public static TextStyle empty() {
         return new TextStyle(null, null, null, null, null, null, null, null,null, null);
     }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder().append("TextStyle{");
+        if(color != null) builder.append("color=").append(color).append(", ");
+        if(bold != null) builder.append("bold=").append(bold).append(", ");
+        if(italic != null) builder.append("italic=").append(italic).append(", ");
+        if(underlined != null) builder.append("underlined=").append(underlined).append(", ");
+        if(strikethrough != null) builder.append("strikethrough=").append(strikethrough).append(", ");
+        if(obfuscated != null) builder.append("obfuscated=").append(obfuscated).append(", ");
+        if(clickEvent != null) builder.append("clickEvent=").append(clickEvent).append(", ");
+        if(hoverEvent != null) builder.append("hoverEvent=").append(hoverEvent).append(", ");
+        if(font != null) builder.append("font=").append(font).append(", ");
+        if(builder.charAt(builder.length() - 1) == ' ') {
+            builder.delete(builder.length() - 2, builder.length());
+        }
+        return builder.append("}").toString();
+    }
 }

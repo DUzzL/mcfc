@@ -1,13 +1,13 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_6;
 
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue;
-import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMap;
-import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
-import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapValue;
-import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter;
+import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
+import dev.epicpix.minecraftfunctioncompiler.data.text.TextContent;
+import dev.epicpix.minecraftfunctioncompiler.emitter.impl.*;
 import net.minecraft.commands.functions.CommandFunction;
 import net.minecraft.core.Holder;
 import net.minecraft.nbt.*;
+import net.minecraft.network.chat.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import org.objectweb.asm.Opcodes;
@@ -62,6 +62,56 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
             cw.castType(ObjectiveCriteria.class);
             return 12;
         }));
+        set(CodeFieldStorageMapKind.TEXT, new CodeFieldStorageMapValue<>(Component.class, (cf, cw, value) -> writeTextValue(value, cw, cf)));
+        set(CodeFieldStorageMapKind.TEXT_STYLE, new CodeFieldStorageMapValue<>(Style.class, (cf, cw, value) -> {
+            cw.newObjectCreate(Style.class);
+            int cost = 8;
+            if(value.color() != null) {
+                cw.writeInt(value.color());
+                callTextColor_fromRgb(cw);
+                cost += 6;
+            }else {
+                cw.writeNull();
+                cost++;
+            }
+            cost += writeBoolean(cw, value.bold());
+            cost += writeBoolean(cw, value.italic());
+            cost += writeBoolean(cw, value.underlined());
+            cost += writeBoolean(cw, value.strikethrough());
+            cost += writeBoolean(cw, value.obfuscated());
+            cw.writeNull();
+            cw.writeNull();
+            if(value.insertion() != null) {
+                cw.writeString(value.insertion());
+                cost += 3;
+            }else {
+                cw.writeNull();
+                cost++;
+            }
+            if(value.font() != null) {
+                cf.loadResourceLocation(cw, value.font());
+                cost += 3;
+            }else {
+                cw.writeNull();
+                cost++;
+            }
+            cw.newObjectInit(Style.class, TextColor.class, Boolean.class, Boolean.class, Boolean.class, Boolean.class, Boolean.class, ClickEvent.class, HoverEvent.class, String.class, ResourceLocation.class);
+            return cost;
+        }));
+    }
+
+    private static int writeBoolean(CodeWriter cw, Boolean value) {
+        if(value == null) {
+            cw.writeNull();
+            return 1;
+        }else {
+            if(value) {
+                loadBoolean_TRUE(cw);
+            }else {
+                loadBoolean_FALSE(cw);
+            }
+            return 3;
+        }
     }
 
     private static int writeNbtValue(NbtValue value, CodeWriter cw) {
@@ -158,6 +208,23 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
             return 6;
         }else {
             throw new IllegalArgumentException("Invalid nbt value: " + value);
+        }
+    }
+
+    private static int writeTextValue(Text text, CodeWriter cw, CodeFieldStorage cf) {
+        if(text.content() instanceof TextContent.LiteralText literal) {
+            cw.writeString(literal.value());
+            callComponent_literal(cw);
+            cf.loadTextStyle(cw, text.style());
+            callMutableComponent_withStyle(cw);
+            int cost = 12;
+            for(var child : text.siblings()) {
+                cost += writeTextValue(child, cw, cf) + 3;
+                callMutableComponent_append(cw);
+            }
+            return cost;
+        }else {
+            throw new IllegalArgumentException("Invalid text content: " + text.content());
         }
     }
 }

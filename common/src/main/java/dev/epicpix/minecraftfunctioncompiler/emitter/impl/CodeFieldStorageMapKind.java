@@ -2,6 +2,8 @@ package dev.epicpix.minecraftfunctioncompiler.emitter.impl;
 
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue;
+import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
+import dev.epicpix.minecraftfunctioncompiler.data.text.TextStyle;
 
 import java.util.ArrayList;
 
@@ -27,6 +29,8 @@ public final class CodeFieldStorageMapKind<T> {
     public static final CodeFieldStorageMapKind<NbtValue> NBT_VALUE = new CodeFieldStorageMapKind<>("NBT_VALUE");
     public static final CodeFieldStorageMapKind<DataLocation> RESOURCE_LOCATION = new CodeFieldStorageMapKind<>("RESOURCE_LOCATION");
     public static final CodeFieldStorageMapKind<String> SCOREBOARD_CRITERION = new CodeFieldStorageMapKind<>("SCOREBOARD_CRITERION");
+    public static final CodeFieldStorageMapKind<Text> TEXT = new CodeFieldStorageMapKind<>("TEXT");
+    public static final CodeFieldStorageMapKind<TextStyle> TEXT_STYLE = new CodeFieldStorageMapKind<>("TEXT_STYLE");
 
     @Override
     public String toString() {

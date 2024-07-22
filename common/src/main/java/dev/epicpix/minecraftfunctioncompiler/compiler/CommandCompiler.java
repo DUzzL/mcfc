@@ -606,6 +606,16 @@ public final class CommandCompiler {
                     entity.writeInstruction(Instructions2.removeEntityTag(entity.content(), command.get("name")));
                 }
             }
+            case TELLRAW -> {
+                try(var players = context.forSelector(command.get("players"))) {
+                    var playerLocation = LocationData.<Player>ofLocal(players.data().highestId());
+                    var textLocation = LocationData.<TextComponent>ofLocal(players.data().highestId() + 1);
+                    players.writeInstruction(
+                            Instructions2.tryAsPlayer(players.content(), playerLocation)
+                                    .with(Instructions2.loadText(command.get("text"), textLocation)
+                                            .with(Instructions2.sendSystemMessage(playerLocation, textLocation))));
+                }
+            }
             case WEATHER_CLEAR_TIMED -> {
                 context.writeInstruction(Instructions2.setWeatherStatic(command.get("duration"), 0, false, false));
             }

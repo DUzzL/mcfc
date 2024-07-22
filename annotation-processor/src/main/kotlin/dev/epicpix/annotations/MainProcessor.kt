@@ -111,6 +111,7 @@ fun javaToMinecraftGenericType(type: String): String {
             "net.minecraft.nbt.CompoundTag" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.NbtCompound"
             "net.minecraft.nbt.Tag" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.NbtTag"
             "net.minecraft.world.scores.criteria.ObjectiveCriteria" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.ScoreboardCriterion"
+            "net.minecraft.network.chat.Component" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.TextComponent"
             else -> throw IllegalArgumentException("Unknown minecraft class: $type")
         }
     }else {

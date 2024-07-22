@@ -24,6 +24,11 @@ Tag_stringify."1.20.3+" = "net/minecraft/commands/functions/MacroFunction:string
 ObjectiveCriteria_byName = "net/minecraft/world/scores/criteria/ObjectiveCriteria:byName(Ljava/lang/String;)Ljava/util/Optional;@S"
 Optional_get = "java/util/Optional:get()Ljava/lang/Object;@M"
 
+Component_literal = "net/minecraft/network/chat/Component:literal(Ljava/lang/String;)Lnet/minecraft/network/chat/MutableComponent;@IS"
+MutableComponent_withStyle = "net/minecraft/network/chat/MutableComponent:withStyle(Lnet/minecraft/network/chat/Style;)Lnet/minecraft/network/chat/MutableComponent;@M"
+MutableComponent_append = "net/minecraft/network/chat/MutableComponent:append(Lnet/minecraft/network/chat/Component;)Lnet/minecraft/network/chat/MutableComponent;@M"
+TextColor_fromRgb = "net/minecraft/network/chat/TextColor:fromRgb(I)Lnet/minecraft/network/chat/TextColor;@S"
+
 Registry_get."1.20.4-" = "net/minecraft/core/Registry:get(Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/Object;@IM"
 Registry_getHolder."1.20.5+" = "net/minecraft/core/Registry:getHolder(Lnet/minecraft/resources/ResourceLocation;)Ljava/util/Optional;@IM"
 
@@ -63,3 +68,6 @@ Anchor_EYES = "net/minecraft/commands/arguments/EntityAnchorArgument$Anchor:EYES
 Anchor_FEET = "net/minecraft/commands/arguments/EntityAnchorArgument$Anchor:FEET:Lnet/minecraft/commands/arguments/EntityAnchorArgument$Anchor;@SR"
 
 ServerFunctionManager_context."1.20.2-" = "net/minecraft/server/ServerFunctionManager:context:Lnet/minecraft/server/ServerFunctionManager$ExecutionContext;@MRW"
+
+Boolean_FALSE = "java/lang/Boolean:FALSE:Ljava/lang/Boolean;@SR"
+Boolean_TRUE = "java/lang/Boolean:TRUE:Ljava/lang/Boolean;@SR"

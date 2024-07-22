@@ -2,6 +2,8 @@ package dev.epicpix.minecraftfunctioncompiler.emitter.impl;
 
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue;
+import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
+import dev.epicpix.minecraftfunctioncompiler.data.text.TextStyle;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 
@@ -66,6 +68,14 @@ public final class CodeFieldStorage {
                 : "s" + map.checkIndex(CodeFieldStorageMapKind.SCOREBOARD_CRITERION, value);
     }
 
+    private String getTextName(Text value) {
+        return "t" + map.checkIndex(CodeFieldStorageMapKind.TEXT, value);
+    }
+
+    private String getTextStyleName(TextStyle value) {
+        return "ts" + map.checkIndex(CodeFieldStorageMapKind.TEXT_STYLE, value);
+    }
+
     private String getUuidName(UUID value) {
         return DEBUG
                 ? "uuid$" + value.toString().replace("-", "")
@@ -103,6 +113,25 @@ public final class CodeFieldStorage {
     public void loadScoreboardCriterion(CodeWriter cw, String value) {
         map.writeValue(CodeFieldStorageMapKind.SCOREBOARD_CRITERION, value);
         cw.getDataField(getScoreboardCriterionName(value), map.getValueClass(CodeFieldStorageMapKind.SCOREBOARD_CRITERION));
+    }
+
+    public void loadText(CodeWriter cw, Text value) {
+        value.forEachComponent(text -> {
+            map.writeValue(CodeFieldStorageMapKind.TEXT_STYLE, text.style());
+            if(text.style().font() != null) {
+                map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, text.style().font());
+            }
+        });
+        map.writeValue(CodeFieldStorageMapKind.TEXT, value);
+        cw.getDataField(getTextName(value), map.getValueClass(CodeFieldStorageMapKind.TEXT));
+    }
+
+    public void loadTextStyle(CodeWriter cw, TextStyle value) {
+        map.writeValue(CodeFieldStorageMapKind.TEXT_STYLE, value);
+        if(value.font() != null) {
+            map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, value.font());
+        }
+        cw.getDataField(getTextStyleName(value), map.getValueClass(CodeFieldStorageMapKind.TEXT_STYLE));
     }
 
     public void loadUUID(CodeWriter cw, UUID value) {
@@ -181,6 +210,18 @@ public final class CodeFieldStorage {
             cw = getCurrentFunction(cw, classWriter);
         }
 
+        for(var value : map.getStorage(CodeFieldStorageMapKind.TEXT_STYLE)) {
+            cost += map.writeCode(CodeFieldStorageMapKind.TEXT_STYLE, this, cw, value) + 3;
+            cw.setDataField(getTextStyleName(value), map.getValueClass(CodeFieldStorageMapKind.TEXT_STYLE));
+            cw = getCurrentFunction(cw, classWriter);
+        }
+
+        for(var value : map.getStorage(CodeFieldStorageMapKind.TEXT)) {
+            cost += map.writeCode(CodeFieldStorageMapKind.TEXT, this, cw, value) + 3;
+            cw.setDataField(getTextName(value), map.getValueClass(CodeFieldStorageMapKind.TEXT));
+            cw = getCurrentFunction(cw, classWriter);
+        }
+
         for(var value : map.getStorage(CodeFieldStorageMapKind.NBT_VALUE)) {
             cost += map.writeCode(CodeFieldStorageMapKind.NBT_VALUE, this, cw, value) + 3;
             cw.setDataField(getNbtValueName(value), map.getValueClass(CodeFieldStorageMapKind.NBT_VALUE));
@@ -209,6 +250,12 @@ public final class CodeFieldStorage {
         }
         for(var value : map.getStorage(CodeFieldStorageMapKind.SCOREBOARD_CRITERION)) {
             classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getScoreboardCriterionName(value), map.getValueClass(CodeFieldStorageMapKind.SCOREBOARD_CRITERION).descriptorString(), null, null);
+        }
+        for(var value : map.getStorage(CodeFieldStorageMapKind.TEXT_STYLE)) {
+            classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getTextStyleName(value), map.getValueClass(CodeFieldStorageMapKind.TEXT_STYLE).descriptorString(), null, null);
+        }
+        for(var value : map.getStorage(CodeFieldStorageMapKind.TEXT)) {
+            classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getTextName(value), map.getValueClass(CodeFieldStorageMapKind.TEXT).descriptorString(), null, null);
         }
         for(var value : map.getStorage(CodeFieldStorageMapKind.NBT_VALUE)) {
             classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, getNbtValueName(value), map.getValueClass(CodeFieldStorageMapKind.NBT_VALUE).descriptorString(), null, null);

@@ -131,6 +131,10 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
         setState(State.PARSING);
         backgroundThread = new Thread(run);
         backgroundThread.setName("Function Compiler");
+        backgroundThread.setUncaughtExceptionHandler((t, e) -> {
+            setState(State.FAILED);
+            logError.accept("Compiler Thread threw an uncaught exception", e);
+        });
         backgroundThread.start();
         return true;
     }
