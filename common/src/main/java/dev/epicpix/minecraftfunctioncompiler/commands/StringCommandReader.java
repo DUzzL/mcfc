@@ -173,6 +173,10 @@ public class StringCommandReader {
     }
 
     public String readString() {
+        return readString(false);
+    }
+
+    private String readString(boolean ignoreInvalidEscapeSequences) {
         if(!canRead()) return "";
         char quoteChar = peek();
         if(quoteChar == '"' || quoteChar == '\'') {
@@ -187,7 +191,7 @@ public class StringCommandReader {
                     escaping = true;
                     continue;
                 }else if(escaping) {
-                    if(c != quoteChar && c != '\\') {
+                    if(!ignoreInvalidEscapeSequences && c != quoteChar && c != '\\') {
                         throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_STRING_QUOTE);
                     }
                 }
@@ -570,7 +574,7 @@ public class StringCommandReader {
         int start = index;
         char peeked = peek();
         if(peeked == '"') {
-            readString();
+            readString(true);
         }else if(peeked == '[') {
             skip();
             readJsonUntil(']');
@@ -578,7 +582,7 @@ public class StringCommandReader {
             skip();
             readJsonUntil('}');
         }else if((peeked == '-' || peeked == '+') || (peeked >= '0' && peeked <= '9')) {
-            readNumberBase();
+            skipJsonNumber();
         }
         int end = index;
         index = start;
@@ -589,7 +593,7 @@ public class StringCommandReader {
         while(canRead()) {
             char peeked = peek();
             if(peeked == '"') {
-                readString();
+                readString(true);
             }else if(peeked == '[') {
                 skip();
                 readJsonUntil(']');
@@ -597,12 +601,24 @@ public class StringCommandReader {
                 skip();
                 readJsonUntil('}');
             }else if((peeked == '-' || peeked == '+') || (peeked >= '0' && peeked <= '9')) {
-                readNumberBase();
+                skipJsonNumber();
             }else if(peeked == c) {
                 skip();
                 return;
             }else {
                 skip();
+            }
+        }
+    }
+
+    private void skipJsonNumber() {
+        while(canRead()) {
+            checkMacro(false);
+            char peeked = peek();
+            if((peeked >= '0' && peeked <= '9') || peeked == '-' || peeked == '+' || peeked == '.' || peeked == 'e' || peeked == 'E') {
+                skip();
+            }else {
+                break;
             }
         }
     }

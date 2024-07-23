@@ -606,6 +606,60 @@ public final class CommandCompiler {
                     entity.writeInstruction(Instructions2.removeEntityTag(entity.content(), command.get("name")));
                 }
             }
+            case TITLE_ACTIONBAR -> {
+                try(var players = context.forSelector(command.get("players"))) {
+                    var playerLocation = LocationData.<Player>ofLocal(players.data().highestId());
+                    var textLocation = LocationData.<TextComponent>ofLocal(players.data().highestId() + 1);
+                    players.writeInstruction(
+                            Instructions2.tryAsPlayer(players.content(), playerLocation)
+                                    .with(Instructions2.loadText(command.get("text"), textLocation)
+                                            .with(Instructions2.sendActionbar(playerLocation, textLocation))));
+                }
+            }
+            case TITLE_CLEAR -> {
+                try(var players = context.forSelector(command.get("players"))) {
+                    var playerLocation = LocationData.<Player>ofLocal(players.data().highestId());
+                    players.writeInstruction(
+                            Instructions2.tryAsPlayer(players.content(), playerLocation)
+                                            .with(Instructions2.sendTitlesClear(playerLocation)));
+                }
+            }
+            case TITLE_RESET -> {
+                try(var players = context.forSelector(command.get("players"))) {
+                    var playerLocation = LocationData.<Player>ofLocal(players.data().highestId());
+                    players.writeInstruction(
+                            Instructions2.tryAsPlayer(players.content(), playerLocation)
+                                    .with(Instructions2.sendTitlesReset(playerLocation)));
+                }
+            }
+            case TITLE_SUBTITLE -> {
+                try(var players = context.forSelector(command.get("players"))) {
+                    var playerLocation = LocationData.<Player>ofLocal(players.data().highestId());
+                    var textLocation = LocationData.<TextComponent>ofLocal(players.data().highestId() + 1);
+                    players.writeInstruction(
+                            Instructions2.tryAsPlayer(players.content(), playerLocation)
+                                    .with(Instructions2.loadText(command.get("text"), textLocation)
+                                            .with(Instructions2.sendSubtitle(playerLocation, textLocation))));
+                }
+            }
+            case TITLE_TIMES -> {
+                try(var players = context.forSelector(command.get("players"))) {
+                    var playerLocation = LocationData.<Player>ofLocal(players.data().highestId());
+                    players.writeInstruction(
+                            Instructions2.tryAsPlayer(players.content(), playerLocation)
+                                    .with(Instructions2.sendTitlesTimes(playerLocation, command.get("fadeIn"), command.get("stay"), command.get("fadeOut"))));
+                }
+            }
+            case TITLE_TITLE -> {
+                try(var players = context.forSelector(command.get("players"))) {
+                    var playerLocation = LocationData.<Player>ofLocal(players.data().highestId());
+                    var textLocation = LocationData.<TextComponent>ofLocal(players.data().highestId() + 1);
+                    players.writeInstruction(
+                            Instructions2.tryAsPlayer(players.content(), playerLocation)
+                                    .with(Instructions2.loadText(command.get("text"), textLocation)
+                                            .with(Instructions2.sendTitle(playerLocation, textLocation))));
+                }
+            }
             case TELLRAW -> {
                 try(var players = context.forSelector(command.get("players"))) {
                     var playerLocation = LocationData.<Player>ofLocal(players.data().highestId());

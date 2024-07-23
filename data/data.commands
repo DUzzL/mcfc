@@ -66,6 +66,13 @@ SCOREBOARD_PLAYERS_SET/scoreboard players set <targets:score_holder> <objective:
 TAG_ADD/tag <targets:entity_selector> add <name:word>
 TAG_REMOVE/tag <targets:entity_selector> remove <name:word>
 
+TITLE_ACTIONBAR/title <players:entity_selector[players]> actionbar <text:text>
+TITLE_CLEAR/title <players:entity_selector[players]> clear
+TITLE_RESET/title <players:entity_selector[players]> reset
+TITLE_SUBTITLE/title <players:entity_selector[players]> subtitle <text:text>
+TITLE_TIMES/title <players:entity_selector[players]> times <fadeIn:time[minimum=0]> <stay:time[minimum=0]> <fadeOut:time[minimum=0]>
+TITLE_TITLE/title <players:entity_selector[players]> title <text:text>
+
 TELLRAW/tellraw <players:entity_selector[players]> <text:text>
 
 WEATHER_CLEAR_TIMED/weather clear <duration:time[minimum=1]>

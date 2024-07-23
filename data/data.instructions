@@ -859,3 +859,27 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 @SEND_SYSTEM_MESSAGE(<net.minecraft.server.level.ServerPlayer> [ctx:player], <net.minecraft.network.chat.Component> [ctx:text]) {
   [ctx:player].sendSystemMessage([ctx:text], false);
 }
+
+@SEND_ACTIONBAR(<net.minecraft.server.level.ServerPlayer> [ctx:player], <net.minecraft.network.chat.Component> [ctx:text]) {
+  [ctx:player].connection.send(new <net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket>([ctx:text]));
+}
+
+@SEND_TITLE(<net.minecraft.server.level.ServerPlayer> [ctx:player], <net.minecraft.network.chat.Component> [ctx:text]) {
+  [ctx:player].connection.send(new <net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket>([ctx:text]));
+}
+
+@SEND_SUBTITLE(<net.minecraft.server.level.ServerPlayer> [ctx:player], <net.minecraft.network.chat.Component> [ctx:text]) {
+  [ctx:player].connection.send(new <net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket>([ctx:text]));
+}
+
+@SEND_TITLES_CLEAR(<net.minecraft.server.level.ServerPlayer> [ctx:player]) {
+  [ctx:player].connection.send(new <net.minecraft.network.protocol.game.ClientboundClearTitlesPacket>(false));
+}
+
+@SEND_TITLES_RESET(<net.minecraft.server.level.ServerPlayer> [ctx:player]) {
+  [ctx:player].connection.send(new <net.minecraft.network.protocol.game.ClientboundClearTitlesPacket>(true));
+}
+
+@SEND_TITLES_TIMES(<net.minecraft.server.level.ServerPlayer> [ctx:player], int [instr:fade_in], int [instr:stay], int [instr:fade_out]) {
+  [ctx:player].connection.send(new <net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket>([instr:fade_in], [instr:stay], [instr:fade_out]));
+}

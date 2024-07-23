@@ -47,6 +47,12 @@ Not all commands are currently implemented in this mod, if a command is not list
 | `scoreboard players set`                  | Partial[^1]  | No                     | No                      |
 | `tag add`                                 | Partial[^1]  | No                     | No                      |
 | `tag remove`                              | Partial[^1]  | No                     | No                      |
+| `title ... actionbar`                     | Partial[^4]  | No                     | No                      |
+| `title ... clear`                         | Yes          | No                     | No                      |
+| `title ... reset`                         | Yes          | No                     | No                      |
+| `title ... subtitle`                      | Partial[^4]  | No                     | No                      |
+| `title ... times`                         | Yes          | No                     | No                      |
+| `title ... title`                         | Partial[^4]  | No                     | No                      |
 | `tellraw`                                 | Partial[^4]  | No                     | No                      |
 | `weather`                                 | Yes          | No                     | No                      |
 | `xp add`                                  | Partial[^1]  | No                     | No                      |
