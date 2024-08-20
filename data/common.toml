@@ -4,3 +4,12 @@ definition_file = "dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsage
 Map_get = "java/util/Map:get(Ljava/lang/Object;)Ljava/lang/Object;@IM"
 Math_floor = "java/lang/Math:floor(D)D@S"
 String_contains = "java/lang/String:contains(Ljava/lang/CharSequence;)Z@M"
+String_isEmpty = "java/lang/String:isEmpty()Z@M"
+Pattern_compile = "java/util/regex/Pattern:compile(Ljava/lang/String;)Z@S"
+Pattern_matcher = "java/util/regex/Pattern:matcher(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;@M"
+Matcher_matches = "java/util/regex/Matcher:matches()Z@M"
+Optional_get = "java/util/Optional:get()Ljava/lang/Object;@M"
+
+[definitions_fields]
+Boolean_FALSE = "java/lang/Boolean:FALSE:Ljava/lang/Boolean;@SR"
+Boolean_TRUE = "java/lang/Boolean:TRUE:Ljava/lang/Boolean;@SR"

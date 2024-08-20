@@ -598,12 +598,12 @@ public final class CommandCompiler {
             }
             case TAG_ADD -> {
                 try(var entity = context.forSelector(command.get("targets"))) {
-                    entity.writeInstruction(Instructions2.addEntityTag(entity.content(), command.get("name")));
+                    entity.writeInstruction(Instructions2.addEntityTag(entity.content(), LocationData.ofString(command.get("name"))));
                 }
             }
             case TAG_REMOVE -> {
                 try(var entity = context.forSelector(command.get("targets"))) {
-                    entity.writeInstruction(Instructions2.removeEntityTag(entity.content(), command.get("name")));
+                    entity.writeInstruction(Instructions2.removeEntityTag(entity.content(), LocationData.ofString(command.get("name"))));
                 }
             }
             case TITLE_ACTIONBAR -> {

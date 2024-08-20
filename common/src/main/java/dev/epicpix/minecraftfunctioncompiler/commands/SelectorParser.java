@@ -115,8 +115,8 @@ public final class SelectorParser {
     public static void initBaseSelectorOptions() {
         registerSelectorOption("tag", (reader, data) -> {
             var negated = reader.skipIfNext('!');
-            var tag = reader.readWord();
-            if(tag.isEmpty()) {
+            var tag = reader.readMacroWord(List.of(MacroValidators.NOT_EMPTY));
+            if(tag.parts().isEmpty()) {
                 data.hasTags = !negated;
             }else {
                 data.tags.add(new NegatableData<>(tag, negated));

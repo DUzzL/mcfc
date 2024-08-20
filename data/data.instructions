@@ -156,27 +156,27 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
   }
 }
 
-@ADD_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:tag]) {
-  [ctx:entity].addTag([instr:tag]);
+@ADD_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [ctx:tag]) {
+  [ctx:entity].addTag([ctx:tag]);
 }
 
-@REMOVE_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:tag]) {
-  [ctx:entity].removeTag([instr:tag]);
+@REMOVE_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [ctx:tag]) {
+  [ctx:entity].removeTag([ctx:tag]);
 }
 
-=CHECK_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:tag], boolean [instr:negated]) {
+=CHECK_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [ctx:tag], boolean [instr:negated]) {
   (negated == false) => CHECK_HAS_ENTITY_TAG;
   => CHECK_NOT_HAS_ENTITY_TAG;
 }
 
-@CHECK_HAS_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:tag]) {
-  if([ctx:entity].getTags().contains([instr:tag]) != false) {
+@CHECK_HAS_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [ctx:tag]) {
+  if([ctx:entity].getTags().contains([ctx:tag]) != false) {
     run();
   }
 }
 
-@CHECK_NOT_HAS_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:tag]) {
-  if([ctx:entity].getTags().contains([instr:tag]) == false) {
+@CHECK_NOT_HAS_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [ctx:tag]) {
+  if([ctx:entity].getTags().contains([ctx:tag]) == false) {
     run();
   }
 }

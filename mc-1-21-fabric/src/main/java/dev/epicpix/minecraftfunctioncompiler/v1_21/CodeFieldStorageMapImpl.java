@@ -13,8 +13,9 @@ import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import org.objectweb.asm.Opcodes;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
-import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callMap_get;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.*;
 import static dev.epicpix.minecraftfunctioncompiler.v1_21.emitter.MappedUsageDefinitionsExtensions.*;
 
 public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
@@ -48,6 +49,11 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
         }));
         set(CodeFieldStorageMapKind.NBT_COMPOUND, new CodeFieldStorageMapValue<>(CompoundTag.class, (cf, cw, value) -> writeNbtValue(value, cw)));
         set(CodeFieldStorageMapKind.NBT_VALUE, new CodeFieldStorageMapValue<>(Tag.class, (cf, cw, value) -> writeNbtValue(value, cw)));
+        set(CodeFieldStorageMapKind.REGEX_PATTERN, new CodeFieldStorageMapValue<>(Pattern.class, (cf, cw, value) -> {
+            cw.writeString(value);
+            callPattern_matcher(cw);
+            return 6;
+        }));
         set(CodeFieldStorageMapKind.RESOURCE_LOCATION, new CodeFieldStorageMapValue<>(ResourceLocation.class, (cf, cw, value) -> {
             cw.writeString(value.namespace());
             cw.writeString(value.path());

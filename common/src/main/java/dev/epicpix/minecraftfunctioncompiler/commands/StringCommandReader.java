@@ -50,9 +50,10 @@ public class StringCommandReader {
         return allowMacros && canRead(2) && command.charAt(index) == '$' && command.charAt(index + 1) == '(';
     }
 
-    public void checkMacro(boolean wantMacro) {
+    public boolean checkMacro(boolean wantMacro) {
         if(!wantMacro && isMacro()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.UNSUPPORTED_MACRO_LOCATION);
         if(wantMacro && !isMacro()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.NOT_MACRO);
+        return true;
     }
 
     public void skip() {
@@ -152,9 +153,20 @@ public class StringCommandReader {
                 || c == '.' || c == '+';
     }
 
+    public MacroTemplate<String> readMacroWord(List<MacroValidator> validators) {
+        if(!allowMacros) return MacroTemplate.fromLiteral(readWord());
+        ArrayList<MacroTemplate.MacroPart> parts = new ArrayList<>();
+        ArrayList<MacroValidator> inputValidators = new ArrayList<>(validators);
+        inputValidators.add(MacroValidators.IS_WORD);
+        while(canRead() && isWordCharacter(peek())) {
+            parts.add(readMacroChar(inputValidators));
+        }
+        return new MacroTemplate<>(MacroTemplate.mergeParts(parts));
+    }
+
     public String readWord() {
         int start = index;
-        while (canRead() && isWordCharacter(peek())) {
+        while (canRead() && checkMacro(false) && isWordCharacter(peek())) {
             skip();
         }
         return command.substring(start, index);
@@ -166,7 +178,7 @@ public class StringCommandReader {
 
     public String readNbtWord() {
         int start = index;
-        while (canRead() && isNbtWordCharacter(peek())) {
+        while (canRead() && checkMacro(false) && isNbtWordCharacter(peek())) {
             skip();
         }
         return command.substring(start, index);

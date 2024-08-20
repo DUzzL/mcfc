@@ -56,6 +56,12 @@ public final class CodeFieldStorage {
         return "n" + map.checkIndex(CodeFieldStorageMapKind.NBT_VALUE, value);
     }
 
+    private String getRegexPatternName(String value) {
+        return DEBUG
+                ? "regex" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
+                : "R" + map.checkIndex(CodeFieldStorageMapKind.REGEX_PATTERN, value);
+    }
+
     private String getResourceLocationName(DataLocation value) {
         return DEBUG
                 ? "resourceLocation$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
@@ -103,6 +109,11 @@ public final class CodeFieldStorage {
     public void loadNbtValue(CodeWriter cw, NbtValue value) {
         map.writeValue(CodeFieldStorageMapKind.NBT_VALUE, value);
         cw.getDataField(getNbtValueName(value), map.getValueClass(CodeFieldStorageMapKind.NBT_VALUE));
+    }
+
+    public void loadRegexPattern(CodeWriter cw, String value) {
+        map.writeValue(CodeFieldStorageMapKind.REGEX_PATTERN, value);
+        cw.getDataField(getRegexPatternName(value), map.getValueClass(CodeFieldStorageMapKind.REGEX_PATTERN));
     }
 
     public void loadResourceLocation(CodeWriter cw, DataLocation value) {
@@ -179,6 +190,12 @@ public final class CodeFieldStorage {
             cw.newObjectInit(UUID.class, long.class, long.class);
             cw.setDataField(getUuidName(value), UUID.class);
             cost += 16;
+            cw = getCurrentFunction(cw, classWriter);
+        }
+
+        for(var value : map.getStorage(CodeFieldStorageMapKind.REGEX_PATTERN)) {
+            cost += map.writeCode(CodeFieldStorageMapKind.REGEX_PATTERN, this, cw, value) + 3;
+            cw.setDataField(getRegexPatternName(value), map.getValueClass(CodeFieldStorageMapKind.REGEX_PATTERN));
             cw = getCurrentFunction(cw, classWriter);
         }
 

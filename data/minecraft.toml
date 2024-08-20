@@ -22,7 +22,6 @@ Tag_stringify."1.20.2" = "net/minecraft/commands/CommandFunction$CommandMacro:st
 Tag_stringify."1.20.3+" = "net/minecraft/commands/functions/MacroFunction:stringify(Lnet/minecraft/nbt/Tag;)Ljava/lang/String;@S"
 
 ObjectiveCriteria_byName = "net/minecraft/world/scores/criteria/ObjectiveCriteria:byName(Ljava/lang/String;)Ljava/util/Optional;@S"
-Optional_get = "java/util/Optional:get()Ljava/lang/Object;@M"
 
 Component_literal = "net/minecraft/network/chat/Component:literal(Ljava/lang/String;)Lnet/minecraft/network/chat/MutableComponent;@IS"
 Component_keybind = "net/minecraft/network/chat/Component:keybind(Ljava/lang/String;)Lnet/minecraft/network/chat/MutableComponent;@IS"
@@ -73,6 +72,3 @@ Anchor_EYES = "net/minecraft/commands/arguments/EntityAnchorArgument$Anchor:EYES
 Anchor_FEET = "net/minecraft/commands/arguments/EntityAnchorArgument$Anchor:FEET:Lnet/minecraft/commands/arguments/EntityAnchorArgument$Anchor;@SR"
 
 ServerFunctionManager_context."1.20.2-" = "net/minecraft/server/ServerFunctionManager:context:Lnet/minecraft/server/ServerFunctionManager$ExecutionContext;@MRW"
-
-Boolean_FALSE = "java/lang/Boolean:FALSE:Ljava/lang/Boolean;@SR"
-Boolean_TRUE = "java/lang/Boolean:TRUE:Ljava/lang/Boolean;@SR"

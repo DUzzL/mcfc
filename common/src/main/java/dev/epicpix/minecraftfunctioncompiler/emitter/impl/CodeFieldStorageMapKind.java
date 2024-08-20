@@ -6,6 +6,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
 import dev.epicpix.minecraftfunctioncompiler.data.text.TextStyle;
 
 import java.util.ArrayList;
+import java.util.regex.Pattern;
 
 public final class CodeFieldStorageMapKind<T> {
 
@@ -27,6 +28,7 @@ public final class CodeFieldStorageMapKind<T> {
     public static final CodeFieldStorageMapKind<DataLocation> FUNCTION = new CodeFieldStorageMapKind<>("FUNCTION");
     public static final CodeFieldStorageMapKind<NbtValue.Compound> NBT_COMPOUND = new CodeFieldStorageMapKind<>("NBT_COMPOUND");
     public static final CodeFieldStorageMapKind<NbtValue> NBT_VALUE = new CodeFieldStorageMapKind<>("NBT_VALUE");
+    public static final CodeFieldStorageMapKind<String> REGEX_PATTERN = new CodeFieldStorageMapKind<>("REGEX_PATTERN");
     public static final CodeFieldStorageMapKind<DataLocation> RESOURCE_LOCATION = new CodeFieldStorageMapKind<>("RESOURCE_LOCATION");
     public static final CodeFieldStorageMapKind<String> SCOREBOARD_CRITERION = new CodeFieldStorageMapKind<>("SCOREBOARD_CRITERION");
     public static final CodeFieldStorageMapKind<Text> TEXT = new CodeFieldStorageMapKind<>("TEXT");

@@ -154,6 +154,7 @@ public final class NbtParser {
     private static boolean isIntegerLike(String str) {
         int index = 0;
         if(str.charAt(0) == '-' || str.charAt(0) == '+') index++;
+        if(str.length() == index) return false;
         if(str.charAt(index) == '0') return str.length() == index + 1;
         while(index < str.length()) {
             char c = str.charAt(index);

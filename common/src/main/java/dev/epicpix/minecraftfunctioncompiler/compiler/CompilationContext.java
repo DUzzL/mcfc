@@ -334,14 +334,16 @@ public class CompilationContext {
             var playerLocal = LocationData.<Player>ofLocal(data.highestId());
             stacker.stackInstruction(Instructions2.tryAsPlayer(entityData.content(), playerLocal));
             stacker.stackInstruction(Instructions2.checkGamemode(playerLocal, gamemode.data(), gamemode.negated()));
-            data = data.incrementedId(1);
-            enterWith(data);
+            enterWith(data = data.incrementedId(1));
         }
         for(var name : selector.names()) {
             stacker.stackInstruction(Instructions2.checkEntityName(entityData.content(), name.data(), name.negated()));
         }
+        enterWith(data = data.withBaseInstruction(stacker.current));
         for(var tag : selector.tags()) {
-            stacker.stackInstruction(Instructions2.checkEntityTag(entityData.content(), tag.data(), tag.negated()));
+            var resolved = getResolvedMacro(tag.data());
+            stacker.stackInstruction(Instructions2.checkEntityTag(entityData.content(), resolved.content(), tag.negated()));
+            enterWith(data = resolved.data().withBaseInstruction(stacker.current));
         }
         if(selector.hasTags() != null) {
             stacker.stackInstruction(Instructions2.checkEntityTags(entityData.content(), selector.hasTags()));
@@ -352,16 +354,14 @@ public class CompilationContext {
             stacker.stackInstruction(Instructions2.tryAsPlayer(entityData.content(), playerLocal));
             stacker.stackInstruction(Instructions2.getExperienceLevel(playerLocal, levelLocal));
             stacker.stackInstruction(Instructions.checkIntRange(levelLocal, selector.level()));
-            data = data.incrementedId(2);
-            enterWith(data);
+            enterWith(data = data.incrementedId(2));
         }
         if(selector.yaw() != null || selector.pitch() != null) {
             var rotationLocal = LocationData.<Vec2>ofLocal(data.highestId());
             stacker.stackInstruction(Instructions2.getEntityRotation(entityData.content(), rotationLocal));
             if(selector.yaw() != null) stacker.stackInstruction(Instructions.checkRotationYaw(rotationLocal, selector.yaw()));
             if(selector.pitch() != null) stacker.stackInstruction(Instructions.checkRotationPitch(rotationLocal, selector.pitch()));
-            data = data.incrementedId(1);
-            enterWith(data);
+            enterWith(data = data.incrementedId(1));
         }
         for(var team : selector.teams()) {
             stacker.stackInstruction(Instructions2.checkTeam(entityData.content(), team.data(), team.negated()));

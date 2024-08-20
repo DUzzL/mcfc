@@ -1,5 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.data;
 
+import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
+
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -14,7 +16,7 @@ public record SelectorArgument(
     boolean requirePlayer,
     List<NegatableData<String>> names,
     Boolean hasTags,
-    List<NegatableData<String>> tags,
+    List<NegatableData<MacroTemplate<String>>> tags,
     Boolean hasTeam,
     List<NegatableData<String>> teams,
     Map<String, IntRangeArgument> scores,
@@ -84,13 +86,6 @@ public record SelectorArgument(
                 yaw,
                 pitch
         );
-    }
-
-    public boolean selectPlayers() {
-        return entityTypes != null
-                && !entityTypes.negated()
-                && entityTypes.data().size() == 1
-                && entityTypes.data().get(0).equals(new DataLocation("minecraft", "player"));
     }
 
     public boolean excludesPlayers() {

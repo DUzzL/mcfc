@@ -295,7 +295,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
 
     protected abstract void nbtTagToString(CodeWriter writer, String key, Label errorLabel);
 
-    private void writeMacroInstanceCreation(String className, Label errorLabel, CodeWriter writer, List<Instruction> macroInstructions, List<String> macroInputs) {
+    private void writeMacroInstanceCreation(String className, Label errorLabel, CodeWriter writer, CodeFieldStorage cf, List<Instruction> macroInstructions, List<String> macroInputs) {
         writer.loadLocal("static$FunctionCompound");
         writer.methodVisitor().visitJumpInsn(Opcodes.IFNULL, errorLabel);
 
@@ -313,7 +313,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
                 writer.storeLocal("macroCheck");
                 for(var validator : macro.validators()) {
                     if(generated.add(validator)) {
-                        validator.validateGenerated("macroCheck", writer, errorLabel);
+                        validator.validateGenerated("macroCheck", writer, cf, errorLabel);
                     }
                 }
                 writer.destroyLocal(local);
@@ -359,7 +359,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
             new EmitterContext(fieldStorage, codeWriter, compiledFunctions, new HashMap<>(), new HashMap<>(), null, Instructions2.root().withChildren(new ArrayList<>(instructions)), new HashMap<>(), new HashMap<>()).run();
         }else {
             var errorLabel = new Label();
-            writeMacroInstanceCreation(className, errorLabel, codeWriter, macroInstructions, macroInputs);
+            writeMacroInstanceCreation(className, errorLabel, codeWriter, fieldStorage, macroInstructions, macroInputs);
             codeWriter.methodVisitor().visitLabel(errorLabel);
             var instr = Instructions2.root().with(Instructions.callFunctions(List.of(funcId), null, null, null, null, null, LocationData.ofLocal(-1)));
             new EmitterContext(fieldStorage, codeWriter, Collections.emptySet(), new HashMap<>(), new HashMap<>(), null, instr, new HashMap<>(Map.of(-1, "static$FunctionCompound")), new HashMap<>()).run();
