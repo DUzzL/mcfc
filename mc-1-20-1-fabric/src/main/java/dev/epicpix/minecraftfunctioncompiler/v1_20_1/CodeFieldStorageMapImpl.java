@@ -14,14 +14,12 @@ import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import org.objectweb.asm.Opcodes;
 
 import java.util.List;
-import java.util.regex.Pattern;
 
-import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callMap_get;
-import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callPattern_matcher;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.*;
 import static dev.epicpix.minecraftfunctioncompiler.v1_20_1.emitter.MappedUsageDefinitionsExtensions.*;
 
 public class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
-    public static final CodeFieldStorageMap INSTANCE = new CodeFieldStorageMapImpl();
+    public static final CodeFieldStorageMap INSTANCE = new CodeFieldStorageMapImpl().addDefaults();
 
     CodeFieldStorageMapImpl() {
         set(CodeFieldStorageMapKind.ATTRIBUTE, new CodeFieldStorageMapValue<>(Attribute.class, (cf, cw, value) -> {
@@ -49,11 +47,6 @@ public class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
         }));
         set(CodeFieldStorageMapKind.NBT_COMPOUND, new CodeFieldStorageMapValue<>(CompoundTag.class, (cf, cw, value) -> writeNbtValue(value, cw)));
         set(CodeFieldStorageMapKind.NBT_VALUE, new CodeFieldStorageMapValue<>(Tag.class, (cf, cw, value) -> writeNbtValue(value, cw)));
-        set(CodeFieldStorageMapKind.REGEX_PATTERN, new CodeFieldStorageMapValue<>(Pattern.class, (cf, cw, value) -> {
-            cw.writeString(value);
-            callPattern_matcher(cw);
-            return 6;
-        }));
         set(CodeFieldStorageMapKind.RESOURCE_LOCATION, new CodeFieldStorageMapValue<>(ResourceLocation.class, (cf, cw, value) -> {
             cw.newObjectCreate(ResourceLocation.class);
             cw.writeString(value.namespace());
