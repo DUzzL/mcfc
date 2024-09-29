@@ -1,8 +1,8 @@
 package dev.epicpix.minecraftfunctioncompiler.compiler;
 
+import dev.epicpix.minecraftfunctioncompiler.commands.CommandParams;
 import dev.epicpix.minecraftfunctioncompiler.il.Instructions2;
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
-import dev.epicpix.minecraftfunctioncompiler.commands.Command;
 
 public class ResultStorage {
 
@@ -58,7 +58,7 @@ public class ResultStorage {
         }
     }
 
-    public void checkRequirements(Command command) {
+    public void checkRequirements(CommandParams command) {
         if(storesSuccess() && !updatedSuccess) throw new UnsupportedOperationException("ResultStorage requirement failed, requires success value but missing data: " + command);
         if(storesResult() && !updatedResult) throw new UnsupportedOperationException("ResultStorage requirement failed, requires result value but missing data: " + command);
     }

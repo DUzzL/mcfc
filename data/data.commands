@@ -20,8 +20,8 @@ EXECUTE_ANCHORED/execute anchored <anchor:location_anchor> <command:command[root
 EXECUTE_AS/execute as <targets:entity_selector> <command:command[root=execute]>
 EXECUTE_AT/execute at <targets:entity_selector> <command:command[root=execute]>
 EXECUTE_IF_ENTITY/execute if entity <entities:entity_selector> <command:command[root=execute]>
-EXECUTE_IF_SCORE_RANGE/execute if score <target:score_holder> <targetObjective:objective> matches <range:int_range> <command:command[root=execute]>
-EXECUTE_IF_SCORE_COMPARE/execute if score <target:score_holder> <targetObjective:objective> <comparison:score_comparison> <source:score_holder> <sourceObjective:objective> <command:command[root=execute]>
+EXECUTE_IF_SCORE_RANGE/execute if score <target:score_holder> <target_objective:objective> matches <range:int_range> <command:command[root=execute]>
+EXECUTE_IF_SCORE_COMPARE/execute if score <target:score_holder> <target_objective:objective> <comparison:score_comparison> <source:score_holder> <source_objective:objective> <command:command[root=execute]>
 EXECUTE_ON_VEHICLE/execute on vehicle <command:command[root=execute]>
 EXECUTE_POSITIONED_AS/execute positioned as <targets:entity_selector> <command:command[root=execute]>
 EXECUTE_POSITIONED_POS/execute positioned <pos:vec3> <command:command[root=execute]>
@@ -31,8 +31,8 @@ EXECUTE_RUN/execute run <command:command>
 EXECUTE_STORE_RESULT_SCORE/execute store result score <targets:score_holder> <objective:objective> <command:command[root=execute]>
 EXECUTE_STORE_RESULT_STORAGE/execute store result storage <storage:resource_location> <path:nbt_path> <store_type:result_store_type> <scale:double> <command:command[root=execute]>
 EXECUTE_UNLESS_ENTITY/execute unless entity <entities:entity_selector> <command:command[root=execute]>
-EXECUTE_UNLESS_SCORE_RANGE/execute unless score <target:score_holder> <targetObjective:objective> matches <range:int_range> <command:command[root=execute]>
-EXECUTE_UNLESS_SCORE_COMPARE/execute unless score <target:score_holder> <targetObjective:objective> <comparison:score_comparison> <source:score_holder> <sourceObjective:objective> <command:command[root=execute]>
+EXECUTE_UNLESS_SCORE_RANGE/execute unless score <target:score_holder> <target_objective:objective> matches <range:int_range> <command:command[root=execute]>
+EXECUTE_UNLESS_SCORE_COMPARE/execute unless score <target:score_holder> <target_objective:objective> <comparison:score_comparison> <source:score_holder> <source_objective:objective> <command:command[root=execute]>
 
 =DEFINE/xp/experience
 EXPERIENCE_ADD/experience add <targets:entity_selector[players]> <amount:int>
@@ -57,7 +57,7 @@ RETURN_VALUE<1.20..>/return <value:int>
 SCOREBOARD_PLAYERS_ADD/scoreboard players add <targets:score_holder> <objective:objective> <score:int[minimum=0]>
 SCOREBOARD_PLAYERS_ENABLE/scoreboard players enable <targets:score_holder> <objective:objective>
 SCOREBOARD_PLAYERS_GET/scoreboard players get <targets:score_holder> <objective:objective>
-SCOREBOARD_PLAYERS_OPERATION/scoreboard players operation <targets:score_holder> <targetObjective:objective> <operation:scoreboard_operation> <source:score_holder> <sourceObjective:objective>
+SCOREBOARD_PLAYERS_OPERATION/scoreboard players operation <targets:score_holder> <target_objective:objective> <operation:scoreboard_operation> <source:score_holder> <source_objective:objective>
 SCOREBOARD_PLAYERS_REMOVE/scoreboard players remove <targets:score_holder> <objective:objective> <score:int[minimum=0]>
 SCOREBOARD_PLAYERS_RESET_OBJECTIVE/scoreboard players reset <targets:score_holder> <objective:objective>
 SCOREBOARD_PLAYERS_RESET_ALL/scoreboard players reset <targets:score_holder>
@@ -70,7 +70,7 @@ TITLE_ACTIONBAR/title <players:entity_selector[players]> actionbar <text:text>
 TITLE_CLEAR/title <players:entity_selector[players]> clear
 TITLE_RESET/title <players:entity_selector[players]> reset
 TITLE_SUBTITLE/title <players:entity_selector[players]> subtitle <text:text>
-TITLE_TIMES/title <players:entity_selector[players]> times <fadeIn:time[minimum=0]> <stay:time[minimum=0]> <fadeOut:time[minimum=0]>
+TITLE_TIMES/title <players:entity_selector[players]> times <fade_in:time[minimum=0]> <stay:time[minimum=0]> <fade_out:time[minimum=0]>
 TITLE_TITLE/title <players:entity_selector[players]> title <text:text>
 
 TELLRAW/tellraw <players:entity_selector[players]> <text:text>

@@ -1,5 +1,6 @@
 package dev.epicpix.annotations.commands
 
+import dev.epicpix.annotations.snakeToLowerCamelCase
 import java.util.concurrent.atomic.AtomicInteger
 
 data class ParsedCommandArgument(
@@ -10,6 +11,7 @@ data class ParsedCommandArgument(
     val kindDefaults: String? = null,
     var executableCommand: String? = null,
     var versionRange: Pair<String?, String?>? = null,
+    var types: MutableList<Pair<String, String>> = mutableListOf(),
 )
 
 data class ParsedCommandData(
@@ -92,27 +94,29 @@ fun parseCommandsData(file: String): ParsedCommandData {
     return ParsedCommandData(commandRedirects, commands, commandTree)
 }
 
-private fun generateCommandReturn(builder: StringBuilder, uniqueId: AtomicInteger, executableCommand: String, arguments: Map<String, String>, forced: Boolean = false) {
+private fun generateCommandReturn(builder: StringBuilder, commandTypes: MutableMap<String, List<Pair<String, String>>>, executableCommand: String, arguments: Map<String, String>, typedArguments: List<Pair<String, String>>, forced: Boolean = false) {
+    commandTypes[executableCommand] = typedArguments
+    val paramsClassName = "_COMMAND_$executableCommand".snakeToLowerCamelCase()
     if(!forced) {
         builder.append("    if(!reader.canRead()) {\n")
-        val hashMapIndex = uniqueId.getAndIncrement()
-        builder.append("        var y$hashMapIndex = new HashMap<String, Object>();\n")
-        for((k, v) in arguments) {
-            builder.append("        y$hashMapIndex.put(\"$k\", $v);\n")
+        builder.append("    ")
+    }
+    builder.append("    return new dev.epicpix.minecraftfunctioncompiler.commands.params.$paramsClassName(")
+    var index = 0
+    for((t, _) in typedArguments) {
+        index++
+        builder.append(arguments[t])
+        if(index != typedArguments.size) {
+            builder.append(",")
         }
-        builder.append("        return new Command(CommandType.${executableCommand}, y$hashMapIndex);\n")
+    }
+    builder.append(");\n")
+    if(!forced) {
         builder.append("    }\n")
-    }else {
-        val hashMapIndex = uniqueId.getAndIncrement()
-        builder.append("    var y$hashMapIndex = new HashMap<String, Object>();\n")
-        for((k, v) in arguments) {
-            builder.append("    y$hashMapIndex.put(\"$k\", $v);\n")
-        }
-        builder.append("    return new Command(CommandType.${executableCommand}, y$hashMapIndex);\n")
     }
 }
 
-private fun generateArgumentReaderChildren(name: String, data: ParsedCommandArgument, builder: StringBuilder, uniqueId: AtomicInteger, argumentPath: String, arguments: Map<String, String>, indent: String) {
+private fun generateArgumentReaderChildren(name: String, data: ParsedCommandArgument, builder: StringBuilder, commandTypes: MutableMap<String, List<Pair<String, String>>>, uniqueId: AtomicInteger, argumentPath: String, arguments: Map<String, String>, typedArguments: List<Pair<String, String>>, indent: String) {
     var reachable = true
     val entries = data.children.entries.toList().sortedBy { it.value.kind != "literal" }
     for(i in entries.indices) {
@@ -124,7 +128,7 @@ private fun generateArgumentReaderChildren(name: String, data: ParsedCommandArgu
                 val locationIndex = uniqueId.getAndIncrement()
                 builder.append("${indent}var z$locationIndex = reader.getIndex();\n")
                 builder.append("${indent}try {\n")
-                if(generateArgumentReaderVersionCheck(k, v, innerBuilder, uniqueId, "$argumentPath $name", arguments)) {
+                if(generateArgumentReaderVersionCheck(k, v, innerBuilder, commandTypes, uniqueId, "$argumentPath $name", arguments, typedArguments)) {
                     innerBuilder.append("reader.setIndex(z$locationIndex);\n")
                 }
                 builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent("$indent    ") + "\n")
@@ -132,7 +136,7 @@ private fun generateArgumentReaderChildren(name: String, data: ParsedCommandArgu
                 builder.append("$indent    reader.setIndex(z$locationIndex);\n")
                 builder.append("$indent}\n")
             }else {
-                reachable = generateArgumentReaderVersionCheck(k, v, innerBuilder, uniqueId, "$argumentPath $name", arguments)
+                reachable = generateArgumentReaderVersionCheck(k, v, innerBuilder, commandTypes, uniqueId, "$argumentPath $name", arguments, typedArguments)
                 builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent(indent) + "\n")
             }
         }
@@ -142,27 +146,29 @@ private fun generateArgumentReaderChildren(name: String, data: ParsedCommandArgu
     }
 }
 
-private fun generateArgumentReaderVersionCheck(name: String, data: ParsedCommandArgument, builder: StringBuilder, uniqueId: AtomicInteger, argumentPath: String, arguments: Map<String, String>, fromRoot: Boolean = false): Boolean {
+private fun generateArgumentReaderVersionCheck(name: String, data: ParsedCommandArgument, builder: StringBuilder, commandTypes: MutableMap<String, List<Pair<String, String>>>, uniqueId: AtomicInteger, argumentPath: String, arguments: Map<String, String>, typedArguments: List<Pair<String, String>>, fromRoot: Boolean = false): Boolean {
     if(data.versionRange != null) {
         val innerBuilder = StringBuilder()
         val min = data.versionRange!!.first.let { if(it == null) "null" else "MinecraftVersion.MC_${it.replace('.', '_')}" }
         val max = data.versionRange!!.second.let { if(it == null) "null" else "MinecraftVersion.MC_${it.replace('.', '_')}" }
         builder.append("if(MinecraftVersion.isCurrentVersionInRange($min, $max)) {\n")
-        generateArgumentReader(name, data, innerBuilder, uniqueId, argumentPath, arguments, fromRoot)
+        generateArgumentReader(name, data, innerBuilder, commandTypes, uniqueId, argumentPath, arguments, typedArguments, fromRoot)
         builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent("    ") + "\n")
         builder.append("}\n")
         return true
     }else {
-        return generateArgumentReader(name, data, builder, uniqueId, argumentPath, arguments, fromRoot)
+        return generateArgumentReader(name, data, builder, commandTypes, uniqueId, argumentPath, arguments, typedArguments, fromRoot)
     }
 }
 
-private fun generateArgumentReader(name: String, data: ParsedCommandArgument, builder: StringBuilder, uniqueId: AtomicInteger, argumentPath: String, arguments: Map<String, String>, fromRoot: Boolean = false): Boolean {
+private fun generateArgumentReader(name: String, data: ParsedCommandArgument, builder: StringBuilder, commandTypes: MutableMap<String, List<Pair<String, String>>>, uniqueId: AtomicInteger, argumentPath: String, arguments: Map<String, String>, typedArguments: List<Pair<String, String>>, fromRoot: Boolean = false): Boolean {
     if(fromRoot) {
         if(data.executableCommand != null) {
-            builder.append("if(!reader.canRead()) return new Command(CommandType.${data.executableCommand}, Map.of());\n")
+            commandTypes[data.executableCommand!!] = typedArguments
+            val paramsClassName = "_COMMAND_${data.executableCommand}".snakeToLowerCamelCase()
+            builder.append("if(!reader.canRead()) return new dev.epicpix.minecraftfunctioncompiler.commands.params.$paramsClassName();\n")
         }
-        generateArgumentReaderChildren(name, data, builder, uniqueId, argumentPath, arguments, "")
+        generateArgumentReaderChildren(name, data, builder, commandTypes, uniqueId, argumentPath, arguments, typedArguments, "")
         return true
     }else if(data.kind != "literal") {
         val kindInfo = data.kind +
@@ -170,9 +176,16 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
             (if(data.kindDefaults == null) "" else ":${data.kindDefaults}")
         builder.append("{ // ${data.argName} <${kindInfo}>\n")
         val argumentIndex = uniqueId.getAndIncrement()
+        val newTypedArguments = typedArguments.toMutableList()
         when(data.kind) {
-            "attribute" -> builder.append("    var a$argumentIndex = reader.readAttribute();\n")
-            "boolean" -> builder.append("    var a$argumentIndex = reader.readBoolean();\n")
+            "attribute" -> {
+                builder.append("    var a$argumentIndex = reader.readAttribute();\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.AttributeData")
+            }
+            "boolean" -> {
+                builder.append("    var a$argumentIndex = reader.readBoolean();\n")
+                newTypedArguments.add(data.argName!! to "boolean")
+            }
             "command" -> {
                 val root = data.kindOptions["root"]
                 if(root != null) {
@@ -180,66 +193,129 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 }else {
                     builder.append("    var a$argumentIndex = parseCommand(reader, lookup);\n")
                 }
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.commands.CommandParams")
             }
-            "difficulty" -> builder.append("    var a$argumentIndex = reader.readDifficulty();\n")
+            "difficulty" -> {
+                builder.append("    var a$argumentIndex = reader.readDifficulty();\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.Difficulty")
+            }
             "double" -> {
                 builder.append("    var a$argumentIndex = reader.readDouble();\n")
                 data.kindOptions["minimum"]?.toDouble()?.also { min -> builder.append("    if(a$argumentIndex < $min) ${createError("\"Double value of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }
                 data.kindOptions["maximum"]?.toDouble()?.also { max -> builder.append("    if(a$argumentIndex > $max) ${createError("\"Double value of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
+                newTypedArguments.add(data.argName!! to "double")
             }
             "entity_selector" -> {
                 val allowMultiple = data.kindOptions.getOrDefault("multiple", "true").toBoolean()
                 val playersOnly = data.kindOptions.getOrDefault("players", "false").toBoolean()
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument")
                 if(data.executableCommand != null && data.kindDefaults == "self") {
-                    generateCommandReturn(builder, uniqueId, data.executableCommand!!, arguments + mapOf(data.argName!! to "SelectorArgument.ofSelf()"))
+                    generateCommandReturn(builder, commandTypes, data.executableCommand!!, arguments + mapOf(data.argName!! to "SelectorArgument.ofSelf()"), newTypedArguments)
                 }
                 builder.append("    var a$argumentIndex = SelectorParser.parseSelector(reader, ${!playersOnly}, $allowMultiple);\n")
             }
-            "function" -> builder.append("    var a$argumentIndex = lookup.lookupFunctions(reader.readTag());\n")
-            "gamemode" -> builder.append("    var a$argumentIndex = reader.readGamemode();\n")
+            "function" -> {
+                builder.append("    var a$argumentIndex = lookup.lookupFunctions(reader.readTag());\n")
+                newTypedArguments.add(data.argName!! to "java.util.List<dev.epicpix.minecraftfunctioncompiler.data.DataLocation>")
+            }
+            "gamemode" -> {
+                builder.append("    var a$argumentIndex = reader.readGamemode();\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.Gamemode")
+            }
             "int" -> {
                 builder.append("    var a$argumentIndex = reader.readInt();\n")
                 data.kindOptions["minimum"]?.toInt()?.also { min -> builder.append("    if(a$argumentIndex < $min) ${createError("\"Integer value of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }
                 data.kindOptions["maximum"]?.toInt()?.also { max -> builder.append("    if(a$argumentIndex > $max) ${createError("\"Integer value of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
+                newTypedArguments.add(data.argName!! to "int")
             }
             "int_range" -> {
                 builder.append("    var a$argumentIndex = reader.readIntRange();\n")
                 data.kindOptions["minimum"]?.toInt()?.also { min -> builder.append("    if(a$argumentIndex.minimum() < $min) ${createError("\"Integer range minimum of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }
                 data.kindOptions["maximum"]?.toInt()?.also { max -> builder.append("    if(a$argumentIndex.maximum() > $max) ${createError("\"Integer range maximum of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.IntRangeArgument")
             }
-            "location_anchor" -> builder.append("    var a$argumentIndex = reader.readLocationAnchor();\n")
-            "mob_effect" -> builder.append("    var a$argumentIndex = reader.readMobEffect();\n")
-            "nbt_compound" -> builder.append("    var a$argumentIndex = NbtParser.readNbtCompound(reader);\n")
-            "nbt_path" -> builder.append("    var a$argumentIndex = NbtParser.readNbtPath(reader);\n")
-            "nbt_value" -> builder.append("    var a$argumentIndex = NbtParser.readNbtValue(reader);\n")
-            "objective" -> builder.append("    var a$argumentIndex = reader.readWord();\n")
-            "resource_location" -> builder.append("    var a$argumentIndex = reader.readDataLocation();\n")
-            "result_store_type" -> builder.append("    var a$argumentIndex = reader.readResultStoreType();\n")
-            "rotation" -> builder.append("    var a$argumentIndex = reader.readRotation();\n")
-            "score_comparison" -> builder.append("    var a$argumentIndex = reader.readScoreboardCompareOperation();\n")
-            "score_holder" -> builder.append("    var a$argumentIndex = SelectorParser.parseScoreHolder(reader);\n")
-            "scoreboard_operation" -> builder.append("    var a$argumentIndex = reader.readScoreboardOperation();\n")
-            "swizzle" -> builder.append("    var a$argumentIndex = reader.readSwizzle();\n")
-            "text" -> builder.append("    var a$argumentIndex = TextParser.readText(reader);\n")
+            "location_anchor" -> {
+                builder.append("    var a$argumentIndex = reader.readLocationAnchor();\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.LocationAnchor")
+            }
+            "mob_effect" -> {
+                builder.append("    var a$argumentIndex = reader.readMobEffect();\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.MobEffectData")
+            }
+            "nbt_compound" -> {
+                builder.append("    var a$argumentIndex = NbtParser.readNbtCompound(reader);\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue.Compound")
+            }
+            "nbt_path" -> {
+                builder.append("    var a$argumentIndex = NbtParser.readNbtPath(reader);\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPath")
+            }
+            "nbt_value" -> {
+                builder.append("    var a$argumentIndex = NbtParser.readNbtValue(reader);\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue")
+            }
+            "objective" -> {
+                builder.append("    var a$argumentIndex = reader.readWord();\n")
+                newTypedArguments.add(data.argName!! to "java.lang.String")
+            }
+            "resource_location" -> {
+                builder.append("    var a$argumentIndex = reader.readDataLocation();\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.DataLocation")
+            }
+            "result_store_type" -> {
+                builder.append("    var a$argumentIndex = reader.readResultStoreType();\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.ResultStoreType")
+            }
+            "rotation" -> {
+                builder.append("    var a$argumentIndex = reader.readRotation();\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.RotationCoordinates")
+            }
+            "score_comparison" -> {
+                builder.append("    var a$argumentIndex = reader.readScoreboardCompareOperation();\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCompareOperation")
+            }
+            "score_holder" -> {
+                builder.append("    var a$argumentIndex = SelectorParser.parseScoreHolder(reader);\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument")
+            }
+            "scoreboard_operation" -> {
+                builder.append("    var a$argumentIndex = reader.readScoreboardOperation();\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.ScoreboardOperation")
+            }
+            "swizzle" -> {
+                builder.append("    var a$argumentIndex = reader.readSwizzle();\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.SwizzleArgument")
+            }
+            "text" -> {
+                builder.append("    var a$argumentIndex = TextParser.readText(reader);\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.text.Text")
+            }
             "time" -> {
                 builder.append("    var a$argumentIndex = reader.readTime();\n")
                 data.kindOptions["minimum"]?.toInt()?.also { min -> builder.append("    if(a$argumentIndex < $min) ${createError("\"Time value of \" + a$argumentIndex + \" ticks is below allowed value ($min ticks)\"")}\n") }
                 data.kindOptions["maximum"]?.toInt()?.also { max -> builder.append("    if(a$argumentIndex > $max) ${createError("\"Time value of \" + a$argumentIndex + \" ticks is above allowed value ($max ticks)\"")}\n") }
+                newTypedArguments.add(data.argName!! to "int")
             }
-            "word" -> builder.append("    var a$argumentIndex = reader.readWord();\n")
-            "vec3" -> builder.append("    var a$argumentIndex = reader.readVec3();\n")
+            "word" -> {
+                builder.append("    var a$argumentIndex = reader.readWord();\n")
+                newTypedArguments.add(data.argName!! to "java.lang.String")
+            }
+            "vec3" -> {
+                builder.append("    var a$argumentIndex = reader.readVec3();\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates")
+            }
             else -> {
                 TODO("Reading '$kindInfo' kind is not implemented @$argumentPath <${data.argName}>")
             }
         }
         val newArguments = arguments + mapOf(data.argName!! to "a$argumentIndex")
         if(data.kind == "command") {
-            generateCommandReturn(builder, uniqueId, data.executableCommand!!, newArguments)
+            generateCommandReturn(builder, commandTypes, data.executableCommand!!, newArguments, newTypedArguments)
             builder.append("}\n")
             return false
         }
         if(data.executableCommand != null) {
-            generateCommandReturn(builder, uniqueId, data.executableCommand!!, newArguments)
+            generateCommandReturn(builder, commandTypes, data.executableCommand!!, newArguments, newTypedArguments)
             if(data.children.isEmpty()) {
                 builder.append("    ${createWrappedError("Too many arguments for @$argumentPath $name")}\n")
                 builder.append("}\n")
@@ -247,7 +323,7 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
             }
         }
         builder.append("    if(!reader.skipArgumentWhitespace()) ${createWrappedError("Missing space after argument @$argumentPath $name")}\n")
-        generateArgumentReaderChildren(name, data, builder, uniqueId, argumentPath, newArguments, "    ")
+        generateArgumentReaderChildren(name, data, builder, commandTypes, uniqueId, argumentPath, newArguments, newTypedArguments, "    ")
         builder.append("}\n")
         return false
     }else {
@@ -256,17 +332,10 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
         builder.append("    var z$locationIndex = reader.getIndex();\n")
         builder.append("    if(reader.canRead() && reader.readWord().equals(\"$name\")) {\n")
         if(data.executableCommand != null) {
-            builder.append("    if(!reader.canRead()) {\n")
-            val hashMapIndex = uniqueId.getAndIncrement()
-            builder.append("        var y$hashMapIndex = new HashMap<String, Object>();\n")
-            for((k, v) in arguments) {
-                builder.append("        y$hashMapIndex.put(\"$k\", $v);\n")
-            }
-            builder.append("        return new Command(CommandType.${data.executableCommand}, y$hashMapIndex);\n")
-            builder.append("    }\n")
+            generateCommandReturn(builder, commandTypes, data.executableCommand!!, arguments, typedArguments)
         }
         builder.append("        if(!reader.skipArgumentWhitespace()) ${createWrappedError("Missing space after argument @$argumentPath $name")}\n")
-        generateArgumentReaderChildren(name, data, builder, uniqueId, argumentPath, arguments, "        ")
+        generateArgumentReaderChildren(name, data, builder, commandTypes, uniqueId, argumentPath, arguments, typedArguments, "        ")
         builder.append("    }\n")
         builder.append("    reader.setIndex(z$locationIndex);\n")
         builder.append("}\n")
@@ -275,16 +344,16 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
 }
 
 private fun createError(str: String) = "throw new CommandErrorException(new CommandError(reader.getString(), $str));"
-private fun createWrappedError(str: String) = createError("\"" + str.translateEscapes() + "\"")
+private fun createWrappedError(str: String) = createError("\"" + str.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\"")
 
-fun generateCommandsDataReader(data: ParsedCommandData): String {
+fun generateCommandsDataReader(data: ParsedCommandData): Pair<String, Map<String, List<Pair<String, String>>>> {
     val builder = StringBuilder()
     val uid = AtomicInteger()
-    builder.append("public static Command parseCommand(String command, boolean allowMacros, IArgumentLookup lookup) {\n")
+    builder.append("public static CommandParams parseCommand(String command, boolean allowMacros, IArgumentLookup lookup) {\n")
     builder.append("    return parseCommand(new StringCommandReader(command, allowMacros), lookup);\n")
     builder.append("}\n")
     builder.append("\n")
-    builder.append("public static Command parseCommand(StringCommandReader reader, IArgumentLookup lookup) {\n")
+    builder.append("public static CommandParams parseCommand(StringCommandReader reader, IArgumentLookup lookup) {\n")
     builder.append("    var commandName = reader.readWord();\n")
     builder.append("    if(!reader.skipArgumentWhitespace()) ${createError("\"Missing space after argument @ \" + commandName")}\n")
     builder.append("    switch(commandName) {\n")
@@ -298,12 +367,13 @@ fun generateCommandsDataReader(data: ParsedCommandData): String {
     builder.append("    }\n")
     builder.append("}\n")
     builder.append("\n")
+    val commandTypes = mutableMapOf<String, List<Pair<String, String>>>()
     for((k, v) in data.commandTree) {
-        builder.append("public static Command parseCommand_$k(StringCommandReader reader, IArgumentLookup lookup) {\n")
+        builder.append("public static CommandParams parseCommand_$k(StringCommandReader reader, IArgumentLookup lookup) {\n")
         val innerBuilder = StringBuilder()
-        generateArgumentReaderVersionCheck(k, v, innerBuilder, uid, "", mapOf(), true)
+        generateArgumentReaderVersionCheck(k, v, innerBuilder, commandTypes, uid, "", mapOf(), listOf(), true)
         builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent("    ") + "\n")
         builder.append("}\n")
     }
-    return builder.toString()
+    return builder.toString() to commandTypes
 }

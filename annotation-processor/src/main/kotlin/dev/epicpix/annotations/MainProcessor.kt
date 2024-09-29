@@ -218,6 +218,7 @@ class MainProcessor(
 
     fun generateCommandsData() {
         val data = parseCommandsData(loadDataFile("data.commands"))
+        val (cmdStr, cmdTypes) = generateCommandsDataReader(data)
         run {
             val resultPackage = "dev.epicpix.minecraftfunctioncompiler.commands"
             val resultName = "CommandParser"
@@ -228,21 +229,18 @@ class MainProcessor(
             map.appendText("import java.util.*;\n")
             map.appendText("public final class $resultName {\n")
             map.appendText("    private $resultName() {}\n")
-            map.appendText(generateCommandsDataReader(data).substringBeforeLast('\n').prependIndent("    ") + "\n")
+            map.appendText(cmdStr.substringBeforeLast('\n').prependIndent("    ") + "\n")
             map.appendText("}\n")
             map.close()
         }
         run {
-            val resultPackage = "dev.epicpix.minecraftfunctioncompiler.commands"
-            val resultName = "CommandType"
-            val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")
-            map.appendText("package $resultPackage;\n")
-            map.appendText("public enum $resultName {\n")
-            for((command) in data.commands) {
-                map.appendText("$command,\n")
+            for((kind, types) in cmdTypes) {
+                val paramsClassName = "_COMMAND_$kind".snakeToLowerCamelCase()
+                val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, "dev.epicpix.minecraftfunctioncompiler.commands.params", paramsClassName, "java")
+                map.appendText("package dev.epicpix.minecraftfunctioncompiler.commands.params;\n")
+                map.appendText("public record $paramsClassName(\n${types.joinToString(",\n") { (name, type) -> "    $type ${name.snakeToLowerCamelCase()}" }}\n) implements dev.epicpix.minecraftfunctioncompiler.commands.CommandParams {}\n")
+                map.close()
             }
-            map.appendText("}\n")
-            map.close()
         }
     }
 

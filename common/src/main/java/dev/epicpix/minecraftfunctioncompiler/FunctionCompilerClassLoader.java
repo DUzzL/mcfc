@@ -140,7 +140,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
     }
 
     public void loadFunctionClasses(IArgumentLookup lookup, CodeFieldStorage fieldStorage, Object serverFunctionManager) {
-        HashMap<DataLocation, List<Command>> definedFunctions = new HashMap<>();
+        HashMap<DataLocation, List<CommandParams>> definedFunctions = new HashMap<>();
         ArrayList<CommandError> commandErrors = new ArrayList<>();
 
         var startParse = System.nanoTime();
@@ -149,7 +149,7 @@ public abstract class FunctionCompilerClassLoader extends ClassLoader {
             var values = entry.getValue();
             String currentCommand = null;
             try {
-                ArrayList<Command> parsed = new ArrayList<>();
+                ArrayList<CommandParams> parsed = new ArrayList<>();
                 for(int i = 0; i<values.size(); i++) {
                     StringBuilder value = new StringBuilder(values.get(i).trim());
                     if(MinecraftVersion.isCurrentVersionInRange(MinecraftVersion.MC_1_20_2, null)) {
