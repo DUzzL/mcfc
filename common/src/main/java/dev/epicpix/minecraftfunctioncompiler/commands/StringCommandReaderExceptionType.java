@@ -26,4 +26,5 @@ public enum StringCommandReaderExceptionType {
     UNSUPPORTED_MACRO_LOCATION,
     NOT_MACRO,
     INVALID_MACRO_NAME,
+    INVALID_SCORE_ACCESSOR,
 }

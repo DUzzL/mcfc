@@ -190,6 +190,13 @@ public class CompilationContext {
         return enterWithValue(data.incrementedId(1).withBaseInstruction(execInstruction), objective);
     }
 
+    @SuppressWarnings("resource")
+    public CompilationData<ScoreAccessor> forScoreAccessors(ScoreAccessorArgument accessor) {
+        var objectiveName = getObjective(accessor.objective());
+        var scoreHolder = forScoreHolder(accessor.scoreHolder());
+        return enterWithValue(scoreHolder.data(), new ScoreAccessor(objectiveName.content(), scoreHolder.content()), objectiveName.stackCount() + scoreHolder.stackCount() + 1);
+    }
+
     public CompilationData<LocationData<String>> getScoreboardName(LocationData<Entity> entity) {
         var data = stack.peek();
         LocationData<String> name = LocationData.ofLocal(data.highestId());
@@ -198,10 +205,10 @@ public class CompilationContext {
         return enterWithValue(data.incrementedId(1).withBaseInstruction(instruction), name);
     }
 
-    public CompilationData<LocationData<Score>> getScoreData(LocationData<Objective> objective, LocationData<String> name, boolean autoCreate) {
+    public CompilationData<LocationData<Score>> getScoreData(ScoreAccessor accessor, boolean autoCreate) {
         var data = stack.peek();
         LocationData<Score> score = LocationData.ofLocal(data.highestId());
-        var instruction = Instructions2.scoreData(objective, name, score, autoCreate);
+        var instruction = Instructions2.scoreData(accessor.objective(), accessor.scoreHolder(), score, autoCreate);
         data.addInstructionConsumer().accept(instruction);
         if(autoCreate) {
             return enterWithValue(data.incrementedId(1).withBaseInstruction(instruction), score);
@@ -391,7 +398,7 @@ public class CompilationContext {
             for(var entry : selector.scores().entrySet()) {
                 var objectiveData = getObjective(entry.getKey());
                 var nameData = getScoreboardName(entityData.content());
-                var scoreData = getScoreData(objectiveData.content(), nameData.content(), false);
+                var scoreData = getScoreData(new ScoreAccessor(objectiveData.content(), nameData.content()), false);
 
                 var scoreValue = LocationData.<Integer>ofLocal(scoreData.data().highestId());
                 var execInstruction = Instructions.checkIntRange(scoreValue, entry.getValue());

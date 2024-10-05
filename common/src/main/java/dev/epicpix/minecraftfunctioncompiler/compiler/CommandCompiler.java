@@ -204,33 +204,27 @@ public final class CommandCompiler {
                 compile(context, cmdData.command(), result);
             }
         }else if(command instanceof CommandExecuteIfScoreRange cmdData) {
-            try(var objective = context.getObjective(cmdData.targetObjective())) {
-                try(var name = context.forScoreHolder(cmdData.target().selectSingle())) {
-                    try(var scoreData = context.getScoreData(objective.content(), name.content(), false)) {
-                        var scoreValue = LocationData.<Integer>ofLocal(scoreData.data().highestId());
-                        var execInstruction = Instructions.checkIntRange(scoreValue, cmdData.range());
-                        var baseInstruction = Instructions2.getScoreValue(scoreData.content(), scoreValue).with(execInstruction);
-                        try(var ignored = context.enterWithoutValue(scoreData.data().incrementedId(1).withBaseInstruction(execInstruction))) {
-                            compile(context, cmdData.command(), result);
-                        }
-                        scoreData.writeInstruction(baseInstruction);
+            try(var scoreAccessor = context.forScoreAccessors(cmdData.target().selectSingle())) {
+                try(var scoreData = context.getScoreData(scoreAccessor.content(), false)) {
+                    var scoreValue = LocationData.<Integer>ofLocal(scoreData.data().highestId());
+                    var execInstruction = Instructions.checkIntRange(scoreValue, cmdData.range());
+                    var baseInstruction = Instructions2.getScoreValue(scoreData.content(), scoreValue).with(execInstruction);
+                    try(var ignored = context.enterWithoutValue(scoreData.data().incrementedId(1).withBaseInstruction(execInstruction))) {
+                        compile(context, cmdData.command(), result);
                     }
+                    scoreData.writeInstruction(baseInstruction);
                 }
             }
         }else if(command instanceof CommandExecuteIfScoreCompare cmdData) {
-            try(var targetObjective = context.getObjective(cmdData.targetObjective())) {
-                try(var targetName = context.forScoreHolder(cmdData.target().selectSingle())) {
-                    try(var sourceObjective = context.getObjective(cmdData.sourceObjective())) {
-                        try(var sourceName = context.forScoreHolder(cmdData.source().selectSingle())) {
-                            try(var targetScore = context.getScoreData(targetObjective.content(), targetName.content(), false)) {
-                                try(var sourceScore = context.getScoreData(sourceObjective.content(), sourceName.content(), false)) {
-                                    var instr = Instructions.checkScoreCompare(targetScore.content(), sourceScore.content(), cmdData.comparison());
-                                    try(var ignored = context.enterWithoutValueUsingInstruction(instr)) {
-                                        compile(context, cmdData.command(), result);
-                                    }
-                                    sourceScore.writeInstruction(instr);
-                                }
+            try(var target = context.forScoreAccessors(cmdData.target().selectSingle())) {
+                try(var source = context.forScoreAccessors(cmdData.source().selectSingle())) {
+                    try(var targetScore = context.getScoreData(target.content(), false)) {
+                        try(var sourceScore = context.getScoreData(source.content(), false)) {
+                            var instr = Instructions.checkScoreCompare(targetScore.content(), sourceScore.content(), cmdData.comparison());
+                            try(var ignored = context.enterWithoutValueUsingInstruction(instr)) {
+                                compile(context, cmdData.command(), result);
                             }
+                            sourceScore.writeInstruction(instr);
                         }
                     }
                 }
@@ -281,11 +275,9 @@ public final class CommandCompiler {
             try(var res = context.withResultStorage(true, false)) {
                 compile(context, cmdData.command(), res.content());
                 res.content().checkRequirements(cmdData.command());
-                try(var objective = context.getObjective(cmdData.objective())) {
-                    try(var name = context.forScoreHolder(cmdData.targets())) {
-                        try(var scoreData = context.getScoreData(objective.content(), name.content(), true)) {
-                            scoreData.writeInstruction(Instructions2.setScore(scoreData.content(), res.content().result));
-                        }
+                try(var scoreAccessor = context.forScoreAccessors(cmdData.targets())) {
+                    try(var scoreData = context.getScoreData(scoreAccessor.content(), true)) {
+                        scoreData.writeInstruction(Instructions2.setScore(scoreData.content(), res.content().result));
                     }
                 }
             }
@@ -345,28 +337,22 @@ public final class CommandCompiler {
                 compile(context, cmdData.command(), result);
             }
         }else if(command instanceof CommandExecuteUnlessScoreRange cmdData) {
-            try(var objective = context.getObjective(cmdData.targetObjective())) {
-                try(var scope = context.forScope()) {
-                    try(var name = context.forScoreHolder(cmdData.target().selectSingle())) {
-                        try(var scoreData = context.getScoreData(objective.content(), name.content(), false)) {
-                            var scoreValue = LocationData.<Integer>ofLocal(scoreData.data().highestId());
-                            scoreData.writeInstruction(Instructions2.getScoreValue(scoreData.content(), scoreValue).with(Instructions.checkIntRange(scoreValue, cmdData.range()).with(Instructions2.exitScope(scope.content()))));
-                        }
+            try(var scope = context.forScope()) {
+                try(var scoreAccessor = context.forScoreAccessors(cmdData.target().selectSingle())) {
+                    try(var scoreData = context.getScoreData(scoreAccessor.content(), false)) {
+                        var scoreValue = LocationData.<Integer>ofLocal(scoreData.data().highestId());
+                        scoreData.writeInstruction(Instructions2.getScoreValue(scoreData.content(), scoreValue).with(Instructions.checkIntRange(scoreValue, cmdData.range()).with(Instructions2.exitScope(scope.content()))));
                     }
                     compile(context, cmdData.command(), result);
                 }
             }
         }else if(command instanceof CommandExecuteUnlessScoreCompare cmdData) {
-            try(var targetObjective = context.getObjective(cmdData.targetObjective())) {
-                try(var sourceObjective = context.getObjective(cmdData.sourceObjective())) {
+            try(var target = context.forScoreAccessors(cmdData.target().selectSingle())) {
+                try(var source = context.forScoreAccessors(cmdData.source().selectSingle())) {
                     try(var scope = context.forScope()) {
-                        try(var targetName = context.forScoreHolder(cmdData.target().selectSingle())) {
-                            try(var sourceName = context.forScoreHolder(cmdData.source().selectSingle())) {
-                                try(var targetScore = context.getScoreData(targetObjective.content(), targetName.content(), false)) {
-                                    try(var sourceScore = context.getScoreData(sourceObjective.content(), sourceName.content(), false)) {
-                                        sourceScore.writeInstruction(Instructions.checkScoreCompare(targetScore.content(), sourceScore.content(), cmdData.comparison()).with(Instructions2.exitScope(scope.content())));
-                                    }
-                                }
+                        try(var targetScore = context.getScoreData(target.content(), false)) {
+                            try(var sourceScore = context.getScoreData(source.content(), false)) {
+                                sourceScore.writeInstruction(Instructions.checkScoreCompare(targetScore.content(), sourceScore.content(), cmdData.comparison()).with(Instructions2.exitScope(scope.content())));
                             }
                         }
                         compile(context, cmdData.command(), result);
@@ -465,57 +451,49 @@ public final class CommandCompiler {
         }else if(command instanceof CommandReturnValue cmdData) {
             context.writeInstruction(Instructions2.returnSuccess(LocationData.ofInteger(cmdData.value())));
         }else if(command instanceof CommandScoreboardPlayersAdd cmdData) {
-            try(var objective = context.getObjective(cmdData.objective())) {
-                try(var name = context.forScoreHolder(cmdData.targets())) {
-                    try(var scoreData = context.getScoreData(objective.content(), name.content(), true)) {
-                        scoreData.writeInstruction(Instructions2.addScore(scoreData.content(), LocationData.ofInteger(cmdData.score())));
-                    }
+            try(var targets = context.forScoreAccessors(cmdData.targets())) {
+                try(var scoreData = context.getScoreData(targets.content(), true)) {
+                    scoreData.writeInstruction(Instructions2.addScore(scoreData.content(), LocationData.ofInteger(cmdData.score())));
                 }
             }
         }else if(command instanceof CommandScoreboardPlayersEnable cmdData) {
-            try(var objective = context.getObjective(cmdData.objective())) {
+            try(var objective = context.getObjective(cmdData.targets().objective())) {
                 var criterion = LocationData.<ScoreboardCriterion>ofLocal(objective.data().highestId());
                 var execInstr = Instructions2.checkIsCriterion(criterion, DataRegistries.SCOREBOARD_CRITERIA.getOrThrow("trigger"));
                 objective.writeInstruction(Instructions2.getObjectiveCriterion(objective.content(), criterion).with(execInstr));
                 try(var ignored = context.enterWithoutValue(objective.data().withBaseInstruction(execInstr))) {
-                    try(var name = context.forScoreHolder(cmdData.targets())) {
-                        try(var scoreData = context.getScoreData(objective.content(), name.content(), true)) {
+                    try(var name = context.forScoreHolder(cmdData.targets().scoreHolder())) {
+                        try(var scoreData = context.getScoreData(new ScoreAccessor(objective.content(), name.content()), true)) {
                             scoreData.writeInstruction(Instructions2.scoreUnlock(scoreData.content()));
                         }
                     }
                 }
             }
         }else if(command instanceof CommandScoreboardPlayersGet cmdData) {
-            try(var objective = context.getObjective(cmdData.objective())) {
-                try(var name = context.forScoreHolder(cmdData.targets())) {
-                    try(var scoreData = context.getScoreData(objective.content(), name.content(), true)) {
-                        var res = LocationData.<Integer>ofLocal(scoreData.data().highestId());
-                        var instr = Instructions2.getScoreValue(scoreData.content(), res);
-                        result.setResult(scoreData.data().incrementedId(1).withBaseInstruction(instr), res);
-                        scoreData.writeInstruction(instr);
-                    }
+            try(var targets = context.forScoreAccessors(cmdData.targets())) {
+                try(var scoreData = context.getScoreData(targets.content(), true)) {
+                    var res = LocationData.<Integer>ofLocal(scoreData.data().highestId());
+                    var instr = Instructions2.getScoreValue(scoreData.content(), res);
+                    result.setResult(scoreData.data().incrementedId(1).withBaseInstruction(instr), res);
+                    scoreData.writeInstruction(instr);
                 }
             }
         }else if(command instanceof CommandScoreboardPlayersOperation cmdData) {
             try(var exceptionScope = context.forScope()) {
-                try(var targetObjective = context.getObjective(cmdData.targetObjective())) {
-                    try(var targetName = context.forScoreHolder(cmdData.targets())) {
-                        try(var sourceObjective = context.getObjective(cmdData.sourceObjective())) {
-                            try(var sourceName = context.forScoreHolder(cmdData.source())) {
-                                try(var targetScore = context.getScoreData(targetObjective.content(), targetName.content(), true)) {
-                                    try(var sourceScore = context.getScoreData(sourceObjective.content(), sourceName.content(), true)) {
-                                        switch(cmdData.operation()) {
-                                            case SET -> sourceScore.writeInstruction(Instructions2.runScoreOperationSet(targetScore.content(), sourceScore.content()));
-                                            case ADD -> sourceScore.writeInstruction(Instructions2.runScoreOperationPlus(targetScore.content(), sourceScore.content()));
-                                            case SUB -> sourceScore.writeInstruction(Instructions2.runScoreOperationMinus(targetScore.content(), sourceScore.content()));
-                                            case MUL -> sourceScore.writeInstruction(Instructions2.runScoreOperationMultiply(targetScore.content(), sourceScore.content()));
-                                            case DIV -> sourceScore.writeInstruction(Instructions2.runScoreOperationDivide(targetScore.content(), sourceScore.content(), exceptionScope.content()));
-                                            case MOD -> sourceScore.writeInstruction(Instructions2.runScoreOperationModulo(targetScore.content(), sourceScore.content(), exceptionScope.content()));
-                                            case MIN -> sourceScore.writeInstruction(Instructions2.runScoreOperationMin(targetScore.content(), sourceScore.content()));
-                                            case MAX -> sourceScore.writeInstruction(Instructions2.runScoreOperationMax(targetScore.content(), sourceScore.content()));
-                                            case SWAP -> sourceScore.writeInstruction(Instructions2.runScoreOperationSwap(targetScore.content(), sourceScore.content()));
-                                        }
-                                    }
+                try(var targets = context.forScoreAccessors(cmdData.targets())) {
+                    try(var source = context.forScoreAccessors(cmdData.source())) {
+                        try(var targetScore = context.getScoreData(targets.content(), true)) {
+                            try(var sourceScore = context.getScoreData(source.content(), true)) {
+                                switch(cmdData.operation()) {
+                                    case SET -> sourceScore.writeInstruction(Instructions2.runScoreOperationSet(targetScore.content(), sourceScore.content()));
+                                    case ADD -> sourceScore.writeInstruction(Instructions2.runScoreOperationPlus(targetScore.content(), sourceScore.content()));
+                                    case SUB -> sourceScore.writeInstruction(Instructions2.runScoreOperationMinus(targetScore.content(), sourceScore.content()));
+                                    case MUL -> sourceScore.writeInstruction(Instructions2.runScoreOperationMultiply(targetScore.content(), sourceScore.content()));
+                                    case DIV -> sourceScore.writeInstruction(Instructions2.runScoreOperationDivide(targetScore.content(), sourceScore.content(), exceptionScope.content()));
+                                    case MOD -> sourceScore.writeInstruction(Instructions2.runScoreOperationModulo(targetScore.content(), sourceScore.content(), exceptionScope.content()));
+                                    case MIN -> sourceScore.writeInstruction(Instructions2.runScoreOperationMin(targetScore.content(), sourceScore.content()));
+                                    case MAX -> sourceScore.writeInstruction(Instructions2.runScoreOperationMax(targetScore.content(), sourceScore.content()));
+                                    case SWAP -> sourceScore.writeInstruction(Instructions2.runScoreOperationSwap(targetScore.content(), sourceScore.content()));
                                 }
                             }
                         }
@@ -523,11 +501,9 @@ public final class CommandCompiler {
                 }
             }
         }else if(command instanceof CommandScoreboardPlayersRemove cmdData) {
-            try(var objective = context.getObjective(cmdData.objective())) {
-                try(var name = context.forScoreHolder(cmdData.targets())) {
-                    try(var scoreData = context.getScoreData(objective.content(), name.content(), true)) {
-                        scoreData.writeInstruction(Instructions2.removeScore(scoreData.content(), LocationData.ofInteger(cmdData.score())));
-                    }
+            try(var targets = context.forScoreAccessors(cmdData.targets())) {
+                try(var scoreData = context.getScoreData(targets.content(), true)) {
+                    scoreData.writeInstruction(Instructions2.removeScore(scoreData.content(), LocationData.ofInteger(cmdData.score())));
                 }
             }
         }else if(command instanceof CommandScoreboardPlayersResetAll cmdData) {
@@ -535,17 +511,15 @@ public final class CommandCompiler {
                 name.writeInstruction(Instructions2.resetPlayerScore(name.content()));
             }
         }else if(command instanceof CommandScoreboardPlayersResetObjective cmdData) {
-            try(var objective = context.getObjective(cmdData.objective())) {
-                try(var name = context.forScoreHolder(cmdData.targets())) {
+            try(var objective = context.getObjective(cmdData.targets().objective())) {
+                try(var name = context.forScoreHolder(cmdData.targets().scoreHolder())) {
                     name.writeInstruction(Instructions2.resetScore(objective.content(), name.content()));
                 }
             }
         }else if(command instanceof CommandScoreboardPlayersSet cmdData) {
-            try(var objective = context.getObjective(cmdData.objective())) {
-                try(var name = context.forScoreHolder(cmdData.targets())) {
-                    try(var scoreData = context.getScoreData(objective.content(), name.content(), true)) {
-                        scoreData.writeInstruction(Instructions2.setScore(scoreData.content(), LocationData.ofInteger(cmdData.score())));
-                    }
+            try(var targets = context.forScoreAccessors(cmdData.targets())) {
+                try(var scoreData = context.getScoreData(targets.content(), true)) {
+                    scoreData.writeInstruction(Instructions2.setScore(scoreData.content(), LocationData.ofInteger(cmdData.score())));
                 }
             }
         }else if(command instanceof CommandTagAdd cmdData) {

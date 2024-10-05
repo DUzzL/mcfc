@@ -1,14 +1,12 @@
 package dev.epicpix.minecraftfunctioncompiler.commands;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonSyntaxException;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidator;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidators;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
-import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
 import java.util.ArrayList;
@@ -645,6 +643,13 @@ public class StringCommandReader {
         }catch(JsonSyntaxException e) {
             throw new CommandErrorException(new CommandError(command, "Tried to parse JSON, but failed", CommandError.Step.PARSE, e));
         }
+    }
+
+    public ScoreAccessorArgument readScoreAccessor() {
+        String objective = readWord();
+        if(!skipArgumentWhitespace()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_SCORE_ACCESSOR);
+        ScoreHolderArgument scoreHolder = SelectorParser.parseScoreHolder(this);
+        return new ScoreAccessorArgument(objective, scoreHolder);
     }
 
 }
