@@ -10,6 +10,7 @@ import java.util.*;
 public class CompilationContext {
 
     private final Stack<CompilationContextData> stack = new Stack<>();
+    private final UniqueIdTracker idTracker = new UniqueIdTracker();
 
     public CompilationContext(CompilationContextData init) {
         enterWith(init);
@@ -18,6 +19,11 @@ public class CompilationContext {
     public <T> CompilationData<T> enterWithValue(CompilationContextData data, T value, int stackCount) {
         enterWith(data);
         return new CompilationData<>(this, data, value, stackCount);
+    }
+
+    public <T> CompilationData<T> enterWithInstructionAndValue(CompilationContextData data, Instruction instruction, T value) {
+        data.addInstructionConsumer().accept(instruction);
+        return enterWithValue(data.withBaseInstruction(instruction), value, 1);
     }
 
     public <T> CompilationData<T> enterWithValue(CompilationContextData data, T value) {
@@ -48,33 +54,41 @@ public class CompilationContext {
         current().writeInstruction(instruction);
     }
 
+    public int createId() {
+        return idTracker.createId();
+    }
+
+    public <T> LocationData<T> createLocal() {
+        return LocationData.ofLocal(createId());
+    }
+
+    public ScopeData createScope() {
+        return ScopeData.ofId(createId());
+    }
+
     public CompilationData<LocationData<String>> getResolvedMacro(MacroTemplate<String> macro) {
         var data = stack.peek();
         if(macro.parts().size() == 1 && macro.parts().get(0) instanceof MacroTemplate.LiteralKind literal) {
             return new CompilationData<>(this, data, LocationData.ofString(literal.literal()), 0);
         }
-        var macroString = LocationData.<String>ofLocal(data.highestId());
+        var macroString = this.<String>createLocal();
         var instr = Instructions.loadMacro(macro, macroString);
         writeInstruction(instr);
-        return enterWithValue(data.incrementedId(1).withBaseInstruction(instr), macroString);
+        return enterWithValue(data.withBaseInstruction(instr), macroString);
     }
 
     public CompilationData<ResultStorage> withResultStorage(boolean requireResultValue, boolean requireSuccessValue) {
         if(requireResultValue == requireSuccessValue) throw new UnsupportedOperationException("calling withResultStorage() with requireResultValue == requireSuccessValue is not supported");
-        var data = stack.peek();
-        var loc = LocationData.<Integer>ofLocal(data.highestId());
+        var loc = this.<Integer>createLocal();
         var res = requireResultValue ? ResultStorage.withResult(loc) : ResultStorage.withSuccess(loc);
         var instr = Instructions2.createResultStorage(loc);
-        data.addInstructionConsumer().accept(instr);
-        return enterWithValue(data.incrementedId(1).withBaseInstruction(instr), res);
+        return enterWithInstructionAndValue(current(), instr, res);
     }
 
     public CompilationData<ScopeData> forScope() {
-        var data = stack.peek();
-        var scope = ScopeData.ofId(data.highestId());
+        var scope = createScope();
         var instruction = Instructions2.scope(scope);
-        data.addInstructionConsumer().accept(instruction);
-        return enterWithValue(data.incrementedId(1).withBaseInstruction(instruction), scope);
+        return enterWithInstructionAndValue(current(), instruction, scope);
     }
 
     public CompilationData<LocationData<Entity>> getCurrentEntity() {
@@ -82,10 +96,9 @@ public class CompilationContext {
         if(data.currentEntity() != null) {
             return new CompilationData<>(this, data, data.currentEntity(), 0);
         }else {
-            LocationData<Entity> entity = LocationData.ofLocal(data.highestId());
+            LocationData<Entity> entity = createLocal();
             var instruction = Instructions2.getCurrentEntity(entity);
-            data.addInstructionConsumer().accept(instruction);
-            return enterWithValue(data.incrementedId(1).withBaseInstruction(instruction).withCurrentEntity(entity), entity);
+            return enterWithInstructionAndValue(data.withCurrentEntity(entity), instruction, entity);
         }
     }
 
@@ -95,10 +108,9 @@ public class CompilationContext {
             return new CompilationData<>(this, data, data.currentPosition(), 0);
         }else {
             var current = current();
-            LocationData<Vec3> position = LocationData.ofLocal(current.highestId());
+            LocationData<Vec3> position = createLocal();
             var instruction = Instructions2.getStackPosition(position);
-            writeInstruction(instruction);
-            return enterWithValue(current.incrementedId(1).withBaseInstruction(instruction).withCurrentPosition(position), position);
+            return enterWithInstructionAndValue(current.withCurrentPosition(position), instruction, position);
         }
     }
 
@@ -108,10 +120,9 @@ public class CompilationContext {
             return new CompilationData<>(this, data, data.currentRotation(), 0);
         }else {
             var current = current();
-            LocationData<Vec2> rotation = LocationData.ofLocal(current.highestId());
+            LocationData<Vec2> rotation = createLocal();
             var instruction = Instructions2.getStackRotation(rotation);
-            writeInstruction(instruction);
-            return enterWithValue(current.incrementedId(1).withBaseInstruction(instruction).withCurrentRotation(rotation), rotation);
+            return enterWithInstructionAndValue(current.withCurrentRotation(rotation), instruction, rotation);
         }
     }
 
@@ -120,8 +131,8 @@ public class CompilationContext {
             var entityData = getCurrentEntity();
             var positionData = getPosition();
             var rotationData = getRotation();
-            var offset = LocationData.<Double>ofLocal(rotationData.data().highestId());
-            var position = LocationData.<Vec3>ofLocal(rotationData.data().highestId() + 1);
+            var offset = this.<Double>createLocal();
+            var position = this.<Vec3>createLocal();
             var stacker = new InstructionStacker(Instructions2.always());
             if(rotationData.data().currentAnchor() == LocationAnchor.EYES) {
                 stacker.stackInstruction(Instructions2.getEyeHeight(entityData.content(), offset));
@@ -132,62 +143,53 @@ public class CompilationContext {
             }
             stacker.stackInstruction(Instructions.applyLocalPositionWorld(positionData.content(), rotationData.content(), offset, position, pos));
             rotationData.writeInstruction(stacker.base);
-            return enterWithValue(rotationData.data().incrementedId(2).withBaseInstruction(stacker.current), position, entityData.stackCount() + positionData.stackCount() + rotationData.stackCount() + 1);
+            return enterWithValue(rotationData.data().withBaseInstruction(stacker.current), position, entityData.stackCount() + positionData.stackCount() + rotationData.stackCount() + 1);
         }
         var positionData = getPosition();
-        var position = LocationData.<Vec3>ofLocal(positionData.data().highestId());
+        var position = this.<Vec3>createLocal();
         var instruction = Instructions.applyPositionWorld(positionData.content(), position, pos);
         positionData.writeInstruction(instruction);
-        return enterWithValue(positionData.data().incrementedId(1).withBaseInstruction(instruction), position, positionData.stackCount() + 1);
+        return enterWithValue(positionData.data().withBaseInstruction(instruction), position, positionData.stackCount() + 1);
     }
 
     public CompilationData<LocationData<Vec2>> applyRotation(RotationCoordinates rot) {
         var rotationData = getRotation();
-        var rotation = LocationData.<Vec2>ofLocal(rotationData.data().highestId());
+        var rotation = this.<Vec2>createLocal();
         var instruction = Instructions.applyRotationWorld(rotationData.content(), rotation, rot);
         rotationData.writeInstruction(instruction);
-        return enterWithValue(rotationData.data().incrementedId(1).withBaseInstruction(instruction), rotation, rotationData.stackCount() + 1);
+        return enterWithValue(rotationData.data().withBaseInstruction(instruction), rotation, rotationData.stackCount() + 1);
     }
 
     public CompilationData<LocationData<Entity>> forEntity(UUID entityUuid) {
-        var data = stack.peek();
-        LocationData<Entity> entity = LocationData.ofLocal(data.highestId());
+        LocationData<Entity> entity = createLocal();
         var instruction = Instructions2.forEntity(entity, entityUuid);
-        data.addInstructionConsumer().accept(instruction);
-        return enterWithValue(data.incrementedId(1).withBaseInstruction(instruction), entity);
+        return enterWithInstructionAndValue(current(), instruction, entity);
     }
 
     public CompilationData<LocationData<Entity>> forEachEntity() {
-        var data = stack.peek();
-        LocationData<Entity> entity = LocationData.ofLocal(data.highestId());
+        LocationData<Entity> entity = createLocal();
         var instruction = Instructions2.forEachEntity(entity);
-        data.addInstructionConsumer().accept(instruction);
-        return enterWithValue(data.incrementedId(1).withBaseInstruction(instruction), entity);
+        return enterWithInstructionAndValue(current(), instruction, entity);
     }
 
     public CompilationData<LocationData<Player>> forPlayer(String playerName) {
-        var data = stack.peek();
-        LocationData<Player> player = LocationData.ofLocal(data.highestId());
+        LocationData<Player> player = createLocal();
         var instruction = Instructions2.forPlayer(player, playerName);
-        data.addInstructionConsumer().accept(instruction);
-        return enterWithValue(data.incrementedId(1).withBaseInstruction(instruction), player);
+        return enterWithInstructionAndValue(current(), instruction, player);
     }
 
     public CompilationData<LocationData<Player>> forEachPlayer() {
-        var data = stack.peek();
-        LocationData<Player> player = LocationData.ofLocal(data.highestId());
+        LocationData<Player> player = createLocal();
         var instruction = Instructions2.forEachPlayer(player);
-        data.addInstructionConsumer().accept(instruction);
-        return enterWithValue(data.incrementedId(1).withBaseInstruction(instruction), player);
+        return enterWithInstructionAndValue(current(), instruction, player);
     }
 
     public CompilationData<LocationData<Objective>> getObjective(String objectiveName) {
-        var data = stack.peek();
-        LocationData<Objective> objective = LocationData.ofLocal(data.highestId());
+        LocationData<Objective> objective = createLocal();
         var execInstruction = Instructions2.ifNotNull(objective.lower());
         var instruction = Instructions2.getObjective(objective, objectiveName).with(execInstruction);
-        data.addInstructionConsumer().accept(instruction);
-        return enterWithValue(data.incrementedId(1).withBaseInstruction(execInstruction), objective);
+        writeInstruction(instruction);
+        return enterWithValue(current().withBaseInstruction(execInstruction), objective);
     }
 
     @SuppressWarnings("resource")
@@ -198,33 +200,29 @@ public class CompilationContext {
     }
 
     public CompilationData<LocationData<String>> getScoreboardName(LocationData<Entity> entity) {
-        var data = stack.peek();
-        LocationData<String> name = LocationData.ofLocal(data.highestId());
+        LocationData<String> name = createLocal();
         var instruction = Instructions2.getScoreboardName(entity, name);
-        data.addInstructionConsumer().accept(instruction);
-        return enterWithValue(data.incrementedId(1).withBaseInstruction(instruction), name);
+        return enterWithInstructionAndValue(current(), instruction, name);
     }
 
     public CompilationData<LocationData<Score>> getScoreData(ScoreAccessor accessor, boolean autoCreate) {
         var data = stack.peek();
-        LocationData<Score> score = LocationData.ofLocal(data.highestId());
+        LocationData<Score> score = createLocal();
         var instruction = Instructions2.scoreData(accessor.objective(), accessor.scoreHolder(), score, autoCreate);
-        data.addInstructionConsumer().accept(instruction);
+        data.writeInstruction(instruction);
         if(autoCreate) {
-            return enterWithValue(data.incrementedId(1).withBaseInstruction(instruction), score);
+            return enterWithValue(data.withBaseInstruction(instruction), score);
         }else {
             var nonNull = Instructions2.ifNotNull(score.lower());
             instruction.with(nonNull);
-            return enterWithValue(data.incrementedId(1).withBaseInstruction(nonNull), score);
+            return enterWithValue(data.withBaseInstruction(nonNull), score);
         }
     }
 
     public CompilationData<LocationData<String>> forEachScoreHolder(boolean single) {
-        var data = stack.peek();
-        var name = LocationData.<String>ofLocal(data.highestId());
+        var name = this.<String>createLocal();
         var instruction = Instructions2.forScoreHolders(name, single);
-        data.addInstructionConsumer().accept(instruction);
-        return enterWithValue(data.incrementedId(1).withBaseInstruction(instruction), name);
+        return enterWithInstructionAndValue(current(), instruction, name);
     }
 
     public CompilationData<LocationData<String>> forScoreHolder(ScoreHolderArgument holder) {
@@ -236,74 +234,67 @@ public class CompilationContext {
             var selector = holder.single() ? holder.selector().limit(1) : holder.selector();
             @SuppressWarnings("resource")
             var selectorData = forSelector(selector);
-            var name = LocationData.<String>ofLocal(selectorData.data().highestId());
+            var name = this.<String>createLocal();
             var instruction = Instructions2.getScoreboardName(selectorData.content(), name);
             selectorData.writeInstruction(Instructions2.ifNotNull(selectorData.content().lower()).with(instruction));
-            return enterWithValue(selectorData.data().incrementedId(1).withBaseInstruction(instruction), name, selectorData.stackCount() + 1);
+            return enterWithValue(selectorData.data().withBaseInstruction(instruction), name, selectorData.stackCount() + 1);
         }else {
             throw new IllegalArgumentException("ScoreHolderArgument without any valid option: " + holder);
         }
     }
 
     public CompilationData<LocationData<Entity>> forSelector(SelectorArgument selector) {
-        var data = stack.peek();
         if(selector.requirePlayer() && selector.excludesPlayers()) {
-            LocationData<Entity> entity = LocationData.ofLocal(data.highestId());
+            LocationData<Entity> entity = createLocal();
             var instr = Instructions2.never();
-            data.addInstructionConsumer().accept(instr);
-            return new CompilationData<>(this, data.incrementedId(1).withBaseInstruction(instr), entity, 0);
+            return enterWithInstructionAndValue(current(), instr, entity);
         }
-        LocationData<List<?>> entityList = LocationData.ofLocal(data.highestId());
+        LocationData<List<?>> entityList = createLocal();
         var entityListInstruction = Instructions2.createMutableList(entityList);
-        data.addInstructionConsumer().accept(entityListInstruction);
-        enterWith(data.incrementedId(1).withBaseInstruction(entityListInstruction));
+        var data = current();
+        data.writeInstruction(entityListInstruction);
+        enterWith(data.withBaseInstruction(entityListInstruction));
         try(var selectorData = forSelectorSelect(selector)) {
             selectorData.writeInstruction(Instructions2.addListElement(entityList, selectorData.content().lower()));
         }
         if(selector.sort() == SelectorSort.NEAREST || selector.sort() == SelectorSort.FURTHEST) {
             try(var pos = getPosition()) {
                 switch(selector.sort()) {
-                    case FURTHEST -> {
-                        pos.writeInstruction(Instructions2.sortListEntityFurthest(pos.content(), entityList));
-                    }
-                    case NEAREST -> {
-                        pos.writeInstruction(Instructions2.sortListEntityNearest(pos.content(), entityList));
-                    }
+                    case FURTHEST -> pos.writeInstruction(Instructions2.sortListEntityFurthest(pos.content(), entityList));
+                    case NEAREST -> pos.writeInstruction(Instructions2.sortListEntityNearest(pos.content(), entityList));
                 }
             }
         }else if(selector.sort() == SelectorSort.RANDOM) {
             entityListInstruction.with(Instructions2.shuffleList(entityList));
         }
-        LocationData<Object> objectLocation = LocationData.ofLocal(data.highestId() + 1);
-        LocationData<Entity> entityLocation = LocationData.ofLocal(data.highestId() + 2);
+        LocationData<Object> objectLocation = createLocal();
+        LocationData<Entity> entityLocation = createLocal();
         if(selector.limit() != null) {
+            var execInstr = Instructions2.always();
             if(selector.limit() == 1) {
-                var execInstr = Instructions2.always();
-                ScopeData earlyScope = ScopeData.ofId(data.highestId() + 3);
+                ScopeData earlyScope = createScope();
                 var instr = Instructions2.scope(earlyScope)
                         .with(Instructions2.forEachListElement(entityList, objectLocation)
                                 .with(Instructions2.tryAsEntity(objectLocation, entityLocation)
                                         .with(execInstr)
                                         .with(Instructions2.exitScope(earlyScope))));
                 entityListInstruction.with(instr);
-                return enterWithValue(data.incrementedId(4).withBaseInstruction(execInstr), entityLocation, 2);
             }else {
-                var execInstr = Instructions2.always();
-                ScopeData limiterScope = ScopeData.ofId(data.highestId() + 3);
-                LocationData<Integer> limiterCounter = LocationData.ofLocal(data.highestId() + 4);
+                ScopeData limiterScope = createScope();
+                LocationData<Integer> limiterCounter = createLocal();
                 var instr = Instructions2.limiter(limiterScope, limiterCounter, selector.limit())
                         .with(Instructions2.forEachListElement(entityList, objectLocation)
                                 .with(Instructions2.tryAsEntity(objectLocation, entityLocation)
                                         .with(execInstr)
                                         .with(Instructions2.checkLimit(limiterScope, limiterCounter))));
                 entityListInstruction.with(instr);
-                return enterWithValue(data.incrementedId(5).withBaseInstruction(execInstr), entityLocation, 2);
             }
+            return enterWithValue(data.withBaseInstruction(execInstr), entityLocation, 2);
         }else {
             var tryEntityInstr = Instructions2.tryAsEntity(objectLocation, entityLocation);
             var instr = Instructions2.forEachListElement(entityList, objectLocation).with(tryEntityInstr);
             entityListInstruction.with(instr);
-            return enterWithValue(data.incrementedId(3).withBaseInstruction(tryEntityInstr), entityLocation, 2);
+            return enterWithValue(data.withBaseInstruction(tryEntityInstr), entityLocation, 2);
         }
     }
 
@@ -338,10 +329,9 @@ public class CompilationContext {
             stacker.stackInstruction(Instructions.checkEntityTypes(entityData.content(), new ArrayList<>(selector.entityTypes().data()), selector.entityTypes().negated()));
         }
         for(var gamemode : selector.gamemodes()) {
-            var playerLocal = LocationData.<Player>ofLocal(data.highestId());
+            var playerLocal = this.<Player>createLocal();
             stacker.stackInstruction(Instructions2.tryAsPlayer(entityData.content(), playerLocal));
             stacker.stackInstruction(Instructions2.checkGamemode(playerLocal, gamemode.data(), gamemode.negated()));
-            enterWith(data = data.incrementedId(1));
         }
         for(var name : selector.names()) {
             stacker.stackInstruction(Instructions2.checkEntityName(entityData.content(), name.data(), name.negated()));
@@ -356,19 +346,17 @@ public class CompilationContext {
             stacker.stackInstruction(Instructions2.checkEntityTags(entityData.content(), selector.hasTags()));
         }
         if(selector.level() != null) {
-            var playerLocal = LocationData.<Player>ofLocal(data.highestId());
-            var levelLocal = LocationData.<Integer>ofLocal(data.highestId() + 1);
+            var playerLocal = this.<Player>createLocal();
+            var levelLocal = this.<Integer>createLocal();
             stacker.stackInstruction(Instructions2.tryAsPlayer(entityData.content(), playerLocal));
             stacker.stackInstruction(Instructions2.getExperienceLevel(playerLocal, levelLocal));
             stacker.stackInstruction(Instructions.checkIntRange(levelLocal, selector.level()));
-            enterWith(data = data.incrementedId(2));
         }
         if(selector.yaw() != null || selector.pitch() != null) {
-            var rotationLocal = LocationData.<Vec2>ofLocal(data.highestId());
+            var rotationLocal = this.<Vec2>createLocal();
             stacker.stackInstruction(Instructions2.getEntityRotation(entityData.content(), rotationLocal));
             if(selector.yaw() != null) stacker.stackInstruction(Instructions.checkRotationYaw(rotationLocal, selector.yaw()));
             if(selector.pitch() != null) stacker.stackInstruction(Instructions.checkRotationPitch(rotationLocal, selector.pitch()));
-            enterWith(data = data.incrementedId(1));
         }
         for(var team : selector.teams()) {
             stacker.stackInstruction(Instructions2.checkTeam(entityData.content(), team.data(), team.negated()));
@@ -384,12 +372,12 @@ public class CompilationContext {
             positionData.writeInstruction(instr);
             stacker.current = instr;
 
-            LocationData<Vec3> thisPosition = LocationData.ofLocal(positionData.data().highestId());
+            LocationData<Vec3> thisPosition = createLocal();
             stacker.stackInstruction(Instructions2.getEntityPosition(entityData.content(), thisPosition));
-            LocationData<Double> distance = LocationData.ofLocal(positionData.data().highestId() + 1);
+            LocationData<Double> distance = createLocal();
             stacker.stackInstruction(Instructions2.getDistanceSquared(positionData.content(), thisPosition, distance));
             stacker.stackInstruction(Instructions.checkDoubleRange(distance, selector.distance().square()));
-            enterWith(positionData.data().incrementedId(2).withBaseInstruction(stacker.current));
+            enterWith(positionData.data().withBaseInstruction(stacker.current));
 
             data = stack.peek();
         }
@@ -400,11 +388,11 @@ public class CompilationContext {
                 var nameData = getScoreboardName(entityData.content());
                 var scoreData = getScoreData(new ScoreAccessor(objectiveData.content(), nameData.content()), false);
 
-                var scoreValue = LocationData.<Integer>ofLocal(scoreData.data().highestId());
+                var scoreValue = this.<Integer>createLocal();
                 var execInstruction = Instructions.checkIntRange(scoreValue, entry.getValue());
                 var baseInstruction = Instructions2.getScoreValue(scoreData.content(), scoreValue).with(execInstruction);
                 scoreData.writeInstruction(baseInstruction);
-                enterWith(scoreData.data().withBaseInstruction(execInstruction).incrementedId(1));
+                enterWith(scoreData.data().withBaseInstruction(execInstruction));
                 stacker.current = execInstruction;
             }
             data = stack.peek();
