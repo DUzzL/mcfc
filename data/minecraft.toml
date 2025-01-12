@@ -1,4 +1,4 @@
-definition_file = "dev.epicpix.minecraftfunctioncompiler.$VERSION.emitter.MappedUsageDefinitionsExtensions"
+definition_file = "dev.epicpix.minecraftfunctioncompiler._VERSION_.emitter.MappedUsageDefinitionsExtensions"
 
 [definitions_functions]
 CommandSourceStack_withEntity = "net/minecraft/commands/CommandSourceStack:withEntity(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/commands/CommandSourceStack;@M"

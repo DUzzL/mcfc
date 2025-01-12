@@ -124,6 +124,8 @@ fun javaToMinecraftGenericType(type: String): String {
     }
 }
 
+var PACKAGE_MINECRAFT_VERSION: String? = null
+
 class MainProcessor(
     private val codeGenerator: CodeGenerator,
     private val options: Map<String, String>
@@ -164,29 +166,29 @@ class MainProcessor(
             setJarInfo(jarFiles to jarFileMappings)
         }
         setResolver(resolver)
-        val packageMinecraftVersion = options["minecraft_version"]?.replace(".", "_")?.run { "v$this" }
+        PACKAGE_MINECRAFT_VERSION = options["minecraft_version"]?.replace(".", "_")?.run { "v$this" }
         val minecraftVersion = options["minecraft_version"]?.split(".")
         val definitions = options["definitions"]?.let { loadToml(it) }
         generateInstructionData(resolver)
         val targets = mutableListOf<String>()
         val file = parseCode(loadDataFile("data.instructions"))
-        val emitterClass = (if(options["definitions"] == "common") file.fileInfo["emitter_noobf_file"]!! else file.fileInfo["emitter_obf_file"]!!).replace("\$VERSION", packageMinecraftVersion ?: "common")
+        val emitterClass = (if(options["definitions"] == "common") file.fileInfo["emitter_noobf_file"]!! else file.fileInfo["emitter_obf_file"]!!).replace("_VERSION_", PACKAGE_MINECRAFT_VERSION ?: "common")
         val emitterPackage = emitterClass.substring(0, emitterClass.lastIndexOf('.'))
         val emitterTargetsClass = "$emitterPackage.EmitterTargets"
         if(definitions != null) {
             if(definitions["definition_file"] != null) {
-                generateFunctionMapping(mappingData, definitions, minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0, packageMinecraftVersion, emitterTargetsClass, targets)
+                generateFunctionMapping(mappingData, definitions, minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0, emitterTargetsClass, targets)
             }
         }
         if(options["definitions"] != null) {
             val enums = parseEnums(loadDataFile("data.enums"))
-            generateInstructionData(file, mappingData, options["definitions"] == "common", minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0, packageMinecraftVersion, enums, targets)
+            generateInstructionData(file, mappingData, options["definitions"] == "common", minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0, enums, targets)
         }
         if(options["definitions"] == "common") {
             generateConstantsData()
             generateCommandsData()
         }
-        if(packageMinecraftVersion != null && mappingData != null) {
+        if(PACKAGE_MINECRAFT_VERSION != null && mappingData != null) {
             val accessWidenerWriter = AccessWidenerWriter()
             AccessWidenerReader(object : AccessWidenerVisitor {
                 override fun visitHeader(namespace: String?) {
@@ -205,7 +207,7 @@ class MainProcessor(
                     accessWidenerWriter.visitField(mappingData.getClassName(owner), mappingData.getFieldName(owner, name, descriptor), remapType(Type.getType(descriptor), mappingData).descriptor, access, transitive)
                 }
             }).read(Files.readAllBytes(Paths.get(options["accesswidener"]!!)))
-            val generatedAccessWidener = codeGenerator.createNewFile(Dependencies.ALL_FILES, "", "minecraftfunctioncompiler.$packageMinecraftVersion.generated", "accesswidener")
+            val generatedAccessWidener = codeGenerator.createNewFile(Dependencies.ALL_FILES, "", "minecraftfunctioncompiler.$PACKAGE_MINECRAFT_VERSION.generated", "accesswidener")
             generatedAccessWidener.write(accessWidenerWriter.write())
             generatedAccessWidener.close()
         }
@@ -263,8 +265,8 @@ class MainProcessor(
         return index
     }
 
-    fun generateFunctionMapping(mappingData: MappingData?, data: Map<String, Any>, majorVer: Int, minorVer: Int, packageMinecraftVersion: String?, emitterTargetsClass: String, targets: MutableList<String>) {
-        val resultClass = (data["definition_file"] as String).replace("\$VERSION", packageMinecraftVersion ?: "common")
+    fun generateFunctionMapping(mappingData: MappingData?, data: Map<String, Any>, majorVer: Int, minorVer: Int, emitterTargetsClass: String, targets: MutableList<String>) {
+        val resultClass = (data["definition_file"] as String).replace("_VERSION_", PACKAGE_MINECRAFT_VERSION ?: "common")
         val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
         val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
         val mapExtensions = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")
@@ -351,8 +353,8 @@ class MainProcessor(
         mapExtensions.appendText("}\n")
     }
 
-    fun generateInstructionData(file: ParsedFile, mappingData: MappingData?, common: Boolean, majorVer: Int, minorVer: Int, packageMinecraftVersion: String?, enums: EnumList, targets: MutableList<String>) {
-        val resultClass = (if(common) file.fileInfo["emitter_noobf_file"]!! else file.fileInfo["emitter_obf_file"]!!).replace("\$VERSION", packageMinecraftVersion ?: "common")
+    fun generateInstructionData(file: ParsedFile, mappingData: MappingData?, common: Boolean, majorVer: Int, minorVer: Int, enums: EnumList, targets: MutableList<String>) {
+        val resultClass = (if(common) file.fileInfo["emitter_noobf_file"]!! else file.fileInfo["emitter_obf_file"]!!).replace("_VERSION_", PACKAGE_MINECRAFT_VERSION ?: "common")
         val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
         val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
         val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")

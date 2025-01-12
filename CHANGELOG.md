@@ -1,3 +1,11 @@
+# 0.3.0-alpha.2
+
+who knows
+
+## Details
+- **Released:** In Development
+- **Supported Versions:** 1.20–1.20.1, 1.20.2, 1.20.3–1.20.4, 1.20.5–1.20.6, 1.21–1.21.1
+
 # 0.3.0-alpha.1
 
 Update function compiler to have multiple compilation stages, for better code generation

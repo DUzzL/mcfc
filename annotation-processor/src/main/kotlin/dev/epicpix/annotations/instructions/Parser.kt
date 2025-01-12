@@ -1,5 +1,6 @@
 package dev.epicpix.annotations.instructions
 
+import dev.epicpix.annotations.PACKAGE_MINECRAFT_VERSION
 import java.util.concurrent.atomic.AtomicBoolean
 
 interface ParsedToken
@@ -68,7 +69,12 @@ private fun parseExpressionTypeWord(iter: ListIterator<LexToken>): ParsedTokenEx
             if(iter.tryNextTokenType(LexTokenSimpleType.DOT)) {
                 t += "."
             }else {
-                t += iter.expectToken<LexTokenWord>().word
+                val part = iter.expectToken<LexTokenWord>().word
+                if(part == "_VERSION_") {
+                    t += PACKAGE_MINECRAFT_VERSION
+                }else {
+                    t += part
+                }
             }
         }
         return ParsedTokenExpressionTypeComplex(t)

@@ -1,5 +1,5 @@
 #emitter_noobf_file("dev.epicpix.minecraftfunctioncompiler.emitter.impl.EmitterBaseOptions")
-#emitter_obf_file("dev.epicpix.minecraftfunctioncompiler.$VERSION.emitter.Emitter2")
+#emitter_obf_file("dev.epicpix.minecraftfunctioncompiler._VERSION_.emitter.Emitter2")
 #enum_file("dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2")
 #generator_file("dev.epicpix.minecraftfunctioncompiler.il.Instructions2")
 #definitions("common,minecraft")
@@ -356,24 +356,12 @@
   let [ctx:score] = [static:Scoreboard].getOrCreatePlayerScore(<net.minecraft.world.scores.ScoreHolder>.forNameOnly([ctx:name]), [ctx:objective]);
 }
 
-@SCORE_DATA_NO_AUTO_CREATE [1.20.1] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <net.minecraft.world.scores.Score> [ctx:score]) {
-  let [ctx:score] = <dev.epicpix.minecraftfunctioncompiler.v1_20_1.ExtensionFunctions>.getScore([static:Scoreboard], [ctx:name], [ctx:objective]);
+@SCORE_DATA_NO_AUTO_CREATE [-1.20.2] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <net.minecraft.world.scores.Score> [ctx:score]) {
+  let [ctx:score] = <dev.epicpix.minecraftfunctioncompiler._VERSION_.ExtensionFunctions>.getScore([static:Scoreboard], [ctx:name], [ctx:objective]);
 }
 
-@SCORE_DATA_NO_AUTO_CREATE [1.20.2] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <net.minecraft.world.scores.Score> [ctx:score]) {
-  let [ctx:score] = <dev.epicpix.minecraftfunctioncompiler.v1_20_2.ExtensionFunctions>.getScore([static:Scoreboard], [ctx:name], [ctx:objective]);
-}
-
-@SCORE_DATA_NO_AUTO_CREATE [1.20.3-1.20.4] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <net.minecraft.world.scores.ScoreAccess> [ctx:score]) {
-  let [ctx:score] = <dev.epicpix.minecraftfunctioncompiler.v1_20_4.ExtensionFunctions>.getScore([static:Scoreboard], <net.minecraft.world.scores.ScoreHolder>.forNameOnly([ctx:name]), [ctx:objective]);
-}
-
-@SCORE_DATA_NO_AUTO_CREATE [1.20.5-1.20.6] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <net.minecraft.world.scores.ScoreAccess> [ctx:score]) {
-  let [ctx:score] = <dev.epicpix.minecraftfunctioncompiler.v1_20_6.ExtensionFunctions>.getScore([static:Scoreboard], <net.minecraft.world.scores.ScoreHolder>.forNameOnly([ctx:name]), [ctx:objective]);
-}
-
-@SCORE_DATA_NO_AUTO_CREATE [1.21-1.21] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <net.minecraft.world.scores.ScoreAccess> [ctx:score]) {
-  let [ctx:score] = <dev.epicpix.minecraftfunctioncompiler.v1_21.ExtensionFunctions>.getScore([static:Scoreboard], <net.minecraft.world.scores.ScoreHolder>.forNameOnly([ctx:name]), [ctx:objective]);
+@SCORE_DATA_NO_AUTO_CREATE [1.20.3-] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <net.minecraft.world.scores.ScoreAccess> [ctx:score]) {
+  let [ctx:score] = <dev.epicpix.minecraftfunctioncompiler._VERSION_.ExtensionFunctions>.getScore([static:Scoreboard], <net.minecraft.world.scores.ScoreHolder>.forNameOnly([ctx:name]), [ctx:objective]);
 }
 
 @RUN_SCORE_OPERATION_SET [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) {
@@ -628,44 +616,12 @@
 }
 
 
-@SORT_LIST_ENTITY_NEAREST [1.20.1] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
-  <dev.epicpix.minecraftfunctioncompiler.v1_20_1.ExtensionFunctions>.sortEntitiesClosest([ctx:position], [ctx:list]);
+@SORT_LIST_ENTITY_NEAREST(<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
+  <dev.epicpix.minecraftfunctioncompiler._VERSION_.ExtensionFunctions>.sortEntitiesClosest([ctx:position], [ctx:list]);
 }
 
-@SORT_LIST_ENTITY_NEAREST [1.20.2] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
-  <dev.epicpix.minecraftfunctioncompiler.v1_20_2.ExtensionFunctions>.sortEntitiesClosest([ctx:position], [ctx:list]);
-}
-
-@SORT_LIST_ENTITY_NEAREST [1.20.3-1.20.4] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
-  <dev.epicpix.minecraftfunctioncompiler.v1_20_4.ExtensionFunctions>.sortEntitiesClosest([ctx:position], [ctx:list]);
-}
-
-@SORT_LIST_ENTITY_NEAREST [1.20.5-1.20.6] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
-  <dev.epicpix.minecraftfunctioncompiler.v1_20_6.ExtensionFunctions>.sortEntitiesClosest([ctx:position], [ctx:list]);
-}
-
-@SORT_LIST_ENTITY_NEAREST [1.21-1.21] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
-  <dev.epicpix.minecraftfunctioncompiler.v1_21.ExtensionFunctions>.sortEntitiesClosest([ctx:position], [ctx:list]);
-}
-
-@SORT_LIST_ENTITY_FURTHEST [1.20.1] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
-  <dev.epicpix.minecraftfunctioncompiler.v1_20_1.ExtensionFunctions>.sortEntitiesFurthest([ctx:position], [ctx:list]);
-}
-
-@SORT_LIST_ENTITY_FURTHEST [1.20.2] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
-  <dev.epicpix.minecraftfunctioncompiler.v1_20_2.ExtensionFunctions>.sortEntitiesFurthest([ctx:position], [ctx:list]);
-}
-
-@SORT_LIST_ENTITY_FURTHEST [1.20.3-1.20.4] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
-  <dev.epicpix.minecraftfunctioncompiler.v1_20_4.ExtensionFunctions>.sortEntitiesFurthest([ctx:position], [ctx:list]);
-}
-
-@SORT_LIST_ENTITY_FURTHEST [1.20.5-1.20.6] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
-  <dev.epicpix.minecraftfunctioncompiler.v1_20_6.ExtensionFunctions>.sortEntitiesFurthest([ctx:position], [ctx:list]);
-}
-
-@SORT_LIST_ENTITY_FURTHEST [1.21-1.21] (<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
-  <dev.epicpix.minecraftfunctioncompiler.v1_21.ExtensionFunctions>.sortEntitiesFurthest([ctx:position], [ctx:list]);
+@SORT_LIST_ENTITY_FURTHEST(<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
+  <dev.epicpix.minecraftfunctioncompiler._VERSION_.ExtensionFunctions>.sortEntitiesFurthest([ctx:position], [ctx:list]);
 }
 
 @GET_ENTITY_VEHICLE(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.entity.Entity> [ctx:vehicle]) {
