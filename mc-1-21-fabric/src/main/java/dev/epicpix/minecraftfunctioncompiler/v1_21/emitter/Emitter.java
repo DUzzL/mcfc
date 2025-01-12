@@ -2,8 +2,11 @@ package dev.epicpix.minecraftfunctioncompiler.v1_21.emitter;
 
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
-import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructions;
+import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
@@ -11,254 +14,151 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.Opcodes;
 
 import java.util.List;
 
-import static dev.epicpix.minecraftfunctioncompiler.emitter.EmitterHelper.*;
 import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callMath_floor;
 import static dev.epicpix.minecraftfunctioncompiler.v1_21.emitter.MappedUsageDefinitionsExtensions.*;
 
 public final class Emitter {
     private Emitter() {}
 
+    private static final InstructionTarget VEC3_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(Vec3.class, double.class, double.class, double.class);
+    private static final InstructionTarget VEC2_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(Vec2.class, float.class, float.class);
+
     public static void registerInstructionEmitters() {
         EmitterInstructions.registerEmitterInstruction(context -> {
             var codeWriter = context.codeWriter();
-            var methodVisitor = codeWriter.methodVisitor();
             if(context.instruction().type() == InstructionTypes.LOAD_MACRO) {
                 var template = context.instruction().<MacroTemplate<String>>get("macroTemplate");
-                template.writeBytecode(context);
-                context.runStored("string", String.class);
+                var macroContent = template.writeBytecode(context);
+                context.store("string", macroContent);
+                return true;
+            }
+            if(context.instruction().type() == InstructionTypes.MAKE_COMMAND_SOURCE_STACK) {
+                var commandSourceStack = context.load("from");
+                if(context.instruction().get("entity") != null) {
+                    commandSourceStack = callCommandSourceStack_withEntity(codeWriter, commandSourceStack, context.load("entity"));
+                }
+                if(context.instruction().get("world") != null) {
+                    commandSourceStack = callCommandSourceStack_withLevel(codeWriter, commandSourceStack, context.load("world"));
+                }
+                if(context.instruction().get("position") != null) {
+                    commandSourceStack = callCommandSourceStack_withPosition(codeWriter, commandSourceStack, context.load("position"));
+                }
+                if(context.instruction().get("rotation") != null) {
+                    commandSourceStack = callCommandSourceStack_withRotation(codeWriter, commandSourceStack, context.load("rotation"));
+                }
+                if(context.instruction().get("anchor") != null) {
+                    var anchor = context.instruction().<LocationAnchor>get("anchor");
+                    var anchorReg = anchor == LocationAnchor.EYES ? loadAnchor_EYES(codeWriter) : loadAnchor_FEET(codeWriter);
+                    commandSourceStack = callCommandSourceStack_withAnchor(codeWriter, commandSourceStack, anchorReg);
+                }
+                context.store("to", commandSourceStack);
                 return true;
             }
             if(context.instruction().type() == InstructionTypes.CALL_FUNCTIONS) {
                 for(var func : context.instruction().<List<DataLocation>>get("functions")) {
+                    BytecodeRegister mctxtl = null;
+                    BytecodeRegister mctx = null;
                     if(!context.compiledFunctions().contains(func)) {
-                        context.fieldStorage().loadServerFunctionManager(codeWriter);
-                        context.fieldStorage().loadFunction(codeWriter, func);
+                        mctxtl = loadCommands_CURRENT_EXECUTION_CONTEXT(codeWriter);
+                        mctx = callThreadLocal_get(codeWriter, mctxtl);
+                        callThreadLocal_set(codeWriter, mctxtl, new BytecodeValue.NullValue());
                     }
-                    codeWriter.loadLocal("static$CommandSourceStack");
-                    if(context.instruction().get("entity") != null) {
-                        context.load("entity");
-                        callCommandSourceStack_withEntity(codeWriter);
-                    }
-                    if(context.instruction().get("world") != null) {
-                        context.load("world");
-                        callCommandSourceStack_withLevel(codeWriter);
-                    }
-                    if(context.instruction().get("position") != null) {
-                        context.load("position");
-                        callCommandSourceStack_withPosition(codeWriter);
-                    }
-                    if(context.instruction().get("rotation") != null) {
-                        context.load("rotation");
-                        callCommandSourceStack_withRotation(codeWriter);
-                    }
-                    if(context.instruction().get("anchor") != null) {
-                        var anchor = context.instruction().<LocationAnchor>get("anchor");
-                        if(anchor == LocationAnchor.EYES) {
-                            loadAnchor_EYES(codeWriter);
-                        }else {
-                            loadAnchor_FEET(codeWriter);
-                        }
-                        callCommandSourceStack_withAnchor(codeWriter);
-                    }
+                    var commandSourceStack = context.load("stack");
                     if(context.compiledFunctions().contains(func)) {
-                        if(context.instruction().get("arguments") != null) {
-                            context.load("arguments");
-                            codeWriter.castType(CompoundTag.class);
-                        }else {
-                            codeWriter.writeNull();
-                        }
-                        methodVisitor.visitMethodInsn(Opcodes.INVOKESTATIC, ("function/" + func.namespace() + "/" + func.path()).replace('.', '$'), "run", "(" + CommandSourceStack.class.descriptorString() + context.fieldStorage().getMap().getValueClass(CodeFieldStorageMapKind.NBT_COMPOUND).descriptorString() + ")J", false);
-                        methodVisitor.visitInsn(Opcodes.POP2);
+                        var nbtArgs = context.instruction().get("arguments") != null ? codeWriter.castType(context.load("arguments"), CompoundTag.class) : new BytecodeValue.NullValue();
+                        var target = new InstructionTarget.FunctionTarget(("mcfc/function/" + func.namespace() + "/" + func.path()).replace('.', '$'), "run", "(" + CommandSourceStack.class.descriptorString() + context.fieldStorage().getMap().getValueClass(CodeFieldStorageMapKind.NBT_COMPOUND).descriptorString() + ")J", true, false, false, true);
+                        codeWriter.writeTarget(target, commandSourceStack, nbtArgs);
                     }else {
+                        var functionManager = context.fieldStorage().loadServerFunctionManager(codeWriter);
+                        var function = context.fieldStorage().loadFunction(codeWriter, func);
+
                         if(context.instruction().get("arguments") != null) {
-                            context.load("arguments");
-                            codeWriter.castType(CompoundTag.class);
-                            callExtensionFunctions_executeFunction(codeWriter);
+                            callExtensionFunctions_executeFunction(codeWriter, functionManager, function, commandSourceStack, codeWriter.castType(context.load("arguments"), CompoundTag.class));
                         }else {
-                            callServerFunctionManager_execute(codeWriter);
+                            callServerFunctionManager_execute(codeWriter, functionManager, function, commandSourceStack);
                         }
+                        callThreadLocal_set(codeWriter, mctxtl, mctx);
                     }
                 }
                 return true;
             }
             if(context.instruction().type() == InstructionTypes.CHECK_SCORE_COMPARE) {
-                context.load("target");
-                callScore_getScore(codeWriter);
-                context.load("source");
-                callScore_getScore(codeWriter);
+                var a = callScore_getScore(codeWriter, context.load("target"));
+                var b = callScore_getScore(codeWriter, context.load("source"));
 
-                var endLabel = codeWriter.executeIfLabeled(switch(context.instruction().<ScoreboardCompareOperation>get("compareOperation")) {
-                    case LT -> Opcodes.IF_ICMPLT;
-                    case LE -> Opcodes.IF_ICMPLE;
-                    case EQ -> Opcodes.IF_ICMPEQ;
-                    case NE -> Opcodes.IF_ICMPNE;
-                    case GE -> Opcodes.IF_ICMPGE;
-                    case GT -> Opcodes.IF_ICMPGT;
-                });
-                context.run();
-                methodVisitor.visitLabel(endLabel);
+                codeWriter.conditionalJump(switch(context.instruction().<ScoreboardCompareOperation>get("compareOperation")) {
+                    case LT -> JumpCondition.GE;
+                    case LE -> JumpCondition.GT;
+                    case EQ -> JumpCondition.NE;
+                    case NE -> JumpCondition.EQ;
+                    case GE -> JumpCondition.LT;
+                    case GT -> JumpCondition.LE;
+                }, a, b, context.mapLabel("failLabel"));
                 return true;
             }
             if(context.instruction().type() == InstructionTypes.APPLY_LOCAL_POSITION_WORLD) {
                 var pos = context.instruction().<WorldCoordinates>get("position");
                 if(!pos.localCoordinates()) throw new UnsupportedOperationException("Cannot run APPLY_LOCAL_POSITION_WORLD with non-local coordinates");
-                context.load("fromRotation");
-                loadVec2_x(codeWriter);
-                context.load("fromRotation");
-                loadVec2_y(codeWriter);
-                context.load("fromPosition");
-                loadVec3_x(codeWriter);
-                context.load("fromPosition");
-                loadVec3_y(codeWriter);
+                var rotX = loadVec2_x(codeWriter, context.load("fromRotation"));
+                var rotY = loadVec2_y(codeWriter, context.load("fromRotation"));
+                var fposX = loadVec3_x(codeWriter, context.load("fromPosition"));
+                var fposY = loadVec3_y(codeWriter, context.load("fromPosition"));
                 if(context.instruction().get("yOffset") != null) {
-                    context.load("yOffset");
-                    methodVisitor.visitInsn(Opcodes.DADD);
+                    fposY = codeWriter.add(fposY, context.load("yOffset"));
                 }
-                context.load("fromPosition");
-                loadVec3_z(codeWriter);
-                codeWriter.writeDouble(pos.x());
-                codeWriter.writeDouble(pos.y());
-                codeWriter.writeDouble(pos.z());
-                callExtensionFunctions_calculateLocalCoordinates(codeWriter);
-                context.runStored("to", Vec3.class);
+                var fposZ = loadVec3_z(codeWriter, context.load("fromPosition"));
+                var posX = new BytecodeValue.DoubleValue(pos.x());
+                var posY = new BytecodeValue.DoubleValue(pos.y());
+                var posZ = new BytecodeValue.DoubleValue(pos.z());
+                var calculated = callExtensionFunctions_calculateLocalCoordinates(codeWriter, rotX, rotY, fposX, fposY, fposZ, posX, posY, posZ);
+                context.store("to", calculated);
                 return true;
             }
             if(context.instruction().type() == InstructionTypes.APPLY_POSITION_WORLD) {
                 var pos = context.instruction().<WorldCoordinates>get("position");
                 if(pos.localCoordinates()) throw new UnsupportedOperationException("Cannot run APPLY_POSITION_WORLD with local coordinates");
-                codeWriter.newObjectCreate(Vec3.class);
-                if(pos.isXRelative()) {
-                    context.load("from");
-                    loadVec3_x(codeWriter);
-                    if(pos.x() != 0.0) {
-                        codeWriter.writeDouble(pos.x());
-                        methodVisitor.visitInsn(Opcodes.DADD);
-                    }
-                } else {
-                    codeWriter.writeDouble(pos.x());
-                }
-                if(pos.isYRelative()) {
-                    context.load("from");
-                    loadVec3_y(codeWriter);
-                    if(pos.y() != 0.0) {
-                        codeWriter.writeDouble(pos.y());
-                        methodVisitor.visitInsn(Opcodes.DADD);
-                    }
-                } else {
-                    codeWriter.writeDouble(pos.y());
-                }
-                if(pos.isZRelative()) {
-                    context.load("from");
-                    loadVec3_z(codeWriter);
-                    if(pos.z() != 0.0) {
-                        codeWriter.writeDouble(pos.z());
-                        methodVisitor.visitInsn(Opcodes.DADD);
-                    }
-                } else {
-                    codeWriter.writeDouble(pos.z());
-                }
-                codeWriter.newObjectInit(Vec3.class, double.class, double.class, double.class);
-                context.runStored("to", Vec3.class);
+                BytecodeValue x = pos.isXRelative() ? codeWriter.add(loadVec3_x(codeWriter, context.load("from")), new BytecodeValue.DoubleValue(pos.x())) : new BytecodeValue.DoubleValue(pos.x());
+                BytecodeValue y = pos.isYRelative() ? codeWriter.add(loadVec3_y(codeWriter, context.load("from")), new BytecodeValue.DoubleValue(pos.y())) : new BytecodeValue.DoubleValue(pos.y());
+                BytecodeValue z = pos.isZRelative() ? codeWriter.add(loadVec3_z(codeWriter, context.load("from")), new BytecodeValue.DoubleValue(pos.z())) : new BytecodeValue.DoubleValue(pos.z());
+
+                context.store("to", codeWriter.newObjectCreate(VEC3_INIT_TARGET, x, y, z));
                 return true;
             }
             if(context.instruction().type() == InstructionTypes.APPLY_ROTATION_WORLD) {
-                codeWriter.newObjectCreate(Vec2.class);
                 var rot = context.instruction().<RotationCoordinates>get("rotation");
-                if(rot.isYawRelative()) {
-                    context.load("from");
-                    loadVec2_x(codeWriter);
-                    if(rot.yaw() != 0.0) {
-                        codeWriter.writeFloat((float) rot.yaw());
-                        methodVisitor.visitInsn(Opcodes.FADD);
-                    }
-                } else {
-                    codeWriter.writeFloat((float) rot.yaw());
-                }
-                if(rot.isPitchRelative()) {
-                    context.load("from");
-                    loadVec2_y(codeWriter);
-                    if(rot.pitch() != 0.0) {
-                        codeWriter.writeFloat((float) rot.pitch());
-                        methodVisitor.visitInsn(Opcodes.FADD);
-                    }
-                } else {
-                    codeWriter.writeFloat((float) rot.pitch());
-                }
-                codeWriter.newObjectInit(Vec2.class, float.class, float.class);
-                context.runStored("to", Vec2.class);
+                BytecodeValue yaw = rot.isYawRelative() ? codeWriter.add(loadVec2_x(codeWriter, context.load("from")), new BytecodeValue.FloatValue((float) rot.yaw())) : new BytecodeValue.FloatValue((float) rot.yaw());
+                BytecodeValue pitch = rot.isPitchRelative() ? codeWriter.add(loadVec2_y(codeWriter, context.load("from")), new BytecodeValue.FloatValue((float) rot.pitch())) : new BytecodeValue.FloatValue((float) rot.pitch());
+
+                context.store("to", codeWriter.newObjectCreate(VEC2_INIT_TARGET, yaw, pitch));
                 return true;
             }
             if(context.instruction().type() == InstructionTypes.CHECK_ENTITY_TYPES) {
-                var label = new Label();
+                var success = codeWriter.createLabel();
                 for(var res : context.instruction().<List<DataLocation>>get("types")) {
-                    context.load("entity");
-                    var desc = DataRegistries.ENTITY_CLASS.get(res).clazz().descriptorString();
-                    methodVisitor.visitTypeInsn(Opcodes.INSTANCEOF, desc.substring(1, desc.length() - 1));
-                    methodVisitor.visitJumpInsn(Opcodes.IFNE, label);
+                    var entity = context.load("entity");
+                    var clazz = DataRegistries.ENTITY_CLASS.get(res).clazz();
+                    if(context.instruction().<Boolean>get("negated")) {
+                        codeWriter.instanceCheckJump(true, entity, clazz, context.mapLabel("failLabel"));
+                    }else {
+                        codeWriter.instanceCheckJump(true, entity, clazz, success);
+                    }
                 }
                 if(!context.instruction().<Boolean>get("negated")) {
-                    var label2 = new Label();
-                    methodVisitor.visitJumpInsn(Opcodes.GOTO, label2);
-                    methodVisitor.visitLabel(label);
-                    context.run();
-                    methodVisitor.visitLabel(label2);
-                }else {
-                    context.run();
-                    methodVisitor.visitLabel(label);
+                    codeWriter.jump(context.mapLabel("failLabel"));
                 }
+                codeWriter.label(success);
                 return true;
             }
             if(context.instruction().type() == InstructionTypes.ALIGN_POSITION) {
-                codeWriter.newObjectCreate(Vec3.class);
                 var swizzle = context.instruction().<SwizzleArgument>get("swizzle");
-                context.load("position");
-                loadVec3_x(codeWriter);
-                if(swizzle.x()) callMath_floor(codeWriter);
-                context.load("position");
-                loadVec3_y(codeWriter);
-                if(swizzle.y()) callMath_floor(codeWriter);
-                context.load("position");
-                loadVec3_z(codeWriter);
-                if(swizzle.z()) callMath_floor(codeWriter);
-                codeWriter.newObjectInit(Vec3.class, double.class, double.class, double.class);
-                context.runStored("result", Vec3.class);
-                return true;
-            }
-            if(context.instruction().type() == InstructionTypes.CHECK_INT_RANGE) {
-                context.load("value");
-                checkIntRange(context, context.instruction().get("range"), EmitterContext::run);
-                return true;
-            }
-            if(context.instruction().type() == InstructionTypes.CHECK_NOT_INT_RANGE) {
-                context.load("value");
-                checkNotIntRange(context, context.instruction().get("range"), EmitterContext::run);
-                return true;
-            }
-            if(context.instruction().type() == InstructionTypes.CHECK_FLOAT_RANGE) {
-                context.load("value");
-                checkFloatRange(context, context.instruction().get("range"), EmitterContext::run);
-                return true;
-            }
-            if(context.instruction().type() == InstructionTypes.CHECK_DOUBLE_RANGE) {
-                context.load("value");
-                checkDoubleRange(context, context.instruction().get("range"), EmitterContext::run);
-                return true;
-            }
-            if(context.instruction().type() == InstructionTypes.CHECK_ROTATION_YAW) {
-                context.load("rotation");
-                loadVec2_x(codeWriter);
-                checkFloatRange(context, context.instruction().get("yaw"), EmitterContext::run);
-                return true;
-            }
-            if(context.instruction().type() == InstructionTypes.CHECK_ROTATION_PITCH) {
-                context.load("rotation");
-                loadVec2_y(codeWriter);
-                checkFloatRange(context, context.instruction().get("pitch"), EmitterContext::run);
+                var x = swizzle.x() ? callMath_floor(codeWriter, loadVec3_x(codeWriter, context.load("position"))) : loadVec3_x(codeWriter, context.load("position"));
+                var y = swizzle.y() ? callMath_floor(codeWriter, loadVec3_y(codeWriter, context.load("position"))) : loadVec3_y(codeWriter, context.load("position"));
+                var z = swizzle.z() ? callMath_floor(codeWriter, loadVec3_z(codeWriter, context.load("position"))) : loadVec3_z(codeWriter, context.load("position"));
+
+                context.store("result", codeWriter.newObjectCreate(VEC3_INIT_TARGET, x, y, z));
                 return true;
             }
 

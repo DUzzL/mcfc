@@ -19,6 +19,7 @@ import static dev.epicpix.minecraftfunctioncompiler.v1_21.FunctionCompilerMain.f
 public class CallFunctionMixin<T extends ExecutionCommandSource<T>> {
 
     @Shadow @Final private CommandResultCallback resultCallback;
+    @Shadow @Final private boolean returnParentFrame;
 
     @Inject(method = "execute(Lnet/minecraft/commands/ExecutionCommandSource;Lnet/minecraft/commands/execution/ExecutionContext;Lnet/minecraft/commands/execution/Frame;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/commands/execution/ExecutionContext;incrementCost()V", shift = At.Shift.AFTER), cancellable = true)
     public void execute(T source, ExecutionContext<T> executionContext, Frame frame, CallbackInfo ci) {
@@ -29,6 +30,8 @@ public class CallFunctionMixin<T extends ExecutionCommandSource<T>> {
                 if(res >> 32 < 2) {
                     if (res >> 32 == 1) resultCallback.onFailure();
                     else resultCallback.onSuccess((int) res);
+                    Frame.FrameControl frameControl = returnParentFrame ? frame.frameControl() : executionContext.frameControlForDepth(frame.depth() + 1);
+                    frameControl.discard();
                 }
                 ci.cancel();
             }

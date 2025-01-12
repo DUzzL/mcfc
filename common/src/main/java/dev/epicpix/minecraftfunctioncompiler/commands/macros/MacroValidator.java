@@ -1,9 +1,10 @@
 package dev.epicpix.minecraftfunctioncompiler.commands.macros;
 
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter;
-import org.objectweb.asm.Label;
 
 public interface MacroValidator {
-    void validateGenerated(String source, CodeWriter cw, CodeFieldStorage cf, Label failureLabel);
+    void validateGenerated(BytecodeValue source, CodeWriter cw, CodeFieldStorage cf, BytecodeLabel failureLabel);
 }

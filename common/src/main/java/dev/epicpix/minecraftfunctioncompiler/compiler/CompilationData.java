@@ -4,7 +4,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 
 public record CompilationData<T>(CompilationContext context, CompilationContextData data, T content, int stackCount) implements AutoCloseable {
     public void writeInstruction(Instruction instr) {
-        data.addInstructionConsumer().accept(instr);
+        data.writeInstruction(context.instructionWriter, instr);
     }
     @SuppressWarnings("unchecked")
     public <R> CompilationData<R> changeType() {

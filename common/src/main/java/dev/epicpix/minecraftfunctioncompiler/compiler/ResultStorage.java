@@ -37,24 +37,24 @@ public class ResultStorage {
         return success != null;
     }
 
-    public void setResult(CompilationContextData context, LocationData<Integer> data) {
+    public void setResult(InstructionWriter instructionWriter, CompilationContextData context, LocationData<Integer> data) {
         if(storesResult()) {
             updatedResult = true;
-            context.writeInstruction(Instructions2.setResultStorage(result, data));
+            context.writeInstruction(instructionWriter, Instructions2.valueAssign(result, data));
         }
     }
 
-    public void addResult(CompilationContextData context, LocationData<Integer> data) {
+    public void addResult(InstructionWriter instructionWriter, CompilationContextData context, LocationData<Integer> data) {
         if(storesResult()) {
             updatedResult = true;
-            context.writeInstruction(Instructions2.addResultStorage(result, data));
+            context.writeInstruction(instructionWriter, Instructions2.valueAdd(result, data));
         }
     }
 
-    public void updateSuccess(CompilationContextData context, boolean failed) {
+    public void updateSuccess(InstructionWriter instructionWriter, CompilationContextData context, boolean failed) {
         if(storesSuccess()) {
             updatedSuccess = true;
-            context.writeInstruction(Instructions2.setResultStorage(success, LocationData.ofInteger(failed ? 0 : 1)));
+            context.writeInstruction(instructionWriter, Instructions2.valueAssign(success, LocationData.ofInteger(failed ? 0 : 1)));
         }
     }
 

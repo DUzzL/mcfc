@@ -1,28 +1,23 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter.impl;
 
+import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
+
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
-import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callPattern_matcher;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callPattern_compile;
 
 public class CodeFieldStorageMap {
 
     private final HashMap<CodeFieldStorageMapKind<?>, CodeFieldStorageMapValue<?>> map = new HashMap<>();
 
+    private static final InstructionTarget UUID_TARGET_INIT = InstructionTarget.FunctionTarget.initFunction(UUID.class, long.class, long.class);
+
     public CodeFieldStorageMap addDefaults() {
-        set(CodeFieldStorageMapKind.REGEX_PATTERN, new CodeFieldStorageMapValue<>(Pattern.class, (cf, cw, value) -> {
-            cw.writeString(value);
-            callPattern_matcher(cw);
-            return 6;
-        }));
-        set(CodeFieldStorageMapKind.UUID, new CodeFieldStorageMapValue<>(UUID.class, (cf, cw, value) -> {
-            cw.newObjectCreate(UUID.class);
-            cw.writeLong(value.getMostSignificantBits());
-            cw.writeLong(value.getLeastSignificantBits());
-            cw.newObjectInit(UUID.class, long.class, long.class);
-            return 13;
-        }));
+        set(CodeFieldStorageMapKind.REGEX_PATTERN, new CodeFieldStorageMapValue<>(Pattern.class, (cf, cw, value) -> callPattern_compile(cw, new BytecodeValue.StringValue(value))));
+        set(CodeFieldStorageMapKind.UUID, new CodeFieldStorageMapValue<>(UUID.class, (cf, cw, value) -> cw.newObjectCreate(UUID_TARGET_INIT, new BytecodeValue.LongValue(value.getMostSignificantBits()), new BytecodeValue.LongValue(value.getLeastSignificantBits()))));
         return this;
     }
 

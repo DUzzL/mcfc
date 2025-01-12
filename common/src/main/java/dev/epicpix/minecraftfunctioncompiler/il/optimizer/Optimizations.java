@@ -1,342 +1,278 @@
 package dev.epicpix.minecraftfunctioncompiler.il.optimizer;
 
 import dev.epicpix.minecraftfunctioncompiler.il.*;
+import dev.epicpix.minecraftfunctioncompiler.util.Pair;
 
-import java.util.*;
-
-import static dev.epicpix.minecraftfunctioncompiler.il.optimizer.OptimizationResult.*;
-import static dev.epicpix.minecraftfunctioncompiler.il.optimizer.Optimizer.getFirstFreeLocal;
+import java.util.ArrayList;
+import java.util.List;
 
 public final class Optimizations {
     private Optimizations() {}
 
-    static final Optimization[] OPTIMIZATIONS = {
-            Optimizations::removeExitScopeDeadCode,
-            Optimizations::inlineListAccess,
-            Optimizations::removeUnnecessaryInstructions,
-            Optimizations::mergePureInstructions,
-            Optimizations::removeDuplicateNullChecks,
-            Optimizations::upgradeEntityToPlayerSelector,
-            Optimizations::coalesceEntityCasts,
-            Optimizations::combineObjectiveGetters,
-            Optimizations::combineNullChecks,
-    };
+    public static final List<Optimization> OPTIMIZATIONS = List.of(
+        Optimizations::mergeValues,
+        Optimizations::removeDuplicateChecks,
+        Optimizations::inlineLists,
+        Optimizations::mergeLabels,
+        Optimizations::removeUselessCommandStackData
+    );
 
-    private static OptimizationResult removeUnnecessaryInstructions(OptimizationInput input) {
-        var instr = input.instruction();
-        if(instr.type() == InstructionTypes2.ALWAYS) return OptimizationResultTypes.INLINE_AND_REMOVE_SELF;
-        if(instr.type() == InstructionTypes2.NEVER) return OptimizationResultTypes.REMOVE_SELF;
-        if(instr.type() == InstructionTypes2.SCOPE) {
-            var scope = instr.<ScopeData>get("scope");
-            if(!input.anyChildren(it -> it.data().containsValue(scope))) return OptimizationResultTypes.INLINE_AND_REMOVE_SELF;
+    private static void mergeLabels(OptimizationPass pass) {
+        if(pass.thisInstruction().type() != InstructionTypes2.LABEL) return;
+        var thisLabel = pass.thisInstruction().<LabelData>get("label");
+
+        var prevInstruction = pass.getOffsetInstruction(-1);
+        if(prevInstruction != null && prevInstruction.type() == InstructionTypes2.LABEL) {
+            var newLabel = prevInstruction.<LabelData>get("label");
+            int instrCount = pass.context().getInstructionCount();
+            for(int o = 0; o<instrCount; o++) {
+                if(o == pass.thisInstructionIndex()) continue;
+                var instr = pass.getInstruction(o);
+                Object[] replacedInstructionData = instr.optReplaceDataIf(value -> value instanceof LabelData label && label.id() == thisLabel.id(), newLabel);
+                if(replacedInstructionData != null) {
+                    pass.modifyInstructionData(o, replacedInstructionData);
+                }
+            }
+            pass.removeInstruction(pass.thisInstructionIndex());
+            return;
         }
-        if(instr.type() == InstructionTypes2.IF_NOT_NULL && instr.children().isEmpty()) return OptimizationResultTypes.REMOVE_SELF;
-        return OptimizationResultTypes.KEEP;
+
+        int useCount = 0;
+        for(int i = 0; i<pass.context().getInstructionCount(); i++) {
+            if(i == pass.thisInstructionIndex()) continue;
+            var instr = pass.getInstruction(i);
+            if(instr.containsValue(thisLabel)) {
+                useCount++;
+            }
+        }
+        if(prevInstruction != null && prevInstruction.type() == InstructionTypes2.JUMP && prevInstruction.get("label").equals(thisLabel)) {
+            if(useCount == 1) {
+                pass.removeInstruction(pass.thisInstructionIndex());
+            }
+            pass.removeInstruction(pass.thisInstructionIndex() - 1);
+        }else if(useCount == 0) {
+            pass.removeInstruction(pass.thisInstructionIndex());
+        }
+
     }
 
-    private static OptimizationResult removeExitScopeDeadCode(OptimizationInput input) {
-        var instr = input.instruction();
-        if(instr.type() == InstructionTypes2.SCOPE) {
-            var scope = instr.<ScopeData>get("scope");
-            var scopeInstructions = input.collectChildren(it -> it.instruction().data().containsValue(scope));
-
-            ArrayList<InstructionModification> modifications = new ArrayList<>();
-            for(var scopeInstr : scopeInstructions) {
-                if(scopeInstr.instruction().type() == InstructionTypes2.EXIT_SCOPE) {
-                    var before = input.getByPath(scopeInstr.path().pathExceptLast());
-                    for(int i = scopeInstr.path().lastIndex() + 1; i<before.instruction().children().size(); i++) {
-                        modifications.add(new InstructionModification.RemoveInstruction(before.path().addPathNode(i)));
+    private static void removeUselessCommandStackData(OptimizationPass pass) {
+        if(pass.thisInstruction().type() == InstructionTypes2.GET_STACK_ENTITY) {
+            var stack = pass.thisInstruction().get("stack");
+            Object entitySource = null;
+            for(int i = 0; i<pass.context().getInstructionCount(); i++) {
+                var instr = pass.getInstruction(i);
+                if(instr.type() == InstructionTypes2.GET_COMMAND_STACK) {
+                    if(instr.get("stack").equals(stack)) {
+                        return;
+                    }
+                }else if(instr.type() == InstructionTypes.MAKE_COMMAND_SOURCE_STACK) {
+                    if(instr.get("to").equals(stack)) {
+                        entitySource = instr.get("entity");
+                        break;
                     }
                 }
             }
-            if(!modifications.isEmpty()) {
-                return OptimizationResult.modificationsWithFlags(modifications, 0);
-            }
-        }
-        // TODO: Some check here is not correct
-//        else if(instr.type() == InstructionTypes2.EXIT_SCOPE) {
-//            var scope = instr.<ScopeData>get("scope");
-//            var scopeDefinition = input.getInstructionFromPath(it -> it.instruction().type() == InstructionTypes2.SCOPE && it.instruction().data().get("scope").equals(scope));
-//            if(scopeDefinition != null) {
-//                var isFlowSafe = !input.anyInstructionFromPath(it -> it.path().depth() > scopeDefinition.path().depth() && (it.instruction().type() == InstructionTypes2.FOR_EACH_PLAYER || it.instruction().type() == InstructionTypes2.FOR_EACH_ENTITY || it.instruction().type() == InstructionTypes2.FOR_EACH_LIST_ELEMENT));
-//                var isLastElement = !input.anyInstructionFromPath(it -> it.path().depth() > scopeDefinition.path().depth() && input.thisPath().path().get(it.path().depth() - 1) == input.getByPath(it.path().pathExceptLast()).instruction().children().size());
-//                if (isFlowSafe && isLastElement) {
-//                    return OptimizationResultTypes.REMOVE_SELF;
-//                }
-//            }
-//        }
-        return OptimizationResultTypes.KEEP;
-    }
+            if(entitySource == null) return;
 
-    private static OptimizationResult inlineListAccess(OptimizationInput input) {
-        var instr = input.instruction();
-        if(instr.type() == InstructionTypes2.CREATE_MUTABLE_LIST) {
-            var listLocation = instr.<LocationData<List<?>>>get("list");
-            var addInstructions = input.collectChildren(it -> it.instruction().type() == InstructionTypes2.ADD_LIST_ELEMENT && it.instruction().data().containsValue(listLocation));
-            if(addInstructions.size() == 1) {
-                var addInstruction = addInstructions.get(0);
-                var elementSourceInstruction = input.getInstructionDefinitionInPath(addInstruction.path(), addInstruction.instruction().get("element"));
-                var sourceInstructionType = elementSourceInstruction.instruction().type();
-                var isEntity = sourceInstructionType == InstructionTypes2.GET_CURRENT_ENTITY || sourceInstructionType == InstructionTypes2.FOR_EACH_ENTITY || sourceInstructionType == InstructionTypes2.FOR_EACH_PLAYER || sourceInstructionType == InstructionTypes2.FOR_ENTITY || sourceInstructionType == InstructionTypes2.FOR_PLAYER || sourceInstructionType == InstructionTypes2.TRY_AS_LIVING_ENTITY || sourceInstructionType == InstructionTypes2.TRY_AS_PLAYER || (sourceInstructionType == InstructionTypes2.TRY_AS_ENTITY && elementSourceInstruction.instruction().data().get("entity").equals(addInstruction.instruction().get("element")));
-                if(isEntity) {
-                    var otherMutations = input.anyChildren(it -> it.type() != InstructionTypes2.ADD_LIST_ELEMENT && it.type() != InstructionTypes2.FOR_EACH_LIST_ELEMENT && it.data().containsValue(listLocation));
-                    if(!otherMutations) {
-                        var forEachInstruction = input.getChild(it -> it.instruction().type() == InstructionTypes2.FOR_EACH_LIST_ELEMENT && it.instruction().data().containsValue(listLocation));
-                        if(forEachInstruction != null) {
-                            var forEachDirectChild = input.getDirectChild(forEachInstruction);
-                            var isSafeToInline = elementSourceInstruction.path().absolute() || sourceInstructionType == InstructionTypes2.GET_CURRENT_ENTITY || !input.anyChildrenIn(forEachInstruction, it -> it.type() == InstructionTypes.CALL_FUNCTIONS || it.type() == InstructionTypes2.KILL_ENTITY);
-                            if (isSafeToInline) {
-                                var commonReused = new HashSet<Integer>();
-                                int nextId = getFirstFreeLocal(input.usedLocations(), instr, input.getDirectChild(addInstruction).path(), forEachDirectChild.path(), commonReused);
-                                var remapData = new HashMap<Integer, Integer>();
-                                for(var reused : commonReused) {
-                                    remapData.putIfAbsent(reused, nextId++);
-                                }
-                                remapData.put(forEachInstruction.instruction().<LocationData<?>>get("element").local(), addInstruction.instruction().<LocationData<?>>get("element").local());
-                                ArrayList<InstructionModification> modifications = new ArrayList<>();
-                                modifications.add(new InstructionModification.RemoveInstruction(addInstruction.path(), 2));
-                                if(addInstruction.path().depth() > 1) {
-                                    modifications.add(new InstructionModification.MoveChildrenFromToNested(forEachInstruction.path(), addInstruction.path().pathExceptLast(), remapData, false, false, 1));
-                                    if (!forEachDirectChild.path().equals(forEachInstruction.path())) {
-                                        modifications.add(new InstructionModification.MoveChildrenFromToNested(forEachDirectChild.path(), InstructionPath.emptyRelative(), remapData, true, true, 0));
-                                    }
-                                }else {
-                                    modifications.add(new InstructionModification.MoveChildrenFromToNested(addInstruction.path(), addInstruction.path(), remapData, true, false, 1));
-                                }
-                                return OptimizationResult.modificationsWithFlags(modifications, OptimizationResult.REMOVE_SELF_AND_INLINE_CHILDREN);
-                            }
-                        }
-                    }
+            var replaceFrom = pass.thisInstruction().get("entity");
+            pass.replaceInstructionData(false, replaceFrom, entitySource);
+            pass.removeInstruction(pass.thisInstructionIndex());
+
+        }else if(pass.thisInstruction().type() == InstructionTypes.MAKE_COMMAND_SOURCE_STACK) {
+            var stack = pass.thisInstruction().get("to");
+
+            for(int i = 0; i<pass.context().getInstructionCount(); i++) {
+                if(i == pass.thisInstructionIndex()) continue;
+                var instr = pass.getInstruction(i);
+                if(instr.containsValue(stack)) {
+                    return;
                 }
-            }else if(addInstructions.isEmpty()) {
-                return OptimizationResultTypes.REMOVE_SELF;
             }
+
+            pass.removeInstruction(pass.thisInstructionIndex());
         }
-        return OptimizationResultTypes.KEEP;
     }
 
-    private static OptimizationResult removeDuplicateNullChecks(OptimizationInput input) {
-        var instr = input.instruction();
-        if(instr.type() == InstructionTypes2.IF_NOT_NULL) {
-            var checkLoc = instr.<LocationData<Object>>get("local");
-            var isNotNull = input.anyInstructionFromPath(it -> it.instruction().data().containsValue(checkLoc) && (it.instruction().type() == InstructionTypes2.IF_NOT_NULL || it.instruction().type() == InstructionTypes2.GET_CURRENT_ENTITY || it.instruction().type() == InstructionTypes2.FOR_EACH_ENTITY || it.instruction().type() == InstructionTypes2.FOR_EACH_PLAYER || (it.instruction().type() == InstructionTypes2.TRY_AS_ENTITY && it.instruction().data().get("entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.TRY_AS_LIVING_ENTITY && it.instruction().data().get("living_entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER && it.instruction().data().get("player").equals(checkLoc))));
-            if(isNotNull) {
-                return OptimizationResultTypes.INLINE_AND_REMOVE_SELF;
-            }
+    private static void mergeValues(OptimizationPass pass) {
+        mergePureData(pass, InstructionTypes2.GET_STACK_ENTITY, "stack", "entity");
+        mergePureData(pass, InstructionTypes2.GET_SCOREBOARD_NAME, "entity", "name");
+
+        if(pass.thisInstruction().type() == InstructionTypes2.OBJECT_ASSIGN) {
+            var assignFrom = pass.thisInstruction().get("src");
+            var assignTo = pass.thisInstruction().get("dst");
+            var otherAssigns = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.OBJECT_ASSIGN, List.of(new Pair<>("dst", assignFrom)));
+            if(!otherAssigns.isEmpty()) return;
+
+            pass.replaceInstructionData(false, assignFrom, assignTo);
+            pass.removeInstruction(pass.thisInstructionIndex());
         }
-        return OptimizationResultTypes.KEEP;
     }
 
-    private static OptimizationResult coalesceEntityCasts(OptimizationInput input) {
-        var instr = input.instruction();
-        if(instr.type() == InstructionTypes2.TRY_AS_ENTITY) {
-            var checkLoc = instr.<LocationData<Object>>get("object");
-            var isCastReapplied = input.anyInstructionFromPath(it -> it.instruction().data().containsValue(checkLoc) && ((it.instruction().type() == InstructionTypes2.TRY_AS_ENTITY && it.instruction().data().get("entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.TRY_AS_LIVING_ENTITY && it.instruction().data().get("living_entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER && it.instruction().data().get("player").equals(checkLoc))));
-            if(isCastReapplied) {
-                var remap = new HashMap<Integer, Integer>();
-                remap.put(instr.<LocationData<?>>get("entity").local(), checkLoc.local());
-                return OptimizationResult.remapWithFlags(remap, REMOVE_SELF_AND_INLINE_CHILDREN);
-            }
+    private static void mergePureData(OptimizationPass pass, InstructionType type, String compare, String replace) {
+        if(pass.thisInstruction().type() == type) {
+            var compareData = pass.thisInstruction().get(compare);
+            var replaceData = pass.thisInstruction().get(replace);
+            var validReplMatchesInstrs = pass.findInstructions(0, pass.context().getInstructionCount(), false, type, List.of(new Pair<>(compare, compareData)));
+            if(!validReplMatchesInstrs.isEmpty()) {
+                var validReplInstrs = new ArrayList<>(pass.findExecutedInstructions());
+                validReplInstrs.retainAll(validReplMatchesInstrs);
+                if(!validReplInstrs.isEmpty()) {
+                    var newReplace = pass.getInstruction(validReplInstrs.get(0)).get(replace);
 
-            var castInstr = input.getInstructionFromPath(it -> it.instruction().data().containsValue(checkLoc) && ((it.instruction().type() == InstructionTypes2.TRY_AS_ENTITY && it.instruction().data().get("object").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.TRY_AS_LIVING_ENTITY && it.instruction().data().get("entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER && it.instruction().data().get("entity").equals(checkLoc))));
-            if(castInstr != null) {
-                var remap = new HashMap<Integer, Integer>();
-                if(castInstr.instruction().type() == InstructionTypes2.TRY_AS_ENTITY) remap.put(instr.<LocationData<?>>get("entity").local(), castInstr.instruction().<LocationData<?>>get("entity").local());
-                if(castInstr.instruction().type() == InstructionTypes2.TRY_AS_LIVING_ENTITY) remap.put(instr.<LocationData<?>>get("entity").local(), castInstr.instruction().<LocationData<?>>get("living_entity").local());
-                if(castInstr.instruction().type() == InstructionTypes2.TRY_AS_PLAYER) remap.put(instr.<LocationData<?>>get("entity").local(), castInstr.instruction().<LocationData<?>>get("player").local());
-                return OptimizationResult.remapWithFlags(remap, REMOVE_SELF_AND_INLINE_CHILDREN);
-            }
-
-            var alreadyIsType = input.anyInstructionFromPath(it -> (it.instruction().type() == InstructionTypes2.GET_CURRENT_ENTITY && it.instruction().data().get("entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.FOR_EACH_PLAYER && it.instruction().data().get("entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.FOR_EACH_ENTITY && it.instruction().data().get("entity").equals(checkLoc)));
-            if(alreadyIsType) {
-                var remap = new HashMap<Integer, Integer>();
-                remap.put(instr.<LocationData<?>>get("entity").local(), instr.<LocationData<?>>get("object").local());
-                return OptimizationResult.remapWithFlags(remap, REMOVE_SELF_AND_INLINE_CHILDREN);
-            }
-        }else if(instr.type() == InstructionTypes2.TRY_AS_LIVING_ENTITY) {
-            var checkLoc = instr.<LocationData<Object>>get("entity");
-            var isCastReapplied = input.anyInstructionFromPath(it -> it.instruction().data().containsValue(checkLoc) && ((it.instruction().type() == InstructionTypes2.TRY_AS_LIVING_ENTITY && it.instruction().data().get("living_entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER && it.instruction().data().get("player").equals(checkLoc))));
-            if(isCastReapplied) {
-                var remap = new HashMap<Integer, Integer>();
-                remap.put(instr.<LocationData<?>>get("living_entity").local(), checkLoc.local());
-                return OptimizationResult.remapWithFlags(remap, REMOVE_SELF_AND_INLINE_CHILDREN);
-            }
-
-            var castInstr = input.getInstructionFromPath(it -> it.instruction().data().containsValue(checkLoc) && ((it.instruction().type() == InstructionTypes2.TRY_AS_LIVING_ENTITY && it.instruction().data().get("entity").equals(checkLoc)) || (it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER && it.instruction().data().get("entity").equals(checkLoc))));
-            if(castInstr != null) {
-                var remap = new HashMap<Integer, Integer>();
-                if(castInstr.instruction().type() == InstructionTypes2.TRY_AS_LIVING_ENTITY) remap.put(instr.<LocationData<?>>get("entity").local(), castInstr.instruction().<LocationData<?>>get("living_entity").local());
-                if(castInstr.instruction().type() == InstructionTypes2.TRY_AS_PLAYER) remap.put(instr.<LocationData<?>>get("entity").local(), castInstr.instruction().<LocationData<?>>get("player").local());
-                return OptimizationResult.remapWithFlags(remap, REMOVE_SELF_AND_INLINE_CHILDREN);
-            }
-
-            var alreadyIsType = input.anyInstructionFromPath(it -> it.instruction().type() == InstructionTypes2.FOR_EACH_PLAYER && it.instruction().data().get("entity").equals(checkLoc));
-            if(alreadyIsType) {
-                var remap = new HashMap<Integer, Integer>();
-                remap.put(instr.<LocationData<?>>get("living_entity").local(), instr.<LocationData<?>>get("entity").local());
-                return OptimizationResult.remapWithFlags(remap, REMOVE_SELF_AND_INLINE_CHILDREN);
-            }
-        }else if(instr.type() == InstructionTypes2.TRY_AS_PLAYER) {
-            var checkLoc = instr.<LocationData<Object>>get("entity");
-            var isCastReapplied = input.anyInstructionFromPath(it -> it.instruction().data().containsValue(checkLoc) && (it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER && it.instruction().data().get("player").equals(checkLoc)));
-            if(isCastReapplied) {
-                var remap = new HashMap<Integer, Integer>();
-                remap.put(instr.<LocationData<?>>get("player").local(), checkLoc.local());
-                return OptimizationResult.remapWithFlags(remap, REMOVE_SELF_AND_INLINE_CHILDREN);
-            }
-
-            var castInstr = input.getInstructionFromPath(it -> it.instruction().data().containsValue(checkLoc) && (it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER && it.instruction().data().get("entity").equals(checkLoc)));
-            if(castInstr != null) {
-                var remap = new HashMap<Integer, Integer>();
-                remap.put(instr.<LocationData<?>>get("entity").local(), castInstr.instruction().<LocationData<?>>get("player").local());
-                return OptimizationResult.remapWithFlags(remap, REMOVE_SELF_AND_INLINE_CHILDREN);
-            }
-
-            var alreadyIsType = input.anyInstructionFromPath(it -> it.instruction().type() == InstructionTypes2.FOR_EACH_PLAYER && it.instruction().data().get("entity").equals(checkLoc));
-            if(alreadyIsType) {
-                var remap = new HashMap<Integer, Integer>();
-                remap.put(instr.<LocationData<?>>get("player").local(), instr.<LocationData<?>>get("entity").local());
-                return OptimizationResult.remapWithFlags(remap, REMOVE_SELF_AND_INLINE_CHILDREN);
-            }
-        }
-        return OptimizationResultTypes.KEEP;
-    }
-
-    private static OptimizationResult upgradeEntityToPlayerSelector(OptimizationInput input) {
-        var instr = input.instruction();
-        if(instr.type() == InstructionTypes2.FOR_EACH_ENTITY) {
-            var entityLoc = instr.<LocationData<Object>>get("entity");
-            var playerCast = input.getChild(it -> it.instruction().data().containsValue(entityLoc) && it.instruction().type() == InstructionTypes2.TRY_AS_PLAYER);
-            if(playerCast != null) {
-                var isLastElement = !input.anyInstructionFromPath(it -> it.path().depth() > playerCast.path().depth() && Objects.equals(input.thisPath().lastIndex(), input.getByPath(it.path().pathExceptLast()).instruction().children().size()));
-                if(isLastElement) {
-                    return new OptimizationResult(null, null, null, InstructionTypes2.FOR_EACH_PLAYER, null, REPLACE_SELF_TYPE);
+                    pass.replaceInstructionData(false, replaceData, newReplace);
+                    pass.removeInstruction(pass.thisInstructionIndex());
                 }
             }
         }
-        return OptimizationResultTypes.KEEP;
     }
 
-    private static OptimizationResult mergePureInstructions(OptimizationInput input) {
-        var instr = input.instruction();
-        if(instr.type() == InstructionTypes2.GET_CURRENT_ENTITY) {
-            var entityLoc = instr.<LocationData<Object>>get("entity");
-            var previousCurrentEntity = input.getInstructionFromPath(it -> it.instruction().type() == InstructionTypes2.GET_CURRENT_ENTITY);
-            if(previousCurrentEntity != null) {
-                return OptimizationResult.remapWithFlags(Map.of(entityLoc.local(), previousCurrentEntity.instruction().<LocationData<?>>get("entity").local()), REMOVE_SELF_AND_INLINE_CHILDREN);
-            }
-        }else if(instr.type() == InstructionTypes2.GET_SCOREBOARD_NAME) {
-            var entityLoc = instr.<LocationData<Object>>get("entity");
-            var previousScoreboardName = input.getInstructionFromPath(it -> it.instruction().type() == InstructionTypes2.GET_SCOREBOARD_NAME && it.instruction().get("entity").equals(entityLoc));
-            if(previousScoreboardName != null) {
-                var nameLoc = instr.<LocationData<Object>>get("name");
-                return OptimizationResult.remapWithFlags(Map.of(nameLoc.local(), previousScoreboardName.instruction().<LocationData<?>>get("name").local()), REMOVE_SELF_AND_INLINE_CHILDREN);
-            }
-        }else if(instr.type() == InstructionTypes2.GET_OBJECTIVE) {
-            var nameLoc = instr.<String>get("name");
-            var objectiveLoc = instr.<LocationData<Object>>get("objective");
-            var previousObjectiveSetter = input.getInstructionFromPath(it -> it.instruction().type() == InstructionTypes2.GET_OBJECTIVE && it.instruction().get("name").equals(nameLoc));
-            if(previousObjectiveSetter != null) {
-                var anyLoops = input.anyInstructionFromPath(it -> it.path().depth() > previousObjectiveSetter.path().depth() && (it.instruction().type() == InstructionTypes2.FOR_EACH_PLAYER || it.instruction().type() == InstructionTypes2.FOR_EACH_ENTITY || it.instruction().type() == InstructionTypes2.FOR_EACH_LIST_ELEMENT));
-                if(!anyLoops) {
-                    return OptimizationResult.remapWithFlags(Map.of(objectiveLoc.local(), previousObjectiveSetter.instruction().<LocationData<?>>get("objective").local()), REMOVE_SELF_AND_INLINE_CHILDREN);
-                }else {
-                    var hasFunctionCalls = input.anyChildren(it -> it.type() == InstructionTypes.CALL_FUNCTIONS);
-                    if(!hasFunctionCalls) {
-                        return OptimizationResult.remapWithFlags(Map.of(objectiveLoc.local(), previousObjectiveSetter.instruction().<LocationData<?>>get("objective").local()), REMOVE_SELF_AND_INLINE_CHILDREN);
+    private static void removeDuplicateChecks(OptimizationPass pass) {
+        if(pass.thisInstruction().type() == InstructionTypes2.IF_NULL_JUMP) {
+            var compareData = pass.thisInstruction().get("local");
+            var reassignmentInstrs = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.OBJECT_ASSIGN, List.of(new Pair<>("dst", compareData)));
+            if(reassignmentInstrs.isEmpty()) {
+                var labelData = pass.thisInstruction().get("label");
+                var delInstrs = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.IF_NULL_JUMP, List.of(new Pair<>("local", compareData), new Pair<>("label", labelData)));
+                if(!delInstrs.isEmpty()) {
+                    var validDelInstrs = new ArrayList<>(pass.findExecutedInstructions());
+                    validDelInstrs.retainAll(delInstrs);
+                    if(!validDelInstrs.isEmpty()) {
+                        pass.removeInstruction(pass.thisInstructionIndex());
                     }
                 }
             }
-        }else if(instr.type() == InstructionTypes2.SCORE_DATA_NO_AUTO_CREATE) {
-            var nameLoc = instr.<LocationData<Object>>get("name");
-            var objectiveLoc = instr.<LocationData<Object>>get("objective");
-            var scoreLoc = instr.<LocationData<Object>>get("score");
-            var previousScoreGetter = input.getInstructionFromPath(it -> (it.instruction().type() == InstructionTypes2.SCORE_DATA_NO_AUTO_CREATE || it.instruction().type() == InstructionTypes2.SCORE_DATA_AUTO_CREATE) && it.instruction().get("name").equals(nameLoc) && it.instruction().get("objective").equals(objectiveLoc));
-            if(previousScoreGetter != null) {
-                var anyLoops = input.anyInstructionFromPath(it -> it.path().depth() > previousScoreGetter.path().depth() && (it.instruction().type() == InstructionTypes2.FOR_EACH_PLAYER || it.instruction().type() == InstructionTypes2.FOR_EACH_ENTITY || it.instruction().type() == InstructionTypes2.FOR_EACH_LIST_ELEMENT));
-                if(!anyLoops) {
-                    return OptimizationResult.remapWithFlags(Map.of(scoreLoc.local(), previousScoreGetter.instruction().<LocationData<?>>get("score").local()), REMOVE_SELF_AND_INLINE_CHILDREN);
-                }else {
-                    var hasFunctionCalls = input.anyChildren(it -> it.type() == InstructionTypes.CALL_FUNCTIONS);
-                    if(!hasFunctionCalls) {
-                        return OptimizationResult.remapWithFlags(Map.of(scoreLoc.local(), previousScoreGetter.instruction().<LocationData<?>>get("score").local()), REMOVE_SELF_AND_INLINE_CHILDREN);
-                    }
-                }
+        }else if(pass.thisInstruction().type() == InstructionTypes2.ASSUME_COMMAND_STACK) {
+            var stackFrom = pass.thisInstruction().get("stack_obj");
+            var stackTo = pass.thisInstruction().get("stack");
+
+            var def = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes.MAKE_COMMAND_SOURCE_STACK, List.of(new Pair<>("to", stackFrom)));
+            if(def != null) {
+                pass.replaceInstructionData(false, stackFrom, stackTo);
+                pass.removeInstruction(pass.thisInstructionIndex());
             }
-        }else if(instr.type() == InstructionTypes2.SCORE_DATA_AUTO_CREATE) {
-            var nameLoc = instr.<LocationData<Object>>get("name");
-            var objectiveLoc = instr.<LocationData<Object>>get("objective");
-            var scoreLoc = instr.<LocationData<Object>>get("score");
-            var previousScoreGetter = input.getInstructionFromPath(it -> it.instruction().type() == InstructionTypes2.SCORE_DATA_AUTO_CREATE && it.instruction().get("name").equals(nameLoc) && it.instruction().get("objective").equals(objectiveLoc));
-            if(previousScoreGetter != null) {
-                var anyLoops = input.anyInstructionFromPath(it -> it.path().depth() > previousScoreGetter.path().depth() && (it.instruction().type() == InstructionTypes2.FOR_EACH_PLAYER || it.instruction().type() == InstructionTypes2.FOR_EACH_ENTITY || it.instruction().type() == InstructionTypes2.FOR_EACH_LIST_ELEMENT));
-                if(!anyLoops) {
-                    return OptimizationResult.remapWithFlags(Map.of(scoreLoc.local(), previousScoreGetter.instruction().<LocationData<?>>get("score").local()), REMOVE_SELF_AND_INLINE_CHILDREN);
-                }else {
-                    var hasFunctionCalls = input.anyChildren(it -> it.type() == InstructionTypes.CALL_FUNCTIONS);
-                    if(!hasFunctionCalls) {
-                        return OptimizationResult.remapWithFlags(Map.of(scoreLoc.local(), previousScoreGetter.instruction().<LocationData<?>>get("score").local()), REMOVE_SELF_AND_INLINE_CHILDREN);
-                    }
-                }
+        }else if(pass.thisInstruction().type() == InstructionTypes2.ASSUME_ENTITY) {
+            var entityFrom = pass.thisInstruction().get("entity_obj");
+            var entityTo = pass.thisInstruction().get("entity");
+
+            var def = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.ASSUME_ENTITY, List.of(new Pair<>("entity", entityFrom)));
+            if(def != null) {
+                pass.replaceInstructionData(false, entityFrom, entityTo);
+                pass.removeInstruction(pass.thisInstructionIndex());
+                return;
+            }
+
+            var def2 = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.ASSUME_PLAYER, List.of(new Pair<>("player", entityFrom)));
+            if(def2 != null) {
+                pass.replaceInstructionData(false, entityFrom, entityTo);
+                pass.removeInstruction(pass.thisInstructionIndex());
             }
         }
-        return OptimizationResultTypes.KEEP;
     }
 
-    private static OptimizationResult combineObjectiveGetters(OptimizationInput input) {
-        var instr = input.instruction();
-        ArrayList<InstructionModification> modifications = new ArrayList<>();
-        LocatedInstruction previous = null;
-        for(int i = 0; i<instr.children().size(); i++) {
-            var child = input.getByDirectIndex(i);
-            if(child.instruction().type() == InstructionTypes2.GET_OBJECTIVE) {
-                var canMerge = previous != null && Objects.equals(previous.instruction().data().get("name"), child.instruction().data().get("name"));
-                if(canMerge) {
-                    if(!Objects.equals(child.instruction().<LocationData<?>>get("objective").local(), previous.instruction().<LocationData<?>>get("objective").local())) {
-                        int nextId = getFirstFreeLocal(input.usedLocations(), instr, child.path(), previous.path(), null);
-                        modifications.add(new InstructionModification.MoveChildrenFromToNested(child.path(), previous.path(), Map.of(child.instruction().<LocationData<?>>get("objective").local(), previous.instruction().<LocationData<?>>get("objective").local(), previous.instruction().<LocationData<?>>get("objective").local(), nextId), false, false));
-                    }else {
-                        modifications.add(new InstructionModification.MoveChildrenFromToNested(child.path(), previous.path(), Map.of(child.instruction().<LocationData<?>>get("objective").local(), previous.instruction().<LocationData<?>>get("objective").local()), false, false));
-                    }
-                }
-                if(!input.anyChildrenIn(child, it -> it.type() == InstructionTypes.CALL_FUNCTIONS)) {
-                    if(!canMerge) {
-                        previous = child;
-                    }
-                    continue;
+    private static void inlineLists(OptimizationPass pass) {
+        if(pass.thisInstruction().type() != InstructionTypes2.CREATE_MUTABLE_LIST) return;
+
+        var list = pass.thisInstruction().<LocationData<List<Object>>>get("list");
+
+        var addInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.ADD_LIST_ELEMENT, List.of(new Pair<>("list", list)));
+        if(addInstr == null) return;
+
+        var listLengthInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.GET_LIST_LENGTH, List.of(new Pair<>("list", list)));
+        if(listLengthInstr == null) return;
+
+        var getInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.GET_LIST_ELEMENT, List.of(new Pair<>("list", list)));
+        if(getInstr == null) return;
+
+        var condInstr = getInstr - 1;
+        if(!pass.getInstruction(condInstr).containsValue(pass.getInstruction(listLengthInstr).get("size"))) return;
+        var condInstrType = pass.getInstruction(condInstr).type();
+        boolean singleSelector;
+        LabelData endLabel;
+        if(condInstrType == InstructionTypes2.IF_EQUAL_JUMP) {
+            if(!pass.getInstruction(condInstr).containsValue(LocationData.ofInteger(0))) return;
+            singleSelector = true;
+            endLabel = pass.getInstruction(condInstr).get("label");
+        }else if(condInstrType == InstructionTypes2.IF_GREATER_EQUAL_JUMP) {
+            singleSelector = false;
+            endLabel = pass.getInstruction(condInstr).get("label");
+        }else {
+            return;
+        }
+
+        var endInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.LABEL, List.of(new Pair<>("label", endLabel)));
+        if(endInstr == null) return;
+
+        if(!pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.SORT_LIST_ENTITY_FURTHEST, List.of(new Pair<>("list", list))).isEmpty()) return;
+        if(!pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.SORT_LIST_ENTITY_NEAREST, List.of(new Pair<>("list", list))).isEmpty()) return;
+        if(!pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.SHUFFLE_LIST, List.of(new Pair<>("list", list))).isEmpty()) return;
+
+        if(!pass.findInstructions(condInstr, endInstr, false, InstructionTypes.CALL_FUNCTIONS, List.of()).isEmpty()) return;
+        if(!pass.findInstructions(condInstr, endInstr, false, InstructionTypes2.KILL_ENTITY, List.of()).isEmpty()) return;
+
+        if(!singleSelector) {
+            var indexLoc = pass.getInstruction(getInstr).get("index");
+
+            var indexDefInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.VALUE_DEFINE, List.of(new Pair<>("dst", indexLoc), new Pair<>("src", LocationData.ofInteger(0))));
+            if(indexDefInstr == null) return;
+
+            var adderInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.VALUE_ADD, List.of(new Pair<>("a", indexLoc), new Pair<>("b", LocationData.ofInteger(1))));
+            if(adderInstr == null) return;
+
+            var jumpInstr = adderInstr + 1;
+            if(pass.getInstruction(jumpInstr).type() != InstructionTypes2.JUMP) return;
+
+            for(int i = 0; i<pass.context().getInstructionCount(); i++) {
+                if(i == getInstr || i == condInstr || i == indexDefInstr || i == adderInstr) continue;
+                var instr = pass.getInstruction(i);
+                if(instr.containsValue(indexLoc)) {
+                    return;
                 }
             }
-            previous = null;
+
+
+            pass.replaceInstruction(getInstr, Instructions2.objectAssign(pass.getInstruction(getInstr).get("element"), pass.getInstruction(addInstr).get("element")));
+            pass.removeInstruction(jumpInstr);
+            pass.removeInstruction(adderInstr);
+            pass.removeInstruction(condInstr);
+            pass.removeInstruction(indexDefInstr);
+            pass.removeInstruction(listLengthInstr);
+            pass.removeInstruction(addInstr);
+            pass.removeInstruction(pass.thisInstructionIndex());
+            var moveSelStart = condInstr - 5;
+            var moveSelEnd = endInstr - 8;
+            var instrs = new ArrayList<Instruction>();
+            for(int i = moveSelStart; i <= moveSelEnd; i++) {
+                var r = pass.getInstruction(moveSelStart);
+                pass.removeInstruction(moveSelStart);
+                instrs.add(r);
+            }
+            for(int i = instrs.size() - 1; i >= 0; i--) {
+                Instruction r = instrs.get(i);
+                pass.addInstruction(addInstr - 1, r);
+            }
+        }else {
+            pass.replaceInstruction(getInstr, Instructions2.objectAssign(pass.getInstruction(getInstr).get("element"), pass.getInstruction(addInstr).get("element")));
+            pass.removeInstruction(condInstr);
+            pass.removeInstruction(listLengthInstr);
+            pass.removeInstruction(addInstr);
+            pass.removeInstruction(pass.thisInstructionIndex());
+            var moveSelStart = condInstr - 3;
+            var moveSelEnd = endInstr - 5;
+            var instrs = new ArrayList<Instruction>();
+            for(int i = moveSelStart; i <= moveSelEnd; i++) {
+                var r = pass.getInstruction(moveSelStart);
+                pass.removeInstruction(moveSelStart);
+                instrs.add(r);
+            }
+            instrs.add(Instructions2.jump(endLabel));
+            for(int i = instrs.size() - 1; i >= 0; i--) {
+                Instruction r = instrs.get(i);
+                pass.addInstruction(addInstr - 1, r);
+            }
         }
-        if(!modifications.isEmpty()) {
-            return OptimizationResult.modificationsWithFlags(modifications, 0);
-        }
-        return OptimizationResultTypes.KEEP;
+
     }
 
-    private static OptimizationResult combineNullChecks(OptimizationInput input) {
-        var instr = input.instruction();
-        ArrayList<InstructionModification> modifications = new ArrayList<>();
-        LocatedInstruction previous = null;
-        for(int i = 0; i<instr.children().size(); i++) {
-            var child = input.getByDirectIndex(i);
-            if(child.instruction().type() == InstructionTypes2.IF_NOT_NULL) {
-                var canMerge = previous != null && Objects.equals(previous.instruction().data().get("local"), child.instruction().data().get("local"));
-                if(canMerge) {
-                    modifications.add(new InstructionModification.MoveChildrenFromToNested(child.path(), previous.path(), Map.of(), false, false));
-                }
-                if(!input.anyChildrenIn(child, it -> it.type() == InstructionTypes2.SET_NBT_VALUE && it.data().containsValue(child.instruction().data().get("local")))) {
-                    if(!canMerge) {
-                        previous = child;
-                    }
-                    continue;
-                }
-            }
-            previous = null;
-        }
-        if(!modifications.isEmpty()) {
-            return OptimizationResult.modificationsWithFlags(modifications, 0);
-        }
-        return OptimizationResultTypes.KEEP;
-    }
+
 }

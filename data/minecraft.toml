@@ -49,13 +49,16 @@ ExtensionFunctions_calculateLocalCoordinates."1.20.4" = "dev/epicpix/minecraftfu
 ExtensionFunctions_calculateLocalCoordinates."1.20.6" = "dev/epicpix/minecraftfunctioncompiler/v1_20_6/ExtensionFunctions:calculateLocalCoordinates(FFDDDDDD)Lnet/minecraft/world/phys/Vec3;@S"
 ExtensionFunctions_calculateLocalCoordinates."1.21" = "dev/epicpix/minecraftfunctioncompiler/v1_21/ExtensionFunctions:calculateLocalCoordinates(FFDDDDDD)Lnet/minecraft/world/phys/Vec3;@S"
 
-ExtensionFunctions_executeFunction."1.20.1" = "dev/epicpix/minecraftfunctioncompiler/v1_20_1/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;)V@S"
-ExtensionFunctions_executeFunction."1.20.2" = "dev/epicpix/minecraftfunctioncompiler/v1_20_2/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;Lnet/minecraft/nbt/CompoundTag;)V@S"
-ExtensionFunctions_executeFunction."1.20.4" = "dev/epicpix/minecraftfunctioncompiler/v1_20_4/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@S"
-ExtensionFunctions_executeFunction."1.20.6" = "dev/epicpix/minecraftfunctioncompiler/v1_20_6/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@S"
-ExtensionFunctions_executeFunction."1.21" = "dev/epicpix/minecraftfunctioncompiler/v1_21/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@S"
+ExtensionFunctions_executeFunction."1.20.1" = "dev/epicpix/minecraftfunctioncompiler/v1_20_1/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;)V@SN"
+ExtensionFunctions_executeFunction."1.20.2" = "dev/epicpix/minecraftfunctioncompiler/v1_20_2/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;Lnet/minecraft/nbt/CompoundTag;)V@SN"
+ExtensionFunctions_executeFunction."1.20.4" = "dev/epicpix/minecraftfunctioncompiler/v1_20_4/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@SN"
+ExtensionFunctions_executeFunction."1.20.6" = "dev/epicpix/minecraftfunctioncompiler/v1_20_6/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@SN"
+ExtensionFunctions_executeFunction."1.21" = "dev/epicpix/minecraftfunctioncompiler/v1_21/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@SN"
 
 ResourceLocation_fromNamespaceAndPath."1.21+" = "net/minecraft/resources/ResourceLocation:fromNamespaceAndPath(Ljava/lang/String;Ljava/lang/String;)Lnet/minecraft/resources/ResourceLocation;@S"
+
+ThreadLocal_get."1.20.3+" = "java/lang/ThreadLocal:get()Ljava/lang/Object;@MN"
+ThreadLocal_set."1.20.3+" = "java/lang/ThreadLocal:set(Ljava/lang/Object;)V@MN"
 
 [definitions_fields]
 ServerFunctionManager_library = "net/minecraft/server/ServerFunctionManager:library:Lnet/minecraft/server/ServerFunctionLibrary;@MR"
@@ -72,3 +75,4 @@ Anchor_EYES = "net/minecraft/commands/arguments/EntityAnchorArgument$Anchor:EYES
 Anchor_FEET = "net/minecraft/commands/arguments/EntityAnchorArgument$Anchor:FEET:Lnet/minecraft/commands/arguments/EntityAnchorArgument$Anchor;@SR"
 
 ServerFunctionManager_context."1.20.2-" = "net/minecraft/server/ServerFunctionManager:context:Lnet/minecraft/server/ServerFunctionManager$ExecutionContext;@MRW"
+Commands_CURRENT_EXECUTION_CONTEXT."1.20.3+" = "net/minecraft/commands/Commands:CURRENT_EXECUTION_CONTEXT:Ljava/lang/ThreadLocal;@SR"

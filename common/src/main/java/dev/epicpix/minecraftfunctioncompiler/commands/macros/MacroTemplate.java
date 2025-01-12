@@ -1,6 +1,8 @@
 package dev.epicpix.minecraftfunctioncompiler.commands.macros;
 
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 
@@ -11,33 +13,16 @@ import java.util.stream.Collectors;
 public record MacroTemplate<T>(List<MacroPart> parts) {
     public interface MacroPart {}
 
-    public void writeBytecode(EmitterContext context) {
-        var mv = context.codeWriter().methodVisitor();
-        StringBuilder result = new StringBuilder();
-        ArrayList<String> additionalArguments = new ArrayList<>();
-        int macroCount = 0;
+    public BytecodeRegister writeBytecode(EmitterContext context) {
+        ArrayList<BytecodeValue> concatArgs = new ArrayList<>();
         for(var part : parts) {
             if(part instanceof MacroKind macro) {
-                result.append("\u0001");
-                context.codeWriter().loadLocal(context.macroLocations().get(macro.source));
-                macroCount++;
+                concatArgs.add(context.getMacro(macro.source));
             }else if(part instanceof LiteralKind literal) {
-                if(literal.literal.contains("\u0001") || literal.literal.contains("\u0002")) {
-                    result.append("\u0002");
-                    additionalArguments.add(literal.literal);
-                }else {
-                    result.append(literal.literal);
-                }
+                concatArgs.add(new BytecodeValue.StringValue(literal.literal));
             }
         }
-        Object[] res = new Object[1 + additionalArguments.size()];
-        res[0] = result.toString();
-        for(int i = 0; i<additionalArguments.size(); i++) {
-            res[i + 1] = additionalArguments.get(i);
-        }
-        var handle = new Handle(Opcodes.H_INVOKESTATIC, "java/lang/invoke/StringConcatFactory", "makeConcatWithConstants", "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite;", false);
-        mv.visitInvokeDynamicInsn("makeConcatWithConstants", "(" + "Ljava/lang/String;".repeat(macroCount) + ")Ljava/lang/String;", handle, res);
-
+        return context.codeWriter().stringConcat(concatArgs);
     }
 
     public record LiteralKind(String literal) implements MacroPart {

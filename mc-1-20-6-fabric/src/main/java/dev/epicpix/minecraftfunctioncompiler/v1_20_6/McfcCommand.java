@@ -2,7 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.v1_20_6;
 
 import com.mojang.brigadier.CommandDispatcher;
 import dev.epicpix.minecraftfunctioncompiler.CompileConstants;
-import dev.epicpix.minecraftfunctioncompiler.FunctionCompilerClassLoader;
+import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -20,7 +20,7 @@ public class McfcCommand {
                         context.getSource().sendFailure(Component.literal("Function Compiler is not loaded"));
                         return 0;
                     }
-                    if(loader.getState() == FunctionCompilerClassLoader.State.READY_OFF || loader.getState() == FunctionCompilerClassLoader.State.READY_ON) {
+                    if(loader.getState() == FunctionCompilerClassLoader.State.READY_OFF || loader.getState() == FunctionCompilerClassLoader.State.READY_ON || loader.getState() == FunctionCompilerClassLoader.State.EXECUTION_FAILED) {
                         loader.tryOn();
                         context.getSource().sendSuccess(() -> Component.literal("Turned on Function Compiler").withStyle(ChatFormatting.GREEN), false);
                         return 1;
@@ -34,7 +34,7 @@ public class McfcCommand {
                         context.getSource().sendFailure(Component.literal("Function Compiler is not loaded"));
                         return 0;
                     }
-                    if(loader.getState() == FunctionCompilerClassLoader.State.READY_OFF || loader.getState() == FunctionCompilerClassLoader.State.READY_ON) {
+                    if(loader.getState() == FunctionCompilerClassLoader.State.READY_OFF || loader.getState() == FunctionCompilerClassLoader.State.READY_ON || loader.getState() == FunctionCompilerClassLoader.State.EXECUTION_FAILED) {
                         loader.tryOff();
                         context.getSource().sendSuccess(() -> Component.literal("Turned off Function Compiler").withStyle(ChatFormatting.GREEN), false);
                         return 1;

@@ -1,5 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter.impl;
 
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,7 +24,7 @@ public final class CodeFieldStorageStorageMap {
         return getValue(key).clazz();
     }
 
-    public <T> int writeCode(CodeFieldStorageMapKind<T> key, CodeFieldStorage fieldStorage, CodeWriter writer, T value) {
+    public <T> BytecodeValue writeCode(CodeFieldStorageMapKind<T> key, CodeFieldStorage fieldStorage, CodeWriter writer, T value) {
         return getValue(key).mapper().accept(fieldStorage, writer, value);
     }
 

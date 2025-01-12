@@ -29,10 +29,11 @@ public final class SelectorParser {
 
     public static SelectorArgument parseSelector(StringCommandReader reader, boolean allowEntities, boolean allowMultiple) {
         if(reader.peek() != '@') {
+            var word = reader.readWord();
             try {
-                return SelectorArgument.ofUuid(UUID.fromString(reader.readWord()));
+                return SelectorArgument.ofUuid(UUID.fromString(word));
             }catch(IllegalArgumentException e) {
-                return SelectorArgument.ofPlayer(reader.readWord());
+                return SelectorArgument.ofPlayer(word);
             }
         }
 
@@ -125,6 +126,14 @@ public final class SelectorParser {
         SelectorParser.registerSelectorOption("gamemode", (reader, data) -> {
             var negated = reader.skipIfNext('!');
             var gamemode = reader.readGamemode();
+            for(var cGamemode : data.gamemodes) {
+                if(!cGamemode.negated()) {
+                    throwError(reader, "gamemode selector cannot have multiple non-negated values");
+                }
+                if(!negated) {
+                    throwError(reader, "gamemode selector cannot have a negated and non-negated value");
+                }
+            }
             data.gamemodes.add(new NegatableData<>(gamemode, negated));
         });
         SelectorParser.registerSelectorOption("sort", (reader, data) -> {

@@ -1,6 +1,8 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter;
 
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
+import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2;
+import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 import dev.epicpix.minecraftfunctioncompiler.util.Pair;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
@@ -8,10 +10,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DEBUG_GENERATE_GRAPH;
@@ -22,9 +21,6 @@ public final class GraphGenerator {
     private static void visitInstructionFunc(Instruction instruction, StringBuilder stringBuilder, DataLocation base, ArrayList<Pair<DataLocation, DataLocation>> calls) {
         if(!DEBUG_GENERATE_GRAPH) return;
 
-        for(var it : instruction.children()) {
-            visitInstructionFunc(it, stringBuilder, base, calls);
-        }
         if(instruction.type() == InstructionTypes.CALL_FUNCTIONS) {
             var functions = instruction.<List<DataLocation>>get("functions");
             for(var function : functions) {
@@ -40,29 +36,41 @@ public final class GraphGenerator {
         if(!DEBUG_GENERATE_GRAPH) return;
 
         var base = "func_" + funcId.namespace() + "_" + funcId.path().replace('.', '_').replace('/', '_').replace('-', '_');
-        builder.append(base).append("[label=\"").append(funcId).append("\"]\n");
+        builder.append(base).append("[label=\"").append(funcId).append("\"];\n");
         for(var it : instructions) {
             visitInstructionFunc(it, builder, funcId, calls);
         }
     }
 
-    private static int visitInstruction(Instruction instruction, StringBuilder stringBuilder, StringBuilder post, int uid) {
-        if(!DEBUG_GENERATE_GRAPH) return 0;
+    private static void visitInstruction(Instruction instruction, StringBuilder stringBuilder, StringBuilder post, HashMap<Integer, String> labels, int uid) {
+        if(!DEBUG_GENERATE_GRAPH) return;
 
-        var instrDescription = instruction.data().entrySet().stream().map(it -> it.getKey() + "=" + Objects.toString(it.getValue()).replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")).collect(Collectors.joining("\n"));
+        var instrDescription = instruction.namedEntries().stream().map(it -> it.first() + "=" + Objects.toString(it.second()).replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")).collect(Collectors.joining("\n"));
         stringBuilder.append("    x").append(uid).append("[label=\"").append(instruction.type()).append("\n").append(instrDescription).append("\",shape=box];\n");
-        var curUid = uid + 1;
-        for(var child : instruction.children()) {
-            stringBuilder.append("    x").append(uid).append(" -> x").append(curUid).append(";\n");
-            curUid = visitInstruction(child, stringBuilder, post, curUid);
-        }
         if(instruction.type() == InstructionTypes.CALL_FUNCTIONS) {
             var functions = instruction.<List<DataLocation>>get("functions");
             for(var function : functions) {
                 post.append("  x").append(uid).append(" -> x").append(function.namespace()).append("_").append(function.path().replace('.', '_').replace('-', '_').replace('/', '_')).append("\n");
             }
         }
-        return curUid;
+
+        if(instruction.type() == InstructionTypes2.RETURN_FAIL || instruction.type() == InstructionTypes2.RETURN_SUCCESS) {
+            return;
+        }
+
+        if(instruction.type() == InstructionTypes2.JUMP) {
+            var label = instruction.<LabelData>get("label");
+            stringBuilder.append("    x").append(uid).append(" -> ").append(labels.get(label.id())).append(" [color=red];\n");
+        }else {
+            stringBuilder.append("    x").append(uid).append(" -> x").append(uid + 1).append(";\n");
+            if(instruction.type() != InstructionTypes2.LABEL) {
+                for(var value : instruction.data()) {
+                    if(value instanceof LabelData label) {
+                        stringBuilder.append("    x").append(uid).append(" -> ").append(labels.get(label.id())).append(" [color=blue];\n");
+                    }
+                }
+            }
+        }
     }
 
     private static int generateFunctionGraph(List<Instruction> instructions, DataLocation funcId, StringBuilder builder, StringBuilder post, int uid) {
@@ -73,15 +81,25 @@ public final class GraphGenerator {
         builder.append("  subgraph cluster_").append(safeName).append(" {\n");
         builder.append("    color=black;\n");
         builder.append("    label=\"").append(funcId).append("\";\n");
-        builder.append("    x").append(safeName).append("[label=\"<root>\"]\n");
-        var curUid = uid;
+        builder.append("    x").append(safeName).append("[label=\"<root>\"];\n");
+        builder.append("    x").append(safeName).append(" -> x").append(uid).append(";\n");
+        HashMap<Integer, String> labels = new HashMap<>();
+        int jIndex = 0;
         for(var child : instructions) {
-            builder.append("    x").append(safeName).append(" -> x").append(curUid).append(";\n");
-            curUid = visitInstruction(child, builder, post, curUid);
+            if(child.type() == InstructionTypes2.LABEL) {
+                labels.put(child.<LabelData>get("label").id(), "x" + (uid + jIndex));
+            }
+            jIndex++;
         }
+        var index = 0;
+        for(var child : instructions) {
+            visitInstruction(child, builder, post, labels, uid + index);
+            index++;
+        }
+        builder.append("    x").append(uid + index).append("[label=\"<return>\"];\n");
         builder.append("  }\n");
 
-        return curUid;
+        return uid + instructions.size() + 1;
     }
 
     private static void generateFullGraph(Map<DataLocation, List<Instruction>> functions, Path resultDir) throws IOException, InterruptedException {
@@ -97,9 +115,9 @@ public final class GraphGenerator {
         builder.append(post);
         builder.append("}\n");
 
-        var dotFile = resultDir.resolve("full_graph.dot");
+        var dotFile = resultDir.resolve("full_graph_high_level.dot");
         Files.writeString(dotFile, builder.toString());
-        new ProcessBuilder("dot", "-Tsvg", dotFile.toAbsolutePath().toString(), "-o", resultDir.resolve("full_graph.svg").toAbsolutePath().toString()).start().waitFor();
+        new ProcessBuilder("dot", "-Tsvg", dotFile.toAbsolutePath().toString(), "-o", resultDir.resolve("full_graph_high_level.svg").toAbsolutePath().toString()).start().waitFor();
         Files.delete(dotFile);
     }
 
@@ -115,9 +133,9 @@ public final class GraphGenerator {
         }
         builder.append("}\n");
 
-        var dotFile = resultDir.resolve("call_graph.dot");
+        var dotFile = resultDir.resolve("call_graph_high_level.dot");
         Files.writeString(dotFile, builder.toString());
-        new ProcessBuilder("dot", "-Tsvg", dotFile.toAbsolutePath().toString(), "-o", resultDir.resolve("call_graph.svg").toAbsolutePath().toString()).start().waitFor();
+        new ProcessBuilder("dot", "-Tsvg", dotFile.toAbsolutePath().toString(), "-o", resultDir.resolve("call_graph_high_level.svg").toAbsolutePath().toString()).start().waitFor();
         Files.delete(dotFile);
     }
 

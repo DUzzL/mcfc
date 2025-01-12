@@ -2,18 +2,12 @@ package dev.epicpix.minecraftfunctioncompiler.v1_20_1;
 
 import com.mojang.brigadier.CommandDispatcher;
 import dev.epicpix.minecraftfunctioncompiler.CompileConstants;
-import dev.epicpix.minecraftfunctioncompiler.FunctionCompilerClassLoader;
+import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
 import net.minecraft.ChatFormatting;
-import net.minecraft.Util;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.item.FunctionArgument;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.MinecraftServer;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import static net.minecraft.server.commands.FunctionCommand.SUGGEST_FUNCTION;
 
@@ -26,7 +20,7 @@ public class McfcCommand {
                         context.getSource().sendFailure(Component.literal("Function Compiler is not loaded"));
                         return 0;
                     }
-                    if(loader.getState() == FunctionCompilerClassLoader.State.READY_OFF || loader.getState() == FunctionCompilerClassLoader.State.READY_ON) {
+                    if(loader.getState() == FunctionCompilerClassLoader.State.READY_OFF || loader.getState() == FunctionCompilerClassLoader.State.READY_ON || loader.getState() == FunctionCompilerClassLoader.State.EXECUTION_FAILED) {
                         loader.tryOn();
                         context.getSource().sendSuccess(() -> Component.literal("Turned on Function Compiler").withStyle(ChatFormatting.GREEN), false);
                         return 1;
@@ -40,7 +34,7 @@ public class McfcCommand {
                         context.getSource().sendFailure(Component.literal("Function Compiler is not loaded"));
                         return 0;
                     }
-                    if(loader.getState() == FunctionCompilerClassLoader.State.READY_OFF || loader.getState() == FunctionCompilerClassLoader.State.READY_ON) {
+                    if(loader.getState() == FunctionCompilerClassLoader.State.READY_OFF || loader.getState() == FunctionCompilerClassLoader.State.READY_ON || loader.getState() == FunctionCompilerClassLoader.State.EXECUTION_FAILED) {
                         loader.tryOff();
                         context.getSource().sendSuccess(() -> Component.literal("Turned off Function Compiler").withStyle(ChatFormatting.GREEN), false);
                         return 1;

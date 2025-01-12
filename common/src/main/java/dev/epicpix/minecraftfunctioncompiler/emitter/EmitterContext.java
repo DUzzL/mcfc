@@ -1,73 +1,163 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter;
 
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
+import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
-import org.objectweb.asm.Label;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
-import static dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructions.emitInstruction;
+public final class EmitterContext {
+    private final CodeFieldStorage fieldStorage;
+    private final CodeWriter codeWriter;
+    private final Set<DataLocation> compiledFunctions;
+    private final Map<String, BytecodeValue> staticArguments;
+    private final Map<String, BytecodeValue> macroLocations;
+    private final List<Instruction> instructions;
 
-public record EmitterContext(
+    private final Map<Integer, BytecodeValue> transforms = new HashMap<>();
+    private final HashMap<LabelData, BytecodeLabel> labelMappings = new HashMap<>();
+
+    private int currentInstructionIndex = 0;
+
+    public EmitterContext(
         CodeFieldStorage fieldStorage,
         CodeWriter codeWriter,
         Set<DataLocation> compiledFunctions,
-        Map<Integer, String> transforms,
-        Map<Integer, Label> scopes,
-        Map<String, String> macroLocations,
+        Map<String, BytecodeValue> staticArguments,
+        Map<String, BytecodeValue> macroLocations,
 
-        Instruction instruction,
-        HashMap<Integer, String> newTransforms,
-        HashMap<Integer, Label> newScopes
-) {
-    public EmitterContext cloneWith(Instruction instruction) {
-        return new EmitterContext(fieldStorage, codeWriter, compiledFunctions, newTransforms, newScopes, macroLocations, instruction, new HashMap<>(newTransforms), new HashMap<>(newScopes));
+        List<Instruction> instructions
+    ) {
+        this.fieldStorage = fieldStorage;
+        this.codeWriter = codeWriter;
+        this.compiledFunctions = compiledFunctions;
+        this.staticArguments = staticArguments;
+        this.macroLocations = macroLocations;
+        this.instructions = instructions;
     }
 
-    public void run() {
-        for(var it : instruction.children()) {
-            emitInstruction(cloneWith(it));
+    public void emitForEach() {
+        for(currentInstructionIndex = 0; currentInstructionIndex < instructions.size(); currentInstructionIndex++) {
+            EmitterInstructions.emitInstruction(this);
         }
     }
 
-    public void save(String location) {
-        var loc = instruction.<LocationData<?>>get(location);
-        if(loc == null || loc.local() == null) throw new UnsupportedOperationException("Tried to store variable in a non-defined local location: " + loc + ", " + instruction);
-        codeWriter.storeLocal(newTransforms.get(loc.local()));
+    public Instruction instruction() {
+        return instructions.get(currentInstructionIndex);
     }
 
-    public void store(String location, String uid) {
-        var loc = instruction.<LocationData<?>>get(location);
-        if(loc == null || loc.local() == null) throw new UnsupportedOperationException("Tried to store variable in a non-defined local location: " + loc + ", " + instruction);
-        newTransforms.put(loc.local(), uid);
+    public CodeFieldStorage fieldStorage() {
+        return fieldStorage;
     }
 
-    public void runStored(String location, Class<?> type) {
-        var uid = codeWriter.generateUniqueLocal();
-        store(location, uid);
-        var localValue = codeWriter.createLocal(uid, type.descriptorString());
-        codeWriter.storeLocal(uid);
-        run();
-        codeWriter.destroyLocal(localValue);
+    public CodeWriter codeWriter() {
+        return codeWriter;
     }
 
-    public void load(String location) {
-        var loc = instruction.<LocationData<?>>get(location);
-        if(loc.string() != null) {
-            codeWriter.writeString(loc.string());
-        }else if(loc.local() != null) {
-            codeWriter.loadLocal(newTransforms.get(loc.local()));
-        }else if(loc.integer() != null) {
-            codeWriter.writeInt(loc.integer());
-        }else if(loc.doubleValue() != null) {
-            codeWriter.writeDouble(loc.doubleValue());
+    public Set<DataLocation> compiledFunctions() {
+        return compiledFunctions;
+    }
+
+    public BytecodeValue getMacro(String macro) {
+        return macroLocations.get(macro);
+    }
+
+    public BytecodeLabel mapLabel(String instructionField) {
+        return mapLabel(instruction().type().getArgumentIndex(instructionField));
+    }
+
+    public BytecodeLabel mapLabel(int instructionIndexField) {
+        return mapLabel(instruction().<LabelData>get(instructionIndexField));
+    }
+
+    public BytecodeLabel mapLabel(LabelData label) {
+        var mapped = labelMappings.get(label);
+        if(mapped != null) {
+            return mapped;
+        }
+        var bytecodeLabel = codeWriter.createLabel();
+        labelMappings.put(label, bytecodeLabel);
+        return bytecodeLabel;
+    }
+
+    public BytecodeValue load(String instructionField) {
+        return load(instruction().type().getArgumentIndex(instructionField));
+    }
+
+    public BytecodeValue load(int instructionIndexField) {
+        var location = instruction().<LocationData<?>>get(instructionIndexField);
+        if(location.local() != null) {
+            return transforms.get(location.local());
+        }else if(location.object() instanceof String str) {
+            return new BytecodeValue.StringValue(str);
+        }else if(location.object() instanceof Integer intVal) {
+            return new BytecodeValue.IntegerValue(intVal);
+        }else if(location.object() instanceof Float floatVal) {
+            return new BytecodeValue.FloatValue(floatVal);
+        }else if(location.object() instanceof Double doubleVal) {
+            return new BytecodeValue.DoubleValue(doubleVal);
         }else {
-            throw new IllegalArgumentException("Loading imaginary data from " + location);
+            throw new IllegalArgumentException("Invalid field load location: " + location);
         }
+    }
+
+    public void store(int instructionFieldIndex, BytecodeValue value) {
+        var location = instruction().<LocationData<?>>get(instructionFieldIndex);
+        if(location.local() != null) {
+            var transform = transforms.get(location.local());
+            if(transform instanceof BytecodeRegister reg) {
+                codeWriter.setValue(reg, value);
+            }else {
+                transforms.put(location.local(), value);
+            }
+        }else {
+            throw new IllegalArgumentException("Invalid field store location: " + location);
+        }
+    }
+
+    public void store(String instructionField, BytecodeValue value) {
+        store(instruction().type().getArgumentIndex(instructionField), value);
+    }
+
+    public BytecodeValue getStatic(String name) {
+        return staticArguments.get(name);
+    }
+
+    public void putStatic(String name, BytecodeValue value) {
+        staticArguments.put(name, value);
+    }
+
+    public void setTransform(int index, BytecodeValue value) {
+        transforms.put(index, value);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        EmitterContext that = (EmitterContext) o;
+        return currentInstructionIndex == that.currentInstructionIndex && Objects.equals(fieldStorage, that.fieldStorage) && Objects.equals(codeWriter, that.codeWriter) && Objects.equals(compiledFunctions, that.compiledFunctions) && Objects.equals(transforms, that.transforms) && Objects.equals(macroLocations, that.macroLocations) && Objects.equals(instructions, that.instructions);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(fieldStorage, codeWriter, compiledFunctions, transforms, macroLocations, instructions, currentInstructionIndex);
+    }
+
+    @Override
+    public String toString() {
+        return "EmitterContext{" +
+            "fieldStorage=" + fieldStorage +
+            ", codeWriter=" + codeWriter +
+            ", compiledFunctions=" + compiledFunctions +
+            ", transforms=" + transforms +
+            ", macroLocations=" + macroLocations +
+            ", currentInstructionIndex=" + currentInstructionIndex +
+            '}';
     }
 }

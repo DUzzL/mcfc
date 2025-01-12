@@ -646,9 +646,9 @@ public class StringCommandReader {
     }
 
     public ScoreAccessorArgument readScoreAccessor() {
-        String objective = readWord();
-        if(!skipArgumentWhitespace()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_SCORE_ACCESSOR);
         ScoreHolderArgument scoreHolder = SelectorParser.parseScoreHolder(this);
+        if(!skipArgumentWhitespace()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_SCORE_ACCESSOR);
+        String objective = readWord();
         return new ScoreAccessorArgument(objective, scoreHolder);
     }
 
