@@ -1,30 +1,31 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_1;
 
-import dev.epicpix.minecraftfunctioncompiler.FunctionCompilerClassLoader;
+import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.commands.IArgumentLookup;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.TaggableLocation;
+import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
-import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerFunctionManager;
-import org.objectweb.asm.Label;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.MethodHandle;
 import java.util.List;
 
-public class FunctionClassLoader extends FunctionCompilerClassLoader {
+public class FunctionClassLoader extends FunctionCompilerClassLoader<ResourceLocation, CommandSourceStack, CompoundTag> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("minecraftfunctioncompiler");
 
     public FunctionClassLoader(ClassLoader parent, Object minecraftServer, SourceFileProvider sourceFileProvider) {
-        super(parent, FabricLoader.getInstance().getGameDir().resolve("generated"), CommandSourceStack.class, minecraftServer, LOGGER::info, LOGGER::warn, LOGGER::error, sourceFileProvider.mcfc$getSourceFiles());
+        super(parent, FabricLoader.getInstance().getGameDir().resolve("generated"), CommandSourceStack.class, minecraftServer, sourceFileProvider.mcfc$getSourceFiles());
     }
 
     public void loadFunctions(ServerFunctionManager serverFunctionManager) {
@@ -37,7 +38,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
             }
             loadFunctions(serverFunctionManager);
         })) return;
-        logInfo.accept("Starting compilation");
+        LOGGER.info("Starting compilation");
         resetHandles();
         var lookup = new IArgumentLookup() {
             public List<DataLocation> lookupFunctions(TaggableLocation functions) {
@@ -54,25 +55,12 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
         loadFunctionClasses(lookup, createCodeFieldStorage(), serverFunctionManager);
     }
 
-    public boolean hasFunctionLoaded(ResourceLocation location) {
-        return handles.containsKey(location);
-    }
-
     public void setHandle(DataLocation key, MethodHandle handle) {
-        handles.put(new ResourceLocation(key.namespace(), key.path()), handle);
+        setHandle(new ResourceLocation(key.namespace(), key.path()), handle);
     }
 
-    protected void nbtTagToString(CodeWriter writer, String key, Label errorLabel) {
+    protected BytecodeValue nbtTagToString(EmitterContext emitter, String key, BytecodeLabel errorLabel) {
         throw new UnsupportedOperationException("Cannot convert nbt tag to string in this version");
-    }
-
-    public long runFunction(ResourceLocation location, CommandSourceStack stack, CompoundTag compound) {
-        try {
-            return (long) handles.get(location).invoke(stack, compound);
-        } catch (Throwable e) {
-            logError.accept("Failed to run function " + location, e);
-            return 3L << 32;
-        }
     }
 
     private CodeFieldStorage createCodeFieldStorage() {

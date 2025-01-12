@@ -1,6 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.mixin.v1_20_2;
 
-import dev.epicpix.minecraftfunctioncompiler.FunctionCompilerClassLoader;
+import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import net.minecraft.commands.CommandFunction;
 import net.minecraft.commands.CommandSourceStack;
@@ -25,10 +25,12 @@ public class ServerFunctionLibraryMixin implements FunctionCompilerClassLoader.S
 
     @Inject(method = "method_29451", at = @At(value = "INVOKE", target = "Lnet/minecraft/commands/CommandFunction;fromLines(Lnet/minecraft/resources/ResourceLocation;Lcom/mojang/brigadier/CommandDispatcher;Lnet/minecraft/commands/CommandSourceStack;Ljava/util/List;)Lnet/minecraft/commands/CommandFunction;", shift = At.Shift.BEFORE), locals = LocalCapture.CAPTURE_FAILHARD)
     public void loadFunction(Map.Entry<ResourceLocation, Resource> entry, ResourceLocation resourceLocation, CommandSourceStack commandSourceStack, CallbackInfoReturnable<CommandFunction> cir, List<String> lines) {
-        sources.put(new DataLocation(resourceLocation.getNamespace(), resourceLocation.getPath()), lines);
+        synchronized(sources) {
+            sources.put(new DataLocation(resourceLocation.getNamespace(), resourceLocation.getPath()), lines);
+        }
     }
 
     public Map<DataLocation, List<String>> mcfc$getSourceFiles() {
-        return sources;
+        return new HashMap<>(sources);
     }
 }

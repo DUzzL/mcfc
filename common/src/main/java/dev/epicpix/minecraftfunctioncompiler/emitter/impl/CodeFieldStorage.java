@@ -4,8 +4,12 @@ import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue;
 import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
 import dev.epicpix.minecraftfunctioncompiler.data.text.TextStyle;
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.Opcodes;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeInstruction;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeOptimizer;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
+import dev.epicpix.minecraftfunctioncompiler.loader.ClassGenerator;
+import org.objectweb.asm.Type;
 
 import java.util.*;
 
@@ -32,45 +36,45 @@ public final class CodeFieldStorage {
         return map;
     }
 
-    public void loadAttribute(CodeWriter cw, DataLocation value) {
+    public BytecodeRegister loadAttribute(CodeWriter cw, DataLocation value) {
         map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, value);
         map.writeValue(CodeFieldStorageMapKind.ATTRIBUTE, value);
-        cw.getDataField(CodeFieldStorageMapKind.ATTRIBUTE.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.ATTRIBUTE));
+        return cw.getDataField(CodeFieldStorageMapKind.ATTRIBUTE.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.ATTRIBUTE));
     }
 
-    public void loadEffect(CodeWriter cw, DataLocation value) {
+    public BytecodeRegister loadEffect(CodeWriter cw, DataLocation value) {
         map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, value);
         map.writeValue(CodeFieldStorageMapKind.EFFECT, value);
-        cw.getDataField(CodeFieldStorageMapKind.EFFECT.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.EFFECT));
+        return cw.getDataField(CodeFieldStorageMapKind.EFFECT.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.EFFECT));
     }
 
-    public void loadFunction(CodeWriter cw, DataLocation value) {
+    public BytecodeRegister loadFunction(CodeWriter cw, DataLocation value) {
         map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, value);
         map.writeValue(CodeFieldStorageMapKind.FUNCTION, value);
-        cw.getDataField(CodeFieldStorageMapKind.FUNCTION.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.FUNCTION));
+        return cw.getDataField(CodeFieldStorageMapKind.FUNCTION.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.FUNCTION));
     }
 
-    public void loadNbtValue(CodeWriter cw, NbtValue value) {
+    public BytecodeRegister loadNbtValue(CodeWriter cw, NbtValue value) {
         map.writeValue(CodeFieldStorageMapKind.NBT_VALUE, value);
-        cw.getDataField(CodeFieldStorageMapKind.NBT_VALUE.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.NBT_VALUE));
+        return cw.getDataField(CodeFieldStorageMapKind.NBT_VALUE.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.NBT_VALUE));
     }
 
-    public void loadRegexPattern(CodeWriter cw, String value) {
+    public BytecodeRegister loadRegexPattern(CodeWriter cw, String value) {
         map.writeValue(CodeFieldStorageMapKind.REGEX_PATTERN, value);
-        cw.getDataField(CodeFieldStorageMapKind.REGEX_PATTERN.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.REGEX_PATTERN));
+        return cw.getDataField(CodeFieldStorageMapKind.REGEX_PATTERN.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.REGEX_PATTERN));
     }
 
-    public void loadResourceLocation(CodeWriter cw, DataLocation value) {
+    public BytecodeRegister loadResourceLocation(CodeWriter cw, DataLocation value) {
         map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, value);
-        cw.getDataField(CodeFieldStorageMapKind.RESOURCE_LOCATION.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.RESOURCE_LOCATION));
+        return cw.getDataField(CodeFieldStorageMapKind.RESOURCE_LOCATION.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.RESOURCE_LOCATION));
     }
 
-    public void loadScoreboardCriterion(CodeWriter cw, String value) {
+    public BytecodeRegister loadScoreboardCriterion(CodeWriter cw, String value) {
         map.writeValue(CodeFieldStorageMapKind.SCOREBOARD_CRITERION, value);
-        cw.getDataField(CodeFieldStorageMapKind.SCOREBOARD_CRITERION.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.SCOREBOARD_CRITERION));
+        return cw.getDataField(CodeFieldStorageMapKind.SCOREBOARD_CRITERION.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.SCOREBOARD_CRITERION));
     }
 
-    public void loadText(CodeWriter cw, Text value) {
+    public BytecodeRegister loadText(CodeWriter cw, Text value) {
         value.forEachComponent(text -> {
             if(!text.style().isEmpty()) {
                 map.writeValue(CodeFieldStorageMapKind.TEXT_STYLE, text.style());
@@ -80,80 +84,66 @@ public final class CodeFieldStorage {
             }
         });
         map.writeValue(CodeFieldStorageMapKind.TEXT, value);
-        cw.getDataField(CodeFieldStorageMapKind.TEXT.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.TEXT));
+        return cw.getDataField(CodeFieldStorageMapKind.TEXT.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.TEXT));
     }
 
-    public void loadTextStyle(CodeWriter cw, TextStyle value) {
+    public BytecodeRegister loadTextStyle(CodeWriter cw, TextStyle value) {
         map.writeValue(CodeFieldStorageMapKind.TEXT_STYLE, value);
         if(value.font() != null) {
             map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, value.font());
         }
-        cw.getDataField(CodeFieldStorageMapKind.TEXT_STYLE.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.TEXT_STYLE));
+        return cw.getDataField(CodeFieldStorageMapKind.TEXT_STYLE.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.TEXT_STYLE));
     }
 
-    public void loadUUID(CodeWriter cw, UUID value) {
+    public BytecodeRegister loadUUID(CodeWriter cw, UUID value) {
         map.writeValue(CodeFieldStorageMapKind.UUID, value);
-        cw.getDataField(CodeFieldStorageMapKind.UUID.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.UUID));
+        return cw.getDataField(CodeFieldStorageMapKind.UUID.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.UUID));
     }
 
-    public void loadServerFunctionManager(CodeWriter cw) {
-        cw.getDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerClass);
+    public BytecodeRegister loadServerFunctionManager(CodeWriter cw) {
+        return cw.getDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerClass);
     }
 
-    private int currentFunctionDefinition;
-    private int cost;
-
-    private CodeWriter getCurrentFunction(CodeWriter cw, ClassWriter classWriter) {
-        if(cost >= 60000) {
-            currentFunctionDefinition++;
-            cost = 0;
-            cw.methodVisitor().visitMethodInsn(Opcodes.INVOKESTATIC, DATA_CLASS, "load" + currentFunctionDefinition, "()V", false);
-            cw.methodVisitor().visitInsn(Opcodes.RETURN);
-            cw.methodVisitor().visitMaxs(0, 0);
-            cw.methodVisitor().visitEnd();
-            var mv = classWriter.visitMethod(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC, "load" + currentFunctionDefinition, "()V", null, null);
-            mv.visitCode();
-            return new CodeWriter(mv);
-        }
-        return cw;
-    }
-
-    private <T> CodeWriter writeFromStorage(HashSet<CodeFieldStorageMapKind<?>> written, CodeWriter cw, ClassWriter classWriter, CodeFieldStorageMapKind<T> kind) {
+    private <T> CodeWriter writeFromStorage(HashSet<CodeFieldStorageMapKind<?>> written, CodeWriter cw, ClassGenerator classGenerator, CodeFieldStorageMapKind<T> kind) {
         if(written.contains(kind)) return cw;
         written.add(kind);
         for(var dep : kind.getDependencies()) {
-            cw = writeFromStorage(written, cw, classWriter, dep);
+            cw = writeFromStorage(written, cw, classGenerator, dep);
         }
         for(var value : map.getStorage(kind)) {
             var name = kind.generateName(map, value);
-            cost += map.writeCode(kind, this, cw, value) + 3;
-            cw.setDataField(name, map.getValueClass(kind));
-            cw = getCurrentFunction(cw, classWriter);
-            classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, name, map.getValueClass(kind).descriptorString(), null, null);
+            var writtenValue = map.writeCode(kind, this, cw, value);
+            cw.setDataField(name, map.getValueClass(kind), writtenValue);
+            classGenerator.addFinalField(name, Type.getType(map.getValueClass(kind)));
         }
 
         return cw;
     }
 
-    public void generate(ClassWriter classWriter) {
-        currentFunctionDefinition = 1;
-        var mv = classWriter.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "load", "(" + minecraftServerClass.descriptorString() + serverFunctionManagerClass.descriptorString() + ")V", null, null);
-        mv.visitCode();
-        var cw = new CodeWriter(mv);
+    public byte[] generate(HashMap<String, List<BytecodeInstruction>> lowLevelInstructions) {
+        var classGenerator = ClassGenerator.createClassGenerator(DATA_CLASS, true);
 
-        mv.visitVarInsn(Opcodes.ALOAD, 1);
-        cw.setDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerClass);
+        var cw = new CodeWriter();
+
+        cw.setDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerClass, new BytecodeValue.Parameter(1, serverFunctionManagerClass));
 
         HashSet<CodeFieldStorageMapKind<?>> written = new HashSet<>();
         for(var kind : CodeFieldStorageMapKind.values()) {
-            cw = writeFromStorage(written, cw, classWriter, kind);
+            cw = writeFromStorage(written, cw, classGenerator, kind);
         }
 
-        cw.methodVisitor().visitInsn(Opcodes.RETURN);
-        cw.methodVisitor().visitMaxs(0, 0);
-        cw.methodVisitor().visitEnd();
+        cw.returnVoid();
 
-        classWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerClass.descriptorString(), null, null);
+        var instructions = BytecodeOptimizer.optimizeInstructions(cw.getInstructions());
+        if(DEBUG) {
+            lowLevelInstructions.put(DATA_CLASS.replace('/', '.') + "#load", instructions);
+        }
+
+        classGenerator.addFunction("load", instructions, Type.VOID_TYPE, Type.getType(minecraftServerClass), Type.getType(serverFunctionManagerClass));
+
+        classGenerator.addFinalField(EMIT_SERVER_FUNCTION_MANAGER_NAME, Type.getType(serverFunctionManagerClass));
+
+        return classGenerator.finish();
     }
 
 }

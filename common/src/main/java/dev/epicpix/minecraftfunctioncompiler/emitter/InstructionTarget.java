@@ -1,0 +1,15 @@
+package dev.epicpix.minecraftfunctioncompiler.emitter;
+
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
+public interface InstructionTarget {
+    record FunctionTarget(String className, String name, String descriptor, boolean isStatic, boolean isInterface, boolean isSpecial, boolean noReordering) implements InstructionTarget {
+        public static FunctionTarget initFunction(Class<?> clazz, Class<?>... arguments) {
+            String desc = clazz.descriptorString();
+            String args = Arrays.stream(arguments).map(Class::descriptorString).collect(Collectors.joining(""));
+            return new FunctionTarget(desc.substring(1, desc.length() - 1), "<init>", "(" + args + ")V", false, false, true, false);
+        }
+    }
+    record FieldTarget(String className, String name, String descriptor, boolean isStatic, boolean isWrite) implements InstructionTarget {}
+}

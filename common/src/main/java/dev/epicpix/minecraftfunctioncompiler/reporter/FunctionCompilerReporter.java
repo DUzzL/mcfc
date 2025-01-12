@@ -1,13 +1,9 @@
 package dev.epicpix.minecraftfunctioncompiler.reporter;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import com.google.gson.*;
 import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
 import dev.epicpix.minecraftfunctioncompiler.commands.CommandError;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
-import dev.epicpix.minecraftfunctioncompiler.il.optimizer.OptimizationStatistics;
 
 import java.net.URL;
 import java.net.http.HttpClient;
@@ -21,7 +17,6 @@ import java.util.UUID;
 import static dev.epicpix.minecraftfunctioncompiler.CompileConstants.isDevelopmentEnvironment;
 import static dev.epicpix.minecraftfunctioncompiler.CompileConstants.versionCommit;
 import static dev.epicpix.minecraftfunctioncompiler.CompileConstants.versionName;
-import static dev.epicpix.minecraftfunctioncompiler.il.Instruction.printInstructionList;
 
 public final class FunctionCompilerReporter {
     private FunctionCompilerReporter() {}
@@ -58,6 +53,7 @@ public final class FunctionCompilerReporter {
         sendData.addProperty("run_uuid", runUuid.toString());
         sendData.addProperty("timestamp", System.currentTimeMillis());
         sendData.addProperty("report_type", type);
+        sendData.addProperty("report_version", "v7");
         sendData.add("data", data);
 
         reportQueue.add(sendData);
@@ -89,15 +85,23 @@ public final class FunctionCompilerReporter {
     public static void reportExceptionWithInstructions(String step, Throwable exception, List<Instruction> instructions) {
         JsonObject json = new JsonObject();
         var instructionResult = new StringBuilder();
-        printInstructionList(instructions, (it) -> instructionResult.append(it).append("\n"));
+        Instruction.printInstructions(instructions, (it) -> instructionResult.append(it).append("\n"));
         json.addProperty("instructions", instructionResult.toString());
+        reportException(step, exception, json);
+    }
+
+    public static void reportExceptionWithCommands(String step, Throwable exception, List<String> commands) {
+        JsonObject json = new JsonObject();
+        var commandResult = new StringBuilder();
+        for(var command : commands) commandResult.append(command).append("\n");
+        json.addProperty("commands", commandResult.toString());
         reportException(step, exception, json);
     }
 
     public static void reportCompilationStatistics(
             FunctionCountsData functionCounts,
             TimingData timings,
-            List<List<OptimizationStatistics>> optimizationStats,
+            CodeGenerationMetrics codeGenerationMetrics,
             List<CommandError> commandErrors
         ) {
         JsonObject compilationStats = new JsonObject();
@@ -115,19 +119,14 @@ public final class FunctionCompilerReporter {
         timingsJson.addProperty("handle_load", timings.handleLoad());
         compilationStats.add("timings", timingsJson);
 
-        JsonArray optimizations = new JsonArray();
-        for(var optimizationData : optimizationStats) {
-            JsonArray arr = new JsonArray();
-            for(var optimization : optimizationData) {
-                JsonObject optimizationObj = new JsonObject();
-                optimizationObj.addProperty("optimization", optimization.type());
-                optimizationObj.addProperty("instruction_count", optimization.instructionCount());
-                optimizationObj.addProperty("time_taken", optimization.timeTaken());
-                arr.add(optimizationObj);
-            }
-            optimizations.add(arr);
-        }
-        compilationStats.add("optimizations", optimizations);
+        JsonObject codeGenerationMetricsJson = new JsonObject();
+        codeGenerationMetricsJson.addProperty("total_command_count", codeGenerationMetrics.totalCommandCount());
+        codeGenerationMetricsJson.addProperty("total_unoptimized_high_level_instruction_count", codeGenerationMetrics.totalUnoptimizedHighLevelInstructionCount());
+        codeGenerationMetricsJson.addProperty("total_high_level_instruction_count", codeGenerationMetrics.totalHighLevelInstructionCount());
+        codeGenerationMetricsJson.addProperty("total_low_level_instruction_count", codeGenerationMetrics.totalLowLevelInstructionCount());
+        codeGenerationMetricsJson.addProperty("total_function_class_file_size", codeGenerationMetrics.totalFunctionClassFileSize());
+        codeGenerationMetricsJson.addProperty("total_data_class_file_size", codeGenerationMetrics.totalDataClassFileSize());
+        compilationStats.add("code_generation_metrics", codeGenerationMetricsJson);
 
         JsonArray commandErrorsJson = new JsonArray();
         for(var error : commandErrors) {

@@ -1,20 +1,20 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_6;
 
-import dev.epicpix.minecraftfunctioncompiler.FunctionCompilerClassLoader;
+import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.commands.IArgumentLookup;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.TaggableLocation;
+import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
-import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerFunctionManager;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.Opcodes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,12 +24,12 @@ import java.util.List;
 import static dev.epicpix.minecraftfunctioncompiler.v1_20_6.emitter.MappedUsageDefinitionsExtensions.callCompoundTag_get;
 import static dev.epicpix.minecraftfunctioncompiler.v1_20_6.emitter.MappedUsageDefinitionsExtensions.callTag_stringify;
 
-public class FunctionClassLoader extends FunctionCompilerClassLoader {
+public class FunctionClassLoader extends FunctionCompilerClassLoader<ResourceLocation, CommandSourceStack, CompoundTag> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("minecraftfunctioncompiler");
 
     public FunctionClassLoader(ClassLoader parent, Object minecraftServer, SourceFileProvider sourceFileProvider) {
-        super(parent, FabricLoader.getInstance().getGameDir().resolve("generated"), CommandSourceStack.class, minecraftServer, LOGGER::info, LOGGER::warn, LOGGER::error, sourceFileProvider.mcfc$getSourceFiles());
+        super(parent, FabricLoader.getInstance().getGameDir().resolve("generated"), CommandSourceStack.class, minecraftServer, sourceFileProvider.mcfc$getSourceFiles());
     }
 
     public void loadFunctions(ServerFunctionManager serverFunctionManager) {
@@ -42,7 +42,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
             }
             loadFunctions(serverFunctionManager);
         })) return;
-        logInfo.accept("Starting compilation");
+        LOGGER.info("Starting compilation");
         resetHandles();
         var lookup = new IArgumentLookup() {
             public List<DataLocation> lookupFunctions(TaggableLocation functions) {
@@ -59,38 +59,17 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader {
         loadFunctionClasses(lookup, createCodeFieldStorage(), serverFunctionManager);
     }
 
-    public boolean hasFunctionLoaded(ResourceLocation location) {
-        return handles.containsKey(location);
-    }
-
     public void setHandle(DataLocation key, MethodHandle handle) {
-        handles.put(new ResourceLocation(key.namespace(), key.path()), handle);
+        setHandle(new ResourceLocation(key.namespace(), key.path()), handle);
     }
 
-    protected void nbtTagToString(CodeWriter writer, String key, Label errorLabel) {
-        writer.loadLocal("static$FunctionCompound");
-        writer.writeString(key);
-        callCompoundTag_get(writer);
-        if(errorLabel == null) {
-            callTag_stringify(writer);
-        }else {
-            var tag = writer.createLocal(writer.generateUniqueLocal(), Tag.class.descriptorString());
-            writer.storeLocal(tag.name());
-            writer.loadLocal(tag.name());
-            writer.methodVisitor().visitJumpInsn(Opcodes.IFNULL, errorLabel);
-            writer.loadLocal(tag.name());
-            callTag_stringify(writer);
-            writer.destroyLocal(tag);
+    protected BytecodeValue nbtTagToString(EmitterContext emitter, String key, BytecodeLabel errorLabel) {
+        var cw = emitter.codeWriter();
+        var tag = callCompoundTag_get(cw, emitter.getStatic("FunctionCompound"), new BytecodeValue.StringValue(key));
+        if(errorLabel != null) {
+            cw.conditionalJump(JumpCondition.EQ, tag, new BytecodeValue.NullValue(), errorLabel);
         }
-    }
-
-    public long runFunction(ResourceLocation location, CommandSourceStack stack, CompoundTag compound) {
-        try {
-            return (long) handles.get(location).invoke(stack, compound);
-        } catch (Throwable e) {
-            logError.accept("Failed to run function " + location, e);
-            return 3L << 32;
-        }
+        return callTag_stringify(cw, tag);
     }
 
     private CodeFieldStorage createCodeFieldStorage() {

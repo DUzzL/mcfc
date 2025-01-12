@@ -5,89 +5,154 @@
 #definitions("common,minecraft")
 
 // Common
-@ROOT() {
-  run();
+##CONDITIONAL_JUMP
+@IF_FALSE_JUMP(boolean [ctx:local], label [ctx:label]) {
+  _jumpIfEqual([ctx:local], false, [ctx:label]);
 }
 
-@ALWAYS() {
-  run();
+##CONDITIONAL_JUMP
+@IF_NULL_JUMP(<java.lang.Object> [ctx:local], label [ctx:label]) {
+  _jumpIfEqual([ctx:local], null, [ctx:label]);
 }
 
-@NEVER();
-
-@IF_NOT_NULL(<java.lang.Object> [ctx:local]) {
-  if([ctx:local] != null) {
-    run();
-  }
+##CONDITIONAL_JUMP
+@IF_NOT_NULL_JUMP(<java.lang.Object> [ctx:local], label [ctx:label]) {
+  _jumpIfNotEqual([ctx:local], null, [ctx:label]);
 }
 
-@SCOPE(scope [ctx:scope]) {
-  scope([ctx:scope]) {
-    run();
-  }
+##CONDITIONAL_JUMP
+@IF_OBJECT_EQUIVALENT_JUMP(<java.lang.Object> [ctx:a], <java.lang.Object> [ctx:b], label [ctx:label]) {
+  _jumpIfEqual([ctx:a], [ctx:b], [ctx:label]);
 }
 
-@EXIT_SCOPE(scope [ctx:scope]) {
-  exit_scope([ctx:scope]);
+##CONDITIONAL_JUMP
+@IF_OBJECT_NOT_EQUIVALENT_JUMP(<java.lang.Object> [ctx:a], <java.lang.Object> [ctx:b], label [ctx:label]) {
+  _jumpIfNotEqual([ctx:a], [ctx:b], [ctx:label]);
 }
 
-@LIMITER(scope [ctx:scope], int [ctx:current], int [instr:limit]) {
-  scope([ctx:scope]) {
-    let [ctx:current] = [instr:limit];
-    run();
-  }
+##CONDITIONAL_JUMP
+@IF_OBJECT_EQUAL_JUMP(<java.lang.Object> [ctx:a], <java.lang.Object> [ctx:b], label [ctx:label]) {
+  _jumpIfNotEqual(<java.util.Objects>.equals([ctx:a], [ctx:b]), false, [ctx:label]);
 }
 
-@CHECK_LIMIT(scope [ctx:scope], int [ctx:current]) {
-  [ctx:current] = [ctx:current] - 1;
-  if([ctx:current] == 0) {
-    exit_scope([ctx:scope]);
-  }
+##CONDITIONAL_JUMP
+@IF_OBJECT_NOT_EQUAL_JUMP(<java.lang.Object> [ctx:a], <java.lang.Object> [ctx:b], label [ctx:label]) {
+  _jumpIfEqual(<java.util.Objects>.equals([ctx:a], [ctx:b]), false, [ctx:label]);
+}
+
+// any numeric type as long as they're the same will work here, not worth it making a separate instruction for each type
+##CONDITIONAL_JUMP
+@IF_EQUAL_JUMP(int [ctx:a], int [ctx:b], label [ctx:label]) {
+  _jumpIfEqual([ctx:a], [ctx:b], [ctx:label]);
+}
+
+##CONDITIONAL_JUMP
+@IF_NOT_EQUAL_JUMP(int [ctx:a], int [ctx:b], label [ctx:label]) {
+  _jumpIfNotEqual([ctx:a], [ctx:b], [ctx:label]);
+}
+
+##CONDITIONAL_JUMP
+@IF_GREATER_EQUAL_JUMP(int [ctx:a], int [ctx:b], label [ctx:label]) {
+  _jumpIfGreaterEqual([ctx:a], [ctx:b], [ctx:label]);
+}
+
+##CONDITIONAL_JUMP
+@IF_GREATER_THAN_JUMP(int [ctx:a], int [ctx:b], label [ctx:label]) {
+  _jumpIfGreaterThan([ctx:a], [ctx:b], [ctx:label]);
+}
+
+##CONDITIONAL_JUMP
+@IF_LESS_THAN_JUMP(int [ctx:a], int [ctx:b], label [ctx:label]) {
+  _jumpIfLessThan([ctx:a], [ctx:b], [ctx:label]);
+}
+
+##CONDITIONAL_JUMP
+@IF_LESS_EQUAL_JUMP(int [ctx:a], int [ctx:b], label [ctx:label]) {
+  _jumpIfLessEqual([ctx:a], [ctx:b], [ctx:label]);
+}
+
+@VALUE_DEFINE(int [ctx:dst], int [ctx:src]) {
+  let [ctx:dst] = [ctx:src];
+}
+
+@VALUE_ASSIGN(int [ctx:dst], int [ctx:src]) {
+  [ctx:dst] = [ctx:src];
+}
+
+@OBJECT_ASSIGN(<java.lang.Object> [ctx:dst], <java.lang.Object> [ctx:src]) {
+  [ctx:dst] = [ctx:src];
+}
+
+@VALUE_ADD(int [ctx:a], int [ctx:b]) {
+  [ctx:a] = [ctx:a] + [ctx:b];
+}
+
+@VALUE_SUB(int [ctx:a], int [ctx:b]) {
+  [ctx:a] = [ctx:a] - [ctx:b];
+}
+
+@LABEL(label [ctx:label]);
+
+@JUMP(label [ctx:label]) {
+  _jump([ctx:label]);
 }
 
 @CREATE_MUTABLE_LIST(<java.util.List> [ctx:list]) {
   let [ctx:list] = new <java.util.ArrayList>();
-  run();
 }
 
 @ADD_LIST_ELEMENT(<java.util.List> [ctx:list], <java.lang.Object> [ctx:element]) {
   [ctx:list].add([ctx:element]);
 }
 
-@FOR_EACH_LIST_ELEMENT(<java.util.List> [ctx:list], <java.lang.Object> [ctx:element]) {
-  let [ctx:element];
-  for_each_list_indexed([ctx:list], [ctx:element]) {
-    run();
-  }
+@GET_LIST_ELEMENT(<java.util.List> [ctx:list], int [ctx:index], <java.lang.Object> [ctx:element]) {
+  let [ctx:element] = [ctx:list].get([ctx:index]);
+}
+
+@GET_LIST_LENGTH(<java.util.List> [ctx:list], int [ctx:size]) {
+  let [ctx:size] = [ctx:list].size();
+}
+
+@GET_SET_LENGTH(<java.util.Set> [ctx:set], int [ctx:size]) {
+  let [ctx:size] = [ctx:set].size();
+}
+
+##CONDITIONAL_JUMP
+@JUMP_IF_LIST_CONTAINS(<java.util.List> [ctx:list], <java.lang.Object> [ctx:element], label [ctx:label]) {
+  _jumpIfNotEqual([ctx:list].contains([ctx:element]), false, [ctx:label]);
+}
+
+##CONDITIONAL_JUMP
+@JUMP_IF_LIST_NOT_CONTAINS(<java.util.List> [ctx:list], <java.lang.Object> [ctx:element], label [ctx:label]) {
+  _jumpIfEqual([ctx:list].contains([ctx:element]), false, [ctx:label]);
+}
+
+##CONDITIONAL_JUMP
+@JUMP_IF_SET_CONTAINS(<java.util.Set> [ctx:set], <java.lang.Object> [ctx:element], label [ctx:label]) {
+  _jumpIfNotEqual([ctx:set].contains([ctx:element]), false, [ctx:label]);
+}
+
+##CONDITIONAL_JUMP
+@JUMP_IF_SET_NOT_CONTAINS(<java.util.Set> [ctx:set], <java.lang.Object> [ctx:element], label [ctx:label]) {
+  _jumpIfEqual([ctx:set].contains([ctx:element]), false, [ctx:label]);
+}
+
+@ITERATOR_NEXT(<java.util.Iterator> [ctx:iterator], <java.lang.Object> [ctx:element]) {
+  let [ctx:element] = [ctx:iterator].next();
+}
+
+##CONDITIONAL_JUMP
+@JUMP_IF_ITERATOR_HAS_NEXT(<java.util.Iterator> [ctx:iterator], label [ctx:label]) {
+  _jumpIfNotEqual([ctx:iterator].hasNext(), false, [ctx:label]);
+}
+
+##CONDITIONAL_JUMP
+@JUMP_IF_ITERATOR_HAS_NO_NEXT(<java.util.Iterator> [ctx:iterator], label [ctx:label]) {
+  _jumpIfEqual([ctx:iterator].hasNext(), false, [ctx:label]);
 }
 
 @SHUFFLE_LIST(<java.util.List> [ctx:list]) {
   <java.util.Collections>.shuffle([ctx:list]);
-}
-
-@CREATE_RESULT_STORAGE(int [ctx:storage]) {
-  let [ctx:storage] = 0;
-  run();
-}
-
-@ADD_RESULT_STORAGE(int [ctx:storage], int [ctx:value]) {
-  [ctx:storage] = [ctx:storage] + [ctx:value];
-}
-
-@SET_RESULT_STORAGE(int [ctx:storage], int [ctx:value]) {
-  [ctx:storage] = [ctx:value];
-}
-
-@IS_RESULT_STORAGE(int [ctx:storage], int [instr:value]) {
-  if([ctx:storage] == [instr:value]) {
-    run();
-  }
-}
-
-@IS_NOT_RESULT_STORAGE(int [ctx:storage], int [instr:value]) {
-  if([ctx:storage] != [instr:value]) {
-    run();
-  }
 }
 
 @RETURN_FAIL() {
@@ -98,62 +163,38 @@
   return_success([ctx:value]);
 }
 
-
-$for_each_list_indexed(<java.util.List> [ctx:list], yield<java.lang.Object> [ctx:res_element]) {
-  let [local:index]<int> = 0;
-  let [local:size]<int> = [ctx:list].size();
-  while([local:index] < [local:size]) {
-    yield([ctx:res_element], [ctx:list].get([local:index]));
-    [local:index] = [local:index] + 1;
-  }
-}
-
-$for_each_iterator(<java.util.Iterator> [ctx:iterator], yield<java.lang.Object> [ctx:element]) {
-  while([ctx:iterator].hasNext() != false) {
-    yield([ctx:element], [ctx:iterator].next());
-  }
-}
-
-$for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> [ctx:element]) {
-  let [local:iterator]<java.util.Iterator> = [ctx:iterable].iterator();
-  while([local:iterator].hasNext() != false) {
-    yield([ctx:element], [local:iterator].next());
-  }
+@ASSUME_STRING(<java.lang.Object> [ctx:string_obj], <java.lang.String> [ctx:string]) {
+  let [ctx:string] = cast([ctx:string_obj], <java.lang.String>);
 }
 
 // Minecraft specific
 @static_MINECRAFT_SERVER(<net.minecraft.commands.CommandSourceStack> [static:CommandSourceStack], <net.minecraft.server.MinecraftServer> [static:MinecraftServer]) {
   let [static:MinecraftServer] = [static:CommandSourceStack].getServer();
-  run();
 }
 
 @static_PLAYER_LIST(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.players.PlayerList> [static:PlayerList]) {
   let [static:PlayerList] = [static:MinecraftServer].getPlayerList();
-  run();
 }
 
 @static_ALL_WORLDS(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.Iterable> [static:AllWorlds]) {
   let [static:AllWorlds] = [static:MinecraftServer].getAllLevels();
-  run();
 }
 
 @static_SCOREBOARD(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.ServerScoreboard> [static:Scoreboard]) {
   let [static:Scoreboard] = [static:MinecraftServer].getScoreboard();
-  run();
 }
 
 @static_COMMAND_STORAGE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.world.level.storage.CommandStorage> [static:CommandStorage]) {
   let [static:CommandStorage] = [static:MinecraftServer].getCommandStorage();
-  run();
 }
 
 
-// contract [ctx:entity] match IF_NOT_NULL remove
-@GET_CURRENT_ENTITY(<net.minecraft.commands.CommandSourceStack> [static:CommandSourceStack], <net.minecraft.world.entity.Entity> [ctx:entity]) {
-  let [ctx:entity] = [static:CommandSourceStack].getEntity();
-  if([ctx:entity] != null) {
-    run();
-  }
+@GET_STACK_ENTITY(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <net.minecraft.world.entity.Entity> [ctx:entity]) {
+  let [ctx:entity] = [ctx:stack].getEntity();
+}
+
+@ASSUME_COMMAND_STACK(<java.lang.Object> [ctx:stack_obj], <net.minecraft.commands.CommandSourceStack> [ctx:stack]) {
+  let [ctx:stack] = cast([ctx:stack_obj], <net.minecraft.commands.CommandSourceStack>);
 }
 
 @ADD_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [ctx:tag]) {
@@ -164,117 +205,64 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
   [ctx:entity].removeTag([ctx:tag]);
 }
 
-=CHECK_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [ctx:tag], boolean [instr:negated]) {
-  (negated == false) => CHECK_HAS_ENTITY_TAG;
-  => CHECK_NOT_HAS_ENTITY_TAG;
+@GET_ENTITY_TAGS(<net.minecraft.world.entity.Entity> [ctx:entity], <java.util.Set> [ctx:tags]) {
+  let [ctx:tags] = [ctx:entity].getTags();
 }
 
-@CHECK_HAS_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [ctx:tag]) {
-  if([ctx:entity].getTags().contains([ctx:tag]) != false) {
-    run();
-  }
+@GET_PLAYERS(<net.minecraft.server.players.PlayerList> [static:PlayerList], <java.util.List> [ctx:players]) {
+  let [ctx:players] = [static:PlayerList].getPlayers();
 }
 
-@CHECK_NOT_HAS_ENTITY_TAG(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [ctx:tag]) {
-  if([ctx:entity].getTags().contains([ctx:tag]) == false) {
-    run();
-  }
+@ASSUME_PLAYER(<java.lang.Object> [ctx:player_obj], <net.minecraft.server.level.ServerPlayer> [ctx:player]) {
+  let [ctx:player] = cast([ctx:player_obj], <net.minecraft.server.level.ServerPlayer>);
 }
 
-=CHECK_ENTITY_TAGS(<net.minecraft.world.entity.Entity> [ctx:entity], boolean [instr:negated]) {
-  (negated == false) => CHECK_HAS_ENTITY_TAGS;
-  => CHECK_NOT_HAS_ENTITY_TAGS;
+@GET_WORLDS_ITERATOR(<java.lang.Iterable> [static:AllWorlds], <java.util.Iterator> [ctx:worlds]) {
+  let [ctx:worlds] = [static:AllWorlds].iterator();
 }
 
-@CHECK_HAS_ENTITY_TAGS(<net.minecraft.world.entity.Entity> [ctx:entity]) {
-  if([ctx:entity].getTags().size() != 0) {
-    run();
-  }
+@ASSUME_WORLD(<java.lang.Object> [ctx:world_obj], <net.minecraft.server.level.ServerLevel> [ctx:world]) {
+  let [ctx:world] = cast([ctx:world_obj], <net.minecraft.server.level.ServerLevel>);
 }
 
-@CHECK_NOT_HAS_ENTITY_TAGS(<net.minecraft.world.entity.Entity> [ctx:entity]) {
-  if([ctx:entity].getTags().size() == 0) {
-    run();
-  }
+@ASSUME_ENTITY(<java.lang.Object> [ctx:entity_obj], <net.minecraft.world.entity.Entity> [ctx:entity]) {
+  let [ctx:entity] = cast([ctx:entity_obj], <net.minecraft.world.entity.Entity>);
 }
 
-// contract [ctx:entity] match IF_NOT_NULL remove
-@FOR_EACH_PLAYER(<net.minecraft.server.players.PlayerList> [static:PlayerList], <net.minecraft.server.level.ServerPlayer> [ctx:entity]) {
-  let [local:players]<java.util.List> = [static:PlayerList].getPlayers();
-  let [ctx:entity];
-  for_each_list_indexed([local:players], [ctx:entity]) {
-    run();
-  }
+@GET_ENTITIES(<net.minecraft.server.level.ServerLevel> [ctx:world], <java.util.Iterator> [ctx:entities]) {
+  let [ctx:entities] = [ctx:world].getAllEntities().iterator();
 }
 
-// contract [ctx:entity] match IF_NOT_NULL remove
-@FOR_EACH_ENTITY(<java.lang.Iterable> [static:AllWorlds], <net.minecraft.world.entity.Entity> [ctx:entity]) {
-  let [local:world]<net.minecraft.server.level.ServerLevel>;
-  for_each_iterable([static:AllWorlds], [local:world]) {
-    let [local:entities]<java.lang.Iterable> = [local:world].getAllEntities();
-    let [ctx:entity];
-    for_each_iterable([local:entities], [ctx:entity]) {
-      run();
-    }
-  }
+@GET_ENTITIES_ITERATOR(<net.minecraft.server.level.ServerLevel> [ctx:world], <java.util.Iterator> [ctx:entities]) {
+  let [ctx:entities] = [ctx:world].getAllEntities().iterator();
 }
 
-@FOR_PLAYER(<net.minecraft.server.players.PlayerList> [static:PlayerList], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:name]) {
+@GET_PLAYER(<net.minecraft.server.players.PlayerList> [static:PlayerList], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:name]) {
   let [ctx:player] = [static:PlayerList].getPlayerByName([instr:name]);
-  run();
 }
 
-// contract [ctx:entity] match IF_NOT_NULL remove
-@FOR_ENTITY(<java.lang.Iterable> [static:AllWorlds], <net.minecraft.world.entity.Entity> [ctx:entity], <java.util.UUID> [instr:uuid]) {
-  let [local:world]<net.minecraft.server.level.ServerLevel>;
-  for_each_iterable([static:AllWorlds], [local:world]) {
-    let [ctx:entity] = [local:world].getEntity([instr:uuid]);
-    if([ctx:entity] != null) {
-      run();
-      return;
-    }
-  }
+@GET_ENTITY(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.entity.Entity> [ctx:entity], <java.util.UUID> [instr:uuid]) {
+  let [ctx:entity] = [ctx:world].getEntity([instr:uuid]);
 }
 
-=FOR_SCORE_HOLDERS(<java.lang.String> [ctx:name], boolean [instr:single]) {
-  (single == false) => FOR_SINGLE_SCORE_HOLDER;
-  => FOR_MULTIPLE_SCORE_HOLDERS;
-}
-
-@FOR_SINGLE_SCORE_HOLDER(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [ctx:name]) {
-  let [local:array]<java.util.ArrayList> = new <java.util.ArrayList>([static:Scoreboard].playerScores.keySet());
-  let [ctx:name];
-  for_each_list_indexed([local:array], [ctx:name]) {
-    run();
-  }
-}
-
-@FOR_MULTIPLE_SCORE_HOLDERS(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [ctx:name]) {
-  let [local:array]<java.util.ArrayList> = new <java.util.ArrayList>([static:Scoreboard].playerScores.keySet());
-  if([local:array].isEmpty() != 0) {
-    let [ctx:name] = cast([local:array].get(0), <java.lang.String>);
-    run();
-  }
+@GET_SCOREBOARD_HOLDERS(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.util.List> [ctx:holders]) {
+  let [ctx:holders] = new <java.util.ArrayList>([static:Scoreboard].playerScores.keySet());
 }
 
 @GET_OBJECTIVE(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [instr:name]) {
   let [ctx:objective] = [static:Scoreboard].getObjective([instr:name]);
-  run();
 }
 
 @GET_SCOREBOARD_NAME(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [ctx:name]) {
   let [ctx:name] = [ctx:entity].getScoreboardName();
-  run();
 }
 
 @GET_SCORE_VALUE [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:score], int [ctx:score_value]) {
   let [ctx:score_value] = [ctx:score].getScore();
-  run();
 }
 
 @GET_SCORE_VALUE [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:score], int [ctx:score_value]) {
   let [ctx:score_value] = [ctx:score].get();
-  run();
 }
 
 @SET_SCORE [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:score], int [ctx:value]) {
@@ -305,63 +293,40 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
   [ctx:entity].kill();
 }
 
-@GET_STACK_POSITION(<net.minecraft.commands.CommandSourceStack> [static:CommandSourceStack], <net.minecraft.world.phys.Vec3> [ctx:position]) {
-  let [ctx:position] = [static:CommandSourceStack].getPosition();
-  run();
+@GET_COMMAND_STACK(<net.minecraft.commands.CommandSourceStack> [static:CommandSourceStack], <net.minecraft.commands.CommandSourceStack> [ctx:stack]) {
+  let [ctx:stack] = [static:CommandSourceStack];
+}
+
+@GET_STACK_POSITION(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <net.minecraft.world.phys.Vec3> [ctx:position]) {
+  let [ctx:position] = [ctx:stack].getPosition();
+}
+
+@GET_STACK_ROTATION(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <net.minecraft.world.phys.Vec2> [ctx:rotation]) {
+  let [ctx:rotation] = [ctx:stack].getRotation();
 }
 
 @GET_ENTITY_POSITION(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.phys.Vec3> [ctx:position]) {
   let [ctx:position] = [ctx:entity].position();
-  run();
-}
-
-@GET_STACK_ROTATION(<net.minecraft.commands.CommandSourceStack> [static:CommandSourceStack], <net.minecraft.world.phys.Vec2> [ctx:rotation]) {
-  let [ctx:rotation] = [static:CommandSourceStack].getRotation();
-  run();
 }
 
 @GET_ENTITY_ROTATION(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.phys.Vec2> [ctx:rotation]) {
   let [ctx:rotation] = [ctx:entity].getRotationVector();
-  run();
 }
 
-=HAS_TEAM(<net.minecraft.world.entity.Entity> [ctx:entity], boolean [instr:negated]) {
-  (negated == false) => CHECK_HAS_TEAM;
-  => CHECK_NOT_HAS_TEAM;
+@GET_ROTATION_PITCH(<net.minecraft.world.phys.Vec2> [ctx:rotation], float [ctx:pitch]) {
+  let [ctx:pitch] = [ctx:rotation].x;
 }
 
-@CHECK_HAS_TEAM(<net.minecraft.world.entity.Entity> [ctx:entity]) {
-  if([ctx:entity].getTeam() != null) {
-    run();
-  }
+@GET_ROTATION_YAW(<net.minecraft.world.phys.Vec2> [ctx:rotation], float [ctx:yaw]) {
+  let [ctx:yaw] = [ctx:rotation].y;
 }
 
-@CHECK_NOT_HAS_TEAM(<net.minecraft.world.entity.Entity> [ctx:entity]) {
-  if([ctx:entity].getTeam() == null) {
-    run();
-  }
+@GET_ENTITY_TEAM(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.scores.Team> [ctx:team]) {
+  let [ctx:team] = [ctx:entity].getTeam();
 }
 
-=CHECK_TEAM(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:team], boolean [instr:negated]) {
-  (negated == false) => CHECK_IS_TEAM;
-  => CHECK_NOT_IS_TEAM;
-}
-
-@CHECK_IS_TEAM(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:team]) {
-  if([ctx:entity].getTeam() != null) {
-    if(<java.util.Objects>.equals([ctx:entity].getTeam().getName(), [instr:team]) == true) {
-      run();
-    }
-  }
-}
-
-@CHECK_NOT_IS_TEAM(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:team]) {
-  if([ctx:entity].getTeam() != null) {
-    if(<java.util.Objects>.equals([ctx:entity].getTeam().getName(), [instr:team]) == true) {
-      return;
-    }
-  }
-  run();
+@GET_TEAM_NAME(<net.minecraft.world.scores.Team> [ctx:team], <java.lang.String> [ctx:name]) {
+  let [ctx:name] = [ctx:team].getName();
 }
 
 @RESET_SCORE [-1.20.2] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name]) {
@@ -382,44 +347,33 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 
 
 
-=SCORE_DATA(<net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <dev.epicpix.minecraftfunctioncompiler.data.locations.Score> [ctx:score], boolean [instr:auto_create]) {
-  (auto_create == false) => SCORE_DATA_NO_AUTO_CREATE;
-  => SCORE_DATA_AUTO_CREATE;
-}
 
 @SCORE_DATA_AUTO_CREATE [-1.20.2] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <net.minecraft.world.scores.Score> [ctx:score]) {
   let [ctx:score] = [static:Scoreboard].getOrCreatePlayerScore([ctx:name], [ctx:objective]);
-  run();
 }
 
 @SCORE_DATA_AUTO_CREATE [1.20.3-] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <net.minecraft.world.scores.ScoreAccess> [ctx:score]) {
   let [ctx:score] = [static:Scoreboard].getOrCreatePlayerScore(<net.minecraft.world.scores.ScoreHolder>.forNameOnly([ctx:name]), [ctx:objective]);
-  run();
 }
 
 @SCORE_DATA_NO_AUTO_CREATE [1.20.1] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <net.minecraft.world.scores.Score> [ctx:score]) {
   let [ctx:score] = <dev.epicpix.minecraftfunctioncompiler.v1_20_1.ExtensionFunctions>.getScore([static:Scoreboard], [ctx:name], [ctx:objective]);
-  run();
 }
 
 @SCORE_DATA_NO_AUTO_CREATE [1.20.2] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <net.minecraft.world.scores.Score> [ctx:score]) {
   let [ctx:score] = <dev.epicpix.minecraftfunctioncompiler.v1_20_2.ExtensionFunctions>.getScore([static:Scoreboard], [ctx:name], [ctx:objective]);
-  run();
 }
 
 @SCORE_DATA_NO_AUTO_CREATE [1.20.3-1.20.4] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <net.minecraft.world.scores.ScoreAccess> [ctx:score]) {
   let [ctx:score] = <dev.epicpix.minecraftfunctioncompiler.v1_20_4.ExtensionFunctions>.getScore([static:Scoreboard], <net.minecraft.world.scores.ScoreHolder>.forNameOnly([ctx:name]), [ctx:objective]);
-  run();
 }
 
 @SCORE_DATA_NO_AUTO_CREATE [1.20.5-1.20.6] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <net.minecraft.world.scores.ScoreAccess> [ctx:score]) {
   let [ctx:score] = <dev.epicpix.minecraftfunctioncompiler.v1_20_6.ExtensionFunctions>.getScore([static:Scoreboard], <net.minecraft.world.scores.ScoreHolder>.forNameOnly([ctx:name]), [ctx:objective]);
-  run();
 }
 
 @SCORE_DATA_NO_AUTO_CREATE [1.21-1.21] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name], <net.minecraft.world.scores.ScoreAccess> [ctx:score]) {
   let [ctx:score] = <dev.epicpix.minecraftfunctioncompiler.v1_21.ExtensionFunctions>.getScore([static:Scoreboard], <net.minecraft.world.scores.ScoreHolder>.forNameOnly([ctx:name]), [ctx:objective]);
-  run();
 }
 
 @RUN_SCORE_OPERATION_SET [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) {
@@ -454,36 +408,20 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
   [ctx:target].set([ctx:target].get() * [ctx:source].get());
 }
 
-@RUN_SCORE_OPERATION_DIVIDE [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source], scope [ctx:exceptionScope]) {
-  if([ctx:source].getScore() != 0) {
-    [ctx:target].setScore(<java.lang.Math>.floorDiv([ctx:target].getScore(), [ctx:source].getScore()));
-  }else {
-    exit_scope([ctx:exceptionScope]);
-  }
+@RUN_SCORE_OPERATION_DIVIDE [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) {
+  [ctx:target].setScore(<java.lang.Math>.floorDiv([ctx:target].getScore(), [ctx:source].getScore()));
 }
 
-@RUN_SCORE_OPERATION_DIVIDE [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source], scope [ctx:exceptionScope]) {
-  if([ctx:source].get() != 0) {
-    [ctx:target].set(<java.lang.Math>.floorDiv([ctx:target].get(), [ctx:source].get()));
-  }else {
-    exit_scope([ctx:exceptionScope]);
-  }
+@RUN_SCORE_OPERATION_DIVIDE [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source]) {
+  [ctx:target].set(<java.lang.Math>.floorDiv([ctx:target].get(), [ctx:source].get()));
 }
 
-@RUN_SCORE_OPERATION_MODULO [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source], scope [ctx:exceptionScope]) {
-  if([ctx:source].getScore() != 0) {
-    [ctx:target].setScore(<java.lang.Math>.floorMod([ctx:target].getScore(), [ctx:source].getScore()));
-  }else {
-    exit_scope([ctx:exceptionScope]);
-  }
+@RUN_SCORE_OPERATION_MODULO [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) {
+  [ctx:target].setScore(<java.lang.Math>.floorMod([ctx:target].getScore(), [ctx:source].getScore()));
 }
 
-@RUN_SCORE_OPERATION_MODULO [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source], scope [ctx:exceptionScope]) {
-  if([ctx:source].get() != 0) {
-    [ctx:target].set(<java.lang.Math>.floorMod([ctx:target].get(), [ctx:source].get()));
-  }else {
-    exit_scope([ctx:exceptionScope]);
-  }
+@RUN_SCORE_OPERATION_MODULO [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source]) {
+  [ctx:target].set(<java.lang.Math>.floorMod([ctx:target].get(), [ctx:source].get()));
 }
 
 @RUN_SCORE_OPERATION_MIN [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) {
@@ -516,39 +454,26 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 
 @GET_ENTITY_WORLD(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.server.level.ServerLevel> [ctx:level]) {
   let [ctx:level] = cast([ctx:entity].level(), <net.minecraft.server.level.ServerLevel>);
-  run();
 }
 
 @SET_GAMEMODE(<net.minecraft.server.level.ServerPlayer> [ctx:player], <dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:gamemode]) {
     [ctx:player].setGameMode(map_enum([instr:gamemode], <net.minecraft.world.level.GameType>));
 }
 
-=CHECK_GAMEMODE(<net.minecraft.server.level.ServerPlayer> [ctx:player], <dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:gamemode], boolean [instr:negated]) {
-  (negated == false) => CHECK_IS_GAMEMODE;
-  => CHECK_NOT_IS_GAMEMODE;
+@MAP_GAMEMODE(<dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:instr_gamemode], <net.minecraft.world.level.GameType> [ctx:gamemode]) {
+    let [ctx:gamemode] = map_enum([instr:instr_gamemode], <net.minecraft.world.level.GameType>);
 }
 
-@CHECK_IS_GAMEMODE(<net.minecraft.server.level.ServerPlayer> [ctx:player], <dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:gamemode]) {
-    if([ctx:player].gameMode.getGameModeForPlayer() == map_enum([instr:gamemode], <net.minecraft.world.level.GameType>)) {
-      run();
-    }
+@GET_GAMEMODE(<net.minecraft.server.level.ServerPlayer> [ctx:player], <net.minecraft.world.level.GameType> [ctx:gamemode]) {
+    let [ctx:gamemode] = [ctx:player].gameMode.getGameModeForPlayer();
 }
 
-@CHECK_NOT_IS_GAMEMODE(<net.minecraft.server.level.ServerPlayer> [ctx:player], <dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:gamemode]) {
-    if([ctx:player].gameMode.getGameModeForPlayer() != map_enum([instr:gamemode], <net.minecraft.world.level.GameType>)) {
-      run();
-    }
-}
-
-@CHECK_IS_ALIVE(<net.minecraft.world.entity.Entity> [ctx:entity]) {
-    if([ctx:entity].isAlive() == true) {
-      run();
-    }
+@GET_IS_ALIVE(<net.minecraft.world.entity.Entity> [ctx:entity], boolean [ctx:alive]) {
+  let [ctx:alive] = [ctx:entity].isAlive();
 }
 
 @GET_ATTRIBUTE_INSTANCE(<net.minecraft.world.entity.LivingEntity> [ctx:entity], <net.minecraft.world.entity.ai.attributes.AttributeInstance> [ctx:attribute], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:attribute_name]) {
     let [ctx:attribute] = [ctx:entity].getAttributes().getInstance(map_attribute([instr:attribute_name]));
-    run();
 }
 
 @SET_ATTRIBUTE_BASE(<net.minecraft.world.entity.ai.attributes.AttributeInstance> [ctx:attribute], double [instr:value]) {
@@ -607,45 +532,28 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 
 @GET_EXPERIENCE_LEVEL(<net.minecraft.server.level.ServerPlayer> [ctx:player], int [ctx:level]) {
   let [ctx:level] = [ctx:player].experienceLevel;
-  run();
 }
 
-@TRY_AS_ENTITY(<java.lang.Object> [ctx:object], <net.minecraft.world.entity.Entity> [ctx:entity]) {
-  if(is([ctx:object], <net.minecraft.world.entity.Entity>) == true) {
-    let [ctx:entity] = cast([ctx:object], <net.minecraft.world.entity.Entity>);
-    run();
-  }
+##CONDITIONAL_JUMP
+@TRY_AS_ENTITY(<java.lang.Object> [ctx:object], <net.minecraft.world.entity.Entity> [ctx:entity], label [ctx:fail_label]) {
+  _jumpIfNotInstanceOf([ctx:object], <net.minecraft.world.entity.Entity>, [ctx:fail_label]);
+  let [ctx:entity] = cast([ctx:object], <net.minecraft.world.entity.Entity>);
 }
 
-@TRY_AS_LIVING_ENTITY(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.entity.LivingEntity> [ctx:living_entity]) {
-  if(is([ctx:entity], <net.minecraft.world.entity.LivingEntity>) == true) {
-    let [ctx:living_entity] = cast([ctx:entity], <net.minecraft.world.entity.LivingEntity>);
-    run();
-  }
+##CONDITIONAL_JUMP
+@TRY_AS_LIVING_ENTITY(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.entity.LivingEntity> [ctx:living_entity], label [ctx:fail_label]) {
+  _jumpIfNotInstanceOf([ctx:entity], <net.minecraft.world.entity.LivingEntity>, [ctx:fail_label]);
+  let [ctx:living_entity] = cast([ctx:entity], <net.minecraft.world.entity.LivingEntity>);
 }
 
-@TRY_AS_PLAYER(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.server.level.ServerPlayer> [ctx:player]) {
-  if(is([ctx:entity], <net.minecraft.server.level.ServerPlayer>) == true) {
-    let [ctx:player] = cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>);
-    run();
-  }
+##CONDITIONAL_JUMP
+@TRY_AS_PLAYER(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.server.level.ServerPlayer> [ctx:player], label [ctx:fail_label]) {
+  _jumpIfNotInstanceOf([ctx:entity], <net.minecraft.server.level.ServerPlayer>, [ctx:fail_label]);
+  let [ctx:player] = cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>);
 }
 
-=CHECK_ENTITY_NAME(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:name], boolean [instr:negated]) {
-  (negated == false) => CHECK_ENTITY_IS_NAME;
-  => CHECK_ENTITY_NOT_IS_NAME;
-}
-
-@CHECK_ENTITY_IS_NAME(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:name]) {
-  if([ctx:entity].getName().getString().equals([instr:name]) == true) {
-    run();
-  }
-}
-
-@CHECK_ENTITY_NOT_IS_NAME(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:name]) {
-  if([ctx:entity].getName().getString().equals([instr:name]) == false) {
-    run();
-  }
+@GET_ENTITY_NAME(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [ctx:name]) {
+  let [ctx:name] = [ctx:entity].getName().getString();
 }
 
 @GET_DISTANCE_SQUARED(<net.minecraft.world.phys.Vec3> [ctx:position_a], <net.minecraft.world.phys.Vec3> [ctx:position_b], double [ctx:distance]) {
@@ -653,12 +561,10 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
   let [local:y]<double> = [ctx:position_a].y() - [ctx:position_b].y();
   let [local:z]<double> = [ctx:position_a].z() - [ctx:position_b].z();
   let [ctx:distance] = [local:x]*[local:x] + [local:y]*[local:y] + [local:z]*[local:z];
-  run();
 }
 
 @GET_NBT_STORAGE(<net.minecraft.world.level.storage.CommandStorage> [static:CommandStorage], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:storage_name], <net.minecraft.nbt.CompoundTag> [ctx:tag]) {
   let [ctx:tag] = [static:CommandStorage].get(map_resource_location([instr:storage_name]));
-  run();
 }
 
 @SET_NBT_STORAGE(<net.minecraft.world.level.storage.CommandStorage> [static:CommandStorage], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:storage_name], <net.minecraft.nbt.CompoundTag> [ctx:tag]) {
@@ -667,108 +573,58 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 
 @LOAD_NBT_VALUE(<dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue> [instr:nbt], <net.minecraft.nbt.Tag> [ctx:tag]) {
   let [ctx:tag] = map_nbt_value([instr:nbt]).copy();
-  run();
-}
-
-@SET_NBT_VALUE(<net.minecraft.nbt.Tag> [ctx:input], <net.minecraft.nbt.Tag> [ctx:output]) {
-  [ctx:output] = [ctx:input];
-  run();
 }
 
 @CLONE_NBT_VALUE(<net.minecraft.nbt.Tag> [ctx:input], <net.minecraft.nbt.Tag> [ctx:output]) {
   let [ctx:output] = [ctx:input].copy();
-  run();
 }
 
-@CHECK_IS_COMPOUND(<net.minecraft.nbt.Tag> [ctx:tag], <net.minecraft.nbt.CompoundTag> [ctx:compound]) {
-  if(is([ctx:tag], <net.minecraft.nbt.CompoundTag>) == true) {
-    let [ctx:compound] = cast([ctx:tag], <net.minecraft.nbt.CompoundTag>);
-    run();
+##CONDITIONAL_JUMP
+@CHECK_IS_COMPOUND(<net.minecraft.nbt.Tag> [ctx:tag], <net.minecraft.nbt.CompoundTag> [ctx:compound], label [ctx:fail_label]) {
+  _jumpIfNotInstanceOf([ctx:tag], <net.minecraft.nbt.CompoundTag>, [ctx:fail_label]);
+  let [ctx:compound] = cast([ctx:tag], <net.minecraft.nbt.CompoundTag>);
+}
+
+##CONDITIONAL_JUMP
+@CHECK_IS_LIST(<net.minecraft.nbt.Tag> [ctx:tag], <net.minecraft.nbt.ListTag> [ctx:list], label [ctx:fail_label]) {
+  _jumpIfNotInstanceOf([ctx:tag], <net.minecraft.nbt.ListTag>, [ctx:fail_label]);
+  let [ctx:list] = cast([ctx:tag], <net.minecraft.nbt.ListTag>);
+}
+
+@SET_NBT_IN_COMPOUND(<net.minecraft.nbt.CompoundTag> [ctx:in], <java.lang.String> [instr:name], <net.minecraft.nbt.Tag> [ctx:value]) {
+  [ctx:in].put([instr:name], [ctx:value]);
+}
+
+@GET_NBT_FROM_COMPOUND_OR_CREATE(<net.minecraft.nbt.CompoundTag> [ctx:from], <java.lang.String> [instr:name], <net.minecraft.nbt.Tag> [ctx:value]) {
+  let [ctx:value] = [ctx:from].get([instr:name]);
+  if([ctx:value] == null) {
+    [ctx:value] = new <net.minecraft.nbt.CompoundTag>();
+    [ctx:from].put([instr:name], [ctx:value]);
   }
 }
 
-@SET_NBT_IN_COMPOUND(<net.minecraft.nbt.Tag> [ctx:in], <java.lang.String> [instr:name], <net.minecraft.nbt.Tag> [ctx:value]) {
-  if(is([ctx:in], <net.minecraft.nbt.CompoundTag>) == true) {
-    cast([ctx:in], <net.minecraft.nbt.CompoundTag>).put([instr:name], [ctx:value]);
-    run();
-  }
+@GET_NBT_FROM_COMPOUND(<net.minecraft.nbt.CompoundTag> [ctx:from], <java.lang.String> [instr:name], <net.minecraft.nbt.Tag> [ctx:value]) {
+  let [ctx:value] = [ctx:from].get([instr:name]);
 }
 
-@GET_NBT_FROM_COMPOUND_OR_CREATE(<net.minecraft.nbt.Tag> [ctx:from], <java.lang.String> [instr:name], <net.minecraft.nbt.Tag> [ctx:value]) {
-  if(is([ctx:from], <net.minecraft.nbt.CompoundTag>) == true) {
-    let [local:from_compound]<net.minecraft.nbt.CompoundTag> = cast([ctx:from], <net.minecraft.nbt.CompoundTag>);
-    let [ctx:value] = [local:from_compound].get([instr:name]);
-    if([ctx:value] == null) {
-      [ctx:value] = new <net.minecraft.nbt.CompoundTag>();
-      [local:from_compound].put([instr:name], [ctx:value]);
-    }
-    run();
-  }
+@GET_NBT_LIST_SIZE(<net.minecraft.nbt.ListTag> [ctx:list], int [ctx:size]) {
+  let [ctx:size] = [ctx:list].size();
 }
 
-@GET_NBT_FROM_COMPOUND(<net.minecraft.nbt.Tag> [ctx:from], <java.lang.String> [instr:name], <net.minecraft.nbt.Tag> [ctx:value]) {
-  if(is([ctx:from], <net.minecraft.nbt.CompoundTag>) == true) {
-    let [ctx:value] = cast([ctx:from], <net.minecraft.nbt.CompoundTag>).get([instr:name]);
-    if([ctx:value] != null) {
-      run();
-    }
-  }
+@GET_NBT_FROM_LIST(<net.minecraft.nbt.ListTag> [ctx:from], int [ctx:index], <net.minecraft.nbt.Tag> [ctx:value]) {
+  let [ctx:value] = [ctx:from].get([ctx:index]);
 }
 
-@GET_NBT_FROM_LIST_FORWARD(<net.minecraft.nbt.Tag> [ctx:from], int [instr:index], <net.minecraft.nbt.Tag> [ctx:value]) {
-  if(is([ctx:from], <net.minecraft.nbt.ListTag>) == true) {
-    let [local:list]<net.minecraft.nbt.ListTag> = cast([ctx:from], <net.minecraft.nbt.ListTag>);
-    if([local:list].size() > [instr:index]) {
-      let [ctx:value] = [local:list].get([instr:index]);
-      if([ctx:value] != null) {
-        run();
-      }
-    }
-  }
-}
-
-@GET_NBT_FROM_LIST_BACKWARD(<net.minecraft.nbt.Tag> [ctx:from], int [instr:index], <net.minecraft.nbt.Tag> [ctx:value]) {
-  if(is([ctx:from], <net.minecraft.nbt.ListTag>) == true) {
-    let [local:list]<net.minecraft.nbt.ListTag> = cast([ctx:from], <net.minecraft.nbt.ListTag>);
-    if([local:list].size() > [instr:index]) {
-      let [ctx:value] = [local:list].get([local:list].size() - [instr:index]);
-      if([ctx:value] != null) {
-        run();
-      }
-    }
-  }
-}
-
-@SET_NBT_IN_LIST_FORWARD(<net.minecraft.nbt.Tag> [ctx:in], int [instr:index], <net.minecraft.nbt.Tag> [ctx:value]) {
-  if(is([ctx:in], <net.minecraft.nbt.ListTag>) == true) {
-    let [local:list]<net.minecraft.nbt.ListTag> = cast([ctx:in], <net.minecraft.nbt.ListTag>);
-    if([local:list].size() > [instr:index]) {
-      if([local:list].setTag([instr:index], [ctx:value]) == true) {
-        run();
-      }
-    }
-  }
-}
-
-@SET_NBT_IN_LIST_BACKWARD(<net.minecraft.nbt.Tag> [ctx:in], int [instr:index], <net.minecraft.nbt.Tag> [ctx:value]) {
-  if(is([ctx:in], <net.minecraft.nbt.ListTag>) == true) {
-    let [local:list]<net.minecraft.nbt.ListTag> = cast([ctx:in], <net.minecraft.nbt.ListTag>);
-    if([local:list].size() > [instr:index]) {
-      if([local:list].setTag([local:list].size() - [instr:index], [ctx:value]) == true) {
-        run();
-      }
-    }
-  }
+@SET_NBT_IN_LIST(<net.minecraft.nbt.ListTag> [ctx:list], int [ctx:index], <net.minecraft.nbt.Tag> [ctx:value], label [ctx:fail_label]) {
+  _jumpIfEqual([ctx:list].setTag([ctx:index], [ctx:value]), false, [ctx:fail_label]);
 }
 
 @CREATE_NULL_TAG(<net.minecraft.nbt.Tag> [ctx:output]) {
   let [ctx:output] = null;
-  run();
 }
 
 @CREATE_INT_TAG(int [ctx:value], <net.minecraft.nbt.Tag> [ctx:output]) {
   let [ctx:output] = <net.minecraft.nbt.IntTag>.valueOf([ctx:value]);
-  run();
 }
 
 
@@ -814,33 +670,27 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 
 @GET_ENTITY_VEHICLE(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.entity.Entity> [ctx:vehicle]) {
   let [ctx:vehicle] = [ctx:entity].getVehicle();
-  run();
 }
 
-@GET_ANCHOR_OFFSET(<net.minecraft.commands.CommandSourceStack> [static:CommandSourceStack], <net.minecraft.world.entity.Entity> [ctx:entity], double [ctx:result]) {
+@GET_ANCHOR_OFFSET(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <net.minecraft.world.entity.Entity> [ctx:entity], double [ctx:result]) {
   let [ctx:result];
-  if([static:CommandSourceStack].getAnchor() == <net.minecraft.commands.arguments.EntityAnchorArgument.Anchor>.EYES) {
+  if([ctx:stack].getAnchor() == <net.minecraft.commands.arguments.EntityAnchorArgument.Anchor>.EYES) {
     [ctx:result] = to_double([ctx:entity].getEyeHeight());
   }else {
     [ctx:result] = to_double(0);
   }
-  run();
 }
 
 @GET_EYE_HEIGHT(<net.minecraft.world.entity.Entity> [ctx:entity], double [ctx:result]) {
   let [ctx:result] = to_double([ctx:entity].getEyeHeight());
-  run();
 }
 
 @GET_OBJECTIVE_CRITERION(<net.minecraft.world.scores.Objective> [ctx:objective], <net.minecraft.world.scores.criteria.ObjectiveCriteria> [ctx:criterion]) {
   let [ctx:criterion] = [ctx:objective].getCriteria();
-  run();
 }
 
-@CHECK_IS_CRITERION(<net.minecraft.world.scores.criteria.ObjectiveCriteria> [ctx:criterion], <dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCriterionData> [instr:other]) {
-  if([ctx:criterion] == map_scoreboard_criterion([instr:other])) {
-    run();
-  }
+@MAP_OBJECTIVE_CRITERION(<dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCriterionData> [instr:from], <net.minecraft.world.scores.criteria.ObjectiveCriteria> [ctx:criterion]) {
+  let [ctx:criterion] = map_scoreboard_criterion([instr:from]);
 }
 
 @SCORE_UNLOCK [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target]) {
@@ -853,7 +703,6 @@ $for_each_iterable(<java.lang.Iterable> [ctx:iterable], yield<java.lang.Object> 
 
 @LOAD_TEXT(<dev.epicpix.minecraftfunctioncompiler.data.text.Text> [instr:in_text], <net.minecraft.network.chat.Component> [ctx:text]) {
   let [ctx:text] = map_text([instr:in_text]).copy();
-  run();
 }
 
 @SEND_SYSTEM_MESSAGE(<net.minecraft.server.level.ServerPlayer> [ctx:player], <net.minecraft.network.chat.Component> [ctx:text]) {

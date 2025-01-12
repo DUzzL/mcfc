@@ -1,93 +1,103 @@
 package dev.epicpix.minecraftfunctioncompiler.il;
 
+import dev.epicpix.minecraftfunctioncompiler.util.Pair;
+
 import java.util.*;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-public record Instruction(InstructionType type, Map<String, Object> data, ArrayList<Instruction> children) {
+public record Instruction(InstructionType type, Object[] data) {
 
-    public Instruction(InstructionType type, Map<String, Object> data, List<Instruction> children) {
-        this(type, data, new ArrayList<>(children));
+    @Override
+    public String toString() {
+        return "Instruction{type=" + type + ", data=" + Arrays.toString(data) + "}";
     }
 
-    public Instruction(InstructionType type, Map<String, Object> data) {
-        this(type, data, new ArrayList<>());
+    @Override
+    public boolean equals(Object o) {
+        if(o == null || getClass() != o.getClass()) return false;
+        Instruction that = (Instruction) o;
+        return Objects.equals(type, that.type) && Arrays.deepEquals(data, that.data);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(type, Arrays.hashCode(data));
     }
 
     @SuppressWarnings("unchecked")
+    public <T> T get(int index) {
+        return (T) data[index];
+    }
+
     public <T> T get(String key) {
-        return (T) data.get(key);
+        return get(type.getArgumentIndex(key));
     }
 
-    public Instruction with(Instruction instruction) {
-        children.add(instruction);
-        return this;
+    public List<Pair<String, Object>> namedEntries() {
+        var entries = new ArrayList<Pair<String, Object>>(data.length);
+        for(int i = 0; i<data.length; i++) {
+            entries.add(new Pair<>(type.argumentNames()[i], data[i]));
+        }
+        return entries;
     }
 
-    public Instruction withChildren(ArrayList<Instruction> children) {
-        return new Instruction(type, data, children);
+    public boolean containsValue(Object value) {
+        for(var d : data) {
+            if(Objects.equals(d, value)) return true;
+        }
+        return false;
+    }
+
+    public Object[] optReplaceData(Object src, Object dst) {
+        Object[] replacedData = null;
+        for(int d = 0; d<data.length; d++) {
+            var value = data[d];
+            if(Objects.equals(value, src)) {
+                if(replacedData == null) replacedData = data.clone();
+                replacedData[d] = dst;
+            }
+        }
+        return replacedData;
+    }
+
+    public Object[] optReplaceDataIf(Predicate<Object> check, Object dst) {
+        Object[] replacedData = null;
+        for(int d = 0; d<data.length; d++) {
+            if(check.test(data[d])) {
+                if(replacedData == null) replacedData = data.clone();
+                replacedData[d] = dst;
+            }
+        }
+        return replacedData;
     }
 
     public static List<Instruction> findTyped(List<Instruction> input, InstructionType type) {
-        Stack<Instruction> instructions = new Stack<>();
-        instructions.addAll(input);
         List<Instruction> result = List.of();
-        while(!instructions.isEmpty()) {
-            var instr = instructions.pop();
+        for(var instr : input) {
             if(instr.type == type) {
                 if(result.isEmpty()) {
                     result = new ArrayList<>();
                 }
                 result.add(instr);
             }
-            instructions.addAll(instr.children());
         }
         return result;
     }
 
-    public int countInstructions() {
-        int res = 1;
-        for(var child : children) res += child.countInstructions();
-        return res;
-    }
+    public static void printInstructions(List<Instruction> instructions, Consumer<String> lineConsumer) {
+        var entries = new ArrayList<Pair<String, Object>>();
+        for(var instruction : instructions) {
+            for(int i = 0; i<instruction.data.length; i++) {
+                entries.add(new Pair<>(instruction.type.argumentNames()[i], instruction.data[i]));
+            }
+            entries.sort((a, b) -> a.toString().compareToIgnoreCase(b.toString()));
+            String args = entries.isEmpty() ? "" : " -> { " + entries.stream().map(it -> it.first() + "=" + (it.second() instanceof String str ? "\"" + str.translateEscapes() + "\"" : it.second())).collect(Collectors.joining(", ")) + " }";
 
-    public static int countInstructions(List<Instruction> instructions) {
-        int res = 0;
-        for(var instr : instructions) res += instr.countInstructions();
-        return res;
-    }
+            lineConsumer.accept("┗━ " + instruction.type.name() + args);
 
-    public static void printInstructionList(List<Instruction> instructions, Consumer<String> lineConsumer) {
-        for(var instr : instructions) printInstruction(instr, (data, ignored) -> lineConsumer.accept(data));
-    }
-
-    private static void printInstruction(Instruction instruction, BiConsumer<String, Boolean> writer) {
-        var entries = new ArrayList<>(instruction.data.entrySet());
-        entries.sort((a, b) -> a.toString().compareToIgnoreCase(b.toString()));
-        String args = entries.isEmpty() ? "" : " -> { " + entries.stream().map(it -> it.getKey() + "=" + (it.getValue() instanceof String str ? "\"" + str.translateEscapes() + "\"" : it.getValue())).collect(Collectors.joining(", ")) + " }";
-
-        writer.accept(instruction.type.name() + args, true);
-
-        ArrayList<Instruction> instructions = instruction.children;
-        for(int i = 0; i < instructions.size(); i++) {
-            var child = instructions.get(i);
-            boolean hasNext = i + 1 < instructions.size();
-            printInstruction(child, (data, first) -> {
-                if(!hasNext) {
-                    if(first) {
-                        writer.accept("┗━ " + data, false);
-                    }else {
-                        writer.accept("   " + data, false);
-                    }
-                }else {
-                    if(first) {
-                        writer.accept("┣━ " + data, false);
-                    }else {
-                        writer.accept("┃  " + data, false);
-                    }
-                }
-            });
+            entries.clear();
         }
     }
 }

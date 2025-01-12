@@ -1,6 +1,5 @@
 package dev.epicpix.minecraftfunctioncompiler.compiler;
 
-import com.sun.jdi.IntegerValue;
 import dev.epicpix.minecraftfunctioncompiler.commands.CommandParams;
 import dev.epicpix.minecraftfunctioncompiler.commands.params.*;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
@@ -9,114 +8,119 @@ import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPathPart;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 public final class CommandCompiler {
     private CommandCompiler() {}
 
     public static List<Instruction> compile(List<CommandParams> commands) {
-        ArrayList<Instruction> instructions = new ArrayList<>();
-        var context = new CompilationContext(CompilationContextData.create(instructions::add));
+        var context = new CompilationContext();
         for(var command : commands) {
-            compile(context, command, ResultStorage.empty());
+            var commandLabel = context.current().writeLabel(context.instructionWriter);
+            try(var ignored = context.enterWithoutValue(context.current().withContextLabel(commandLabel))) {
+                compile(context, null, command, ResultStorage.empty());
+            }
         }
-        context.exit();
-        return instructions;
+        return context.end();
     }
 
-    private static void compile(CompilationContext context, CommandParams command, ResultStorage result) {
+    private static void compile(CompilationContext context, ForkingContext forkingContext, CommandParams command, ResultStorage result) {
         if(command instanceof CommandAttributeBaseSet cmdData) {
             try(var selector = context.forSelector(cmdData.target())) {
                 var livingEntityLocation = context.<LivingEntity>createLocal();
                 var attrLocation = context.<AttributeInstance>createLocal();
-                var instruction =
-                    Instructions2.tryAsLivingEntity(selector.content(), livingEntityLocation)
-                        .with(Instructions2.getAttributeInstance(livingEntityLocation, attrLocation, cmdData.attribute().location())
-                            .with(Instructions2.ifNotNull(attrLocation.lower())
-                                .with(Instructions2.setAttributeBase(attrLocation, cmdData.value()))
-                            ));
-                selector.writeInstruction(instruction);
-
+                selector.writeInstruction(Instructions2.tryAsLivingEntity(selector.content(), livingEntityLocation, selector.data().contextEndLabel()));
+                selector.writeInstruction(Instructions2.getAttributeInstance(livingEntityLocation, attrLocation, cmdData.attribute().location()));
+                selector.writeInstruction(Instructions2.ifNullJump(attrLocation.lower(), selector.data().contextEndLabel()));
+                selector.writeInstruction(Instructions2.setAttributeBase(attrLocation, cmdData.value()));
             }
         }else if(command instanceof CommandDataModifyStorageSetValue cmdData) {
             var storageLocal = context.<NbtCompound>createLocal();
             var setCountLocal = context.<Integer>createLocal();
 
-            var stacker = new InstructionStacker(Instructions2.always());
-
-            stacker.stackInstruction(Instructions2.getNbtStorage(cmdData.storage(), storageLocal));
-            var resultStorage = Instructions2.createResultStorage(setCountLocal);
-            stacker.stackInstruction(resultStorage);
+            context.writeInstruction(Instructions2.getNbtStorage(cmdData.storage(), storageLocal));
+            context.writeInstruction(Instructions2.valueDefine(setCountLocal, LocationData.ofInteger(0)));
 
             var parts = cmdData.path().parts();
-            try(var ignored = context.enterWithoutValue(context.current().withBaseInstruction(resultStorage))) {
-                getNbtPathValue(context, storageLocal.forceCast(), parts.subList(0, parts.size() - 1), true, (value) -> {
-                    var last = parts.get(parts.size() - 1);
-                    if(last instanceof NbtPathPart.Named named) {
-                        var tagLocal = context.<NbtTag>createLocal();
-                        context.writeInstruction(Instructions2.loadNbtValue(cmdData.value(), tagLocal).with(Instructions2.setNbtInCompound(value, named.name(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
-                    }else if(last instanceof NbtPathPart.ArrayIndexInteger indexed) {
-                        var tagLocal = context.<NbtTag>createLocal();
-                        if(indexed.index() >= 0) {
-                            context.writeInstruction(Instructions2.loadNbtValue(cmdData.value(), tagLocal).with(Instructions2.setNbtInListForward(value, indexed.index(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
-                        }else {
-                            context.writeInstruction(Instructions2.loadNbtValue(cmdData.value(), tagLocal).with(Instructions2.setNbtInListBackward(value, -indexed.index(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
-                        }
+
+            var codeLocation = context.current().writeLabel(context.instructionWriter);
+            try(var innerContext = context.enterWithoutValue(context.current().withContextLabel(codeLocation))) {
+                var value = getNbtPathValue(context, storageLocal.forceCast(), parts.subList(0, parts.size() - 1), true, innerContext.data().contextEndLabel());
+
+                var last = parts.get(parts.size() - 1);
+                if(last instanceof NbtPathPart.Named named) {
+                    var valueCompound = context.<NbtCompound>createLocal();
+                    innerContext.writeInstruction(Instructions2.checkIsCompound(value, valueCompound, innerContext.data().contextEndLabel()));
+
+                    var tagLocal = context.<NbtTag>createLocal();
+                    innerContext.writeInstruction(Instructions2.loadNbtValue(cmdData.value(), tagLocal));
+                    innerContext.writeInstruction(Instructions2.setNbtInCompound(valueCompound, named.name(), tagLocal));
+                    innerContext.writeInstruction(Instructions2.valueAdd(setCountLocal, LocationData.ofInteger(1)));
+                }else if(last instanceof NbtPathPart.ArrayIndexInteger indexed) {
+                    var list = context.<NbtList>createLocal();
+                    innerContext.writeInstruction(Instructions2.checkIsList(value, list, innerContext.data().contextEndLabel()));
+                    var length = context.<Integer>createLocal();
+                    innerContext.writeInstruction(Instructions2.getListLength(list.forceCast(), length));
+                    innerContext.writeInstruction(Instructions2.ifGreaterEqualJump(LocationData.ofInteger(indexed.index()), length, innerContext.data().contextEndLabel()));
+                    var index = context.<Integer>createLocal();
+
+                    var tagLocal = context.<NbtTag>createLocal();
+                    innerContext.writeInstruction(Instructions2.loadNbtValue(cmdData.value(), tagLocal));
+
+                    if(indexed.index() >= 0) {
+                        innerContext.writeInstruction(Instructions2.valueDefine(index, LocationData.ofInteger(indexed.index())));
                     }else {
-                        throw new UnsupportedOperationException("Cannot set nbt value from path " + last);
+                        innerContext.writeInstruction(Instructions2.valueDefine(index, length));
+                        innerContext.writeInstruction(Instructions2.valueSub(index, LocationData.ofInteger(-indexed.index())));
                     }
-                });
-            }
-            stacker.stackInstruction(Instructions2.isNotResultStorage(setCountLocal, 0));
-            try(var data = context.enterWithoutValue(context.current().withBaseInstruction(stacker.current))) {
-                data.writeInstruction(Instructions2.setNbtStorage(cmdData.storage(), storageLocal));
+
+                    innerContext.writeInstruction(Instructions2.setNbtInList(list, index, tagLocal, innerContext.data().contextEndLabel()));
+                    innerContext.writeInstruction(Instructions2.valueAdd(setCountLocal, LocationData.ofInteger(1)));
+                }else {
+                    throw new UnsupportedOperationException("Cannot set nbt value from path " + last);
+                }
             }
 
-            context.writeInstruction(stacker.base);
+            context.writeInstruction(Instructions2.ifEqualJump(setCountLocal, LocationData.ofInteger(0), context.current().contextEndLabel()));
+            context.writeInstruction(Instructions2.setNbtStorage(cmdData.storage(), storageLocal));
         }else if(command instanceof CommandDifficultySet cmdData) {
             context.writeInstruction(Instructions2.setDifficulty(cmdData.difficulty()));
         }else if(command instanceof CommandEffectClear) {
             try(var self = context.getCurrentEntity()) {
                 var livingEntityLocation = context.<LivingEntity>createLocal();
-                self.writeInstruction(
-                    Instructions2.ifNotNull(self.content().lower())
-                        .with(Instructions2.tryAsLivingEntity(self.content(), livingEntityLocation)
-                            .with(Instructions2.clearAllEffects(livingEntityLocation))));
+                self.writeInstruction(Instructions2.ifNullJump(self.content().lower(), self.data().contextEndLabel()));
+                self.writeInstruction(Instructions2.tryAsLivingEntity(self.content(), livingEntityLocation, self.data().contextEndLabel()));
+                self.writeInstruction(Instructions2.clearAllEffects(livingEntityLocation));
             }
         }else if(command instanceof CommandEffectClearEntities cmdData) {
             try(var targets = context.forSelector(cmdData.targets())) {
                 var livingEntityLocation = context.<LivingEntity>createLocal();
-                targets.writeInstruction(
-                    Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation)
-                        .with(Instructions2.clearAllEffects(livingEntityLocation)));
+                targets.writeInstruction(Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation, targets.data().contextEndLabel()));
+                targets.writeInstruction(Instructions2.clearAllEffects(livingEntityLocation));
             }
         }else if(command instanceof CommandEffectClearEntitiesEffect cmdData) {
             try(var targets = context.forSelector(cmdData.targets())) {
                 var livingEntityLocation = context.<LivingEntity>createLocal();
-                targets.writeInstruction(
-                    Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation)
-                        .with(Instructions2.clearEffect(livingEntityLocation, cmdData.effect().location())));
+                targets.writeInstruction(Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation, targets.data().contextEndLabel()));
+                targets.writeInstruction(Instructions2.clearEffect(livingEntityLocation, cmdData.effect().location()));
             }
         }else if(command instanceof CommandEffectGive cmdData) {
             MobEffectData effect = cmdData.effect();
             try(var self = context.getCurrentEntity()) {
                 try(var targets = context.forSelector(cmdData.targets())) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
-                    targets.writeInstruction(
-                        Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation)
-                            .with(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), effect.instant() ? 1 : 600, 0, true)));
+                    targets.writeInstruction(Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation, targets.data().contextEndLabel()));
+                    targets.writeInstruction(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), effect.instant() ? 1 : 600, 0, true));
                 }
             }
-        }else if(command instanceof CommandEffectGiveDur cmdData) {
+        }
+        else if(command instanceof CommandEffectGiveDur cmdData) {
             MobEffectData effect = cmdData.effect();
             try(var self = context.getCurrentEntity()) {
                 try(var targets = context.forSelector(cmdData.targets())) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
-                    targets.writeInstruction(
-                        Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation)
-                            .with(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), cmdData.duration() * (effect.instant() ? 1 : 20), 0, true)));
+                    targets.writeInstruction(Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation, targets.data().contextEndLabel()));
+                    targets.writeInstruction(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), cmdData.duration() * (effect.instant() ? 1 : 20), 0, true));
                 }
             }
         }else if(command instanceof CommandEffectGiveDurAmp cmdData) {
@@ -124,9 +128,8 @@ public final class CommandCompiler {
             try(var self = context.getCurrentEntity()) {
                 try(var targets = context.forSelector(cmdData.targets())) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
-                    targets.writeInstruction(
-                        Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation)
-                            .with(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), cmdData.duration() * (effect.instant() ? 1 : 20), cmdData.amplifier(), true)));
+                    targets.writeInstruction(Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation, targets.data().contextEndLabel()));
+                    targets.writeInstruction(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), cmdData.duration() * (effect.instant() ? 1 : 20), cmdData.amplifier(), true));
                 }
             }
         }else if(command instanceof CommandEffectGiveDurAmpShow cmdData) {
@@ -134,9 +137,8 @@ public final class CommandCompiler {
             try(var self = context.getCurrentEntity()) {
                 try(var targets = context.forSelector(cmdData.targets())) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
-                    targets.writeInstruction(
-                        Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation)
-                            .with(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), cmdData.duration() * (effect.instant() ? 1 : 20), cmdData.amplifier(), !cmdData.hideParticles())));
+                    targets.writeInstruction(Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation, targets.data().contextEndLabel()));
+                    targets.writeInstruction(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), cmdData.duration() * (effect.instant() ? 1 : 20), cmdData.amplifier(), !cmdData.hideParticles()));
                 }
             }
         }else if(command instanceof CommandEffectGiveInf cmdData) {
@@ -144,9 +146,8 @@ public final class CommandCompiler {
             try(var self = context.getCurrentEntity()) {
                 try(var targets = context.forSelector(cmdData.targets())) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
-                    targets.writeInstruction(
-                        Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation)
-                            .with(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), -1, 0, true)));
+                    targets.writeInstruction(Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation, targets.data().contextEndLabel()));
+                    targets.writeInstruction(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), -1, 0, true));
                 }
             }
         }else if(command instanceof CommandEffectGiveInfAmp cmdData) {
@@ -154,9 +155,8 @@ public final class CommandCompiler {
             try(var self = context.getCurrentEntity()) {
                 try(var targets = context.forSelector(cmdData.targets())) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
-                    targets.writeInstruction(
-                        Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation)
-                            .with(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), -1, cmdData.amplifier(), true)));
+                    targets.writeInstruction(Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation, targets.data().contextEndLabel()));
+                    targets.writeInstruction(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), -1, cmdData.amplifier(), true));
                 }
             }
         }else if(command instanceof CommandEffectGiveInfAmpShow cmdData) {
@@ -164,284 +164,324 @@ public final class CommandCompiler {
             try(var self = context.getCurrentEntity()) {
                 try(var targets = context.forSelector(cmdData.targets())) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
-                    targets.writeInstruction(
-                        Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation)
-                            .with(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), -1, cmdData.amplifier(), !cmdData.hideParticles())));
+                    targets.writeInstruction(Instructions2.tryAsLivingEntity(targets.content(), livingEntityLocation, targets.data().contextEndLabel()));
+                    targets.writeInstruction(Instructions2.giveEffect(self.content(), livingEntityLocation, effect.location(), -1, cmdData.amplifier(), !cmdData.hideParticles()));
                 }
             }
         }else if(command instanceof CommandExecuteAlign cmdData) {
-            try(var pos = context.getPosition()) {
-                var newPosition = context.<Vec3>createLocal();
-                var instruction = Instructions.alignPosition(pos.content(), newPosition, cmdData.swizzle());
-                try(var ignored = context.enterWithoutValue(pos.data().withCurrentPosition(newPosition).withBaseInstruction(instruction))) {
-                    compile(context, cmdData.command(), result);
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var pos = context.getPosition()) {
+                    var newPosition = context.<Vec3>createLocal();
+                    pos.writeInstruction(Instructions.alignPosition(pos.content(), newPosition, cmdData.swizzle()));
+                    try(var ignored = context.enterWithoutValue(pos.data().withCurrentPosition(newPosition))) {
+                        compile(context, fContext.content(), cmdData.command(), result);
+                    }
                 }
-                pos.writeInstruction(instruction);
             }
         }else if(command instanceof CommandExecuteAnchored cmdData) {
-            try(var ignored = context.enterWithoutValue(context.current().withCurrentAnchor(cmdData.anchor()))) {
-                compile(context, cmdData.command(), result);
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var ignored = context.enterWithoutValue(context.current().withCurrentAnchor(cmdData.anchor()))) {
+                    compile(context, fContext.content(), cmdData.command(), result);
+                }
             }
         }else if(command instanceof CommandExecuteAs cmdData) {
-            try(var selector = context.forSelector(cmdData.targets())) {
-                try(var ignored = context.enterWithoutValue(selector.data().withCurrentEntity(selector.content()))) {
-                    compile(context, cmdData.command(), result);
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var selector = context.forSelector(cmdData.targets())) {
+                    try(var ignored = context.enterWithoutValue(selector.data().withCurrentEntity(selector.content()))) {
+                        compile(context, fContext.content(), cmdData.command(), result);
+                    }
                 }
             }
         }else if(command instanceof CommandExecuteAt cmdData) {
-            try(var selector = context.forSelector(cmdData.targets())) {
-                var world = context.<World>createLocal();
-                var position = context.<Vec3>createLocal();
-                var rotation = context.<Vec2>createLocal();
-                var execInstruction = Instructions2.getEntityRotation(selector.content(), rotation);
-                var instruction = Instructions2.getEntityWorld(selector.content(), world).with(Instructions2.getEntityPosition(selector.content(), position).with(execInstruction));
-                try(var ignored = context.enterWithoutValue(selector.data().withCurrentPosition(position).withCurrentRotation(rotation).withCurrentWorld(world).withBaseInstruction(execInstruction))) {
-                    compile(context, cmdData.command(), result);
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var selector = context.forSelector(cmdData.targets())) {
+                    var world = context.<World>createLocal();
+                    var position = context.<Vec3>createLocal();
+                    var rotation = context.<Vec2>createLocal();
+                    selector.writeInstruction(Instructions2.getEntityWorld(selector.content(), world));
+                    selector.writeInstruction(Instructions2.getEntityPosition(selector.content(), position));
+                    selector.writeInstruction(Instructions2.getEntityRotation(selector.content(), rotation));
+                    try(var ignored = context.enterWithoutValue(selector.data().withCurrentPosition(position).withCurrentRotation(rotation).withCurrentWorld(world))) {
+                        compile(context, fContext.content(), cmdData.command(), result);
+                    }
                 }
-                selector.writeInstruction(instruction);
             }
         }else if(command instanceof CommandExecuteIfEntity cmdData) {
-            try(var ignored = context.forSelector(cmdData.entities().limit(1))) {
-                compile(context, cmdData.command(), result);
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var ignored = context.forSelector(cmdData.entities().limit(1))) {
+                    compile(context, fContext.content(), cmdData.command(), result);
+                }
             }
         }else if(command instanceof CommandExecuteIfScoreRange cmdData) {
-            try(var scoreAccessor = context.forScoreAccessors(cmdData.target().selectSingle())) {
-                try(var scoreData = context.getScoreData(scoreAccessor.content(), false)) {
-                    var scoreValue = context.<Integer>createLocal();
-                    var execInstruction = Instructions.checkIntRange(scoreValue, cmdData.range());
-                    var baseInstruction = Instructions2.getScoreValue(scoreData.content(), scoreValue).with(execInstruction);
-                    try(var ignored = context.enterWithoutValue(scoreData.data().withBaseInstruction(execInstruction))) {
-                        compile(context, cmdData.command(), result);
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var scoreAccessor = context.forScoreAccessors(cmdData.target().selectSingle())) {
+                    try(var scoreData = context.getScoreData(scoreAccessor.content(), false)) {
+                        var scoreValue = context.<Integer>createLocal();
+                        scoreData.writeInstruction(Instructions2.getScoreValue(scoreData.content(), scoreValue));
+                        context.jumpIfNotMatchesRange(scoreData.data(), scoreValue, cmdData.range(), scoreData.data().contextEndLabel());
+                        compile(context, fContext.content(), cmdData.command(), result);
                     }
-                    scoreData.writeInstruction(baseInstruction);
                 }
             }
         }else if(command instanceof CommandExecuteIfScoreCompare cmdData) {
-            try(var target = context.forScoreAccessors(cmdData.target().selectSingle())) {
-                try(var source = context.forScoreAccessors(cmdData.source().selectSingle())) {
-                    try(var targetScore = context.getScoreData(target.content(), false)) {
-                        try(var sourceScore = context.getScoreData(source.content(), false)) {
-                            var instr = Instructions.checkScoreCompare(targetScore.content(), sourceScore.content(), cmdData.comparison());
-                            try(var ignored = context.enterWithoutValueUsingInstruction(instr)) {
-                                compile(context, cmdData.command(), result);
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var target = context.forScoreAccessors(cmdData.target().selectSingle())) {
+                    try(var source = context.forScoreAccessors(cmdData.source().selectSingle())) {
+                        try(var targetScore = context.getScoreData(target.content(), false)) {
+                            try(var sourceScore = context.getScoreData(source.content(), false)) {
+                                sourceScore.writeInstruction(Instructions.checkScoreCompare(targetScore.content(), sourceScore.content(), cmdData.comparison(), sourceScore.data().contextEndLabel()));
+                                compile(context, fContext.content(), cmdData.command(), result);
                             }
-                            sourceScore.writeInstruction(instr);
                         }
                     }
                 }
             }
         }else if(command instanceof CommandExecuteOnVehicle cmdData) {
-            try(var currentEntity = context.getCurrentEntity()) {
-                var vehicle = context.<Entity>createLocal();
-                var ifNotNull = Instructions2.ifNotNull(vehicle.lower());
-                var instruction = Instructions2.getEntityVehicle(currentEntity.content(), vehicle).with(ifNotNull);
-                try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(vehicle).withBaseInstruction(ifNotNull))) {
-                    compile(context, cmdData.command(), result);
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var currentEntity = context.getCurrentEntity()) {
+                    var vehicle = context.<Entity>createLocal();
+                    currentEntity.writeInstruction(Instructions2.getEntityVehicle(currentEntity.content(), vehicle));
+                    currentEntity.writeInstruction(Instructions2.ifNullJump(vehicle.lower(), currentEntity.data().contextEndLabel()));
+                    try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(vehicle))) {
+                        compile(context, fContext.content(), cmdData.command(), result);
+                    }
                 }
-                currentEntity.writeInstruction(instruction);
             }
         }else if(command instanceof CommandExecutePositionedAs cmdData) {
-            try(var targets = context.forSelector(cmdData.targets())) {
-                var position = context.<Vec3>createLocal();
-                var instruction = Instructions2.getEntityPosition(targets.content(), position);
-                try(var ignored = context.enterWithoutValue(targets.data().withCurrentPosition(position).withBaseInstruction(instruction))) {
-                    compile(context, cmdData.command(), result);
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var targets = context.forSelector(cmdData.targets())) {
+                    var position = context.<Vec3>createLocal();
+                    targets.writeInstruction(Instructions2.getEntityPosition(targets.content(), position));
+                    try(var ignored = context.enterWithoutValue(targets.data().withCurrentPosition(position))) {
+                        compile(context, fContext.content(), cmdData.command(), result);
+                    }
                 }
-                targets.writeInstruction(instruction);
             }
         }else if(command instanceof CommandExecutePositionedPos cmdData) {
-            try(var position = context.applyPosition(cmdData.pos())) {
-                try(var ignored = context.enterWithoutValue(position.data().withCurrentPosition(position.content()).withCurrentAnchor(LocationAnchor.FEET))) {
-                    compile(context, cmdData.command(), result);
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var position = context.applyPosition(cmdData.pos())) {
+                    try(var ignored = context.enterWithoutValue(position.data().withCurrentPosition(position.content()).withCurrentAnchor(LocationAnchor.FEET))) {
+                        compile(context, fContext.content(), cmdData.command(), result);
+                    }
                 }
             }
         }else if(command instanceof CommandExecuteRotatedAs cmdData) {
-            try(var targets = context.forSelector(cmdData.targets())) {
-                var rotation = context.<Vec2>createLocal();
-                var instruction = Instructions2.getEntityRotation(targets.content(), rotation);
-                try(var ignored = context.enterWithoutValue(targets.data().withCurrentRotation(rotation).withBaseInstruction(instruction))) {
-                    compile(context, cmdData.command(), result);
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var targets = context.forSelector(cmdData.targets())) {
+                    var rotation = context.<Vec2>createLocal();
+                    targets.writeInstruction(Instructions2.getEntityRotation(targets.content(), rotation));
+                    try(var ignored = context.enterWithoutValue(targets.data().withCurrentRotation(rotation))) {
+                        compile(context, fContext.content(), cmdData.command(), result);
+                    }
                 }
-                targets.writeInstruction(instruction);
             }
         }else if(command instanceof CommandExecuteRotatedRot cmdData) {
-            try(var rotation = context.applyRotation(cmdData.rot())) {
-                try(var ignored = context.enterWithoutValue(rotation.data().withCurrentRotation(rotation.content()))) {
-                    compile(context, cmdData.command(), result);
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var rotation = context.applyRotation(cmdData.rot())) {
+                    try(var ignored = context.enterWithoutValue(rotation.data().withCurrentRotation(rotation.content()))) {
+                        compile(context, fContext.content(), cmdData.command(), result);
+                    }
                 }
             }
         }else if(command instanceof CommandExecuteRun cmdData) {
-            compile(context, cmdData.command(), result);
+            try(var ignored = context.generateForkExecCode(forkingContext)) {
+                compile(context, forkingContext, cmdData.command(), result);
+            }
         }else if(command instanceof CommandExecuteStoreResultScore cmdData) {
-            try(var res = context.withResultStorage(true, false)) {
-                compile(context, cmdData.command(), res.content());
-                res.content().checkRequirements(cmdData.command());
+            try(var ignored = context.generateForkExecCode(forkingContext)) {
+                var res = context.withResultStorage(true, false);
+                compile(context, null, cmdData.command(), res);
+                res.checkRequirements(cmdData.command());
                 try(var scoreAccessor = context.forScoreAccessors(cmdData.targets())) {
                     try(var scoreData = context.getScoreData(scoreAccessor.content(), true)) {
-                        scoreData.writeInstruction(Instructions2.setScore(scoreData.content(), res.content().result));
+                        scoreData.writeInstruction(Instructions2.setScore(scoreData.content(), res.result));
                     }
                 }
             }
         }else if(command instanceof CommandExecuteStoreResultStorage cmdData) {
-            if(cmdData.storeType() == ResultStoreType.INT) {
-                if(cmdData.scale() == 1.0d) {
-                    try(var res = context.withResultStorage(true, false)) {
-                        compile(context, cmdData.command(), res.content());
-                        res.content().checkRequirements(cmdData.command());
+            try(var ignored = context.generateForkExecCode(forkingContext)) {
+                if(cmdData.storeType() == ResultStoreType.INT) {
+                    if(cmdData.scale() == 1.0d) {
+                        var res = context.withResultStorage(true, false);
+                        compile(context, null, cmdData.command(), res);
+                        res.checkRequirements(cmdData.command());
 
                         var storageLocal = context.<NbtCompound>createLocal();
                         var setCountLocal = context.<Integer>createLocal();
 
-                        var stacker = new InstructionStacker(Instructions2.always());
-
-                        stacker.stackInstruction(Instructions2.getNbtStorage(cmdData.storage(), storageLocal));
-                        var resultStorage = Instructions2.createResultStorage(setCountLocal);
-                        stacker.stackInstruction(resultStorage);
+                        context.writeInstruction(Instructions2.getNbtStorage(cmdData.storage(), storageLocal));
+                        context.writeInstruction(Instructions2.valueDefine(setCountLocal, LocationData.ofInteger(0)));
 
                         var parts = cmdData.path().parts();
-                        try(var ignored = context.enterWithoutValue(context.current().withBaseInstruction(resultStorage))) {
-                            getNbtPathValue(context, storageLocal.forceCast(), parts.subList(0, parts.size() - 1), true, (value) -> {
-                                var last = parts.get(parts.size() - 1);
-                                if(last instanceof NbtPathPart.Named named) {
-                                    var tagLocal = context.<NbtTag>createLocal();
-                                    context.writeInstruction(Instructions2.createIntTag(res.content().result, tagLocal).with(Instructions2.setNbtInCompound(value, named.name(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
-                                }else if(last instanceof NbtPathPart.ArrayIndexInteger indexed) {
-                                    var tagLocal = context.<NbtTag>createLocal();
-                                    if(indexed.index() >= 0) {
-                                        context.writeInstruction(Instructions2.createIntTag(res.content().result, tagLocal).with(Instructions2.setNbtInListForward(value, indexed.index(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
-                                    }else {
-                                        context.writeInstruction(Instructions2.createIntTag(res.content().result, tagLocal).with(Instructions2.setNbtInListBackward(value, -indexed.index(), tagLocal).with(Instructions2.addResultStorage(setCountLocal, LocationData.ofInteger(1)))));
-                                    }
-                                }else {
-                                    throw new UnsupportedOperationException("Cannot set nbt value from path " + last);
-                                }
-                            });
-                        }
-                        stacker.stackInstruction(Instructions2.isNotResultStorage(setCountLocal, 0));
-                        try(var data = context.enterWithoutValue(context.current().withBaseInstruction(stacker.current))) {
-                            data.writeInstruction(Instructions2.setNbtStorage(cmdData.storage(), storageLocal));
-                        }
 
-                        context.writeInstruction(stacker.base);
+                        var codeLocation = context.current().writeLabel(context.instructionWriter);
+                        try(var innerContext = context.enterWithoutValue(context.current().withContextLabel(codeLocation))) {
+                            var value = getNbtPathValue(context, storageLocal.forceCast(), parts.subList(0, parts.size() - 1), true, innerContext.data().contextEndLabel());
+
+                            var last = parts.get(parts.size() - 1);
+                            if(last instanceof NbtPathPart.Named named) {
+                                var valueCompound = context.<NbtCompound>createLocal();
+                                innerContext.writeInstruction(Instructions2.checkIsCompound(value, valueCompound, innerContext.data().contextEndLabel()));
+
+                                var tagLocal = context.<NbtTag>createLocal();
+                                innerContext.writeInstruction(Instructions2.createIntTag(res.result, tagLocal));
+                                innerContext.writeInstruction(Instructions2.setNbtInCompound(valueCompound, named.name(), tagLocal));
+                                innerContext.writeInstruction(Instructions2.valueAdd(setCountLocal, LocationData.ofInteger(1)));
+                            }else if(last instanceof NbtPathPart.ArrayIndexInteger indexed) {
+                                var list = context.<NbtList>createLocal();
+                                innerContext.writeInstruction(Instructions2.checkIsList(value, list, innerContext.data().contextEndLabel()));
+                                var length = context.<Integer>createLocal();
+                                innerContext.writeInstruction(Instructions2.getListLength(list.forceCast(), length));
+                                innerContext.writeInstruction(Instructions2.ifGreaterEqualJump(LocationData.ofInteger(indexed.index()), length, innerContext.data().contextEndLabel()));
+                                var index = context.<Integer>createLocal();
+
+                                var tagLocal = context.<NbtTag>createLocal();
+                                innerContext.writeInstruction(Instructions2.createIntTag(res.result, tagLocal));
+
+                                if(indexed.index() >= 0) {
+                                    innerContext.writeInstruction(Instructions2.valueDefine(index, LocationData.ofInteger(indexed.index())));
+                                }else {
+                                    innerContext.writeInstruction(Instructions2.valueDefine(index, length));
+                                    innerContext.writeInstruction(Instructions2.valueSub(index, LocationData.ofInteger(-indexed.index())));
+                                }
+
+                                innerContext.writeInstruction(Instructions2.setNbtInList(list, index, tagLocal, innerContext.data().contextEndLabel()));
+                                innerContext.writeInstruction(Instructions2.valueAdd(setCountLocal, LocationData.ofInteger(1)));
+                            }else {
+                                throw new UnsupportedOperationException("Cannot set nbt value from path " + last);
+                            }
+                        }
+                        context.writeInstruction(Instructions2.ifEqualJump(setCountLocal, LocationData.ofInteger(0), context.current().contextEndLabel()));
+                        context.writeInstruction(Instructions2.setNbtStorage(cmdData.storage(), storageLocal));
+                    }else {
+                        throw new UnsupportedOperationException("Storing into storage with a non 1.0 scale is not yet implemented");
                     }
                 }else {
-                    throw new UnsupportedOperationException("Storing into storage with a non 1.0 scale is not yet implemented");
+                    throw new UnsupportedOperationException("Storing into storage with a non-int type is not yet implemented");
                 }
-            }else {
-                throw new UnsupportedOperationException("Storing into storage with a non-int type is not yet implemented");
             }
         }else if(command instanceof CommandExecuteUnlessEntity cmdData) {
-            try(var scope = context.forScope()) {
-                try(var selector = context.forSelector(cmdData.entities().limit(1))) {
-                    selector.writeInstruction(Instructions2.exitScope(scope.content()));
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                var contextLabel = context.current().contextEndLabel();
+                var codeLocation = context.current().writeLabel(context.instructionWriter);
+                try(var ignored = context.enterWithoutValue(context.current().withContextLabel(codeLocation))) {
+                    try(var selector = context.forSelector(cmdData.entities().limit(1))) {
+                        selector.writeInstruction(Instructions2.jump(contextLabel));
+                    }
                 }
-                compile(context, cmdData.command(), result);
+                compile(context, fContext.content(), cmdData.command(), result);
             }
         }else if(command instanceof CommandExecuteUnlessScoreRange cmdData) {
-            try(var scope = context.forScope()) {
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                var contextLabel = context.current().contextEndLabel();
                 try(var scoreAccessor = context.forScoreAccessors(cmdData.target().selectSingle())) {
                     try(var scoreData = context.getScoreData(scoreAccessor.content(), false)) {
                         var scoreValue = context.<Integer>createLocal();
-                        scoreData.writeInstruction(Instructions2.getScoreValue(scoreData.content(), scoreValue).with(Instructions.checkIntRange(scoreValue, cmdData.range()).with(Instructions2.exitScope(scope.content()))));
+                        scoreData.writeInstruction(Instructions2.getScoreValue(scoreData.content(), scoreValue));
+                        context.jumpIfMatchesRange(scoreData.data(), scoreValue, cmdData.range(), contextLabel);
                     }
-                    compile(context, cmdData.command(), result);
                 }
+                compile(context, fContext.content(), cmdData.command(), result);
             }
         }else if(command instanceof CommandExecuteUnlessScoreCompare cmdData) {
-            try(var target = context.forScoreAccessors(cmdData.target().selectSingle())) {
-                try(var source = context.forScoreAccessors(cmdData.source().selectSingle())) {
-                    try(var scope = context.forScope()) {
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                var contextLabel = context.current().contextEndLabel();
+                try(var target = context.forScoreAccessors(cmdData.target().selectSingle())) {
+                    try(var source = context.forScoreAccessors(cmdData.source().selectSingle())) {
                         try(var targetScore = context.getScoreData(target.content(), false)) {
                             try(var sourceScore = context.getScoreData(source.content(), false)) {
-                                sourceScore.writeInstruction(Instructions.checkScoreCompare(targetScore.content(), sourceScore.content(), cmdData.comparison()).with(Instructions2.exitScope(scope.content())));
+                                sourceScore.writeInstruction(Instructions.checkScoreCompare(targetScore.content(), sourceScore.content(), cmdData.comparison(), contextLabel));
                             }
                         }
-                        compile(context, cmdData.command(), result);
                     }
                 }
+                compile(context, fContext.content(), cmdData.command(), result);
             }
         }else if(command instanceof CommandExperienceAdd cmdData) {
             try(var targets = context.forSelector(cmdData.targets())) {
                 var playerLocation = context.<Player>createLocal();
-                targets.writeInstruction(
-                    Instructions2.tryAsPlayer(targets.content(), playerLocation)
-                        .with(Instructions2.addExperiencePoints(playerLocation, cmdData.amount())));
+                targets.writeInstruction(Instructions2.tryAsPlayer(targets.content(), playerLocation, targets.data().contextEndLabel()));
+                targets.writeInstruction(Instructions2.addExperiencePoints(playerLocation, cmdData.amount()));
             }
         }else if(command instanceof CommandExperienceAddPoints cmdData) {
             try(var targets = context.forSelector(cmdData.targets())) {
                 var playerLocation = context.<Player>createLocal();
-                targets.writeInstruction(
-                    Instructions2.tryAsPlayer(targets.content(), playerLocation)
-                        .with(Instructions2.addExperiencePoints(playerLocation, cmdData.amount())));
+                targets.writeInstruction(Instructions2.tryAsPlayer(targets.content(), playerLocation, targets.data().contextEndLabel()));
+                targets.writeInstruction(Instructions2.addExperiencePoints(playerLocation, cmdData.amount()));
             }
         }else if(command instanceof CommandExperienceAddLevels cmdData) {
             try(var targets = context.forSelector(cmdData.targets())) {
                 var playerLocation = context.<Player>createLocal();
-                targets.writeInstruction(
-                    Instructions2.tryAsPlayer(targets.content(), playerLocation)
-                        .with(Instructions2.addExperienceLevels(playerLocation, cmdData.amount())));
+                targets.writeInstruction(Instructions2.tryAsPlayer(targets.content(), playerLocation, targets.data().contextEndLabel()));
+                targets.writeInstruction(Instructions2.addExperienceLevels(playerLocation, cmdData.amount()));
             }
         }else if(command instanceof CommandExperienceSet cmdData) {
             try(var targets = context.forSelector(cmdData.targets())) {
                 var playerLocation = context.<Player>createLocal();
-                targets.writeInstruction(
-                    Instructions2.tryAsPlayer(targets.content(), playerLocation)
-                        .with(Instructions2.setExperiencePoints(playerLocation, cmdData.amount())));
+                targets.writeInstruction(Instructions2.tryAsPlayer(targets.content(), playerLocation, targets.data().contextEndLabel()));
+                targets.writeInstruction(Instructions2.setExperiencePoints(playerLocation, cmdData.amount()));
             }
         }else if(command instanceof CommandExperienceSetPoints cmdData) {
             try(var targets = context.forSelector(cmdData.targets())) {
                 var playerLocation = context.<Player>createLocal();
-                targets.writeInstruction(
-                    Instructions2.tryAsPlayer(targets.content(), playerLocation)
-                        .with(Instructions2.setExperiencePoints(playerLocation, cmdData.amount())));
+                targets.writeInstruction(Instructions2.tryAsPlayer(targets.content(), playerLocation, targets.data().contextEndLabel()));
+                targets.writeInstruction(Instructions2.setExperiencePoints(playerLocation, cmdData.amount()));
             }
         }else if(command instanceof CommandExperienceSetLevels cmdData) {
             try(var targets = context.forSelector(cmdData.targets())) {
                 var playerLocation = context.<Player>createLocal();
-                targets.writeInstruction(
-                    Instructions2.tryAsPlayer(targets.content(), playerLocation)
-                        .with(Instructions2.setExperienceLevels(playerLocation, cmdData.amount())));
+                targets.writeInstruction(Instructions2.tryAsPlayer(targets.content(), playerLocation, targets.data().contextEndLabel()));
+                targets.writeInstruction(Instructions2.setExperienceLevels(playerLocation, cmdData.amount()));
             }
         }else if(command instanceof CommandFunction cmdData) {
             var current = context.current();
-            current.writeInstruction(Instructions.callFunctions(cmdData.functions(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor(), null));
+            var stack = context.<CommandSourceStack>createLocal();
+            context.writeInstruction(Instructions.makeCommandSourceStack(current.commandSourceStack(), stack, current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
+            context.writeInstruction(Instructions.callFunctions(cmdData.functions(), stack, null));
         }else if(command instanceof CommandFunctionArgs cmdData) {
             var current = context.current();
             var arguments = context.<NbtCompound>createLocal();
-            current.writeInstruction(Instructions2.loadNbtValue(cmdData.arguments(), arguments.forceCast()).with(Instructions.callFunctions(cmdData.functions(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor(), arguments)));
+            context.writeInstruction(Instructions2.loadNbtValue(cmdData.arguments(), arguments.forceCast()));
+            var stack = context.<CommandSourceStack>createLocal();
+            context.writeInstruction(Instructions.makeCommandSourceStack(current.commandSourceStack(), stack, current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
+            context.writeInstruction(Instructions.callFunctions(cmdData.functions(), stack, arguments));
         }else if(command instanceof CommandFunctionArgsStorage cmdData) {
             var current = context.current();
             var arguments = context.<NbtCompound>createLocal();
             var clonedArguments = context.<NbtTag>createLocal();
             var validArguments = context.<NbtCompound>createLocal();
-            current.writeInstruction(Instructions2.getNbtStorage(cmdData.storage(), arguments).with(Instructions2.cloneNbtValue(arguments.forceCast(), clonedArguments).with(Instructions2.checkIsCompound(clonedArguments, validArguments).with(Instructions.callFunctions(cmdData.functions(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor(), validArguments)))));
+            context.writeInstruction(Instructions2.getNbtStorage(cmdData.storage(), arguments));
+            context.writeInstruction(Instructions2.cloneNbtValue(arguments.forceCast(), clonedArguments));
+            context.writeInstruction(Instructions2.checkIsCompound(clonedArguments, validArguments, current.contextEndLabel()));
+            var stack = context.<CommandSourceStack>createLocal();
+            context.writeInstruction(Instructions.makeCommandSourceStack(current.commandSourceStack(), stack, current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
+            context.writeInstruction(Instructions.callFunctions(cmdData.functions(), stack, validArguments));
         }else if(command instanceof CommandFunctionArgsStoragePath cmdData) {
             var current = context.current();
-            var scope = context.createScope();
             var currentTag = context.<NbtTag>createLocal();
             var storageLocal = context.<NbtCompound>createLocal();
-            var stacker = new InstructionStacker(Instructions2.createNullTag(currentTag));
-            stacker.stackInstruction(Instructions2.scope(scope));
-            stacker.stackInstruction(Instructions2.getNbtStorage(cmdData.storage(), storageLocal));
+            context.writeInstruction(Instructions2.createNullTag(currentTag));
+            context.writeInstruction(Instructions2.getNbtStorage(cmdData.storage(), storageLocal));
 
             var parts = cmdData.path().parts();
-            try(var ignored = context.enterWithoutValue(context.current().withBaseInstruction(stacker.current))) {
-                getNbtPathValue(context, storageLocal.forceCast(), parts, false, (value) -> {
-                    context.writeInstruction(Instructions2.ifNotNull(currentTag.lower()).with(Instructions2.exitScope(scope)));
-                    context.writeInstruction(Instructions2.setNbtValue(value, currentTag));
-                });
+            try(var ignored = context.enterWithoutValue(context.current())) {
+                var value = getNbtPathValue(context, storageLocal.forceCast(), parts, false, current.contextEndLabel());
+                context.writeInstruction(Instructions2.ifNotNullJump(currentTag.lower(), current.contextEndLabel()));
+                context.writeInstruction(Instructions2.objectAssign(currentTag.lower(), value.lower()));
             }
-            stacker.stackInstruction(Instructions2.ifNotNull(currentTag.lower()));
+            context.writeInstruction(Instructions2.ifNullJump(currentTag.lower(), current.contextEndLabel()));
             var clonedTag = context.<NbtTag>createLocal();
-            stacker.stackInstruction(Instructions2.cloneNbtValue(currentTag, clonedTag));
+            context.writeInstruction(Instructions2.cloneNbtValue(currentTag, clonedTag));
             var compoundTag = context.<NbtCompound>createLocal();
-            stacker.stackInstruction(Instructions2.checkIsCompound(clonedTag, compoundTag));
-            stacker.stackInstruction(Instructions.callFunctions(cmdData.functions(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor(), compoundTag));
-            current.writeInstruction(stacker.base);
+            context.writeInstruction(Instructions2.checkIsCompound(clonedTag, compoundTag, current.contextEndLabel()));
+            var stack = context.<CommandSourceStack>createLocal();
+            context.writeInstruction(Instructions.makeCommandSourceStack(current.commandSourceStack(), stack, current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
+            context.writeInstruction(Instructions.callFunctions(cmdData.functions(), stack, compoundTag));
         }else if(command instanceof CommandGamemode cmdData) {
             try(var selector = context.forSelector(cmdData.targets())) {
                 var playerLocation = context.<Player>createLocal();
-                selector.writeInstruction(Instructions2.tryAsPlayer(selector.content(), playerLocation).with(Instructions2.setGamemode(playerLocation, cmdData.gamemode())));
+                selector.writeInstruction(Instructions2.tryAsPlayer(selector.content(), playerLocation, selector.data().contextEndLabel()));
+                selector.writeInstruction(Instructions2.setGamemode(playerLocation, cmdData.gamemode()));
             }
         }else if(command instanceof CommandKill cmdData) {
             try(var selector = context.forSelector(cmdData.targets())) {
@@ -460,27 +500,27 @@ public final class CommandCompiler {
         }else if(command instanceof CommandScoreboardPlayersEnable cmdData) {
             try(var objective = context.getObjective(cmdData.targets().objective())) {
                 var criterion = context.<ScoreboardCriterion>createLocal();
-                var execInstr = Instructions2.checkIsCriterion(criterion, DataRegistries.SCOREBOARD_CRITERIA.getOrThrow("trigger"));
-                objective.writeInstruction(Instructions2.getObjectiveCriterion(objective.content(), criterion).with(execInstr));
-                try(var ignored = context.enterWithoutValue(objective.data().withBaseInstruction(execInstr))) {
-                    try(var name = context.forScoreHolder(cmdData.targets().scoreHolder())) {
-                        try(var scoreData = context.getScoreData(new ScoreAccessor(objective.content(), name.content()), true)) {
-                            scoreData.writeInstruction(Instructions2.scoreUnlock(scoreData.content()));
-                        }
+                objective.writeInstruction(Instructions2.getObjectiveCriterion(objective.content(), criterion));
+                var mappedCriterion = context.<ScoreboardCriterion>createLocal();
+                objective.writeInstruction(Instructions2.mapObjectiveCriterion(DataRegistries.SCOREBOARD_CRITERIA.getOrThrow("trigger"), mappedCriterion));
+                objective.writeInstruction(Instructions2.ifObjectNotEquivalentJump(criterion.lower(), mappedCriterion.lower(), objective.data().contextEndLabel()));
+                try(var name = context.forScoreHolder(cmdData.targets().scoreHolder())) {
+                    try(var scoreData = context.getScoreData(new ScoreAccessor(objective.content(), name.content()), true)) {
+                        scoreData.writeInstruction(Instructions2.scoreUnlock(scoreData.content()));
                     }
                 }
             }
         }else if(command instanceof CommandScoreboardPlayersGet cmdData) {
             try(var targets = context.forScoreAccessors(cmdData.targets())) {
-                try(var scoreData = context.getScoreData(targets.content(), true)) {
+                try(var scoreData = context.getScoreData(targets.content(), false)) {
                     var res = context.<Integer>createLocal();
-                    var instr = Instructions2.getScoreValue(scoreData.content(), res);
-                    result.setResult(scoreData.data().withBaseInstruction(instr), res);
-                    scoreData.writeInstruction(instr);
+                    scoreData.writeInstruction(Instructions2.getScoreValue(scoreData.content(), res));
+                    result.addResult(context.instructionWriter, scoreData.data(), res);
                 }
             }
         }else if(command instanceof CommandScoreboardPlayersOperation cmdData) {
-            try(var exceptionScope = context.forScope()) {
+            var selectorCodeLocation = context.current().writeLabel(context.instructionWriter);
+            try(var ignored = context.enterWithoutValue(context.current().withContextLabel(selectorCodeLocation))) {
                 try(var targets = context.forScoreAccessors(cmdData.targets())) {
                     try(var source = context.forScoreAccessors(cmdData.source())) {
                         try(var targetScore = context.getScoreData(targets.content(), true)) {
@@ -490,8 +530,18 @@ public final class CommandCompiler {
                                     case ADD -> sourceScore.writeInstruction(Instructions2.runScoreOperationPlus(targetScore.content(), sourceScore.content()));
                                     case SUB -> sourceScore.writeInstruction(Instructions2.runScoreOperationMinus(targetScore.content(), sourceScore.content()));
                                     case MUL -> sourceScore.writeInstruction(Instructions2.runScoreOperationMultiply(targetScore.content(), sourceScore.content()));
-                                    case DIV -> sourceScore.writeInstruction(Instructions2.runScoreOperationDivide(targetScore.content(), sourceScore.content(), exceptionScope.content()));
-                                    case MOD -> sourceScore.writeInstruction(Instructions2.runScoreOperationModulo(targetScore.content(), sourceScore.content(), exceptionScope.content()));
+                                    case DIV -> {
+                                        var divisor = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.getScoreValue(sourceScore.content(), divisor));
+                                        sourceScore.writeInstruction(Instructions2.ifEqualJump(divisor, LocationData.ofInteger(0), selectorCodeLocation));
+                                        sourceScore.writeInstruction(Instructions2.runScoreOperationDivide(targetScore.content(), sourceScore.content()));
+                                    }
+                                    case MOD -> {
+                                        var divisor = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.getScoreValue(sourceScore.content(), divisor));
+                                        sourceScore.writeInstruction(Instructions2.ifEqualJump(divisor, LocationData.ofInteger(0), selectorCodeLocation));
+                                        sourceScore.writeInstruction(Instructions2.runScoreOperationModulo(targetScore.content(), sourceScore.content()));
+                                    }
                                     case MIN -> sourceScore.writeInstruction(Instructions2.runScoreOperationMin(targetScore.content(), sourceScore.content()));
                                     case MAX -> sourceScore.writeInstruction(Instructions2.runScoreOperationMax(targetScore.content(), sourceScore.content()));
                                     case SWAP -> sourceScore.writeInstruction(Instructions2.runScoreOperationSwap(targetScore.content(), sourceScore.content()));
@@ -535,58 +585,51 @@ public final class CommandCompiler {
             try(var players = context.forSelector(cmdData.players())) {
                 var playerLocation = context.<Player>createLocal();
                 var textLocation = context.<TextComponent>createLocal();
-                players.writeInstruction(
-                    Instructions2.tryAsPlayer(players.content(), playerLocation)
-                        .with(Instructions2.loadText(cmdData.text(), textLocation)
-                            .with(Instructions2.sendActionbar(playerLocation, textLocation))));
+                players.writeInstruction(Instructions2.tryAsPlayer(players.content(), playerLocation, players.data().contextEndLabel()));
+                players.writeInstruction(Instructions2.loadText(cmdData.text(), textLocation));
+                players.writeInstruction(Instructions2.sendActionbar(playerLocation, textLocation));
             }
         }else if(command instanceof CommandTitleClear cmdData) {
             try(var players = context.forSelector(cmdData.players())) {
                 var playerLocation = context.<Player>createLocal();
-                players.writeInstruction(
-                    Instructions2.tryAsPlayer(players.content(), playerLocation)
-                        .with(Instructions2.sendTitlesClear(playerLocation)));
+                players.writeInstruction(Instructions2.tryAsPlayer(players.content(), playerLocation, players.data().contextEndLabel()));
+                players.writeInstruction(Instructions2.sendTitlesClear(playerLocation));
             }
         }else if(command instanceof CommandTitleReset cmdData) {
             try(var players = context.forSelector(cmdData.players())) {
                 var playerLocation = context.<Player>createLocal();
-                players.writeInstruction(
-                    Instructions2.tryAsPlayer(players.content(), playerLocation)
-                        .with(Instructions2.sendTitlesReset(playerLocation)));
+                players.writeInstruction(Instructions2.tryAsPlayer(players.content(), playerLocation, players.data().contextEndLabel()));
+                players.writeInstruction(Instructions2.sendTitlesReset(playerLocation));
             }
         }else if(command instanceof CommandTitleSubtitle cmdData) {
             try(var players = context.forSelector(cmdData.players())) {
                 var playerLocation = context.<Player>createLocal();
                 var textLocation = context.<TextComponent>createLocal();
-                players.writeInstruction(
-                    Instructions2.tryAsPlayer(players.content(), playerLocation)
-                        .with(Instructions2.loadText(cmdData.text(), textLocation)
-                            .with(Instructions2.sendSubtitle(playerLocation, textLocation))));
+                players.writeInstruction(Instructions2.tryAsPlayer(players.content(), playerLocation, players.data().contextEndLabel()));
+                players.writeInstruction(Instructions2.loadText(cmdData.text(), textLocation));
+                players.writeInstruction(Instructions2.sendSubtitle(playerLocation, textLocation));
             }
         }else if(command instanceof CommandTitleTimes cmdData) {
             try(var players = context.forSelector(cmdData.players())) {
                 var playerLocation = context.<Player>createLocal();
-                players.writeInstruction(
-                    Instructions2.tryAsPlayer(players.content(), playerLocation)
-                        .with(Instructions2.sendTitlesTimes(playerLocation, cmdData.fadeIn(), cmdData.stay(), cmdData.fadeOut())));
+                players.writeInstruction(Instructions2.tryAsPlayer(players.content(), playerLocation, players.data().contextEndLabel()));
+                players.writeInstruction(Instructions2.sendTitlesTimes(playerLocation, cmdData.fadeIn(), cmdData.stay(), cmdData.fadeOut()));
             }
         }else if(command instanceof CommandTitleTitle cmdData) {
             try(var players = context.forSelector(cmdData.players())) {
                 var playerLocation = context.<Player>createLocal();
                 var textLocation = context.<TextComponent>createLocal();
-                players.writeInstruction(
-                    Instructions2.tryAsPlayer(players.content(), playerLocation)
-                        .with(Instructions2.loadText(cmdData.text(), textLocation)
-                            .with(Instructions2.sendTitle(playerLocation, textLocation))));
+                players.writeInstruction(Instructions2.tryAsPlayer(players.content(), playerLocation, players.data().contextEndLabel()));
+                players.writeInstruction(Instructions2.loadText(cmdData.text(), textLocation));
+                players.writeInstruction(Instructions2.sendTitle(playerLocation, textLocation));
             }
         }else if(command instanceof CommandTellraw cmdData) {
             try(var players = context.forSelector(cmdData.players())) {
                 var playerLocation = context.<Player>createLocal();
                 var textLocation = context.<TextComponent>createLocal();
-                players.writeInstruction(
-                    Instructions2.tryAsPlayer(players.content(), playerLocation)
-                        .with(Instructions2.loadText(cmdData.text(), textLocation)
-                            .with(Instructions2.sendSystemMessage(playerLocation, textLocation))));
+                players.writeInstruction(Instructions2.tryAsPlayer(players.content(), playerLocation, players.data().contextEndLabel()));
+                players.writeInstruction(Instructions2.loadText(cmdData.text(), textLocation));
+                players.writeInstruction(Instructions2.sendSystemMessage(playerLocation, textLocation));
             }
         }else if(command instanceof CommandWeatherClearTimed cmdData) {
             context.writeInstruction(Instructions2.setWeatherStatic(cmdData.duration(), 0, false, false));
@@ -605,34 +648,39 @@ public final class CommandCompiler {
         }
     }
 
-    private static void getNbtPathValue(CompilationContext context, LocationData<NbtTag> source, List<NbtPathPart> parts, boolean tryCreate, Consumer<LocationData<NbtTag>> valueConsumer) {
-        if(!parts.isEmpty()) {
-            var currentPart = parts.get(0);
-            var otherParts = parts.subList(1, parts.size());
-            if(currentPart instanceof NbtPathPart.Named named) {
+    private static LocationData<NbtTag> getNbtPathValue(CompilationContext context, LocationData<NbtTag> source, List<NbtPathPart> parts, boolean tryCreate, LabelData failLabel) {
+        for(var part : parts) {
+            if(part instanceof NbtPathPart.Named named) {
+                var compound = context.<NbtCompound>createLocal();
+                context.writeInstruction(Instructions2.checkIsCompound(source, compound, failLabel));
                 var storage = context.<NbtTag>createLocal();
-                var instr = tryCreate
-                        ? Instructions2.getNbtFromCompoundOrCreate(source, named.name(), storage)
-                        : Instructions2.getNbtFromCompound(source, named.name(), storage);
-                context.writeInstruction(instr);
-                try(var ignored = context.enterWithoutValue(context.current().withBaseInstruction(instr))) {
-                    getNbtPathValue(context, storage, otherParts, tryCreate, valueConsumer);
+                if(tryCreate) {
+                    context.writeInstruction(Instructions2.getNbtFromCompoundOrCreate(compound, named.name(), storage));
+                }else {
+                    context.writeInstruction(Instructions2.getNbtFromCompound(compound, named.name(), storage));
                 }
-            }else if(currentPart instanceof NbtPathPart.ArrayIndexInteger indexed) {
+                source = storage;
+            }else if(part instanceof NbtPathPart.ArrayIndexInteger indexed) {
+                var list = context.<NbtList>createLocal();
+                context.writeInstruction(Instructions2.checkIsList(source, list, failLabel));
+                var length = context.<Integer>createLocal();
+                context.writeInstruction(Instructions2.getListLength(list.forceCast(), length));
+                context.writeInstruction(Instructions2.ifGreaterEqualJump(LocationData.ofInteger(indexed.index()), length, failLabel));
+                var index = context.<Integer>createLocal();
+                if(indexed.index() >= 0) {
+                    context.writeInstruction(Instructions2.valueDefine(index, LocationData.ofInteger(indexed.index())));
+                }else {
+                    context.writeInstruction(Instructions2.valueDefine(index, length));
+                    context.writeInstruction(Instructions2.valueSub(index, LocationData.ofInteger(-indexed.index())));
+                }
                 var storage = context.<NbtTag>createLocal();
-                var instr = indexed.index() >= 0
-                        ? Instructions2.getNbtFromListForward(source, indexed.index(), storage)
-                        : Instructions2.getNbtFromListBackward(source, -indexed.index(), storage);
-                context.writeInstruction(instr);
-                try(var ignored = context.enterWithoutValue(context.current().withBaseInstruction(instr))) {
-                    getNbtPathValue(context, storage, otherParts, tryCreate, valueConsumer);
-                }
+                context.writeInstruction(Instructions2.getNbtFromList(list, index, storage));
+                source = storage;
             }else {
-                throw new UnsupportedOperationException("Cannot get nbt path from " + currentPart);
+                throw new UnsupportedOperationException("Cannot get nbt path from " + part);
             }
-        }else {
-            valueConsumer.accept(source);
         }
+        return source;
     }
 
 }

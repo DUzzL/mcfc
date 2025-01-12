@@ -1,6 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.mixin.v1_20_1;
 
-import dev.epicpix.minecraftfunctioncompiler.FunctionCompilerClassLoader;
+import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.v1_20_1.FunctionClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.v1_20_1.FunctionCompilerMain;
 import net.minecraft.commands.CommandFunction;
