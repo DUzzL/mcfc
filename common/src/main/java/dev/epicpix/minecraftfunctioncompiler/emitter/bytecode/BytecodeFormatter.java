@@ -74,6 +74,8 @@ public class BytecodeFormatter {
                 case ADD -> formatValue(v.result()) + " = " + formatValue(v.sourceA()) + " + " + formatValue(v.sourceB());
                 case SUB -> formatValue(v.result()) + " = " + formatValue(v.sourceA()) + " - " + formatValue(v.sourceB());
                 case MUL -> formatValue(v.result()) + " = " + formatValue(v.sourceA()) + " * " + formatValue(v.sourceB());
+                case SHL -> formatValue(v.result()) + " = " + formatValue(v.sourceA()) + " << " + formatValue(v.sourceB());
+                case SHR -> formatValue(v.result()) + " = " + formatValue(v.sourceA()) + " >> " + formatValue(v.sourceB());
             };
         }else if(instr instanceof BytecodeInstruction.CreateArray v) {
             return formatValue(v.result()) + " = new " + formatClass(v.contentType()) + "[" + formatValue(v.length()) + "]";

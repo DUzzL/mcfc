@@ -4,4 +4,6 @@ public enum StackEvaluationType {
     ADD,
     SUB,
     MUL,
+    SHL,
+    SHR,
 }

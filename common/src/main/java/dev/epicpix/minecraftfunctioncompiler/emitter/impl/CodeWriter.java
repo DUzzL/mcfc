@@ -120,6 +120,18 @@ public final class CodeWriter {
         return resultRegister;
     }
 
+    public BytecodeRegister shiftLeft(BytecodeValue a, BytecodeValue b) {
+        var resultRegister = createRegister();
+        instructions.add(new BytecodeInstruction.RegisterValueValue(InstructionRVVType.SHL, resultRegister, a, b));
+        return resultRegister;
+    }
+
+    public BytecodeRegister shiftRight(BytecodeValue a, BytecodeValue b) {
+        var resultRegister = createRegister();
+        instructions.add(new BytecodeInstruction.RegisterValueValue(InstructionRVVType.SHR, resultRegister, a, b));
+        return resultRegister;
+    }
+
     public BytecodeRegister newArray(BytecodeValue length, Class<?> contentType) {
         var resultRegister = createRegister();
         instructions.add(new BytecodeInstruction.CreateArray(resultRegister, length, contentType));

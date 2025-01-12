@@ -4,4 +4,6 @@ public enum InstructionRVVType {
     ADD,
     SUB,
     MUL,
+    SHL,
+    SHR,
 }

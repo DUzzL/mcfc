@@ -202,6 +202,18 @@ public class JavaStackCompiler {
                 mv.visitInsn(a.getOpcode(Opcodes.IMUL));
                 currentTypeStack.push(a);
                 return true;
+            }else if(eval.evaluationType() == StackEvaluationType.SHL) {
+                currentTypeStack.pop();
+                var a = currentTypeStack.pop();
+                mv.visitInsn(a.getOpcode(Opcodes.ISHL));
+                currentTypeStack.push(a);
+                return true;
+            }else if(eval.evaluationType() == StackEvaluationType.SHR) {
+                currentTypeStack.pop();
+                var a = currentTypeStack.pop();
+                mv.visitInsn(a.getOpcode(Opcodes.ISHR));
+                currentTypeStack.push(a);
+                return true;
             }else {
                 throw new IllegalArgumentException("Unknown evaluation type: " + eval.evaluationType());
             }
