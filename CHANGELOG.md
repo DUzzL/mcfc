@@ -12,8 +12,8 @@ Fixes bugs:
 - Not all functions are found, some of the time
 
 ## Details
-- **Released:** In Development
-- **Supported Versions:** 1.20–1.20.1, 1.20.2, 1.20.3–1.20.4, 1.20.5–1.20.6, 1.21–1.21.1
+- **Released:** 2025-01-12
+- **Supported Versions:** [1.20–1.20.1](https://modrinth.com/mod/mcfc/version/0.3.0-alpha.1+1.20.1), [1.20.2](https://modrinth.com/mod/mcfc/version/0.3.0-alpha.1+1.20.2), [1.20.3–1.20.4](https://modrinth.com/mod/mcfc/version/0.3.0-alpha.1+1.20.4), [1.20.5–1.20.6](https://modrinth.com/mod/mcfc/version/0.3.0-alpha.1+1.20.6), [1.21–1.21.1](https://modrinth.com/mod/mcfc/version/0.3.0-alpha.1+1.21)
 
 ---
 
