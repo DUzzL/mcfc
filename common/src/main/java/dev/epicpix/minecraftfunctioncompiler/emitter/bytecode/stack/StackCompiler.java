@@ -395,7 +395,7 @@ public class StackCompiler {
                 }else if(instr instanceof StackInstruction.Call c) {
                     if(c.target() instanceof InstructionTarget.FunctionTarget f) {
                         var fdesc = Type.getType(f.descriptor());
-                        int consumed = fdesc.getArgumentCount() + (f.isStatic() ? 0 : 1);
+                        int consumed = fdesc.getArgumentTypes().length + (f.isStatic() ? 0 : 1);
                         int returned = fdesc.getReturnType() == Type.VOID_TYPE ? 0 : 1;
                         stackDepth += returned - consumed;
                     }else if(c.target() instanceof InstructionTarget.FieldTarget f) {

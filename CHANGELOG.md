@@ -2,6 +2,9 @@
 
 Adds 1.21.2 and 1.21.3 support
 
+Fixes bugs:
+- Compilation throws an exception due to using a library in which a function doesn't exist in older minecraft versions
+
 ## Details
 - **Released:** In Development
 - **Supported Versions:** 1.20–1.20.1, 1.20.2, 1.20.3–1.20.4, 1.20.5–1.20.6, 1.21–1.21.1, 1.21.2–1.21.3
