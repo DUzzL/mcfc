@@ -2,8 +2,11 @@
 
 Adds 1.21.2 and 1.21.3 support
 
+Adds selector arguments: `x`, `y`, `z`
+
 Fixes bugs:
 - Compilation throws an exception due to using a library in which a function doesn't exist in older minecraft versions
+- `distance` selector compares locations without checking if the entity is in the same world
 
 ## Details
 - **Released:** In Development

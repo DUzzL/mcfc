@@ -29,6 +29,10 @@ public record LocationData<T>(
         return new LocationData<>(null, doubleValue);
     }
 
+    public static LocationData<Double> ofDoubleOrNull(Double doubleValue) {
+        return doubleValue != null ? new LocationData<>(null, doubleValue) : null;
+    }
+
     @SuppressWarnings("unchecked")
     public LocationData<Object> lower() {
         return (LocationData<Object>) this;
@@ -54,7 +58,7 @@ public record LocationData<T>(
         }else if(object instanceof Double doubleValue) {
             return doubleValue.toString();
         }else {
-            throw new RuntimeException("Invalid location data: " + object);
+            return "INVALID<" + object + ">";
         }
     }
 }

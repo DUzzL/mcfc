@@ -154,6 +154,15 @@ public final class Emitter {
                 context.store("result", codeWriter.newObjectCreate(VEC3_INIT_TARGET, x, y, z));
                 return true;
             }
+            if(context.instruction().type() == InstructionTypes.MERGE_POSITIONS) {
+                var position = context.load("position");
+                var x = context.instruction().get("x") != null ? context.load("x") : loadVec3_x(codeWriter, position);
+                var y = context.instruction().get("y") != null ? context.load("y") : loadVec3_y(codeWriter, position);
+                var z = context.instruction().get("z") != null ? context.load("z") : loadVec3_z(codeWriter, position);
+
+                context.store("result", codeWriter.newObjectCreate(VEC3_INIT_TARGET, x, y, z));
+                return true;
+            }
 
             return false;
         });

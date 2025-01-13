@@ -25,7 +25,11 @@ public record SelectorArgument(
     IntRangeArgument level,
     SelectorSort sort,
     FloatRangeArgument yaw,
-    FloatRangeArgument pitch
+    FloatRangeArgument pitch,
+    boolean worldLimited,
+    Double x,
+    Double y,
+    Double z
 ) {
 
     private SelectorArgument(UUID entityUuid, String playerName, boolean self) {
@@ -46,6 +50,10 @@ public record SelectorArgument(
                 List.of(),
                 null,
                 null,
+                null,
+                null,
+                null,
+                false,
                 null,
                 null,
                 null
@@ -84,7 +92,11 @@ public record SelectorArgument(
                 level,
                 sort,
                 yaw,
-                pitch
+                pitch,
+                worldLimited,
+                x,
+                y,
+                z
         );
     }
 

@@ -154,6 +154,8 @@ public final class SelectorParser {
             }
         });
         registerSelectorOption("distance", (reader, data) -> {
+            if(data.distance != null) throwError(reader, "distance selector cannot be repeated");
+            data.worldLimited = true;
             data.distance = reader.readDoubleRange();
             if((data.distance.minimum() != null && data.distance.minimum() < 0) || (data.distance.maximum() != null && data.distance.maximum() < 0)) {
                 throwError(reader, "Minimum/maximum distance cannot be negative: " + data.distance);
@@ -189,6 +191,21 @@ public final class SelectorParser {
         registerSelectorOption("y_rotation", (reader, data) -> {
             var bounds = reader.readFloatRange();
             data.yaw = new FloatRangeArgument(bounds.minimum() != null ? wrapDegrees(bounds.minimum()) : null, bounds.maximum() != null ? wrapDegrees(bounds.maximum()) : null);
+        });
+        registerSelectorOption("x", (reader, data) -> {
+            if(data.x != null) throwError(reader, "x selector cannot be repeated");
+            data.worldLimited = true;
+            data.x = reader.readDouble();
+        });
+        registerSelectorOption("y", (reader, data) -> {
+            if(data.y != null) throwError(reader, "y selector cannot be repeated");
+            data.worldLimited = true;
+            data.y = reader.readDouble();
+        });
+        registerSelectorOption("z", (reader, data) -> {
+            if(data.z != null) throwError(reader, "z selector cannot be repeated");
+            data.worldLimited = true;
+            data.z = reader.readDouble();
         });
     }
 

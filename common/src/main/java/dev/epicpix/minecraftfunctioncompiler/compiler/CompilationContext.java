@@ -179,30 +179,44 @@ public class CompilationContext {
         return enterWithValue(data.withContextLabel(codeLocation), entity);
     }
 
-    public CompilationData<LocationData<Entity>> forEachEntity() {
+    public CompilationData<LocationData<Entity>> forEachEntity(LocationData<World> inWorld) {
         var data = current();
-        var worldIter = this.<Iterator<World>>createLocal();
-        data.writeInstruction(instructionWriter, Instructions2.getWorldsIterator(worldIter.forceCast()));
-        var iterWorldStart = data.writeLabel(instructionWriter);
-        data.writeInstruction(instructionWriter, Instructions2.jumpIfIteratorHasNoNext(worldIter.forceCast(), data.contextEndLabel()));
-        var worldObj = this.createLocal();
-        var world = this.<World>createLocal();
-        data.writeInstruction(instructionWriter, Instructions2.iteratorNext(worldIter.forceCast(), worldObj));
-        data.writeInstruction(instructionWriter, Instructions2.assumeWorld(worldObj, world));
+        if(inWorld == null) {
+            var worldIter = this.<Iterator<World>>createLocal();
+            data.writeInstruction(instructionWriter, Instructions2.getWorldsIterator(worldIter.forceCast()));
+            var iterWorldStart = data.writeLabel(instructionWriter);
+            data.writeInstruction(instructionWriter, Instructions2.jumpIfIteratorHasNoNext(worldIter.forceCast(), data.contextEndLabel()));
+            var worldObj = this.createLocal();
+            var world = this.<World>createLocal();
+            data.writeInstruction(instructionWriter, Instructions2.iteratorNext(worldIter.forceCast(), worldObj));
+            data.writeInstruction(instructionWriter, Instructions2.assumeWorld(worldObj, world));
 
-        var entityIter = this.<Iterator<Entity>>createLocal();
-        data.writeInstruction(instructionWriter, Instructions2.getEntities(world, entityIter.forceCast()));
-        var iterEntityStart = data.writeLabel(instructionWriter);
-        data.writeInstruction(instructionWriter, Instructions2.jumpIfIteratorHasNoNext(entityIter.forceCast(), iterWorldStart));
-        var entityObj = this.createLocal();
-        var entity = this.<Entity>createLocal();
-        data.writeInstruction(instructionWriter, Instructions2.iteratorNext(entityIter.forceCast(), entityObj));
-        data.writeInstruction(instructionWriter, Instructions2.assumeEntity(entityObj, entity));
+            var entityIter = this.<Iterator<Entity>>createLocal();
+            data.writeInstruction(instructionWriter, Instructions2.getEntities(world, entityIter.forceCast()));
+            var iterEntityStart = data.writeLabel(instructionWriter);
+            data.writeInstruction(instructionWriter, Instructions2.jumpIfIteratorHasNoNext(entityIter.forceCast(), iterWorldStart));
+            var entityObj = this.createLocal();
+            var entity = this.<Entity>createLocal();
+            data.writeInstruction(instructionWriter, Instructions2.iteratorNext(entityIter.forceCast(), entityObj));
+            data.writeInstruction(instructionWriter, Instructions2.assumeEntity(entityObj, entity));
 
-        var codeLocation = data.writeLabel(instructionWriter);
-        data.writeInstruction(instructionWriter, Instructions2.jump(iterEntityStart));
+            var codeLocation = data.writeLabel(instructionWriter);
+            data.writeInstruction(instructionWriter, Instructions2.jump(iterEntityStart));
+            return enterWithValue(data.withContextLabel(codeLocation), entity);
+        }else {
+            var entityIter = this.<Iterator<Entity>>createLocal();
+            data.writeInstruction(instructionWriter, Instructions2.getEntities(inWorld, entityIter.forceCast()));
+            var iterEntityStart = data.writeLabel(instructionWriter);
+            data.writeInstruction(instructionWriter, Instructions2.jumpIfIteratorHasNoNext(entityIter.forceCast(), data.contextEndLabel()));
+            var entityObj = this.createLocal();
+            var entity = this.<Entity>createLocal();
+            data.writeInstruction(instructionWriter, Instructions2.iteratorNext(entityIter.forceCast(), entityObj));
+            data.writeInstruction(instructionWriter, Instructions2.assumeEntity(entityObj, entity));
 
-        return enterWithValue(data.withContextLabel(codeLocation), entity);
+            var codeLocation = data.writeLabel(instructionWriter);
+            data.writeInstruction(instructionWriter, Instructions2.jump(iterEntityStart));
+            return enterWithValue(data.withContextLabel(codeLocation), entity);
+        }
     }
 
     public CompilationData<LocationData<Player>> forPlayer(String playerName) {
@@ -341,25 +355,44 @@ public class CompilationContext {
         }
 
         LocationData<List<Entity>> entityList = createLocal();
-        data.writeInstruction(instructionWriter, Instructions2.createMutableList(entityList.forceCast()));
 
-        var selectorCodeLocation = data.writeLabel(instructionWriter);
-        try(var ignored = enterWithoutValue(data.withContextLabel(selectorCodeLocation))) {
-            try(var selectorData = forSelectorSelect(selector)) {
-                selectorData.writeInstruction(Instructions2.addListElement(entityList.forceCast(), selectorData.content().lower()));
+        try(var position = getPosition()) {
+            LocationData<Vec3> realPosition;
+            if(selector.x() != null || selector.y() != null || selector.z() != null) {
+                realPosition = this.createLocal();
+                position.writeInstruction(Instructions.mergePositions(position.content(), LocationData.ofDoubleOrNull(selector.x()), LocationData.ofDoubleOrNull(selector.y()), LocationData.ofDoubleOrNull(selector.z()), realPosition));
+            }else {
+                realPosition = position.content();
             }
-        }
 
-        if(selector.sort() == SelectorSort.NEAREST || selector.sort() == SelectorSort.FURTHEST) {
-            try(var pos = getPosition()) {
-                switch(selector.sort()) {
-                    case FURTHEST -> pos.writeInstruction(Instructions2.sortListEntityFurthest(pos.content(), entityList.forceCast()));
-                    case NEAREST -> pos.writeInstruction(Instructions2.sortListEntityNearest(pos.content(), entityList.forceCast()));
+            data.writeInstruction(instructionWriter, Instructions2.createMutableList(entityList.forceCast()));
+
+            var selectorCodeLocation = data.writeLabel(instructionWriter);
+
+            try(var ignored = enterWithoutValue(data.withContextLabel(selectorCodeLocation))) {
+                if(selector.worldLimited()) {
+                    try(var world = getWorld()) {
+                        try(var selectorData = forSelectorSelect(selector, realPosition, world.content())) {
+                            selectorData.writeInstruction(Instructions2.addListElement(entityList.forceCast(), selectorData.content().lower()));
+                        }
+                    }
+                }else {
+                    try(var selectorData = forSelectorSelect(selector, realPosition, null)) {
+                        selectorData.writeInstruction(Instructions2.addListElement(entityList.forceCast(), selectorData.content().lower()));
+                    }
                 }
             }
-        }else if(selector.sort() == SelectorSort.RANDOM) {
-            data.writeInstruction(instructionWriter, Instructions2.shuffleList(entityList.forceCast()));
+
+            if(selector.sort() == SelectorSort.NEAREST || selector.sort() == SelectorSort.FURTHEST) {
+                switch(selector.sort()) {
+                    case FURTHEST -> position.writeInstruction(Instructions2.sortListEntityFurthest(realPosition, entityList.forceCast()));
+                    case NEAREST -> position.writeInstruction(Instructions2.sortListEntityNearest(realPosition, entityList.forceCast()));
+                }
+            }else if(selector.sort() == SelectorSort.RANDOM) {
+                data.writeInstruction(instructionWriter, Instructions2.shuffleList(entityList.forceCast()));
+            }
         }
+
         var length = this.<Integer>createLocal();
         data.writeInstruction(instructionWriter, Instructions2.getListLength(entityList.forceCast(), length));
         if(selector.limit() != null) {
@@ -405,7 +438,7 @@ public class CompilationContext {
     }
 
     @SuppressWarnings("resource")
-    private CompilationData<LocationData<Entity>> forSelectorSelect(SelectorArgument selector) {
+    private CompilationData<LocationData<Entity>> forSelectorSelect(SelectorArgument selector, LocationData<Vec3> position, LocationData<World> world) {
         CompilationData<LocationData<Entity>> entityData;
         if(selector.playerName() != null) {
             entityData = forPlayer(selector.playerName()).changeType();
@@ -416,16 +449,21 @@ public class CompilationContext {
         }else if(selector.requirePlayer()) {
             entityData = forEachPlayer().changeType();
         }else {
-            entityData = forEachEntity();
+            entityData = forEachEntity(world);
         }
-        return forSelectorBase(entityData, selector);
+        return forSelectorBase(entityData, selector, position, world);
     }
 
-    private CompilationData<LocationData<Entity>> forSelectorBase(CompilationData<LocationData<Entity>> entityData, SelectorArgument selector) {
+    private CompilationData<LocationData<Entity>> forSelectorBase(CompilationData<LocationData<Entity>> entityData, SelectorArgument selector, LocationData<Vec3> position, LocationData<World> world) {
         var data = entityData.data();
         int stackCount = entityData.stackCount();
         int stackStart = stack.size();
         data.writeInstruction(instructionWriter, Instructions2.ifNullJump(entityData.content().lower(), data.contextEndLabel()));
+        if(world != null) {
+            LocationData<World> thisWorld = createLocal();
+            data.writeInstruction(instructionWriter, Instructions2.getEntityWorld(entityData.content(), thisWorld));
+            data.writeInstruction(instructionWriter, Instructions2.ifObjectNotEquivalentJump(thisWorld.lower(), world.lower(), data.contextEndLabel()));
+        }
         if(selector.requireAlive()) {
             var alive = this.<Boolean>createLocal();
             data.writeInstruction(instructionWriter, Instructions2.getIsAlive(entityData.content(), alive));
@@ -524,13 +562,10 @@ public class CompilationContext {
             }
         }
         if(selector.distance() != null) {
-            var positionData = getPosition();
-            data = stack.peek();
-
             LocationData<Vec3> thisPosition = createLocal();
             data.writeInstruction(instructionWriter, Instructions2.getEntityPosition(entityData.content(), thisPosition));
             LocationData<Double> distance = createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getDistanceSquared(positionData.content(), thisPosition, distance));
+            data.writeInstruction(instructionWriter, Instructions2.getDistanceSquared(position, thisPosition, distance));
             jumpIfNotMatchesRange(data, distance, selector.distance().square(), data.contextEndLabel());
         }
         if(!selector.scores().isEmpty()) {

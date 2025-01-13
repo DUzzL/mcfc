@@ -26,4 +26,5 @@ interface InstructionDefinitions {
     @InstructionConditionalJumpFlag
     Instruction checkEntityTypes(@InstructionSource LocationData<Entity> entity, List<DataLocation> types, boolean negated, LabelData failLabel);
     Instruction alignPosition(@InstructionSource LocationData<Vec3> position, @InstructionDestination LocationData<Vec3> result, SwizzleArgument swizzle);
+    Instruction mergePositions(@InstructionSource LocationData<Vec3> position, @Nullable @InstructionSource LocationData<Double> x, @Nullable @InstructionSource LocationData<Double> y, @Nullable @InstructionSource LocationData<Double> z, @InstructionDestination LocationData<Vec3> result);
 }

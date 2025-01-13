@@ -26,6 +26,10 @@ public class SelectorGeneratorBuilderData {
     public SelectorSort sort = SelectorSort.ARBITRARY;
     public FloatRangeArgument yaw = null;
     public FloatRangeArgument pitch = null;
+    public boolean worldLimited = false;
+    public Double x = null;
+    public Double y = null;
+    public Double z = null;
 
     public SelectorArgument build() {
         return new SelectorArgument(
@@ -47,7 +51,11 @@ public class SelectorGeneratorBuilderData {
                 level,
                 sort,
                 yaw,
-                pitch
+                pitch,
+                worldLimited,
+            x,
+            y,
+            z
         );
     }
 
