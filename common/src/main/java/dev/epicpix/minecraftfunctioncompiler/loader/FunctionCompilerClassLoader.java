@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.loader;
 
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import dev.epicpix.minecraftfunctioncompiler.CommonConstants;
 import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
@@ -17,6 +18,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKin
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
 import dev.epicpix.minecraftfunctioncompiler.il.optimizer.Optimizer;
+import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import dev.epicpix.minecraftfunctioncompiler.reporter.CodeGenerationMetrics;
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCountsData;
@@ -251,6 +253,18 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
     public void loadFunctionClasses(IArgumentLookup lookup, CodeFieldStorage fieldStorage, Object serverFunctionManager) {
         ArrayList<CommandError> commandErrors = new ArrayList<>();
 
+        if(DEBUG && ALLOW_EXTERNAL_DATA_ACCESS) {
+            try {
+                Files.createDirectory(generatedDir);
+            }catch(Exception ignored) {}
+            try {
+                var registries = DataRegistries.extractRegistries();
+                var registriesStr = new GsonBuilder().setPrettyPrinting().create().toJson(registries);
+                Files.writeString(generatedDir.resolve("registries.json"), registriesStr);
+                LOGGER.info("Wrote {} lines into registries.json", registriesStr.lines().count());
+            }catch(Exception ignored) {}
+        }
+
         var startParse = System.nanoTime();
         var functionSources = loadFunctionSources();
         var definedFunctions = parseFunctions(functionSources, lookup, commandErrors);
@@ -336,6 +350,8 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
             var startGraph = System.nanoTime();
             try {
                 Files.createDirectory(generatedDir);
+            }catch(Exception ignored) {}
+            try {
                 GraphGenerator.generateGraphs(compiledFunctions, generatedDir);
                 if(DEBUG) {
                     BytecodeGraphGenerator.generateBytecodeGraphs(lowLevelFunctions, generatedDir);

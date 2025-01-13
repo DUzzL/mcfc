@@ -1,9 +1,10 @@
 package dev.epicpix.minecraftfunctioncompiler.registry;
 
-import dev.epicpix.minecraftfunctioncompiler.data.AttributeData;
-import dev.epicpix.minecraftfunctioncompiler.data.EntityData;
-import dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCriterionData;
-import dev.epicpix.minecraftfunctioncompiler.data.MobEffectData;
+import com.google.gson.JsonObject;
+import dev.epicpix.minecraftfunctioncompiler.data.*;
+import org.objectweb.asm.Type;
+
+import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.ALLOW_EXTERNAL_DATA_ACCESS;
 
 public final class DataRegistries {
     private DataRegistries() {}
@@ -13,4 +14,87 @@ public final class DataRegistries {
     public static final DataRegistry<MobEffectData> MOB_EFFECT = new DataRegistry<>();
 
     public static final RawDataRegistry<String, ScoreboardCriterionData> SCOREBOARD_CRITERIA = new RawDataRegistry<>();
+
+    public static JsonObject extractRegistries() {
+        if(!ALLOW_EXTERNAL_DATA_ACCESS) throw new UnsupportedOperationException("This build doesn't support extracting registries");
+        var registries = new JsonObject();
+
+        var attributeRegistry = new JsonObject();
+        for(var entry : ATTRIBUTE.entrySet()) {
+            var data = entry.getValue();
+            var obj = new JsonObject();
+            obj.addProperty("default_value", data.defaultValue());
+            obj.addProperty("minimum_value", data.minimumValue());
+            obj.addProperty("maximum_value", data.maximumValue());
+            attributeRegistry.add(entry.getKey().toString(), obj);
+        }
+        registries.add("ATTRIBUTE", attributeRegistry);
+
+        var entityClassRegistry = new JsonObject();
+        for(var entry : ENTITY_CLASS.entrySet()) {
+            var data = entry.getValue();
+            var obj = new JsonObject();
+            obj.addProperty("type", data.type().getDescriptor());
+            obj.addProperty("summonable", data.summonable());
+            entityClassRegistry.add(entry.getKey().toString(), obj);
+        }
+        registries.add("ENTITY_CLASS", entityClassRegistry);
+
+        var mobEffectRegistry = new JsonObject();
+        for(var entry : MOB_EFFECT.entrySet()) {
+            var data = entry.getValue();
+            var obj = new JsonObject();
+            obj.addProperty("instant", data.instant());
+            mobEffectRegistry.add(entry.getKey().toString(), obj);
+        }
+        registries.add("MOB_EFFECT", mobEffectRegistry);
+
+        var scoreboardCriteriaRegistry = new JsonObject();
+        for(var entry : SCOREBOARD_CRITERIA.entrySet()) {
+            var data = entry.getValue();
+            var obj = new JsonObject();
+            obj.addProperty("read_only", data.readOnly());
+            scoreboardCriteriaRegistry.add(entry.getKey(), obj);
+        }
+        registries.add("SCOREBOARD_CRITERIA", scoreboardCriteriaRegistry);
+
+        return registries;
+    }
+
+    public static void insertRegistries(JsonObject registries) {
+        if(!ALLOW_EXTERNAL_DATA_ACCESS) throw new UnsupportedOperationException("This build doesn't support inserting registries from json");
+
+        ATTRIBUTE.reset();
+        for(var attributes : registries.getAsJsonObject("ATTRIBUTE").entrySet()) {
+            var attribute = attributes.getValue().getAsJsonObject();
+            var location = new DataLocation(attributes.getKey());
+            ATTRIBUTE.set(location, new AttributeData(location, attribute.get("default_value").getAsDouble(), attribute.get("minimum_value").getAsDouble(), attribute.get("maximum_value").getAsDouble()));
+        }
+        ATTRIBUTE.freeze();
+
+        ENTITY_CLASS.reset();
+        for(var entityClasses : registries.getAsJsonObject("ENTITY_CLASS").entrySet()) {
+            var entityClass = entityClasses.getValue().getAsJsonObject();
+            var location = new DataLocation(entityClasses.getKey());
+            ENTITY_CLASS.set(location, new EntityData(Type.getType(entityClass.get("type").getAsString()), entityClass.get("summonable").getAsBoolean()));
+        }
+        ENTITY_CLASS.freeze();
+
+        MOB_EFFECT.reset();
+        for(var mobEffects : registries.getAsJsonObject("MOB_EFFECT").entrySet()) {
+            var mobEffect = mobEffects.getValue().getAsJsonObject();
+            var location = new DataLocation(mobEffects.getKey());
+            MOB_EFFECT.set(location, new MobEffectData(location, mobEffect.get("instant").getAsBoolean()));
+        }
+        MOB_EFFECT.freeze();
+
+        SCOREBOARD_CRITERIA.reset();
+        for(var scoreboardCriteria : registries.getAsJsonObject("SCOREBOARD_CRITERIA").entrySet()) {
+            var scoreboardCriterion = scoreboardCriteria.getValue().getAsJsonObject();
+            var location = scoreboardCriteria.getKey();
+            SCOREBOARD_CRITERIA.set(location, new ScoreboardCriterionData(location, scoreboardCriterion.get("read_only").getAsBoolean()));
+        }
+        SCOREBOARD_CRITERIA.freeze();
+    }
+
 }
