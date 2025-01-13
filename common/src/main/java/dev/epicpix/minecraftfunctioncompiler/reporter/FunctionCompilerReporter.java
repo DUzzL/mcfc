@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.ENABLE_REPORTING;
 import static dev.epicpix.minecraftfunctioncompiler.CompileConstants.isDevelopmentEnvironment;
 import static dev.epicpix.minecraftfunctioncompiler.CompileConstants.versionCommit;
 import static dev.epicpix.minecraftfunctioncompiler.CompileConstants.versionName;
@@ -21,7 +22,7 @@ import static dev.epicpix.minecraftfunctioncompiler.CompileConstants.versionName
 public final class FunctionCompilerReporter {
     private FunctionCompilerReporter() {}
 
-    private static boolean dataReportingEnabled = true;
+    private static boolean dataReportingEnabled = ENABLE_REPORTING;
 
     private static final UUID runUuid = UUID.randomUUID();
     private static final String REPORT_URL = "https://mcfc.mods.epicpix.dev/api/v1/send_reports";
@@ -41,7 +42,7 @@ public final class FunctionCompilerReporter {
 
     @SuppressWarnings("ConstantValue")
     public static void reportRawData(String type, JsonElement data) {
-        if(!dataReportingEnabled) return;
+        if(ENABLE_REPORTING || !dataReportingEnabled) return;
 
         JsonObject sendData = new JsonObject();
         sendData.addProperty("is_dev", isDevelopmentEnvironment || "development".equals(versionCommit));
@@ -60,6 +61,7 @@ public final class FunctionCompilerReporter {
     }
 
     private static void writeExceptionJson(Throwable exception, JsonObject json) {
+        if(!ENABLE_REPORTING) return;
         json.addProperty("exception_type", exception.getClass().getName());
         json.addProperty("exception_message", exception.getMessage());
         var trace = new StringBuilder();
@@ -75,6 +77,7 @@ public final class FunctionCompilerReporter {
     }
 
     public static void reportException(String step, Throwable exception, JsonElement extra) {
+        if(!ENABLE_REPORTING) return;
         JsonObject json = new JsonObject();
         json.addProperty("step", step);
         writeExceptionJson(exception, json);
@@ -83,6 +86,7 @@ public final class FunctionCompilerReporter {
     }
 
     public static void reportExceptionWithInstructions(String step, Throwable exception, List<Instruction> instructions) {
+        if(!ENABLE_REPORTING) return;
         JsonObject json = new JsonObject();
         var instructionResult = new StringBuilder();
         Instruction.printInstructions(instructions, (it) -> instructionResult.append(it).append("\n"));
@@ -91,6 +95,7 @@ public final class FunctionCompilerReporter {
     }
 
     public static void reportExceptionWithCommands(String step, Throwable exception, List<String> commands) {
+        if(!ENABLE_REPORTING) return;
         JsonObject json = new JsonObject();
         var commandResult = new StringBuilder();
         for(var command : commands) commandResult.append(command).append("\n");
@@ -104,6 +109,7 @@ public final class FunctionCompilerReporter {
             CodeGenerationMetrics codeGenerationMetrics,
             List<CommandError> commandErrors
         ) {
+        if(!ENABLE_REPORTING) return;
         JsonObject compilationStats = new JsonObject();
 
         JsonObject functionCountsJson = new JsonObject();
@@ -147,7 +153,7 @@ public final class FunctionCompilerReporter {
     }
 
     public static void sendReports() {
-        if(!dataReportingEnabled || reportQueue.isEmpty()) return;
+        if(!ENABLE_REPORTING || !dataReportingEnabled || reportQueue.isEmpty()) return;
         var sendData = new JsonArray();
         reportQueue.forEach(sendData::add);
         reportQueue.clear();

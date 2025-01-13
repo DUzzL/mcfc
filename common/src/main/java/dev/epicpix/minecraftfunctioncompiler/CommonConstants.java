@@ -8,6 +8,7 @@ public final class CommonConstants {
     public static final boolean AUTO_SWITCH_FUNCTIONS = true;
     public static final boolean ALLOW_EXTERNAL_DATA_ACCESS = false;
     public static final boolean BLOCKING_COMPILATION = false;
+    public static final boolean ENABLE_REPORTING = true;
     public static final String DATA_CLASS = "mcfc/function/data";
 
     public static final String EMIT_SERVER_FUNCTION_MANAGER_NAME = "_ServerFunctionManager";

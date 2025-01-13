@@ -13,11 +13,17 @@ import static org.objectweb.asm.ClassWriter.COMPUTE_FRAMES;
 
 public class ClassGenerator {
 
+    private final String className;
     private final ClassWriter writer;
     private boolean methodHandlesLookupGenerated = false;
 
-    private ClassGenerator(ClassWriter writer) {
+    private ClassGenerator(String className, ClassWriter writer) {
+        this.className = className;
         this.writer = writer;
+    }
+
+    public String getClassName() {
+        return className;
     }
 
     public byte[] finish() {
@@ -59,7 +65,7 @@ public class ClassGenerator {
     private static ClassGenerator createClassGenerator(String className, int javaVersion) {
         var writer = createClassWriter();
         writer.visit(javaVersion, Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL, className, null, "java/lang/Object", null);
-        return new ClassGenerator(writer);
+        return new ClassGenerator(className, writer);
     }
 
     private static ClassWriter createClassWriter() {

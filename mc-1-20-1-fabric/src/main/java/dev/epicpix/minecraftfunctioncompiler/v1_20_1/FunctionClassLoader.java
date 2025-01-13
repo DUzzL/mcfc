@@ -58,18 +58,18 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<ResourceLoc
             }
         };
 
-        loadFunctionClasses(lookup, createCodeFieldStorage(), serverFunctionManager);
+        loadFunctionClasses(lookup, serverFunctionManager);
     }
 
     public void setHandle(DataLocation key, MethodHandle handle) {
         setHandle(new ResourceLocation(key.namespace(), key.path()), handle);
     }
 
-    protected BytecodeValue nbtTagToString(EmitterContext emitter, String key, BytecodeLabel errorLabel) {
+    public BytecodeValue nbtTagToBytecodeString(EmitterContext emitter, String key, BytecodeLabel errorLabel) {
         throw new UnsupportedOperationException("Cannot convert nbt tag to string in this version");
     }
 
-    private CodeFieldStorage createCodeFieldStorage() {
+    public CodeFieldStorage createCodeFieldStorage() {
         return new CodeFieldStorage(Type.getType(ServerFunctionManager.class), Type.getType(MinecraftServer.class), CodeFieldStorageMapImpl.INSTANCE);
     }
 }
