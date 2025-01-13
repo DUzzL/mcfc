@@ -15,6 +15,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerFunctionManager;
+import org.objectweb.asm.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,6 +75,6 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<ResourceLoc
 
 
     private CodeFieldStorage createCodeFieldStorage() {
-        return new CodeFieldStorage(ServerFunctionManager.class, MinecraftServer.class, CodeFieldStorageMapImpl.INSTANCE);
+        return new CodeFieldStorage(Type.getType(ServerFunctionManager.class), Type.getType(MinecraftServer.class), CodeFieldStorageMapImpl.INSTANCE);
     }
 }

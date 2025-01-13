@@ -77,8 +77,8 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
 
     public void registerFunction(Class<?> clazz, DataLocation key, CodeFieldStorage fieldStorage) {
         try {
-            setHandle(key, MethodHandles.lookup().findStatic(clazz, "run", MethodType.methodType(long.class, commandSourceStackClass, fieldStorage.getMap().getValueClass(CodeFieldStorageMapKind.NBT_COMPOUND))));
-        } catch (NoSuchMethodException | IllegalAccessException e) {
+            setHandle(key, MethodHandles.lookup().findStatic(clazz, "run", MethodType.methodType(long.class, commandSourceStackClass, Class.forName(fieldStorage.getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND).getClassName()))));
+        } catch(NoSuchMethodException | IllegalAccessException | ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }
@@ -424,9 +424,9 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
 
         var entryWriter = new CodeWriter();
         var staticCommandSourceStack = entryWriter.createRegister();
-        entryWriter.setValue(staticCommandSourceStack, new BytecodeValue.Parameter(0, commandSourceStackClass));
+        entryWriter.setValue(staticCommandSourceStack, new BytecodeValue.Parameter(0, Type.getType(commandSourceStackClass)));
         var staticFunctionCompound = entryWriter.createRegister();
-        entryWriter.setValue(staticFunctionCompound, new BytecodeValue.Parameter(1, fieldStorage.getMap().getValueClass(CodeFieldStorageMapKind.NBT_COMPOUND)));
+        entryWriter.setValue(staticFunctionCompound, new BytecodeValue.Parameter(1, fieldStorage.getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND)));
         Map<String, BytecodeValue> staticArguments = Map.of("CommandSourceStack", staticCommandSourceStack, "FunctionCompound", staticFunctionCompound);
         EmitterContext entryContext;
         if(macroInstructions.isEmpty()) {
@@ -446,20 +446,20 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
 
         var entryBytecode = BytecodeOptimizer.optimizeInstructions(entryWriter.getInstructions());
         lowLevelFunctions.put(className.replace('/', '.') + "#run", entryBytecode);
-        gen.addFunction("run", entryBytecode, Type.LONG_TYPE, Type.getType(commandSourceStackClass), Type.getType(fieldStorage.getMap().getValueClass(CodeFieldStorageMapKind.NBT_COMPOUND)));
+        gen.addFunction("run", entryBytecode, Type.LONG_TYPE, Type.getType(commandSourceStackClass), fieldStorage.getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND));
 
 
         if(!macroInstructions.isEmpty()) {
             var writer = new CodeWriter();
 
             var staticCommandSourceStack2 = writer.createRegister();
-            writer.setValue(staticCommandSourceStack2, new BytecodeValue.Parameter(0, commandSourceStackClass));
+            writer.setValue(staticCommandSourceStack2, new BytecodeValue.Parameter(0, Type.getType(commandSourceStackClass)));
             HashMap<String, BytecodeValue> macroLocations = new HashMap<>();
             int i = 1;
             for(var macro : macroInputs) {
                 var macroRegister = writer.createRegister();
                 macroLocations.put(macro, macroRegister);
-                writer.setValue(macroRegister, new BytecodeValue.Parameter(i, String.class));
+                writer.setValue(macroRegister, new BytecodeValue.Parameter(i, Type.getType(String.class)));
                 i++;
             }
             new EmitterContext(fieldStorage, writer, compiledFunctions, new HashMap<>(Map.of("CommandSourceStack", staticCommandSourceStack2)), macroLocations, instructions).emitForEach();
@@ -485,7 +485,7 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
         var dataClassBytes = fieldStorage.generate(lowLevelInstructions);
         totalClassFileSize[1] += dataClassBytes.length;
         var defined = defineClass(DATA_CLASS.replace('/', '.'), dataClassBytes);
-        defined.getDeclaredMethod("load", fieldStorage.minecraftServerClass, fieldStorage.serverFunctionManagerClass).invoke(null, minecraftServer, serverFunctionManager);
+        defined.getDeclaredMethod("load", Class.forName(fieldStorage.minecraftServerType.getClassName()), Class.forName(fieldStorage.serverFunctionManagerType.getClassName())).invoke(null, minecraftServer, serverFunctionManager);
         return defined;
     }
 

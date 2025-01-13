@@ -22,7 +22,7 @@ public class StackCompiler {
         }else if(value instanceof BytecodeValue.StringValue) {
             return Type.getType(String.class);
         }else if(value instanceof BytecodeValue.Parameter parameter) {
-            return Type.getType(parameter.clazz());
+            return parameter.type();
         }else if(value instanceof BytecodeRegister register) {
             return registerTypeMap.get(register);
         }else {
@@ -71,8 +71,8 @@ public class StackCompiler {
                 results.add(storeValue(v.result(), sourceType, registerTypeMap));
             }else if(instr instanceof BytecodeInstruction.CreateArray v) {
                 results.add(loadValue(v.length(), registerTypeMap));
-                results.add(new StackInstruction.NewArray(Type.getType(v.contentType())));
-                results.add(storeValue(v.result(), Type.getType(v.contentType().arrayType()), registerTypeMap));
+                results.add(new StackInstruction.NewArray(v.contentType()));
+                results.add(storeValue(v.result(), Type.getType("[" + v.contentType().getDescriptor()), registerTypeMap));
             }else if(instr instanceof BytecodeInstruction.SetArrayValue v) {
                 results.add(loadValue(v.array(), registerTypeMap));
                 results.add(loadValue(v.index(), registerTypeMap));
@@ -80,7 +80,7 @@ public class StackCompiler {
                 results.add(new StackInstruction.ArrayStore());
             }else if(instr instanceof BytecodeInstruction.InstanceCheckJump v) {
                 results.add(loadValue(v.a(), registerTypeMap));
-                results.add(new StackInstruction.JumpTyped(v.ifIsInstance() ? StackJumpType.IF_INSTANCEOF : StackJumpType.IF_NOT_INSTANCEOF, Type.getType(v.clazz()), v.label()));
+                results.add(new StackInstruction.JumpTyped(v.ifIsInstance() ? StackJumpType.IF_INSTANCEOF : StackJumpType.IF_NOT_INSTANCEOF, v.type(), v.label()));
             }else if(instr instanceof BytecodeInstruction.ConditionalJump v) {
                 results.add(loadValue(v.a(), registerTypeMap));
                 var other = v.b();
@@ -146,8 +146,8 @@ public class StackCompiler {
                 results.add(new StackInstruction.Call(f));
             }else if(instr instanceof BytecodeInstruction.Cast v) {
                 results.add(loadValue(v.source(), registerTypeMap));
-                results.add(new StackInstruction.Cast(Type.getType(v.clazz())));
-                results.add(storeValue(v.result(), Type.getType(v.clazz()), registerTypeMap));
+                results.add(new StackInstruction.Cast(v.type()));
+                results.add(storeValue(v.result(), v.type(), registerTypeMap));
             }else if(instr instanceof BytecodeInstruction.StringConcat v) {
                 ArrayList<String> staticStrings = new ArrayList<>();
                 boolean isConstant = true;

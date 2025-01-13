@@ -14,6 +14,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
+import org.objectweb.asm.Type;
 
 import java.util.List;
 
@@ -65,9 +66,9 @@ public final class Emitter {
                         storeServerFunctionManager_context(codeWriter, context.fieldStorage().loadServerFunctionManager(codeWriter), new BytecodeValue.NullValue());
                     }
                     var commandSourceStack = context.load("stack");
-                    var nbtArgs = context.instruction().get("arguments") != null ? codeWriter.castType(context.load("arguments"), CompoundTag.class) : new BytecodeValue.NullValue();
+                    var nbtArgs = context.instruction().get("arguments") != null ? codeWriter.castType(context.load("arguments"), Type.getType(CompoundTag.class)) : new BytecodeValue.NullValue();
                     if(context.compiledFunctions().contains(func)) {
-                        var target = new InstructionTarget.FunctionTarget(("mcfc/function/" + func.namespace() + "/" + func.path()).replace('.', '$'), "run", "(" + CommandSourceStack.class.descriptorString() + context.fieldStorage().getMap().getValueClass(CodeFieldStorageMapKind.NBT_COMPOUND).descriptorString() + ")J", true, false, false, true);
+                        var target = new InstructionTarget.FunctionTarget(("mcfc/function/" + func.namespace() + "/" + func.path()).replace('.', '$'), "run", "(" + CommandSourceStack.class.descriptorString() + context.fieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND).getDescriptor() + ")J", true, false, false, true);
                         codeWriter.writeTarget(target, commandSourceStack, nbtArgs);
                     }else {
                         var functionManager = context.fieldStorage().loadServerFunctionManager(codeWriter);
@@ -132,7 +133,7 @@ public final class Emitter {
                 var success = codeWriter.createLabel();
                 for(var res : context.instruction().<List<DataLocation>>get("types")) {
                     var entity = context.load("entity");
-                    var clazz = DataRegistries.ENTITY_CLASS.get(res).clazz();
+                    var clazz = DataRegistries.ENTITY_CLASS.get(res).type();
                     if(context.instruction().<Boolean>get("negated")) {
                         codeWriter.instanceCheckJump(true, entity, clazz, context.mapLabel("failLabel"));
                     }else {

@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter.impl;
 
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
+import org.objectweb.asm.Type;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,8 +21,8 @@ public final class CodeFieldStorageStorageMap {
         return (CodeFieldStorageMapValue<T>) map.get(key);
     }
 
-    public <T> Class<?> getValueClass(CodeFieldStorageMapKind<T> key) {
-        return getValue(key).clazz();
+    public <T> Type getValueType(CodeFieldStorageMapKind<T> key) {
+        return getValue(key).type();
     }
 
     public <T> BytecodeValue writeCode(CodeFieldStorageMapKind<T> key, CodeFieldStorage fieldStorage, CodeWriter writer, T value) {

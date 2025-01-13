@@ -10,6 +10,7 @@ import net.minecraft.stats.StatType;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.RangedAttribute;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
+import org.objectweb.asm.Type;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -60,10 +61,10 @@ public final class RegistryMapping {
         for(var entry : definedEntityClasses.entrySet()) {
             if(!duplicateEntityClasses.contains(entry.getValue())) {
                 var entityType = BuiltInRegistries.ENTITY_TYPE.getValue(entry.getKey());
-                DataRegistries.ENTITY_CLASS.set(new DataLocation(entry.getKey().getNamespace(), entry.getKey().getPath()), new EntityData(entry.getValue(), entityType.canSummon()));
+                DataRegistries.ENTITY_CLASS.set(new DataLocation(entry.getKey().getNamespace(), entry.getKey().getPath()), new EntityData(Type.getType(entry.getValue()), entityType.canSummon()));
             }
         }
-        DataRegistries.ENTITY_CLASS.set(new DataLocation("minecraft", "player"), new EntityData(ServerPlayer.class, false));
+        DataRegistries.ENTITY_CLASS.set(new DataLocation("minecraft", "player"), new EntityData(Type.getType(ServerPlayer.class), false));
         DataRegistries.ENTITY_CLASS.freeze();
     }
 }

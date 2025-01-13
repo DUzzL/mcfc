@@ -17,17 +17,17 @@ import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.*;
 
 public final class CodeFieldStorage {
 
-    public final Class<?> serverFunctionManagerClass;
-    public final Class<?> minecraftServerClass;
+    public final Type serverFunctionManagerType;
+    public final Type minecraftServerType;
     private final CodeFieldStorageStorageMap map;
 
     public CodeFieldStorage(
-            Class<?> serverFunctionManagerClass,
-            Class<?> minecraftServerClass,
+            Type serverFunctionManagerType,
+            Type minecraftServerType,
             CodeFieldStorageMap map
     ) {
-        this.serverFunctionManagerClass = serverFunctionManagerClass;
-        this.minecraftServerClass = minecraftServerClass;
+        this.serverFunctionManagerType = serverFunctionManagerType;
+        this.minecraftServerType = minecraftServerType;
         map.checkEntryCount();
         this.map = map.toStorageMap();
     }
@@ -39,39 +39,39 @@ public final class CodeFieldStorage {
     public BytecodeRegister loadAttribute(CodeWriter cw, DataLocation value) {
         map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, value);
         map.writeValue(CodeFieldStorageMapKind.ATTRIBUTE, value);
-        return cw.getDataField(CodeFieldStorageMapKind.ATTRIBUTE.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.ATTRIBUTE));
+        return cw.getDataField(CodeFieldStorageMapKind.ATTRIBUTE.generateName(map, value), map.getValueType(CodeFieldStorageMapKind.ATTRIBUTE));
     }
 
     public BytecodeRegister loadEffect(CodeWriter cw, DataLocation value) {
         map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, value);
         map.writeValue(CodeFieldStorageMapKind.EFFECT, value);
-        return cw.getDataField(CodeFieldStorageMapKind.EFFECT.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.EFFECT));
+        return cw.getDataField(CodeFieldStorageMapKind.EFFECT.generateName(map, value), map.getValueType(CodeFieldStorageMapKind.EFFECT));
     }
 
     public BytecodeRegister loadFunction(CodeWriter cw, DataLocation value) {
         map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, value);
         map.writeValue(CodeFieldStorageMapKind.FUNCTION, value);
-        return cw.getDataField(CodeFieldStorageMapKind.FUNCTION.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.FUNCTION));
+        return cw.getDataField(CodeFieldStorageMapKind.FUNCTION.generateName(map, value), map.getValueType(CodeFieldStorageMapKind.FUNCTION));
     }
 
     public BytecodeRegister loadNbtValue(CodeWriter cw, NbtValue value) {
         map.writeValue(CodeFieldStorageMapKind.NBT_VALUE, value);
-        return cw.getDataField(CodeFieldStorageMapKind.NBT_VALUE.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.NBT_VALUE));
+        return cw.getDataField(CodeFieldStorageMapKind.NBT_VALUE.generateName(map, value), map.getValueType(CodeFieldStorageMapKind.NBT_VALUE));
     }
 
     public BytecodeRegister loadRegexPattern(CodeWriter cw, String value) {
         map.writeValue(CodeFieldStorageMapKind.REGEX_PATTERN, value);
-        return cw.getDataField(CodeFieldStorageMapKind.REGEX_PATTERN.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.REGEX_PATTERN));
+        return cw.getDataField(CodeFieldStorageMapKind.REGEX_PATTERN.generateName(map, value), map.getValueType(CodeFieldStorageMapKind.REGEX_PATTERN));
     }
 
     public BytecodeRegister loadResourceLocation(CodeWriter cw, DataLocation value) {
         map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, value);
-        return cw.getDataField(CodeFieldStorageMapKind.RESOURCE_LOCATION.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.RESOURCE_LOCATION));
+        return cw.getDataField(CodeFieldStorageMapKind.RESOURCE_LOCATION.generateName(map, value), map.getValueType(CodeFieldStorageMapKind.RESOURCE_LOCATION));
     }
 
     public BytecodeRegister loadScoreboardCriterion(CodeWriter cw, String value) {
         map.writeValue(CodeFieldStorageMapKind.SCOREBOARD_CRITERION, value);
-        return cw.getDataField(CodeFieldStorageMapKind.SCOREBOARD_CRITERION.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.SCOREBOARD_CRITERION));
+        return cw.getDataField(CodeFieldStorageMapKind.SCOREBOARD_CRITERION.generateName(map, value), map.getValueType(CodeFieldStorageMapKind.SCOREBOARD_CRITERION));
     }
 
     public BytecodeRegister loadText(CodeWriter cw, Text value) {
@@ -84,7 +84,7 @@ public final class CodeFieldStorage {
             }
         });
         map.writeValue(CodeFieldStorageMapKind.TEXT, value);
-        return cw.getDataField(CodeFieldStorageMapKind.TEXT.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.TEXT));
+        return cw.getDataField(CodeFieldStorageMapKind.TEXT.generateName(map, value), map.getValueType(CodeFieldStorageMapKind.TEXT));
     }
 
     public BytecodeRegister loadTextStyle(CodeWriter cw, TextStyle value) {
@@ -92,16 +92,16 @@ public final class CodeFieldStorage {
         if(value.font() != null) {
             map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, value.font());
         }
-        return cw.getDataField(CodeFieldStorageMapKind.TEXT_STYLE.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.TEXT_STYLE));
+        return cw.getDataField(CodeFieldStorageMapKind.TEXT_STYLE.generateName(map, value), map.getValueType(CodeFieldStorageMapKind.TEXT_STYLE));
     }
 
     public BytecodeRegister loadUUID(CodeWriter cw, UUID value) {
         map.writeValue(CodeFieldStorageMapKind.UUID, value);
-        return cw.getDataField(CodeFieldStorageMapKind.UUID.generateName(map, value), map.getValueClass(CodeFieldStorageMapKind.UUID));
+        return cw.getDataField(CodeFieldStorageMapKind.UUID.generateName(map, value), map.getValueType(CodeFieldStorageMapKind.UUID));
     }
 
     public BytecodeRegister loadServerFunctionManager(CodeWriter cw) {
-        return cw.getDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerClass);
+        return cw.getDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerType);
     }
 
     private <T> CodeWriter writeFromStorage(HashSet<CodeFieldStorageMapKind<?>> written, CodeWriter cw, ClassGenerator classGenerator, CodeFieldStorageMapKind<T> kind) {
@@ -113,8 +113,8 @@ public final class CodeFieldStorage {
         for(var value : map.getStorage(kind)) {
             var name = kind.generateName(map, value);
             var writtenValue = map.writeCode(kind, this, cw, value);
-            cw.setDataField(name, map.getValueClass(kind), writtenValue);
-            classGenerator.addFinalField(name, Type.getType(map.getValueClass(kind)));
+            cw.setDataField(name, map.getValueType(kind), writtenValue);
+            classGenerator.addFinalField(name, map.getValueType(kind));
         }
 
         return cw;
@@ -125,7 +125,7 @@ public final class CodeFieldStorage {
 
         var cw = new CodeWriter();
 
-        cw.setDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerClass, new BytecodeValue.Parameter(1, serverFunctionManagerClass));
+        cw.setDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerType, new BytecodeValue.Parameter(1, serverFunctionManagerType));
 
         HashSet<CodeFieldStorageMapKind<?>> written = new HashSet<>();
         for(var kind : CodeFieldStorageMapKind.values()) {
@@ -137,9 +137,9 @@ public final class CodeFieldStorage {
         var instructions = BytecodeOptimizer.optimizeInstructions(cw.getInstructions());
         lowLevelInstructions.put(DATA_CLASS.replace('/', '.') + "#load", instructions);
 
-        classGenerator.addFunction("load", instructions, Type.VOID_TYPE, Type.getType(minecraftServerClass), Type.getType(serverFunctionManagerClass));
+        classGenerator.addFunction("load", instructions, Type.VOID_TYPE, minecraftServerType, serverFunctionManagerType);
 
-        classGenerator.addFinalField(EMIT_SERVER_FUNCTION_MANAGER_NAME, Type.getType(serverFunctionManagerClass));
+        classGenerator.addFinalField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerType);
 
         return classGenerator.finish();
     }

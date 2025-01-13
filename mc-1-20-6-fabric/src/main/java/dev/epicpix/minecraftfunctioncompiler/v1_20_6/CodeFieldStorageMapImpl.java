@@ -11,9 +11,8 @@ import net.minecraft.core.Holder;
 import net.minecraft.nbt.*;
 import net.minecraft.network.chat.*;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.effect.MobEffect;
-import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
+import org.objectweb.asm.Type;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,28 +31,27 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
     private static final InstructionTarget INT_ARRAY_TAG_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(IntArrayTag.class, int[].class);
     private static final InstructionTarget LONG_ARRAY_TAG_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(LongArrayTag.class, long[].class);
 
-
     CodeFieldStorageMapImpl() {
-        set(CodeFieldStorageMapKind.ATTRIBUTE, new CodeFieldStorageMapValue<>(Holder.class, (cf, cw, value) -> {
-            return cw.castType(callOptional_get(cw, callRegistry_getHolder(cw, loadBuiltInRegistries_ATTRIBUTE(cw), cf.loadResourceLocation(cw, value))), Holder.class);
+        set(CodeFieldStorageMapKind.ATTRIBUTE, new CodeFieldStorageMapValue<>(Type.getType(Holder.class), (cf, cw, value) -> {
+            return cw.castType(callOptional_get(cw, callRegistry_getHolder(cw, loadBuiltInRegistries_ATTRIBUTE(cw), cf.loadResourceLocation(cw, value))), Type.getType(Holder.class));
         }));
-        set(CodeFieldStorageMapKind.EFFECT, new CodeFieldStorageMapValue<>(Holder.class, (cf, cw, value) -> {
-            return cw.castType(callOptional_get(cw, callRegistry_getHolder(cw, loadBuiltInRegistries_MOB_EFFECT(cw), cf.loadResourceLocation(cw, value))), Holder.class);
+        set(CodeFieldStorageMapKind.EFFECT, new CodeFieldStorageMapValue<>(Type.getType(Holder.class), (cf, cw, value) -> {
+            return cw.castType(callOptional_get(cw, callRegistry_getHolder(cw, loadBuiltInRegistries_MOB_EFFECT(cw), cf.loadResourceLocation(cw, value))), Type.getType(Holder.class));
         }));
-        set(CodeFieldStorageMapKind.FUNCTION, new CodeFieldStorageMapValue<>(CommandFunction.class, (cf, cw, value) -> {
+        set(CodeFieldStorageMapKind.FUNCTION, new CodeFieldStorageMapValue<>(Type.getType(CommandFunction.class), (cf, cw, value) -> {
             var functions = loadServerFunctionLibrary_functions(cw, loadServerFunctionManager_library(cw, cf.loadServerFunctionManager(cw)));
-            return cw.castType(callMap_get(cw, functions, cf.loadResourceLocation(cw, value)), CommandFunction.class);
+            return cw.castType(callMap_get(cw, functions, cf.loadResourceLocation(cw, value)), Type.getType(CommandFunction.class));
         }));
-        set(CodeFieldStorageMapKind.NBT_COMPOUND, new CodeFieldStorageMapValue<>(CompoundTag.class, (cf, cw, value) -> writeNbtValue(value, cw)));
-        set(CodeFieldStorageMapKind.NBT_VALUE, new CodeFieldStorageMapValue<>(Tag.class, (cf, cw, value) -> writeNbtValue(value, cw)));
-        set(CodeFieldStorageMapKind.RESOURCE_LOCATION, new CodeFieldStorageMapValue<>(ResourceLocation.class, (cf, cw, value) -> {
+        set(CodeFieldStorageMapKind.NBT_COMPOUND, new CodeFieldStorageMapValue<>(Type.getType(CompoundTag.class), (cf, cw, value) -> writeNbtValue(value, cw)));
+        set(CodeFieldStorageMapKind.NBT_VALUE, new CodeFieldStorageMapValue<>(Type.getType(Tag.class), (cf, cw, value) -> writeNbtValue(value, cw)));
+        set(CodeFieldStorageMapKind.RESOURCE_LOCATION, new CodeFieldStorageMapValue<>(Type.getType(ResourceLocation.class), (cf, cw, value) -> {
             return cw.newObjectCreate(RESOURCE_LOCATION_INIT_TARGET, new BytecodeValue.StringValue(value.namespace()), new BytecodeValue.StringValue(value.path()));
         }));
-        set(CodeFieldStorageMapKind.SCOREBOARD_CRITERION, new CodeFieldStorageMapValue<>(ObjectiveCriteria.class, (cf, cw, value) -> {
-            return cw.castType(callOptional_get(cw, callObjectiveCriteria_byName(cw, new BytecodeValue.StringValue(value))), ObjectiveCriteria.class);
+        set(CodeFieldStorageMapKind.SCOREBOARD_CRITERION, new CodeFieldStorageMapValue<>(Type.getType(ObjectiveCriteria.class), (cf, cw, value) -> {
+            return cw.castType(callOptional_get(cw, callObjectiveCriteria_byName(cw, new BytecodeValue.StringValue(value))), Type.getType(ObjectiveCriteria.class));
         }));
-        set(CodeFieldStorageMapKind.TEXT, new CodeFieldStorageMapValue<>(Component.class, (cf, cw, value) -> writeTextValue(value, cw, cf)));
-        set(CodeFieldStorageMapKind.TEXT_STYLE, new CodeFieldStorageMapValue<>(Style.class, (cf, cw, value) -> {
+        set(CodeFieldStorageMapKind.TEXT, new CodeFieldStorageMapValue<>(Type.getType(Component.class), (cf, cw, value) -> writeTextValue(value, cw, cf)));
+        set(CodeFieldStorageMapKind.TEXT_STYLE, new CodeFieldStorageMapValue<>(Type.getType(Style.class), (cf, cw, value) -> {
             ArrayList<BytecodeValue> args = new ArrayList<>();
             if(value.color() != null) {
                 args.add(callTextColor_fromRgb(cw, new BytecodeValue.IntegerValue(value.color())));
@@ -102,7 +100,7 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
             }
             return listTag;
         }else if(value instanceof NbtValue.ByteArray barr) {
-            var byteArray = cw.newArray(new BytecodeValue.IntegerValue(barr.values().length), byte.class);
+            var byteArray = cw.newArray(new BytecodeValue.IntegerValue(barr.values().length), Type.getType(byte.class));
             byte[] values = barr.values();
             for(int i = 0; i < values.length; i++) {
                 cw.setArrayValue(byteArray, new BytecodeValue.IntegerValue(i), new BytecodeValue.IntegerValue(values[i]));
@@ -121,7 +119,7 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
         }else if(value instanceof NbtValue.FloatLiteral fl) {
             return callFloatTag_valueOf(cw, new BytecodeValue.FloatValue(fl.value()));
         }else if(value instanceof NbtValue.IntegerArray iarr) {
-            var intArray = cw.newArray(new BytecodeValue.IntegerValue(iarr.values().length), int.class);
+            var intArray = cw.newArray(new BytecodeValue.IntegerValue(iarr.values().length), Type.getType(int.class));
             int[] values = iarr.values();
             for(int i = 0; i < values.length; i++) {
                 cw.setArrayValue(intArray, new BytecodeValue.IntegerValue(i), new BytecodeValue.IntegerValue(values[i]));
@@ -130,7 +128,7 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
         }else if(value instanceof NbtValue.IntegerLiteral il) {
             return callIntTag_valueOf(cw, new BytecodeValue.IntegerValue(il.value()));
         }else if(value instanceof NbtValue.LongArray larr) {
-            var longArray = cw.newArray(new BytecodeValue.IntegerValue(larr.values().length), long.class);
+            var longArray = cw.newArray(new BytecodeValue.IntegerValue(larr.values().length), Type.getType(long.class));
             long[] values = larr.values();
             for(int i = 0; i < values.length; i++) {
                 cw.setArrayValue(longArray, new BytecodeValue.IntegerValue(i), new BytecodeValue.LongValue(values[i]));
@@ -161,7 +159,7 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
                     textComponent = callComponent_translatableFallbackEmpty(cw, new BytecodeValue.StringValue(translatable.key()), new BytecodeValue.StringValue(translatable.fallback()));
                 }
             }else {
-                var array = cw.newArray(new BytecodeValue.IntegerValue(translatable.args().size()), Object.class);
+                var array = cw.newArray(new BytecodeValue.IntegerValue(translatable.args().size()), Type.getType(Object.class));
                 var values = translatable.args();
                 for(int i = 0; i < values.size(); i++) {
                     BytecodeValue writeValue;

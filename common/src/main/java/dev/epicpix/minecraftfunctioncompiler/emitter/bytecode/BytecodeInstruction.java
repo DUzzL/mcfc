@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter.bytecode;
 
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
+import org.objectweb.asm.Type;
 
 import java.util.List;
 
@@ -19,7 +20,7 @@ public interface BytecodeInstruction {
         }
     }
 
-    record CreateArray(BytecodeRegister result, BytecodeValue length, Class<?> contentType) implements BytecodeInstruction {
+    record CreateArray(BytecodeRegister result, BytecodeValue length, Type contentType) implements BytecodeInstruction {
         public int cost() {
             return 2 + result().cost() + length.cost();
         }
@@ -31,7 +32,7 @@ public interface BytecodeInstruction {
         }
     }
 
-    record InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, Class<?> clazz, BytecodeLabel label) implements BytecodeInstruction {
+    record InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, Type type, BytecodeLabel label) implements BytecodeInstruction {
         public int cost() {
             return 3 + a.cost();
         }
@@ -67,7 +68,7 @@ public interface BytecodeInstruction {
         }
     }
 
-    record Cast(BytecodeRegister result, BytecodeValue source, Class<?> clazz) implements BytecodeInstruction {
+    record Cast(BytecodeRegister result, BytecodeValue source, Type type) implements BytecodeInstruction {
         public int cost() {
             return 3 + result().cost() + source.cost();
         }

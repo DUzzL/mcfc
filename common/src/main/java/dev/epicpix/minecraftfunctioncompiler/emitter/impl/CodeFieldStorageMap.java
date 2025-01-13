@@ -2,6 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.emitter.impl;
 
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
+import org.objectweb.asm.Type;
 
 import java.util.HashMap;
 import java.util.UUID;
@@ -16,8 +17,8 @@ public class CodeFieldStorageMap {
     private static final InstructionTarget UUID_TARGET_INIT = InstructionTarget.FunctionTarget.initFunction(UUID.class, long.class, long.class);
 
     public CodeFieldStorageMap addDefaults() {
-        set(CodeFieldStorageMapKind.REGEX_PATTERN, new CodeFieldStorageMapValue<>(Pattern.class, (cf, cw, value) -> callPattern_compile(cw, new BytecodeValue.StringValue(value))));
-        set(CodeFieldStorageMapKind.UUID, new CodeFieldStorageMapValue<>(UUID.class, (cf, cw, value) -> cw.newObjectCreate(UUID_TARGET_INIT, new BytecodeValue.LongValue(value.getMostSignificantBits()), new BytecodeValue.LongValue(value.getLeastSignificantBits()))));
+        set(CodeFieldStorageMapKind.REGEX_PATTERN, new CodeFieldStorageMapValue<>(Type.getType(Pattern.class), (cf, cw, value) -> callPattern_compile(cw, new BytecodeValue.StringValue(value))));
+        set(CodeFieldStorageMapKind.UUID, new CodeFieldStorageMapValue<>(Type.getType(UUID.class), (cf, cw, value) -> cw.newObjectCreate(UUID_TARGET_INIT, new BytecodeValue.LongValue(value.getMostSignificantBits()), new BytecodeValue.LongValue(value.getLeastSignificantBits()))));
         return this;
     }
 

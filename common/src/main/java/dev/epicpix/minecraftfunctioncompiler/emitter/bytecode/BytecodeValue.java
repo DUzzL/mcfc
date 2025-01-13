@@ -1,5 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter.bytecode;
 
+import org.objectweb.asm.Type;
+
 public interface BytecodeValue {
     int cost();
 
@@ -44,7 +46,7 @@ public interface BytecodeValue {
         }
     }
 
-    record Parameter(int index, Class<?> clazz) implements BytecodeValue {
+    record Parameter(int index, Type type) implements BytecodeValue {
         public int cost() {
             return 3;
         }

@@ -148,7 +148,7 @@ public class BytecodeOptimizer {
             }else if(instruction instanceof BytecodeInstruction.SetArrayValue v) {
                 newInstructions.add(new BytecodeInstruction.SetArrayValue(remapValue(registerDefinitionTracker, v.array()), remapValue(registerDefinitionTracker, v.index()), remapValue(registerDefinitionTracker, v.value())));
             }else if(instruction instanceof BytecodeInstruction.InstanceCheckJump v) {
-                newInstructions.add(new BytecodeInstruction.InstanceCheckJump(v.ifIsInstance(), remapValue(registerDefinitionTracker, v.a()), v.clazz(), v.label()));
+                newInstructions.add(new BytecodeInstruction.InstanceCheckJump(v.ifIsInstance(), remapValue(registerDefinitionTracker, v.a()), v.type(), v.label()));
             }else if(instruction instanceof BytecodeInstruction.ConditionalJump v) {
                 newInstructions.add(new BytecodeInstruction.ConditionalJump(v.condition(), remapValue(registerDefinitionTracker, v.a()), remapValue(registerDefinitionTracker, v.b()), v.label()));
             }else if(instruction instanceof BytecodeInstruction.Jump v) {
@@ -168,7 +168,7 @@ public class BytecodeOptimizer {
                 }
                 newInstructions.add(new BytecodeInstruction.New(v.result(), v.target(), args));
             }else if(instruction instanceof BytecodeInstruction.Cast v) {
-                newInstructions.add(new BytecodeInstruction.Cast(v.result(), remapValue(registerDefinitionTracker, v.source()), v.clazz()));
+                newInstructions.add(new BytecodeInstruction.Cast(v.result(), remapValue(registerDefinitionTracker, v.source()), v.type()));
             }else if(instruction instanceof BytecodeInstruction.StringConcat v) {
                 ArrayList<BytecodeValue> values = new ArrayList<>();
                 for(var arg : v.values()) {
@@ -242,7 +242,7 @@ public class BytecodeOptimizer {
                 continue;
             }else if(instruction instanceof BytecodeInstruction.InstanceCheckJump v) {
                 var label = getLabel(instantJumps, v.label());
-                newInstructions.add(new BytecodeInstruction.InstanceCheckJump(v.ifIsInstance(), v.a(), v.clazz(), label));
+                newInstructions.add(new BytecodeInstruction.InstanceCheckJump(v.ifIsInstance(), v.a(), v.type(), label));
                 continue;
             }else if(instruction instanceof BytecodeInstruction.Label v) {
                 var nextInstruction = instructions.get(index + 1);

@@ -2,6 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.emitter.impl;
 
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.*;
+import org.objectweb.asm.Type;
 
 import java.util.*;
 
@@ -48,22 +49,22 @@ public final class CodeWriter {
         return newObjectCreate(target, List.of());
     }
 
-    public BytecodeRegister getDataField(String name, Class<?> type) {
-        return writeTarget(new InstructionTarget.FieldTarget(DATA_CLASS, name, type.descriptorString(), true, false));
+    public BytecodeRegister getDataField(String name, Type type) {
+        return writeTarget(new InstructionTarget.FieldTarget(DATA_CLASS, name, type.getDescriptor(), true, false));
     }
 
-    public void setDataField(String name, Class<?> type, BytecodeValue value) {
-        writeTarget(new InstructionTarget.FieldTarget(DATA_CLASS, name, type.descriptorString(), true, true), value);
+    public void setDataField(String name, Type type, BytecodeValue value) {
+        writeTarget(new InstructionTarget.FieldTarget(DATA_CLASS, name, type.getDescriptor(), true, true), value);
     }
 
-    public BytecodeRegister castType(BytecodeValue value, Class<?> type) {
+    public BytecodeRegister castType(BytecodeValue value, Type type) {
         var resultRegister = createRegister();
         instructions.add(new BytecodeInstruction.Cast(resultRegister, value, type));
         return resultRegister;
     }
 
-    public void instanceCheckJump(boolean ifIsInstance, BytecodeValue value, Class<?> clazz, BytecodeLabel label) {
-        instructions.add(new BytecodeInstruction.InstanceCheckJump(ifIsInstance, value, clazz, label));
+    public void instanceCheckJump(boolean ifIsInstance, BytecodeValue value, Type type, BytecodeLabel label) {
+        instructions.add(new BytecodeInstruction.InstanceCheckJump(ifIsInstance, value, type, label));
     }
 
     public void conditionalJump(JumpCondition condition, BytecodeValue a, BytecodeValue b, BytecodeLabel label) {
@@ -132,7 +133,7 @@ public final class CodeWriter {
         return resultRegister;
     }
 
-    public BytecodeRegister newArray(BytecodeValue length, Class<?> contentType) {
+    public BytecodeRegister newArray(BytecodeValue length, Type contentType) {
         var resultRegister = createRegister();
         instructions.add(new BytecodeInstruction.CreateArray(resultRegister, length, contentType));
         return resultRegister;

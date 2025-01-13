@@ -382,7 +382,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             if(expression.name == "cast") {
                 val expr = writeExpression(writerData, expression.arguments[0], output, uniqId)
                 val className = ((expression.arguments[1] as ParsedTokenExpressionTyped).type as ParsedTokenExpressionTypeComplex).typeName
-                return writeNextRegister(uniqId, output, "cw.castType($expr, $className.class)")
+                return writeNextRegister(uniqId, output, "cw.castType($expr, org.objectweb.asm.Type.getType($className.class))")
             }
             if(expression.name == "map_enum") {
                 val source = expression.arguments[0] as ParsedTokenValueAccessor
@@ -462,7 +462,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             }
             if(expression.name == "to_double") {
                 val expr = writeExpression(writerData, expression.arguments[0], output, uniqId)
-                return writeNextRegister(uniqId, output, "cw.castType($expr, double.class)")
+                return writeNextRegister(uniqId, output, "cw.castType($expr, org.objectweb.asm.Type.DOUBLE_TYPE)")
             }
             throw UnsupportedOperationException("Unknown function call: ${expression.name} / $expression")
         }
@@ -586,7 +586,7 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                 val className = ((el.arguments[1] as ParsedTokenExpressionTyped).type as ParsedTokenExpressionTypeComplex).typeName
                 val scopeAccessor = el.arguments[2] as ParsedTokenValueAccessor
                 writerData.markGet(scopeAccessor)
-                output.appendText("cw.instanceCheckJump(false, ${expr}, ${className}.class, context.mapLabel(${writerData.getParamIndex(scopeAccessor)}));\n")
+                output.appendText("cw.instanceCheckJump(false, ${expr}, org.objectweb.asm.Type.getType(${className}.class), context.mapLabel(${writerData.getParamIndex(scopeAccessor)}));\n")
             }else if(el.name == "_jumpIfEqual") {
                 val exprA = writeExpression(writerData, el.arguments[0], output, uniqId)
                 val exprB = writeExpression(writerData, el.arguments[1], output, uniqId)
@@ -629,7 +629,7 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                 val sourceType = evaluateExpressionType(writerData, el.arguments[0])
                 if(sourceType == ParsedTokenExpressionSimpleType.INTEGER) {
                     val expr = writeExpression(writerData, el.arguments[0], output, uniqId)
-                    output.appendText("cw.returnValue(cw.castType($expr, long.class));\n")
+                    output.appendText("cw.returnValue(cw.castType($expr, org.objectweb.asm.Type.LONG_TYPE));\n")
                 }else {
                     throw IllegalArgumentException("Invalid return type: $sourceType")
                 }

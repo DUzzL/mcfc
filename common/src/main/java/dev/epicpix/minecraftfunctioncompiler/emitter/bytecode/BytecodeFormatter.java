@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter.bytecode;
 
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
+import org.objectweb.asm.Type;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -31,12 +32,8 @@ public class BytecodeFormatter {
         }
     }
 
-    private static String formatClass(Class<?> clazz) {
-        if(clazz.isArray()) {
-            return formatClass(clazz.getComponentType()) + "[]";
-        }else {
-            return clazz.getName();
-        }
+    private static String formatType(Type type) {
+        return type.getClassName();
     }
 
     private static String formatValue(BytecodeValue value) {
@@ -56,7 +53,7 @@ public class BytecodeFormatter {
                 .replace("\n", "\\n")
                 .replace("\"", "\\\"") + "\"";
         }else if(value instanceof BytecodeValue.Parameter parameter) {
-            return "parameter<" + parameter.index() + "," + formatClass(parameter.clazz()) + ">";
+            return "parameter<" + parameter.index() + "," + formatType(parameter.type()) + ">";
         }else if(value instanceof BytecodeRegister register) {
             return "r" + register.reg();
         }else {
@@ -78,11 +75,11 @@ public class BytecodeFormatter {
                 case SHR -> formatValue(v.result()) + " = " + formatValue(v.sourceA()) + " >> " + formatValue(v.sourceB());
             };
         }else if(instr instanceof BytecodeInstruction.CreateArray v) {
-            return formatValue(v.result()) + " = new " + formatClass(v.contentType()) + "[" + formatValue(v.length()) + "]";
+            return formatValue(v.result()) + " = new " + formatType(v.contentType()) + "[" + formatValue(v.length()) + "]";
         }else if(instr instanceof BytecodeInstruction.SetArrayValue v) {
             return formatValue(v.array()) + "[" + formatValue(v.index()) + "]" + " = " + formatValue(v.value());
         }else if(instr instanceof BytecodeInstruction.InstanceCheckJump v) {
-            return formatLabel(v.label()) + " <- " + formatValue(v.a()) + (v.ifIsInstance() ? " " : " !") + "instanceof " + formatClass(v.clazz());
+            return formatLabel(v.label()) + " <- " + formatValue(v.a()) + (v.ifIsInstance() ? " " : " !") + "instanceof " + formatType(v.type());
         }else if(instr instanceof BytecodeInstruction.ConditionalJump v) {
             return formatLabel(v.label()) + " <- " + formatValue(v.a()) + " " + switch(v.condition()) {
                 case EQ -> "==";
@@ -116,7 +113,7 @@ public class BytecodeFormatter {
                 throw new IllegalArgumentException("Unknown target: " + v.target());
             }
         }else if(instr instanceof BytecodeInstruction.Cast v) {
-            return formatValue(v.result()) + " = (" + formatClass(v.clazz()) + ") " + formatValue(v.source());
+            return formatValue(v.result()) + " = (" + formatType(v.type()) + ") " + formatValue(v.source());
         }else if(instr instanceof BytecodeInstruction.StringConcat v) {
             var values = v.values().stream().map(BytecodeFormatter::formatValue).collect(Collectors.joining(" ++ "));
             return formatValue(v.result()) + " = ++ " + values;
