@@ -3,6 +3,7 @@ package dev.epicpix.minecraftfunctioncompiler.v1_20_2;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stat;
 import net.minecraft.stats.StatType;
@@ -13,6 +14,8 @@ import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
+import java.util.HashMap;
+import java.util.HashSet;
 
 public final class RegistryMapping {
     private RegistryMapping() {}
@@ -40,12 +43,24 @@ public final class RegistryMapping {
         BuiltInRegistries.MOB_EFFECT.entrySet().forEach(e -> DataRegistries.MOB_EFFECT.set(new DataLocation(e.getKey().location().getNamespace(), e.getKey().location().getPath()), new MobEffectData(new DataLocation(e.getKey().location().getNamespace(), e.getKey().location().getPath()), e.getValue().isInstantenous())));
         DataRegistries.MOB_EFFECT.freeze();
         DataRegistries.ENTITY_CLASS.reset();
+        HashMap<ResourceLocation, Class<?>> definedEntityClasses = new HashMap<>();
+        HashSet<Class<?>> duplicateEntityClasses = new HashSet<>();
         for(Field field : EntityType.class.getDeclaredFields()) {
             if(EntityType.class.isAssignableFrom(field.getType()) && Modifier.isPublic(field.getModifiers()) && Modifier.isStatic(field.getModifiers()) && Modifier.isFinal(field.getModifiers())) {
                 var value = (EntityType<?>) field.get(null);
                 var type = (Class<?>) ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
                 var key = BuiltInRegistries.ENTITY_TYPE.getKey(value);
-                DataRegistries.ENTITY_CLASS.set(new DataLocation(key.getNamespace(), key.getPath()), new EntityData(type, value.canSummon()));
+                if(definedEntityClasses.containsValue(type)) {
+                    duplicateEntityClasses.add(type);
+                    continue;
+                }
+                definedEntityClasses.put(key, type);
+            }
+        }
+        for(var entry : definedEntityClasses.entrySet()) {
+            if(!duplicateEntityClasses.contains(entry.getValue())) {
+                var entityType = BuiltInRegistries.ENTITY_TYPE.get(entry.getKey());
+                DataRegistries.ENTITY_CLASS.set(new DataLocation(entry.getKey().getNamespace(), entry.getKey().getPath()), new EntityData(entry.getValue(), entityType.canSummon()));
             }
         }
         DataRegistries.ENTITY_CLASS.set(new DataLocation("minecraft", "player"), new EntityData(ServerPlayer.class, false));

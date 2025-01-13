@@ -8,6 +8,7 @@ Fixes bugs:
 - Compilation throws an exception due to using a library in which a function doesn't exist in older minecraft versions
 - `distance` selector compares locations without checking if the entity is in the same world
 - Attributes and effects don't work due to a cast error while loading (affects 1.20.5+)
+- Entities using the same classes under the hood all match the `[type]` selector (those entities are not supported anymore, for now)
 
 ## Details
 - **Released:** In Development
