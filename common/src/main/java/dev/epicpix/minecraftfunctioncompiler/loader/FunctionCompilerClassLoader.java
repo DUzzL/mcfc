@@ -445,9 +445,7 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
         entryWriter.returnValue(new BytecodeValue.LongValue((commandCount | (0x2L << 32))));
 
         var entryBytecode = BytecodeOptimizer.optimizeInstructions(entryWriter.getInstructions());
-        if (DEBUG) {
-            lowLevelFunctions.put(className.replace('/', '.') + "#run", entryBytecode);
-        }
+        lowLevelFunctions.put(className.replace('/', '.') + "#run", entryBytecode);
         gen.addFunction("run", entryBytecode, Type.LONG_TYPE, Type.getType(commandSourceStackClass), Type.getType(fieldStorage.getMap().getValueClass(CodeFieldStorageMapKind.NBT_COMPOUND)));
 
 
@@ -471,9 +469,7 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
 
 
             var macroedBytecode = BytecodeOptimizer.optimizeInstructions(writer.getInstructions());
-            if(DEBUG) {
-                lowLevelFunctions.put(className.replace('/', '.') + "#runInstanced", macroedBytecode);
-            }
+            lowLevelFunctions.put(className.replace('/', '.') + "#runInstanced", macroedBytecode);
             var funcParams = new Type[1 + macroInputs.size()];
             funcParams[0] = Type.getType(commandSourceStackClass);
             Arrays.fill(funcParams, 1, funcParams.length, Type.getType(String.class));

@@ -135,9 +135,7 @@ public final class CodeFieldStorage {
         cw.returnVoid();
 
         var instructions = BytecodeOptimizer.optimizeInstructions(cw.getInstructions());
-        if(DEBUG) {
-            lowLevelInstructions.put(DATA_CLASS.replace('/', '.') + "#load", instructions);
-        }
+        lowLevelInstructions.put(DATA_CLASS.replace('/', '.') + "#load", instructions);
 
         classGenerator.addFunction("load", instructions, Type.VOID_TYPE, Type.getType(minecraftServerClass), Type.getType(serverFunctionManagerClass));
 
