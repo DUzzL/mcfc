@@ -485,7 +485,9 @@ public final class CommandCompiler {
             }
         }else if(command instanceof CommandKill cmdData) {
             try(var selector = context.forSelector(cmdData.targets())) {
-                selector.writeInstruction(Instructions2.killEntity(selector.content()));
+                try(var world = context.getWorld()) {
+                    selector.writeInstruction(Instructions2.killEntity(selector.content(), world.content()));
+                }
             }
         }else if(command instanceof CommandReturnFail) {
             context.writeInstruction(Instructions2.returnFail());

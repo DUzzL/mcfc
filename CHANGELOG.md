@@ -1,10 +1,10 @@
 # 0.3.0-alpha.2
 
-who knows
+Adds 1.21.2 and 1.21.3 support
 
 ## Details
 - **Released:** In Development
-- **Supported Versions:** 1.20–1.20.1, 1.20.2, 1.20.3–1.20.4, 1.20.5–1.20.6, 1.21–1.21.1
+- **Supported Versions:** 1.20–1.20.1, 1.20.2, 1.20.3–1.20.4, 1.20.5–1.20.6, 1.21–1.21.1, 1.21.2–1.21.3
 
 # 0.3.0-alpha.1
 

@@ -9,7 +9,10 @@ public enum MinecraftVersion {
     MC_1_20_5("1.20.5"),
     MC_1_20_6("1.20.6"),
     MC_1_21("1.21"),
-    MC_1_21_1("1.21.1");
+    MC_1_21_1("1.21.1"),
+    MC_1_21_2("1.21.2"),
+    MC_1_21_3("1.21.3"),
+    ;
 
     private final String name;
     MinecraftVersion(String name) {

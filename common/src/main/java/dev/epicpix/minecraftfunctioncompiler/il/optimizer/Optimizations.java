@@ -207,10 +207,10 @@ public final class Optimizations {
         if(!pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.SORT_LIST_ENTITY_NEAREST, List.of(new Pair<>("list", list))).isEmpty()) return;
         if(!pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.SHUFFLE_LIST, List.of(new Pair<>("list", list))).isEmpty()) return;
 
-        if(!pass.findInstructions(condInstr, endInstr, false, InstructionTypes.CALL_FUNCTIONS, List.of()).isEmpty()) return;
-        if(!pass.findInstructions(condInstr, endInstr, false, InstructionTypes2.KILL_ENTITY, List.of()).isEmpty()) return;
-
         if(!singleSelector) {
+            if(!pass.findInstructions(condInstr, endInstr, false, InstructionTypes.CALL_FUNCTIONS, List.of()).isEmpty()) return;
+            if(!pass.findInstructions(condInstr, endInstr, false, InstructionTypes2.KILL_ENTITY, List.of()).isEmpty()) return;
+
             var indexLoc = pass.getInstruction(getInstr).get("index");
 
             var indexDefInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.VALUE_DEFINE, List.of(new Pair<>("dst", indexLoc), new Pair<>("src", LocationData.ofInteger(0))));

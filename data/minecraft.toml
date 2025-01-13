@@ -34,7 +34,9 @@ MutableComponent_append = "net/minecraft/network/chat/MutableComponent:append(Ln
 TextColor_fromRgb = "net/minecraft/network/chat/TextColor:fromRgb(I)Lnet/minecraft/network/chat/TextColor;@S"
 
 Registry_get."1.20.4-" = "net/minecraft/core/Registry:get(Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/Object;@IM"
-Registry_getHolder."1.20.5+" = "net/minecraft/core/Registry:getHolder(Lnet/minecraft/resources/ResourceLocation;)Ljava/util/Optional;@IM"
+Registry_getHolder."1.20.6" = "net/minecraft/core/Registry:getHolder(Lnet/minecraft/resources/ResourceLocation;)Ljava/util/Optional;@IM"
+Registry_getHolder."1.21" = "net/minecraft/core/Registry:getHolder(Lnet/minecraft/resources/ResourceLocation;)Ljava/util/Optional;@IM"
+Registry_getValue."1.21.2+" = "net/minecraft/core/Registry:getValue(Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/Object;@IM"
 
 Score_getScore."1.20.3+" = "net/minecraft/world/scores/ScoreAccess:get()I@IM"
 Score_getScore."1.20.2-" = "net/minecraft/world/scores/Score:getScore()I@M"
@@ -48,12 +50,14 @@ ExtensionFunctions_calculateLocalCoordinates."1.20.2" = "dev/epicpix/minecraftfu
 ExtensionFunctions_calculateLocalCoordinates."1.20.4" = "dev/epicpix/minecraftfunctioncompiler/v1_20_4/ExtensionFunctions:calculateLocalCoordinates(FFDDDDDD)Lnet/minecraft/world/phys/Vec3;@S"
 ExtensionFunctions_calculateLocalCoordinates."1.20.6" = "dev/epicpix/minecraftfunctioncompiler/v1_20_6/ExtensionFunctions:calculateLocalCoordinates(FFDDDDDD)Lnet/minecraft/world/phys/Vec3;@S"
 ExtensionFunctions_calculateLocalCoordinates."1.21" = "dev/epicpix/minecraftfunctioncompiler/v1_21/ExtensionFunctions:calculateLocalCoordinates(FFDDDDDD)Lnet/minecraft/world/phys/Vec3;@S"
+ExtensionFunctions_calculateLocalCoordinates."1.21.2" = "dev/epicpix/minecraftfunctioncompiler/v1_21_2/ExtensionFunctions:calculateLocalCoordinates(FFDDDDDD)Lnet/minecraft/world/phys/Vec3;@S"
 
 ExtensionFunctions_executeFunction."1.20.1" = "dev/epicpix/minecraftfunctioncompiler/v1_20_1/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;)V@SN"
 ExtensionFunctions_executeFunction."1.20.2" = "dev/epicpix/minecraftfunctioncompiler/v1_20_2/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;Lnet/minecraft/nbt/CompoundTag;)V@SN"
 ExtensionFunctions_executeFunction."1.20.4" = "dev/epicpix/minecraftfunctioncompiler/v1_20_4/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@SN"
 ExtensionFunctions_executeFunction."1.20.6" = "dev/epicpix/minecraftfunctioncompiler/v1_20_6/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@SN"
 ExtensionFunctions_executeFunction."1.21" = "dev/epicpix/minecraftfunctioncompiler/v1_21/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@SN"
+ExtensionFunctions_executeFunction."1.21.2" = "dev/epicpix/minecraftfunctioncompiler/v1_21_2/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@SN"
 
 ResourceLocation_fromNamespaceAndPath."1.21+" = "net/minecraft/resources/ResourceLocation:fromNamespaceAndPath(Ljava/lang/String;Ljava/lang/String;)Lnet/minecraft/resources/ResourceLocation;@S"
 

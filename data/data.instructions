@@ -289,8 +289,12 @@
   [ctx:score].set([ctx:score].get() - [ctx:value]);
 }
 
-@KILL_ENTITY(<net.minecraft.world.entity.Entity> [ctx:entity]) {
+@KILL_ENTITY [-1.21.1] (<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.server.level.ServerLevel> [ctx:world]) {
   [ctx:entity].kill();
+}
+
+@KILL_ENTITY [1.21.2-] (<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.server.level.ServerLevel> [ctx:world]) {
+  [ctx:entity].kill([ctx:world]);
 }
 
 @GET_COMMAND_STACK(<net.minecraft.commands.CommandSourceStack> [static:CommandSourceStack], <net.minecraft.commands.CommandSourceStack> [ctx:stack]) {
@@ -303,6 +307,10 @@
 
 @GET_STACK_ROTATION(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <net.minecraft.world.phys.Vec2> [ctx:rotation]) {
   let [ctx:rotation] = [ctx:stack].getRotation();
+}
+
+@GET_STACK_WORLD(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <net.minecraft.server.level.ServerLevel> [ctx:world]) {
+  let [ctx:world] = [ctx:stack].getLevel();
 }
 
 @GET_ENTITY_POSITION(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.phys.Vec3> [ctx:position]) {

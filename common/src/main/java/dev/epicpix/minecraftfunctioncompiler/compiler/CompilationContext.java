@@ -116,6 +116,17 @@ public class CompilationContext {
         }
     }
 
+    public CompilationData<LocationData<World>> getWorld() {
+        var data = current();
+        if(data.currentWorld() != null) {
+            return new CompilationData<>(this, data, data.currentWorld(), 0);
+        }else {
+            LocationData<World> world = createLocal();
+            data.writeInstruction(instructionWriter, Instructions2.getStackWorld(data.commandSourceStack(), world));
+            return enterWithValue(data.withCurrentWorld(world), world);
+        }
+    }
+
     public CompilationData<LocationData<Vec3>> applyPosition(WorldCoordinates pos) {
         if(pos.localCoordinates()) {
             var entityData = getCurrentEntity();
