@@ -7,6 +7,7 @@ Adds selector arguments: `x`, `y`, `z`
 Fixes bugs:
 - Compilation throws an exception due to using a library in which a function doesn't exist in older minecraft versions
 - `distance` selector compares locations without checking if the entity is in the same world
+- Attributes and effects don't work due to a cast error while loading (affects 1.20.5+)
 
 ## Details
 - **Released:** In Development

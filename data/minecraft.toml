@@ -36,7 +36,7 @@ TextColor_fromRgb = "net/minecraft/network/chat/TextColor:fromRgb(I)Lnet/minecra
 Registry_get."1.20.4-" = "net/minecraft/core/Registry:get(Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/Object;@IM"
 Registry_getHolder."1.20.6" = "net/minecraft/core/Registry:getHolder(Lnet/minecraft/resources/ResourceLocation;)Ljava/util/Optional;@IM"
 Registry_getHolder."1.21" = "net/minecraft/core/Registry:getHolder(Lnet/minecraft/resources/ResourceLocation;)Ljava/util/Optional;@IM"
-Registry_getValue."1.21.2+" = "net/minecraft/core/Registry:getValue(Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/Object;@IM"
+Registry_get."1.21.2+" = "net/minecraft/core/Registry:get(Lnet/minecraft/resources/ResourceLocation;)Ljava/util/Optional;@IM"
 
 Score_getScore."1.20.3+" = "net/minecraft/world/scores/ScoreAccess:get()I@IM"
 Score_getScore."1.20.2-" = "net/minecraft/world/scores/Score:getScore()I@M"

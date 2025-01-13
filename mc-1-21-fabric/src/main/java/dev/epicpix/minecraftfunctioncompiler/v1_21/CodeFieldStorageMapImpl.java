@@ -36,10 +36,10 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
 
     CodeFieldStorageMapImpl() {
         set(CodeFieldStorageMapKind.ATTRIBUTE, new CodeFieldStorageMapValue<>(Holder.class, (cf, cw, value) -> {
-            return cw.castType(callOptional_get(cw, callRegistry_getHolder(cw, loadBuiltInRegistries_ATTRIBUTE(cw), cf.loadResourceLocation(cw, value))), Attribute.class);
+            return cw.castType(callOptional_get(cw, callRegistry_getHolder(cw, loadBuiltInRegistries_ATTRIBUTE(cw), cf.loadResourceLocation(cw, value))), Holder.class);
         }));
         set(CodeFieldStorageMapKind.EFFECT, new CodeFieldStorageMapValue<>(Holder.class, (cf, cw, value) -> {
-            return cw.castType(callOptional_get(cw, callRegistry_getHolder(cw, loadBuiltInRegistries_MOB_EFFECT(cw), cf.loadResourceLocation(cw, value))), MobEffect.class);
+            return cw.castType(callOptional_get(cw, callRegistry_getHolder(cw, loadBuiltInRegistries_MOB_EFFECT(cw), cf.loadResourceLocation(cw, value))), Holder.class);
         }));
         set(CodeFieldStorageMapKind.FUNCTION, new CodeFieldStorageMapValue<>(CommandFunction.class, (cf, cw, value) -> {
             var functions = loadServerFunctionLibrary_functions(cw, loadServerFunctionManager_library(cw, cf.loadServerFunctionManager(cw)));
