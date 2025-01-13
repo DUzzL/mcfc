@@ -1,5 +1,8 @@
 package dev.epicpix.minecraftfunctioncompiler.il;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.util.Pair;
 
 import java.util.*;
@@ -99,5 +102,81 @@ public record Instruction(InstructionType type, Object[] data) {
 
             entries.clear();
         }
+    }
+
+    public static JsonArray generateInstructionsJson(List<Instruction> instructions) {
+        var entries = new JsonArray();
+        for(var instruction : instructions) {
+            var entry = new JsonObject();
+            entry.addProperty("name", instruction.type.name());
+            var data = new JsonArray();
+            for(int i = 0; i<instruction.data.length; i++) {
+                var dEntry = new JsonArray();
+                dEntry.add(instruction.type.argumentNames()[i]);
+                var value = instruction.data[i];
+                dEntry.add(serializeType(value));
+                data.add(dEntry);
+            }
+            entry.add("data", data);
+            entries.add(entry);
+        }
+        return entries;
+    }
+
+    private static JsonObject serializeType(Object value) {
+        JsonObject object = new JsonObject();
+        if(value == null) {
+            object.addProperty("type", "null");
+        }else if(value instanceof String val) {
+            object.addProperty("type", "string");
+            object.addProperty("value", val);
+        }else if(value instanceof Boolean val) {
+            object.addProperty("type", "boolean");
+            object.addProperty("value", val);
+        }else if(value instanceof Byte val) {
+            object.addProperty("type", "byte");
+            object.addProperty("value", val);
+        }else if(value instanceof Short val) {
+            object.addProperty("type", "short");
+            object.addProperty("value", val);
+        }else if(value instanceof Integer val) {
+            object.addProperty("type", "int");
+            object.addProperty("value", val);
+        }else if(value instanceof Long val) {
+            object.addProperty("type", "long");
+            object.addProperty("value", val);
+        }else if(value instanceof Double val) {
+            object.addProperty("type", "double");
+            object.addProperty("value", val);
+        }else if(value instanceof Float val) {
+            object.addProperty("type", "float");
+            object.addProperty("value", val);
+        }else if(value instanceof LocationData<?> val) {
+            object.addProperty("type", "register");
+            if(val.local() != null) {
+                object.addProperty("local", val.local());
+            }else {
+                object.add("object", serializeType(val.object()));
+            }
+        }else if(value instanceof LabelData val) {
+            object.addProperty("type", "label");
+            object.addProperty("id", val.id());
+        }else if(value instanceof List<?> val) {
+            object.addProperty("type", "list");
+            JsonArray content = new JsonArray();
+            for(var v : val) {
+                content.add(serializeType(v));
+            }
+            object.add("content", content);
+        }else if(value instanceof DataLocation val) {
+            object.addProperty("type", "location");
+            object.addProperty("namespace", val.namespace());
+            object.addProperty("path", val.path());
+        }else {
+            object.addProperty("type", "unknown");
+            object.addProperty("class", value.getClass().getCanonicalName());
+            object.addProperty("value_string", value.toString());
+        }
+        return object;
     }
 }

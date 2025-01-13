@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.loader;
 
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.epicpix.minecraftfunctioncompiler.CommonConstants;
 import dev.epicpix.minecraftfunctioncompiler.commands.*;
@@ -170,7 +171,7 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
         var fieldStorage = createCodeFieldStorage();
         ArrayList<CommandError> commandErrors = new ArrayList<>();
 
-        if(DEBUG && ALLOW_EXTERNAL_DATA_ACCESS) {
+        if(ALLOW_EXTERNAL_DATA_ACCESS && GENERATE_REGISTRY_FILE) {
             try {
                 Files.createDirectory(generatedDir);
             }catch(Exception ignored) {}
@@ -197,6 +198,7 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
             StringBuilder instructionDump = new StringBuilder();
             var entries = new ArrayList<>(compiledFunctions.entrySet());
             entries.sort((a, b) -> a.toString().compareToIgnoreCase(b.toString()));
+            var instructionsJson = new JsonObject();
             for(var entry : entries) {
                 instructionDump.append("┌──\n");
                 instructionDump.append("│ function ").append(entry.getKey()).append("\n");
@@ -208,6 +210,7 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
                 Instruction.printInstructions(entry.getValue(), line -> instructionDump.append("│ ").append(line).append("\n"));
                 instructionDump.append("└──\n");
                 instructionDump.append("\n");
+                instructionsJson.add(entry.getKey().toString(), Instruction.generateInstructionsJson(entry.getValue()));
             }
             try {
                 Files.createDirectory(generatedDir);
@@ -216,6 +219,9 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
                 String instructionDumpStr = instructionDump.toString();
                 Files.writeString(generatedDir.resolve("instruction_dump_high_level.txt"), instructionDumpStr);
                 LOGGER.info("Wrote {} lines into instruction_dump_high_level.txt", instructionDumpStr.lines().count());
+                String instructionDumpJsonStr = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(instructionsJson);
+                Files.writeString(generatedDir.resolve("instruction_dump_high_level.json"), instructionDumpJsonStr);
+                LOGGER.info("Wrote {} lines into instruction_dump_high_level.json", instructionDumpJsonStr.lines().count());
             }catch(Exception ignored) {}
         }
 
@@ -241,6 +247,7 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
             StringBuilder instructionDump = new StringBuilder();
             var entries = new ArrayList<>(lowLevelFunctions.entrySet());
             entries.sort((a, b) -> a.toString().compareToIgnoreCase(b.toString()));
+            var instructionsJson = new JsonObject();
             for(var entry : entries) {
                 instructionDump.append("┌──\n");
                 instructionDump.append("│ function ").append(entry.getKey()).append("\n");
@@ -248,9 +255,12 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
                 var instructionCount = instructions.size();
                 instructionDump.append("│ ┗━ ").append(instructionCount).append(" instruction").append(instructionCount != 1 ? "s" : "").append("\n");
                 instructionDump.append("│\n");
+                var instrs = new JsonArray();
                 for(var instr : instructions) {
                     instructionDump.append("│ ").append(BytecodeFormatter.formatInstruction(instr)).append("\n");
+                    instrs.add(BytecodeFormatter.instructionToJson(instr));
                 }
+                instructionsJson.add(entry.getKey(), instrs);
                 instructionDump.append("└──\n");
                 instructionDump.append("\n");
             }
@@ -261,6 +271,9 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
                 String instructionDumpStr = instructionDump.toString();
                 Files.writeString(generatedDir.resolve("instruction_dump_low_level.txt"), instructionDumpStr);
                 LOGGER.info("Wrote {} lines into instruction_dump_low_level.txt", instructionDumpStr.lines().count());
+                String instructionDumpJsonStr = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(instructionsJson);
+                Files.writeString(generatedDir.resolve("instruction_dump_low_level.json"), instructionDumpJsonStr);
+                LOGGER.info("Wrote {} lines into instruction_dump_low_level.json", instructionDumpJsonStr.lines().count());
             }catch(Exception ignored) {}
         }
         if(DEBUG_GENERATE_GRAPH) {
