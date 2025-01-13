@@ -8,6 +8,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
+import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
@@ -21,6 +22,8 @@ import org.slf4j.LoggerFactory;
 import java.lang.invoke.MethodHandle;
 import java.util.List;
 
+import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.BLOCKING_COMPILATION;
+
 public class FunctionClassLoader extends FunctionCompilerClassLoader<ResourceLocation, CommandSourceStack, CompoundTag> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("minecraftfunctioncompiler");
@@ -31,20 +34,22 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<ResourceLoc
 
     public void loadFunctions(ServerFunctionManager serverFunctionManager) {
         if(totalFunctionCount() == 0) return;
-        if(compileInBackground(() -> {
-            try {
-                RegistryMapping.updateRegistryMaps();
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException(e);
-            }
-            loadFunctions(serverFunctionManager);
-        })) return;
+        if(!BLOCKING_COMPILATION) {
+            if(compileInBackground(() -> loadFunctions(serverFunctionManager))) return;
+        }
+        try {
+            RegistryMapping.updateRegistryMaps(serverFunctionManager);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
         LOGGER.info("Starting compilation");
         resetHandles();
         var lookup = new IArgumentLookup() {
             public List<DataLocation> lookupFunctions(TaggableLocation functions) {
                 if(functions.isTag()) {
-                    return serverFunctionManager.getTag(new ResourceLocation(functions.location().toString())).stream().map(it -> new DataLocation(it.getId().getNamespace(), it.getId().getPath())).toList();
+                    var tags = DataRegistries.FUNCTION_TAGS.get(functions.location());
+                    if(tags == null) return List.of();
+                    return tags;
                 }else if(serverFunctionManager.library.functions.containsKey(new ResourceLocation(functions.location().toString()))) {
                     return List.of(functions.location());
                 }else {

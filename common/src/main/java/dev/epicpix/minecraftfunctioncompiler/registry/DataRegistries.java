@@ -1,8 +1,12 @@
 package dev.epicpix.minecraftfunctioncompiler.registry;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import org.objectweb.asm.Type;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.ALLOW_EXTERNAL_DATA_ACCESS;
 
@@ -11,6 +15,8 @@ public final class DataRegistries {
 
     public static final DataRegistry<AttributeData> ATTRIBUTE = new DataRegistry<>();
     public static final DataRegistry<EntityData> ENTITY_CLASS = new DataRegistry<>();
+    public static final DataRegistry<List<DataLocation>> ENTITY_TAGS = new DataRegistry<>();
+    public static final DataRegistry<List<DataLocation>> FUNCTION_TAGS = new DataRegistry<>();
     public static final DataRegistry<MobEffectData> MOB_EFFECT = new DataRegistry<>();
 
     public static final RawDataRegistry<String, ScoreboardCriterionData> SCOREBOARD_CRITERIA = new RawDataRegistry<>();
@@ -39,6 +45,28 @@ public final class DataRegistries {
             entityClassRegistry.add(entry.getKey().toString(), obj);
         }
         registries.add("ENTITY_CLASS", entityClassRegistry);
+
+        var entityTagsRegistry = new JsonObject();
+        for(var entry : ENTITY_TAGS.entrySet()) {
+            var data = entry.getValue();
+            var obj = new JsonArray();
+            for(var entity : data) {
+                obj.add(entity.toString());
+            }
+            entityTagsRegistry.add(entry.getKey().toString(), obj);
+        }
+        registries.add("ENTITY_TAGS", entityTagsRegistry);
+
+        var functionTagsRegistry = new JsonObject();
+        for(var entry : FUNCTION_TAGS.entrySet()) {
+            var data = entry.getValue();
+            var obj = new JsonArray();
+            for(var func : data) {
+                obj.add(func.toString());
+            }
+            functionTagsRegistry.add(entry.getKey().toString(), obj);
+        }
+        registries.add("FUNCTION_TAGS", functionTagsRegistry);
 
         var mobEffectRegistry = new JsonObject();
         for(var entry : MOB_EFFECT.entrySet()) {
@@ -79,6 +107,26 @@ public final class DataRegistries {
             ENTITY_CLASS.set(location, new EntityData(Type.getType(entityClass.get("type").getAsString()), entityClass.get("summonable").getAsBoolean()));
         }
         ENTITY_CLASS.freeze();
+
+        ENTITY_TAGS.reset();
+        for(var entityTags : registries.getAsJsonObject("ENTITY_TAGS").entrySet()) {
+            var functionLocations = entityTags.getValue().getAsJsonArray();
+            var location = new DataLocation(entityTags.getKey());
+            var entities = new ArrayList<DataLocation>();
+            for(var loc : functionLocations) entities.add(new DataLocation(loc.getAsString()));
+            ENTITY_TAGS.set(location, List.copyOf(entities));
+        }
+        ENTITY_TAGS.freeze();
+
+        FUNCTION_TAGS.reset();
+        for(var functionTags : registries.getAsJsonObject("FUNCTION_TAGS").entrySet()) {
+            var functionLocations = functionTags.getValue().getAsJsonArray();
+            var location = new DataLocation(functionTags.getKey());
+            var functions = new ArrayList<DataLocation>();
+            for(var loc : functionLocations) functions.add(new DataLocation(loc.getAsString()));
+            FUNCTION_TAGS.set(location, List.copyOf(functions));
+        }
+        FUNCTION_TAGS.freeze();
 
         MOB_EFFECT.reset();
         for(var mobEffects : registries.getAsJsonObject("MOB_EFFECT").entrySet()) {

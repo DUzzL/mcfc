@@ -4,6 +4,7 @@ import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidators;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
+import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
 import java.util.HashMap;
 import java.util.List;
@@ -114,6 +115,22 @@ public final class SelectorParser {
     }
 
     public static void initBaseSelectorOptions() {
+        registerSelectorOption("type", (reader, data) -> {
+            var negated = reader.skipIfNext('!');
+            var tag = reader.skipIfNext('#');
+            var type = reader.readDataLocation();
+            List<DataLocation> types;
+            if(!tag) {
+                types = List.of(type);
+            }else {
+                types = DataRegistries.ENTITY_TAGS.get(type);
+                if(types == null) types = List.of();
+            }
+            for(var it : types) {
+                if(DataRegistries.ENTITY_CLASS.get(it) == null) throw new UnsupportedOperationException("Unsupported entity type: " + it);
+            }
+            data.entityTypes = new NegatableData<>(types, negated);
+        });
         registerSelectorOption("tag", (reader, data) -> {
             var negated = reader.skipIfNext('!');
             var tag = reader.readMacroWord(List.of(MacroValidators.NOT_EMPTY));
@@ -123,7 +140,7 @@ public final class SelectorParser {
                 data.tags.add(new NegatableData<>(tag, negated));
             }
         });
-        SelectorParser.registerSelectorOption("gamemode", (reader, data) -> {
+        registerSelectorOption("gamemode", (reader, data) -> {
             var negated = reader.skipIfNext('!');
             var gamemode = reader.readGamemode();
             for(var cGamemode : data.gamemodes) {
@@ -136,10 +153,10 @@ public final class SelectorParser {
             }
             data.gamemodes.add(new NegatableData<>(gamemode, negated));
         });
-        SelectorParser.registerSelectorOption("sort", (reader, data) -> {
+        registerSelectorOption("sort", (reader, data) -> {
             data.sort = reader.readSelectorSort();
         });
-        SelectorParser.registerSelectorOption("name", (reader, data) -> {
+        registerSelectorOption("name", (reader, data) -> {
             var negated = reader.skipIfNext('!');
             var name = reader.readString();
             data.names.add(new NegatableData<>(name, negated));

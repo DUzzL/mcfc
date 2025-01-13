@@ -4,6 +4,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.ServerFunctionManager;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stat;
 import net.minecraft.stats.StatType;
@@ -15,14 +16,16 @@ import org.objectweb.asm.Type;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 
 public final class RegistryMapping {
     private RegistryMapping() {}
 
     @SuppressWarnings("unchecked")
-    public static void updateRegistryMaps() throws IllegalAccessException {
+    public static void updateRegistryMaps(ServerFunctionManager serverFunctionManager) throws IllegalAccessException {
         DataRegistries.ATTRIBUTE.reset();
         BuiltInRegistries.ATTRIBUTE.entrySet().forEach(e -> {
             DataLocation location = new DataLocation(e.getKey().location().getNamespace(), e.getKey().location().getPath());
@@ -66,5 +69,24 @@ public final class RegistryMapping {
         }
         DataRegistries.ENTITY_CLASS.set(new DataLocation("minecraft", "player"), new EntityData(Type.getType(ServerPlayer.class), false));
         DataRegistries.ENTITY_CLASS.freeze();
+        DataRegistries.FUNCTION_TAGS.reset();
+        for(var tagName : serverFunctionManager.getTagNames()) {
+            var functions = serverFunctionManager.getTag(tagName);
+            var mappedFunctions = new ArrayList<DataLocation>(functions.size());
+            for(var function : functions) mappedFunctions.add(new DataLocation(function.id().getNamespace(), function.id().getPath()));
+            DataRegistries.FUNCTION_TAGS.set(new DataLocation(tagName.getNamespace(), tagName.getPath()), List.copyOf(mappedFunctions));
+        }
+        DataRegistries.FUNCTION_TAGS.freeze();
+        DataRegistries.ENTITY_TAGS.reset();
+        BuiltInRegistries.ENTITY_TYPE.getTags().forEach(e -> {
+            DataLocation location = new DataLocation(e.key().location().getNamespace(), e.key().location().getPath());
+            var mapped = new ArrayList<DataLocation>();
+            for(var item : e) {
+                var key = EntityType.getKey(item.value());
+                mapped.add(new DataLocation(key.getNamespace(), key.getPath()));
+            }
+            DataRegistries.ENTITY_TAGS.set(location, List.copyOf(mapped));
+        });
+        DataRegistries.ENTITY_TAGS.freeze();
     }
 }
