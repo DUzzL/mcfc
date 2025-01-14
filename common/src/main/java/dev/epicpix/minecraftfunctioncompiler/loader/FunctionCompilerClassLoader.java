@@ -30,7 +30,7 @@ import java.util.*;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.*;
 
-public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSourceStack, TCompoundTag> extends ClassLoader implements FunctionCodeGenerator.NbtTagBytecodeStringGenerator {
+public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSourceStack, TCompoundTag> extends ClassLoader {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("minecraftfunctioncompiler");
 
@@ -130,12 +130,12 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
         return true;
     }
 
-    private HashMap<DataLocation, Class<?>> loadFunctions(HashMap<DataLocation, List<String>> functionSources, HashMap<DataLocation, List<CommandParams>> definedFunctions, HashMap<DataLocation, List<Instruction>> compiledFunctions, CodeFieldStorage fieldStorage, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions, int[] totalClassFileSize) {
+    private HashMap<DataLocation, Class<?>> loadFunctions(FunctionCodeGenerator.NbtTagBytecodeStringGenerator nbtStringGenerator, HashMap<DataLocation, List<String>> functionSources, HashMap<DataLocation, List<CommandParams>> definedFunctions, HashMap<DataLocation, List<Instruction>> compiledFunctions, CodeFieldStorage fieldStorage, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions, int[] totalClassFileSize) {
         var loadedFunctions = new HashMap<DataLocation, Class<?>>();
         var compiledFunctionSet = new HashSet<>(compiledFunctions.keySet());
         for(var key : compiledFunctions.keySet()) {
             try {
-                loadedFunctions.put(key, defineFunction(key, fieldStorage, compiledFunctions.get(key), definedFunctions.get(key).size(), compiledFunctionSet, lowLevelFunctions, totalClassFileSize));
+                loadedFunctions.put(key, defineFunction(nbtStringGenerator, key, fieldStorage, compiledFunctions.get(key), definedFunctions.get(key).size(), compiledFunctionSet, lowLevelFunctions, totalClassFileSize));
             }catch(Throwable e) {
                 LOGGER.error("Failed to load function ({}), skipping function compilation", key, e);
                 setState(State.FAILED);
@@ -167,8 +167,7 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
         return true;
     }
 
-    public void loadFunctionClasses(IArgumentLookup lookup, Object serverFunctionManager) {
-        var fieldStorage = createCodeFieldStorage();
+    public void loadFunctionClasses(IArgumentLookup lookup, CodeFieldStorage fieldStorage, FunctionCodeGenerator.NbtTagBytecodeStringGenerator nbtStringGenerator, Object serverFunctionManager) {
         ArrayList<CommandError> commandErrors = new ArrayList<>();
 
         if(ALLOW_EXTERNAL_DATA_ACCESS && GENERATE_REGISTRY_FILE) {
@@ -229,7 +228,7 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
         HashMap<String, List<BytecodeInstruction>> lowLevelFunctions = new HashMap<>();
         var startLoader = System.nanoTime();
         var totalClassFileSize = new int[2];
-        var loadedFunctions = loadFunctions(functionSources, definedFunctions, compiledFunctions, fieldStorage, lowLevelFunctions, totalClassFileSize);
+        var loadedFunctions = loadFunctions(nbtStringGenerator, functionSources, definedFunctions, compiledFunctions, fieldStorage, lowLevelFunctions, totalClassFileSize);
         if(loadedFunctions == null) return;
 
         try {
@@ -318,8 +317,8 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
         }
     }
 
-    private Class<?> defineFunction(DataLocation funcId, CodeFieldStorage fieldStorage, List<Instruction> instructions, int commandCount, Set<DataLocation> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions, int[] totalClassFileSize) {
-        var gen = FunctionCodeGenerator.generateFunctionClass(this, funcId, fieldStorage, instructions, commandCount, compiledFunctions, lowLevelFunctions, Type.getType(commandSourceStackClass));
+    private Class<?> defineFunction(FunctionCodeGenerator.NbtTagBytecodeStringGenerator nbtStringGenerator, DataLocation funcId, CodeFieldStorage fieldStorage, List<Instruction> instructions, int commandCount, Set<DataLocation> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions, int[] totalClassFileSize) {
+        var gen = FunctionCodeGenerator.generateFunctionClass(nbtStringGenerator, funcId, fieldStorage, instructions, commandCount, compiledFunctions, lowLevelFunctions, Type.getType(commandSourceStackClass));
 
         byte[] bytes = gen.finish();
         totalClassFileSize[0] += bytes.length;
@@ -363,6 +362,4 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
             return 3L << 32;
         }
     }
-
-    public abstract CodeFieldStorage createCodeFieldStorage();
 }

@@ -1,11 +1,10 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_21;
 
+import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCodeGenerator;
 import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.commands.IArgumentLookup;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.TaggableLocation;
-import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
-import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
@@ -61,23 +60,23 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<ResourceLoc
             }
         };
 
-        loadFunctionClasses(lookup, serverFunctionManager);
+        loadFunctionClasses(lookup, createCodeFieldStorage(), NBT_STRING_GENERATOR, serverFunctionManager);
     }
 
     public void setHandle(DataLocation key, MethodHandle handle) {
         setHandle(ResourceLocation.fromNamespaceAndPath(key.namespace(), key.path()), handle);
     }
 
-    public BytecodeValue nbtTagToBytecodeString(EmitterContext emitter, String key, BytecodeLabel errorLabel) {
+    public static final FunctionCodeGenerator.NbtTagBytecodeStringGenerator NBT_STRING_GENERATOR = (emitter, key, errorLabel) -> {
         var cw = emitter.codeWriter();
         var tag = callCompoundTag_get(cw, emitter.getStatic("FunctionCompound"), new BytecodeValue.StringValue(key));
         if(errorLabel != null) {
             cw.conditionalJump(JumpCondition.EQ, tag, new BytecodeValue.NullValue(), errorLabel);
         }
         return callTag_stringify(cw, tag);
-    }
+    };
 
-    public CodeFieldStorage createCodeFieldStorage() {
+    public static CodeFieldStorage createCodeFieldStorage() {
         return new CodeFieldStorage(Type.getType(ServerFunctionManager.class), Type.getType(MinecraftServer.class), CodeFieldStorageMapImpl.INSTANCE);
     }
 }

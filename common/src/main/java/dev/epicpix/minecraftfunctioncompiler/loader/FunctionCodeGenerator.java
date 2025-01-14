@@ -85,9 +85,9 @@ public class FunctionCodeGenerator {
             var value = func.getValue();
             try {
                 var compiled = CommandCompiler.compile(value);
-                instructionCounts[0] += compiled.size();
+                if(instructionCounts != null) instructionCounts[0] += compiled.size();
                 var optimized = Optimizer.optimize(compiled);
-                instructionCounts[1] += optimized.size();
+                if(instructionCounts != null) instructionCounts[1] += optimized.size();
                 compiledFunctions.put(key, Instructions2.addStaticRequirements(optimized));
             }catch(UnsupportedOperationException e) {
                 LOGGER.warn("Failed to compile function {} / {}", key, e.getMessage());
