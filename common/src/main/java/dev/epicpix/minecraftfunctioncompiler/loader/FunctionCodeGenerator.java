@@ -9,7 +9,6 @@ import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.*;
-import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
@@ -47,7 +46,7 @@ public class FunctionCodeGenerator {
         return readFunctions;
     }
 
-    public static HashMap<DataLocation, List<CommandParams>> parseFunctions(HashMap<DataLocation, List<String>> functionSources, IArgumentLookup lookup, ArrayList<CommandError> commandErrors) {
+    public static HashMap<DataLocation, List<CommandParams>> parseFunctions(HashMap<DataLocation, List<String>> functionSources, IArgumentLookup lookup, HashMap<DataLocation, CommandError> commandErrors) {
         HashMap<DataLocation, List<CommandParams>> definedFunctions = new HashMap<>();
         for(var entry : functionSources.entrySet()) {
             var key = entry.getKey();
@@ -66,19 +65,19 @@ public class FunctionCodeGenerator {
                 definedFunctions.put(key, parsed);
             } catch (CommandErrorException e) {
                 LOGGER.warn("Unable to parse function {} / {}", key, e.getMessage());
-                commandErrors.add(e.error);
+                commandErrors.put(key, e.error);
             } catch (StringCommandReaderException e) {
                 LOGGER.warn("Unable to parse function {} / {} / {}", key, e.getMessage(), currentCommand);
-                commandErrors.add(new CommandError(currentCommand, e.getMessage()));
+                commandErrors.put(key, new CommandError(currentCommand, e.getMessage()));
             } catch (Throwable e) {
                 LOGGER.error("Unable to parse function {}", key, e);
-                commandErrors.add(new CommandError(currentCommand, e.getMessage(), CommandError.Step.PARSE, e));
+                commandErrors.put(key, new CommandError(currentCommand, e.getMessage(), CommandError.Step.PARSE, e));
             }
         }
         return definedFunctions;
     }
 
-    public static HashMap<DataLocation, List<Instruction>> compileFunctionsHighLevel(HashMap<DataLocation, List<CommandParams>> definedFunctions, ArrayList<CommandError> commandErrors, int[] instructionCounts) {
+    public static HashMap<DataLocation, List<Instruction>> compileFunctionsHighLevel(HashMap<DataLocation, List<CommandParams>> definedFunctions, HashMap<DataLocation, CommandError> commandErrors, int[] instructionCounts) {
         HashMap<DataLocation, List<Instruction>> compiledFunctions = new HashMap<>();
         for(var func : definedFunctions.entrySet()) {
             var key = func.getKey();
@@ -91,10 +90,10 @@ public class FunctionCodeGenerator {
                 compiledFunctions.put(key, Instructions2.addStaticRequirements(optimized));
             }catch(UnsupportedOperationException e) {
                 LOGGER.warn("Failed to compile function {} / {}", key, e.getMessage());
-                commandErrors.add(new CommandError(e.getMessage()));
+                commandErrors.put(key, new CommandError(e.getMessage()));
             }catch(Throwable e) {
                 LOGGER.error("Failed to compile function {}", key, e);
-                commandErrors.add(new CommandError(null, e.getMessage(), CommandError.Step.COMPILE, e));
+                commandErrors.put(key, new CommandError(null, e.getMessage(), CommandError.Step.COMPILE, e));
             }
         }
         return compiledFunctions;
@@ -135,7 +134,7 @@ public class FunctionCodeGenerator {
         context.codeWriter().returnValue(context.codeWriter().writeTarget(target, arguments));
     }
 
-    public static ClassGenerator generateFunctionClass(NbtTagBytecodeStringGenerator nbtStringGenerator, DataLocation funcId, CodeFieldStorage fieldStorage, List<Instruction> instructions, int commandCount, Set<DataLocation> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions, Type commandSourceStackType) {
+    public static ClassGenerator generateFunctionClass(CompilationParams params, DataLocation funcId, List<Instruction> instructions, int commandCount, Set<DataLocation> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions) {
         var macroInstructions = Instruction.findTyped(instructions, InstructionTypes.LOAD_MACRO);
         var macroInputs = new ArrayList<String>();
         for(var macroInstr : macroInstructions) {
@@ -154,21 +153,21 @@ public class FunctionCodeGenerator {
 
         var entryWriter = new CodeWriter();
         var staticCommandSourceStack = entryWriter.createRegister();
-        entryWriter.setValue(staticCommandSourceStack, new BytecodeValue.Parameter(0, commandSourceStackType));
+        entryWriter.setValue(staticCommandSourceStack, new BytecodeValue.Parameter(0, params.commandSourceStackType()));
         var staticFunctionCompound = entryWriter.createRegister();
-        entryWriter.setValue(staticFunctionCompound, new BytecodeValue.Parameter(1, fieldStorage.getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND)));
+        entryWriter.setValue(staticFunctionCompound, new BytecodeValue.Parameter(1, params.codeFieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND)));
         Map<String, BytecodeValue> staticArguments = Map.of("CommandSourceStack", staticCommandSourceStack, "FunctionCompound", staticFunctionCompound);
         EmitterContext entryContext;
         if(macroInstructions.isEmpty()) {
-            entryContext = new EmitterContext(fieldStorage, entryWriter, compiledFunctions, new HashMap<>(staticArguments), null, instructions);
+            entryContext = new EmitterContext(params.codeFieldStorage(), entryWriter, compiledFunctions, new HashMap<>(staticArguments), null, instructions);
         }else {
             var instr = List.of(Instructions.callFunctions(List.of(funcId), LocationData.ofLocal(-1), LocationData.ofLocal(-2)));
-            entryContext = new EmitterContext(fieldStorage, entryWriter, Collections.emptySet(), new HashMap<>(staticArguments), null, instr);
+            entryContext = new EmitterContext(params.codeFieldStorage(), entryWriter, Collections.emptySet(), new HashMap<>(staticArguments), null, instr);
             entryContext.setTransform(-1, staticCommandSourceStack);
             entryContext.setTransform(-2, staticFunctionCompound);
 
             var errorLabel = entryWriter.createLabel();
-            writeMacroInstanceCreation(nbtStringGenerator, className, errorLabel, entryContext, macroInstructions, macroInputs, commandSourceStackType);
+            writeMacroInstanceCreation(params.stringGenerator(), className, errorLabel, entryContext, macroInstructions, macroInputs, params.commandSourceStackType());
             entryWriter.label(errorLabel);
         }
         entryContext.emitForEach();
@@ -176,14 +175,14 @@ public class FunctionCodeGenerator {
 
         var entryBytecode = BytecodeOptimizer.optimizeInstructions(entryWriter.getInstructions());
         lowLevelFunctions.put(className.replace('/', '.') + "#run", entryBytecode);
-        gen.addFunction("run", entryBytecode, Type.LONG_TYPE, commandSourceStackType, fieldStorage.getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND));
+        gen.addFunction("run", entryBytecode, Type.LONG_TYPE, params.commandSourceStackType(), params.codeFieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND));
 
 
         if(!macroInstructions.isEmpty()) {
             var writer = new CodeWriter();
 
             var staticCommandSourceStack2 = writer.createRegister();
-            writer.setValue(staticCommandSourceStack2, new BytecodeValue.Parameter(0, commandSourceStackType));
+            writer.setValue(staticCommandSourceStack2, new BytecodeValue.Parameter(0, params.commandSourceStackType()));
             HashMap<String, BytecodeValue> macroLocations = new HashMap<>();
             int i = 1;
             for(var macro : macroInputs) {
@@ -192,7 +191,7 @@ public class FunctionCodeGenerator {
                 writer.setValue(macroRegister, new BytecodeValue.Parameter(i, Type.getType(String.class)));
                 i++;
             }
-            new EmitterContext(fieldStorage, writer, compiledFunctions, new HashMap<>(Map.of("CommandSourceStack", staticCommandSourceStack2)), macroLocations, instructions).emitForEach();
+            new EmitterContext(params.codeFieldStorage(), writer, compiledFunctions, new HashMap<>(Map.of("CommandSourceStack", staticCommandSourceStack2)), macroLocations, instructions).emitForEach();
             Collections.reverse(macroInputs);
 
             writer.returnValue(new BytecodeValue.LongValue((commandCount | (0x2L << 32))));
@@ -201,7 +200,7 @@ public class FunctionCodeGenerator {
             var macroedBytecode = BytecodeOptimizer.optimizeInstructions(writer.getInstructions());
             lowLevelFunctions.put(className.replace('/', '.') + "#runInstanced", macroedBytecode);
             var funcParams = new Type[1 + macroInputs.size()];
-            funcParams[0] = commandSourceStackType;
+            funcParams[0] = params.commandSourceStackType();
             Arrays.fill(funcParams, 1, funcParams.length, Type.getType(String.class));
             gen.addFunction("runInstanced", macroedBytecode, Type.LONG_TYPE, funcParams);
         }

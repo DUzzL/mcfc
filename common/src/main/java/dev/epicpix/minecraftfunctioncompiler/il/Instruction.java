@@ -98,7 +98,7 @@ public record Instruction(InstructionType type, Object[] data) {
             entries.sort((a, b) -> a.toString().compareToIgnoreCase(b.toString()));
             String args = entries.isEmpty() ? "" : " -> { " + entries.stream().map(it -> it.first() + "=" + (it.second() instanceof String str ? "\"" + str.translateEscapes() + "\"" : it.second())).collect(Collectors.joining(", ")) + " }";
 
-            lineConsumer.accept("┗━ " + instruction.type.name() + args);
+            lineConsumer.accept(instruction.type.name() + args);
 
             entries.clear();
         }

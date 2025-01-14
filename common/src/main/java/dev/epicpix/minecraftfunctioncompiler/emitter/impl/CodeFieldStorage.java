@@ -120,7 +120,7 @@ public final class CodeFieldStorage {
         return cw;
     }
 
-    public byte[] generate(HashMap<String, List<BytecodeInstruction>> lowLevelInstructions) {
+    public ClassGenerator generate(HashMap<String, List<BytecodeInstruction>> lowLevelInstructions) {
         var classGenerator = ClassGenerator.createClassGenerator(DATA_CLASS, true);
 
         var cw = new CodeWriter();
@@ -141,7 +141,7 @@ public final class CodeFieldStorage {
 
         classGenerator.addFinalField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerType);
 
-        return classGenerator.finish();
+        return classGenerator;
     }
 
 }

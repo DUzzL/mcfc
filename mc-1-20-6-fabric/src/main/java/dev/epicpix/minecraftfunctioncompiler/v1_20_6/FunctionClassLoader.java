@@ -1,6 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_6;
 
-import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCodeGenerator;
+import dev.epicpix.minecraftfunctioncompiler.loader.CompilationParams;
 import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.commands.IArgumentLookup;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
@@ -31,7 +31,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<ResourceLoc
     private static final Logger LOGGER = LoggerFactory.getLogger("minecraftfunctioncompiler");
 
     public FunctionClassLoader(ClassLoader parent, Object minecraftServer, SourceFileProvider sourceFileProvider) {
-        super(parent, FabricLoader.getInstance().getGameDir().resolve("generated"), CommandSourceStack.class, minecraftServer, sourceFileProvider.mcfc$getSourceFiles());
+        super(parent, FabricLoader.getInstance().getGameDir().resolve("generated"), minecraftServer, sourceFileProvider.mcfc$getSourceFiles());
     }
 
     public void loadFunctions(ServerFunctionManager serverFunctionManager) {
@@ -60,23 +60,25 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<ResourceLoc
             }
         };
 
-        loadFunctionClasses(lookup, createCodeFieldStorage(), NBT_STRING_GENERATOR, serverFunctionManager);
+        loadFunctionClasses(lookup, createCompilationParams(), serverFunctionManager);
     }
 
     public void setHandle(DataLocation key, MethodHandle handle) {
         setHandle(new ResourceLocation(key.namespace(), key.path()), handle);
     }
 
-    public static final FunctionCodeGenerator.NbtTagBytecodeStringGenerator NBT_STRING_GENERATOR = (emitter, key, errorLabel) -> {
-        var cw = emitter.codeWriter();
-        var tag = callCompoundTag_get(cw, emitter.getStatic("FunctionCompound"), new BytecodeValue.StringValue(key));
-        if(errorLabel != null) {
-            cw.conditionalJump(JumpCondition.EQ, tag, new BytecodeValue.NullValue(), errorLabel);
-        }
-        return callTag_stringify(cw, tag);
-    };
-
-    public static CodeFieldStorage createCodeFieldStorage() {
-        return new CodeFieldStorage(Type.getType(ServerFunctionManager.class), Type.getType(MinecraftServer.class), CodeFieldStorageMapImpl.INSTANCE);
+    public static CompilationParams createCompilationParams() {
+        return new CompilationParams(
+            new CodeFieldStorage(Type.getType(ServerFunctionManager.class), Type.getType(MinecraftServer.class), CodeFieldStorageMapImpl.INSTANCE),
+            (emitter, key, errorLabel) -> {
+                var cw = emitter.codeWriter();
+                var tag = callCompoundTag_get(cw, emitter.getStatic("FunctionCompound"), new BytecodeValue.StringValue(key));
+                if(errorLabel != null) {
+                    cw.conditionalJump(JumpCondition.EQ, tag, new BytecodeValue.NullValue(), errorLabel);
+                }
+                return callTag_stringify(cw, tag);
+            },
+            Type.getType(CommandSourceStack.class)
+        );
     }
 }

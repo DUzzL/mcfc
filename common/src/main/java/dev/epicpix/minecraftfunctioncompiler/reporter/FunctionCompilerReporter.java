@@ -9,10 +9,7 @@ import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.ENABLE_REPORTING;
 import static dev.epicpix.minecraftfunctioncompiler.CompileConstants.isDevelopmentEnvironment;
@@ -89,7 +86,7 @@ public final class FunctionCompilerReporter {
         if(!ENABLE_REPORTING) return;
         JsonObject json = new JsonObject();
         var instructionResult = new StringBuilder();
-        Instruction.printInstructions(instructions, (it) -> instructionResult.append(it).append("\n"));
+        Instruction.printInstructions(instructions, (it) -> instructionResult.append("┗━ ").append(it).append("\n"));
         json.addProperty("instructions", instructionResult.toString());
         reportException(step, exception, json);
     }
@@ -107,7 +104,7 @@ public final class FunctionCompilerReporter {
             FunctionCountsData functionCounts,
             TimingData timings,
             CodeGenerationMetrics codeGenerationMetrics,
-            List<CommandError> commandErrors
+            Collection<CommandError> commandErrors
         ) {
         if(!ENABLE_REPORTING) return;
         JsonObject compilationStats = new JsonObject();
