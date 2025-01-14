@@ -155,8 +155,8 @@ public class StackCompiler {
                 for(var value : v.values()) {
                     if(value instanceof BytecodeValue.StringValue sv) {
                         staticStrings.add(sv.value());
-                        isConstant = false;
                     }else {
+                        isConstant = false;
                         staticStrings.add(null);
                         var valueType = getValueType(value, registerTypeMap);
                         onlyStrings &= valueType.equals(Type.getType(String.class));
