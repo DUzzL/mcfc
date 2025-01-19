@@ -13,8 +13,8 @@ Fixes bugs:
 - Nbt compounds with a suffix as a value without quotes break parsing (`b`, `d`, `f`, `l`, `s`)
 
 ## Details
-- **Released:** In Development
-- **Supported Versions:** 1.20–1.20.1, 1.20.2, 1.20.3–1.20.4, 1.20.5–1.20.6, 1.21–1.21.1, 1.21.2–1.21.3
+- **Released:** 2025-01-19
+- **Supported Versions:** [1.20–1.20.1](https://modrinth.com/mod/mcfc/version/0.3.0-alpha.2+1.20.1), [1.20.2](https://modrinth.com/mod/mcfc/version/0.3.0-alpha.2+1.20.2), [1.20.3–1.20.4](https://modrinth.com/mod/mcfc/version/0.3.0-alpha.2+1.20.4), [1.20.5–1.20.6](https://modrinth.com/mod/mcfc/version/0.3.0-alpha.2+1.20.6), [1.21–1.21.1](https://modrinth.com/mod/mcfc/version/0.3.0-alpha.2+1.21), [1.21.2–1.21.3](https://modrinth.com/mod/mcfc/version/0.3.0-alpha.2+1.21.2)
 
 # 0.3.0-alpha.1
 
