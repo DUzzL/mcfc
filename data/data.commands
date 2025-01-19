@@ -11,9 +11,9 @@ EFFECT_GIVE/effect give <targets:entity_selector> <effect:mob_effect>
 EFFECT_GIVE_DUR/effect give <targets:entity_selector> <effect:mob_effect> <duration:int[minimum=1,maximum=1000000]>
 EFFECT_GIVE_DUR_AMP/effect give <targets:entity_selector> <effect:mob_effect> <duration:int[minimum=1,maximum=1000000]> <amplifier:int[minimum=0,maximum=255]>
 EFFECT_GIVE_DUR_AMP_SHOW/effect give <targets:entity_selector> <effect:mob_effect> <duration:int[minimum=1,maximum=1000000]> <amplifier:int[minimum=0,maximum=255]> <hide_particles:boolean>
-EFFECT_GIVE_INF/effect give <targets:entity_selector> <effect:mob_effect> infinite
-EFFECT_GIVE_INF_AMP/effect give <targets:entity_selector> <effect:mob_effect> infinite <amplifier:int[minimum=0,maximum=255]>
-EFFECT_GIVE_INF_AMP_SHOW/effect give <targets:entity_selector> <effect:mob_effect> infinite <amplifier:int[minimum=0,maximum=255]> <hide_particles:boolean>
+EFFECT_GIVE_INF<1.19.4..>/effect give <targets:entity_selector> <effect:mob_effect> infinite
+EFFECT_GIVE_INF_AMP<1.19.4..>/effect give <targets:entity_selector> <effect:mob_effect> infinite <amplifier:int[minimum=0,maximum=255]>
+EFFECT_GIVE_INF_AMP_SHOW<1.19.4..>/effect give <targets:entity_selector> <effect:mob_effect> infinite <amplifier:int[minimum=0,maximum=255]> <hide_particles:boolean>
 
 EXECUTE_ALIGN/execute align <swizzle:swizzle> <command:command[root=execute]>
 EXECUTE_ANCHORED/execute anchored <anchor:location_anchor> <command:command[root=execute]>
@@ -22,7 +22,7 @@ EXECUTE_AT/execute at <targets:entity_selector> <command:command[root=execute]>
 EXECUTE_IF_ENTITY/execute if entity <entities:entity_selector> <command:command[root=execute]>
 EXECUTE_IF_SCORE_RANGE/execute if score <target:score_accessor> matches <range:int_range> <command:command[root=execute]>
 EXECUTE_IF_SCORE_COMPARE/execute if score <target:score_accessor> <comparison:score_comparison> <source:score_accessor> <command:command[root=execute]>
-EXECUTE_ON_VEHICLE/execute on vehicle <command:command[root=execute]>
+EXECUTE_ON_VEHICLE<1.19.4..>/execute on vehicle <command:command[root=execute]>
 EXECUTE_POSITIONED_AS/execute positioned as <targets:entity_selector> <command:command[root=execute]>
 EXECUTE_POSITIONED_POS/execute positioned <pos:vec3> <command:command[root=execute]>
 EXECUTE_ROTATED_AS/execute rotated as <targets:entity_selector> <command:command[root=execute]>

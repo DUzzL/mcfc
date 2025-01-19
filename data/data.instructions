@@ -448,7 +448,11 @@
   [ctx:source].set([local:temp]);
 }
 
-@GET_ENTITY_WORLD(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.server.level.ServerLevel> [ctx:level]) {
+@GET_ENTITY_WORLD [-1.19.4] (<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.server.level.ServerLevel> [ctx:level]) {
+  let [ctx:level] = cast([ctx:entity].getLevel(), <net.minecraft.server.level.ServerLevel>);
+}
+
+@GET_ENTITY_WORLD [1.20-] (<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.server.level.ServerLevel> [ctx:level]) {
   let [ctx:level] = cast([ctx:entity].level(), <net.minecraft.server.level.ServerLevel>);
 }
 

@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler;
 
 public enum MinecraftVersion {
+    MC_1_19_4("1.19.4"),
     MC_1_20("1.20"),
     MC_1_20_1("1.20.1"),
     MC_1_20_2("1.20.2"),

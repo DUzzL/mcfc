@@ -297,7 +297,7 @@ class MainProcessor(
         (data["definitions_functions"] as? Map<*, *>)?.forEach { (k, v) ->
             val content = findVersionSpecific(v)
             if(content != null) {
-                val fullDescriptor = content.split("@")[0]
+                val fullDescriptor = content.split("@")[0].replace(Regex.fromLiteral("_VERSION_")) { PACKAGE_MINECRAFT_VERSION ?: throw IllegalArgumentException("Tried to use _VERSION_ in a common env") }
                 val className = mappingData.getClassName(fullDescriptor.split(":")[0])
                 val methodDescriptor = remapType(Type.getMethodType("(" + fullDescriptor.split("(")[1]), mappingData)
                 val methodName = mappingData.getMethodName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1].split("(")[0], "(" + fullDescriptor.split("(")[1])
@@ -324,7 +324,7 @@ class MainProcessor(
         (data["definitions_fields"] as? Map<*, *>)?.forEach { (k, v) ->
             val content = findVersionSpecific(v)
             if(content != null) {
-                val fullDescriptor = content.split("@")[0]
+                val fullDescriptor = content.split("@")[0].replace(Regex.fromLiteral("_VERSION_")) { PACKAGE_MINECRAFT_VERSION ?: throw IllegalArgumentException("Tried to use _VERSION_ in a common env") }
                 val className = mappingData.getClassName(fullDescriptor.split(":")[0])
                 val fieldDescriptor = remapType(Type.getType(fullDescriptor.split(":")[2]), mappingData).descriptor
                 val fieldName = mappingData.getFieldName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1], fullDescriptor.split(":")[2])
