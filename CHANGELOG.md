@@ -10,6 +10,7 @@ Fixes bugs:
 - Attributes and effects don't work due to a cast error while loading (affects 1.20.5+)
 - Entities using the same classes under the hood all match the `[type]` selector (those entities are not supported anymore, for now)
 - Some macros throw an exception due to generating wrong bytecode
+- Nbt compounds with a suffix as a value without quotes break parsing (`b`, `d`, `f`, `l`, `s`)
 
 ## Details
 - **Released:** In Development
