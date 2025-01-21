@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
 import dev.epicpix.minecraftfunctioncompiler.data.text.TextContent;
@@ -49,6 +50,19 @@ public final class TextParser {
         };
     }
 
+    private static Integer contentToColor(JsonElement element) {
+        if(element instanceof JsonArray array && array.size() == 4) {
+            int r = array.get(0).getAsInt();
+            int g = array.get(1).getAsInt();
+            int b = array.get(2).getAsInt();
+            int a = array.get(3).getAsInt();
+            return a << 24 | r << 16 | g << 8 | b;
+        }else if(element instanceof JsonPrimitive prim && prim.isNumber()) {
+            return prim.getAsInt();
+        }
+        throw new CommandErrorException(new CommandError("Invalid color specification: " + element + " (expected [R,G,B,A] or integer ARGB)"));
+    }
+
     private static Text jsonToText(JsonElement element) {
         if(element instanceof JsonPrimitive prim && prim.isString()) {
             return new Text(List.of(), TextStyle.empty(), new TextContent.LiteralText(prim.getAsString()));
@@ -87,6 +101,7 @@ public final class TextParser {
             }
 
             Integer color = obj.has("color") ? stringToColor(obj.get("color").getAsString()) : null;
+            Integer shadowColor = MinecraftVersion.isCurrentVersionInRange(MinecraftVersion.MC_1_21_4, null) ? (obj.has("shadow_color") ? contentToColor(obj.get("shadow_color")) : null) : null;
             Boolean bold = obj.has("bold") ? obj.get("bold").getAsBoolean() : null;
             Boolean italic = obj.has("italic") ? obj.get("italic").getAsBoolean() : null;
             Boolean underlined = obj.has("underlined") ? obj.get("underlined").getAsBoolean() : null;
@@ -98,7 +113,7 @@ public final class TextParser {
             if(obj.has("clickEvent")) throw new CommandErrorException(new CommandError("\"clickEvent\" in text is not yet supported"));
             if(obj.has("hoverEvent")) throw new CommandErrorException(new CommandError("\"hoverEvent\" in text is not yet supported"));
 
-            return new Text(siblings, new TextStyle(color, bold, italic, underlined, strikethrough, obfuscated,null, null, insertion, font), content);
+            return new Text(siblings, new TextStyle(color, shadowColor, bold, italic, underlined, strikethrough, obfuscated,null, null, insertion, font), content);
         }else if(element instanceof JsonArray arr) {
             Text text = jsonToText(arr.get(0));
             var siblings = new ArrayList<>(text.siblings());

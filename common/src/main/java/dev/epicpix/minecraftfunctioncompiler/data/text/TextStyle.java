@@ -2,8 +2,8 @@ package dev.epicpix.minecraftfunctioncompiler.data.text;
 
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 
-public record TextStyle(Integer color, Boolean bold, Boolean italic, Boolean underlined, Boolean strikethrough, Boolean obfuscated, TextClickEvent clickEvent, TextHoverEvent<?> hoverEvent, String insertion, DataLocation font) {
-    private static final TextStyle EMPTY = new TextStyle(null, null, null, null, null, null, null, null,null, null);
+public record TextStyle(Integer color, Integer shadowColor, Boolean bold, Boolean italic, Boolean underlined, Boolean strikethrough, Boolean obfuscated, TextClickEvent clickEvent, TextHoverEvent<?> hoverEvent, String insertion, DataLocation font) {
+    private static final TextStyle EMPTY = new TextStyle(null, null, null, null, null, null, null, null, null,null, null);
 
     public static TextStyle empty() {
         return EMPTY;
@@ -13,6 +13,7 @@ public record TextStyle(Integer color, Boolean bold, Boolean italic, Boolean und
     public String toString() {
         StringBuilder builder = new StringBuilder().append("TextStyle{");
         if(color != null) builder.append("color=").append(color).append(", ");
+        if(shadowColor != null) builder.append("shadowColor=").append(color).append(", ");
         if(bold != null) builder.append("bold=").append(bold).append(", ");
         if(italic != null) builder.append("italic=").append(italic).append(", ");
         if(underlined != null) builder.append("underlined=").append(underlined).append(", ");
