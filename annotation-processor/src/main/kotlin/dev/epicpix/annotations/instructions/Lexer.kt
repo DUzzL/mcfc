@@ -113,7 +113,7 @@ fun lexTokens(code: String): List<LexToken> {
         }
         if(res.first() == '@') {
             res = ""
-            while(index < code.length && (code[index].isLetter() || code[index] == '_')) {
+            while(index < code.length && (code[index].isLetterOrDigit() || code[index] == '_')) {
                 res += code[index++]
             }
             return LexTokenInstructionDefinition(res)

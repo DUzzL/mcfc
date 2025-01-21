@@ -91,6 +91,10 @@
   [ctx:a] = [ctx:a] - [ctx:b];
 }
 
+@VALUE_ADD_ASSIGN(int [ctx:res], int [ctx:a], int [ctx:b]) {
+  let [ctx:res] = [ctx:a] + [ctx:b];
+}
+
 @LABEL(label [ctx:label]);
 
 @JUMP(label [ctx:label]) {
@@ -554,6 +558,18 @@
 
 @GET_ENTITY_NAME(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [ctx:name]) {
   let [ctx:name] = [ctx:entity].getName().getString();
+}
+
+@GET_VEC3_X(<net.minecraft.world.phys.Vec3> [ctx:position], double [ctx:x]) {
+  let [ctx:x] = [ctx:position].x();
+}
+
+@GET_VEC3_Y(<net.minecraft.world.phys.Vec3> [ctx:position], double [ctx:y]) {
+  let [ctx:y] = [ctx:position].y();
+}
+
+@GET_VEC3_Z(<net.minecraft.world.phys.Vec3> [ctx:position], double [ctx:z]) {
+  let [ctx:z] = [ctx:position].z();
 }
 
 @GET_DISTANCE_SQUARED(<net.minecraft.world.phys.Vec3> [ctx:position_a], <net.minecraft.world.phys.Vec3> [ctx:position_b], double [ctx:distance]) {

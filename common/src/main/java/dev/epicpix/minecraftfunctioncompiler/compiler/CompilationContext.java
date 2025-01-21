@@ -562,11 +562,33 @@ public class CompilationContext {
             }
         }
         if(selector.distance() != null) {
-            LocationData<Vec3> thisPosition = createLocal();
+            var thisPosition = this.<Vec3>createLocal();
             data.writeInstruction(instructionWriter, Instructions2.getEntityPosition(entityData.content(), thisPosition));
-            LocationData<Double> distance = createLocal();
+            var distance = this.<Double>createLocal();
             data.writeInstruction(instructionWriter, Instructions2.getDistanceSquared(position, thisPosition, distance));
             jumpIfNotMatchesRange(data, distance, selector.distance().square(), data.contextEndLabel());
+        }
+        if(selector.dx() != null || selector.dy() != null || selector.dz() != null) {
+            var compareX = this.<Double>createLocal();
+            var compareY = this.<Double>createLocal();
+            var compareZ = this.<Double>createLocal();
+            data.writeInstruction(instructionWriter, Instructions2.getVec3X(position, compareX));
+            data.writeInstruction(instructionWriter, Instructions2.getVec3Y(position, compareY));
+            data.writeInstruction(instructionWriter, Instructions2.getVec3Z(position, compareZ));
+            var aabb = selector.createLocalAABB();
+            var transformedMinX = this.<Double>createLocal();
+            data.writeInstruction(instructionWriter, Instructions2.valueAddAssign(transformedMinX.forceCast(), compareX.forceCast(), LocationData.ofDouble(aabb.minX()).forceCast()));
+            var transformedMinY = this.<Double>createLocal();
+            data.writeInstruction(instructionWriter, Instructions2.valueAddAssign(transformedMinY.forceCast(), compareY.forceCast(), LocationData.ofDouble(aabb.minY()).forceCast()));
+            var transformedMinZ = this.<Double>createLocal();
+            data.writeInstruction(instructionWriter, Instructions2.valueAddAssign(transformedMinZ.forceCast(), compareZ.forceCast(), LocationData.ofDouble(aabb.minZ()).forceCast()));
+            var transformedMaxX = this.<Double>createLocal();
+            data.writeInstruction(instructionWriter, Instructions2.valueAddAssign(transformedMaxX.forceCast(), compareX.forceCast(), LocationData.ofDouble(aabb.maxX()).forceCast()));
+            var transformedMaxY = this.<Double>createLocal();
+            data.writeInstruction(instructionWriter, Instructions2.valueAddAssign(transformedMaxY.forceCast(), compareY.forceCast(), LocationData.ofDouble(aabb.maxY()).forceCast()));
+            var transformedMaxZ = this.<Double>createLocal();
+            data.writeInstruction(instructionWriter, Instructions2.valueAddAssign(transformedMaxZ.forceCast(), compareZ.forceCast(), LocationData.ofDouble(aabb.maxZ()).forceCast()));
+            data.writeInstruction(instructionWriter, Instructions.checkEntityIntersection(entityData.content(), transformedMinX, transformedMinY, transformedMinZ, transformedMaxX, transformedMaxY, transformedMaxZ, data.contextEndLabel()));
         }
         if(!selector.scores().isEmpty()) {
             for(var entry : selector.scores().entrySet()) {

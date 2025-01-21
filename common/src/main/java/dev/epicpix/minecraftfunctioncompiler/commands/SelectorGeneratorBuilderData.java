@@ -30,6 +30,9 @@ public class SelectorGeneratorBuilderData {
     public Double x = null;
     public Double y = null;
     public Double z = null;
+    public Double dx = null;
+    public Double dy = null;
+    public Double dz = null;
 
     public SelectorArgument build() {
         return new SelectorArgument(
@@ -55,7 +58,10 @@ public class SelectorGeneratorBuilderData {
                 worldLimited,
             x,
             y,
-            z
+            z,
+            dx,
+            dy,
+            dz
         );
     }
 

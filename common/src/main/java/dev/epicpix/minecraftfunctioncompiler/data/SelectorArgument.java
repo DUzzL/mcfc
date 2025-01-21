@@ -29,7 +29,10 @@ public record SelectorArgument(
     boolean worldLimited,
     Double x,
     Double y,
-    Double z
+    Double z,
+    Double dx,
+    Double dy,
+    Double dz
 ) {
 
     private SelectorArgument(UUID entityUuid, String playerName, boolean self) {
@@ -54,6 +57,9 @@ public record SelectorArgument(
                 null,
                 null,
                 false,
+                null,
+                null,
+                null,
                 null,
                 null,
                 null
@@ -96,7 +102,10 @@ public record SelectorArgument(
                 worldLimited,
                 x,
                 y,
-                z
+                z,
+                dx,
+                dy,
+                dz
         );
     }
 
@@ -121,6 +130,28 @@ public record SelectorArgument(
             }
         }
         return false;
+    }
+
+    public AABB createLocalAABB() {
+        double vdx = dx == null ? 0.0 : dx;
+        double vdy = dy == null ? 0.0 : dy;
+        double vdz = dz == null ? 0.0 : dz;
+
+        double lx = Math.min(vdx, 0.0);
+        double ly = Math.min(vdy, 0.0);
+        double lz = Math.min(vdz, 0.0);
+        double hx = Math.max(vdx, 0.0) + 1.0;
+        double hy = Math.max(vdy, 0.0) + 1.0;
+        double hz = Math.max(vdz, 0.0) + 1.0;
+
+        double minX = Math.min(lx, hx);
+        double minY = Math.min(ly, hy);
+        double minZ = Math.min(lz, hz);
+        double maxX = Math.max(lx, hx);
+        double maxY = Math.max(ly, hy);
+        double maxZ = Math.max(lz, hz);
+
+        return new AABB(minX, minY, minZ, maxX, maxY, maxZ);
     }
 
 }

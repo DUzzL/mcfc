@@ -224,6 +224,21 @@ public final class SelectorParser {
             data.worldLimited = true;
             data.z = reader.readDouble();
         });
+        registerSelectorOption("dx", (reader, data) -> {
+            if(data.dx != null) throwError(reader, "dx selector cannot be repeated");
+            data.worldLimited = true;
+            data.dx = reader.readDouble();
+        });
+        registerSelectorOption("dy", (reader, data) -> {
+            if(data.dy != null) throwError(reader, "dy selector cannot be repeated");
+            data.worldLimited = true;
+            data.dy = reader.readDouble();
+        });
+        registerSelectorOption("dz", (reader, data) -> {
+            if(data.dz != null) throwError(reader, "dz selector cannot be repeated");
+            data.worldLimited = true;
+            data.dz = reader.readDouble();
+        });
     }
 
 

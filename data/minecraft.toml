@@ -58,6 +58,9 @@ ThreadLocal_set."1.20.3+" = "java/lang/ThreadLocal:set(Ljava/lang/Object;)V@MN"
 
 Integer_valueOf."1.21.4+" = "java/lang/Integer:valueOf(I)Ljava/lang/Integer;@S"
 
+EntityAccess_getBoundingBox = "net/minecraft/world/level/entity/EntityAccess:getBoundingBox()Lnet/minecraft/world/phys/AABB;@IM"
+AABB_intersects = "net/minecraft/world/phys/AABB:intersects(DDDDDD)Z@M"
+
 [definitions_fields]
 ServerFunctionManager_library = "net/minecraft/server/ServerFunctionManager:library:Lnet/minecraft/server/ServerFunctionLibrary;@MR"
 ServerFunctionLibrary_functions = "net/minecraft/server/ServerFunctionLibrary:functions:Ljava/util/Map;@MR"
