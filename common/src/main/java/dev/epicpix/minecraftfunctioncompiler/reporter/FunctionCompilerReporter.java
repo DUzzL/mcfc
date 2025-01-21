@@ -39,7 +39,7 @@ public final class FunctionCompilerReporter {
 
     @SuppressWarnings("ConstantValue")
     public static void reportRawData(String type, JsonElement data) {
-        if(ENABLE_REPORTING || !dataReportingEnabled) return;
+        if(!ENABLE_REPORTING || !dataReportingEnabled) return;
 
         JsonObject sendData = new JsonObject();
         sendData.addProperty("is_dev", isDevelopmentEnvironment || "development".equals(versionCommit));
