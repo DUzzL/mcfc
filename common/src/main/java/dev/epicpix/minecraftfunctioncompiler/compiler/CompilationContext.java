@@ -588,7 +588,7 @@ public class CompilationContext {
             data.writeInstruction(instructionWriter, Instructions2.valueAddAssign(transformedMaxY.forceCast(), compareY.forceCast(), LocationData.ofDouble(aabb.maxY()).forceCast()));
             var transformedMaxZ = this.<Double>createLocal();
             data.writeInstruction(instructionWriter, Instructions2.valueAddAssign(transformedMaxZ.forceCast(), compareZ.forceCast(), LocationData.ofDouble(aabb.maxZ()).forceCast()));
-            data.writeInstruction(instructionWriter, Instructions.checkEntityIntersection(entityData.content(), transformedMinX, transformedMinY, transformedMinZ, transformedMaxX, transformedMaxY, transformedMaxZ, data.contextEndLabel()));
+            data.writeInstruction(instructionWriter, Instructions2.checkEntityIntersection(entityData.content(), transformedMinX, transformedMinY, transformedMinZ, transformedMaxX, transformedMaxY, transformedMaxZ, data.contextEndLabel()));
         }
         if(!selector.scores().isEmpty()) {
             for(var entry : selector.scores().entrySet()) {

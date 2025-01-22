@@ -162,13 +162,6 @@ public final class Emitter {
                 context.store("result", codeWriter.newObjectCreate(VEC3_INIT_TARGET, x, y, z));
                 return true;
             }
-            if(context.instruction().type() == InstructionTypes.CHECK_ENTITY_INTERSECTION) {
-                var entity = context.load("entity");
-                var aabb = callEntityAccess_getBoundingBox(codeWriter, entity);
-                var intersects = callAABB_intersects(codeWriter, aabb, context.load("minX"), context.load("minY"), context.load("minZ"), context.load("maxX"), context.load("maxY"), context.load("maxZ"));
-                codeWriter.conditionalJump(JumpCondition.EQ, intersects, new BytecodeValue.IntegerValue(0), context.mapLabel("failLabel"));
-                return true;
-            }
 
             return false;
         });

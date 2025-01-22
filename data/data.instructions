@@ -716,3 +716,8 @@
 @SEND_TITLES_TIMES(<net.minecraft.server.level.ServerPlayer> [ctx:player], int [instr:fade_in], int [instr:stay], int [instr:fade_out]) {
   [ctx:player].connection.send(new <net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket>([instr:fade_in], [instr:stay], [instr:fade_out]));
 }
+
+##CONDITIONAL_JUMP
+@CHECK_ENTITY_INTERSECTION(<net.minecraft.world.entity.Entity> [ctx:entity], double [ctx:min_x], double [ctx:min_y], double [ctx:min_z], double [ctx:max_x], double [ctx:max_y], double [ctx:max_z], label [ctx:fail_label]) {
+  _jumpIfEqual([ctx:entity].getBoundingBox().intersects([ctx:min_x], [ctx:min_y], [ctx:min_z], [ctx:max_x], [ctx:max_y], [ctx:max_z]), false, [ctx:fail_label]);
+}
