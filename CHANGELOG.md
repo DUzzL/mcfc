@@ -1,5 +1,7 @@
 # 0.3.0-alpha.4
 
+Re-adds support for some missing entity types
+
 Fixes bugs:
 - Text with non-default styles don't compile (affects 1.21.4)
 

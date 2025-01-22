@@ -128,14 +128,15 @@ public final class Emitter {
                 return true;
             }
             if(context.instruction().type() == InstructionTypes.CHECK_ENTITY_TYPES) {
+                var entity = context.load("entity");
+                var entityType = callEntity_getType(codeWriter, entity);
                 var success = codeWriter.createLabel();
                 for(var res : context.instruction().<List<DataLocation>>get("types")) {
-                    var entity = context.load("entity");
-                    var clazz = DataRegistries.ENTITY_CLASS.get(res).type();
+                    var compareType = codeWriter.writeTarget(DataRegistries.ENTITY_TYPE.get(res).field());
                     if(context.instruction().<Boolean>get("negated")) {
-                        codeWriter.instanceCheckJump(true, entity, clazz, context.mapLabel("failLabel"));
+                        codeWriter.conditionalJump(JumpCondition.EQ, entityType, compareType, context.mapLabel("failLabel"));
                     }else {
-                        codeWriter.instanceCheckJump(true, entity, clazz, success);
+                        codeWriter.conditionalJump(JumpCondition.EQ, entityType, compareType, success);
                     }
                 }
                 if(!context.instruction().<Boolean>get("negated")) {

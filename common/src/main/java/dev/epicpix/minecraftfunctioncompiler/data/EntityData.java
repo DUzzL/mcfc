@@ -1,5 +1,5 @@
 package dev.epicpix.minecraftfunctioncompiler.data;
 
-import org.objectweb.asm.Type;
+import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 
-public record EntityData(Type type, boolean summonable) {}
+public record EntityData(InstructionTarget.FieldTarget field, boolean summonable) {}

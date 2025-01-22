@@ -3,7 +3,7 @@ package dev.epicpix.minecraftfunctioncompiler.registry;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
-import org.objectweb.asm.Type;
+import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +14,7 @@ public final class DataRegistries {
     private DataRegistries() {}
 
     public static final DataRegistry<AttributeData> ATTRIBUTE = new DataRegistry<>();
-    public static final DataRegistry<EntityData> ENTITY_CLASS = new DataRegistry<>();
+    public static final DataRegistry<EntityData> ENTITY_TYPE = new DataRegistry<>();
     public static final DataRegistry<List<DataLocation>> ENTITY_TAGS = new DataRegistry<>();
     public static final DataRegistry<List<DataLocation>> FUNCTION_TAGS = new DataRegistry<>();
     public static final DataRegistry<MobEffectData> MOB_EFFECT = new DataRegistry<>();
@@ -37,14 +37,16 @@ public final class DataRegistries {
         registries.add("ATTRIBUTE", attributeRegistry);
 
         var entityClassRegistry = new JsonObject();
-        for(var entry : ENTITY_CLASS.entrySet()) {
+        for(var entry : ENTITY_TYPE.entrySet()) {
             var data = entry.getValue();
             var obj = new JsonObject();
-            obj.addProperty("type", data.type().getDescriptor());
+            obj.addProperty("field_class", data.field().className());
+            obj.addProperty("field_name", data.field().name());
+            obj.addProperty("field_descriptor", data.field().descriptor());
             obj.addProperty("summonable", data.summonable());
             entityClassRegistry.add(entry.getKey().toString(), obj);
         }
-        registries.add("ENTITY_CLASS", entityClassRegistry);
+        registries.add("ENTITY_TYPE", entityClassRegistry);
 
         var entityTagsRegistry = new JsonObject();
         for(var entry : ENTITY_TAGS.entrySet()) {
@@ -100,13 +102,13 @@ public final class DataRegistries {
         }
         ATTRIBUTE.freeze();
 
-        ENTITY_CLASS.reset();
-        for(var entityClasses : registries.getAsJsonObject("ENTITY_CLASS").entrySet()) {
+        ENTITY_TYPE.reset();
+        for(var entityClasses : registries.getAsJsonObject("ENTITY_TYPE").entrySet()) {
             var entityClass = entityClasses.getValue().getAsJsonObject();
             var location = new DataLocation(entityClasses.getKey());
-            ENTITY_CLASS.set(location, new EntityData(Type.getType(entityClass.get("type").getAsString()), entityClass.get("summonable").getAsBoolean()));
+            ENTITY_TYPE.set(location, new EntityData(new InstructionTarget.FieldTarget(entityClass.get("field_class").getAsString(), entityClass.get("field_name").getAsString(), entityClass.get("field_descriptor").getAsString(), true, false), entityClass.get("summonable").getAsBoolean()));
         }
-        ENTITY_CLASS.freeze();
+        ENTITY_TYPE.freeze();
 
         ENTITY_TAGS.reset();
         for(var entityTags : registries.getAsJsonObject("ENTITY_TAGS").entrySet()) {

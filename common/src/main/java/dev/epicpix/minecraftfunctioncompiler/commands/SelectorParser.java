@@ -116,6 +116,7 @@ public final class SelectorParser {
 
     public static void initBaseSelectorOptions() {
         registerSelectorOption("type", (reader, data) -> {
+            if(data.entityTypes != null) throwError(reader, "type selector cannot be repeated");
             var negated = reader.skipIfNext('!');
             var tag = reader.skipIfNext('#');
             var type = reader.readDataLocation();
@@ -127,7 +128,7 @@ public final class SelectorParser {
                 if(types == null) types = List.of();
             }
             for(var it : types) {
-                if(DataRegistries.ENTITY_CLASS.get(it) == null) throw new UnsupportedOperationException("Unsupported entity type: " + it);
+                if(DataRegistries.ENTITY_TYPE.get(it) == null) throw new UnsupportedOperationException("Unsupported entity type: " + it);
             }
             data.entityTypes = new NegatableData<>(types, negated);
         });
