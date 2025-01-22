@@ -1,3 +1,12 @@
+# 0.3.0-alpha.4
+
+Fixes bugs:
+- Text with non-default styles don't compile (affects 1.21.4)
+
+## Details
+- **Released:** In Development
+- **Supported Versions:** 1.19.4, 1.20–1.20.1, 1.20.2, 1.20.3–1.20.4, 1.20.5–1.20.6, 1.21–1.21.1, 1.21.2–1.21.3, 1.21.4
+
 # 0.3.0-alpha.3
 
 Adds 1.19.4 and 1.21.4 support
