@@ -38,6 +38,7 @@ public final class CodeFieldStorageMapKind<T> {
         return dependencies;
     }
 
+    public static final CodeFieldStorageMapKind<DataLocation> ADVANCEMENT = new CodeFieldStorageMapKind<>("ADVANCEMENT", CodeFieldStorageMapKind::getAdvancementName);
     public static final CodeFieldStorageMapKind<DataLocation> ATTRIBUTE = new CodeFieldStorageMapKind<>("ATTRIBUTE", CodeFieldStorageMapKind::getAttributeName);
     public static final CodeFieldStorageMapKind<DataLocation> EFFECT = new CodeFieldStorageMapKind<>("EFFECT", CodeFieldStorageMapKind::getEffectName);
     public static final CodeFieldStorageMapKind<DataLocation> ENTITY_TYPE = new CodeFieldStorageMapKind<>("ENTITY_TYPE", CodeFieldStorageMapKind::getEntityTypeName);
@@ -52,8 +53,10 @@ public final class CodeFieldStorageMapKind<T> {
     public static final CodeFieldStorageMapKind<UUID> UUID = new CodeFieldStorageMapKind<>("UUID", CodeFieldStorageMapKind::getUuidName);
 
     static {
+        ADVANCEMENT.setDependencies(RESOURCE_LOCATION);
         ATTRIBUTE.setDependencies(RESOURCE_LOCATION);
         EFFECT.setDependencies(RESOURCE_LOCATION);
+        ENTITY_TYPE.setDependencies(RESOURCE_LOCATION);
         FUNCTION.setDependencies(RESOURCE_LOCATION);
         TEXT_STYLE.setDependencies(RESOURCE_LOCATION);
         TEXT.setDependencies(TEXT_STYLE);
@@ -73,6 +76,12 @@ public final class CodeFieldStorageMapKind<T> {
     }
 
 
+
+    private static String getAdvancementName(CodeFieldStorageStorageMap map, DataLocation value) {
+        return DEBUG
+            ? "advancement$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
+            : "A" + map.checkIndex(CodeFieldStorageMapKind.ADVANCEMENT, value);
+    }
 
     private static String getAttributeName(CodeFieldStorageStorageMap map, DataLocation value) {
         return DEBUG

@@ -12,6 +12,7 @@ import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.ALLOW_EXTERN
 public final class DataRegistries {
     private DataRegistries() {}
 
+    public static final DataRegistry<AdvancementData> ADVANCEMENT = new DataRegistry<>();
     public static final DataRegistry<AttributeData> ATTRIBUTE = new DataRegistry<>();
     public static final DataRegistry<EntityData> ENTITY_TYPE = new DataRegistry<>();
     public static final DataRegistry<List<DataLocation>> ENTITY_TAGS = new DataRegistry<>();
@@ -23,6 +24,20 @@ public final class DataRegistries {
     public static JsonObject extractRegistries() {
         if(!ALLOW_EXTERNAL_DATA_ACCESS) throw new UnsupportedOperationException("This build doesn't support extracting registries");
         var registries = new JsonObject();
+
+        var advancementRegistry = new JsonObject();
+        for(var entry : ADVANCEMENT.entrySet()) {
+            var data = entry.getValue();
+            var obj = new JsonObject();
+            obj.addProperty("parent", data.parent().toString());
+            var criteria = new JsonArray();
+            for(var v : data.criteria()) {
+                criteria.add(v);
+            }
+            obj.add("criteria", criteria);
+            advancementRegistry.add(entry.getKey().toString(), obj);
+        }
+        registries.add("ADVANCEMENT", advancementRegistry);
 
         var attributeRegistry = new JsonObject();
         for(var entry : ATTRIBUTE.entrySet()) {
@@ -89,6 +104,16 @@ public final class DataRegistries {
 
     public static void insertRegistries(JsonObject registries) {
         if(!ALLOW_EXTERNAL_DATA_ACCESS) throw new UnsupportedOperationException("This build doesn't support inserting registries from json");
+
+        ADVANCEMENT.reset();
+        for(var advancements : registries.getAsJsonObject("ADVANCEMENT").entrySet()) {
+            var advancement = advancements.getValue().getAsJsonObject();
+            var location = new DataLocation(advancements.getKey());
+            var criteria = new ArrayList<String>();
+            for(var name : advancement.getAsJsonArray("criteria")) criteria.add(name.getAsString());
+            ADVANCEMENT.set(location, new AdvancementData(location, new DataLocation(advancement.get("parent").getAsString()), List.copyOf(criteria)));
+        }
+        ADVANCEMENT.freeze();
 
         ATTRIBUTE.reset();
         for(var attributes : registries.getAsJsonObject("ATTRIBUTE").entrySet()) {

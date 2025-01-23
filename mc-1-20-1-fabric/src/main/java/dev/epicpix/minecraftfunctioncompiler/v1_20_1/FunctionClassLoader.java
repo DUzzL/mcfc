@@ -22,11 +22,11 @@ import java.util.List;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.BLOCKING_COMPILATION;
 
-public class FunctionClassLoader extends FunctionCompilerClassLoader<ResourceLocation, CommandSourceStack, CompoundTag> {
+public class FunctionClassLoader extends FunctionCompilerClassLoader<MinecraftServer, ResourceLocation, CommandSourceStack, CompoundTag> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("minecraftfunctioncompiler");
 
-    public FunctionClassLoader(ClassLoader parent, Object minecraftServer, SourceFileProvider sourceFileProvider) {
+    public FunctionClassLoader(ClassLoader parent, MinecraftServer minecraftServer, SourceFileProvider sourceFileProvider) {
         super(parent, FabricLoader.getInstance().getGameDir().resolve("generated"), minecraftServer, sourceFileProvider.mcfc$getSourceFiles());
     }
 
@@ -36,7 +36,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<ResourceLoc
             if(compileInBackground(() -> loadFunctions(serverFunctionManager))) return;
         }
         try {
-            RegistryMapping.updateRegistryMaps(serverFunctionManager);
+            RegistryMapping.updateRegistryMaps(minecraftServer, serverFunctionManager);
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }

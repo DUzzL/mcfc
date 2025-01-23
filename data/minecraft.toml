@@ -61,6 +61,10 @@ Integer_valueOf."1.21.4+" = "java/lang/Integer:valueOf(I)Ljava/lang/Integer;@S"
 
 Entity_getType = "net/minecraft/world/entity/Entity:getType()Lnet/minecraft/world/entity/EntityType;@M"
 
+MinecraftServer_getAdvancements = "net/minecraft/server/MinecraftServer:getAdvancements()Lnet/minecraft/server/ServerAdvancementManager;@M"
+ServerAdvancementManager_getAdvancement."1.20.1-" = "net/minecraft/server/ServerAdvancementManager:getAdvancement(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/advancements/Advancement;@M"
+ServerAdvancementManager_get."1.20.2+" = "net/minecraft/server/ServerAdvancementManager:get(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/advancements/AdvancementHolder;@M"
+
 [definitions_fields]
 ServerFunctionManager_library = "net/minecraft/server/ServerFunctionManager:library:Lnet/minecraft/server/ServerFunctionLibrary;@MR"
 ServerFunctionLibrary_functions = "net/minecraft/server/ServerFunctionLibrary:functions:Ljava/util/Map;@MR"

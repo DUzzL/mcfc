@@ -6,6 +6,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.text.TextContent;
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.*;
+import net.minecraft.advancements.Advancement;
 import net.minecraft.commands.CommandFunction;
 import net.minecraft.nbt.*;
 import net.minecraft.network.chat.*;
@@ -34,6 +35,9 @@ public class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
     private static final InstructionTarget LONG_ARRAY_TAG_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(LongArrayTag.class, long[].class);
 
     CodeFieldStorageMapImpl() {
+        set(CodeFieldStorageMapKind.ADVANCEMENT, new CodeFieldStorageMapValue<>(Type.getType(Advancement.class), (cf, cw, value) -> {
+            return callServerAdvancementManager_getAdvancement(cw, callMinecraftServer_getAdvancements(cw, cf.getGeneratorMinecraftServer()), cf.loadResourceLocation(cw, value));
+        }));
         set(CodeFieldStorageMapKind.ATTRIBUTE, new CodeFieldStorageMapValue<>(Type.getType(Attribute.class), (cf, cw, value) -> {
             return cw.castType(callRegistry_get(cw, loadBuiltInRegistries_ATTRIBUTE(cw), cf.loadResourceLocation(cw, value)), Type.getType(Attribute.class));
         }));

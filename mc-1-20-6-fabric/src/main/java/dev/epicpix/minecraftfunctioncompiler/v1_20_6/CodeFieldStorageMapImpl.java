@@ -6,6 +6,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.text.TextContent;
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.*;
+import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.commands.functions.CommandFunction;
 import net.minecraft.core.Holder;
 import net.minecraft.nbt.*;
@@ -33,6 +34,9 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
     private static final InstructionTarget LONG_ARRAY_TAG_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(LongArrayTag.class, long[].class);
 
     CodeFieldStorageMapImpl() {
+        set(CodeFieldStorageMapKind.ADVANCEMENT, new CodeFieldStorageMapValue<>(Type.getType(AdvancementHolder.class), (cf, cw, value) -> {
+            return callServerAdvancementManager_get(cw, callMinecraftServer_getAdvancements(cw, cf.getGeneratorMinecraftServer()), cf.loadResourceLocation(cw, value));
+        }));
         set(CodeFieldStorageMapKind.ATTRIBUTE, new CodeFieldStorageMapValue<>(Type.getType(Holder.class), (cf, cw, value) -> {
             return cw.castType(callOptional_get(cw, callRegistry_getHolder(cw, loadBuiltInRegistries_ATTRIBUTE(cw), cf.loadResourceLocation(cw, value))), Type.getType(Holder.class));
         }));

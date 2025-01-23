@@ -32,7 +32,8 @@ public record SelectorArgument(
     Double z,
     Double dx,
     Double dy,
-    Double dz
+    Double dz,
+    Map<DataLocation, SelectorAdvancementCheck> advancements
 ) {
 
     private SelectorArgument(UUID entityUuid, String playerName, boolean self) {
@@ -62,7 +63,8 @@ public record SelectorArgument(
                 null,
                 null,
                 null,
-                null
+                null,
+        null
         );
     }
 
@@ -105,7 +107,8 @@ public record SelectorArgument(
                 z,
                 dx,
                 dy,
-                dz
+                dz,
+                advancements
         );
     }
 

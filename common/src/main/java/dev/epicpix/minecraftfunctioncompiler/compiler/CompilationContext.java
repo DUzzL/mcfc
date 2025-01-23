@@ -4,6 +4,7 @@ import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
+import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
 import java.util.*;
 
@@ -521,6 +522,54 @@ public class CompilationContext {
             data.writeInstruction(instructionWriter, Instructions2.tryAsPlayer(entityData.content(), playerLocal, data.contextEndLabel()));
             data.writeInstruction(instructionWriter, Instructions2.getExperienceLevel(playerLocal, levelLocal));
             jumpIfNotMatchesRange(data, levelLocal, selector.level(), data.contextEndLabel());
+        }
+        if(selector.advancements() != null && !selector.advancements().isEmpty()) {
+            var possible = true;
+            out: for(var check : selector.advancements().entrySet()) {
+                var advancement = DataRegistries.ADVANCEMENT.get(check.getKey());
+                if(advancement == null) {
+                    possible = false;
+                    break;
+                }
+                if(check.getValue() instanceof SelectorAdvancementCheck.CriteriaCompleted criteriaCompleted) {
+                    for(var criterion : criteriaCompleted.criteria().keySet()) {
+                        if(!advancement.criteria().contains(criterion)) {
+                            possible = false;
+                            break out;
+                        }
+                    }
+                }
+            }
+            if(!possible) {
+                data.writeInstruction(instructionWriter, Instructions2.jump(data.contextEndLabel()));
+            }else {
+                var playerLocal = this.<Player>createLocal();
+                data.writeInstruction(instructionWriter, Instructions2.tryAsPlayer(entityData.content(), playerLocal, data.contextEndLabel()));
+                var playerAdvancements = this.<PlayerAdvancements>createLocal();
+                data.writeInstruction(instructionWriter, Instructions2.getPlayerAdvancements(playerLocal, playerAdvancements));
+
+                for(var check : selector.advancements().entrySet()) {
+                    var advancementProgressLocal = this.<AdvancementProgress>createLocal();
+                    data.writeInstruction(instructionWriter, Instructions2.getAdvancementProgress(playerAdvancements, advancementProgressLocal, check.getKey()));
+                    if(check.getValue() instanceof SelectorAdvancementCheck.AdvancementCompleted advancementCompleted) {
+                        if(advancementCompleted.done()) {
+                            data.writeInstruction(instructionWriter, Instructions2.jumpIfAdvancementNotDone(advancementProgressLocal, data.contextEndLabel()));
+                        }else {
+                            data.writeInstruction(instructionWriter, Instructions2.jumpIfAdvancementDone(advancementProgressLocal, data.contextEndLabel()));
+                        }
+                    }else if(check.getValue() instanceof SelectorAdvancementCheck.CriteriaCompleted criteriaCompleted) {
+                        for(var criteriaCheck : criteriaCompleted.criteria().entrySet()) {
+                            var criterionProgressLocal = this.<CriterionProgress>createLocal();
+                            data.writeInstruction(instructionWriter, Instructions2.getCriterionProgress(advancementProgressLocal, criterionProgressLocal, LocationData.ofString(criteriaCheck.getKey())));
+                            if(criteriaCheck.getValue()) {
+                                data.writeInstruction(instructionWriter, Instructions2.jumpIfAdvancementCriterionNotDone(criterionProgressLocal, data.contextEndLabel()));
+                            }else {
+                                data.writeInstruction(instructionWriter, Instructions2.jumpIfAdvancementCriterionDone(criterionProgressLocal, data.contextEndLabel()));
+                            }
+                        }
+                    }
+                }
+            }
         }
         if(selector.yaw() != null || selector.pitch() != null) {
             var rotationLocal = this.<Vec2>createLocal();

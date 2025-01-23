@@ -29,7 +29,7 @@ import java.util.*;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.*;
 
-public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSourceStack, TCompoundTag> extends ClassLoader {
+public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLocation, TCommandSourceStack, TCompoundTag> extends ClassLoader {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("minecraftfunctioncompiler");
 
@@ -40,8 +40,8 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
     private final HashMap<TResourceLocation, MethodHandle> handles = new HashMap<>();
 
     public final ClassLoader parent;
+    public final TMinecraftServer minecraftServer;
     private final Path generatedDir;
-    private final Object minecraftServer;
     private final HashMap<DataLocation, List<String>> sourceFiles;
 
     private State state = State.NOTHING_LOADED;
@@ -57,7 +57,7 @@ public abstract class FunctionCompilerClassLoader<TResourceLocation, TCommandSou
         EXECUTION_FAILED,
     }
 
-    public FunctionCompilerClassLoader(ClassLoader parent, Path generatedDir, Object minecraftServer, Map<DataLocation, List<String>> sourceFiles) {
+    public FunctionCompilerClassLoader(ClassLoader parent, Path generatedDir, TMinecraftServer minecraftServer, Map<DataLocation, List<String>> sourceFiles) {
         super(parent);
         this.parent = parent;
         this.generatedDir = generatedDir;

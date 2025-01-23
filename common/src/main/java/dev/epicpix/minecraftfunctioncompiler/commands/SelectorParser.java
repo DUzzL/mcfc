@@ -115,6 +115,47 @@ public final class SelectorParser {
     }
 
     public static void initBaseSelectorOptions() {
+        registerSelectorOption("advancements", (reader, data) -> {
+            if(data.advancements != null) throwError(reader, "advancements selector cannot be repeated");
+            data.advancements = new HashMap<>();
+            reader.skip();
+            reader.skipWhitespace();
+            while(reader.peek() != '}') {
+                reader.skipWhitespace();
+                var key = reader.readDataLocation();
+                reader.skipWhitespace();
+                reader.skip();
+                reader.skipWhitespace();
+                if(reader.peek() == '{') {
+                    reader.skip();
+                    reader.skipWhitespace();
+                    HashMap<String, Boolean> criterionChecks = new HashMap<>();
+                    while(reader.peek() != '}') {
+                        reader.skipWhitespace();
+                        var criterion = reader.readWord();
+                        reader.skipWhitespace();
+                        reader.skip();
+                        reader.skipWhitespace();
+                        var check = reader.readBoolean();
+                        criterionChecks.put(criterion, check);
+                        reader.skipWhitespace();
+                        if(reader.peek() == ',') {
+                            reader.skip();
+                        }
+                    }
+                    reader.skip();
+                    data.advancements.put(key, new SelectorAdvancementCheck.CriteriaCompleted(criterionChecks));
+                }else {
+                    var check = reader.readBoolean();
+                    data.advancements.put(key, new SelectorAdvancementCheck.AdvancementCompleted(check));
+                }
+                reader.skipWhitespace();
+                if(reader.peek() == ',') {
+                    reader.skip();
+                }
+            }
+            reader.skip();
+        });
         registerSelectorOption("type", (reader, data) -> {
             if(data.entityTypes != null) throwError(reader, "type selector cannot be repeated");
             var negated = reader.skipIfNext('!');

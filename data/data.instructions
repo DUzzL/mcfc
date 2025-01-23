@@ -472,6 +472,34 @@
     let [ctx:gamemode] = [ctx:player].gameMode.getGameModeForPlayer();
 }
 
+@GET_PLAYER_ADVANCEMENTS(<net.minecraft.server.level.ServerPlayer> [ctx:player], <net.minecraft.server.PlayerAdvancements> [ctx:player_advancements]) {
+    let [ctx:player_advancements] = [ctx:player].getAdvancements();
+}
+
+@GET_ADVANCEMENT_PROGRESS(<net.minecraft.server.PlayerAdvancements> [ctx:player_advancements], <net.minecraft.advancements.AdvancementProgress> [ctx:advancement_progress], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:advancement_name]) {
+    let [ctx:advancement_progress] = [ctx:player_advancements].getOrStartProgress(map_advancement([instr:advancement_name]));
+}
+
+@JUMP_IF_ADVANCEMENT_NOT_DONE(<net.minecraft.advancements.AdvancementProgress> [ctx:advancement_progress], label [ctx:label]) {
+    _jumpIfEqual([ctx:advancement_progress].isDone(), false, [ctx:label]);
+}
+
+@JUMP_IF_ADVANCEMENT_DONE(<net.minecraft.advancements.AdvancementProgress> [ctx:advancement_progress], label [ctx:label]) {
+    _jumpIfNotEqual([ctx:advancement_progress].isDone(), false, [ctx:label]);
+}
+
+@GET_CRITERION_PROGRESS(<net.minecraft.advancements.AdvancementProgress> [ctx:advancement_progress], <net.minecraft.advancements.CriterionProgress> [ctx:criterion_progress], <java.lang.String> [ctx:criterion]) {
+    let [ctx:criterion_progress] = [ctx:advancement_progress].getCriterion([ctx:criterion]);
+}
+
+@JUMP_IF_ADVANCEMENT_CRITERION_NOT_DONE(<net.minecraft.advancements.CriterionProgress> [ctx:criterion_progress], label [ctx:label]) {
+    _jumpIfEqual([ctx:criterion_progress].isDone(), false, [ctx:label]);
+}
+
+@JUMP_IF_ADVANCEMENT_CRITERION_DONE(<net.minecraft.advancements.CriterionProgress> [ctx:criterion_progress], label [ctx:label]) {
+    _jumpIfNotEqual([ctx:criterion_progress].isDone(), false, [ctx:label]);
+}
+
 @GET_IS_ALIVE(<net.minecraft.world.entity.Entity> [ctx:entity], boolean [ctx:alive]) {
   let [ctx:alive] = [ctx:entity].isAlive();
 }

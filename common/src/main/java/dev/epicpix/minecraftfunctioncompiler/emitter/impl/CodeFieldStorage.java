@@ -36,6 +36,12 @@ public final class CodeFieldStorage {
         return map;
     }
 
+    public BytecodeRegister loadAdvancement(CodeWriter cw, DataLocation value) {
+        map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, value);
+        map.writeValue(CodeFieldStorageMapKind.ADVANCEMENT, value);
+        return cw.getDataField(CodeFieldStorageMapKind.ADVANCEMENT.generateName(map, value), map.getValueType(CodeFieldStorageMapKind.ADVANCEMENT));
+    }
+
     public BytecodeRegister loadAttribute(CodeWriter cw, DataLocation value) {
         map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, value);
         map.writeValue(CodeFieldStorageMapKind.ATTRIBUTE, value);
@@ -124,6 +130,10 @@ public final class CodeFieldStorage {
         }
 
         return cw;
+    }
+
+    public BytecodeValue getGeneratorMinecraftServer() {
+        return new BytecodeValue.Parameter(0, minecraftServerType);
     }
 
     public ClassGenerator generate(HashMap<String, List<BytecodeInstruction>> lowLevelInstructions) {

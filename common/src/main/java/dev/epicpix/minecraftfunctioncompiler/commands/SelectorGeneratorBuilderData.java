@@ -33,6 +33,7 @@ public class SelectorGeneratorBuilderData {
     public Double dx = null;
     public Double dy = null;
     public Double dz = null;
+    public HashMap<DataLocation, SelectorAdvancementCheck> advancements = null;
 
     public SelectorArgument build() {
         return new SelectorArgument(
@@ -61,7 +62,8 @@ public class SelectorGeneratorBuilderData {
             z,
             dx,
             dy,
-            dz
+            dz,
+            advancements != null ? Map.copyOf(advancements) : null
         );
     }
 

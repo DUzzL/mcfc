@@ -92,6 +92,13 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             if(expression.name == "cast" || expression.name == "map_enum") {
                 return (expression.arguments[1] as ParsedTokenExpressionTyped).type as ParsedTokenExpressionTypeComplex
             }
+            if(expression.name == "map_advancement") {
+                if(writerData.isAboveVersion(20, 1)) {
+                    return ParsedTokenExpressionTypeComplex("net.minecraft.advancements.AdvancementHolder")
+                }else {
+                    return ParsedTokenExpressionTypeComplex("net.minecraft.advancements.Advancement")
+                }
+            }
             if(expression.name == "map_attribute") {
                 if(writerData.isAboveVersion(20, 4)) {
                     return ParsedTokenExpressionTypeComplex("net.minecraft.core.Holder")
@@ -403,6 +410,15 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                         }
                         output.appendText("};\n")
                         return reg
+                    }
+                }
+            }
+            if(expression.name == "map_advancement") {
+                val source = expression.arguments[0] as ParsedTokenValueAccessor
+                if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
+                    val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
+                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.DataLocation") {
+                        return writeNextRegister(uniqId, output, "context.fieldStorage().loadAdvancement(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.DataLocation>get(${writerData.getParamIndex(source)}))")
                     }
                 }
             }

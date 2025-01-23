@@ -3,6 +3,7 @@ package dev.epicpix.minecraftfunctioncompiler.v1_20_4;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerFunctionManager;
 import net.minecraft.stats.Stat;
 import net.minecraft.stats.StatType;
@@ -17,7 +18,7 @@ public final class RegistryMapping {
     private RegistryMapping() {}
 
     @SuppressWarnings("unchecked")
-    public static void updateRegistryMaps(ServerFunctionManager serverFunctionManager) throws IllegalAccessException {
+    public static void updateRegistryMaps(MinecraftServer server, ServerFunctionManager serverFunctionManager) throws IllegalAccessException {
         DataRegistries.ATTRIBUTE.reset();
         BuiltInRegistries.ATTRIBUTE.entrySet().forEach(e -> {
             DataLocation location = new DataLocation(e.getKey().location().getNamespace(), e.getKey().location().getPath());
@@ -63,5 +64,12 @@ public final class RegistryMapping {
             DataRegistries.ENTITY_TAGS.set(location, List.copyOf(mapped));
         });
         DataRegistries.ENTITY_TAGS.freeze();
+        DataRegistries.ADVANCEMENT.reset();
+        server.getAdvancements().getAllAdvancements().forEach(e -> {
+            var location = new DataLocation(e.id().getNamespace(), e.id().getPath());
+            var criteria = List.copyOf(e.value().criteria().keySet());
+            DataRegistries.ADVANCEMENT.set(location, new AdvancementData(location, e.value().parent().map(resourceLocation -> new DataLocation(resourceLocation.getNamespace(), resourceLocation.getPath())).orElse(null), criteria));
+        });
+        DataRegistries.ADVANCEMENT.freeze();
     }
 }

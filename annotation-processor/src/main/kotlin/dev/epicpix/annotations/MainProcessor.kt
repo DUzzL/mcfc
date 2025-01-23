@@ -117,6 +117,9 @@ fun javaToMinecraftGenericType(type: String): String {
             "net.minecraft.world.level.GameType" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.GameType"
             "net.minecraft.nbt.ListTag" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.NbtList"
             "net.minecraft.commands.CommandSourceStack" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.CommandSourceStack"
+            "net.minecraft.advancements.AdvancementProgress" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.AdvancementProgress"
+            "net.minecraft.advancements.CriterionProgress" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.CriterionProgress"
+            "net.minecraft.server.PlayerAdvancements" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.PlayerAdvancements"
             else -> throw IllegalArgumentException("Unknown minecraft class: $type")
         }
     }else {
