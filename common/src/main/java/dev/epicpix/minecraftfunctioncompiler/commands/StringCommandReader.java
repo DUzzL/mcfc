@@ -214,6 +214,15 @@ public class StringCommandReader {
         }
     }
 
+    public String readRemainder() {
+        int start = index;
+        while(canRead()) {
+            checkMacro(false);
+            skip();
+        }
+        return command.substring(start, index);
+    }
+
     private String readNumberBase() {
         int start = index;
         while(canRead()) {

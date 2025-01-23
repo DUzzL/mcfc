@@ -4,6 +4,9 @@ Re-adds support for some missing entity types
 
 Adds selector argument: `advancements`
 
+Adds command:
+- `advancement <grant|revoke> <players> only <advancement> [criterion]`
+
 Fixes bugs:
 - Text with non-default styles don't compile (affects 1.21.4)
 

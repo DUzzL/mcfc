@@ -222,6 +222,10 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 builder.append("    var a$argumentIndex = reader.readGamemode();\n")
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.Gamemode")
             }
+            "greedy_string" -> {
+                builder.append("    var a$argumentIndex = reader.readRemainder();\n")
+                newTypedArguments.add(data.argName!! to "java.lang.String")
+            }
             "int" -> {
                 builder.append("    var a$argumentIndex = reader.readInt();\n")
                 data.kindOptions["minimum"]?.toInt()?.also { min -> builder.append("    if(a$argumentIndex < $min) ${createError("\"Integer value of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }

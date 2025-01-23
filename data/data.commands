@@ -1,3 +1,8 @@
+ADVANCEMENT_GRANT_ONLY/advancement grant <targets:entity_selector[players]> only <advancement:resource_location>
+ADVANCEMENT_GRANT_ONLY_CRITERION/advancement grant <targets:entity_selector[players]> only <advancement:resource_location> <criterion:greedy_string>
+ADVANCEMENT_REVOKE_ONLY/advancement revoke <targets:entity_selector[players]> only <advancement:resource_location>
+ADVANCEMENT_REVOKE_ONLY_CRITERION/advancement revoke <targets:entity_selector[players]> only <advancement:resource_location> <criterion:greedy_string>
+
 ATTRIBUTE_BASE_SET/attribute <target:entity_selector[multiple=false]> <attribute:attribute> base set <value:double>
 
 DATA_MODIFY_STORAGE_SET_VALUE/data modify storage <storage:resource_location> <path:nbt_path> set value <value:nbt_value>

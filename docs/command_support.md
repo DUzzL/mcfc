@@ -2,6 +2,8 @@ Not all commands are currently implemented in this mod, if a command is not list
 
 | Command                                   | Full Support | `store result` Support | `store success` Support |
 |-------------------------------------------|--------------|------------------------|-------------------------|
+| `advancement grant ... only ...`          | Partial[^1]  | No                     | No                      |
+| `advancement revoke ... only ...`         | Partial[^1]  | No                     | No                      |
 | `attribute base set`                      | Partial[^1]  | No                     | No                      |
 | `data modify storage ... set value ...`   | Partial[^3]  | No                     | No                      |
 | `difficulty`                              | Partial[^2]  | No                     | No                      |

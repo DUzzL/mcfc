@@ -25,7 +25,53 @@ public final class CommandCompiler {
     }
 
     private static void compile(CompilationContext context, ForkingContext forkingContext, CommandParams command, ResultStorage result) {
-        if(command instanceof CommandAttributeBaseSet cmdData) {
+        if(command instanceof CommandAdvancementGrantOnly cmdData) {
+            var advancementData = DataRegistries.ADVANCEMENT.get(cmdData.advancement());
+            if(advancementData == null) return;
+            try(var selector = context.forSelector(cmdData.targets())) {
+                var player = context.<Player>createLocal();
+                selector.writeInstruction(Instructions2.tryAsPlayer(selector.content(), player, selector.data().contextEndLabel()));
+                var playerAdvancements = context.<PlayerAdvancements>createLocal();
+                selector.writeInstruction(Instructions2.getPlayerAdvancements(player, playerAdvancements));
+                for(var criterion : advancementData.criteria()) {
+                    selector.writeInstruction(Instructions2.awardAdvancementCriterion(playerAdvancements, LocationData.ofString(criterion), advancementData.location()));
+                }
+            }
+        }else if(command instanceof CommandAdvancementGrantOnlyCriterion cmdData) {
+            var advancementData = DataRegistries.ADVANCEMENT.get(cmdData.advancement());
+            if(advancementData == null) return;
+            if(!advancementData.criteria().contains(cmdData.criterion())) return;
+            try(var selector = context.forSelector(cmdData.targets())) {
+                var player = context.<Player>createLocal();
+                selector.writeInstruction(Instructions2.tryAsPlayer(selector.content(), player, selector.data().contextEndLabel()));
+                var playerAdvancements = context.<PlayerAdvancements>createLocal();
+                selector.writeInstruction(Instructions2.getPlayerAdvancements(player, playerAdvancements));
+                selector.writeInstruction(Instructions2.awardAdvancementCriterion(playerAdvancements, LocationData.ofString(cmdData.criterion()), advancementData.location()));
+            }
+        }else if(command instanceof CommandAdvancementGrantOnly cmdData) {
+            var advancementData = DataRegistries.ADVANCEMENT.get(cmdData.advancement());
+            if(advancementData == null) return;
+            try(var selector = context.forSelector(cmdData.targets())) {
+                var player = context.<Player>createLocal();
+                selector.writeInstruction(Instructions2.tryAsPlayer(selector.content(), player, selector.data().contextEndLabel()));
+                var playerAdvancements = context.<PlayerAdvancements>createLocal();
+                selector.writeInstruction(Instructions2.getPlayerAdvancements(player, playerAdvancements));
+                for(var criterion : advancementData.criteria()) {
+                    selector.writeInstruction(Instructions2.revokeAdvancementCriterion(playerAdvancements, LocationData.ofString(criterion), advancementData.location()));
+                }
+            }
+        }else if(command instanceof CommandAdvancementGrantOnlyCriterion cmdData) {
+            var advancementData = DataRegistries.ADVANCEMENT.get(cmdData.advancement());
+            if(advancementData == null) return;
+            if(!advancementData.criteria().contains(cmdData.criterion())) return;
+            try(var selector = context.forSelector(cmdData.targets())) {
+                var player = context.<Player>createLocal();
+                selector.writeInstruction(Instructions2.tryAsPlayer(selector.content(), player, selector.data().contextEndLabel()));
+                var playerAdvancements = context.<PlayerAdvancements>createLocal();
+                selector.writeInstruction(Instructions2.getPlayerAdvancements(player, playerAdvancements));
+                selector.writeInstruction(Instructions2.revokeAdvancementCriterion(playerAdvancements, LocationData.ofString(cmdData.criterion()), advancementData.location()));
+            }
+        }else if(command instanceof CommandAttributeBaseSet cmdData) {
             try(var selector = context.forSelector(cmdData.target())) {
                 var livingEntityLocation = context.<LivingEntity>createLocal();
                 var attrLocation = context.<AttributeInstance>createLocal();

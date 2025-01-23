@@ -500,6 +500,14 @@
     _jumpIfNotEqual([ctx:criterion_progress].isDone(), false, [ctx:label]);
 }
 
+@AWARD_ADVANCEMENT_CRITERION(<net.minecraft.server.PlayerAdvancements> [ctx:player_advancements], <java.lang.String> [ctx:criterion], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:advancement_name]) {
+    [ctx:player_advancements].award(map_advancement([instr:advancement_name]), [ctx:criterion]);
+}
+
+@REVOKE_ADVANCEMENT_CRITERION(<net.minecraft.server.PlayerAdvancements> [ctx:player_advancements], <java.lang.String> [ctx:criterion], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:advancement_name]) {
+    [ctx:player_advancements].revoke(map_advancement([instr:advancement_name]), [ctx:criterion]);
+}
+
 @GET_IS_ALIVE(<net.minecraft.world.entity.Entity> [ctx:entity], boolean [ctx:alive]) {
   let [ctx:alive] = [ctx:entity].isAlive();
 }
