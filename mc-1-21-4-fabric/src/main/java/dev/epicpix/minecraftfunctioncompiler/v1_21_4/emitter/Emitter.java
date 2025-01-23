@@ -9,7 +9,6 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
-import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.phys.Vec2;
@@ -141,7 +140,7 @@ public final class Emitter {
                 var entityType = callEntity_getType(codeWriter, entity);
                 var success = codeWriter.createLabel();
                 for(var res : context.instruction().<List<DataLocation>>get("types")) {
-                    var compareType = codeWriter.writeTarget(DataRegistries.ENTITY_TYPE.get(res).field());
+                    var compareType = context.fieldStorage().loadEntityType(codeWriter, res);
                     if(context.instruction().<Boolean>get("negated")) {
                         codeWriter.conditionalJump(JumpCondition.EQ, entityType, compareType, context.mapLabel("failLabel"));
                     }else {

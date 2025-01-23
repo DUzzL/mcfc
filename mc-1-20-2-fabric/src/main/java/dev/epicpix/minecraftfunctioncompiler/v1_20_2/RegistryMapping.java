@@ -1,7 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_2;
 
 import dev.epicpix.minecraftfunctioncompiler.data.*;
-import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.ServerFunctionManager;
@@ -11,8 +10,6 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.RangedAttribute;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,13 +39,10 @@ public final class RegistryMapping {
         BuiltInRegistries.MOB_EFFECT.entrySet().forEach(e -> DataRegistries.MOB_EFFECT.set(new DataLocation(e.getKey().location().getNamespace(), e.getKey().location().getPath()), new MobEffectData(new DataLocation(e.getKey().location().getNamespace(), e.getKey().location().getPath()), e.getValue().isInstantenous())));
         DataRegistries.MOB_EFFECT.freeze();
         DataRegistries.ENTITY_TYPE.reset();
-        for(Field field : EntityType.class.getDeclaredFields()) {
-            if(EntityType.class.isAssignableFrom(field.getType()) && Modifier.isPublic(field.getModifiers()) && Modifier.isStatic(field.getModifiers()) && Modifier.isFinal(field.getModifiers())) {
-                var value = (EntityType<?>) field.get(null);
-                var key = BuiltInRegistries.ENTITY_TYPE.getKey(value);
-                DataRegistries.ENTITY_TYPE.set(new DataLocation(key.getNamespace(), key.getPath()), new EntityData(InstructionTarget.FieldTarget.fromReflection(field, false), value.canSummon()));
-            }
-        }
+        BuiltInRegistries.ENTITY_TYPE.entrySet().forEach(e -> {
+            DataLocation location = new DataLocation(e.getKey().location().getNamespace(), e.getKey().location().getPath());
+            DataRegistries.ENTITY_TYPE.set(location, new EntityData(location, e.getValue().canSummon()));
+        });
         DataRegistries.ENTITY_TYPE.freeze();
         DataRegistries.FUNCTION_TAGS.reset();
         for(var tagName : serverFunctionManager.getTagNames()) {

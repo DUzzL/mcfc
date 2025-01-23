@@ -33,7 +33,8 @@ MutableComponent_withStyle = "net/minecraft/network/chat/MutableComponent:withSt
 MutableComponent_append = "net/minecraft/network/chat/MutableComponent:append(Lnet/minecraft/network/chat/Component;)Lnet/minecraft/network/chat/MutableComponent;@M"
 TextColor_fromRgb = "net/minecraft/network/chat/TextColor:fromRgb(I)Lnet/minecraft/network/chat/TextColor;@S"
 
-Registry_get."1.20.4-" = "net/minecraft/core/Registry:get(Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/Object;@IM"
+Registry_get."1.21.1-" = "net/minecraft/core/Registry:get(Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/Object;@IM"
+Registry_getValue."1.21.2+" = "net/minecraft/core/Registry:getValue(Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/Object;@IM"
 Registry_getHolder."1.20.6" = "net/minecraft/core/Registry:getHolder(Lnet/minecraft/resources/ResourceLocation;)Ljava/util/Optional;@IM"
 Registry_getHolder."1.21" = "net/minecraft/core/Registry:getHolder(Lnet/minecraft/resources/ResourceLocation;)Ljava/util/Optional;@IM"
 Registry_get."1.21.2+" = "net/minecraft/core/Registry:get(Lnet/minecraft/resources/ResourceLocation;)Ljava/util/Optional;@IM"
@@ -69,6 +70,7 @@ Vec3_z = "net/minecraft/world/phys/Vec3:z:D@MR"
 Vec2_x = "net/minecraft/world/phys/Vec2:x:F@MR"
 Vec2_y = "net/minecraft/world/phys/Vec2:y:F@MR"
 BuiltInRegistries_ATTRIBUTE = "net/minecraft/core/registries/BuiltInRegistries:ATTRIBUTE:Lnet/minecraft/core/Registry;@SR"
+BuiltInRegistries_ENTITY_TYPE = "net/minecraft/core/registries/BuiltInRegistries:ENTITY_TYPE:Lnet/minecraft/core/DefaultedRegistry;@SR"
 BuiltInRegistries_MOB_EFFECT = "net/minecraft/core/registries/BuiltInRegistries:MOB_EFFECT:Lnet/minecraft/core/Registry;@SR"
 
 Anchor_EYES = "net/minecraft/commands/arguments/EntityAnchorArgument$Anchor:EYES:Lnet/minecraft/commands/arguments/EntityAnchorArgument$Anchor;@SR"

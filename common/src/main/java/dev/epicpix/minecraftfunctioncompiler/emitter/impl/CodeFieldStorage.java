@@ -48,6 +48,12 @@ public final class CodeFieldStorage {
         return cw.getDataField(CodeFieldStorageMapKind.EFFECT.generateName(map, value), map.getValueType(CodeFieldStorageMapKind.EFFECT));
     }
 
+    public BytecodeRegister loadEntityType(CodeWriter cw, DataLocation value) {
+        map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, value);
+        map.writeValue(CodeFieldStorageMapKind.ENTITY_TYPE, value);
+        return cw.getDataField(CodeFieldStorageMapKind.ENTITY_TYPE.generateName(map, value), map.getValueType(CodeFieldStorageMapKind.ENTITY_TYPE));
+    }
+
     public BytecodeRegister loadFunction(CodeWriter cw, DataLocation value) {
         map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, value);
         map.writeValue(CodeFieldStorageMapKind.FUNCTION, value);

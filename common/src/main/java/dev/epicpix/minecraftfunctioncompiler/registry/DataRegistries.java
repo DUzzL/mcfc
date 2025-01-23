@@ -3,7 +3,6 @@ package dev.epicpix.minecraftfunctioncompiler.registry;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
-import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,9 +39,6 @@ public final class DataRegistries {
         for(var entry : ENTITY_TYPE.entrySet()) {
             var data = entry.getValue();
             var obj = new JsonObject();
-            obj.addProperty("field_class", data.field().className());
-            obj.addProperty("field_name", data.field().name());
-            obj.addProperty("field_descriptor", data.field().descriptor());
             obj.addProperty("summonable", data.summonable());
             entityClassRegistry.add(entry.getKey().toString(), obj);
         }
@@ -106,7 +102,7 @@ public final class DataRegistries {
         for(var entityClasses : registries.getAsJsonObject("ENTITY_TYPE").entrySet()) {
             var entityClass = entityClasses.getValue().getAsJsonObject();
             var location = new DataLocation(entityClasses.getKey());
-            ENTITY_TYPE.set(location, new EntityData(new InstructionTarget.FieldTarget(entityClass.get("field_class").getAsString(), entityClass.get("field_name").getAsString(), entityClass.get("field_descriptor").getAsString(), true, false), entityClass.get("summonable").getAsBoolean()));
+            ENTITY_TYPE.set(location, new EntityData(location, entityClass.get("summonable").getAsBoolean()));
         }
         ENTITY_TYPE.freeze();
 

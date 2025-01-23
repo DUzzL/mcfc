@@ -1,5 +1,3 @@
 package dev.epicpix.minecraftfunctioncompiler.data;
 
-import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
-
-public record EntityData(InstructionTarget.FieldTarget field, boolean summonable) {}
+public record EntityData(DataLocation location, boolean summonable) {}

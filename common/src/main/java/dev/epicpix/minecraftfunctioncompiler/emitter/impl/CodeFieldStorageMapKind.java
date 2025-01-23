@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DEBUG;
 
@@ -41,6 +40,7 @@ public final class CodeFieldStorageMapKind<T> {
 
     public static final CodeFieldStorageMapKind<DataLocation> ATTRIBUTE = new CodeFieldStorageMapKind<>("ATTRIBUTE", CodeFieldStorageMapKind::getAttributeName);
     public static final CodeFieldStorageMapKind<DataLocation> EFFECT = new CodeFieldStorageMapKind<>("EFFECT", CodeFieldStorageMapKind::getEffectName);
+    public static final CodeFieldStorageMapKind<DataLocation> ENTITY_TYPE = new CodeFieldStorageMapKind<>("ENTITY_TYPE", CodeFieldStorageMapKind::getEntityTypeName);
     public static final CodeFieldStorageMapKind<DataLocation> FUNCTION = new CodeFieldStorageMapKind<>("FUNCTION", CodeFieldStorageMapKind::getFunctionName);
     public static final CodeFieldStorageMapKind<NbtValue.Compound> NBT_COMPOUND = new CodeFieldStorageMapKind<>("NBT_COMPOUND", CodeFieldStorageMapKind::getNbtCompoundValueName);
     public static final CodeFieldStorageMapKind<NbtValue> NBT_VALUE = new CodeFieldStorageMapKind<>("NBT_VALUE", CodeFieldStorageMapKind::getNbtValueName);
@@ -84,6 +84,12 @@ public final class CodeFieldStorageMapKind<T> {
         return DEBUG
             ? "effect$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
             : "e" + map.checkIndex(CodeFieldStorageMapKind.EFFECT, value);
+    }
+
+    private static String getEntityTypeName(CodeFieldStorageStorageMap map, DataLocation value) {
+        return DEBUG
+            ? "entityType$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
+            : "T" + map.checkIndex(CodeFieldStorageMapKind.ENTITY_TYPE, value);
     }
 
     private static String getFunctionName(CodeFieldStorageStorageMap map, DataLocation value) {

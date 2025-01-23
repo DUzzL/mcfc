@@ -11,6 +11,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.nbt.*;
 import net.minecraft.network.chat.*;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import org.objectweb.asm.Type;
 
@@ -36,6 +37,9 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
         }));
         set(CodeFieldStorageMapKind.EFFECT, new CodeFieldStorageMapValue<>(Type.getType(Holder.class), (cf, cw, value) -> {
             return cw.castType(callOptional_get(cw, callRegistry_getHolder(cw, loadBuiltInRegistries_MOB_EFFECT(cw), cf.loadResourceLocation(cw, value))), Type.getType(Holder.class));
+        }));
+        set(CodeFieldStorageMapKind.ENTITY_TYPE, new CodeFieldStorageMapValue<>(Type.getType(EntityType.class), (cf, cw, value) -> {
+            return cw.castType(callRegistry_get(cw, loadBuiltInRegistries_ENTITY_TYPE(cw), cf.loadResourceLocation(cw, value)), Type.getType(EntityType.class));
         }));
         set(CodeFieldStorageMapKind.FUNCTION, new CodeFieldStorageMapValue<>(Type.getType(CommandFunction.class), (cf, cw, value) -> {
             var functions = loadServerFunctionLibrary_functions(cw, loadServerFunctionManager_library(cw, cf.loadServerFunctionManager(cw)));
