@@ -413,7 +413,7 @@ public final class CommandCompiler {
                     try(var source = context.forScoreAccessors(cmdData.source().selectSingle())) {
                         try(var targetScore = context.getScoreData(target.content(), false)) {
                             try(var sourceScore = context.getScoreData(source.content(), false)) {
-                                sourceScore.writeInstruction(Instructions.checkScoreCompare(targetScore.content(), sourceScore.content(), cmdData.comparison(), contextLabel));
+                                sourceScore.writeInstruction(Instructions.checkScoreCompare(targetScore.content(), sourceScore.content(), cmdData.comparison().negate(), contextLabel));
                             }
                         }
                     }
