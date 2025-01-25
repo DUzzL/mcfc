@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "1.9.21"
+    kotlin("jvm") version "2.1.0"
 }
 
 group = "dev.epicpix"
@@ -13,7 +13,7 @@ repositories {
 
 dependencies {
     implementation("com.squareup:javapoet:1.12.1")
-    implementation("com.google.devtools.ksp:symbol-processing-api:1.9.21-1.0.16")
+    implementation("com.google.devtools.ksp:symbol-processing-api:2.1.0-1.0.28")
     implementation("cc.ekblad:4koma:1.2.0")
     implementation("net.fabricmc:tiny-remapper:0.8.2")
     implementation("net.fabricmc:access-widener:2.1.0")
