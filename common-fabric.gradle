@@ -31,7 +31,7 @@ ksp {
     arg("data_dir", file("../data/").absolutePath)
     project.afterEvaluate {
         arg("mappingsFile", loom.mappingsFile.absolutePath)
-        arg("jars", project.configurations.runtimeClasspath.incoming.files.join(":"))
+        arg("jars", project.configurations.runtimeClasspath.incoming.files.join(File.pathSeparator))
     }
     arg("minecraft_version", project.minecraft_version)
     arg("accesswidener", file("src/main/resources/minecraftfunctioncompiler.v${project.minecraft_version.replaceAll("\\.", "_")}.accesswidener").absolutePath)

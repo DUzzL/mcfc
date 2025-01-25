@@ -155,7 +155,7 @@ class MainProcessor(
         val jarFiles = mutableListOf<JarFile>()
         val jarFileMappings = mutableMapOf<String, Int>()
         if(options["jars"] != null) {
-            val jars = options["jars"]!!.split(":")
+            val jars = options["jars"]!!.split(File.pathSeparator)
             for(jarName in jars) {
                 val jar = JarFile(File(jarName))
                 val index = jarFiles.size
