@@ -365,37 +365,9 @@ public final class CommandCompiler {
                             var value = getNbtPathValue(context, storageLocal.forceCast(), parts.subList(0, parts.size() - 1), true, innerContext.data().contextEndLabel());
 
                             var last = parts.get(parts.size() - 1);
-                            if(last instanceof NbtPathPart.Named named) {
-                                var valueCompound = context.<NbtCompound>createLocal();
-                                innerContext.writeInstruction(Instructions2.checkIsCompound(value, valueCompound, innerContext.data().contextEndLabel()));
-
-                                var tagLocal = context.<NbtTag>createLocal();
-                                innerContext.writeInstruction(Instructions2.createIntTag(res.result, tagLocal));
-                                innerContext.writeInstruction(Instructions2.setNbtInCompound(valueCompound, named.name(), tagLocal));
-                                innerContext.writeInstruction(Instructions2.valueAdd(setCountLocal, LocationData.ofInteger(1)));
-                            }else if(last instanceof NbtPathPart.ArrayIndexInteger indexed) {
-                                var list = context.<NbtList>createLocal();
-                                innerContext.writeInstruction(Instructions2.checkIsList(value, list, innerContext.data().contextEndLabel()));
-                                var length = context.<Integer>createLocal();
-                                innerContext.writeInstruction(Instructions2.getListLength(list.forceCast(), length));
-                                innerContext.writeInstruction(Instructions2.ifGreaterEqualJump(LocationData.ofInteger(indexed.index()), length, innerContext.data().contextEndLabel()));
-                                var index = context.<Integer>createLocal();
-
-                                var tagLocal = context.<NbtTag>createLocal();
-                                innerContext.writeInstruction(Instructions2.createIntTag(res.result, tagLocal));
-
-                                if(indexed.index() >= 0) {
-                                    innerContext.writeInstruction(Instructions2.valueDefine(index, LocationData.ofInteger(indexed.index())));
-                                }else {
-                                    innerContext.writeInstruction(Instructions2.valueDefine(index, length));
-                                    innerContext.writeInstruction(Instructions2.valueSub(index, LocationData.ofInteger(-indexed.index())));
-                                }
-
-                                innerContext.writeInstruction(Instructions2.setNbtInList(list, index, tagLocal, innerContext.data().contextEndLabel()));
-                                innerContext.writeInstruction(Instructions2.valueAdd(setCountLocal, LocationData.ofInteger(1)));
-                            }else {
-                                throw new UnsupportedOperationException("Cannot set nbt value from path " + last);
-                            }
+                            var tagLocal = context.<NbtTag>createLocal();
+                            innerContext.writeInstruction(Instructions2.createIntTag(res.result, tagLocal));
+                            assignNbtValue(context, value, last, tagLocal, setCountLocal, innerContext.data().contextEndLabel());
                         }
                         context.writeInstruction(Instructions2.ifEqualJump(setCountLocal, LocationData.ofInteger(0), context.current().contextEndLabel()));
                         context.writeInstruction(Instructions2.setNbtStorage(cmdData.storage(), storageLocal));
@@ -709,20 +681,9 @@ public final class CommandCompiler {
                 }
                 source = storage;
             }else if(part instanceof NbtPathPart.ArrayIndexInteger indexed) {
-                var list = context.<NbtList>createLocal();
-                context.writeInstruction(Instructions2.checkIsList(source, list, failLabel));
-                var length = context.<Integer>createLocal();
-                context.writeInstruction(Instructions2.getListLength(list.forceCast(), length));
-                context.writeInstruction(Instructions2.ifGreaterEqualJump(LocationData.ofInteger(indexed.index()), length, failLabel));
-                var index = context.<Integer>createLocal();
-                if(indexed.index() >= 0) {
-                    context.writeInstruction(Instructions2.valueDefine(index, LocationData.ofInteger(indexed.index())));
-                }else {
-                    context.writeInstruction(Instructions2.valueDefine(index, length));
-                    context.writeInstruction(Instructions2.valueSub(index, LocationData.ofInteger(-indexed.index())));
-                }
+                var listAccess = accessNbtList(context, source, indexed, failLabel);
                 var storage = context.<NbtTag>createLocal();
-                context.writeInstruction(Instructions2.getNbtFromList(list, index, storage));
+                context.writeInstruction(Instructions2.getNbtFromList(listAccess.list, listAccess.index, storage));
                 source = storage;
             }else {
                 throw new UnsupportedOperationException("Cannot get nbt path from " + part);
@@ -730,5 +691,39 @@ public final class CommandCompiler {
         }
         return source;
     }
+
+    private static void assignNbtValue(CompilationContext context, LocationData<NbtTag> source, NbtPathPart accessor, LocationData<NbtTag> value, LocationData<Integer> modifiedCount, LabelData failLabel) {
+        if(accessor instanceof NbtPathPart.Named named) {
+            var valueCompound = context.<NbtCompound>createLocal();
+            context.writeInstruction(Instructions2.checkIsCompound(source, valueCompound, failLabel));
+            context.writeInstruction(Instructions2.setNbtInCompound(valueCompound, named.name(), value));
+        }else if(accessor instanceof NbtPathPart.ArrayIndexInteger indexed) {
+            var listAccess = accessNbtList(context, source, indexed, failLabel);
+            context.writeInstruction(Instructions2.setNbtInList(listAccess.list, listAccess.index, value, failLabel));
+        }else {
+            throw new UnsupportedOperationException("Cannot set nbt value in path " + accessor);
+        }
+        if(modifiedCount != null) context.writeInstruction(Instructions2.valueAdd(modifiedCount, LocationData.ofInteger(1)));
+    }
+
+    private static NbtListAccessResult accessNbtList(CompilationContext context, LocationData<NbtTag> source, NbtPathPart.ArrayIndexInteger indexed, LabelData failLabel) {
+        var list = context.<NbtList>createLocal();
+        context.writeInstruction(Instructions2.checkIsList(source, list, failLabel));
+        var length = context.<Integer>createLocal();
+        context.writeInstruction(Instructions2.getListLength(list.forceCast(), length));
+        context.writeInstruction(Instructions2.ifGreaterEqualJump(LocationData.ofInteger(indexed.index()), length, failLabel));
+        var index = context.<Integer>createLocal();
+
+        if(indexed.index() >= 0) {
+            context.writeInstruction(Instructions2.valueDefine(index, LocationData.ofInteger(indexed.index())));
+        }else {
+            context.writeInstruction(Instructions2.valueDefine(index, length));
+            context.writeInstruction(Instructions2.valueSub(index, LocationData.ofInteger(-indexed.index())));
+        }
+
+        return new NbtListAccessResult(list, index);
+    }
+
+    private record NbtListAccessResult(LocationData<NbtList> list, LocationData<Integer> index) {}
 
 }
