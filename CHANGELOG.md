@@ -12,7 +12,7 @@ Adds commands:
 - `execute store result storage ... int` (now supports non-1 scale)
 
 Fixes bugs:
-- Text with non-default styles don't compile (affects 1.21.4)
+- Texts with non-default styles don't compile (affects 1.21.4)
 - `function ... with storage <storage> <path>` does not get run from within compiled functions
 - `execute unless score ... <operator>` has flipped conditions
 
