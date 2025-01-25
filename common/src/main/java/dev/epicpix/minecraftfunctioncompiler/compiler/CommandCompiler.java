@@ -481,20 +481,14 @@ public final class CommandCompiler {
             context.writeInstruction(Instructions.callFunctions(cmdData.functions(), stack, validArguments, null));
         }else if(command instanceof CommandFunctionArgsStoragePath cmdData) {
             var current = context.current();
-            var currentTag = context.<NbtTag>createLocal();
             var storageLocal = context.<NbtCompound>createLocal();
-            context.writeInstruction(Instructions2.createNullTag(currentTag));
             context.writeInstruction(Instructions2.getNbtStorage(cmdData.storage(), storageLocal));
 
             var parts = cmdData.path().parts();
-            try(var ignored = context.enterWithoutValue(context.current())) {
-                var value = getNbtPathValue(context, storageLocal.forceCast(), parts, false, current.contextEndLabel());
-                context.writeInstruction(Instructions2.ifNotNullJump(currentTag.lower(), current.contextEndLabel()));
-                context.writeInstruction(Instructions2.objectAssign(currentTag.lower(), value.lower()));
-            }
-            context.writeInstruction(Instructions2.ifNullJump(currentTag.lower(), current.contextEndLabel()));
+            var value = getNbtPathValue(context, storageLocal.forceCast(), parts, false, current.contextEndLabel());
+            context.writeInstruction(Instructions2.ifNullJump(value.lower(), current.contextEndLabel()));
             var clonedTag = context.<NbtTag>createLocal();
-            context.writeInstruction(Instructions2.cloneNbtValue(currentTag, clonedTag));
+            context.writeInstruction(Instructions2.cloneNbtValue(value, clonedTag));
             var compoundTag = context.<NbtCompound>createLocal();
             context.writeInstruction(Instructions2.checkIsCompound(clonedTag, compoundTag, current.contextEndLabel()));
             var stack = context.<CommandSourceStack>createLocal();
