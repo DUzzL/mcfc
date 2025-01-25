@@ -18,6 +18,8 @@ enum class LexTokenSimpleType : LexToken {
     CLOSE_PAREN,
     OPEN_ANGLE_BRACKET,
     CLOSE_ANGLE_BRACKET,
+    SHR,
+    SHL,
     LE,
     GE,
     EQEQ,
@@ -76,12 +78,20 @@ fun lexTokens(code: String): List<LexToken> {
                     index++
                     return LexTokenSimpleType.LE
                 }
+                if(index < code.length && code[index] == '<') {
+                    index++
+                    return LexTokenSimpleType.SHL
+                }
                 return LexTokenSimpleType.OPEN_ANGLE_BRACKET
             }
             '>' -> {
                 if(index < code.length && code[index] == '=') {
                     index++
                     return LexTokenSimpleType.GE
+                }
+                if(index < code.length && code[index] == '>') {
+                    index++
+                    return LexTokenSimpleType.SHR
                 }
                 return LexTokenSimpleType.CLOSE_ANGLE_BRACKET
             }

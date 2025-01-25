@@ -59,7 +59,7 @@ enum class ParsedTokenExpressionSimpleType : ParsedTokenExpressionType {
 }
 
 enum class ParsedTokenExpressionOperator {
-    ADD, SUB, MUL, DIV, EQ, NE, GT, LT, GE, LE
+    ADD, SUB, MUL, DIV, EQ, NE, GT, LT, GE, LE, SHR, SHL,
 }
 
 private fun parseExpressionTypeWord(iter: ListIterator<LexToken>): ParsedTokenExpressionType {
@@ -85,6 +85,7 @@ private fun parseExpressionTypeWord(iter: ListIterator<LexToken>): ParsedTokenEx
         "int" -> ParsedTokenExpressionSimpleType.INTEGER
         "double" -> ParsedTokenExpressionSimpleType.DOUBLE
         "float" -> ParsedTokenExpressionSimpleType.FLOAT
+        "long" -> ParsedTokenExpressionSimpleType.LONG
         "label" -> ParsedTokenExpressionSimpleType.LABEL
         else -> throw IllegalArgumentException("Unknown expression type: ${word.word}")
     }
@@ -192,13 +193,28 @@ private fun parseExpression2(iter: ListIterator<LexToken>, valueDefinitions: Lis
 }
 
 private fun parseExpression3(iter: ListIterator<LexToken>, valueDefinitions: List<ParsedTokenValueAccessor>, usesObf: AtomicBoolean): ParsedTokenExpression {
-    var exp1 = parseExpressionBase(iter, valueDefinitions, usesObf)
+    var exp1 = parseExpression4(iter, valueDefinitions, usesObf)
     if(!iter.hasNext()) return exp1
     while(true) {
         exp1 = if(iter.tryNextTokenType(LexTokenSimpleType.STAR)) {
-            ParsedTokenExpressionBinary(exp1, parseExpressionBase(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.MUL)
+            ParsedTokenExpressionBinary(exp1, parseExpression4(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.MUL)
         }else if(iter.tryNextTokenType(LexTokenSimpleType.SLASH)) {
-            ParsedTokenExpressionBinary(exp1, parseExpressionBase(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.DIV)
+            ParsedTokenExpressionBinary(exp1, parseExpression4(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.DIV)
+        }else {
+            break
+        }
+    }
+    return exp1
+}
+
+private fun parseExpression4(iter: ListIterator<LexToken>, valueDefinitions: List<ParsedTokenValueAccessor>, usesObf: AtomicBoolean): ParsedTokenExpression {
+    var exp1 = parseExpressionBase(iter, valueDefinitions, usesObf)
+    if(!iter.hasNext()) return exp1
+    while(true) {
+        exp1 = if(iter.tryNextTokenType(LexTokenSimpleType.SHR)) {
+            ParsedTokenExpressionBinary(exp1, parseExpressionBase(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.SHR)
+        }else if(iter.tryNextTokenType(LexTokenSimpleType.SHL)) {
+            ParsedTokenExpressionBinary(exp1, parseExpressionBase(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.SHL)
         }else {
             break
         }

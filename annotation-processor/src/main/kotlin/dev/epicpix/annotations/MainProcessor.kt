@@ -88,6 +88,7 @@ fun kotlinToJavaType(type: String, genericUsage: Boolean): String {
         "kotlin.Double" -> if(!genericUsage) "double" else "Double"
         "kotlin.Float" -> if(!genericUsage) "float" else "Float"
         "kotlin.Int" -> if(!genericUsage) "int" else "Integer"
+        "kotlin.Long" -> if(!genericUsage) "long" else "Long"
         "kotlin.String" -> "String"
         "kotlin.collections.List" -> if(!genericUsage) "List" else "List<?>"
         "kotlin.collections.MutableList" -> if(!genericUsage) "List" else "List<?>"
@@ -471,6 +472,8 @@ class MainProcessor(
                                         "Double"
                                     }else if(type == ParsedTokenExpressionSimpleType.FLOAT) {
                                         "Float"
+                                    }else if(type == ParsedTokenExpressionSimpleType.LONG) {
+                                        "Long"
                                     }else if(type is ParsedTokenExpressionTypeComplex) {
                                         javaToMinecraftGenericType(type.typeName)
                                     }else {
@@ -488,6 +491,8 @@ class MainProcessor(
                                 "double"
                             }else if(type == ParsedTokenExpressionSimpleType.FLOAT) {
                                 "float"
+                            }else if(type == ParsedTokenExpressionSimpleType.LONG) {
+                                "long"
                             }else if(type is ParsedTokenExpressionTypeComplex) {
                                 kotlinToJavaType(type.typeName, false)
                             }else {

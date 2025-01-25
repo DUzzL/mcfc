@@ -183,6 +183,26 @@
   return_success([ctx:value]);
 }
 
+##CONDITIONAL_JUMP
+@JUMP_IF_VOID_RETURN_VALUE(long [ctx:return_value], label [ctx:label]) {
+  _jumpIfEqual(to_integer([ctx:return_value] >> 32), 2, [ctx:label]);
+}
+
+##CONDITIONAL_JUMP
+@JUMP_IF_NOT_VOID_RETURN_VALUE(long [ctx:return_value], label [ctx:label]) {
+  _jumpIfNotEqual(to_integer([ctx:return_value] >> 32), 2, [ctx:label]);
+}
+
+##CONDITIONAL_JUMP
+@JUMP_IF_NULL_RETURN_VALUE(long [ctx:return_value], label [ctx:label]) {
+  _jumpIfEqual(to_integer([ctx:return_value]), 0, [ctx:label]);
+}
+
+##CONDITIONAL_JUMP
+@JUMP_IF_NOT_NULL_RETURN_VALUE(long [ctx:return_value], label [ctx:label]) {
+  _jumpIfNotEqual(to_integer([ctx:return_value]), 0, [ctx:label]);
+}
+
 @ASSUME_STRING(<java.lang.Object> [ctx:string_obj], <java.lang.String> [ctx:string]) {
   let [ctx:string] = cast([ctx:string_obj], <java.lang.String>);
 }

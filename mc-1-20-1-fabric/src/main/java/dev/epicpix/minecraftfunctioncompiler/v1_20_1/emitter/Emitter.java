@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_1.emitter;
 
+import dev.epicpix.minecraftfunctioncompiler.CommonConstants;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructions;
@@ -9,9 +10,12 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
+import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
+import dev.epicpix.minecraftfunctioncompiler.v1_20_1.CompiledCommandResultStore;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
+import org.objectweb.asm.Type;
 
 import java.util.List;
 
@@ -23,6 +27,9 @@ public final class Emitter {
 
     private static final InstructionTarget VEC3_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(Vec3.class, double.class, double.class, double.class);
     private static final InstructionTarget VEC2_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(Vec2.class, float.class, float.class);
+    private static final InstructionTarget COMMAND_RESULT_STORE_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(CompiledCommandResultStore.class);
+    private static final InstructionTarget RUN_RESULT_FIELD_READ_TARGET = new InstructionTarget.FieldTarget(CommonConstants.DATA_CLASS, CommonConstants.RUN_RESULT_FIELD, "J", true, false);
+    private static final InstructionTarget RUN_RESULT_FIELD_WRITE_TARGET = new InstructionTarget.FieldTarget(CommonConstants.DATA_CLASS, CommonConstants.RUN_RESULT_FIELD, "J", true, true);
 
     public static void registerInstructionEmitters() {
         EmitterInstructions.registerEmitterInstruction(context -> {
@@ -56,24 +63,52 @@ public final class Emitter {
                 return true;
             }
             if(context.instruction().type() == InstructionTypes.CALL_FUNCTIONS) {
-                for(var func : context.instruction().<List<DataLocation>>get("functions")) {
-                    BytecodeRegister mctx = null;
-                    if(!context.compiledFunctions().contains(func)) {
-                        mctx = loadServerFunctionManager_context(codeWriter, context.fieldStorage().loadServerFunctionManager(codeWriter));
-                        storeServerFunctionManager_context(codeWriter, context.fieldStorage().loadServerFunctionManager(codeWriter), new BytecodeValue.NullValue());
+                var functions = context.instruction().<List<DataLocation>>get("functions");
+                var returnValueLocation = context.instruction().<LocationData<Long>>get("returnValue");
+                if(functions.isEmpty()) {
+                    if(returnValueLocation != null) {
+                        context.store("returnValue", new BytecodeValue.LongValue(1L << 32));
                     }
-                    var commandSourceStack = context.load("stack");
-                    if(context.instruction().get("arguments") != null) throw new IllegalArgumentException("Macro arguments are not supported in 1.20.1");
-                    if(context.compiledFunctions().contains(func)) {
-                        var target = new InstructionTarget.FunctionTarget(("mcfc/function/" + func.namespace() + "/" + func.path()).replace('.', '$'), "run", "(" + CommandSourceStack.class.descriptorString() + context.fieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND).getDescriptor() + ")J", true, false, false, true);
-                        codeWriter.writeTarget(target, commandSourceStack, new BytecodeValue.NullValue());
-                    }else {
-                        var functionManager = context.fieldStorage().loadServerFunctionManager(codeWriter);
-                        var function = context.fieldStorage().loadFunction(codeWriter, func);
-                        callExtensionFunctions_executeFunction(codeWriter, functionManager, function, commandSourceStack, new BytecodeValue.NullValue());
-                        storeServerFunctionManager_context(codeWriter, context.fieldStorage().loadServerFunctionManager(codeWriter), mctx);
+                }else {
+                    var post = codeWriter.createLabel();
+                    codeWriter.writeTarget(RUN_RESULT_FIELD_WRITE_TARGET, new BytecodeValue.LongValue(2L << 32));
+                    for(int i = 0; i < functions.size(); i++) {
+                        var func = functions.get(i);
+                        var commandSourceStack = context.load("stack");
+                        BytecodeRegister returnValue = null;
+                        if(context.instruction().get("arguments") != null)
+                            throw new IllegalArgumentException("Macro arguments are not supported in 1.20.1");
+                        if(context.compiledFunctions().contains(func)) {
+                            var target = new InstructionTarget.FunctionTarget(("mcfc/function/" + func.namespace() + "/" + func.path()).replace('.', '$'), "run", "(" + CommandSourceStack.class.descriptorString() + context.fieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND).getDescriptor() + ")J", true, false, false, true);
+                            returnValue = codeWriter.writeTarget(target, commandSourceStack, new BytecodeValue.NullValue());
+                        }else {
+                            var mctx = loadServerFunctionManager_context(codeWriter, context.fieldStorage().loadServerFunctionManager(codeWriter));
+                            storeServerFunctionManager_context(codeWriter, context.fieldStorage().loadServerFunctionManager(codeWriter), new BytecodeValue.NullValue());
+                            if(returnValueLocation != null) {
+                                var store = codeWriter.newObjectCreate(COMMAND_RESULT_STORE_INIT_TARGET);
+                                commandSourceStack = callCommandSourceStack_withCallback(codeWriter, commandSourceStack, store);
+                            }
+                            var functionManager = context.fieldStorage().loadServerFunctionManager(codeWriter);
+                            var function = context.fieldStorage().loadFunction(codeWriter, func);
+                            callExtensionFunctions_executeFunction(codeWriter, functionManager, function, commandSourceStack, new BytecodeValue.NullValue());
+                            storeServerFunctionManager_context(codeWriter, context.fieldStorage().loadServerFunctionManager(codeWriter), mctx);
+                            if(returnValueLocation != null) {
+                                returnValue = codeWriter.writeTarget(RUN_RESULT_FIELD_READ_TARGET);
+                            }
+                        }
+
+                        if(returnValueLocation != null) {
+                            context.store("returnValue", returnValue);
+                            if(i + 1 != functions.size()) {
+                                var shiftedResult = codeWriter.shiftRight(context.load("returnValue"), new BytecodeValue.IntegerValue(32));
+                                var shiftedIntResult = codeWriter.castType(shiftedResult, Type.INT_TYPE);
+                                codeWriter.conditionalJump(JumpCondition.NE, shiftedIntResult, new BytecodeValue.IntegerValue(2), post);
+                            }
+                        }
                     }
+                    codeWriter.label(post);
                 }
+
                 return true;
             }
             if(context.instruction().type() == InstructionTypes.CHECK_SCORE_COMPARE) {

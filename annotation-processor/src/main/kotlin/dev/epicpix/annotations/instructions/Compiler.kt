@@ -70,6 +70,10 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             if(a == ParsedTokenExpressionSimpleType.DOUBLE && b == ParsedTokenExpressionSimpleType.DOUBLE) {
                 return ParsedTokenExpressionSimpleType.DOUBLE
             }
+        }else if(expression.op == ParsedTokenExpressionOperator.SHR) {
+            if(a == ParsedTokenExpressionSimpleType.LONG && b == ParsedTokenExpressionSimpleType.INTEGER) {
+                return ParsedTokenExpressionSimpleType.LONG
+            }
         }else if(expression.op == ParsedTokenExpressionOperator.NE || expression.op == ParsedTokenExpressionOperator.EQ) {
             if(a.isIntegerLikeType() && b.isIntegerLikeType()) {
                 return ParsedTokenExpressionSimpleType.BOOLEAN
@@ -330,6 +334,12 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 val argA = writeExpression(writerData.copyLocalTypes(), expression.a, output, uniqId)
                 val argB = writeExpression(writerData.copyLocalTypes(), expression.b, output, uniqId)
                 return writeNextRegister(uniqId, output, "cw.mul(${argA}, ${argB})")
+            }
+        }else if(expression.op == ParsedTokenExpressionOperator.SHR) {
+            if(isExpressionSimpleType(writerData, expression, ParsedTokenExpressionSimpleType.LONG) || isExpressionSimpleType(writerData, expression, ParsedTokenExpressionSimpleType.INTEGER)) {
+                val argA = writeExpression(writerData.copyLocalTypes(), expression.a, output, uniqId)
+                val argB = writeExpression(writerData.copyLocalTypes(), expression.b, output, uniqId)
+                return writeNextRegister(uniqId, output, "cw.shiftRight(${argA}, ${argB})")
             }
         }
     }else if(expression is ParsedTokenStatementFunctionCall) {

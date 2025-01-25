@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_21_2.emitter;
 
+import dev.epicpix.minecraftfunctioncompiler.CommonConstants;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructions;
@@ -9,6 +10,8 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
+import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
+import dev.epicpix.minecraftfunctioncompiler.v1_21_2.CompiledCommandResultStore;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.phys.Vec2;
@@ -25,6 +28,9 @@ public final class Emitter {
 
     private static final InstructionTarget VEC3_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(Vec3.class, double.class, double.class, double.class);
     private static final InstructionTarget VEC2_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(Vec2.class, float.class, float.class);
+    private static final InstructionTarget COMMAND_RESULT_STORE_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(CompiledCommandResultStore.class);
+    private static final InstructionTarget RUN_RESULT_FIELD_READ_TARGET = new InstructionTarget.FieldTarget(CommonConstants.DATA_CLASS, CommonConstants.RUN_RESULT_FIELD, "J", true, false);
+    private static final InstructionTarget RUN_RESULT_FIELD_WRITE_TARGET = new InstructionTarget.FieldTarget(CommonConstants.DATA_CLASS, CommonConstants.RUN_RESULT_FIELD, "J", true, true);
 
     public static void registerInstructionEmitters() {
         EmitterInstructions.registerEmitterInstruction(context -> {
@@ -58,30 +64,55 @@ public final class Emitter {
                 return true;
             }
             if(context.instruction().type() == InstructionTypes.CALL_FUNCTIONS) {
-                for(var func : context.instruction().<List<DataLocation>>get("functions")) {
-                    BytecodeRegister mctxtl = null;
-                    BytecodeRegister mctx = null;
-                    if(!context.compiledFunctions().contains(func)) {
-                        mctxtl = loadCommands_CURRENT_EXECUTION_CONTEXT(codeWriter);
-                        mctx = callThreadLocal_get(codeWriter, mctxtl);
-                        callThreadLocal_set(codeWriter, mctxtl, new BytecodeValue.NullValue());
+                var functions = context.instruction().<List<DataLocation>>get("functions");
+                var returnValueLocation = context.instruction().<LocationData<Long>>get("returnValue");
+                if(functions.isEmpty()) {
+                    if(returnValueLocation != null) {
+                        context.store("returnValue", new BytecodeValue.LongValue(1L << 32));
                     }
-                    var commandSourceStack = context.load("stack");
-                    if(context.compiledFunctions().contains(func)) {
-                        var nbtArgs = context.instruction().get("arguments") != null ? codeWriter.castType(context.load("arguments"), Type.getType(CompoundTag.class)) : new BytecodeValue.NullValue();
-                        var target = new InstructionTarget.FunctionTarget(("mcfc/function/" + func.namespace() + "/" + func.path()).replace('.', '$'), "run", "(" + CommandSourceStack.class.descriptorString() + context.fieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND).getDescriptor() + ")J", true, false, false, true);
-                        codeWriter.writeTarget(target, commandSourceStack, nbtArgs);
-                    }else {
-                        var functionManager = context.fieldStorage().loadServerFunctionManager(codeWriter);
-                        var function = context.fieldStorage().loadFunction(codeWriter, func);
-
-                        if(context.instruction().get("arguments") != null) {
-                            callExtensionFunctions_executeFunction(codeWriter, functionManager, function, commandSourceStack, codeWriter.castType(context.load("arguments"), Type.getType(CompoundTag.class)));
+                }else {
+                    var post = codeWriter.createLabel();
+                    codeWriter.writeTarget(RUN_RESULT_FIELD_WRITE_TARGET, new BytecodeValue.LongValue(2L << 32));
+                    for(int i = 0; i < functions.size(); i++) {
+                        var func = functions.get(i);
+                        var commandSourceStack = context.load("stack");
+                        BytecodeRegister returnValue = null;
+                        if(context.compiledFunctions().contains(func)) {
+                            var nbtArgs = context.instruction().get("arguments") != null ? codeWriter.castType(context.load("arguments"), Type.getType(CompoundTag.class)) : new BytecodeValue.NullValue();
+                            var target = new InstructionTarget.FunctionTarget(("mcfc/function/" + func.namespace() + "/" + func.path()).replace('.', '$'), "run", "(" + CommandSourceStack.class.descriptorString() + context.fieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND).getDescriptor() + ")J", true, false, false, true);
+                            returnValue = codeWriter.writeTarget(target, commandSourceStack, nbtArgs);
                         }else {
-                            callServerFunctionManager_execute(codeWriter, functionManager, function, commandSourceStack);
+                            var mctxtl = loadCommands_CURRENT_EXECUTION_CONTEXT(codeWriter);
+                            var mctx = callThreadLocal_get(codeWriter, mctxtl);
+                            callThreadLocal_set(codeWriter, mctxtl, new BytecodeValue.NullValue());
+                            if(returnValueLocation != null) {
+                                var store = codeWriter.newObjectCreate(COMMAND_RESULT_STORE_INIT_TARGET);
+                                commandSourceStack = callCommandSourceStack_withCallback(codeWriter, commandSourceStack, store);
+                            }
+                            var functionManager = context.fieldStorage().loadServerFunctionManager(codeWriter);
+                            var function = context.fieldStorage().loadFunction(codeWriter, func);
+
+                            if(context.instruction().get("arguments") != null) {
+                                callExtensionFunctions_executeFunction(codeWriter, functionManager, function, commandSourceStack, codeWriter.castType(context.load("arguments"), Type.getType(CompoundTag.class)));
+                            }else {
+                                callServerFunctionManager_execute(codeWriter, functionManager, function, commandSourceStack);
+                            }
+                            callThreadLocal_set(codeWriter, mctxtl, mctx);
+                            if(returnValueLocation != null) {
+                                returnValue = codeWriter.writeTarget(RUN_RESULT_FIELD_READ_TARGET);
+                            }
                         }
-                        callThreadLocal_set(codeWriter, mctxtl, mctx);
+
+                        if(returnValueLocation != null) {
+                            context.store("returnValue", returnValue);
+                            if(i + 1 != functions.size()) {
+                                var shiftedResult = codeWriter.shiftRight(context.load("returnValue"), new BytecodeValue.IntegerValue(32));
+                                var shiftedIntResult = codeWriter.castType(shiftedResult, Type.INT_TYPE);
+                                codeWriter.conditionalJump(JumpCondition.NE, shiftedIntResult, new BytecodeValue.IntegerValue(2), post);
+                            }
+                        }
                     }
+                    codeWriter.label(post);
                 }
                 return true;
             }

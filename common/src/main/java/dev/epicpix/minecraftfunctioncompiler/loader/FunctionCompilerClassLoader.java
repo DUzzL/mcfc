@@ -45,6 +45,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
     private final HashMap<DataLocation, List<String>> sourceFiles;
 
     private State state = State.NOTHING_LOADED;
+    private MethodHandle resultField;
 
     public enum State {
         FAILED,
@@ -229,7 +230,8 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
         if(loadedFunctions == null) return;
 
         try {
-            loadData(params.codeFieldStorage(), serverFunctionManager, lowLevelFunctions, totalClassFileSize);
+            var dataClass = loadData(params.codeFieldStorage(), serverFunctionManager, lowLevelFunctions, totalClassFileSize);
+            resultField = MethodHandles.lookup().findStaticSetter(dataClass, RUN_RESULT_FIELD, long.class);
         }catch(Throwable e) {
             LOGGER.error("Failed to load data", e);
             setState(State.FAILED);
@@ -357,6 +359,16 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
             LOGGER.error("Failed to run function ({}), disabling mcfc, report this bug to authors", location, e);
             setState(State.EXECUTION_FAILED);
             return 3L << 32;
+        }
+    }
+
+    public void storeResult(long value) {
+        if(isUseReady()) {
+            try {
+                resultField.invoke(value);
+            } catch(Throwable e) {
+                LOGGER.error("Failed to store result value: {}", value, e);
+            }
         }
     }
 }

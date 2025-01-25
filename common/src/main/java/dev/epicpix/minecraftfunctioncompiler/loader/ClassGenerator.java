@@ -50,6 +50,10 @@ public class ClassGenerator {
         }
     }
 
+    public void addField(String name, Type type, Object defaultValue) {
+        writer.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, name, type.getDescriptor(), null, defaultValue);
+    }
+
     public void addFinalField(String name, Type type) {
         writer.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL, name, type.getDescriptor(), null, null);
     }

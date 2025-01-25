@@ -6,6 +6,8 @@ Adds selector argument: `advancements`
 
 Adds commands:
 - `advancement <grant|revoke> <players> only <advancement> [criterion]`
+- `execute if function ...`
+- `execute unless function ...`
 - `execute store result storage ... double`
 - `execute store result storage ... int` (now supports non-1 scale)
 

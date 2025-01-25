@@ -156,6 +156,7 @@ public final class CodeFieldStorage {
         classGenerator.addFunction("load", instructions, Type.VOID_TYPE, minecraftServerType, serverFunctionManagerType);
 
         classGenerator.addFinalField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerType);
+        classGenerator.addField(RUN_RESULT_FIELD, Type.LONG_TYPE, 0L);
 
         return classGenerator;
     }

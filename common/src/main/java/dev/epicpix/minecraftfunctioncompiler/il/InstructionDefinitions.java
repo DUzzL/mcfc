@@ -15,7 +15,7 @@ import java.util.List;
 @InstructionSourceClass(enumClass = "dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes", generatorClass = "dev.epicpix.minecraftfunctioncompiler.il.Instructions")
 interface InstructionDefinitions {
     // Minecraft specific instructions that have not been converted into data.instructions yet
-    Instruction callFunctions(List<DataLocation> functions, LocationData<CommandSourceStack> stack, @Nullable @InstructionSource LocationData<NbtCompound> arguments);
+    Instruction callFunctions(List<DataLocation> functions, LocationData<CommandSourceStack> stack, @Nullable @InstructionSource LocationData<NbtCompound> arguments, @Nullable @InstructionDestination LocationData<Long> returnValue);
     Instruction makeCommandSourceStack(LocationData<CommandSourceStack> from, LocationData<CommandSourceStack> to, @Nullable @InstructionSource LocationData<Entity> entity, @Nullable @InstructionSource LocationData<World> world, @Nullable @InstructionSource LocationData<Vec3> position, @Nullable @InstructionSource LocationData<Vec2> rotation, @Nullable @InstructionSource LocationAnchor anchor);
     Instruction loadMacro(MacroTemplate<String> macroTemplate, @InstructionDestination LocationData<String> string);
     @InstructionConditionalJumpFlag

@@ -6,6 +6,8 @@ CommandSourceStack_withLevel = "net/minecraft/commands/CommandSourceStack:withLe
 CommandSourceStack_withPosition = "net/minecraft/commands/CommandSourceStack:withPosition(Lnet/minecraft/world/phys/Vec3;)Lnet/minecraft/commands/CommandSourceStack;@M"
 CommandSourceStack_withRotation = "net/minecraft/commands/CommandSourceStack:withRotation(Lnet/minecraft/world/phys/Vec2;)Lnet/minecraft/commands/CommandSourceStack;@M"
 CommandSourceStack_withAnchor = "net/minecraft/commands/CommandSourceStack:withAnchor(Lnet/minecraft/commands/arguments/EntityAnchorArgument$Anchor;)Lnet/minecraft/commands/CommandSourceStack;@M"
+CommandSourceStack_withCallback."1.20.2-" = "net/minecraft/commands/CommandSourceStack:withCallback(Lcom/mojang/brigadier/ResultConsumer;)Lnet/minecraft/commands/CommandSourceStack;@M"
+CommandSourceStack_withCallback."1.20.3+" = "net/minecraft/commands/CommandSourceStack:withCallback(Lnet/minecraft/commands/CommandResultCallback;)Lnet/minecraft/commands/CommandSourceStack;@M"
 
 CollectionTag_add = "net/minecraft/nbt/CollectionTag:add(ILnet/minecraft/nbt/Tag;)V@M"
 ByteTag_valueOf = "net/minecraft/nbt/ByteTag:valueOf(B)Lnet/minecraft/nbt/ByteTag;@S"

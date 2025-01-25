@@ -160,18 +160,22 @@ public class FunctionCodeGenerator {
         EmitterContext entryContext;
         if(macroInstructions.isEmpty()) {
             entryContext = new EmitterContext(params.codeFieldStorage(), entryWriter, compiledFunctions, new HashMap<>(staticArguments), null, instructions);
+            entryContext.emitForEach();
+            entryWriter.returnValue(new BytecodeValue.LongValue(0x2L << 32));
         }else {
-            var instr = List.of(Instructions.callFunctions(List.of(funcId), LocationData.ofLocal(-1), LocationData.ofLocal(-2)));
+            var returnValue = entryWriter.createRegister();
+            var instr = List.of(Instructions.callFunctions(List.of(funcId), LocationData.ofLocal(-1), LocationData.ofLocal(-2), LocationData.ofLocal(-3)));
             entryContext = new EmitterContext(params.codeFieldStorage(), entryWriter, Collections.emptySet(), new HashMap<>(staticArguments), null, instr);
             entryContext.setTransform(-1, staticCommandSourceStack);
             entryContext.setTransform(-2, staticFunctionCompound);
+            entryContext.setTransform(-3, returnValue);
 
             var errorLabel = entryWriter.createLabel();
             writeMacroInstanceCreation(params.stringGenerator(), className, errorLabel, entryContext, macroInstructions, macroInputs, params.commandSourceStackType());
             entryWriter.label(errorLabel);
+            entryContext.emitForEach();
+            entryWriter.returnValue(returnValue);
         }
-        entryContext.emitForEach();
-        entryWriter.returnValue(new BytecodeValue.LongValue((commandCount | (0x2L << 32))));
 
         var entryBytecode = BytecodeOptimizer.optimizeInstructions(entryWriter.getInstructions());
         lowLevelFunctions.put(className.replace('/', '.') + "#run", entryBytecode);
@@ -192,9 +196,8 @@ public class FunctionCodeGenerator {
                 i++;
             }
             new EmitterContext(params.codeFieldStorage(), writer, compiledFunctions, new HashMap<>(Map.of("CommandSourceStack", staticCommandSourceStack2)), macroLocations, instructions).emitForEach();
-            Collections.reverse(macroInputs);
 
-            writer.returnValue(new BytecodeValue.LongValue((commandCount | (0x2L << 32))));
+            writer.returnValue(new BytecodeValue.LongValue(0x2L << 32));
 
 
             var macroedBytecode = BytecodeOptimizer.optimizeInstructions(writer.getInstructions());

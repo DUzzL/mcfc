@@ -230,6 +230,16 @@ public final class CommandCompiler {
                     compile(context, fContext.content(), cmdData.command(), result);
                 }
             }
+        }else if(command instanceof CommandExecuteIfFunction cmdData) {
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                var current = context.current();
+                var stack = context.<CommandSourceStack>createLocal();
+                context.writeInstruction(Instructions.makeCommandSourceStack(current.commandSourceStack(), stack, current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
+                var returnValue = context.<Long>createLocal();
+                context.writeInstruction(Instructions.callFunctions(cmdData.functions(), stack, null, returnValue));
+                context.writeInstruction(Instructions2.jumpIfNullReturnValue(returnValue, fContext.endLabel()));
+                compile(context, fContext.content(), cmdData.command(), result);
+            }
         }else if(command instanceof CommandExecuteIfScoreRange cmdData) {
             try(var fContext = context.withForkingContext(forkingContext)) {
                 try(var scoreAccessor = context.forScoreAccessors(cmdData.target().selectSingle())) {
@@ -374,6 +384,16 @@ public final class CommandCompiler {
                 }
                 compile(context, fContext.content(), cmdData.command(), result);
             }
+        }else if(command instanceof CommandExecuteUnlessFunction cmdData) {
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                var current = context.current();
+                var stack = context.<CommandSourceStack>createLocal();
+                context.writeInstruction(Instructions.makeCommandSourceStack(current.commandSourceStack(), stack, current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
+                var returnValue = context.<Long>createLocal();
+                context.writeInstruction(Instructions.callFunctions(cmdData.functions(), stack, null, returnValue));
+                context.writeInstruction(Instructions2.jumpIfNotNullReturnValue(returnValue, fContext.endLabel()));
+                compile(context, fContext.content(), cmdData.command(), result);
+            }
         }else if(command instanceof CommandExecuteUnlessScoreRange cmdData) {
             try(var fContext = context.withForkingContext(forkingContext)) {
                 var contextLabel = context.current().contextEndLabel();
@@ -440,14 +460,14 @@ public final class CommandCompiler {
             var current = context.current();
             var stack = context.<CommandSourceStack>createLocal();
             context.writeInstruction(Instructions.makeCommandSourceStack(current.commandSourceStack(), stack, current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
-            context.writeInstruction(Instructions.callFunctions(cmdData.functions(), stack, null));
+            context.writeInstruction(Instructions.callFunctions(cmdData.functions(), stack, null, null));
         }else if(command instanceof CommandFunctionArgs cmdData) {
             var current = context.current();
             var arguments = context.<NbtCompound>createLocal();
             context.writeInstruction(Instructions2.loadNbtValue(cmdData.arguments(), arguments.forceCast()));
             var stack = context.<CommandSourceStack>createLocal();
             context.writeInstruction(Instructions.makeCommandSourceStack(current.commandSourceStack(), stack, current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
-            context.writeInstruction(Instructions.callFunctions(cmdData.functions(), stack, arguments));
+            context.writeInstruction(Instructions.callFunctions(cmdData.functions(), stack, arguments, null));
         }else if(command instanceof CommandFunctionArgsStorage cmdData) {
             var current = context.current();
             var arguments = context.<NbtCompound>createLocal();
@@ -458,7 +478,7 @@ public final class CommandCompiler {
             context.writeInstruction(Instructions2.checkIsCompound(clonedArguments, validArguments, current.contextEndLabel()));
             var stack = context.<CommandSourceStack>createLocal();
             context.writeInstruction(Instructions.makeCommandSourceStack(current.commandSourceStack(), stack, current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
-            context.writeInstruction(Instructions.callFunctions(cmdData.functions(), stack, validArguments));
+            context.writeInstruction(Instructions.callFunctions(cmdData.functions(), stack, validArguments, null));
         }else if(command instanceof CommandFunctionArgsStoragePath cmdData) {
             var current = context.current();
             var currentTag = context.<NbtTag>createLocal();
@@ -479,7 +499,7 @@ public final class CommandCompiler {
             context.writeInstruction(Instructions2.checkIsCompound(clonedTag, compoundTag, current.contextEndLabel()));
             var stack = context.<CommandSourceStack>createLocal();
             context.writeInstruction(Instructions.makeCommandSourceStack(current.commandSourceStack(), stack, current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
-            context.writeInstruction(Instructions.callFunctions(cmdData.functions(), stack, compoundTag));
+            context.writeInstruction(Instructions.callFunctions(cmdData.functions(), stack, compoundTag, null));
         }else if(command instanceof CommandGamemode cmdData) {
             try(var selector = context.forSelector(cmdData.targets())) {
                 var playerLocation = context.<Player>createLocal();
