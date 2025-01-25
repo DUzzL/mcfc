@@ -95,6 +95,22 @@
   let [ctx:res] = [ctx:a] + [ctx:b];
 }
 
+@VALUE_MUL_ASSIGN_INT_DOUBLE(double [ctx:res], int [ctx:a], double [ctx:b]) {
+  let [ctx:res] = to_double([ctx:a]) * [ctx:b];
+}
+
+@VALUE_MUL_ASSIGN_DOUBLE(double [ctx:res], double [ctx:a], double [ctx:b]) {
+  let [ctx:res] = [ctx:a] * [ctx:b];
+}
+
+@DOUBLE_TO_INTEGER(int [ctx:res], double [ctx:a]) {
+  let [ctx:res] = to_integer([ctx:a]);
+}
+
+@INTEGER_TO_DOUBLE(double [ctx:res], int [ctx:a]) {
+  let [ctx:res] = to_double([ctx:a]);
+}
+
 @LABEL(label [ctx:label]);
 
 @JUMP(label [ctx:label]) {
@@ -673,6 +689,10 @@
 
 @CREATE_NULL_TAG(<net.minecraft.nbt.Tag> [ctx:output]) {
   let [ctx:output] = null;
+}
+
+@CREATE_DOUBLE_TAG(double [ctx:value], <net.minecraft.nbt.Tag> [ctx:output]) {
+  let [ctx:output] = <net.minecraft.nbt.DoubleTag>.valueOf([ctx:value]);
 }
 
 @CREATE_INT_TAG(int [ctx:value], <net.minecraft.nbt.Tag> [ctx:output]) {

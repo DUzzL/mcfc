@@ -128,6 +128,9 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             if(expression.name == "to_double") {
                 return ParsedTokenExpressionSimpleType.DOUBLE
             }
+            if(expression.name == "to_integer") {
+                return ParsedTokenExpressionSimpleType.INTEGER
+            }
         }
         val paramTypes = expression.arguments.map { evaluateExpressionType(writerData, it) }
         val instance = expression.instance
@@ -479,6 +482,10 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             if(expression.name == "to_double") {
                 val expr = writeExpression(writerData, expression.arguments[0], output, uniqId)
                 return writeNextRegister(uniqId, output, "cw.castType($expr, org.objectweb.asm.Type.DOUBLE_TYPE)")
+            }
+            if(expression.name == "to_integer") {
+                val expr = writeExpression(writerData, expression.arguments[0], output, uniqId)
+                return writeNextRegister(uniqId, output, "cw.castType($expr, org.objectweb.asm.Type.INT_TYPE)")
             }
             throw UnsupportedOperationException("Unknown function call: ${expression.name} / $expression")
         }

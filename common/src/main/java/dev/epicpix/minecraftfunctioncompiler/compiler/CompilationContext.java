@@ -33,6 +33,15 @@ public class CompilationContext {
         return enterWithValue(data, null, 1);
     }
 
+    public CompilationData<Object> enterLocalScope() {
+        return enterLocalScope(current());
+    }
+
+    public CompilationData<Object> enterLocalScope(CompilationContextData data) {
+        var codeLocation = data.writeLabel(instructionWriter);
+        return enterWithValue(data.withContextLabel(codeLocation), null, 1);
+    }
+
     public CompilationContextData current() {
         return stack.peek();
     }

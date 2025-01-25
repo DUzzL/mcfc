@@ -48,7 +48,7 @@ public final class CommandCompiler {
                 selector.writeInstruction(Instructions2.getPlayerAdvancements(player, playerAdvancements));
                 selector.writeInstruction(Instructions2.awardAdvancementCriterion(playerAdvancements, LocationData.ofString(cmdData.criterion()), advancementData.location()));
             }
-        }else if(command instanceof CommandAdvancementGrantOnly cmdData) {
+        }else if(command instanceof CommandAdvancementRevokeOnly cmdData) {
             var advancementData = DataRegistries.ADVANCEMENT.get(cmdData.advancement());
             if(advancementData == null) return;
             try(var selector = context.forSelector(cmdData.targets())) {
@@ -60,7 +60,7 @@ public final class CommandCompiler {
                     selector.writeInstruction(Instructions2.revokeAdvancementCriterion(playerAdvancements, LocationData.ofString(criterion), advancementData.location()));
                 }
             }
-        }else if(command instanceof CommandAdvancementGrantOnlyCriterion cmdData) {
+        }else if(command instanceof CommandAdvancementRevokeOnlyCriterion cmdData) {
             var advancementData = DataRegistries.ADVANCEMENT.get(cmdData.advancement());
             if(advancementData == null) return;
             if(!advancementData.criteria().contains(cmdData.criterion())) return;
@@ -94,37 +94,9 @@ public final class CommandCompiler {
                 var value = getNbtPathValue(context, storageLocal.forceCast(), parts.subList(0, parts.size() - 1), true, innerContext.data().contextEndLabel());
 
                 var last = parts.get(parts.size() - 1);
-                if(last instanceof NbtPathPart.Named named) {
-                    var valueCompound = context.<NbtCompound>createLocal();
-                    innerContext.writeInstruction(Instructions2.checkIsCompound(value, valueCompound, innerContext.data().contextEndLabel()));
-
-                    var tagLocal = context.<NbtTag>createLocal();
-                    innerContext.writeInstruction(Instructions2.loadNbtValue(cmdData.value(), tagLocal));
-                    innerContext.writeInstruction(Instructions2.setNbtInCompound(valueCompound, named.name(), tagLocal));
-                    innerContext.writeInstruction(Instructions2.valueAdd(setCountLocal, LocationData.ofInteger(1)));
-                }else if(last instanceof NbtPathPart.ArrayIndexInteger indexed) {
-                    var list = context.<NbtList>createLocal();
-                    innerContext.writeInstruction(Instructions2.checkIsList(value, list, innerContext.data().contextEndLabel()));
-                    var length = context.<Integer>createLocal();
-                    innerContext.writeInstruction(Instructions2.getListLength(list.forceCast(), length));
-                    innerContext.writeInstruction(Instructions2.ifGreaterEqualJump(LocationData.ofInteger(indexed.index()), length, innerContext.data().contextEndLabel()));
-                    var index = context.<Integer>createLocal();
-
-                    var tagLocal = context.<NbtTag>createLocal();
-                    innerContext.writeInstruction(Instructions2.loadNbtValue(cmdData.value(), tagLocal));
-
-                    if(indexed.index() >= 0) {
-                        innerContext.writeInstruction(Instructions2.valueDefine(index, LocationData.ofInteger(indexed.index())));
-                    }else {
-                        innerContext.writeInstruction(Instructions2.valueDefine(index, length));
-                        innerContext.writeInstruction(Instructions2.valueSub(index, LocationData.ofInteger(-indexed.index())));
-                    }
-
-                    innerContext.writeInstruction(Instructions2.setNbtInList(list, index, tagLocal, innerContext.data().contextEndLabel()));
-                    innerContext.writeInstruction(Instructions2.valueAdd(setCountLocal, LocationData.ofInteger(1)));
-                }else {
-                    throw new UnsupportedOperationException("Cannot set nbt value from path " + last);
-                }
+                var tagLocal = context.<NbtTag>createLocal();
+                innerContext.writeInstruction(Instructions2.loadNbtValue(cmdData.value(), tagLocal));
+                assignNbtValue(context, value, last, tagLocal, setCountLocal, innerContext.data().contextEndLabel());
             }
 
             context.writeInstruction(Instructions2.ifEqualJump(setCountLocal, LocationData.ofInteger(0), context.current().contextEndLabel()));
@@ -346,37 +318,50 @@ public final class CommandCompiler {
             }
         }else if(command instanceof CommandExecuteStoreResultStorage cmdData) {
             try(var ignored = context.generateForkExecCode(forkingContext)) {
-                if(cmdData.storeType() == ResultStoreType.INT) {
-                    if(cmdData.scale() == 1.0d) {
-                        var res = context.withResultStorage(true, false);
-                        compile(context, null, cmdData.command(), res);
-                        res.checkRequirements(cmdData.command());
+                var res = context.withResultStorage(true, false);
+                compile(context, null, cmdData.command(), res);
+                res.checkRequirements(cmdData.command());
 
-                        var storageLocal = context.<NbtCompound>createLocal();
-                        var setCountLocal = context.<Integer>createLocal();
+                var storageLocal = context.<NbtCompound>createLocal();
+                var setCountLocal = context.<Integer>createLocal();
 
-                        context.writeInstruction(Instructions2.getNbtStorage(cmdData.storage(), storageLocal));
-                        context.writeInstruction(Instructions2.valueDefine(setCountLocal, LocationData.ofInteger(0)));
+                context.writeInstruction(Instructions2.getNbtStorage(cmdData.storage(), storageLocal));
+                context.writeInstruction(Instructions2.valueDefine(setCountLocal, LocationData.ofInteger(0)));
 
-                        var parts = cmdData.path().parts();
+                var parts = cmdData.path().parts();
 
-                        var codeLocation = context.current().writeLabel(context.instructionWriter);
-                        try(var innerContext = context.enterWithoutValue(context.current().withContextLabel(codeLocation))) {
-                            var value = getNbtPathValue(context, storageLocal.forceCast(), parts.subList(0, parts.size() - 1), true, innerContext.data().contextEndLabel());
+                try(var innerContext = context.enterLocalScope()) {
+                    var value = getNbtPathValue(context, storageLocal.forceCast(), parts.subList(0, parts.size() - 1), true, innerContext.endLabel());
 
-                            var last = parts.get(parts.size() - 1);
-                            var tagLocal = context.<NbtTag>createLocal();
+                    var last = parts.get(parts.size() - 1);
+                    var tagLocal = context.<NbtTag>createLocal();
+                    if(cmdData.storeType() == ResultStoreType.INT) {
+                        if(cmdData.scale() == 1.0d) {
                             innerContext.writeInstruction(Instructions2.createIntTag(res.result, tagLocal));
-                            assignNbtValue(context, value, last, tagLocal, setCountLocal, innerContext.data().contextEndLabel());
+                        }else {
+                            var multipliedDouble = context.<Double>createLocal();
+                            innerContext.writeInstruction(Instructions2.valueMulAssignIntDouble(multipliedDouble, res.result, LocationData.ofDouble(cmdData.scale())));
+                            var convertedInteger = context.<Integer>createLocal();
+                            innerContext.writeInstruction(Instructions2.doubleToInteger(convertedInteger, multipliedDouble));
+                            innerContext.writeInstruction(Instructions2.createIntTag(convertedInteger, tagLocal));
                         }
-                        context.writeInstruction(Instructions2.ifEqualJump(setCountLocal, LocationData.ofInteger(0), context.current().contextEndLabel()));
-                        context.writeInstruction(Instructions2.setNbtStorage(cmdData.storage(), storageLocal));
+                    }else if(cmdData.storeType() == ResultStoreType.DOUBLE) {
+                        var convertedDouble = context.<Double>createLocal();
+                        innerContext.writeInstruction(Instructions2.integerToDouble(convertedDouble, res.result));
+                        if(cmdData.scale() == 1.0d) {
+                            innerContext.writeInstruction(Instructions2.createDoubleTag(convertedDouble, tagLocal));
+                        }else {
+                            var multipliedDouble = context.<Double>createLocal();
+                            innerContext.writeInstruction(Instructions2.valueMulAssignDouble(multipliedDouble, convertedDouble, LocationData.ofDouble(cmdData.scale())));
+                            innerContext.writeInstruction(Instructions2.createDoubleTag(multipliedDouble, tagLocal));
+                        }
                     }else {
-                        throw new UnsupportedOperationException("Storing into storage with a non 1.0 scale is not yet implemented");
+                        throw new UnsupportedOperationException("Storing into storage with a non-int/non-double type is not yet implemented");
                     }
-                }else {
-                    throw new UnsupportedOperationException("Storing into storage with a non-int type is not yet implemented");
+                    assignNbtValue(context, value, last, tagLocal, setCountLocal, innerContext.endLabel());
                 }
+                context.writeInstruction(Instructions2.ifEqualJump(setCountLocal, LocationData.ofInteger(0), context.current().contextEndLabel()));
+                context.writeInstruction(Instructions2.setNbtStorage(cmdData.storage(), storageLocal));
             }
         }else if(command instanceof CommandExecuteUnlessEntity cmdData) {
             try(var fContext = context.withForkingContext(forkingContext)) {

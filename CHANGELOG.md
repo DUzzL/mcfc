@@ -4,8 +4,10 @@ Re-adds support for some missing entity types
 
 Adds selector argument: `advancements`
 
-Adds command:
+Adds commands:
 - `advancement <grant|revoke> <players> only <advancement> [criterion]`
+- `execute store result storage ... double`
+- `execute store result storage ... int` (now supports non-1 scale)
 
 Fixes bugs:
 - Text with non-default styles don't compile (affects 1.21.4)
