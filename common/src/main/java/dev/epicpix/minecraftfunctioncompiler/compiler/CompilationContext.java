@@ -104,6 +104,18 @@ public class CompilationContext {
         }
     }
 
+    public CompilationData<LocationData<Entity>> getCurrentNullableEntity() {
+        var data = current();
+        if(data.currentEntity() != null) {
+            return new CompilationData<>(this, data, data.currentEntity(), 0);
+        }else {
+            LocationData<Entity> entity = createLocal();
+            data.writeInstruction(instructionWriter, Instructions2.getStackEntity(data.commandSourceStack(), entity));
+            var codeLocation = data.writeLabel(instructionWriter);
+            return enterWithValue(data.withContextLabel(codeLocation).withCurrentEntity(entity), entity);
+        }
+    }
+
     public CompilationData<LocationData<Vec3>> getPosition() {
         var data = current();
         if(data.currentPosition() != null) {
@@ -139,18 +151,25 @@ public class CompilationContext {
 
     public CompilationData<LocationData<Vec3>> applyPosition(WorldCoordinates pos) {
         if(pos.localCoordinates()) {
-            var entityData = getCurrentEntity();
+            var entityData = getCurrentNullableEntity();
             var positionData = getPosition();
             var rotationData = getRotation();
 
             var offset = this.<Double>createLocal();
+            rotationData.writeInstruction(Instructions2.valueDefine(offset.forceCast(), LocationData.ofDouble(0.0).forceCast()));
             var position = this.<Vec3>createLocal();
             if(rotationData.data().currentAnchor() == LocationAnchor.EYES) {
-                rotationData.writeInstruction(Instructions2.getEyeHeight(entityData.content(), offset));
-            }else if(rotationData.data().currentAnchor() == LocationAnchor.FEET) {
-                offset = LocationData.ofDouble(0.0);
-            }else {
-                rotationData.writeInstruction(Instructions2.getAnchorOffset(rotationData.data().commandSourceStack(), entityData.content(), offset));
+                var skipCode = instructionWriter.createLabelBefore(rotationData.endLabel());
+                var reassignedOffset = this.<Double>createLocal();
+                instructionWriter.addInstructionBefore(Instructions2.ifNullJump(entityData.content().lower(), skipCode), skipCode);
+                instructionWriter.addInstructionBefore(Instructions2.getEyeHeight(entityData.content(), reassignedOffset), skipCode);
+                instructionWriter.addInstructionBefore(Instructions2.valueAssign(offset.forceCast(), reassignedOffset.forceCast()), skipCode);
+            }else if(rotationData.data().currentAnchor() == null) {
+                var skipCode = instructionWriter.createLabelBefore(rotationData.endLabel());
+                var reassignedOffset = this.<Double>createLocal();
+                instructionWriter.addInstructionBefore(Instructions2.ifNullJump(entityData.content().lower(), skipCode), skipCode);
+                instructionWriter.addInstructionBefore(Instructions2.getAnchorOffset(rotationData.data().commandSourceStack(), entityData.content(), reassignedOffset), skipCode);
+                instructionWriter.addInstructionBefore(Instructions2.valueAssign(offset.forceCast(), reassignedOffset.forceCast()), skipCode);
             }
             rotationData.writeInstruction(Instructions.applyLocalPositionWorld(positionData.content(), rotationData.content(), offset, position, pos));
             return enterWithValue(rotationData.data(), position, entityData.stackCount() + positionData.stackCount() + rotationData.stackCount() + 1);

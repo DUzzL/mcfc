@@ -1,5 +1,9 @@
 # 0.3.1-alpha.1
 
+Fixes bugs:
+- `execute positioned ^ ^ ^` works only when there's an entity in context
+- Local coordinate math does not calculate the correct location
+
 ## Details
 - **Released:** In Development
 - **Supported Versions:** 1.19.4, 1.20–1.20.1, 1.20.2, 1.20.3–1.20.4, 1.20.5–1.20.6, 1.21–1.21.1, 1.21.2–1.21.3, 1.21.4

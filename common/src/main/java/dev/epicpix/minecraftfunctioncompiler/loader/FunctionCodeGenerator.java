@@ -50,6 +50,11 @@ public class FunctionCodeGenerator {
         HashMap<DataLocation, List<CommandParams>> definedFunctions = new HashMap<>();
         for(var entry : functionSources.entrySet()) {
             var key = entry.getKey();
+//            if((key.hashCode() & 0b1111111111111) != 0b1101011100011) {
+//                continue;
+//            }
+            LOGGER.info("Loading function {}, {}", key, Integer.toBinaryString(key.hashCode()));
+
             var values = entry.getValue();
             String currentCommand = null;
             try {
