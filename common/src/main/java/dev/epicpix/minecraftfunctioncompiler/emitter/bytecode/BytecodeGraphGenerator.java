@@ -1,5 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter.bytecode;
 
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,7 +17,7 @@ public class BytecodeGraphGenerator {
 
         var safeName = functionName.replace('.', '_').replace('/', '_').replace('-', '_').replace('#', '_');
 
-        builder.append("  subgraph cluster_").append(safeName).append(" {\n");
+        builder.append("  subgraph \"cluster_").append(safeName).append("\" {\n");
         builder.append("    color=black;\n");
         builder.append("    label=\"").append(functionName).append("\";\n");
         HashMap<Integer, Integer> indexToId = new HashMap<>();
@@ -76,9 +78,17 @@ public class BytecodeGraphGenerator {
         Files.delete(dotFile);
     }
 
-    public static void generateBytecodeGraphs(Map<String, List<BytecodeInstruction>> functions, Path resultDir) throws IOException, InterruptedException {
+    public static void generateBytecodeGraphs(Map<String, List<BytecodeInstruction>> functions, Path resultDir) {
         if(!DEBUG_GENERATE_GRAPH) return;
-        generateFullGraph(functions, resultDir);
+        new Thread(() -> {
+            try {
+                long start = System.nanoTime();
+                generateFullGraph(functions, resultDir);
+                LoggerFactory.getLogger("minecraftfunctioncompiler").info("Generated graph (full_graph_low_level) in {}ms", (System.nanoTime() - start) / 1000000);
+            } catch(IOException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }).start();
     }
 
 }

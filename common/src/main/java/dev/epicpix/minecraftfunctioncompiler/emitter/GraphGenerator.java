@@ -6,6 +6,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 import dev.epicpix.minecraftfunctioncompiler.util.Pair;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -139,9 +140,25 @@ public final class GraphGenerator {
         Files.delete(dotFile);
     }
 
-    public static void generateGraphs(Map<DataLocation, List<Instruction>> functions, Path resultDir) throws IOException, InterruptedException {
+    public static void generateGraphs(Map<DataLocation, List<Instruction>> functions, Path resultDir) {
         if(!DEBUG_GENERATE_GRAPH) return;
-        generateFullGraph(functions, resultDir);
-        generateCallGraph(functions, resultDir);
+        new Thread(() -> {
+            try {
+                long start = System.nanoTime();
+                generateFullGraph(functions, resultDir);
+                LoggerFactory.getLogger("minecraftfunctioncompiler").info("Generated graph (full_graph_high_level) in {}ms", (System.nanoTime() - start) / 1000000);
+            } catch(IOException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }).start();
+        new Thread(() -> {
+            try {
+                long start = System.nanoTime();
+                generateCallGraph(functions, resultDir);
+                LoggerFactory.getLogger("minecraftfunctioncompiler").info("Generated graph (call_graph_high_level) in {}ms", (System.nanoTime() - start) / 1000000);
+            } catch(IOException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }).start();
     }
 }

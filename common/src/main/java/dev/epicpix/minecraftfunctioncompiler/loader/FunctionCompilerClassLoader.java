@@ -19,7 +19,6 @@ import dev.epicpix.minecraftfunctioncompiler.reporter.TimingData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -275,19 +274,11 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
             }catch(Exception ignored) {}
         }
         if(DEBUG_GENERATE_GRAPH) {
-            var startGraph = System.nanoTime();
             try {
                 Files.createDirectory(generatedDir);
             }catch(Exception ignored) {}
-            try {
-                GraphGenerator.generateGraphs(compiledFunctions, generatedDir);
-                if(DEBUG) {
-                    BytecodeGraphGenerator.generateBytecodeGraphs(lowLevelFunctions, generatedDir);
-                }
-            } catch (IOException | InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-            LOGGER.info("Generated graphs in {}ms", (System.nanoTime() - startGraph) / 1000000);
+            GraphGenerator.generateGraphs(compiledFunctions, generatedDir);
+            BytecodeGraphGenerator.generateBytecodeGraphs(lowLevelFunctions, generatedDir);
         }
 
         var startHandles = System.nanoTime();
