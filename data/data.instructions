@@ -107,8 +107,16 @@
   let [ctx:res] = to_integer([ctx:a]);
 }
 
+@DOUBLE_TO_FLOAT(float [ctx:res], double [ctx:a]) {
+  let [ctx:res] = to_float([ctx:a]);
+}
+
 @INTEGER_TO_DOUBLE(double [ctx:res], int [ctx:a]) {
   let [ctx:res] = to_double([ctx:a]);
+}
+
+@INTEGER_TO_FLOAT(float [ctx:res], int [ctx:a]) {
+  let [ctx:res] = to_float([ctx:a]);
 }
 
 @LABEL(label [ctx:label]);
@@ -713,6 +721,10 @@
 
 @CREATE_DOUBLE_TAG(double [ctx:value], <net.minecraft.nbt.Tag> [ctx:output]) {
   let [ctx:output] = <net.minecraft.nbt.DoubleTag>.valueOf([ctx:value]);
+}
+
+@CREATE_FLOAT_TAG(float [ctx:value], <net.minecraft.nbt.Tag> [ctx:output]) {
+  let [ctx:output] = <net.minecraft.nbt.FloatTag>.valueOf([ctx:value]);
 }
 
 @CREATE_INT_TAG(int [ctx:value], <net.minecraft.nbt.Tag> [ctx:output]) {

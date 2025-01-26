@@ -132,6 +132,9 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             if(expression.name == "to_double") {
                 return ParsedTokenExpressionSimpleType.DOUBLE
             }
+            if(expression.name == "to_float") {
+                return ParsedTokenExpressionSimpleType.FLOAT
+            }
             if(expression.name == "to_integer") {
                 return ParsedTokenExpressionSimpleType.INTEGER
             }
@@ -492,6 +495,10 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             if(expression.name == "to_double") {
                 val expr = writeExpression(writerData, expression.arguments[0], output, uniqId)
                 return writeNextRegister(uniqId, output, "cw.castType($expr, org.objectweb.asm.Type.DOUBLE_TYPE)")
+            }
+            if(expression.name == "to_float") {
+                val expr = writeExpression(writerData, expression.arguments[0], output, uniqId)
+                return writeNextRegister(uniqId, output, "cw.castType($expr, org.objectweb.asm.Type.FLOAT_TYPE)")
             }
             if(expression.name == "to_integer") {
                 val expr = writeExpression(writerData, expression.arguments[0], output, uniqId)

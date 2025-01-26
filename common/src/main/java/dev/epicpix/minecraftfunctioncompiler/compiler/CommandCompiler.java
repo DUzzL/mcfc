@@ -365,8 +365,20 @@ public final class CommandCompiler {
                             innerContext.writeInstruction(Instructions2.valueMulAssignDouble(multipliedDouble, convertedDouble, LocationData.ofDouble(cmdData.scale())));
                             innerContext.writeInstruction(Instructions2.createDoubleTag(multipliedDouble, tagLocal));
                         }
+                    }else if(cmdData.storeType() == ResultStoreType.FLOAT) {
+                        if(cmdData.scale() == 1.0d) {
+                            var convertedFloat = context.<Float>createLocal();
+                            innerContext.writeInstruction(Instructions2.integerToFloat(convertedFloat, res.result));
+                            innerContext.writeInstruction(Instructions2.createFloatTag(convertedFloat, tagLocal));
+                        }else {
+                            var multipliedDouble = context.<Double>createLocal();
+                            innerContext.writeInstruction(Instructions2.valueMulAssignIntDouble(multipliedDouble, res.result, LocationData.ofDouble(cmdData.scale())));
+                            var convertedFloat = context.<Float>createLocal();
+                            innerContext.writeInstruction(Instructions2.doubleToFloat(convertedFloat, multipliedDouble));
+                            innerContext.writeInstruction(Instructions2.createFloatTag(convertedFloat, tagLocal));
+                        }
                     }else {
-                        throw new UnsupportedOperationException("Storing into storage with a non-int/non-double type is not yet implemented");
+                        throw new UnsupportedOperationException("Storing into storage with a non-int/non-double/non-float type is not yet implemented");
                     }
                     assignNbtValue(context, value, last, tagLocal, setCountLocal, innerContext.endLabel());
                 }

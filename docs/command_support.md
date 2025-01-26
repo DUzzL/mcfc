@@ -23,6 +23,7 @@ Not all commands are currently implemented in this mod, if a command is not list
 | `execute rotated as`                      | Partial[^1]  | No result by itself    | No result by itself     |
 | `execute run`                             | Yes          | No result by itself    | No result by itself     |
 | `execute store result storage ... double` | Partial[^3]  | No result by itself    | No result by itself     |
+| `execute store result storage ... float`  | Partial[^3]  | No result by itself    | No result by itself     |
 | `execute store result storage ... int`    | Partial[^3]  | No result by itself    | No result by itself     |
 | `execute store result score`              | Partial[^1]  | No result by itself    | No result by itself     |
 | `execute unless entity`                   | Partial[^1]  | No                     | No                      |

@@ -1,5 +1,8 @@
 # 0.3.1-alpha.1
 
+Adds command:
+- `execute store result storage ... float`
+
 Fixes bugs:
 - `execute positioned ^ ^ ^` works only when there's an entity in context
 - Local coordinate math does not calculate the correct location
