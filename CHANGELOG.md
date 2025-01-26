@@ -6,6 +6,7 @@ Adds command:
 Fixes bugs:
 - `execute positioned ^ ^ ^` works only when there's an entity in context
 - Local coordinate math does not calculate the correct location
+- `execute unless score ... matches a..b` generates an infinite loop
 
 ## Details
 - **Released:** In Development

@@ -732,9 +732,9 @@ public class CompilationContext {
             data.writeInstruction(instructionWriter, Instructions2.ifLessEqualJump(value, LocationData.ofInteger(range.maximum()), label));
         }else {
             var failure = data.writeLabel(instructionWriter);
-            data.writeInstruction(instructionWriter, Instructions2.ifLessThanJump(value, LocationData.ofInteger(range.minimum()), failure));
-            data.writeInstruction(instructionWriter, Instructions2.ifGreaterThanJump(value, LocationData.ofInteger(range.maximum()), failure));
-            data.writeInstruction(instructionWriter, Instructions2.jump(label));
+            instructionWriter.addInstructionBefore(Instructions2.ifLessThanJump(value, LocationData.ofInteger(range.minimum()), failure), failure);
+            instructionWriter.addInstructionBefore(Instructions2.ifGreaterThanJump(value, LocationData.ofInteger(range.maximum()), failure), failure);
+            instructionWriter.addInstructionBefore(Instructions2.jump(label), failure);
         }
     }
 
