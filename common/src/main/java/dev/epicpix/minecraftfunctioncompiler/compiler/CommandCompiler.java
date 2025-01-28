@@ -5,16 +5,20 @@ import dev.epicpix.minecraftfunctioncompiler.commands.params.*;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPathPart;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
 import java.util.List;
 
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.*;
+
 public final class CommandCompiler {
     private CommandCompiler() {}
 
-    public static List<Instruction> compile(List<CommandParams> commands) {
-        var context = new CompilationContext();
+    public static List<Instruction> compile(DataLocation source, List<CommandParams> commands) {
+        var context = new CompilationContext(source);
         for(var command : commands) {
             var commandLabel = context.current().writeLabel(context.instructionWriter);
             try(var ignored = context.enterWithoutValue(context.current().withContextLabel(commandLabel))) {
@@ -378,7 +382,7 @@ public final class CommandCompiler {
                             innerContext.writeInstruction(Instructions2.createFloatTag(convertedFloat, tagLocal));
                         }
                     }else {
-                        throw new UnsupportedOperationException("Storing into storage with a non-int/non-double/non-float type is not yet implemented");
+                        throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_STORE, context.getSource(), "Storing into storage with a non-int/non-double/non-float type is not yet implemented"));
                     }
                     assignNbtValue(context, value, last, tagLocal, setCountLocal, innerContext.endLabel());
                 }
@@ -675,7 +679,7 @@ public final class CommandCompiler {
         }else if(command instanceof CommandWeatherThunder) {
             context.writeInstruction(Instructions2.setWeatherDynamicThunder());
         }else {
-            throw new UnsupportedOperationException("Not implemented command: " + command);
+            throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNKNOWN_COMMAND, context.getSource(), "Not implemented command: " + command));
         }
     }
 
@@ -697,7 +701,7 @@ public final class CommandCompiler {
                 context.writeInstruction(Instructions2.getNbtFromList(listAccess.list, listAccess.index, storage));
                 source = storage;
             }else {
-                throw new UnsupportedOperationException("Cannot get nbt path from " + part);
+                throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_NBT_ACCESS, context.getSource(), "Cannot get nbt path from " + part));
             }
         }
         return source;
@@ -712,7 +716,7 @@ public final class CommandCompiler {
             var listAccess = accessNbtList(context, source, indexed, failLabel);
             context.writeInstruction(Instructions2.setNbtInList(listAccess.list, listAccess.index, value, failLabel));
         }else {
-            throw new UnsupportedOperationException("Cannot set nbt value in path " + accessor);
+            throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_NBT_ACCESS, context.getSource(), "Cannot set nbt value in path " + accessor));
         }
         if(modifiedCount != null) context.writeInstruction(Instructions2.valueAdd(modifiedCount, LocationData.ofInteger(1)));
     }

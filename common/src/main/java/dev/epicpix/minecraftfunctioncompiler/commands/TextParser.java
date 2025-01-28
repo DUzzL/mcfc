@@ -9,16 +9,24 @@ import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
 import dev.epicpix.minecraftfunctioncompiler.data.text.TextContent;
 import dev.epicpix.minecraftfunctioncompiler.data.text.TextStyle;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.*;
 
 public final class TextParser {
     private TextParser() {}
 
     public static Text readText(StringCommandReader reader) {
         var json = reader.readJson();
-        return jsonToText(json);
+        return jsonToText(json, reader);
+    }
+
+    private static DiagnosticException createError(StringCommandReader reader, String diagnosticId, String message) {
+        return new DiagnosticException(Diagnostic.parseError(diagnosticId, reader.getSource(), reader.getString(), message));
     }
 
     private static Integer stringToColor(String str) {
@@ -50,7 +58,7 @@ public final class TextParser {
         };
     }
 
-    private static Integer contentToColor(JsonElement element) {
+    private static Integer contentToColor(JsonElement element, StringCommandReader reader) {
         if(element instanceof JsonArray array && array.size() == 4) {
             int r = array.get(0).getAsInt();
             int g = array.get(1).getAsInt();
@@ -60,10 +68,10 @@ public final class TextParser {
         }else if(element instanceof JsonPrimitive prim && prim.isNumber()) {
             return prim.getAsInt();
         }
-        throw new CommandErrorException(new CommandError("Invalid color specification: " + element + " (expected [R,G,B,A] or integer ARGB)"));
+        throw createError(reader, TEXT_INVALID_COLOR, "Invalid color specification: " + element + " (expected [R,G,B,A] or integer ARGB)");
     }
 
-    private static Text jsonToText(JsonElement element) {
+    private static Text jsonToText(JsonElement element, StringCommandReader reader) {
         if(element instanceof JsonPrimitive prim && prim.isString()) {
             return new Text(List.of(), TextStyle.empty(), new TextContent.LiteralText(prim.getAsString()));
         }else if(element instanceof JsonObject obj) {
@@ -84,24 +92,24 @@ public final class TextParser {
                         if(extra instanceof JsonPrimitive prim && prim.isString()) {
                             args.add(prim.getAsString());
                         }else {
-                            args.add(jsonToText(extra));
+                            args.add(jsonToText(extra, reader));
                         }
                     }
                 }
                 content = new TextContent.TranslatableText(key, fallback, args);
             }else {
-                throw new CommandErrorException(new CommandError("Cannot turn \"" + element + "\" into Text"));
+                throw createError(reader, TEXT_INVALID, "Cannot turn \"" + element + "\" into Text");
             }
             List<Text> siblings = List.of();
             if(obj.has("extra")) {
                 siblings = new ArrayList<>();
                 for(var extra : obj.getAsJsonArray("extra")) {
-                    siblings.add(jsonToText(extra));
+                    siblings.add(jsonToText(extra, reader));
                 }
             }
 
             Integer color = obj.has("color") ? stringToColor(obj.get("color").getAsString()) : null;
-            Integer shadowColor = MinecraftVersion.isCurrentVersionInRange(MinecraftVersion.MC_1_21_4, null) ? (obj.has("shadow_color") ? contentToColor(obj.get("shadow_color")) : null) : null;
+            Integer shadowColor = MinecraftVersion.isCurrentVersionInRange(MinecraftVersion.MC_1_21_4, null) ? (obj.has("shadow_color") ? contentToColor(obj.get("shadow_color"), reader) : null) : null;
             Boolean bold = obj.has("bold") ? obj.get("bold").getAsBoolean() : null;
             Boolean italic = obj.has("italic") ? obj.get("italic").getAsBoolean() : null;
             Boolean underlined = obj.has("underlined") ? obj.get("underlined").getAsBoolean() : null;
@@ -110,19 +118,19 @@ public final class TextParser {
             String insertion = obj.has("insertion") ? obj.get("insertion").getAsString() : null;
             DataLocation font = obj.has("font") ? new DataLocation(obj.get("font").getAsString()) : null;
 
-            if(obj.has("clickEvent")) throw new CommandErrorException(new CommandError("\"clickEvent\" in text is not yet supported"));
-            if(obj.has("hoverEvent")) throw new CommandErrorException(new CommandError("\"hoverEvent\" in text is not yet supported"));
+            if(obj.has("clickEvent")) throw createError(reader, TEXT_INVALID_UNSUPPORTED_CLICK_EVENT, "\"clickEvent\" in text is not yet supported");
+            if(obj.has("hoverEvent")) throw createError(reader, TEXT_INVALID_UNSUPPORTED_HOVER_EVENT, "\"hoverEvent\" in text is not yet supported");
 
             return new Text(siblings, new TextStyle(color, shadowColor, bold, italic, underlined, strikethrough, obfuscated,null, null, insertion, font), content);
         }else if(element instanceof JsonArray arr) {
-            Text text = jsonToText(arr.get(0));
+            Text text = jsonToText(arr.get(0), reader);
             var siblings = new ArrayList<>(text.siblings());
             for(int i = 1; i<arr.size(); i++) {
-                siblings.add(jsonToText(arr.get(i)));
+                siblings.add(jsonToText(arr.get(i), reader));
             }
             return new Text(siblings, text.style(), text.content());
         }else {
-            throw new CommandErrorException(new CommandError("Cannot turn \"" + element + "\" into Text"));
+            throw createError(reader, TEXT_INVALID, "Cannot turn \"" + element + "\" into Text");
         }
     }
 

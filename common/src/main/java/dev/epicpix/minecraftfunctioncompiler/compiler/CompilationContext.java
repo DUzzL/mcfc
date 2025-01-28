@@ -10,14 +10,20 @@ import java.util.*;
 
 public class CompilationContext {
 
+    private final DataLocation source;
     private final Stack<CompilationContextData> stack = new Stack<>();
     private final UniqueIdTracker idTracker = new UniqueIdTracker();
     public final InstructionWriter instructionWriter = new InstructionWriter();
 
-    public CompilationContext() {
+    public CompilationContext(DataLocation source) {
+        this.source = source;
         var commandStack = this.<CommandSourceStack>createLocal();
         instructionWriter.addInstructionBefore(Instructions2.getCommandStack(commandStack), instructionWriter.getEndLabel());
         enterWith(CompilationContextData.create(commandStack, instructionWriter.getEndLabel()));
+    }
+
+    public DataLocation getSource() {
+        return source;
     }
 
     public <T> CompilationData<T> enterWithValue(CompilationContextData data, T value, int stackCount) {

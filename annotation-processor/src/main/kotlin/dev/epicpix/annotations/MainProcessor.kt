@@ -242,6 +242,7 @@ class MainProcessor(
             map.appendText("package $resultPackage;\n")
             map.appendText("import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;\n")
             map.appendText("import dev.epicpix.minecraftfunctioncompiler.data.*;\n")
+            map.appendText("import dev.epicpix.minecraftfunctioncompiler.diagnostics.*;\n")
             map.appendText("import java.util.*;\n")
             map.appendText("public final class $resultName {\n")
             map.appendText("    private $resultName() {}\n")

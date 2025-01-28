@@ -4,11 +4,15 @@ import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidators;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.*;
 
 public final class SelectorParser {
     private SelectorParser() {}
@@ -24,8 +28,8 @@ public final class SelectorParser {
         return ScoreHolderArgument.selectNamed(name);
     }
 
-    private static void throwError(StringCommandReader reader, String message) {
-        throw new CommandErrorException(new CommandError(reader.getString(), message));
+    private static void throwError(StringCommandReader reader, String diagnosticId, String message) {
+        throw new DiagnosticException(Diagnostic.parseError(diagnosticId, reader.getSource(), reader.getString(), message));
     }
 
     public static SelectorArgument parseSelector(StringCommandReader reader, boolean allowEntities, boolean allowMultiple) {
@@ -44,8 +48,8 @@ public final class SelectorParser {
         var data = new SelectorGeneratorBuilderData();
         switch (selectorType) {
             case 'e' -> {
-                if(!allowEntities) throwError(reader, "Unable to use @e with a player-only selector");
-                if(!allowMultiple) throwError(reader, "Unable to use @e with a single-only selector");
+                if(!allowEntities) throwError(reader, SELECTOR_EXPECTED_PLAYER_TARGETS, "Unable to use @e with a player-only selector");
+                if(!allowMultiple) throwError(reader, SELECTOR_EXPECTED_SINGULAR_TARGET, "Unable to use @e with a single-only selector");
                 data.requireAlive = true;
             }
             case 's' -> {
@@ -53,7 +57,7 @@ public final class SelectorParser {
                 data.limit = 1;
             }
             case 'a' -> {
-                if(!allowMultiple) throwError(reader, "Unable to use @a with a single-only selector");
+                if(!allowMultiple) throwError(reader, SELECTOR_EXPECTED_SINGULAR_TARGET, "Unable to use @a with a single-only selector");
                 data.requirePlayer = true;
             }
             case 'p' -> {
@@ -67,12 +71,12 @@ public final class SelectorParser {
                 data.limit = 1;
             }
             case 'n' -> {
-                if(!MinecraftVersion.isCurrentVersionInRange(MinecraftVersion.MC_1_21, null)) throwError(reader, "Selector @n is not available on versions below 1.21");
+                if(!MinecraftVersion.isCurrentVersionInRange(MinecraftVersion.MC_1_21, null)) throwError(reader, SELECTOR_WRONG_MINECRAFT_VERSION, "Selector @n is not available on versions below 1.21");
                 data.requirePlayer = true;
                 data.sort = SelectorSort.NEAREST;
                 data.limit = 1;
             }
-            default -> throwError(reader, "Unsupported selector type: @" + selectorType);
+            default -> throwError(reader, SELECTOR_INVALID_TARGET, "Unsupported selector kind: @" + selectorType);
         }
 
         if(reader.canRead() && reader.peek() == '[') {
@@ -81,13 +85,13 @@ public final class SelectorParser {
                 reader.skipWhitespace();
                 var key = reader.readString();
                 reader.skipWhitespace();
-                if(!reader.canRead() || reader.read() != '=') throwError(reader, "Cannot parse selector, missing '='");
+                if(!reader.canRead() || reader.read() != '=') throwError(reader, SELECTOR_INVALID_SYNTAX, "Cannot parse selector, missing '='");
                 reader.skipWhitespace();
                 var option = selectorOptions.get(key);
-                if(option == null) throwError(reader, "Cannot parse selector key: " + key);
+                if(option == null) throwError(reader, SELECTOR_UNKNOWN_OPTION, "Cannot parse selector key: " + key);
                 option.accept(reader, data);
                 reader.skipWhitespace();
-                if(!reader.canRead()) throwError(reader, "Cannot parse selector, ran out of data expecting ',' or ']'");
+                if(!reader.canRead()) throwError(reader, SELECTOR_INVALID_SYNTAX, "Cannot parse selector, ran out of data expecting ',' or ']'");
                 reader.checkMacro(false);
                 var next = reader.peek();
                 if(next == ',') {
@@ -95,13 +99,13 @@ public final class SelectorParser {
                     continue;
                 }
                 if(next == ']') break;
-                throwError(reader, "Cannot parse selector, ran out of data, invalid value '" + next + "' expected ',' or ']'");
+                throwError(reader, SELECTOR_INVALID_SYNTAX, "Cannot parse selector, ran out of data, invalid value '" + next + "' expected ',' or ']'");
             }
             reader.checkMacro(false);
             if(reader.peek() == ']') {
                 reader.skip();
             }else {
-                throwError(reader, "Cannot parse selector, ran out of data, invalid value '" + reader.peek() + "', expected ']'");
+                throwError(reader, SELECTOR_INVALID_SYNTAX, "Cannot parse selector, ran out of data, invalid value '" + reader.peek() + "', expected ']'");
             }
         }
 
@@ -116,7 +120,7 @@ public final class SelectorParser {
 
     public static void initBaseSelectorOptions() {
         registerSelectorOption("advancements", (reader, data) -> {
-            if(data.advancements != null) throwError(reader, "advancements selector cannot be repeated");
+            if(data.advancements != null) throwError(reader, SELECTOR_OPTION_CANNOT_REPEAT, "advancements selector cannot be repeated");
             data.advancements = new HashMap<>();
             reader.skip();
             reader.skipWhitespace();
@@ -157,7 +161,7 @@ public final class SelectorParser {
             reader.skip();
         });
         registerSelectorOption("type", (reader, data) -> {
-            if(data.entityTypes != null) throwError(reader, "type selector cannot be repeated");
+            if(data.entityTypes != null) throwError(reader, SELECTOR_OPTION_CANNOT_REPEAT, "type selector cannot be repeated");
             var negated = reader.skipIfNext('!');
             var tag = reader.skipIfNext('#');
             var type = reader.readDataLocation();
@@ -187,10 +191,10 @@ public final class SelectorParser {
             var gamemode = reader.readGamemode();
             for(var cGamemode : data.gamemodes) {
                 if(!cGamemode.negated()) {
-                    throwError(reader, "gamemode selector cannot have multiple non-negated values");
+                    throwError(reader, SELECTOR_OPTION_INVALID, "gamemode selector cannot have multiple non-negated values");
                 }
                 if(!negated) {
-                    throwError(reader, "gamemode selector cannot have a negated and non-negated value");
+                    throwError(reader, SELECTOR_OPTION_INVALID, "gamemode selector cannot have a negated and non-negated value");
                 }
             }
             data.gamemodes.add(new NegatableData<>(gamemode, negated));
@@ -209,15 +213,15 @@ public final class SelectorParser {
         registerSelectorOption("level", (reader, data) -> {
             data.level = reader.readIntRange();
             if((data.level.minimum() != null && data.level.minimum() < 0) || (data.level.maximum() != null && data.level.maximum() < 0)) {
-                throwError(reader, "Minimum/maximum level cannot be negative: " + data.level);
+                throwError(reader, SELECTOR_OPTION_INVALID, "Minimum/maximum level cannot be negative: " + data.level);
             }
         });
         registerSelectorOption("distance", (reader, data) -> {
-            if(data.distance != null) throwError(reader, "distance selector cannot be repeated");
+            if(data.distance != null) throwError(reader, SELECTOR_OPTION_CANNOT_REPEAT, "distance selector cannot be repeated");
             data.worldLimited = true;
             data.distance = reader.readDoubleRange();
             if((data.distance.minimum() != null && data.distance.minimum() < 0) || (data.distance.maximum() != null && data.distance.maximum() < 0)) {
-                throwError(reader, "Minimum/maximum distance cannot be negative: " + data.distance);
+                throwError(reader, SELECTOR_OPTION_INVALID, "Minimum/maximum distance cannot be negative: " + data.distance);
             }
         });
         registerSelectorOption("scores", (reader, data) -> {
@@ -252,32 +256,32 @@ public final class SelectorParser {
             data.yaw = new FloatRangeArgument(bounds.minimum() != null ? wrapDegrees(bounds.minimum()) : null, bounds.maximum() != null ? wrapDegrees(bounds.maximum()) : null);
         });
         registerSelectorOption("x", (reader, data) -> {
-            if(data.x != null) throwError(reader, "x selector cannot be repeated");
+            if(data.x != null) throwError(reader, SELECTOR_OPTION_CANNOT_REPEAT, "x selector cannot be repeated");
             data.worldLimited = true;
             data.x = reader.readDouble();
         });
         registerSelectorOption("y", (reader, data) -> {
-            if(data.y != null) throwError(reader, "y selector cannot be repeated");
+            if(data.y != null) throwError(reader, SELECTOR_OPTION_CANNOT_REPEAT, "y selector cannot be repeated");
             data.worldLimited = true;
             data.y = reader.readDouble();
         });
         registerSelectorOption("z", (reader, data) -> {
-            if(data.z != null) throwError(reader, "z selector cannot be repeated");
+            if(data.z != null) throwError(reader, SELECTOR_OPTION_CANNOT_REPEAT, "z selector cannot be repeated");
             data.worldLimited = true;
             data.z = reader.readDouble();
         });
         registerSelectorOption("dx", (reader, data) -> {
-            if(data.dx != null) throwError(reader, "dx selector cannot be repeated");
+            if(data.dx != null) throwError(reader, SELECTOR_OPTION_CANNOT_REPEAT, "dx selector cannot be repeated");
             data.worldLimited = true;
             data.dx = reader.readDouble();
         });
         registerSelectorOption("dy", (reader, data) -> {
-            if(data.dy != null) throwError(reader, "dy selector cannot be repeated");
+            if(data.dy != null) throwError(reader, SELECTOR_OPTION_CANNOT_REPEAT, "dy selector cannot be repeated");
             data.worldLimited = true;
             data.dy = reader.readDouble();
         });
         registerSelectorOption("dz", (reader, data) -> {
-            if(data.dz != null) throwError(reader, "dz selector cannot be repeated");
+            if(data.dz != null) throwError(reader, SELECTOR_OPTION_CANNOT_REPEAT, "dz selector cannot be repeated");
             data.worldLimited = true;
             data.dz = reader.readDouble();
         });

@@ -2,7 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.reporter;
 
 import com.google.gson.*;
 import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
-import dev.epicpix.minecraftfunctioncompiler.commands.CommandError;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 
 import java.net.URL;
@@ -51,7 +51,7 @@ public final class FunctionCompilerReporter {
         sendData.addProperty("run_uuid", runUuid.toString());
         sendData.addProperty("timestamp", System.currentTimeMillis());
         sendData.addProperty("report_type", type);
-        sendData.addProperty("report_version", "v7");
+        sendData.addProperty("report_version", "v8");
         sendData.add("data", data);
 
         reportQueue.add(sendData);
@@ -104,7 +104,7 @@ public final class FunctionCompilerReporter {
             FunctionCountsData functionCounts,
             TimingData timings,
             CodeGenerationMetrics codeGenerationMetrics,
-            Collection<CommandError> commandErrors
+            Collection<Diagnostic> diagnostics
         ) {
         if(!ENABLE_REPORTING) return;
         JsonObject compilationStats = new JsonObject();
@@ -131,20 +131,23 @@ public final class FunctionCompilerReporter {
         codeGenerationMetricsJson.addProperty("total_data_class_file_size", codeGenerationMetrics.totalDataClassFileSize());
         compilationStats.add("code_generation_metrics", codeGenerationMetricsJson);
 
-        JsonArray commandErrorsJson = new JsonArray();
-        for(var error : commandErrors) {
+        JsonArray diagnosticsJson = new JsonArray();
+        for(var diagnostic : diagnostics) {
             JsonObject obj = new JsonObject();
-            obj.addProperty("command", error.command());
-            obj.addProperty("error_message", error.errorMessage());
-            obj.addProperty("step", error.step().toString().toLowerCase());
-            if(error.cause() != null) {
+            obj.addProperty("id", diagnostic.diagnosticId());
+            obj.addProperty("severity", diagnostic.severity().toString().toLowerCase(Locale.ROOT));
+            obj.addProperty("kind", diagnostic.kind().toString().toLowerCase(Locale.ROOT));
+            obj.addProperty("message", diagnostic.message());
+
+            if(diagnostic.extra() != null) obj.addProperty("extra", diagnostic.extra());
+            if(diagnostic.cause() != null) {
                 JsonObject exception = new JsonObject();
-                writeExceptionJson(error.cause(), exception);
+                writeExceptionJson(diagnostic.cause(), exception);
                 obj.add("cause", exception);
             }
-            commandErrorsJson.add(obj);
+            diagnosticsJson.add(obj);
         }
-        compilationStats.add("command_errors", commandErrorsJson);
+        compilationStats.add("diagnostics", diagnosticsJson);
 
         reportRawData("compilation_stats", compilationStats);
     }

@@ -5,9 +5,9 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
-import dev.epicpix.minecraftfunctioncompiler.commands.CommandError;
 import dev.epicpix.minecraftfunctioncompiler.commands.SelectorParser;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticCollector;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeFormatter;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeInstruction;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.EmitterBaseOptions;
@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Supplier;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.ALLOW_EXTERNAL_DATA_ACCESS;
@@ -55,8 +56,8 @@ public class SimpleFunctionCompiler {
                 var lines = jsonData(results, "function_sources", source.getKey(), JsonArray::new);
                 for(var line : source.getValue()) lines.add(line);
             }
-            var errors = new HashMap<DataLocation, CommandError>();
-            var parsed = FunctionCodeGenerator.parseFunctions(sources, functions -> List.of(), errors);
+            var diagnostics = new DiagnosticCollector();
+            var parsed = FunctionCodeGenerator.parseFunctions(sources, functions -> List.of(), diagnostics);
             for(var parseRes : parsed.entrySet()) {
                 var commands = jsonData(results, "function_commands", parseRes.getKey(), JsonArray::new);
                 for(var command : parseRes.getValue()) {
@@ -65,7 +66,7 @@ public class SimpleFunctionCompiler {
                     commands.add(tree);
                 }
             }
-            var highLevel = FunctionCodeGenerator.compileFunctionsHighLevel(parsed, errors, null);
+            var highLevel = FunctionCodeGenerator.compileFunctionsHighLevel(parsed, diagnostics, null);
             for(var compRes : highLevel.entrySet()) {
                 var instructionsJson = jsonData(results, "function_high_level_instructions_json", compRes.getKey(), JsonArray::new);
                 instructionsJson.addAll(Instruction.generateInstructionsJson(compRes.getValue()));
@@ -93,14 +94,16 @@ public class SimpleFunctionCompiler {
                     instructionsText.add(BytecodeFormatter.formatInstruction(instr));
                 }
             }
-            for(var e : errors.entrySet()) {
-                var error = e.getValue();
+            for(var diagnostic : diagnostics.getDiagnostics()) {
                 JsonObject eObj = new JsonObject();
-                eObj.addProperty("command", error.command());
-                eObj.addProperty("error_message", error.errorMessage());
-                eObj.addProperty("step", error.step().toString().toLowerCase());
-                if(error.cause() != null) eObj.add("cause", exceptionJson(error.cause()));
-                jsonData(results, "errors", e.getKey(), () -> eObj);
+                eObj.addProperty("id", diagnostic.diagnosticId());
+                eObj.addProperty("severity", diagnostic.severity().toString().toLowerCase(Locale.ROOT));
+                eObj.addProperty("kind", diagnostic.kind().toString().toLowerCase(Locale.ROOT));
+                eObj.addProperty("message", diagnostic.message());
+
+                if(diagnostic.extra() != null) eObj.addProperty("extra", diagnostic.extra());
+                if(diagnostic.cause() != null) eObj.add("cause", exceptionJson(diagnostic.cause()));
+                jsonData(results, "errors", diagnostic.location(), () -> eObj);
             }
             Files.createDirectories(generatedPath);
             for(var cg : classGenerators) {

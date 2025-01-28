@@ -116,7 +116,7 @@ private fun generateCommandReturn(builder: StringBuilder, commandTypes: MutableM
     }
 }
 
-private fun generateArgumentReaderChildren(name: String, data: ParsedCommandArgument, builder: StringBuilder, commandTypes: MutableMap<String, List<Pair<String, String>>>, uniqueId: AtomicInteger, argumentPath: String, arguments: Map<String, String>, typedArguments: List<Pair<String, String>>, indent: String) {
+private fun generateArgumentReaderChildren(name: String, data: ParsedCommandArgument, builder: StringBuilder, commandTypes: MutableMap<String, List<Pair<String, String>>>, uniqueId: AtomicInteger, argumentPath: String, argumentDPath: String, arguments: Map<String, String>, typedArguments: List<Pair<String, String>>, indent: String) {
     var reachable = true
     val entries = data.children.entries.toList().sortedBy { it.value.kind != "literal" }
     for(i in entries.indices) {
@@ -128,47 +128,47 @@ private fun generateArgumentReaderChildren(name: String, data: ParsedCommandArgu
                 val locationIndex = uniqueId.getAndIncrement()
                 builder.append("${indent}var z$locationIndex = reader.getIndex();\n")
                 builder.append("${indent}try {\n")
-                if(generateArgumentReaderVersionCheck(k, v, innerBuilder, commandTypes, uniqueId, "$argumentPath $name", arguments, typedArguments)) {
+                if(generateArgumentReaderVersionCheck(k, v, innerBuilder, commandTypes, uniqueId, "$argumentPath $name", "$argumentDPath.${v.argName ?: k}", arguments, typedArguments)) {
                     innerBuilder.append("reader.setIndex(z$locationIndex);\n")
                 }
                 builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent("$indent    ") + "\n")
-                builder.append("$indent} catch(CommandErrorException ignored) {\n")
+                builder.append("$indent} catch(DiagnosticException ignored) {\n")
                 builder.append("$indent    reader.setIndex(z$locationIndex);\n")
                 builder.append("$indent}\n")
             }else {
-                reachable = generateArgumentReaderVersionCheck(k, v, innerBuilder, commandTypes, uniqueId, "$argumentPath $name", arguments, typedArguments)
+                reachable = generateArgumentReaderVersionCheck(k, v, innerBuilder, commandTypes, uniqueId, "$argumentPath $name", "$argumentDPath.${v.argName ?: k}", arguments, typedArguments)
                 builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent(indent) + "\n")
             }
         }
     }
     if(reachable) {
-        builder.append("    ${createWrappedError("Failed to parse any options @$argumentPath $name")}\n")
+        builder.append("    ${createWrappedError(argumentDPath, "Failed to parse any options @$argumentPath $name")}\n")
     }
 }
 
-private fun generateArgumentReaderVersionCheck(name: String, data: ParsedCommandArgument, builder: StringBuilder, commandTypes: MutableMap<String, List<Pair<String, String>>>, uniqueId: AtomicInteger, argumentPath: String, arguments: Map<String, String>, typedArguments: List<Pair<String, String>>, fromRoot: Boolean = false): Boolean {
+private fun generateArgumentReaderVersionCheck(name: String, data: ParsedCommandArgument, builder: StringBuilder, commandTypes: MutableMap<String, List<Pair<String, String>>>, uniqueId: AtomicInteger, argumentPath: String, argumentDPath: String, arguments: Map<String, String>, typedArguments: List<Pair<String, String>>, fromRoot: Boolean = false): Boolean {
     if(data.versionRange != null) {
         val innerBuilder = StringBuilder()
         val min = data.versionRange!!.first.let { if(it == null) "null" else "MinecraftVersion.MC_${it.replace('.', '_')}" }
         val max = data.versionRange!!.second.let { if(it == null) "null" else "MinecraftVersion.MC_${it.replace('.', '_')}" }
         builder.append("if(MinecraftVersion.isCurrentVersionInRange($min, $max)) {\n")
-        generateArgumentReader(name, data, innerBuilder, commandTypes, uniqueId, argumentPath, arguments, typedArguments, fromRoot)
+        generateArgumentReader(name, data, innerBuilder, commandTypes, uniqueId, argumentPath, argumentDPath, arguments, typedArguments, fromRoot)
         builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent("    ") + "\n")
         builder.append("}\n")
         return true
     }else {
-        return generateArgumentReader(name, data, builder, commandTypes, uniqueId, argumentPath, arguments, typedArguments, fromRoot)
+        return generateArgumentReader(name, data, builder, commandTypes, uniqueId, argumentPath, argumentDPath, arguments, typedArguments, fromRoot)
     }
 }
 
-private fun generateArgumentReader(name: String, data: ParsedCommandArgument, builder: StringBuilder, commandTypes: MutableMap<String, List<Pair<String, String>>>, uniqueId: AtomicInteger, argumentPath: String, arguments: Map<String, String>, typedArguments: List<Pair<String, String>>, fromRoot: Boolean = false): Boolean {
+private fun generateArgumentReader(name: String, data: ParsedCommandArgument, builder: StringBuilder, commandTypes: MutableMap<String, List<Pair<String, String>>>, uniqueId: AtomicInteger, argumentPath: String, argumentDPath: String, arguments: Map<String, String>, typedArguments: List<Pair<String, String>>, fromRoot: Boolean = false): Boolean {
     if(fromRoot) {
         if(data.executableCommand != null) {
             commandTypes[data.executableCommand!!] = typedArguments
             val paramsClassName = "_COMMAND_${data.executableCommand}".snakeToLowerCamelCase()
             builder.append("if(!reader.canRead()) return new dev.epicpix.minecraftfunctioncompiler.commands.params.$paramsClassName();\n")
         }
-        generateArgumentReaderChildren(name, data, builder, commandTypes, uniqueId, argumentPath, arguments, typedArguments, "")
+        generateArgumentReaderChildren(name, data, builder, commandTypes, uniqueId, argumentPath, argumentDPath, arguments, typedArguments, "")
         return true
     }else if(data.kind != "literal") {
         val kindInfo = data.kind +
@@ -201,8 +201,8 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
             }
             "double" -> {
                 builder.append("    var a$argumentIndex = reader.readDouble();\n")
-                data.kindOptions["minimum"]?.toDouble()?.also { min -> builder.append("    if(a$argumentIndex < $min) ${createError("\"Double value of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }
-                data.kindOptions["maximum"]?.toDouble()?.also { max -> builder.append("    if(a$argumentIndex > $max) ${createError("\"Double value of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
+                data.kindOptions["minimum"]?.toDouble()?.also { min -> builder.append("    if(a$argumentIndex < $min) ${createError(argumentDPath, "\"Double value of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }
+                data.kindOptions["maximum"]?.toDouble()?.also { max -> builder.append("    if(a$argumentIndex > $max) ${createError(argumentDPath, "\"Double value of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
                 newTypedArguments.add(data.argName!! to "double")
             }
             "entity_selector" -> {
@@ -228,14 +228,14 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
             }
             "int" -> {
                 builder.append("    var a$argumentIndex = reader.readInt();\n")
-                data.kindOptions["minimum"]?.toInt()?.also { min -> builder.append("    if(a$argumentIndex < $min) ${createError("\"Integer value of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }
-                data.kindOptions["maximum"]?.toInt()?.also { max -> builder.append("    if(a$argumentIndex > $max) ${createError("\"Integer value of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
+                data.kindOptions["minimum"]?.toInt()?.also { min -> builder.append("    if(a$argumentIndex < $min) ${createError(argumentDPath, "\"Integer value of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }
+                data.kindOptions["maximum"]?.toInt()?.also { max -> builder.append("    if(a$argumentIndex > $max) ${createError(argumentDPath, "\"Integer value of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
                 newTypedArguments.add(data.argName!! to "int")
             }
             "int_range" -> {
                 builder.append("    var a$argumentIndex = reader.readIntRange();\n")
-                data.kindOptions["minimum"]?.toInt()?.also { min -> builder.append("    if(a$argumentIndex.minimum() < $min) ${createError("\"Integer range minimum of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }
-                data.kindOptions["maximum"]?.toInt()?.also { max -> builder.append("    if(a$argumentIndex.maximum() > $max) ${createError("\"Integer range maximum of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
+                data.kindOptions["minimum"]?.toInt()?.also { min -> builder.append("    if(a$argumentIndex.minimum() < $min) ${createError(argumentDPath, "\"Integer range minimum of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }
+                data.kindOptions["maximum"]?.toInt()?.also { max -> builder.append("    if(a$argumentIndex.maximum() > $max) ${createError(argumentDPath, "\"Integer range maximum of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.IntRangeArgument")
             }
             "location_anchor" -> {
@@ -300,8 +300,8 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
             }
             "time" -> {
                 builder.append("    var a$argumentIndex = reader.readTime();\n")
-                data.kindOptions["minimum"]?.toInt()?.also { min -> builder.append("    if(a$argumentIndex < $min) ${createError("\"Time value of \" + a$argumentIndex + \" ticks is below allowed value ($min ticks)\"")}\n") }
-                data.kindOptions["maximum"]?.toInt()?.also { max -> builder.append("    if(a$argumentIndex > $max) ${createError("\"Time value of \" + a$argumentIndex + \" ticks is above allowed value ($max ticks)\"")}\n") }
+                data.kindOptions["minimum"]?.toInt()?.also { min -> builder.append("    if(a$argumentIndex < $min) ${createError(argumentDPath, "\"Time value of \" + a$argumentIndex + \" ticks is below allowed value ($min ticks)\"")}\n") }
+                data.kindOptions["maximum"]?.toInt()?.also { max -> builder.append("    if(a$argumentIndex > $max) ${createError(argumentDPath, "\"Time value of \" + a$argumentIndex + \" ticks is above allowed value ($max ticks)\"")}\n") }
                 newTypedArguments.add(data.argName!! to "int")
             }
             "word" -> {
@@ -325,13 +325,13 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
         if(data.executableCommand != null) {
             generateCommandReturn(builder, commandTypes, data.executableCommand!!, newArguments, newTypedArguments)
             if(data.children.isEmpty()) {
-                builder.append("    ${createWrappedError("Too many arguments for @$argumentPath $name")}\n")
+                builder.append("    ${createWrappedError(argumentDPath, "Too many arguments for @$argumentPath $name")}\n")
                 builder.append("}\n")
                 return false
             }
         }
-        builder.append("    if(!reader.skipArgumentWhitespace()) ${createWrappedError("Missing space after argument @$argumentPath $name")}\n")
-        generateArgumentReaderChildren(name, data, builder, commandTypes, uniqueId, argumentPath, newArguments, newTypedArguments, "    ")
+        builder.append("    if(!reader.skipArgumentWhitespace()) ${createWrappedError(argumentDPath, "Missing space after argument @$argumentPath $name")}\n")
+        generateArgumentReaderChildren(name, data, builder, commandTypes, uniqueId, argumentPath, argumentDPath, newArguments, newTypedArguments, "    ")
         builder.append("}\n")
         return false
     }else {
@@ -342,8 +342,8 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
         if(data.executableCommand != null) {
             generateCommandReturn(builder, commandTypes, data.executableCommand!!, arguments, typedArguments)
         }
-        builder.append("        if(!reader.skipArgumentWhitespace()) ${createWrappedError("Missing space after argument @$argumentPath $name")}\n")
-        generateArgumentReaderChildren(name, data, builder, commandTypes, uniqueId, argumentPath, arguments, typedArguments, "        ")
+        builder.append("        if(!reader.skipArgumentWhitespace()) ${createWrappedError(argumentDPath, "Missing space after argument @$argumentPath $name")}\n")
+        generateArgumentReaderChildren(name, data, builder, commandTypes, uniqueId, argumentPath, argumentDPath, arguments, typedArguments, "        ")
         builder.append("    }\n")
         builder.append("    reader.setIndex(z$locationIndex);\n")
         builder.append("}\n")
@@ -351,19 +351,19 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
     }
 }
 
-private fun createError(str: String) = "throw new CommandErrorException(new CommandError(reader.getString(), $str));"
-private fun createWrappedError(str: String) = createError("\"" + str.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\"")
+private fun createError(argumentDPath: String?, str: String) = "throw new DiagnosticException(Diagnostic.parseError(\"command.error.parse${if(argumentDPath != null) ".$argumentDPath" else ""}\", reader.getSource(), reader.getString(), $str));"
+private fun createWrappedError(argumentDPath: String?, str: String) = createError(argumentDPath, "\"" + str.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n") + "\"")
 
 fun generateCommandsDataReader(data: ParsedCommandData): Pair<String, Map<String, List<Pair<String, String>>>> {
     val builder = StringBuilder()
     val uid = AtomicInteger()
-    builder.append("public static CommandParams parseCommand(String command, boolean allowMacros, IArgumentLookup lookup) {\n")
-    builder.append("    return parseCommand(new StringCommandReader(command, allowMacros), lookup);\n")
+    builder.append("public static CommandParams parseCommand(String command, DataLocation source, boolean allowMacros, IArgumentLookup lookup) {\n")
+    builder.append("    return parseCommand(new StringCommandReader(command, source, allowMacros), lookup);\n")
     builder.append("}\n")
     builder.append("\n")
     builder.append("public static CommandParams parseCommand(StringCommandReader reader, IArgumentLookup lookup) {\n")
     builder.append("    var commandName = reader.readWord();\n")
-    builder.append("    if(!reader.skipArgumentWhitespace()) ${createError("\"Missing space after argument @ \" + commandName")}\n")
+    builder.append("    if(!reader.skipArgumentWhitespace()) ${createError(null, "\"Missing space after argument @ \" + commandName")}\n")
     builder.append("    switch(commandName) {\n")
     for((k, _) in data.commandTree) {
         builder.append("        case \"$k\" -> { return parseCommand_$k(reader, lookup); }\n")
@@ -371,7 +371,7 @@ fun generateCommandsDataReader(data: ParsedCommandData): Pair<String, Map<String
     for((k, v) in data.commandRedirects) {
         builder.append("        case \"$k\" -> { return parseCommand_$v(reader, lookup); }\n")
     }
-    builder.append("        default -> ${createError("\"Unknown command: \" + commandName")}\n")
+    builder.append("        default -> ${createError(null, "\"Unknown command: \" + commandName")}\n")
     builder.append("    }\n")
     builder.append("}\n")
     builder.append("\n")
@@ -379,7 +379,7 @@ fun generateCommandsDataReader(data: ParsedCommandData): Pair<String, Map<String
     for((k, v) in data.commandTree) {
         builder.append("public static CommandParams parseCommand_$k(StringCommandReader reader, IArgumentLookup lookup) {\n")
         val innerBuilder = StringBuilder()
-        generateArgumentReaderVersionCheck(k, v, innerBuilder, commandTypes, uid, "", mapOf(), listOf(), true)
+        generateArgumentReaderVersionCheck(k, v, innerBuilder, commandTypes, uid, "", k, mapOf(), listOf(), true)
         builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent("    ") + "\n")
         builder.append("}\n")
     }

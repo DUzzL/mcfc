@@ -6,6 +6,9 @@ import com.google.gson.JsonObject;
 import dev.epicpix.minecraftfunctioncompiler.CommonConstants;
 import dev.epicpix.minecraftfunctioncompiler.commands.*;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticCollector;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticKind;
 import dev.epicpix.minecraftfunctioncompiler.emitter.GraphGenerator;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.*;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
@@ -27,6 +30,8 @@ import java.nio.file.Path;
 import java.util.*;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.*;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.FUNCTION_EXECUTION_FAILED;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.FUNCTION_LOAD_FAILED;
 
 public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLocation, TCommandSourceStack, TCompoundTag> extends ClassLoader {
 
@@ -42,6 +47,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
     public final TMinecraftServer minecraftServer;
     private final Path generatedDir;
     private final HashMap<DataLocation, List<String>> sourceFiles;
+    private final DiagnosticCollector diagnostics = new DiagnosticCollector();
 
     private State state = State.NOTHING_LOADED;
     private MethodHandle resultField;
@@ -149,6 +155,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
             try {
                 registerFunction(loadedFunctions.get(key), key, params);
             }catch(Throwable e) {
+                diagnostics.addDiagnostic(new Diagnostic(DiagnosticKind.LOAD_ERROR, FUNCTION_LOAD_FAILED, "Failed to create function handle (" + key + ")", null, key, null, e));
                 LOGGER.error("Failed to create function handle ({}), clearing data", key, e);
                 setState(State.FAILED);
                 FunctionCompilerReporter.reportExceptionWithInstructions("load_function_class", e, compiledFunctions.get(key));
@@ -165,8 +172,6 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
     }
 
     public void loadFunctionClasses(IArgumentLookup lookup, CompilationParams params, Object serverFunctionManager) {
-        HashMap<DataLocation, CommandError> commandErrors = new HashMap<>();
-
         if(ALLOW_EXTERNAL_DATA_ACCESS && GENERATE_REGISTRY_FILE) {
             try {
                 Files.createDirectory(generatedDir);
@@ -181,14 +186,14 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
 
         var startParse = System.nanoTime();
         var functionSources = FunctionCodeGenerator.loadFunctionSources(sourceFiles);
-        var definedFunctions = FunctionCodeGenerator.parseFunctions(functionSources, lookup, commandErrors);
+        var definedFunctions = FunctionCodeGenerator.parseFunctions(functionSources, lookup, diagnostics);
         var parseTime = (System.nanoTime()-startParse)/1000000000d;
 
         setState(State.COMPILING);
         LOGGER.info("Compiling functions");
         var startCompile = System.nanoTime();
         var highLevelInstructionCounts = new int[2];
-        var compiledFunctions = FunctionCodeGenerator.compileFunctionsHighLevel(definedFunctions, commandErrors, highLevelInstructionCounts);
+        var compiledFunctions = FunctionCodeGenerator.compileFunctionsHighLevel(definedFunctions, diagnostics, highLevelInstructionCounts);
         var compileTime = (System.nanoTime()-startCompile)/1000000000d;
         if(DEBUG) {
             StringBuilder instructionDump = new StringBuilder();
@@ -295,7 +300,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
             totalClassFileSize[0],
             totalClassFileSize[1]
         );
-        FunctionCompilerReporter.reportCompilationStatistics(functionCountsData, timingData, codeGenMetrics, commandErrors.values());
+        FunctionCompilerReporter.reportCompilationStatistics(functionCountsData, timingData, codeGenMetrics, diagnostics.getDiagnostics());
 
         FunctionCompilerReporter.sendReports();
         if(AUTO_SWITCH_FUNCTIONS) {
@@ -348,6 +353,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
             return (long) handles.get(location).invoke(stack, compound);
         } catch (Throwable e) {
             LOGGER.error("Failed to run function ({}), disabling mcfc, report this bug to authors", location, e);
+            diagnostics.addDiagnostic(new Diagnostic(DiagnosticKind.EXECUTION_ERROR, FUNCTION_EXECUTION_FAILED, "Failed to run function (" + location + ")", null, new DataLocation(location.toString()), null, e));
             setState(State.EXECUTION_FAILED);
             return 3L << 32;
         }
@@ -361,5 +367,9 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
                 LOGGER.error("Failed to store result value: {}", value, e);
             }
         }
+    }
+
+    public List<Diagnostic> getDiagnostics() {
+        return diagnostics.getDiagnostics();
     }
 }

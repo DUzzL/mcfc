@@ -3,11 +3,15 @@ package dev.epicpix.minecraftfunctioncompiler.commands;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPath;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPathPart;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.*;
 
 public final class NbtParser {
     private NbtParser() {}
@@ -22,23 +26,27 @@ public final class NbtParser {
         return new NbtPath(List.copyOf(parts));
     }
 
+    private static DiagnosticException createError(StringCommandReader reader, String diagnosticId, String message) {
+        return new DiagnosticException(Diagnostic.parseError(diagnosticId, reader.getSource(), reader.getString(), message));
+    }
+
     public static NbtValue.Compound readNbtCompound(StringCommandReader reader) {
         reader.skipWhitespace();
-        if(!reader.canRead()) throw new CommandErrorException(new CommandError(reader.getString(), "Reached EOF while reading nbt list"));
-        if(!reader.skipIfNext('{')) throw new CommandErrorException(new CommandError(reader.getString(), "Expected '{' while reading nbt compound, but got '" + reader.peek() + "'"));
+        if(!reader.canRead()) throw createError(reader, NBT_INVALID_SYNTAX, "Reached EOF while reading nbt list");
+        if(!reader.skipIfNext('{')) throw createError(reader, NBT_INVALID_SYNTAX, "Expected '{' while reading nbt compound, but got '" + reader.peek() + "'");
         HashMap<String, NbtValue> valueMap = new HashMap<>();
         while(reader.peek() != '}') {
             reader.skipWhitespace();
             var key = reader.readString();
-            if(key.isEmpty()) throw new CommandErrorException(new CommandError(reader.getString(), "Expected a non-empty nbt compound key while reading nbt compound"));
+            if(key.isEmpty()) throw createError(reader, NBT_EMPTY_KEY, "Expected a non-empty nbt compound key while reading nbt compound");
             reader.skipWhitespace();
-            if(!reader.skipIfNext(':')) throw new CommandErrorException(new CommandError(reader.getString(), "Expected ':' while reading nbt compound, but got '" + reader.peek() + "'"));
+            if(!reader.skipIfNext(':')) throw createError(reader, NBT_INVALID_SYNTAX, "Expected ':' while reading nbt compound, but got '" + reader.peek() + "'");
             var value = readNbtValue(reader);
             valueMap.put(key, value);
             reader.skipWhitespace();
             if(!reader.skipIfNext(',')) {
                 if(reader.peek() != '}') {
-                    throw new CommandErrorException(new CommandError(reader.getString(), "Expected ',' or '}' while reading nbt compound, but got '" + reader.peek() + "'"));
+                    throw createError(reader, NBT_INVALID_SYNTAX, "Expected ',' or '}' while reading nbt compound, but got '" + reader.peek() + "'");
                 }
             }
             reader.skipWhitespace();
@@ -49,20 +57,20 @@ public final class NbtParser {
 
     public static NbtValue.Array readNbtList(StringCommandReader reader) {
         reader.skipWhitespace();
-        if(!reader.canRead()) throw new CommandErrorException(new CommandError(reader.getString(), "Reached EOF while reading nbt list"));
-        if(!reader.skipIfNext('[')) throw new CommandErrorException(new CommandError(reader.getString(), "Expected '[' while reading nbt list, but got '" + reader.peek() + "'"));
+        if(!reader.canRead()) throw createError(reader, NBT_INVALID_SYNTAX, "Reached EOF while reading nbt list");
+        if(!reader.skipIfNext('[')) throw createError(reader, NBT_INVALID_SYNTAX, "Expected '[' while reading nbt list, but got '" + reader.peek() + "'");
         ArrayList<NbtValue> valueList = new ArrayList<>();
         while(reader.peek() != ']') {
             var value = readNbtValue(reader);
             if(!valueList.isEmpty() && value.getClass() != valueList.get(0).getClass()) {
-                throw new CommandErrorException(new CommandError(reader.getString(), "Expected " + valueList.get(0).getClass().getSimpleName() + " nbt value, but got " + value.getClass().getSimpleName()));
+                throw createError(reader, NBT_MISMATCHED_TYPE, "Expected " + valueList.get(0).getClass().getSimpleName() + " nbt value, but got " + value.getClass().getSimpleName());
             }else {
                 valueList.add(value);
             }
             reader.skipWhitespace();
             if(!reader.skipIfNext(',')) {
                 if(reader.peek() != ']') {
-                    throw new CommandErrorException(new CommandError(reader.getString(), "Expected ',' or ']' while reading nbt list, but got '" + reader.peek() + "'"));
+                    throw createError(reader, NBT_INVALID_SYNTAX, "Expected ',' or ']' while reading nbt list, but got '" + reader.peek() + "'");
                 }
             }
             reader.skipWhitespace();
@@ -73,8 +81,8 @@ public final class NbtParser {
 
     private static NbtValue.ArrayKind readNbtArrayKind(StringCommandReader reader) {
         reader.skipWhitespace();
-        if(!reader.canRead()) throw new CommandErrorException(new CommandError(reader.getString(), "Reached EOF while reading nbt array kind"));
-        if(reader.peek() != '[') throw new CommandErrorException(new CommandError(reader.getString(), "Expected '[' while reading nbt array kind, but got '" + reader.peek() + "'"));
+        if(!reader.canRead()) throw createError(reader, NBT_INVALID_SYNTAX, "Reached EOF while reading nbt array kind");
+        if(reader.peek() != '[') throw createError(reader, NBT_INVALID_SYNTAX, "Expected '[' while reading nbt array kind, but got '" + reader.peek() + "'");
         if(!reader.canRead(3) || reader.peek(2) != ';') return readNbtList(reader);
         reader.skip();
         char kind = reader.read();
@@ -88,12 +96,12 @@ public final class NbtParser {
                     if(value instanceof NbtValue.ByteLiteral literal) {
                         byteList.add(literal.value());
                     }else {
-                        throw new CommandErrorException(new CommandError(reader.getString(), "Expected byte nbt value, but got " + value.getClass().getSimpleName()));
+                        throw createError(reader, NBT_MISMATCHED_TYPE, "Expected byte nbt value, but got " + value.getClass().getSimpleName());
                     }
                     reader.skipWhitespace();
                     if(!reader.skipIfNext(',')) {
                         if(reader.peek() != ']') {
-                            throw new CommandErrorException(new CommandError(reader.getString(), "Expected ',' or ']' while reading nbt byte array, but got '" + reader.peek() + "'"));
+                            throw createError(reader, NBT_INVALID_SYNTAX, "Expected ',' or ']' while reading nbt byte array, but got '" + reader.peek() + "'");
                         }
                     }
                     reader.skipWhitespace();
@@ -110,12 +118,12 @@ public final class NbtParser {
                     if(value instanceof NbtValue.IntegerLiteral literal) {
                         intList.add(literal.value());
                     }else {
-                        throw new CommandErrorException(new CommandError(reader.getString(), "Expected int nbt value, but got " + value.getClass().getSimpleName()));
+                        throw createError(reader, NBT_MISMATCHED_TYPE, "Expected int nbt value, but got " + value.getClass().getSimpleName());
                     }
                     reader.skipWhitespace();
                     if(!reader.skipIfNext(',')) {
                         if(reader.peek() != ']') {
-                            throw new CommandErrorException(new CommandError(reader.getString(), "Expected ',' or ']' while reading nbt integer array, but got '" + reader.peek() + "'"));
+                            throw createError(reader, NBT_INVALID_SYNTAX, "Expected ',' or ']' while reading nbt integer array, but got '" + reader.peek() + "'");
                         }
                     }
                     reader.skipWhitespace();
@@ -132,12 +140,12 @@ public final class NbtParser {
                     if(value instanceof NbtValue.LongLiteral literal) {
                         longList.add(literal.value());
                     }else {
-                        throw new CommandErrorException(new CommandError(reader.getString(), "Expected long nbt value, but got " + value.getClass().getSimpleName()));
+                        throw createError(reader, NBT_MISMATCHED_TYPE, "Expected long nbt value, but got " + value.getClass().getSimpleName());
                     }
                     reader.skipWhitespace();
                     if(!reader.skipIfNext(',')) {
                         if(reader.peek() != ']') {
-                            throw new CommandErrorException(new CommandError(reader.getString(), "Expected ',' or ']' while reading nbt long array, but got '" + reader.peek() + "'"));
+                            throw createError(reader, NBT_INVALID_SYNTAX, "Expected ',' or ']' while reading nbt long array, but got '" + reader.peek() + "'");
                         }
                     }
                     reader.skipWhitespace();
@@ -147,7 +155,7 @@ public final class NbtParser {
                 for(int i = 0; i<longList.size(); i++) longs[i] = longList.get(i);
                 yield new NbtValue.LongArray(longs);
             }
-            default -> throw new CommandErrorException(new CommandError(reader.getString(), "Expected 'B', 'I', or 'L' while reading nbt typed array, but got '" + reader.peek() + "'"));
+            default -> throw createError(reader, NBT_INVALID_ARRAY_TYPE, "Expected 'B', 'I', or 'L' while reading nbt typed array, but got '" + reader.peek() + "'");
         };
     }
 
@@ -213,7 +221,7 @@ public final class NbtParser {
                 return new NbtValue.StringLiteral(reader.readString());
             }
             String testCase = reader.readWord();
-            if(testCase.isEmpty()) throw new CommandErrorException(new CommandError(reader.getString(), "Empty test case for nbt value"));
+            if(testCase.isEmpty()) throw createError(reader, NBT_INVALID_SYNTAX, "Empty test case for nbt value");
             if(testCase.equalsIgnoreCase("true")) {
                 return new NbtValue.ByteLiteral((byte) 1);
             }else if(testCase.equalsIgnoreCase("false")) {
@@ -268,27 +276,27 @@ public final class NbtParser {
                 case '{' -> new NbtPathPart.CompoundCheck(readNbtCompound(reader));
                 case '[' -> {
                     reader.skip();
-                    if(!reader.canRead()) throw new CommandErrorException(new CommandError(reader.getString(), "Reached EOF while reading nbt path"));
+                    if(!reader.canRead()) throw createError(reader, NBT_INVALID_SYNTAX, "Reached EOF while reading nbt path");
                     if(reader.peek() == '{') {
                         var compound = readNbtCompound(reader);
-                        if(!reader.canRead()) throw new CommandErrorException(new CommandError(reader.getString(), "Reached EOF after compound array indexer while reading nbt path"));
-                        if(reader.read() != ']' && !reader.canRead()) throw new CommandErrorException(new CommandError(reader.getString(), "Expected ']' after compound array indexer while reading nbt path"));
+                        if(!reader.canRead()) throw createError(reader, NBT_INVALID_SYNTAX, "Reached EOF after compound array indexer while reading nbt path");
+                        if(reader.read() != ']' && !reader.canRead()) throw createError(reader, NBT_INVALID_SYNTAX, "Expected ']' after compound array indexer while reading nbt path");
                         yield new NbtPathPart.ArrayIndexCompound(compound);
                     }else {
                         int index = reader.readInt();
-                        if(reader.read() != ']' && !reader.canRead()) throw new CommandErrorException(new CommandError(reader.getString(), "Expected ']' after integer array indexer while reading nbt path"));
+                        if(reader.read() != ']' && !reader.canRead()) throw createError(reader, NBT_INVALID_SYNTAX, "Expected ']' after integer array indexer while reading nbt path");
                         yield new NbtPathPart.ArrayIndexInteger(index);
                     }
                 }
                 case '.' -> {
                     reader.skip();
-                    if(!reader.canRead()) throw new CommandErrorException(new CommandError(reader.getString(), "Reached EOF while reading nbt path, expected named accessor after '.'"));
+                    if(!reader.canRead()) throw createError(reader, NBT_INVALID_SYNTAX, "Reached EOF while reading nbt path, expected named accessor after '.'");
                     yield switch(reader.peek()) {
                         case '\"', '\'' -> new NbtPathPart.Named(reader.readString());
                         default -> new NbtPathPart.Named(reader.readNbtWord());
                     };
                 }
-                default -> throw new CommandErrorException(new CommandError(reader.getString(), "Expected '{', '[' or '.' while reading nbt path, but got '" + reader.peek() + "'"));
+                default -> throw createError(reader, NBT_INVALID_SYNTAX, "Expected '{', '[' or '.' while reading nbt path, but got '" + reader.peek() + "'");
             };
         }
     }

@@ -1,0 +1,19 @@
+package dev.epicpix.minecraftfunctioncompiler.diagnostics;
+
+public class DiagnosticException extends RuntimeException {
+    private final Diagnostic diagnostic;
+
+    public DiagnosticException(Diagnostic diagnostic) {
+        super(null, diagnostic.cause());
+        this.diagnostic = diagnostic;
+    }
+
+    @Override
+    public String getMessage() {
+        return diagnostic.message();
+    }
+
+    public Diagnostic toDiagnostic() {
+        return new Diagnostic(diagnostic.kind(), diagnostic.diagnosticId(), diagnostic.message(), diagnostic.extra(), diagnostic.source(), diagnostic.location(), this);
+    }
+}

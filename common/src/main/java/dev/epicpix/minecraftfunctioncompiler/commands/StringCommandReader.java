@@ -7,25 +7,43 @@ import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidator;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidators;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.*;
+
 public class StringCommandReader {
     private static final Gson GSON = new Gson();
 
     private final String command;
+    private final DataLocation source;
     private final boolean allowMacros;
     private int index;
 
-    public StringCommandReader(String command, boolean allowMacros) {
+    public StringCommandReader(String command, DataLocation source, boolean allowMacros) {
         this.command = command;
+        this.source = source;
         this.allowMacros = allowMacros;
     }
 
+    private DiagnosticException createError(String diagnosticId, String message) {
+        return new DiagnosticException(Diagnostic.parseError(diagnosticId, source, command, message));
+    }
+
+    private DiagnosticException createError(String diagnosticId, String message, Throwable cause) {
+        return new DiagnosticException(Diagnostic.parseError(diagnosticId, source, command, message, cause));
+    }
+
     public String getString() {
-        return command;
+        return (allowMacros ? "$" : "") + command;
+    }
+
+    public DataLocation getSource() {
+        return source;
     }
 
     public int getIndex() {
@@ -49,8 +67,8 @@ public class StringCommandReader {
     }
 
     public boolean checkMacro(boolean wantMacro) {
-        if(!wantMacro && isMacro()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.UNSUPPORTED_MACRO_LOCATION);
-        if(wantMacro && !isMacro()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.NOT_MACRO);
+        if(!wantMacro && isMacro()) throw createError(COMMAND_UNSUPPORTED_MACRO_LOCATION, "Macros are not supported in this location");
+        if(wantMacro && !isMacro()) throw createError(COMMAND_EXPECTED_MACRO, "Expected a macro in this location");
         return true;
     }
 
@@ -89,7 +107,7 @@ public class StringCommandReader {
                 break;
             }
         }
-        throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_MACRO_NAME);
+        throw createError(COMMAND_INVALID_MACRO_NAME, "Invalid macro name");
     }
 
     public MacroTemplate.MacroPart readMacroChar(List<MacroValidator> validators) {
@@ -202,7 +220,7 @@ public class StringCommandReader {
                     continue;
                 }else if(escaping) {
                     if(!ignoreInvalidEscapeSequences && c != quoteChar && c != '\\') {
-                        throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_STRING_QUOTE);
+                        throw createError(COMMAND_INVALID_STRING_QUOTE, "Expected string quote (" + quoteChar + ") in escape sequence, but got '" + c + "'");
                     }
                 }
                 builder.append(c);
@@ -247,7 +265,7 @@ public class StringCommandReader {
         }else if(str.equalsIgnoreCase("false")) {
             return false;
         }else {
-            throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_BOOLEAN);
+            throw createError(COMMAND_INVALID_BOOLEAN, "Invalid boolean");
         }
     }
 
@@ -255,7 +273,7 @@ public class StringCommandReader {
         try {
             return Integer.parseInt(readNumberBase());
         }catch(NumberFormatException e) {
-            throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_INTEGER);
+            throw createError(COMMAND_INVALID_INTEGER, "Invalid integer");
         }
     }
 
@@ -263,7 +281,7 @@ public class StringCommandReader {
         try {
             return Float.parseFloat(readNumberBase());
         }catch(NumberFormatException e) {
-            throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_FLOAT);
+            throw createError(COMMAND_INVALID_FLOAT, "Invalid float");
         }
     }
 
@@ -271,7 +289,7 @@ public class StringCommandReader {
         try {
             return Double.parseDouble(str);
         }catch(NumberFormatException e) {
-            throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_DOUBLE);
+            throw createError(COMMAND_INVALID_DOUBLE, "Invalid double");
         }
     }
 
@@ -286,7 +304,7 @@ public class StringCommandReader {
             try {
                 min = Double.parseDouble(base1);
             }catch(NumberFormatException e) {
-                throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_DOUBLE);
+                throw createError(COMMAND_INVALID_DOUBLE, "Invalid double");
             }
         }
         if(canRead(2) && peek() == '.' && peek(1) == '.') {
@@ -298,14 +316,14 @@ public class StringCommandReader {
                 try {
                     max = Double.parseDouble(base2);
                     if(min != null && min > max) {
-                        throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_RANGE);
+                        throw createError(COMMAND_INVALID_RANGE, "Invalid range, the minimum is bigger than than maximum");
                     }
                 }catch(NumberFormatException e) {
-                    throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_DOUBLE);
+                    throw createError(COMMAND_INVALID_DOUBLE, "Invalid double");
                 }
             }else {
                 if(min == null) {
-                    throw new StringCommandReaderException(this, StringCommandReaderExceptionType.NO_RANGE);
+                    throw createError(COMMAND_MISSING_RANGE, "Missing range");
                 }
             }
             return new DoubleRangeArgument(min, max);
@@ -321,7 +339,7 @@ public class StringCommandReader {
             try {
                 min = Float.parseFloat(base1);
             }catch(NumberFormatException e) {
-                throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_FLOAT);
+                throw createError(COMMAND_INVALID_FLOAT, "Invalid float");
             }
         }
         if(canRead(2) && peek() == '.' && peek(1) == '.') {
@@ -333,14 +351,14 @@ public class StringCommandReader {
                 try {
                     max = Float.parseFloat(base2);
                     if(min != null && min > max) {
-                        throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_RANGE);
+                        throw createError(COMMAND_INVALID_RANGE, "Invalid range, the minimum is bigger than than maximum");
                     }
                 }catch(NumberFormatException e) {
-                    throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_FLOAT);
+                    throw createError(COMMAND_INVALID_FLOAT, "Invalid float");
                 }
             }else {
                 if(min == null) {
-                    throw new StringCommandReaderException(this, StringCommandReaderExceptionType.NO_RANGE);
+                    throw createError(COMMAND_MISSING_RANGE, "Missing range");
                 }
             }
             return new FloatRangeArgument(min, max);
@@ -356,7 +374,7 @@ public class StringCommandReader {
             try {
                 min = Integer.parseInt(base1);
             }catch(NumberFormatException e) {
-                throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_INTEGER);
+                throw createError(COMMAND_INVALID_INTEGER, "Invalid integer");
             }
         }
         if(canRead(2) && peek() == '.' && peek(1) == '.') {
@@ -368,14 +386,14 @@ public class StringCommandReader {
                 try {
                     max = Integer.parseInt(base2);
                     if(min != null && min > max) {
-                        throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_RANGE);
+                        throw createError(COMMAND_INVALID_RANGE, "Invalid range, the minimum is bigger than than maximum");
                     }
                 }catch(NumberFormatException e) {
-                    throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_INTEGER);
+                    throw createError(COMMAND_INVALID_INTEGER, "Invalid integer");
                 }
             }else {
                 if(min == null) {
-                    throw new StringCommandReaderException(this, StringCommandReaderExceptionType.NO_RANGE);
+                    throw createError(COMMAND_MISSING_RANGE, "Missing range");
                 }
             }
             return new IntRangeArgument(min, max);
@@ -399,8 +417,8 @@ public class StringCommandReader {
         }
         String namespace = content.split(":", 2)[0];
         String path = content.split(":", 2)[1];
-        if(namespace.contains("/")) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_DATA_LOCATION);
-        if(path.contains(":")) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_DATA_LOCATION);
+        if(namespace.contains("/")) throw createError(COMMAND_INVALID_DATA_LOCATION, "Invalid location namespace");
+        if(path.contains(":")) throw createError(COMMAND_INVALID_DATA_LOCATION, "Invalid location path");
         return new DataLocation(namespace, path);
     }
 
@@ -411,13 +429,13 @@ public class StringCommandReader {
         while(canRead() && peek() != ' ') {
             char c = read();
             if(c == 'x') {
-                if(x) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_SWIZZLE);
+                if(x) throw createError(COMMAND_INVALID_SWIZZLE, "Invalid swizzle, 'x' can only be written once");
                 x = true;
             }else if(c == 'y') {
-                if(y) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_SWIZZLE);
+                if(y) throw createError(COMMAND_INVALID_SWIZZLE, "Invalid swizzle, 'y' can only be written once");
                 y = true;
             }else if(c == 'z') {
-                if(z) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_SWIZZLE);
+                if(z) throw createError(COMMAND_INVALID_SWIZZLE, "Invalid swizzle, 'z' can only be written once");
                 z = true;
             }
         }
@@ -426,15 +444,15 @@ public class StringCommandReader {
 
     public WorldCoordinates readVec3() {
         if(peek() == '^') {
-            if(!skipIfNext('^')) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_VEC3_LOCAL);
+            if(!skipIfNext('^')) throw createError(COMMAND_INVALID_VEC3_LOCAL, "Invalid vec3, expected ^ for local coordinates");
             String x = readNumberBase();
             if(x.isEmpty()) x = "0";
-            if(!skipArgumentWhitespace()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_VEC3_LOCAL);
-            if(!skipIfNext('^')) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_VEC3_LOCAL);
+            if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_VEC3_LOCAL, "Invalid vec3, expected space for next argument");
+            if(!skipIfNext('^')) throw createError(COMMAND_INVALID_VEC3_LOCAL, "Invalid vec3, expected ^ for local coordinates");
             String y = readNumberBase();
             if(y.isEmpty()) y = "0";
-            if(!skipArgumentWhitespace()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_VEC3_LOCAL);
-            if(!skipIfNext('^')) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_VEC3_LOCAL);
+            if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_VEC3_LOCAL, "Invalid vec3, expected space for next argument");
+            if(!skipIfNext('^')) throw createError(COMMAND_INVALID_VEC3_LOCAL, "Invalid vec3, expected ^ for local coordinates");
             String z = readNumberBase();
             if(z.isEmpty()) z = "0";
             return new WorldCoordinates(parseDouble(x), true, parseDouble(y), true, parseDouble(z), true, true);
@@ -443,12 +461,12 @@ public class StringCommandReader {
         String x = readNumberBase();
         if(!relativeX && !x.contains(".")) x += ".5";
         else if(relativeX && x.isEmpty()) x = "0";
-        if(!skipArgumentWhitespace()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_VEC3);
+        if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_VEC3, "Invalid vec3, expected space for next argument");
         boolean relativeY = skipIfNext('~');
         String y = readNumberBase();
         if(!relativeY && !y.contains(".")) y += ".5";
         else if(relativeY && y.isEmpty()) y = "0";
-        if(!skipArgumentWhitespace()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_VEC3);
+        if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_VEC3, "Invalid vec3, expected space for next argument");
         boolean relativeZ = skipIfNext('~');
         String z = readNumberBase();
         if(!relativeZ && !z.contains(".")) z += ".5";
@@ -461,7 +479,7 @@ public class StringCommandReader {
         String yaw = readNumberBase();
         if(!relativeYaw && !yaw.contains(".")) yaw += ".5";
         else if(relativeYaw && yaw.isEmpty()) yaw = "0";
-        if(!skipArgumentWhitespace()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_ROTATION);
+        if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_ROTATION, "Invalid rotation, expected space for next argument");
         boolean relativePitch = skipIfNext('~');
         String pitch = readNumberBase();
         if(!relativePitch && !pitch.contains(".")) pitch += ".5";
@@ -476,7 +494,7 @@ public class StringCommandReader {
             case "survival" -> Gamemode.SURVIVAL;
             case "adventure" -> Gamemode.ADVENTURE;
             case "spectator" -> Gamemode.SPECTATOR;
-            default -> throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_GAMEMODE);
+            default -> throw createError(COMMAND_INVALID_GAMEMODE, "Invalid gamemode: " + gamemode);
         };
     }
 
@@ -494,7 +512,7 @@ public class StringCommandReader {
             case "=" -> ScoreboardCompareOperation.EQ;
             case "<" -> ScoreboardCompareOperation.LT;
             case "<=" -> ScoreboardCompareOperation.LE;
-            default -> throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_SCOREBOARD_COMPARE_OPERATION);
+            default -> throw createError(COMMAND_INVALID_SCOREBOARD_COMPARE_OPERATION, "Invalid scoreboard compare operation: " + str);
         };
     }
 
@@ -510,7 +528,7 @@ public class StringCommandReader {
             case "<" -> ScoreboardOperation.MIN;
             case ">" -> ScoreboardOperation.MAX;
             case "><" -> ScoreboardOperation.SWAP;
-            default -> throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_SCOREBOARD_OPERATION);
+            default -> throw createError(COMMAND_INVALID_SCOREBOARD_OPERATION, "Invalid scoreboard operation: " + str);
         };
     }
 
@@ -518,7 +536,7 @@ public class StringCommandReader {
         DataLocation location = readDataLocation();
         AttributeData attribute = DataRegistries.ATTRIBUTE.get(location);
         if(attribute == null) {
-            throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_ATTRIBUTE);
+            throw createError(COMMAND_INVALID_ATTRIBUTE, "Unknown attribute: " + location);
         }
         return attribute;
     }
@@ -530,7 +548,7 @@ public class StringCommandReader {
             case "", "t" -> {}
             case "s" -> length *= 20;
             case "d" -> length *= 24000;
-            default -> throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_TIME_KIND);
+            default -> throw createError(COMMAND_INVALID_TIME_KIND, "Invalid time unit: " + unit);
         }
         return Math.round(length);
     }
@@ -542,7 +560,7 @@ public class StringCommandReader {
             case "easy" -> Difficulty.EASY;
             case "normal" -> Difficulty.NORMAL;
             case "hard" -> Difficulty.HARD;
-            default -> throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_DIFFICULTY);
+            default -> throw createError(COMMAND_INVALID_DIFFICULTY, "Invalid difficulty: " + str);
         };
     }
 
@@ -550,7 +568,7 @@ public class StringCommandReader {
         DataLocation location = readDataLocation();
         MobEffectData attribute = DataRegistries.MOB_EFFECT.get(location);
         if(attribute == null) {
-            throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_MOB_EFFECT);
+            throw createError(COMMAND_INVALID_MOB_EFFECT, "Unknown effect: " + location);
         }
         return attribute;
     }
@@ -564,7 +582,7 @@ public class StringCommandReader {
             case "int" -> ResultStoreType.INT;
             case "long" -> ResultStoreType.LONG;
             case "short" -> ResultStoreType.SHORT;
-            default -> throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_RESULT_STORE_TYPE);
+            default -> throw createError(COMMAND_INVALID_RESULT_STORE_TYPE, "Invalid result store type: " + str);
         };
     }
 
@@ -575,7 +593,7 @@ public class StringCommandReader {
             case "furthest" -> SelectorSort.FURTHEST;
             case "nearest" -> SelectorSort.NEAREST;
             case "random" -> SelectorSort.RANDOM;
-            default -> throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_SELECTOR_SORT);
+            default -> throw createError(COMMAND_INVALID_SELECTOR_SORT, "Invalid sort: " + str);
         };
     }
 
@@ -584,7 +602,7 @@ public class StringCommandReader {
         return switch (str) {
             case "eyes" -> LocationAnchor.EYES;
             case "feet" -> LocationAnchor.FEET;
-            default -> throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_LOCATION_ANCHOR);
+            default -> throw createError(COMMAND_INVALID_LOCATION_ANCHOR, "Invalid location anchor: " + str);
         };
     }
 
@@ -643,20 +661,20 @@ public class StringCommandReader {
     }
 
     public JsonElement readJson() {
-        if(allowMacros) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.UNSUPPORTED_MACRO_LOCATION);
+        if(allowMacros) throw createError(COMMAND_UNSUPPORTED_MACRO_LOCATION, "Macro commands are not supported for json arguments");
         int length = estimateJsonLength();
         String jsonString = command.substring(index, index + length);
         index += length;
         try {
             return GSON.fromJson(jsonString, JsonElement.class);
         }catch(JsonSyntaxException e) {
-            throw new CommandErrorException(new CommandError(command, "Tried to parse JSON, but failed", CommandError.Step.PARSE, e));
+            throw createError(COMMAND_INVALID_JSON, "Tried to parse JSON, but failed", e);
         }
     }
 
     public ScoreAccessorArgument readScoreAccessor() {
         ScoreHolderArgument scoreHolder = SelectorParser.parseScoreHolder(this);
-        if(!skipArgumentWhitespace()) throw new StringCommandReaderException(this, StringCommandReaderExceptionType.INVALID_SCORE_ACCESSOR);
+        if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_SCORE_ACCESSOR, "Invalid score accessor, expected space for next argument");
         String objective = readWord();
         return new ScoreAccessorArgument(objective, scoreHolder);
     }

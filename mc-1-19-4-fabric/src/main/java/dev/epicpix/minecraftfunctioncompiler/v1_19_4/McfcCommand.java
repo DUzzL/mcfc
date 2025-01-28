@@ -8,6 +8,10 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.item.FunctionArgument;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.Style;
+
+import java.util.Locale;
 
 import static net.minecraft.server.commands.FunctionCommand.SUGGEST_FUNCTION;
 
@@ -53,6 +57,32 @@ public class McfcCommand {
                     context.getSource().sendSuccess(Component.literal("Compiled Function Count: ").withStyle(ChatFormatting.GREEN).append(Component.literal(Integer.toString(loader.loadedFunctionCount())).withStyle(ChatFormatting.GOLD)), false);
                     context.getSource().sendSuccess(Component.literal("Total Function Count: ").withStyle(ChatFormatting.GREEN).append(Component.literal(Integer.toString(loader.totalFunctionCount())).withStyle(ChatFormatting.GOLD)), false);
                     return loader.getState().ordinal();
+                }))
+                .then(Commands.literal("show_diagnostics").executes(context -> {
+                    var loader = FunctionCompilerMain.functionClassLoader;
+                    if(loader == null) {
+                        context.getSource().sendFailure(Component.literal("Function Compiler is not loaded"));
+                        return 0;
+                    }
+                    var diagnostics = loader.getDiagnostics();
+                    context.getSource().sendSuccess(Component.literal("Total diagnostics: ").withStyle(ChatFormatting.GREEN).append(Component.literal(CompileConstants.versionName).withStyle(ChatFormatting.GOLD)), false);
+                    for(var diagnostic : diagnostics) {
+                        var tooltip = Component.empty();
+                        tooltip.append(Component.literal("Id: ").withStyle(ChatFormatting.GREEN));
+                        tooltip.append(Component.literal(diagnostic.diagnosticId()).withStyle(ChatFormatting.GOLD));
+                        tooltip.append(Component.literal("\nKind: ").withStyle(ChatFormatting.GREEN));
+                        tooltip.append(Component.literal(diagnostic.kind().toString().toLowerCase(Locale.ROOT)).withStyle(ChatFormatting.GOLD));
+                        tooltip.append(Component.literal("\nSeverity: ").withStyle(ChatFormatting.GREEN));
+                        tooltip.append(Component.literal(diagnostic.severity().toString().toLowerCase(Locale.ROOT)).withStyle(ChatFormatting.GOLD));
+                        tooltip.append(Component.literal("\nSource: ").withStyle(ChatFormatting.GREEN));
+                        tooltip.append(Component.literal(diagnostic.source().toString()).withStyle(ChatFormatting.GOLD));
+                        tooltip.append(Component.literal("\nMessage: ").withStyle(ChatFormatting.GREEN));
+                        tooltip.append(Component.literal(diagnostic.message()).withStyle(ChatFormatting.GOLD));
+                        tooltip.append(Component.literal("\nExtra: ").withStyle(ChatFormatting.GREEN));
+                        tooltip.append(Component.literal(diagnostic.extra()).withStyle(ChatFormatting.GOLD));
+                        context.getSource().sendSuccess(Component.literal(diagnostic.kind() + " - " + diagnostic.source()).withStyle(Style.EMPTY.applyFormat(ChatFormatting.GREEN).withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, tooltip))), false);
+                    }
+                    return diagnostics.size();
                 }))
                 .then(Commands.literal("is_compiled").then(Commands.argument("function", FunctionArgument.functions()).suggests(SUGGEST_FUNCTION).executes(context -> {
                     var loader = FunctionCompilerMain.functionClassLoader;

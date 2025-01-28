@@ -6,6 +6,9 @@ import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidator;
 import dev.epicpix.minecraftfunctioncompiler.compiler.CommandCompiler;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticCollector;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.*;
@@ -18,6 +21,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.UNSPECIFIED_COMMAND_ERROR;
 
 public class FunctionCodeGenerator {
 
@@ -46,7 +51,7 @@ public class FunctionCodeGenerator {
         return readFunctions;
     }
 
-    public static HashMap<DataLocation, List<CommandParams>> parseFunctions(HashMap<DataLocation, List<String>> functionSources, IArgumentLookup lookup, HashMap<DataLocation, CommandError> commandErrors) {
+    public static HashMap<DataLocation, List<CommandParams>> parseFunctions(HashMap<DataLocation, List<String>> functionSources, IArgumentLookup lookup, DiagnosticCollector diagnostics) {
         HashMap<DataLocation, List<CommandParams>> definedFunctions = new HashMap<>();
         for(var entry : functionSources.entrySet()) {
             var key = entry.getKey();
@@ -57,43 +62,40 @@ public class FunctionCodeGenerator {
                 for(String value : values) {
                     currentCommand = value;
                     if(MinecraftVersion.isCurrentVersionInRange(MinecraftVersion.MC_1_20_2, null) && currentCommand.startsWith("$")) {
-                        parsed.add(CommandParser.parseCommand(currentCommand.substring(1), true, lookup));
+                        parsed.add(CommandParser.parseCommand(currentCommand.substring(1), key, true, lookup));
                     }else {
-                        parsed.add(CommandParser.parseCommand(currentCommand, false, lookup));
+                        parsed.add(CommandParser.parseCommand(currentCommand, key, false, lookup));
                     }
                 }
                 definedFunctions.put(key, parsed);
-            } catch (CommandErrorException e) {
-                LOGGER.warn("Unable to parse function {} / {}", key, e.getMessage());
-                commandErrors.put(key, e.error);
-            } catch (StringCommandReaderException e) {
+            } catch (DiagnosticException e) {
                 LOGGER.warn("Unable to parse function {} / {} / {}", key, e.getMessage(), currentCommand);
-                commandErrors.put(key, new CommandError(currentCommand, e.getMessage()));
+                diagnostics.addDiagnostic(e.toDiagnostic());
             } catch (Throwable e) {
                 LOGGER.error("Unable to parse function {}", key, e);
-                commandErrors.put(key, new CommandError(currentCommand, e.getMessage(), CommandError.Step.PARSE, e));
+                diagnostics.addDiagnostic(Diagnostic.parseError(UNSPECIFIED_COMMAND_ERROR, key, currentCommand, e.getMessage(), e));
             }
         }
         return definedFunctions;
     }
 
-    public static HashMap<DataLocation, List<Instruction>> compileFunctionsHighLevel(HashMap<DataLocation, List<CommandParams>> definedFunctions, HashMap<DataLocation, CommandError> commandErrors, int[] instructionCounts) {
+    public static HashMap<DataLocation, List<Instruction>> compileFunctionsHighLevel(HashMap<DataLocation, List<CommandParams>> definedFunctions, DiagnosticCollector diagnostics, int[] instructionCounts) {
         HashMap<DataLocation, List<Instruction>> compiledFunctions = new HashMap<>();
         for(var func : definedFunctions.entrySet()) {
             var key = func.getKey();
             var value = func.getValue();
             try {
-                var compiled = CommandCompiler.compile(value);
+                var compiled = CommandCompiler.compile(key, value);
                 if(instructionCounts != null) instructionCounts[0] += compiled.size();
                 var optimized = Optimizer.optimize(compiled);
                 if(instructionCounts != null) instructionCounts[1] += optimized.size();
                 compiledFunctions.put(key, Instructions2.addStaticRequirements(optimized));
-            }catch(UnsupportedOperationException e) {
+            }catch(DiagnosticException e) {
                 LOGGER.warn("Failed to compile function {} / {}", key, e.getMessage());
-                commandErrors.put(key, new CommandError(e.getMessage()));
+                diagnostics.addDiagnostic(e.toDiagnostic());
             }catch(Throwable e) {
                 LOGGER.error("Failed to compile function {}", key, e);
-                commandErrors.put(key, new CommandError(null, e.getMessage(), CommandError.Step.COMPILE, e));
+                diagnostics.addDiagnostic(Diagnostic.compileError(UNSPECIFIED_COMMAND_ERROR, key, e.getMessage(), e));
             }
         }
         return compiledFunctions;
