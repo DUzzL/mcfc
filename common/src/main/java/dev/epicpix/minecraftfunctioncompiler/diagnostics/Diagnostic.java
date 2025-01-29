@@ -23,4 +23,8 @@ public record Diagnostic(DiagnosticKind kind, String diagnosticId, String messag
         return new Diagnostic(DiagnosticKind.COMPILE_ERROR, diagnosticId, errorMessage, null, source, null, cause);
     }
 
+    public static Diagnostic emitterError(String diagnosticId, DataLocation source, String errorMessage) {
+        return new Diagnostic(DiagnosticKind.EMITTER_ERROR, diagnosticId, errorMessage, null, source, null, null);
+    }
+
 }

@@ -5,6 +5,7 @@ public enum DiagnosticKind {
     HINT(DiagnosticSeverity.HINT),
     PARSE_ERROR(DiagnosticSeverity.ERROR),
     COMPILE_ERROR(DiagnosticSeverity.ERROR),
+    EMITTER_ERROR(DiagnosticSeverity.FATAL),
     LOAD_ERROR(DiagnosticSeverity.FATAL),
     EXECUTION_ERROR(DiagnosticSeverity.FATAL),
     ;

@@ -8,6 +8,7 @@ import dev.epicpix.minecraftfunctioncompiler.commands.*;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticCollector;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticKind;
 import dev.epicpix.minecraftfunctioncompiler.emitter.GraphGenerator;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.*;
@@ -30,8 +31,7 @@ import java.nio.file.Path;
 import java.util.*;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.*;
-import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.FUNCTION_EXECUTION_FAILED;
-import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.FUNCTION_LOAD_FAILED;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.*;
 
 public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLocation, TCommandSourceStack, TCompoundTag> extends ClassLoader {
 
@@ -126,6 +126,10 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
         backgroundThread = new Thread(run);
         backgroundThread.setName("Function Compiler");
         backgroundThread.setUncaughtExceptionHandler((t, e) -> {
+            if(e instanceof DiagnosticException de) {
+                diagnostics.addDiagnostic(de.toDiagnostic());
+            }
+            diagnostics.addDiagnostic(new Diagnostic(DiagnosticKind.EXECUTION_ERROR, COMPILER_UNCAUGHT_EXCEPTION, "Uncaught exception caught in compilation thread", null, null, null, e));
             setState(State.FAILED);
             LOGGER.error("Compiler Thread threw an uncaught exception", e);
         });
@@ -140,6 +144,10 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
             try {
                 loadedFunctions.put(key, defineFunction(params, key, compiledFunctions.get(key), definedFunctions.get(key).size(), compiledFunctionSet, lowLevelFunctions, totalClassFileSize));
             }catch(Throwable e) {
+                if(e instanceof DiagnosticException de) {
+                    diagnostics.addDiagnostic(de.toDiagnostic());
+                }
+                diagnostics.addDiagnostic(new Diagnostic(DiagnosticKind.LOAD_ERROR, FUNCTION_CLASS_LOAD_FAILED, "Failed to load function (" + key + ")", null, key, null, e));
                 LOGGER.error("Failed to load function ({}), skipping function compilation", key, e);
                 setState(State.FAILED);
                 FunctionCompilerReporter.reportExceptionWithCommands("define_function", e, functionSources.get(key));
@@ -155,6 +163,9 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
             try {
                 registerFunction(loadedFunctions.get(key), key, params);
             }catch(Throwable e) {
+                if(e instanceof DiagnosticException de) {
+                    diagnostics.addDiagnostic(de.toDiagnostic());
+                }
                 diagnostics.addDiagnostic(new Diagnostic(DiagnosticKind.LOAD_ERROR, FUNCTION_LOAD_FAILED, "Failed to create function handle (" + key + ")", null, key, null, e));
                 LOGGER.error("Failed to create function handle ({}), clearing data", key, e);
                 setState(State.FAILED);
@@ -237,6 +248,9 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
             var dataClass = loadData(params.codeFieldStorage(), serverFunctionManager, lowLevelFunctions, totalClassFileSize);
             resultField = MethodHandles.lookup().findStaticSetter(dataClass, RUN_RESULT_FIELD, long.class);
         }catch(Throwable e) {
+            if(e instanceof DiagnosticException de) {
+                diagnostics.addDiagnostic(de.toDiagnostic());
+            }
             LOGGER.error("Failed to load data", e);
             setState(State.FAILED);
             FunctionCompilerReporter.reportException("define_data_class", e, new JsonObject());

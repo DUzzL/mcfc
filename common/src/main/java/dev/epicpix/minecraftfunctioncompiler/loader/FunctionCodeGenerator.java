@@ -161,13 +161,13 @@ public class FunctionCodeGenerator {
         Map<String, BytecodeValue> staticArguments = Map.of("CommandSourceStack", staticCommandSourceStack, "FunctionCompound", staticFunctionCompound);
         EmitterContext entryContext;
         if(macroInstructions.isEmpty()) {
-            entryContext = new EmitterContext(params.codeFieldStorage(), entryWriter, compiledFunctions, new HashMap<>(staticArguments), null, instructions);
+            entryContext = new EmitterContext(funcId, params.codeFieldStorage(), entryWriter, compiledFunctions, new HashMap<>(staticArguments), null, instructions);
             entryContext.emitForEach();
             entryWriter.returnValue(new BytecodeValue.LongValue(0x2L << 32));
         }else {
             var returnValue = entryWriter.createRegister();
             var instr = List.of(Instructions.callFunctions(List.of(funcId), LocationData.ofLocal(-1), LocationData.ofLocal(-2), LocationData.ofLocal(-3)));
-            entryContext = new EmitterContext(params.codeFieldStorage(), entryWriter, Collections.emptySet(), new HashMap<>(staticArguments), null, instr);
+            entryContext = new EmitterContext(funcId, params.codeFieldStorage(), entryWriter, Collections.emptySet(), new HashMap<>(staticArguments), null, instr);
             entryContext.setTransform(-1, staticCommandSourceStack);
             entryContext.setTransform(-2, staticFunctionCompound);
             entryContext.setTransform(-3, returnValue);
@@ -197,7 +197,7 @@ public class FunctionCodeGenerator {
                 writer.setValue(macroRegister, new BytecodeValue.Parameter(i, Type.getType(String.class)));
                 i++;
             }
-            new EmitterContext(params.codeFieldStorage(), writer, compiledFunctions, new HashMap<>(Map.of("CommandSourceStack", staticCommandSourceStack2)), macroLocations, instructions).emitForEach();
+            new EmitterContext(funcId, params.codeFieldStorage(), writer, compiledFunctions, new HashMap<>(Map.of("CommandSourceStack", staticCommandSourceStack2)), macroLocations, instructions).emitForEach();
 
             writer.returnValue(new BytecodeValue.LongValue(0x2L << 32));
 

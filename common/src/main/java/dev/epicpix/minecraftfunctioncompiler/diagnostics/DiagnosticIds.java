@@ -42,6 +42,7 @@ public final class DiagnosticIds {
     public static final String SELECTOR_UNKNOWN_OPTION = "selector.error.option.unknown";
     public static final String SELECTOR_OPTION_CANNOT_REPEAT = "selector.error.option.cannot_repeat";
     public static final String SELECTOR_OPTION_INVALID = "selector.error.option.invalid";
+    public static final String SELECTOR_INVALID_ENTITY = "selector.error.option.type.invalid";
 
     public static final String NBT_INVALID_SYNTAX = "nbt.error.invalid.syntax";
     public static final String NBT_EMPTY_KEY = "nbt.error.empty_key";
@@ -57,13 +58,28 @@ public final class DiagnosticIds {
     public static final String COMMAND_COMPILE_UNKNOWN_COMMAND = "command.compile.unknown_command";
     public static final String COMMAND_COMPILE_UNSUPPORTED_STORE = "command.compile.unsupported_store";
     public static final String COMMAND_COMPILE_UNSUPPORTED_NBT_ACCESS = "command.compile.unsupported_nbt_access";
+    public static final String COMMAND_COMPILE_UNREACHABLE_CODE = "command.compile.unreachable_code";
+    public static final String COMMAND_COMPILE_UNEXPECTED_CONTEXT_END = "command.compile.unexpected_context_end";
+    public static final String COMMAND_COMPILE_EXPECTED_RESULT = "command.compile.result_storage.expected.result";
+    public static final String COMMAND_COMPILE_EXPECTED_SUCCESS = "command.compile.result_storage.expected.success";
 
 
 
+    public static final String EMITTER_INVALID_LOAD_LOCATION = "emitter.high_level.error.invalid.location.load";
+    public static final String EMITTER_INVALID_STORE_LOCATION = "emitter.high_level.error.invalid.location.store";
+    public static final String EMITTER_NOT_REGISTERED_INSTRUCTION = "emitter.high_level.error.missing_instruction_emitter";
+
+
+
+    public static final String FUNCTION_CLASS_LOAD_FAILED = "function.load.failed.class";
     public static final String FUNCTION_LOAD_FAILED = "function.load.failed";
 
 
 
     public static final String FUNCTION_EXECUTION_FAILED = "function.execute.failed";
+
+
+
+    public static final String COMPILER_UNCAUGHT_EXCEPTION = "compiler.uncaught_exception";
 
 }

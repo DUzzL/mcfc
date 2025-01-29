@@ -22,7 +22,7 @@ public final class CommandCompiler {
         for(var command : commands) {
             var commandLabel = context.current().writeLabel(context.instructionWriter);
             try(var ignored = context.enterWithoutValue(context.current().withContextLabel(commandLabel))) {
-                compile(context, null, command, ResultStorage.empty());
+                compile(context, null, command, ResultStorage.empty(source));
             }
         }
         return context.end();

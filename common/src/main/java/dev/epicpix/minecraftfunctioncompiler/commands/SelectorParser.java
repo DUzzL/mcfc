@@ -173,7 +173,7 @@ public final class SelectorParser {
                 if(types == null) types = List.of();
             }
             for(var it : types) {
-                if(DataRegistries.ENTITY_TYPE.get(it) == null) throw new UnsupportedOperationException("Unsupported entity type: " + it);
+                if(DataRegistries.ENTITY_TYPE.get(it) == null) throwError(reader, SELECTOR_INVALID_ENTITY, "Unsupported entity type: " + it);
             }
             data.entityTypes = new NegatableData<>(types, negated);
         });

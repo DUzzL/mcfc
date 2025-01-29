@@ -1,11 +1,15 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter;
 
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2;
 import dev.epicpix.minecraftfunctioncompiler.il.Instructions2;
 import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 
 import java.util.ArrayList;
 import java.util.function.Function;
+
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.EMITTER_NOT_REGISTERED_INSTRUCTION;
 
 public final class EmitterInstructions {
     private EmitterInstructions() {}
@@ -26,7 +30,7 @@ public final class EmitterInstructions {
                 return;
             }
         }
-        throw new IllegalArgumentException("Failed to write instruction for type: " + context.instruction().type());
+        throw new DiagnosticException(Diagnostic.emitterError(EMITTER_NOT_REGISTERED_INSTRUCTION, context.location(), "Failed to write instruction for type: " + context.instruction().type()));
     }
 
 }

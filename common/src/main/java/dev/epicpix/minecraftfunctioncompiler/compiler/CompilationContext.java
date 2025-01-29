@@ -3,10 +3,15 @@ package dev.epicpix.minecraftfunctioncompiler.compiler;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
 import java.util.*;
+
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_COMPILE_UNEXPECTED_CONTEXT_END;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_COMPILE_UNREACHABLE_CODE;
 
 public class CompilationContext {
 
@@ -60,7 +65,7 @@ public class CompilationContext {
         if(stack.size() == 1) {
             return instructionWriter.getInstructions();
         }else {
-            throw new IllegalStateException("end() called while not at root context");
+            throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNEXPECTED_CONTEXT_END, source, "end() called while not at root context"));
         }
     }
 
@@ -90,11 +95,17 @@ public class CompilationContext {
     }
 
     public ResultStorage withResultStorage(boolean requireResultValue, boolean requireSuccessValue) {
-        if(requireResultValue == requireSuccessValue) throw new UnsupportedOperationException("calling withResultStorage() with requireResultValue == requireSuccessValue is not supported");
-        var loc = this.<Integer>createLocal();
-        var res = requireResultValue ? ResultStorage.withResult(loc) : ResultStorage.withSuccess(loc);
-        writeInstruction(Instructions2.valueDefine(loc, LocationData.ofInteger(0)));
-        return res;
+        LocationData<Integer> rValue = null;
+        if(requireResultValue) {
+            rValue = this.createLocal();
+            writeInstruction(Instructions2.valueDefine(rValue, LocationData.ofInteger(0)));
+        }
+        LocationData<Integer> sValue = null;
+        if(requireSuccessValue) {
+            sValue = this.createLocal();
+            writeInstruction(Instructions2.valueDefine(sValue, LocationData.ofInteger(0)));
+        }
+        return new ResultStorage(source, rValue, sValue);
     }
 
     public CompilationData<LocationData<Entity>> getCurrentEntity() {
@@ -369,7 +380,6 @@ public class CompilationContext {
             var macro = getResolvedMacro(holder.name());
             return new CompilationData<>(this, current(), macro, 0);
         }else if(holder.selector() != null) {
-            var data = current();
             var selector = holder.single() ? holder.selector().limit(1) : holder.selector();
             @SuppressWarnings("resource")
             var selectorData = forSelector(selector);
@@ -377,9 +387,8 @@ public class CompilationContext {
             selectorData.writeInstruction(Instructions2.getScoreboardName(selectorData.content(), name));
             var codeLocation = instructionWriter.createLabelBefore(selectorData.data().contextEndLabel());
             return enterWithValue(selectorData.data().withContextLabel(codeLocation), name, selectorData.stackCount() + 1);
-        }else {
-            throw new IllegalArgumentException("ScoreHolderArgument without any valid option: " + holder);
         }
+        throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNREACHABLE_CODE, source, "Unreachable code reached"));
     }
 
     public CompilationData<LocationData<Entity>> forSelector(SelectorArgument selector) {

@@ -1,6 +1,8 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter;
 
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
@@ -12,7 +14,11 @@ import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
 
 import java.util.*;
 
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.EMITTER_INVALID_LOAD_LOCATION;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.EMITTER_INVALID_STORE_LOCATION;
+
 public final class EmitterContext {
+    private final DataLocation location;
     private final CodeFieldStorage fieldStorage;
     private final CodeWriter codeWriter;
     private final Set<DataLocation> compiledFunctions;
@@ -26,6 +32,7 @@ public final class EmitterContext {
     private int currentInstructionIndex = 0;
 
     public EmitterContext(
+        DataLocation location,
         CodeFieldStorage fieldStorage,
         CodeWriter codeWriter,
         Set<DataLocation> compiledFunctions,
@@ -34,6 +41,7 @@ public final class EmitterContext {
 
         List<Instruction> instructions
     ) {
+        this.location = location;
         this.fieldStorage = fieldStorage;
         this.codeWriter = codeWriter;
         this.compiledFunctions = compiledFunctions;
@@ -46,6 +54,10 @@ public final class EmitterContext {
         for(currentInstructionIndex = 0; currentInstructionIndex < instructions.size(); currentInstructionIndex++) {
             EmitterInstructions.emitInstruction(this);
         }
+    }
+
+    public DataLocation location() {
+        return location;
     }
 
     public Instruction instruction() {
@@ -103,7 +115,7 @@ public final class EmitterContext {
         }else if(location.object() instanceof Double doubleVal) {
             return new BytecodeValue.DoubleValue(doubleVal);
         }else {
-            throw new IllegalArgumentException("Invalid field load location: " + location);
+            throw new DiagnosticException(Diagnostic.emitterError(EMITTER_INVALID_LOAD_LOCATION, this.location, "Invalid field load location: " + location));
         }
     }
 
@@ -117,7 +129,7 @@ public final class EmitterContext {
                 transforms.put(location.local(), value);
             }
         }else {
-            throw new IllegalArgumentException("Invalid field store location: " + location);
+            throw new DiagnosticException(Diagnostic.emitterError(EMITTER_INVALID_STORE_LOCATION, this.location, "Invalid field store location: " + location));
         }
     }
 

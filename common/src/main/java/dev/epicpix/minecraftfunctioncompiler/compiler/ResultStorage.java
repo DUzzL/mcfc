@@ -1,29 +1,29 @@
 package dev.epicpix.minecraftfunctioncompiler.compiler;
 
 import dev.epicpix.minecraftfunctioncompiler.commands.CommandParams;
+import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.il.Instructions2;
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
 
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_COMPILE_EXPECTED_RESULT;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_COMPILE_EXPECTED_SUCCESS;
+
 public class ResultStorage {
 
+    private final DataLocation location;
     public final LocationData<Integer> result;
     public final LocationData<Integer> success;
 
-    private ResultStorage(LocationData<Integer> result, LocationData<Integer> success) {
+    public ResultStorage(DataLocation location, LocationData<Integer> result, LocationData<Integer> success) {
+        this.location = location;
         this.result = result;
         this.success = success;
     }
 
-    public static ResultStorage withResult(LocationData<Integer> result) {
-        return new ResultStorage(result, null);
-    }
-
-    public static ResultStorage withSuccess(LocationData<Integer> success) {
-        return new ResultStorage(null, success);
-    }
-
-    public static ResultStorage empty() {
-        return new ResultStorage(null, null);
+    public static ResultStorage empty(DataLocation location) {
+        return new ResultStorage(location, null, null);
     }
 
     private boolean updatedResult = false;
@@ -59,8 +59,8 @@ public class ResultStorage {
     }
 
     public void checkRequirements(CommandParams command) {
-        if(storesSuccess() && !updatedSuccess) throw new UnsupportedOperationException("ResultStorage requirement failed, requires success value but missing data: " + command);
-        if(storesResult() && !updatedResult) throw new UnsupportedOperationException("ResultStorage requirement failed, requires result value but missing data: " + command);
+        if(storesSuccess() && !updatedSuccess) throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_EXPECTED_SUCCESS, location, "ResultStorage requirement failed, requires success value but missing data: " + command));
+        if(storesResult() && !updatedResult) throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_EXPECTED_RESULT, location, "ResultStorage requirement failed, requires result value but missing data: " + command));
     }
 
 }
