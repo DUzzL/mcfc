@@ -2,6 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.mixin.v1_20_6.server;
 
 import com.mojang.datafixers.DataFixer;
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
+import dev.epicpix.minecraftfunctioncompiler.reporter.MinecraftEnvironment;
 import net.minecraft.DetectedVersion;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.Services;
@@ -24,7 +25,7 @@ public abstract class MinecraftServerMixin {
 
     @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/thread/ReentrantBlockableEventLoop;<init>(Ljava/lang/String;)V", shift = At.Shift.AFTER))
     public void init(Thread thread, LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem worldStem, Proxy proxy, DataFixer dataFixer, Services services, ChunkProgressListenerFactory chunkProgressListenerFactory, CallbackInfo ci) {
-        FunctionCompilerReporter.setMinecraftVersion(DetectedVersion.BUILT_IN.getName(), getServerModName());
+        FunctionCompilerReporter.setMinecraftVersion(DetectedVersion.BUILT_IN.getName(), getServerModName(), MinecraftEnvironment.SERVER);
     }
 
 }
