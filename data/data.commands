@@ -28,6 +28,8 @@ EXECUTE_IF_ENTITY/execute if entity <entities:entity_selector> <command:command[
 EXECUTE_IF_FUNCTION<1.20.3..>/execute if function <functions:function> <command:command[root=execute]>
 EXECUTE_IF_SCORE_RANGE/execute if score <target:score_accessor> matches <range:int_range> <command:command[root=execute]>
 EXECUTE_IF_SCORE_COMPARE/execute if score <target:score_accessor> <comparison:score_comparison> <source:score_accessor> <command:command[root=execute]>
+EXECUTE_ON_ORIGIN<1.19.4..>/execute on origin <command:command[root=execute]>
+EXECUTE_ON_TARGET<1.19.4..>/execute on target <command:command[root=execute]>
 EXECUTE_ON_VEHICLE<1.19.4..>/execute on vehicle <command:command[root=execute]>
 EXECUTE_POSITIONED_AS/execute positioned as <targets:entity_selector> <command:command[root=execute]>
 EXECUTE_POSITIONED_POS/execute positioned <pos:vec3> <command:command[root=execute]>

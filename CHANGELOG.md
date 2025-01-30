@@ -1,6 +1,8 @@
 # 0.3.1-alpha.1
 
-Adds command:
+Adds commands:
+- `execute on origin`
+- `execute on target`
 - `execute store result storage ... float`
 
 Fixes bugs:

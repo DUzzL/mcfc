@@ -636,6 +636,18 @@
   let [ctx:player] = cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>);
 }
 
+##CONDITIONAL_JUMP
+@TRY_AS_TRACEABLE_ENTITY(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.entity.TraceableEntity> [ctx:traceable_entity], label [ctx:fail_label]) {
+  _jumpIfNotInstanceOf([ctx:entity], <net.minecraft.world.entity.TraceableEntity>, [ctx:fail_label]);
+  let [ctx:traceable_entity] = cast([ctx:entity], <net.minecraft.world.entity.TraceableEntity>);
+}
+
+##CONDITIONAL_JUMP
+@TRY_AS_TARGETING_ENTITY(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.entity.Targeting> [ctx:targeting_entity], label [ctx:fail_label]) {
+  _jumpIfNotInstanceOf([ctx:entity], <net.minecraft.world.entity.Targeting>, [ctx:fail_label]);
+  let [ctx:targeting_entity] = cast([ctx:entity], <net.minecraft.world.entity.Targeting>);
+}
+
 @GET_ENTITY_NAME(<net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [ctx:name]) {
   let [ctx:name] = [ctx:entity].getName().getString();
 }
@@ -742,6 +754,14 @@
 
 @GET_ENTITY_VEHICLE(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.entity.Entity> [ctx:vehicle]) {
   let [ctx:vehicle] = [ctx:entity].getVehicle();
+}
+
+@GET_ENTITY_TARGET(<net.minecraft.world.entity.Targeting> [ctx:targeting_entity], <net.minecraft.world.entity.LivingEntity> [ctx:target]) {
+  let [ctx:target] = [ctx:targeting_entity].getTarget();
+}
+
+@GET_ENTITY_ORIGIN(<net.minecraft.world.entity.TraceableEntity> [ctx:traceable_entity], <net.minecraft.world.entity.Entity> [ctx:origin]) {
+  let [ctx:origin] = [ctx:traceable_entity].getOwner();
 }
 
 @GET_ANCHOR_OFFSET(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <net.minecraft.world.entity.Entity> [ctx:entity], double [ctx:result]) {

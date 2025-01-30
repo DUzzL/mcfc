@@ -15,6 +15,7 @@ Not all commands are currently implemented in this mod, if a command is not list
 | `execute if entity`                       | Partial[^1]  | No                     | No                      |
 | `execute if function`                     | Yes          | No                     | No                      |
 | `execute if score`                        | Partial[^1]  | No                     | No                      |
+| `execute on target`                       | Yes          | No result by itself    | No result by itself     |
 | `execute on vehicle`                      | Yes          | No result by itself    | No result by itself     |
 | `execute positioned`                      | Yes          | No result by itself    | No result by itself     |
 | `execute positioned as`                   | Partial[^1]  | No result by itself    | No result by itself     |

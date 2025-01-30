@@ -268,12 +268,38 @@ public final class CommandCompiler {
                     }
                 }
             }
+        }else if(command instanceof CommandExecuteOnOrigin cmdData) {
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var currentEntity = context.getCurrentEntity()) {
+                    var traceableEntity = context.<TraceableEntity>createLocal();
+                    currentEntity.writeInstruction(Instructions2.tryAsTraceableEntity(currentEntity.content(), traceableEntity, currentEntity.endLabel()));
+                    var origin = context.<Entity>createLocal();
+                    currentEntity.writeInstruction(Instructions2.getEntityOrigin(traceableEntity, origin));
+                    currentEntity.writeInstruction(Instructions2.ifNullJump(origin.lower(), currentEntity.endLabel()));
+                    try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(origin))) {
+                        compile(context, fContext.content(), cmdData.command(), result);
+                    }
+                }
+            }
+        }else if(command instanceof CommandExecuteOnTarget cmdData) {
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var currentEntity = context.getCurrentEntity()) {
+                    var targetingEntity = context.<TargetingEntity>createLocal();
+                    currentEntity.writeInstruction(Instructions2.tryAsTargetingEntity(currentEntity.content(), targetingEntity, currentEntity.endLabel()));
+                    var target = context.<LivingEntity>createLocal();
+                    currentEntity.writeInstruction(Instructions2.getEntityTarget(targetingEntity, target));
+                    currentEntity.writeInstruction(Instructions2.ifNullJump(target.lower(), currentEntity.endLabel()));
+                    try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(target.forceCast()))) {
+                        compile(context, fContext.content(), cmdData.command(), result);
+                    }
+                }
+            }
         }else if(command instanceof CommandExecuteOnVehicle cmdData) {
             try(var fContext = context.withForkingContext(forkingContext)) {
                 try(var currentEntity = context.getCurrentEntity()) {
                     var vehicle = context.<Entity>createLocal();
                     currentEntity.writeInstruction(Instructions2.getEntityVehicle(currentEntity.content(), vehicle));
-                    currentEntity.writeInstruction(Instructions2.ifNullJump(vehicle.lower(), currentEntity.data().contextEndLabel()));
+                    currentEntity.writeInstruction(Instructions2.ifNullJump(vehicle.lower(), currentEntity.endLabel()));
                     try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(vehicle))) {
                         compile(context, fContext.content(), cmdData.command(), result);
                     }
