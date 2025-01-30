@@ -18,6 +18,7 @@ public final class DataRegistries {
     public static final DataRegistry<List<DataLocation>> ENTITY_TAGS = new DataRegistry<>();
     public static final DataRegistry<List<DataLocation>> FUNCTION_TAGS = new DataRegistry<>();
     public static final DataRegistry<MobEffectData> MOB_EFFECT = new DataRegistry<>();
+    public static final DataRegistry<PredicateData> PREDICATE = new DataRegistry<>();
 
     public static final RawDataRegistry<String, ScoreboardCriterionData> SCOREBOARD_CRITERIA = new RawDataRegistry<>();
 
@@ -29,7 +30,7 @@ public final class DataRegistries {
         for(var entry : ADVANCEMENT.entrySet()) {
             var data = entry.getValue();
             var obj = new JsonObject();
-            obj.addProperty("parent", data.parent().toString());
+            obj.addProperty("parent", data.parent() == null ? null : data.parent().toString());
             var criteria = new JsonArray();
             for(var v : data.criteria()) {
                 criteria.add(v);
@@ -90,6 +91,12 @@ public final class DataRegistries {
         }
         registries.add("MOB_EFFECT", mobEffectRegistry);
 
+        var predicateRegistry = new JsonObject();
+        for(var entry : PREDICATE.entrySet()) {
+            predicateRegistry.add(entry.getKey().toString(), new JsonObject());
+        }
+        registries.add("PREDICATE", predicateRegistry);
+
         var scoreboardCriteriaRegistry = new JsonObject();
         for(var entry : SCOREBOARD_CRITERIA.entrySet()) {
             var data = entry.getValue();
@@ -111,7 +118,7 @@ public final class DataRegistries {
             var location = new DataLocation(advancements.getKey());
             var criteria = new ArrayList<String>();
             for(var name : advancement.getAsJsonArray("criteria")) criteria.add(name.getAsString());
-            ADVANCEMENT.set(location, new AdvancementData(location, new DataLocation(advancement.get("parent").getAsString()), List.copyOf(criteria)));
+            ADVANCEMENT.set(location, new AdvancementData(location, advancement.get("parent").isJsonNull() ? null : new DataLocation(advancement.get("parent").getAsString()), List.copyOf(criteria)));
         }
         ADVANCEMENT.freeze();
 
@@ -158,6 +165,13 @@ public final class DataRegistries {
             MOB_EFFECT.set(location, new MobEffectData(location, mobEffect.get("instant").getAsBoolean()));
         }
         MOB_EFFECT.freeze();
+
+        PREDICATE.reset();
+        for(var predicates : registries.getAsJsonObject("PREDICATE").entrySet()) {
+            var location = new DataLocation(predicates.getKey());
+            PREDICATE.set(location, new PredicateData(location));
+        }
+        PREDICATE.freeze();
 
         SCOREBOARD_CRITERIA.reset();
         for(var scoreboardCriteria : registries.getAsJsonObject("SCOREBOARD_CRITERIA").entrySet()) {

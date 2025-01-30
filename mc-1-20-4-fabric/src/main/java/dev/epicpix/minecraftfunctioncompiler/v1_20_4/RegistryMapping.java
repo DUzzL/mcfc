@@ -9,6 +9,7 @@ import net.minecraft.stats.Stat;
 import net.minecraft.stats.StatType;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.RangedAttribute;
+import net.minecraft.world.level.storage.loot.LootDataType;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 
 import java.util.ArrayList;
@@ -71,5 +72,11 @@ public final class RegistryMapping {
             DataRegistries.ADVANCEMENT.set(location, new AdvancementData(location, e.value().parent().map(resourceLocation -> new DataLocation(resourceLocation.getNamespace(), resourceLocation.getPath())).orElse(null), criteria));
         });
         DataRegistries.ADVANCEMENT.freeze();
+        DataRegistries.PREDICATE.reset();
+        server.getLootData().getKeys(LootDataType.PREDICATE).forEach(e -> {
+            var location = new DataLocation(e.getNamespace(), e.getPath());
+            DataRegistries.PREDICATE.set(location, new PredicateData(location));
+        });
+        DataRegistries.PREDICATE.freeze();
     }
 }

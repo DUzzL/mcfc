@@ -67,6 +67,17 @@ MinecraftServer_getAdvancements = "net/minecraft/server/MinecraftServer:getAdvan
 ServerAdvancementManager_getAdvancement."1.20.1-" = "net/minecraft/server/ServerAdvancementManager:getAdvancement(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/advancements/Advancement;@M"
 ServerAdvancementManager_get."1.20.2+" = "net/minecraft/server/ServerAdvancementManager:get(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/advancements/AdvancementHolder;@M"
 
+MinecraftServer_getPredicateManager."1.19.4-" = "net/minecraft/server/MinecraftServer:getPredicateManager()Lnet/minecraft/world/level/storage/loot/PredicateManager;@M"
+PredicateManager_get."1.19.4-" = "net/minecraft/world/level/storage/loot/PredicateManager:get(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/world/level/storage/loot/predicates/LootItemCondition;@M"
+MinecraftServer_getLootData."1.20.1,1.20.2,1.20.4" = "net/minecraft/server/MinecraftServer:getLootData()Lnet/minecraft/world/level/storage/loot/LootDataManager;@M"
+LootDataResolver_getElement."1.20.1,1.20.2,1.20.4" = "net/minecraft/world/level/storage/loot/LootDataResolver:getElement(Lnet/minecraft/world/level/storage/loot/LootDataType;Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/Object;@IMO"
+MinecraftServer_reloadableRegistries."1.20.6+" = "net/minecraft/server/MinecraftServer:reloadableRegistries()Lnet/minecraft/server/ReloadableServerRegistries$Holder;@M"
+ReloadableServerRegistriesHolder_lookup."1.20.6+" = "net/minecraft/server/ReloadableServerRegistries$Holder:lookup()Lnet/minecraft/core/HolderGetter$Provider;@M"
+HolderGetterProvider_get."1.20.6,1.21" = "net/minecraft/core/HolderGetter$Provider:get(Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/resources/ResourceKey;)Ljava/util/Optional;@IM"
+HolderGetterProvider_get."1.21.2+" = "net/minecraft/core/HolderGetter$Provider:get(Lnet/minecraft/resources/ResourceKey;)Ljava/util/Optional;@IM"
+ResourceKey_create."1.20.6+" = "net/minecraft/resources/ResourceKey:create(Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/resources/ResourceKey;@S"
+Holder_value."1.20.6+" = "net/minecraft/core/Holder:value()Ljava/lang/Object;@IM"
+
 [definitions_fields]
 ServerFunctionManager_library = "net/minecraft/server/ServerFunctionManager:library:Lnet/minecraft/server/ServerFunctionLibrary;@MR"
 ServerFunctionLibrary_functions = "net/minecraft/server/ServerFunctionLibrary:functions:Ljava/util/Map;@MR"
@@ -84,3 +95,6 @@ Anchor_FEET = "net/minecraft/commands/arguments/EntityAnchorArgument$Anchor:FEET
 
 ServerFunctionManager_context."1.20.2-" = "net/minecraft/server/ServerFunctionManager:context:Lnet/minecraft/server/ServerFunctionManager$ExecutionContext;@MRW"
 Commands_CURRENT_EXECUTION_CONTEXT."1.20.3+" = "net/minecraft/commands/Commands:CURRENT_EXECUTION_CONTEXT:Ljava/lang/ThreadLocal;@SR"
+
+LootDataType_PREDICATE."1.20.1,1.20.2,1.20.4" = "net/minecraft/world/level/storage/loot/LootDataType:PREDICATE:Lnet/minecraft/world/level/storage/loot/LootDataType;@SR"
+Registries_PREDICATE."1.20.6+" = "net/minecraft/core/registries/Registries:PREDICATE:Lnet/minecraft/resources/ResourceKey;@SR"

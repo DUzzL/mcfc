@@ -71,6 +71,12 @@ public final class CodeFieldStorage {
         return cw.getDataField(CodeFieldStorageMapKind.NBT_VALUE.generateName(map, value), map.getValueType(CodeFieldStorageMapKind.NBT_VALUE));
     }
 
+    public BytecodeRegister loadPredicate(CodeWriter cw, DataLocation value) {
+        map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, value);
+        map.writeValue(CodeFieldStorageMapKind.PREDICATE, value);
+        return cw.getDataField(CodeFieldStorageMapKind.PREDICATE.generateName(map, value), map.getValueType(CodeFieldStorageMapKind.PREDICATE));
+    }
+
     public BytecodeRegister loadRegexPattern(CodeWriter cw, String value) {
         map.writeValue(CodeFieldStorageMapKind.REGEX_PATTERN, value);
         return cw.getDataField(CodeFieldStorageMapKind.REGEX_PATTERN.generateName(map, value), map.getValueType(CodeFieldStorageMapKind.REGEX_PATTERN));

@@ -45,6 +45,7 @@ public final class CodeFieldStorageMapKind<T> {
     public static final CodeFieldStorageMapKind<DataLocation> FUNCTION = new CodeFieldStorageMapKind<>("FUNCTION", CodeFieldStorageMapKind::getFunctionName);
     public static final CodeFieldStorageMapKind<NbtValue.Compound> NBT_COMPOUND = new CodeFieldStorageMapKind<>("NBT_COMPOUND", CodeFieldStorageMapKind::getNbtCompoundValueName);
     public static final CodeFieldStorageMapKind<NbtValue> NBT_VALUE = new CodeFieldStorageMapKind<>("NBT_VALUE", CodeFieldStorageMapKind::getNbtValueName);
+    public static final CodeFieldStorageMapKind<DataLocation> PREDICATE = new CodeFieldStorageMapKind<>("REGEX_PATTERN", CodeFieldStorageMapKind::getPredicateName);
     public static final CodeFieldStorageMapKind<String> REGEX_PATTERN = new CodeFieldStorageMapKind<>("REGEX_PATTERN", CodeFieldStorageMapKind::getRegexPatternName);
     public static final CodeFieldStorageMapKind<DataLocation> RESOURCE_LOCATION = new CodeFieldStorageMapKind<>("RESOURCE_LOCATION", CodeFieldStorageMapKind::getResourceLocationName);
     public static final CodeFieldStorageMapKind<String> SCOREBOARD_CRITERION = new CodeFieldStorageMapKind<>("SCOREBOARD_CRITERION", CodeFieldStorageMapKind::getScoreboardCriterionName);
@@ -58,6 +59,7 @@ public final class CodeFieldStorageMapKind<T> {
         EFFECT.setDependencies(RESOURCE_LOCATION);
         ENTITY_TYPE.setDependencies(RESOURCE_LOCATION);
         FUNCTION.setDependencies(RESOURCE_LOCATION);
+        PREDICATE.setDependencies(RESOURCE_LOCATION);
         TEXT_STYLE.setDependencies(RESOURCE_LOCATION);
         TEXT.setDependencies(TEXT_STYLE);
     }
@@ -113,6 +115,12 @@ public final class CodeFieldStorageMapKind<T> {
 
     private static String getNbtCompoundValueName(CodeFieldStorageStorageMap map, NbtValue.Compound value) {
         return "nc" + map.checkIndex(CodeFieldStorageMapKind.NBT_COMPOUND, value);
+    }
+
+    private static String getPredicateName(CodeFieldStorageStorageMap map, DataLocation value) {
+        return DEBUG
+            ? "predicate$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
+            : "p" + map.checkIndex(CodeFieldStorageMapKind.PREDICATE, value);
     }
 
     private static String getRegexPatternName(CodeFieldStorageStorageMap map, String value) {

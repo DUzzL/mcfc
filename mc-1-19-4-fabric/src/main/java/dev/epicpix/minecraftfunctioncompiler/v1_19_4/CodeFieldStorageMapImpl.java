@@ -14,6 +14,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import org.objectweb.asm.Type;
 
@@ -53,6 +54,9 @@ public class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
         }));
         set(CodeFieldStorageMapKind.NBT_COMPOUND, new CodeFieldStorageMapValue<>(Type.getType(CompoundTag.class), (cf, cw, value) -> writeNbtValue(value, cw)));
         set(CodeFieldStorageMapKind.NBT_VALUE, new CodeFieldStorageMapValue<>(Type.getType(Tag.class), (cf, cw, value) -> writeNbtValue(value, cw)));
+        set(CodeFieldStorageMapKind.PREDICATE, new CodeFieldStorageMapValue<>(Type.getType(LootItemCondition.class), (cf, cw, value) -> {
+            return callPredicateManager_get(cw, callMinecraftServer_getPredicateManager(cw, cf.getGeneratorMinecraftServer()), cf.loadResourceLocation(cw, value));
+        }));
         set(CodeFieldStorageMapKind.RESOURCE_LOCATION, new CodeFieldStorageMapValue<>(Type.getType(ResourceLocation.class), (cf, cw, value) -> {
             return cw.newObjectCreate(RESOURCE_LOCATION_INIT_TARGET, new BytecodeValue.StringValue(value.namespace()), new BytecodeValue.StringValue(value.path()));
         }));

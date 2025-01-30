@@ -72,5 +72,11 @@ public final class RegistryMapping {
             DataRegistries.ADVANCEMENT.set(location, new AdvancementData(location, parent != null ? new DataLocation(parent.getId().getNamespace(), parent.getId().getPath()) : null, criteria));
         });
         DataRegistries.ADVANCEMENT.freeze();
+        DataRegistries.PREDICATE.reset();
+        server.getPredicateManager().getKeys().forEach(e -> {
+            var location = new DataLocation(e.getNamespace(), e.getPath());
+            DataRegistries.PREDICATE.set(location, new PredicateData(location));
+        });
+        DataRegistries.PREDICATE.freeze();
     }
 }

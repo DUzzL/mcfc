@@ -829,3 +829,65 @@
 @CHECK_ENTITY_INTERSECTION(<net.minecraft.world.entity.Entity> [ctx:entity], double [ctx:min_x], double [ctx:min_y], double [ctx:min_z], double [ctx:max_x], double [ctx:max_y], double [ctx:max_z], label [ctx:fail_label]) {
   _jumpIfEqual([ctx:entity].getBoundingBox().intersects([ctx:min_x], [ctx:min_y], [ctx:min_z], [ctx:max_x], [ctx:max_y], [ctx:max_z]), false, [ctx:fail_label]);
 }
+
+##CONDITIONAL_JUMP
+@JUMP_IF_PREDICATE_SELECTOR_SUCCEEDS [-1.19.4] (<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.entity.Entity> [ctx:entity], label [ctx:label], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:predicate_name]) {
+  let [local:context]<net.minecraft.world.level.storage.loot.LootContext> = new <net.minecraft.world.level.storage.loot.LootContext.Builder>([ctx:world])
+     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.THIS_ENTITY, [ctx:entity])
+     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.ORIGIN, [ctx:entity].position())
+     .create(<net.minecraft.world.level.storage.loot.parameters.LootContextParamSets>.SELECTOR);
+  _jumpIfNotEqual(map_predicate([instr:predicate_name]).test([local:context]), false, [ctx:label]);
+}
+
+##CONDITIONAL_JUMP
+@JUMP_IF_PREDICATE_SELECTOR_SUCCEEDS [1.20.1] (<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.entity.Entity> [ctx:entity], label [ctx:label], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:predicate_name]) {
+  let [local:params]<net.minecraft.world.level.storage.loot.LootParams> = new <net.minecraft.world.level.storage.loot.LootParams.Builder>([ctx:world])
+     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.THIS_ENTITY, [ctx:entity])
+     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.ORIGIN, [ctx:entity].position())
+     .create(<net.minecraft.world.level.storage.loot.parameters.LootContextParamSets>.SELECTOR);
+  let [local:context]<net.minecraft.world.level.storage.loot.LootContext> = new <net.minecraft.world.level.storage.loot.LootContext.Builder>([local:params]).create(null);
+  [local:context].pushVisitedElement(<net.minecraft.world.level.storage.loot.LootContext>.createVisitedEntry(map_predicate([instr:predicate_name])));
+  _jumpIfNotEqual(map_predicate([instr:predicate_name]).test([local:context]), false, [ctx:label]);
+}
+
+##CONDITIONAL_JUMP
+@JUMP_IF_PREDICATE_SELECTOR_SUCCEEDS [1.20.2-] (<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.entity.Entity> [ctx:entity], label [ctx:label], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:predicate_name]) {
+  let [local:params]<net.minecraft.world.level.storage.loot.LootParams> = new <net.minecraft.world.level.storage.loot.LootParams.Builder>([ctx:world])
+     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.THIS_ENTITY, [ctx:entity])
+     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.ORIGIN, [ctx:entity].position())
+     .create(<net.minecraft.world.level.storage.loot.parameters.LootContextParamSets>.SELECTOR);
+  let [local:context]<net.minecraft.world.level.storage.loot.LootContext> = new <net.minecraft.world.level.storage.loot.LootContext.Builder>([local:params]).create(<java.util.Optional>.empty());
+  [local:context].pushVisitedElement(<net.minecraft.world.level.storage.loot.LootContext>.createVisitedEntry(map_predicate([instr:predicate_name])));
+  _jumpIfNotEqual(map_predicate([instr:predicate_name]).test([local:context]), false, [ctx:label]);
+}
+
+##CONDITIONAL_JUMP
+@JUMP_IF_PREDICATE_SELECTOR_FAILS [-1.19.4] (<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.entity.Entity> [ctx:entity], label [ctx:label], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:predicate_name]) {
+  let [local:context]<net.minecraft.world.level.storage.loot.LootContext> = new <net.minecraft.world.level.storage.loot.LootContext.Builder>([ctx:world])
+     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.THIS_ENTITY, [ctx:entity])
+     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.ORIGIN, [ctx:entity].position())
+     .create(<net.minecraft.world.level.storage.loot.parameters.LootContextParamSets>.SELECTOR);
+  _jumpIfEqual(map_predicate([instr:predicate_name]).test([local:context]), false, [ctx:label]);
+}
+
+##CONDITIONAL_JUMP
+@JUMP_IF_PREDICATE_SELECTOR_FAILS [1.20.1] (<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.entity.Entity> [ctx:entity], label [ctx:label], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:predicate_name]) {
+  let [local:params]<net.minecraft.world.level.storage.loot.LootParams> = new <net.minecraft.world.level.storage.loot.LootParams.Builder>([ctx:world])
+     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.THIS_ENTITY, [ctx:entity])
+     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.ORIGIN, [ctx:entity].position())
+     .create(<net.minecraft.world.level.storage.loot.parameters.LootContextParamSets>.SELECTOR);
+  let [local:context]<net.minecraft.world.level.storage.loot.LootContext> = new <net.minecraft.world.level.storage.loot.LootContext.Builder>([local:params]).create(null);
+  [local:context].pushVisitedElement(<net.minecraft.world.level.storage.loot.LootContext>.createVisitedEntry(map_predicate([instr:predicate_name])));
+  _jumpIfEqual(map_predicate([instr:predicate_name]).test([local:context]), false, [ctx:label]);
+}
+
+##CONDITIONAL_JUMP
+@JUMP_IF_PREDICATE_SELECTOR_FAILS [1.20.2-] (<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.entity.Entity> [ctx:entity], label [ctx:label], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:predicate_name]) {
+  let [local:params]<net.minecraft.world.level.storage.loot.LootParams> = new <net.minecraft.world.level.storage.loot.LootParams.Builder>([ctx:world])
+     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.THIS_ENTITY, [ctx:entity])
+     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.ORIGIN, [ctx:entity].position())
+     .create(<net.minecraft.world.level.storage.loot.parameters.LootContextParamSets>.SELECTOR);
+  let [local:context]<net.minecraft.world.level.storage.loot.LootContext> = new <net.minecraft.world.level.storage.loot.LootContext.Builder>([local:params]).create(<java.util.Optional>.empty());
+  [local:context].pushVisitedElement(<net.minecraft.world.level.storage.loot.LootContext>.createVisitedEntry(map_predicate([instr:predicate_name])));
+  _jumpIfEqual(map_predicate([instr:predicate_name]).test([local:context]), false, [ctx:label]);
+}

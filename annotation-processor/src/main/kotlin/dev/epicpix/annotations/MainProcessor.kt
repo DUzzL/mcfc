@@ -283,17 +283,19 @@ class MainProcessor(
         mapExtensions.appendText("    private $resultName() {}\n")
         fun findVersionSpecific(v: Any?): String? {
             if(v is Map<*, *>) {
-                v.forEach { (k, v) ->
-                    k as String
-                    v as String
-                    val minecraftVersion = k.split(".")
-                    val cMajor = minecraftVersion[1].replace("+", "").replace("-", "").toInt()
-                    val cMinor = minecraftVersion.getOrNull(2)?.filter { it.isDigit() }?.toIntOrNull() ?: 0
-                    if(cMajor == majorVer && cMinor == minorVer) return v
-                    else if( k.endsWith("+") && ((majorVer == cMajor && minorVer >= cMinor) || (majorVer > cMajor))) {
-                        return v
-                    }else if(k.endsWith("-") && ((majorVer == cMajor && minorVer <= cMinor) || (majorVer < cMajor))) {
-                        return v
+                v.forEach { (sk, v) ->
+                    sk as String
+                    for(k in sk.split(",")) {
+                        v as String
+                        val minecraftVersion = k.split(".")
+                        val cMajor = minecraftVersion[1].replace("+", "").replace("-", "").toInt()
+                        val cMinor = minecraftVersion.getOrNull(2)?.filter { it.isDigit() }?.toIntOrNull() ?: 0
+                        if(cMajor == majorVer && cMinor == minorVer) return v
+                        else if(k.endsWith("+") && ((majorVer == cMajor && minorVer >= cMinor) || (majorVer > cMajor))) {
+                            return v
+                        } else if(k.endsWith("-") && ((majorVer == cMajor && minorVer <= cMinor) || (majorVer < cMajor))) {
+                            return v
+                        }
                     }
                 }
                 return null
@@ -307,24 +309,23 @@ class MainProcessor(
                 val fullDescriptor = content.split("@")[0].replace(Regex.fromLiteral("_VERSION_")) { PACKAGE_MINECRAFT_VERSION ?: throw IllegalArgumentException("Tried to use _VERSION_ in a common env") }
                 val className = mappingData.getClassName(fullDescriptor.split(":")[0])
                 val methodDescriptor = remapType(Type.getMethodType("(" + fullDescriptor.split("(")[1]), mappingData)
-                val methodName = mappingData.getMethodName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1].split("(")[0], "(" + fullDescriptor.split("(")[1])
-                val callDetails = content.split("@").getOrNull(1)
-                if(callDetails != null) {
-                    val isStatic = !callDetails.contains("M")
-                    val isInterface = callDetails.contains("I")
-                    val noReorder = callDetails.contains("N")
-                    val target = "new dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget.FunctionTarget(\"$className\", \"$methodName\", \"${methodDescriptor.descriptor}\", ${isStatic}, ${isInterface}, ${methodName == "<init>"}, ${noReorder})"
-                    var args = mutableListOf<String>()
-                    if(!isStatic) args.add("self")
-                    for(arg in methodDescriptor.argumentTypes.indices) {
-                        args.add("r$arg")
-                    }
+                val callDetails = content.split("@")[1]
+                val notObfuscated = callDetails.contains("O")
+                val methodName = if(notObfuscated) fullDescriptor.split(":")[1].split("(")[0] else mappingData.getMethodName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1].split("(")[0], "(" + fullDescriptor.split("(")[1])
+                val isStatic = !callDetails.contains("M")
+                val isInterface = callDetails.contains("I")
+                val noReorder = callDetails.contains("N")
+                val target = "new dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget.FunctionTarget(\"$className\", \"$methodName\", \"${methodDescriptor.descriptor}\", ${isStatic}, ${isInterface}, ${methodName == "<init>"}, ${noReorder})"
+                var args = mutableListOf<String>()
+                if(!isStatic) args.add("self")
+                for(arg in methodDescriptor.argumentTypes.indices) {
+                    args.add("r$arg")
+                }
 
-                    if(methodDescriptor.returnType == Type.VOID_TYPE) {
-                        mapExtensions.appendText("    public static void call$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter${args.joinToString("") { ", dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue $it" }}) { codeWriter.writeTarget(TARGETS[${getTarget(target, targets)}]${args.joinToString("") { ", $it" }}); }\n")
-                    }else {
-                        mapExtensions.appendText("    public static dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister call$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter${args.joinToString("") { ", dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue $it" }}) { return codeWriter.writeTarget(TARGETS[${getTarget(target, targets)}]${args.joinToString("") { ", $it" }}); }\n")
-                    }
+                if(methodDescriptor.returnType == Type.VOID_TYPE) {
+                    mapExtensions.appendText("    public static void call$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter${args.joinToString("") { ", dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue $it" }}) { codeWriter.writeTarget(TARGETS[${getTarget(target, targets)}]${args.joinToString("") { ", $it" }}); }\n")
+                }else {
+                    mapExtensions.appendText("    public static dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister call$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter${args.joinToString("") { ", dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue $it" }}) { return codeWriter.writeTarget(TARGETS[${getTarget(target, targets)}]${args.joinToString("") { ", $it" }}); }\n")
                 }
             }
         }

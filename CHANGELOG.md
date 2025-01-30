@@ -1,5 +1,7 @@
 # 0.3.1-alpha.1
 
+Adds selector argument: `predicate`
+
 Adds commands:
 - `execute on origin`
 - `execute on target`

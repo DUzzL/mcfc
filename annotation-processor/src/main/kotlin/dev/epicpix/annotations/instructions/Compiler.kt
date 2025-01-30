@@ -129,6 +129,9 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             if(expression.name == "map_text") {
                 return ParsedTokenExpressionTypeComplex("net.minecraft.network.chat.Component")
             }
+            if(expression.name == "map_predicate") {
+                return ParsedTokenExpressionTypeComplex("net.minecraft.world.level.storage.loot.predicates.LootItemCondition")
+            }
             if(expression.name == "to_double") {
                 return ParsedTokenExpressionSimpleType.DOUBLE
             }
@@ -183,7 +186,7 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             return ParsedTokenExpressionSimpleType.DOUBLE
         }
         if(def.sort == Type.OBJECT) {
-            return ParsedTokenExpressionTypeComplex(def.className)
+            return ParsedTokenExpressionTypeComplex(def.className.replace('$', '.'))
         }
         if(expression.name == "<init>") {
             if(functionMatches[0].owner == "java/lang/Object" && functionMatches[0].name == "<init>" && functionMatches[0].descriptor == "()V") {
@@ -221,7 +224,7 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             return ParsedTokenExpressionSimpleType.INTEGER
         }
         if(def.sort == Type.OBJECT) {
-            return ParsedTokenExpressionTypeComplex(def.className)
+            return ParsedTokenExpressionTypeComplex(def.className.replace('$', '.'))
         }
         TODO(def.descriptor)
     }
@@ -252,7 +255,7 @@ private fun doesArgumentTypeMatch(matchType: ParsedTokenExpressionType, expected
     }else if(expectedType == Type.DOUBLE_TYPE) {
         return matchType == ParsedTokenExpressionSimpleType.DOUBLE
     }else if(expectedType.sort == Type.OBJECT) {
-        return matchType == ParsedTokenExpressionSimpleType.NULL || (matchType is ParsedTokenExpressionTypeComplex && (getClassLowerBounds(expectedType.className).any { matchType.typeName == it } || getClassLowerBounds(matchType.typeName).any { expectedType.className == it }))
+        return matchType == ParsedTokenExpressionSimpleType.NULL || (matchType is ParsedTokenExpressionTypeComplex && (getClassLowerBounds(expectedType.className.replace('$', '.')).any { matchType.typeName == it } || getClassLowerBounds(matchType.typeName.replace('$', '.')).any { expectedType.className == it }))
     }else {
         TODO(expectedType.descriptor)
     }
@@ -489,6 +492,15 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                     val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
                     if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.text.Text") {
                         return writeNextRegister(uniqId, output, "context.fieldStorage().loadText(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.text.Text>get(${writerData.getParamIndex(source)}))")
+                    }
+                }
+            }
+            if(expression.name == "map_predicate") {
+                val source = expression.arguments[0] as ParsedTokenValueAccessor
+                if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
+                    val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
+                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.DataLocation") {
+                        return writeNextRegister(uniqId, output, "context.fieldStorage().loadPredicate(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.DataLocation>get(${writerData.getParamIndex(source)}))")
                     }
                 }
             }

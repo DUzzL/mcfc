@@ -34,6 +34,7 @@ public class SelectorGeneratorBuilderData {
     public Double dy = null;
     public Double dz = null;
     public HashMap<DataLocation, SelectorAdvancementCheck> advancements = null;
+    public final ArrayList<NegatableData<DataLocation>> predicates = new ArrayList<>();
 
     public SelectorArgument build() {
         return new SelectorArgument(
@@ -63,7 +64,8 @@ public class SelectorGeneratorBuilderData {
             dx,
             dy,
             dz,
-            advancements != null ? Map.copyOf(advancements) : null
+            advancements != null ? Map.copyOf(advancements) : null,
+            List.copyOf(predicates)
         );
     }
 

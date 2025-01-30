@@ -397,6 +397,13 @@ public class CompilationContext {
             LocationData<Entity> entity = createLocal();
             return new CompilationData<>(this, data.withContextLabel(InstructionWriter.NULL_LABEL), entity, 0);
         }
+        for(var predicate : selector.predicates()) {
+            var predicateData = DataRegistries.PREDICATE.get(predicate.data());
+            if(predicateData == null) {
+                LocationData<Entity> entity = createLocal();
+                return new CompilationData<>(this, data.withContextLabel(InstructionWriter.NULL_LABEL), entity, 0);
+            }
+        }
 
         LocationData<List<Entity>> entityList = createLocal();
 
@@ -692,6 +699,20 @@ public class CompilationContext {
                 var scoreValue = this.<Integer>createLocal();
                 data.writeInstruction(instructionWriter, Instructions2.getScoreValue(scoreData.content(), scoreValue));
                 jumpIfNotMatchesRange(data, scoreValue, entry.getValue(), data.contextEndLabel());
+            }
+        }
+        for(var predicate : selector.predicates()) {
+            var predicateData = DataRegistries.PREDICATE.get(predicate.data());
+            if(predicateData == null) {
+                data.writeInstruction(instructionWriter, Instructions2.jump(data.contextEndLabel()));
+                break;
+            }
+            var entityWorld = this.<World>createLocal();
+            data.writeInstruction(instructionWriter, Instructions2.getEntityWorld(entityData.content(), entityWorld));
+            if(predicate.negated()) {
+                data.writeInstruction(instructionWriter, Instructions2.jumpIfPredicateSelectorSucceeds(entityWorld, entityData.content(), data.contextEndLabel(), predicate.data()));
+            }else {
+                data.writeInstruction(instructionWriter, Instructions2.jumpIfPredicateSelectorFails(entityWorld, entityData.content(), data.contextEndLabel(), predicate.data()));
             }
         }
         stackCount += stack.size() - stackStart;

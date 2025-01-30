@@ -285,6 +285,11 @@ public final class SelectorParser {
             data.worldLimited = true;
             data.dz = reader.readDouble();
         });
+        registerSelectorOption("predicate", (reader, data) -> {
+            var negated = reader.skipIfNext('!');
+            var predicate = reader.readDataLocation();
+            data.predicates.add(new NegatableData<>(predicate, negated));
+        });
     }
 
 

@@ -33,7 +33,8 @@ public record SelectorArgument(
     Double dx,
     Double dy,
     Double dz,
-    Map<DataLocation, SelectorAdvancementCheck> advancements
+    Map<DataLocation, SelectorAdvancementCheck> advancements,
+    List<NegatableData<DataLocation>> predicates
 ) {
 
     private SelectorArgument(UUID entityUuid, String playerName, boolean self) {
@@ -64,7 +65,8 @@ public record SelectorArgument(
                 null,
                 null,
                 null,
-        null
+                null,
+                List.of()
         );
     }
 
@@ -108,7 +110,8 @@ public record SelectorArgument(
                 dx,
                 dy,
                 dz,
-                advancements
+                advancements,
+                predicates
         );
     }
 
