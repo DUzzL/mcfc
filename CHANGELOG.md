@@ -6,6 +6,8 @@ Adds commands:
 - `execute on origin`
 - `execute on target`
 - `execute store result storage ... float`
+- `execute if predicate`
+- `execute unless predicate`
 
 Fixes bugs:
 - `execute positioned ^ ^ ^` works only when there's an entity in context

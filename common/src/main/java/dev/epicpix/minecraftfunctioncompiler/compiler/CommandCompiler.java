@@ -244,6 +244,20 @@ public final class CommandCompiler {
                 context.writeInstruction(Instructions2.jumpIfNullReturnValue(returnValue, fContext.endLabel()));
                 compile(context, fContext.content(), cmdData.command(), result);
             }
+        }else if(command instanceof CommandExecuteIfPredicate cmdData) {
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                var predicateData = DataRegistries.PREDICATE.get(cmdData.predicate());
+                if(predicateData != null) {
+                    try(var entity = context.getCurrentEntity()) {
+                        try(var world = context.getWorld()) {
+                            try(var position = context.getPosition()) {
+                                entity.writeInstruction(Instructions2.jumpIfPredicateCommandFails(world.content(), entity.content(), position.content(), fContext.endLabel(), cmdData.predicate()));
+                                compile(context, fContext.content(), cmdData.command(), result);
+                            }
+                        }
+                    }
+                }
+            }
         }else if(command instanceof CommandExecuteIfScoreRange cmdData) {
             try(var fContext = context.withForkingContext(forkingContext)) {
                 try(var scoreAccessor = context.forScoreAccessors(cmdData.target().selectSingle())) {
@@ -435,6 +449,20 @@ public final class CommandCompiler {
                 context.writeInstruction(Instructions.callFunctions(cmdData.functions(), stack, null, returnValue));
                 context.writeInstruction(Instructions2.jumpIfNotNullReturnValue(returnValue, fContext.endLabel()));
                 compile(context, fContext.content(), cmdData.command(), result);
+            }
+        }else if(command instanceof CommandExecuteUnlessPredicate cmdData) {
+            try(var fContext = context.withForkingContext(forkingContext)) {
+                var predicateData = DataRegistries.PREDICATE.get(cmdData.predicate());
+                if(predicateData != null) {
+                    try(var entity = context.getCurrentEntity()) {
+                        try(var world = context.getWorld()) {
+                            try(var position = context.getPosition()) {
+                                entity.writeInstruction(Instructions2.jumpIfPredicateCommandSucceeds(world.content(), entity.content(), position.content(), fContext.endLabel(), cmdData.predicate()));
+                                compile(context, fContext.content(), cmdData.command(), result);
+                            }
+                        }
+                    }
+                }
             }
         }else if(command instanceof CommandExecuteUnlessScoreRange cmdData) {
             try(var fContext = context.withForkingContext(forkingContext)) {

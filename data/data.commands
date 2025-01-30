@@ -26,6 +26,7 @@ EXECUTE_AS/execute as <targets:entity_selector> <command:command[root=execute]>
 EXECUTE_AT/execute at <targets:entity_selector> <command:command[root=execute]>
 EXECUTE_IF_ENTITY/execute if entity <entities:entity_selector> <command:command[root=execute]>
 EXECUTE_IF_FUNCTION<1.20.3..>/execute if function <functions:function> <command:command[root=execute]>
+EXECUTE_IF_PREDICATE/execute if predicate <predicate:resource_location> <command:command[root=execute]>
 EXECUTE_IF_SCORE_RANGE/execute if score <target:score_accessor> matches <range:int_range> <command:command[root=execute]>
 EXECUTE_IF_SCORE_COMPARE/execute if score <target:score_accessor> <comparison:score_comparison> <source:score_accessor> <command:command[root=execute]>
 EXECUTE_ON_ORIGIN<1.19.4..>/execute on origin <command:command[root=execute]>
@@ -40,6 +41,7 @@ EXECUTE_STORE_RESULT_SCORE/execute store result score <targets:score_accessor> <
 EXECUTE_STORE_RESULT_STORAGE/execute store result storage <storage:resource_location> <path:nbt_path> <store_type:result_store_type> <scale:double> <command:command[root=execute]>
 EXECUTE_UNLESS_ENTITY/execute unless entity <entities:entity_selector> <command:command[root=execute]>
 EXECUTE_UNLESS_FUNCTION<1.20.3..>/execute unless function <functions:function> <command:command[root=execute]>
+EXECUTE_UNLESS_PREDICATE/execute unless predicate <predicate:resource_location> <command:command[root=execute]>
 EXECUTE_UNLESS_SCORE_RANGE/execute unless score <target:score_accessor> matches <range:int_range> <command:command[root=execute]>
 EXECUTE_UNLESS_SCORE_COMPARE/execute unless score <target:score_accessor> <comparison:score_comparison> <source:score_accessor> <command:command[root=execute]>
 

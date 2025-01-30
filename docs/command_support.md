@@ -14,6 +14,7 @@ Not all commands are currently implemented in this mod, if a command is not list
 | `execute at`                              | Partial[^1]  | No result by itself    | No result by itself     |
 | `execute if entity`                       | Partial[^1]  | No                     | No                      |
 | `execute if function`                     | Yes          | No                     | No                      |
+| `execute if predicate`                    | Yes          | No                     | No                      |
 | `execute if score`                        | Partial[^1]  | No                     | No                      |
 | `execute on target`                       | Yes          | No result by itself    | No result by itself     |
 | `execute on vehicle`                      | Yes          | No result by itself    | No result by itself     |
@@ -29,6 +30,7 @@ Not all commands are currently implemented in this mod, if a command is not list
 | `execute store result score`              | Partial[^1]  | No result by itself    | No result by itself     |
 | `execute unless entity`                   | Partial[^1]  | No                     | No                      |
 | `execute unless function`                 | Yes          | No                     | No                      |
+| `execute unless predicate`                | Yes          | No                     | No                      |
 | `execute unless score`                    | Partial[^1]  | No                     | No                      |
 | `experience add`                          | Partial[^1]  | No                     | No                      |
 | `experience set`                          | Partial[^1]  | No                     | No                      |
