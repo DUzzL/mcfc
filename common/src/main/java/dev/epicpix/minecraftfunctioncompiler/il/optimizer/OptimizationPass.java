@@ -6,6 +6,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2;
 import dev.epicpix.minecraftfunctioncompiler.util.Pair;
 
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public final class OptimizationPass {
@@ -34,6 +35,36 @@ public final class OptimizationPass {
 
     public Instruction getOffsetInstruction(int offset) {
         return getInstruction(thisInstruction + offset);
+    }
+
+    public boolean isValueUsed(int start, int end, boolean includeSelf, Object value) {
+        for(int i = start; i<end; i++) {
+            if(!includeSelf && i == thisInstruction) continue;
+            var instr = getInstruction(i);
+            if(instr.containsValue(value)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public List<Integer> findInstructions(int start, int end, boolean includeSelf, List<InstructionType> types, List<Pair<String, Object>> dataPairs) {
+        var results = new ArrayList<Integer>();
+        next: for(int i = start; i < end; i++) {
+            if(i == thisInstruction && !includeSelf) continue;
+            var instruction = getInstruction(i);
+            for(var type : types) {
+                if(instruction.type().equals(type)) {
+                    for(var data : dataPairs) {
+                        if(!instruction.data()[instruction.type().getArgumentIndex(data.first())].equals(data.second())) {
+                            continue next;
+                        }
+                    }
+                    results.add(i);
+                }
+            }
+        }
+        return results;
     }
 
     public List<Integer> findInstructions(int start, int end, boolean includeSelf, InstructionType type, List<Pair<String, Object>> dataPairs) {

@@ -14,7 +14,8 @@ public final class Optimizations {
         Optimizations::removeDuplicateChecks,
         Optimizations::inlineLists,
         Optimizations::mergeLabels,
-        Optimizations::removeUselessCommandStackData
+        Optimizations::removeUselessCommandStackData,
+        Optimizations::removeUnusedData
     );
 
     private static void mergeLabels(OptimizationPass pass) {
@@ -82,15 +83,9 @@ public final class Optimizations {
         }else if(pass.thisInstruction().type() == InstructionTypes.MAKE_COMMAND_SOURCE_STACK) {
             var stack = pass.thisInstruction().get("to");
 
-            for(int i = 0; i<pass.context().getInstructionCount(); i++) {
-                if(i == pass.thisInstructionIndex()) continue;
-                var instr = pass.getInstruction(i);
-                if(instr.containsValue(stack)) {
-                    return;
-                }
+            if(!pass.isValueUsed(0, pass.context().getInstructionCount(), false, stack)) {
+                pass.removeInstruction(pass.thisInstructionIndex());
             }
-
-            pass.removeInstruction(pass.thisInstructionIndex());
         }
     }
 
@@ -203,13 +198,10 @@ public final class Optimizations {
         var endInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.LABEL, List.of(new Pair<>("label", endLabel)));
         if(endInstr == null) return;
 
-        if(!pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.SORT_LIST_ENTITY_FURTHEST, List.of(new Pair<>("list", list))).isEmpty()) return;
-        if(!pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.SORT_LIST_ENTITY_NEAREST, List.of(new Pair<>("list", list))).isEmpty()) return;
-        if(!pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.SHUFFLE_LIST, List.of(new Pair<>("list", list))).isEmpty()) return;
+        if(!pass.findInstructions(0, pass.context().getInstructionCount(), false, List.of(InstructionTypes2.SORT_LIST_ENTITY_FURTHEST, InstructionTypes2.SORT_LIST_ENTITY_NEAREST, InstructionTypes2.SHUFFLE_LIST), List.of(new Pair<>("list", list))).isEmpty()) return;
 
         if(!singleSelector) {
-            if(!pass.findInstructions(condInstr, endInstr, false, InstructionTypes.CALL_FUNCTIONS, List.of()).isEmpty()) return;
-            if(!pass.findInstructions(condInstr, endInstr, false, InstructionTypes2.KILL_ENTITY, List.of()).isEmpty()) return;
+            if(!pass.findInstructions(condInstr, endInstr, false, List.of(InstructionTypes.CALL_FUNCTIONS, InstructionTypes2.KILL_ENTITY), List.of()).isEmpty()) return;
 
             var indexLoc = pass.getInstruction(getInstr).get("index");
 
@@ -272,6 +264,16 @@ public final class Optimizations {
             }
         }
 
+    }
+
+    private static void removeUnusedData(OptimizationPass pass) {
+        if(pass.thisInstruction().type() == InstructionTypes2.GET_STACK_POSITION) {
+            var result = pass.thisInstruction().get("position");
+
+            if(!pass.isValueUsed(0, pass.context().getInstructionCount(), false, result)) {
+                pass.removeInstruction(pass.thisInstructionIndex());
+            }
+        }
     }
 
 
