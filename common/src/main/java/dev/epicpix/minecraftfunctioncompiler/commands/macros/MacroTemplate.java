@@ -3,14 +3,12 @@ package dev.epicpix.minecraftfunctioncompiler.commands.macros;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
-import org.objectweb.asm.Handle;
-import org.objectweb.asm.Opcodes;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public record MacroTemplate<T>(List<MacroPart> parts) {
+public record MacroTemplate<T>(List<MacroPart> parts, MacroType<T> macroType) {
     public interface MacroPart {}
 
     public BytecodeRegister writeBytecode(EmitterContext context) {
@@ -74,6 +72,6 @@ public record MacroTemplate<T>(List<MacroPart> parts) {
     }
 
     public static MacroTemplate<String> fromLiteral(String value) {
-        return new MacroTemplate<>(List.of(new LiteralKind(value)));
+        return new MacroTemplate<>(List.of(new LiteralKind(value)), MacroType.STRING_MACRO_TYPE);
     }
 }

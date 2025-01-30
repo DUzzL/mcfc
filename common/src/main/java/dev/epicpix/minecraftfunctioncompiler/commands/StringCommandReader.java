@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonSyntaxException;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
+import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroType;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidator;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidators;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
@@ -158,7 +159,7 @@ public class StringCommandReader {
         while(canRead() && peek() != ' ') {
             parts.add(readMacroChar(inputValidators));
         }
-        return new MacroTemplate<>(MacroTemplate.mergeParts(parts));
+        return new MacroTemplate<>(MacroTemplate.mergeParts(parts), MacroType.STRING_MACRO_TYPE);
     }
 
     private static boolean isWordCharacter(char c) {
@@ -177,7 +178,7 @@ public class StringCommandReader {
         while(canRead() && isWordCharacter(peek())) {
             parts.add(readMacroChar(inputValidators));
         }
-        return new MacroTemplate<>(MacroTemplate.mergeParts(parts));
+        return new MacroTemplate<>(MacroTemplate.mergeParts(parts), MacroType.STRING_MACRO_TYPE);
     }
 
     public String readWord() {

@@ -2,7 +2,6 @@ package dev.epicpix.minecraftfunctioncompiler.commands.macros;
 
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition;
-import org.objectweb.asm.Opcodes;
 
 import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.*;
 
