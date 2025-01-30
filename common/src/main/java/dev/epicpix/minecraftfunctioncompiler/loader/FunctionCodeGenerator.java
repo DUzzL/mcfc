@@ -9,6 +9,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticCollector;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticResult;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.*;
@@ -53,7 +54,7 @@ public class FunctionCodeGenerator {
 
     public static HashMap<DataLocation, List<CommandParams>> parseFunctions(HashMap<DataLocation, List<String>> functionSources, IArgumentLookup lookup, DiagnosticCollector diagnostics) {
         HashMap<DataLocation, List<CommandParams>> definedFunctions = new HashMap<>();
-        for(var entry : functionSources.entrySet()) {
+        nextFunction: for(var entry : functionSources.entrySet()) {
             var key = entry.getKey();
             var values = entry.getValue();
             String currentCommand = null;
@@ -61,11 +62,19 @@ public class FunctionCodeGenerator {
                 ArrayList<CommandParams> parsed = new ArrayList<>();
                 for(String value : values) {
                     currentCommand = value;
+                    DiagnosticResult<CommandParams> res;
                     if(MinecraftVersion.isCurrentVersionInRange(MinecraftVersion.MC_1_20_2, null) && currentCommand.startsWith("$")) {
-                        parsed.add(CommandParser.parseCommand(currentCommand.substring(1), key, true, lookup));
+                        res = CommandParser.parseCommand(currentCommand.substring(1), key, true, lookup);
                     }else {
-                        parsed.add(CommandParser.parseCommand(currentCommand, key, false, lookup));
+                        res = CommandParser.parseCommand(currentCommand, key, false, lookup);
                     }
+                    if(res.isError()) {
+                        var diag = res.getError();
+                        LOGGER.warn("Unable to parse function {} / {}", key, diag.message());
+                        diagnostics.addDiagnostic(diag);
+                        continue nextFunction;
+                    }
+                    parsed.add(res.getResult());
                 }
                 definedFunctions.put(key, parsed);
             } catch (DiagnosticException e) {
