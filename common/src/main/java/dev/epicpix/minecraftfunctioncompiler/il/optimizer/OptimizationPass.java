@@ -3,10 +3,10 @@ package dev.epicpix.minecraftfunctioncompiler.il.optimizer;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionType;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2;
+import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 import dev.epicpix.minecraftfunctioncompiler.util.Pair;
 
 import java.util.*;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public final class OptimizationPass {
@@ -112,38 +112,29 @@ public final class OptimizationPass {
     }
 
     public List<Integer> findExecutedInstructionsUntil(int index) {
-        var res = findExecutedInstructionsUntil(index, new HashMap<>(), new Stack<>());
+        var res = findExecutedInstructionsUntil(index, new HashMap<>(), new ArrayDeque<>());
         if(res == null) return List.of();
         return res.stream().sorted().collect(Collectors.toList());
     }
 
-    private HashSet<Integer> findExecutedInstructionsUntil(int index, HashMap<Integer, HashSet<Integer>> cache, Stack<Integer> currentStack) {
+    private HashSet<Integer> findExecutedInstructionsUntil(int index, HashMap<Integer, HashSet<Integer>> cache, Deque<Integer> currentStack) {
         var cached = cache.get(index);
         if(cached != null) return cached;
         var data = findExecutedInstructionsUntilInternal(index);
         if(data.incomplete) {
             currentStack.push(index);
-            var instr = getInstruction(data.finishIndex);
-            var label = instr.get("label");
-            var prevInstrs = new ArrayList<Integer>();
-            prevInstrs.add(data.finishIndex - 1);
-            for(int i = 0; i<context.getInstructionCount(); i++) {
-                if(i == data.finishIndex) continue;
-                if(getInstruction(i).containsValue(label)) {
-                    prevInstrs.add(i);
-                }
-            }
+            var prevInstrs = getPreviousInstructions(data.finishIndex);
             HashSet<Integer> results = null;
             for(var p : prevInstrs) {
                 if(currentStack.contains(p)) {
                     continue;
                 }
-                var data2 = findExecutedInstructionsUntil(p, cache, currentStack);
-                if(data2 == null) continue;
+                var sub = findExecutedInstructionsUntil(p, cache, currentStack);
+                if(sub == null) continue;
                 if(results == null) {
-                    results = new HashSet<>(data2);
+                    results = new HashSet<>(sub);
                 }else {
-                    results.retainAll(data2);
+                    results.retainAll(sub);
                 }
             }
             currentStack.pop();
@@ -158,11 +149,40 @@ public final class OptimizationPass {
             return res;
         }else {
             if(!data.partExecuted) {
+                cache.put(index, null);
                 return null;
             }
             cache.put(index, data.part);
             return data.part;
         }
+    }
+
+    private boolean recomputeLabelToInstructions = true;
+    private final HashMap<LabelData, List<Integer>> labelToInstructions = new HashMap<>();
+
+    private List<Integer> getLabelToInstructions(LabelData label) {
+        if(recomputeLabelToInstructions) {
+            labelToInstructions.clear();
+            for(int i = 0; i<context.getInstructionCount(); i++) {
+                var instr = context.getInstruction(i);
+                for(var data : instr.data()) {
+                    if(data instanceof LabelData lData) {
+                        labelToInstructions.computeIfAbsent(lData, k -> new ArrayList<>()).add(i);
+                    }
+                }
+            }
+            recomputeLabelToInstructions = false;
+        }
+        return labelToInstructions.get(label);
+    }
+
+    private List<Integer> getPreviousInstructions(int finishIndex) {
+        var instr = getInstruction(finishIndex);
+        var label = instr.<LabelData>get("label");
+        var prevInstrs = new ArrayList<Integer>();
+        prevInstrs.add(finishIndex - 1);
+        prevInstrs.addAll(getLabelToInstructions(label));
+        return prevInstrs;
     }
 
     public void replaceInstructionData(boolean includeSelf, Object from, Object to) {
@@ -203,22 +223,26 @@ public final class OptimizationPass {
     public void addInstruction(int index, Instruction instruction) {
         context.instructions.add(index, instruction);
         resetIndex = Math.min(resetIndex, index);
+        recomputeLabelToInstructions = true;
     }
 
     public void removeInstruction(int index) {
         context.instructions.remove(index);
         resetIndex = Math.min(resetIndex, index);
+        recomputeLabelToInstructions = true;
     }
 
     public void replaceInstruction(int index, Instruction instruction) {
         context.instructions.set(index, instruction);
         resetIndex = Math.min(resetIndex, index);
+        recomputeLabelToInstructions = true;
     }
 
     public void modifyInstructionData(int index, Object[] instructionData) {
         var instr = context.instructions.get(index);
         replaceInstruction(index, new Instruction(instr.type(), instructionData));
         resetIndex = Math.min(resetIndex, index);
+        recomputeLabelToInstructions = true;
     }
 
     public int takeResetIndex() {
