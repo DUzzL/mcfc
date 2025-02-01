@@ -34,7 +34,7 @@ data class WriterData(
     fun getParamIndex(accessor: ParsedTokenValueAccessor): Int {
         var i = 0
         for(param in params) {
-            if(param.first.scope == ParsedTokenValueAccessorScope.CONTEXT || param.first.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
+            if(param.first.scope == ParsedTokenValueAccessorScope.CONTEXT || param.first.scope == ParsedTokenValueAccessorScope.INSTRUCTION || param.first.scope == ParsedTokenValueAccessorScope.RETURN) {
                 if(param.first == accessor) {
                     return i
                 }
@@ -223,6 +223,9 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
         if(def == Type.INT_TYPE) {
             return ParsedTokenExpressionSimpleType.INTEGER
         }
+        if(def == Type.FLOAT_TYPE) {
+            return ParsedTokenExpressionSimpleType.FLOAT
+        }
         if(def.sort == Type.OBJECT) {
             return ParsedTokenExpressionTypeComplex(def.className.replace('$', '.'))
         }
@@ -259,6 +262,14 @@ private fun doesArgumentTypeMatch(matchType: ParsedTokenExpressionType, expected
     }else {
         TODO(expectedType.descriptor)
     }
+}
+
+private fun doesTypeMatch(matchType: ParsedTokenExpressionType, expectedType: ParsedTokenExpressionType): Boolean {
+    if(matchType == expectedType) return true
+    if(expectedType is ParsedTokenExpressionTypeComplex) {
+        return matchType == ParsedTokenExpressionSimpleType.NULL || (matchType is ParsedTokenExpressionTypeComplex && (getClassLowerBounds(expectedType.typeName).any { matchType.typeName == it } || getClassLowerBounds(matchType.typeName).any { expectedType.typeName == it }))
+    }
+    return false
 }
 
 private fun getNextLabel(uniqId: AtomicInteger): String {
@@ -610,20 +621,23 @@ private fun doComparison(writerData: WriterData, expression: ParsedTokenExpressi
     }
 }
 
-private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, output: OutputStream, uniqId: AtomicInteger) {
+private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, output: OutputStream, uniqId: AtomicInteger): Boolean {
     for(el in code) {
         if(el is ParsedTokenStatementIf) {
             val failureLabel = getNextLabel(uniqId)
             output.appendText("dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel $failureLabel = cw.createLabel();\n")
             doComparison(writerData.copyLocalTypes(), el.expression, output, failureLabel, uniqId)
-            writeCode(writerData.copyLocalTypes(), el.code, output, uniqId)
+            val baseReturn = writeCode(writerData.copyLocalTypes(), el.code, output, uniqId)
             if(el.elseCode != null) {
                 val jumpLabel = getNextLabel(uniqId)
                 output.appendText("dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel $jumpLabel = cw.createLabel();\n")
                 output.appendText("cw.jump($jumpLabel);\n")
                 output.appendText("cw.label($failureLabel);\n")
-                writeCode(writerData.copyLocalTypes(), el.elseCode, output, uniqId)
+                val otherReturn = writeCode(writerData.copyLocalTypes(), el.elseCode, output, uniqId)
                 output.appendText("cw.label($jumpLabel);\n")
+                if(baseReturn && otherReturn) {
+                    return true
+                }
             }else {
                 output.appendText("cw.label($failureLabel);\n")
             }
@@ -708,6 +722,7 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                     }
                     output.appendText("cw.setValue(${writerData.localTypes[el.accessor.name]!!.mapping}, $expr);\n")
                 }
+                ParsedTokenValueAccessorScope.RETURN -> throw IllegalArgumentException("Cannot assign values to return scope manually")
             }
             if(type is ParsedTokenExpressionTypeComplex) {
                 val expressionType = evaluateExpressionType(writerData, el.expression)
@@ -719,9 +734,26 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                 }
             }
             continue
+        }else if(el is ParsedTokenStatementReturn) {
+            if(el.value == null) {
+                if(writerData.params.any { it.first.scope == ParsedTokenValueAccessorScope.RETURN }) {
+                    throw IllegalArgumentException("Tried to return with no value, when there's a return type in the instruction definition")
+                }
+                return true
+            }
+            val returnAccessor = writerData.params.find { it.first.scope == ParsedTokenValueAccessorScope.RETURN } ?: throw IllegalArgumentException("Tried to return with a value, when there's no return type in the instruction definition")
+            val returnType = returnAccessor.second
+            val expressionType = evaluateExpressionType(writerData, el.value)
+            if(!doesTypeMatch(expressionType, returnType)) {
+                throw IllegalArgumentException("Tried to return with a value, which doesn't match the return type of the instruction")
+            }
+            val expr = writeExpression(writerData, el.value, output, uniqId)
+            output.appendText("context.store(${writerData.getParamIndex(returnAccessor.first)}, $expr);\n")
+            return true
         }
         throw Exception(el.toString())
     }
+    return false
 }
 
 fun generateCode(mappingData: MappingData?, definition: ParsedTokenInstructionDefinition, file: ParsedFile, output: OutputStream, enums: EnumList, majorVersion: Int, minorVersion: Int, targets: MutableList<String>): List<AccessorStatistics> {
@@ -729,7 +761,11 @@ fun generateCode(mappingData: MappingData?, definition: ParsedTokenInstructionDe
     val writerData = WriterData(mappingData = mappingData, file = file, params = definition.params, enums = enums, majorVersion = majorVersion, minorVersion = minorVersion, targets = targets)
     if(definition.code.isNotEmpty()) {
         try {
-            writeCode(writerData, definition.code, bout, AtomicInteger(0))
+            val hasReturnType = writerData.params.any { it.first.scope == ParsedTokenValueAccessorScope.RETURN }
+            val didReturn = writeCode(writerData, definition.code, bout, AtomicInteger(0))
+            if(hasReturnType && !didReturn) {
+                throw IllegalArgumentException("Not all branches return a value, required since the instruction definition has a return type")
+            }
         }catch(e: Exception) {
             throw RuntimeException("Failed to write code for instruction definition ${definition.name}", e)
         }

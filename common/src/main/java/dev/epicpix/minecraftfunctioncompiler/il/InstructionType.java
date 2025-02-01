@@ -24,4 +24,8 @@ public record InstructionType(String name, String[] argumentNames, int flags) {
         return (flags & CONDITIONAL_JUMP) != 0;
     }
 
+    public boolean returnsValue() {
+        return argumentNames.length >= 1 && argumentNames[0].equals("result");
+    }
+
 }

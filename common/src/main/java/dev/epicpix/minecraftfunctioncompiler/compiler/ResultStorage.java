@@ -47,7 +47,7 @@ public class ResultStorage {
     public void addResult(InstructionWriter instructionWriter, CompilationContextData context, LocationData<Integer> data) {
         if(storesResult()) {
             updatedResult = true;
-            context.writeInstruction(instructionWriter, Instructions2.valueAdd(result, data));
+            context.writeInstruction(instructionWriter, Instructions2.valueAdd(result, result, data));
         }
     }
 

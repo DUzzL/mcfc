@@ -38,6 +38,7 @@ data class ParsedTokenInstanceValue(val expression: ParsedTokenExpression) : Par
 data class ParsedTokenStatementIf(val expression: ParsedTokenExpression, val code: List<ParsedTokenStatement>, val elseCode: List<ParsedTokenStatement>?) : ParsedTokenStatement
 data class ParsedTokenStatementFunctionCall(val name: String, val instance: ParsedTokenInstanceType?, val arguments: List<ParsedTokenExpression>) : ParsedTokenStatement, ParsedTokenExpression
 data class ParsedTokenStatementAssignVariable(val accessor: ParsedTokenValueAccessor, val expression: ParsedTokenExpression) : ParsedTokenStatement
+data class ParsedTokenStatementReturn(val value: ParsedTokenExpression?) : ParsedTokenStatement
 
 data class ParsedTokenExpressionField(val name: String, val instance: ParsedTokenInstanceType) : ParsedTokenExpression
 data class ParsedTokenExpressionBoolean(val value: Boolean) : ParsedTokenExpression
@@ -47,7 +48,7 @@ data class ParsedTokenExpressionTyped(val type: ParsedTokenExpressionType) : Par
 data class ParsedTokenExpressionBinary(val a: ParsedTokenExpression, val b: ParsedTokenExpression, val op: ParsedTokenExpressionOperator) : ParsedTokenExpression
 
 enum class ParsedTokenValueAccessorScope {
-    CONTEXT, INSTRUCTION, LOCAL, STATIC,
+    CONTEXT, INSTRUCTION, LOCAL, STATIC, RETURN,
 }
 
 interface ParsedTokenExpressionType
@@ -101,7 +102,7 @@ private fun parseExpressionAccessorScopeWord(iter: ListIterator<LexToken>): Pars
     }
 }
 
-private fun parseFunctionDefinitionParams(iter: ListIterator<LexToken>, usesObf: AtomicBoolean): List<Pair<ParsedTokenValueAccessor, ParsedTokenExpressionType>> {
+private fun parseFunctionDefinitionParams(iter: ListIterator<LexToken>, usesObf: AtomicBoolean): MutableList<Pair<ParsedTokenValueAccessor, ParsedTokenExpressionType>> {
     val res = mutableListOf<Pair<ParsedTokenValueAccessor, ParsedTokenExpressionType>>()
     while(true) {
         if(iter.tryNextToken<LexTokenWord>() == null && !iter.tryNextTokenType(LexTokenSimpleType.OPEN_ANGLE_BRACKET)) {
@@ -325,6 +326,14 @@ private fun parseCode(iter: ListIterator<LexToken>, valueDefinitions: List<Parse
             } else {
                 res.add(ParsedTokenStatementIf(expression, code, null))
             }
+        }else if(iter.tryNextTokenType(LexTokenSimpleType.KW_RETURN)) {
+            if(iter.tryNextTokenType(LexTokenSimpleType.SEMICOLON)) {
+                res.add(ParsedTokenStatementReturn(null))
+            }else {
+                val expression = parseExpression(iter, valueDefinitions, usesObf)
+                res.add(ParsedTokenStatementReturn(expression))
+                iter.expectTokenType(LexTokenSimpleType.SEMICOLON)
+            }
         }else if(iter.tryNextTokenType(LexTokenSimpleType.OPEN_BRACKET)) {
             iter.previous()
             val accessor = parseValueAccessor(iter, valueDefinitions)
@@ -428,7 +437,30 @@ fun parseTokens(iter: ListIterator<LexToken>): ParsedFile {
             iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
             val params = parseFunctionDefinitionParams(iter, usesObf)
             iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
-            val code = parseCode(iter, params.map { it.first }, usesObf)
+            if(iter.tryNextTokenType(LexTokenSimpleType.ARROW)) {
+                val type = parseExpressionTypeWord(iter)
+                if(type is ParsedTokenExpressionTypeComplex) {
+                    if(type.typeName.startsWith("net.minecraft")) {
+                        usesObf.set(true)
+                    }
+                }
+                var firstNonStatic = 0
+                for(i in params.indices) {
+                    if(params[i].first.scope == ParsedTokenValueAccessorScope.STATIC) {
+                        firstNonStatic = i + 1
+                    }else {
+                        break
+                    }
+                }
+                params.add(firstNonStatic, ParsedTokenValueAccessor(ParsedTokenValueAccessorScope.RETURN, "result") to type)
+            }
+            val code = if(iter.tryNextTokenType(LexTokenSimpleType.ASSIGN)) {
+                val expression = parseExpression(iter, params.map { it.first }, usesObf)
+                iter.expectTokenType(LexTokenSimpleType.SEMICOLON)
+                listOf(ParsedTokenStatementReturn(expression))
+            }else {
+                parseCode(iter, params.map { it.first }, usesObf)
+            }
             instrDefs.add(ParsedTokenInstructionDefinition(instructionFlags.toList(), next.name, params, code, range, usesObf.get()))
             instructionFlags.clear()
         }

@@ -449,6 +449,7 @@ class MainProcessor(
                 val argNames = mutableListOf<String>()
                 for((accessor, _) in it.params) {
                     when(accessor.scope) {
+                        ParsedTokenValueAccessorScope.RETURN -> argNames.add(accessor.name)
                         ParsedTokenValueAccessorScope.CONTEXT -> argNames.add(accessor.name)
                         ParsedTokenValueAccessorScope.INSTRUCTION -> argNames.add(accessor.name)
                         ParsedTokenValueAccessorScope.LOCAL -> continue
@@ -463,7 +464,7 @@ class MainProcessor(
                 for(i in it.params.indices) {
                     val (param, type) = it.params[i];
                     val typeName = when(param.scope) {
-                        ParsedTokenValueAccessorScope.CONTEXT -> {
+                        ParsedTokenValueAccessorScope.CONTEXT, ParsedTokenValueAccessorScope.RETURN -> {
                             if(type == ParsedTokenExpressionSimpleType.LABEL) {
                                 "dev.epicpix.minecraftfunctioncompiler.il.LabelData"
                             }else {
@@ -517,7 +518,7 @@ class MainProcessor(
                     }
                 }
                 impl.appendText(") {")
-                impl.appendText("return new $instructionType($enumClass.$named, new Object[] {${it.params.filter { it.first.scope == ParsedTokenValueAccessorScope.INSTRUCTION || it.first.scope == ParsedTokenValueAccessorScope.CONTEXT }.joinToString { "${it.first.name.snakeToLowerCamelCase()}" }}}); }\n")
+                impl.appendText("return new $instructionType($enumClass.$named, new Object[] {${it.params.filter { it.first.scope == ParsedTokenValueAccessorScope.INSTRUCTION || it.first.scope == ParsedTokenValueAccessorScope.CONTEXT || it.first.scope == ParsedTokenValueAccessorScope.RETURN }.joinToString { "${it.first.name.snakeToLowerCamelCase()}" }}}); }\n")
             }
 
             val defs = mutableListOf<DefinitionPriorityTree>()

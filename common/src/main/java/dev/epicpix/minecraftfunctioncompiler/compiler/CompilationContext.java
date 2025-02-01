@@ -90,7 +90,7 @@ public class CompilationContext {
             return LocationData.ofString(literal.literal());
         }
         var macroString = this.<String>createLocal();
-        writeInstruction(Instructions.loadMacro(macro, macroString));
+        writeInstruction(Instructions.loadMacro(macroString, macro));
         return macroString;
     }
 
@@ -114,7 +114,7 @@ public class CompilationContext {
             return new CompilationData<>(this, data, data.currentEntity(), 0);
         }else {
             LocationData<Entity> entity = createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getStackEntity(data.commandSourceStack(), entity));
+            data.writeInstruction(instructionWriter, Instructions2.getStackEntity(entity, data.commandSourceStack()));
             data.writeInstruction(instructionWriter, Instructions2.ifNullJump(entity.lower(), data.contextEndLabel()));
             var codeLocation = data.writeLabel(instructionWriter);
             return enterWithValue(data.withContextLabel(codeLocation).withCurrentEntity(entity), entity);
@@ -127,7 +127,7 @@ public class CompilationContext {
             return new CompilationData<>(this, data, data.currentEntity(), 0);
         }else {
             LocationData<Entity> entity = createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getStackEntity(data.commandSourceStack(), entity));
+            data.writeInstruction(instructionWriter, Instructions2.getStackEntity(entity, data.commandSourceStack()));
             var codeLocation = data.writeLabel(instructionWriter);
             return enterWithValue(data.withContextLabel(codeLocation).withCurrentEntity(entity), entity);
         }
@@ -139,7 +139,7 @@ public class CompilationContext {
             return new CompilationData<>(this, data, data.currentPosition(), 0);
         }else {
             LocationData<Vec3> position = createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getStackPosition(data.commandSourceStack(), position));
+            data.writeInstruction(instructionWriter, Instructions2.getStackPosition(position, data.commandSourceStack()));
             return enterWithValue(data.withCurrentPosition(position), position);
         }
     }
@@ -150,7 +150,7 @@ public class CompilationContext {
             return new CompilationData<>(this, data, data.currentRotation(), 0);
         }else {
             LocationData<Vec2> rotation = createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getStackRotation(data.commandSourceStack(), rotation));
+            data.writeInstruction(instructionWriter, Instructions2.getStackRotation(rotation, data.commandSourceStack()));
             return enterWithValue(data.withCurrentRotation(rotation), rotation);
         }
     }
@@ -161,7 +161,7 @@ public class CompilationContext {
             return new CompilationData<>(this, data, data.currentWorld(), 0);
         }else {
             LocationData<World> world = createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getStackWorld(data.commandSourceStack(), world));
+            data.writeInstruction(instructionWriter, Instructions2.getStackWorld(world, data.commandSourceStack()));
             return enterWithValue(data.withCurrentWorld(world), world);
         }
     }
@@ -179,16 +179,16 @@ public class CompilationContext {
                 var skipCode = instructionWriter.createLabelBefore(rotationData.endLabel());
                 var reassignedOffset = this.<Double>createLocal();
                 instructionWriter.addInstructionBefore(Instructions2.ifNullJump(entityData.content().lower(), skipCode), skipCode);
-                instructionWriter.addInstructionBefore(Instructions2.getEyeHeight(entityData.content(), reassignedOffset), skipCode);
+                instructionWriter.addInstructionBefore(Instructions2.getEyeHeight(reassignedOffset, entityData.content()), skipCode);
                 instructionWriter.addInstructionBefore(Instructions2.valueAssign(offset.forceCast(), reassignedOffset.forceCast()), skipCode);
             }else if(rotationData.data().currentAnchor() == null) {
                 var skipCode = instructionWriter.createLabelBefore(rotationData.endLabel());
                 var reassignedOffset = this.<Double>createLocal();
                 instructionWriter.addInstructionBefore(Instructions2.ifNullJump(entityData.content().lower(), skipCode), skipCode);
-                instructionWriter.addInstructionBefore(Instructions2.getAnchorOffset(rotationData.data().commandSourceStack(), entityData.content(), reassignedOffset), skipCode);
+                instructionWriter.addInstructionBefore(Instructions2.getAnchorOffset(reassignedOffset, rotationData.data().commandSourceStack(), entityData.content()), skipCode);
                 instructionWriter.addInstructionBefore(Instructions2.valueAssign(offset.forceCast(), reassignedOffset.forceCast()), skipCode);
             }
-            rotationData.writeInstruction(Instructions.applyLocalPositionWorld(positionData.content(), rotationData.content(), offset, position, pos));
+            rotationData.writeInstruction(Instructions.applyLocalPositionWorld(position, positionData.content(), rotationData.content(), offset, pos));
             return enterWithValue(rotationData.data(), position, entityData.stackCount() + positionData.stackCount() + rotationData.stackCount() + 1);
         }
         var positionData = getPosition();
@@ -212,11 +212,11 @@ public class CompilationContext {
         data.writeInstruction(instructionWriter, Instructions2.jumpIfIteratorHasNoNext(worldIter.forceCast(), data.contextEndLabel()));
         var worldObj = this.createLocal();
         var world = this.<World>createLocal();
-        data.writeInstruction(instructionWriter, Instructions2.iteratorNext(worldIter.forceCast(), worldObj));
-        data.writeInstruction(instructionWriter, Instructions2.assumeWorld(worldObj, world));
+        data.writeInstruction(instructionWriter, Instructions2.iteratorNext(worldObj, worldIter.forceCast()));
+        data.writeInstruction(instructionWriter, Instructions2.assumeWorld(world, worldObj));
 
         var entity = this.<Entity>createLocal();
-        data.writeInstruction(instructionWriter, Instructions2.getEntity(world, entity, entityUuid));
+        data.writeInstruction(instructionWriter, Instructions2.getEntity(entity, world, entityUuid));
         data.writeInstruction(instructionWriter, Instructions2.ifNullJump(entity.lower(), iterStart));
 
         var codeLocation = data.writeLabel(instructionWriter);
@@ -234,30 +234,30 @@ public class CompilationContext {
             data.writeInstruction(instructionWriter, Instructions2.jumpIfIteratorHasNoNext(worldIter.forceCast(), data.contextEndLabel()));
             var worldObj = this.createLocal();
             var world = this.<World>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.iteratorNext(worldIter.forceCast(), worldObj));
-            data.writeInstruction(instructionWriter, Instructions2.assumeWorld(worldObj, world));
+            data.writeInstruction(instructionWriter, Instructions2.iteratorNext(worldObj, worldIter.forceCast()));
+            data.writeInstruction(instructionWriter, Instructions2.assumeWorld(world, worldObj));
 
             var entityIter = this.<Iterator<Entity>>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getEntities(world, entityIter.forceCast()));
+            data.writeInstruction(instructionWriter, Instructions2.getEntities(entityIter.forceCast(), world));
             var iterEntityStart = data.writeLabel(instructionWriter);
             data.writeInstruction(instructionWriter, Instructions2.jumpIfIteratorHasNoNext(entityIter.forceCast(), iterWorldStart));
             var entityObj = this.createLocal();
             var entity = this.<Entity>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.iteratorNext(entityIter.forceCast(), entityObj));
-            data.writeInstruction(instructionWriter, Instructions2.assumeEntity(entityObj, entity));
+            data.writeInstruction(instructionWriter, Instructions2.iteratorNext(entityObj, entityIter.forceCast()));
+            data.writeInstruction(instructionWriter, Instructions2.assumeEntity(entity, entityObj));
 
             var codeLocation = data.writeLabel(instructionWriter);
             data.writeInstruction(instructionWriter, Instructions2.jump(iterEntityStart));
             return enterWithValue(data.withContextLabel(codeLocation), entity);
         }else {
             var entityIter = this.<Iterator<Entity>>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getEntities(inWorld, entityIter.forceCast()));
+            data.writeInstruction(instructionWriter, Instructions2.getEntities(entityIter.forceCast(), inWorld));
             var iterEntityStart = data.writeLabel(instructionWriter);
             data.writeInstruction(instructionWriter, Instructions2.jumpIfIteratorHasNoNext(entityIter.forceCast(), data.contextEndLabel()));
             var entityObj = this.createLocal();
             var entity = this.<Entity>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.iteratorNext(entityIter.forceCast(), entityObj));
-            data.writeInstruction(instructionWriter, Instructions2.assumeEntity(entityObj, entity));
+            data.writeInstruction(instructionWriter, Instructions2.iteratorNext(entityObj, entityIter.forceCast()));
+            data.writeInstruction(instructionWriter, Instructions2.assumeEntity(entity, entityObj));
 
             var codeLocation = data.writeLabel(instructionWriter);
             data.writeInstruction(instructionWriter, Instructions2.jump(iterEntityStart));
@@ -284,7 +284,7 @@ public class CompilationContext {
         var playerList = this.<List<Player>>createLocal();
         data.writeInstruction(instructionWriter, Instructions2.valueAssign(index, LocationData.ofInteger(0)));
         data.writeInstruction(instructionWriter, Instructions2.getPlayers(playerList.forceCast()));
-        data.writeInstruction(instructionWriter, Instructions2.getListLength(playerList.forceCast(), length));
+        data.writeInstruction(instructionWriter, Instructions2.getListLength(length, playerList.forceCast()));
 
         var iterStart = data.writeLabel(instructionWriter);
 
@@ -292,12 +292,12 @@ public class CompilationContext {
 
         var playerObj = this.createLocal();
         var player = this.<Player>createLocal();
-        data.writeInstruction(instructionWriter, Instructions2.getListElement(playerList.forceCast(), index, playerObj));
-        data.writeInstruction(instructionWriter, Instructions2.assumePlayer(playerObj, player));
+        data.writeInstruction(instructionWriter, Instructions2.getListElement(playerObj, playerList.forceCast(), index));
+        data.writeInstruction(instructionWriter, Instructions2.assumePlayer(player, playerObj));
 
         var codeLocation = data.writeLabel(instructionWriter);
 
-        data.writeInstruction(instructionWriter, Instructions2.valueAdd(index, LocationData.ofInteger(1)));
+        data.writeInstruction(instructionWriter, Instructions2.valueAdd(index, index, LocationData.ofInteger(1)));
         data.writeInstruction(instructionWriter, Instructions2.jump(iterStart));
 
         return enterWithValue(data.withContextLabel(codeLocation), player);
@@ -325,7 +325,7 @@ public class CompilationContext {
     public LocationData<String> getScoreboardName(LocationData<Entity> entity) {
         var data = current();
         LocationData<String> name = createLocal();
-        data.writeInstruction(instructionWriter, Instructions2.getScoreboardName(entity, name));
+        data.writeInstruction(instructionWriter, Instructions2.getScoreboardName(name, entity));
         return name;
     }
 
@@ -333,10 +333,10 @@ public class CompilationContext {
         var data = current();
         LocationData<Score> score = createLocal();
         if(autoCreate) {
-            data.writeInstruction(instructionWriter, Instructions2.scoreDataAutoCreate(accessor.objective(), accessor.scoreHolder(), score));
+            data.writeInstruction(instructionWriter, Instructions2.scoreDataAutoCreate(score, accessor.objective(), accessor.scoreHolder()));
             return new CompilationData<>(this, data, score, 0);
         }else {
-            data.writeInstruction(instructionWriter, Instructions2.scoreDataNoAutoCreate(accessor.objective(), accessor.scoreHolder(), score));
+            data.writeInstruction(instructionWriter, Instructions2.scoreDataNoAutoCreate(score, accessor.objective(), accessor.scoreHolder()));
             data.writeInstruction(instructionWriter, Instructions2.ifNullJump(score.lower(), data.contextEndLabel()));
             var codeLocation = data.writeLabel(instructionWriter);
             return enterWithValue(data.withContextLabel(codeLocation), score);
@@ -348,13 +348,13 @@ public class CompilationContext {
         var scoreHolders = this.<List<String>>createLocal();
         data.writeInstruction(instructionWriter, Instructions2.getScoreboardHolders(scoreHolders.forceCast()));
         var listLength = this.<Integer>createLocal();
-        data.writeInstruction(instructionWriter, Instructions2.getListLength(scoreHolders.forceCast(), listLength));
+        data.writeInstruction(instructionWriter, Instructions2.getListLength(listLength, scoreHolders.forceCast()));
         if(single) {
             data.writeInstruction(instructionWriter, Instructions2.ifEqualJump(listLength, LocationData.ofInteger(0), data.contextEndLabel()));
             var scoreHolderObj = this.createLocal();
             var scoreHolder = this.<String>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getListElement(scoreHolders.forceCast(), LocationData.ofInteger(0), scoreHolderObj));
-            data.writeInstruction(instructionWriter, Instructions2.assumeString(scoreHolderObj, scoreHolder));
+            data.writeInstruction(instructionWriter, Instructions2.getListElement(scoreHolderObj, scoreHolders.forceCast(), LocationData.ofInteger(0)));
+            data.writeInstruction(instructionWriter, Instructions2.assumeString(scoreHolder, scoreHolderObj));
             var codeLocation = data.writeLabel(instructionWriter);
             return enterWithValue(data.withContextLabel(codeLocation), scoreHolder);
         }else {
@@ -364,10 +364,10 @@ public class CompilationContext {
             data.writeInstruction(instructionWriter, Instructions2.ifGreaterEqualJump(index, listLength, data.contextEndLabel()));
             var scoreHolderObj = this.createLocal();
             var scoreHolder = this.<String>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getListElement(scoreHolders.forceCast(), index, scoreHolderObj));
-            data.writeInstruction(instructionWriter, Instructions2.assumeString(scoreHolderObj, scoreHolder));
+            data.writeInstruction(instructionWriter, Instructions2.getListElement(scoreHolderObj, scoreHolders.forceCast(), index));
+            data.writeInstruction(instructionWriter, Instructions2.assumeString(scoreHolder, scoreHolderObj));
             var codeLocation = data.writeLabel(instructionWriter);
-            data.writeInstruction(instructionWriter, Instructions2.valueAdd(index, LocationData.ofInteger(1)));
+            data.writeInstruction(instructionWriter, Instructions2.valueAdd(index, index, LocationData.ofInteger(1)));
             data.writeInstruction(instructionWriter, Instructions2.jump(iterStart));
             return enterWithValue(data.withContextLabel(codeLocation), scoreHolder);
         }
@@ -384,7 +384,7 @@ public class CompilationContext {
             @SuppressWarnings("resource")
             var selectorData = forSelector(selector);
             var name = this.<String>createLocal();
-            selectorData.writeInstruction(Instructions2.getScoreboardName(selectorData.content(), name));
+            selectorData.writeInstruction(Instructions2.getScoreboardName(name, selectorData.content()));
             var codeLocation = instructionWriter.createLabelBefore(selectorData.data().contextEndLabel());
             return enterWithValue(selectorData.data().withContextLabel(codeLocation), name, selectorData.stackCount() + 1);
         }
@@ -411,7 +411,7 @@ public class CompilationContext {
             LocationData<Vec3> realPosition;
             if(selector.x() != null || selector.y() != null || selector.z() != null) {
                 realPosition = this.createLocal();
-                position.writeInstruction(Instructions.mergePositions(position.content(), LocationData.ofDoubleOrNull(selector.x()), LocationData.ofDoubleOrNull(selector.y()), LocationData.ofDoubleOrNull(selector.z()), realPosition));
+                position.writeInstruction(Instructions.mergePositions(realPosition, position.content(), LocationData.ofDoubleOrNull(selector.x()), LocationData.ofDoubleOrNull(selector.y()), LocationData.ofDoubleOrNull(selector.z())));
             }else {
                 realPosition = position.content();
             }
@@ -445,14 +445,14 @@ public class CompilationContext {
         }
 
         var length = this.<Integer>createLocal();
-        data.writeInstruction(instructionWriter, Instructions2.getListLength(entityList.forceCast(), length));
+        data.writeInstruction(instructionWriter, Instructions2.getListLength(length, entityList.forceCast()));
         if(selector.limit() != null) {
             if(selector.limit() == 1) {
                 data.writeInstruction(instructionWriter, Instructions2.ifEqualJump(length, LocationData.ofInteger(0), data.contextEndLabel()));
                 var entityObj = this.createLocal();
                 var entity = this.<Entity>createLocal();
-                data.writeInstruction(instructionWriter, Instructions2.getListElement(entityList.forceCast(), LocationData.ofInteger(0), entityObj));
-                data.writeInstruction(instructionWriter, Instructions2.assumeEntity(entityObj, entity));
+                data.writeInstruction(instructionWriter, Instructions2.getListElement(entityObj, entityList.forceCast(), LocationData.ofInteger(0)));
+                data.writeInstruction(instructionWriter, Instructions2.assumeEntity(entity, entityObj));
                 var codeLocation = data.writeLabel(instructionWriter);
                 return enterWithValue(data.withContextLabel(codeLocation), entity);
             }else {
@@ -463,10 +463,10 @@ public class CompilationContext {
                 data.writeInstruction(instructionWriter, Instructions2.ifGreaterEqualJump(index, LocationData.ofInteger(selector.limit()), data.contextEndLabel()));
                 var entityObj = this.createLocal();
                 var entity = this.<Entity>createLocal();
-                data.writeInstruction(instructionWriter, Instructions2.getListElement(entityList.forceCast(), index, entityObj));
-                data.writeInstruction(instructionWriter, Instructions2.assumeEntity(entityObj, entity));
+                data.writeInstruction(instructionWriter, Instructions2.getListElement(entityObj, entityList.forceCast(), index));
+                data.writeInstruction(instructionWriter, Instructions2.assumeEntity(entity, entityObj));
                 var codeLocation = data.writeLabel(instructionWriter);
-                data.writeInstruction(instructionWriter, Instructions2.valueAdd(index, LocationData.ofInteger(1)));
+                data.writeInstruction(instructionWriter, Instructions2.valueAdd(index, index, LocationData.ofInteger(1)));
                 data.writeInstruction(instructionWriter, Instructions2.jump(iterStart));
 
                 return enterWithValue(data.withContextLabel(codeLocation), entity);
@@ -478,10 +478,10 @@ public class CompilationContext {
             data.writeInstruction(instructionWriter, Instructions2.ifGreaterEqualJump(index, length, data.contextEndLabel()));
             var entityObj = this.createLocal();
             var entity = this.<Entity>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getListElement(entityList.forceCast(), index, entityObj));
-            data.writeInstruction(instructionWriter, Instructions2.assumeEntity(entityObj, entity));
+            data.writeInstruction(instructionWriter, Instructions2.getListElement(entityObj, entityList.forceCast(), index));
+            data.writeInstruction(instructionWriter, Instructions2.assumeEntity(entity, entityObj));
             var codeLocation = data.writeLabel(instructionWriter);
-            data.writeInstruction(instructionWriter, Instructions2.valueAdd(index, LocationData.ofInteger(1)));
+            data.writeInstruction(instructionWriter, Instructions2.valueAdd(index, index, LocationData.ofInteger(1)));
             data.writeInstruction(instructionWriter, Instructions2.jump(iterStart));
 
             return enterWithValue(data.withContextLabel(codeLocation), entity);
@@ -512,12 +512,12 @@ public class CompilationContext {
         data.writeInstruction(instructionWriter, Instructions2.ifNullJump(entityData.content().lower(), data.contextEndLabel()));
         if(world != null) {
             LocationData<World> thisWorld = createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getEntityWorld(entityData.content(), thisWorld));
+            data.writeInstruction(instructionWriter, Instructions2.getEntityWorld(thisWorld, entityData.content()));
             data.writeInstruction(instructionWriter, Instructions2.ifObjectNotEquivalentJump(thisWorld.lower(), world.lower(), data.contextEndLabel()));
         }
         if(selector.requireAlive()) {
             var alive = this.<Boolean>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getIsAlive(entityData.content(), alive));
+            data.writeInstruction(instructionWriter, Instructions2.isEntityAlive(alive, entityData.content()));
             data.writeInstruction(instructionWriter, Instructions2.ifFalseJump(alive, data.contextEndLabel()));
         }
         if(selector.entityTypes() != null) {
@@ -525,11 +525,11 @@ public class CompilationContext {
         }
         for(var gamemode : selector.gamemodes()) {
             var playerLocal = this.<Player>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.tryAsPlayer(entityData.content(), playerLocal, data.contextEndLabel()));
+            data.writeInstruction(instructionWriter, Instructions2.tryAsPlayer(playerLocal, entityData.content(), data.contextEndLabel()));
             var playerGamemode = this.<GameType>createLocal();
             var mappedGamemode = this.<GameType>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.mapGamemode(gamemode.data(), mappedGamemode));
-            data.writeInstruction(instructionWriter, Instructions2.getGamemode(playerLocal, playerGamemode));
+            data.writeInstruction(instructionWriter, Instructions2.mapGamemode(mappedGamemode, gamemode.data()));
+            data.writeInstruction(instructionWriter, Instructions2.getGamemode(playerGamemode, playerLocal));
             if(gamemode.negated()) {
                 data.writeInstruction(instructionWriter, Instructions2.ifObjectEquivalentJump(playerGamemode.lower(), mappedGamemode.lower(), data.contextEndLabel()));
             }else {
@@ -538,7 +538,7 @@ public class CompilationContext {
         }
         for(var name : selector.names()) {
             var entityName = this.<String>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getEntityName(entityData.content(), entityName));
+            data.writeInstruction(instructionWriter, Instructions2.getEntityName(entityName, entityData.content()));
             if(name.negated()) {
                 data.writeInstruction(instructionWriter, Instructions2.ifObjectEqualJump(entityName.lower(), LocationData.ofString(name.data()).lower(), data.contextEndLabel()));
             }else {
@@ -547,7 +547,7 @@ public class CompilationContext {
         }
         for(var tag : selector.tags()) {
             var tags = this.<Set<String>>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getEntityTags(entityData.content(), tags.forceCast()));
+            data.writeInstruction(instructionWriter, Instructions2.getEntityTags(tags.forceCast(), entityData.content()));
             var resolved = getResolvedMacro(tag.data());
             if(tag.negated()) {
                 data.writeInstruction(instructionWriter, Instructions2.jumpIfSetContains(tags.forceCast(), resolved.lower(), data.contextEndLabel()));
@@ -557,9 +557,9 @@ public class CompilationContext {
         }
         if(selector.hasTags() != null) {
             var tags = this.<Set<String>>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getEntityTags(entityData.content(), tags.forceCast()));
+            data.writeInstruction(instructionWriter, Instructions2.getEntityTags(tags.forceCast(), entityData.content()));
             var tagsLength = this.<Integer>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getSetLength(tags.forceCast(), tagsLength));
+            data.writeInstruction(instructionWriter, Instructions2.getSetLength(tagsLength, tags.forceCast()));
             if(selector.hasTags()) {
                 data.writeInstruction(instructionWriter, Instructions2.ifEqualJump(tagsLength, LocationData.ofInteger(0), data.contextEndLabel()));
             }else {
@@ -569,8 +569,8 @@ public class CompilationContext {
         if(selector.level() != null) {
             var playerLocal = this.<Player>createLocal();
             var levelLocal = this.<Integer>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.tryAsPlayer(entityData.content(), playerLocal, data.contextEndLabel()));
-            data.writeInstruction(instructionWriter, Instructions2.getExperienceLevel(playerLocal, levelLocal));
+            data.writeInstruction(instructionWriter, Instructions2.tryAsPlayer(playerLocal, entityData.content(), data.contextEndLabel()));
+            data.writeInstruction(instructionWriter, Instructions2.getExperienceLevel(levelLocal, playerLocal));
             jumpIfNotMatchesRange(data, levelLocal, selector.level(), data.contextEndLabel());
         }
         if(selector.advancements() != null && !selector.advancements().isEmpty()) {
@@ -594,13 +594,13 @@ public class CompilationContext {
                 data.writeInstruction(instructionWriter, Instructions2.jump(data.contextEndLabel()));
             }else {
                 var playerLocal = this.<Player>createLocal();
-                data.writeInstruction(instructionWriter, Instructions2.tryAsPlayer(entityData.content(), playerLocal, data.contextEndLabel()));
+                data.writeInstruction(instructionWriter, Instructions2.tryAsPlayer(playerLocal, entityData.content(), data.contextEndLabel()));
                 var playerAdvancements = this.<PlayerAdvancements>createLocal();
-                data.writeInstruction(instructionWriter, Instructions2.getPlayerAdvancements(playerLocal, playerAdvancements));
+                data.writeInstruction(instructionWriter, Instructions2.getPlayerAdvancements(playerAdvancements, playerLocal));
 
                 for(var check : selector.advancements().entrySet()) {
                     var advancementProgressLocal = this.<AdvancementProgress>createLocal();
-                    data.writeInstruction(instructionWriter, Instructions2.getAdvancementProgress(playerAdvancements, advancementProgressLocal, check.getKey()));
+                    data.writeInstruction(instructionWriter, Instructions2.getAdvancementProgress(advancementProgressLocal, playerAdvancements, check.getKey()));
                     if(check.getValue() instanceof SelectorAdvancementCheck.AdvancementCompleted advancementCompleted) {
                         if(advancementCompleted.done()) {
                             data.writeInstruction(instructionWriter, Instructions2.jumpIfAdvancementNotDone(advancementProgressLocal, data.contextEndLabel()));
@@ -610,7 +610,7 @@ public class CompilationContext {
                     }else if(check.getValue() instanceof SelectorAdvancementCheck.CriteriaCompleted criteriaCompleted) {
                         for(var criteriaCheck : criteriaCompleted.criteria().entrySet()) {
                             var criterionProgressLocal = this.<CriterionProgress>createLocal();
-                            data.writeInstruction(instructionWriter, Instructions2.getCriterionProgress(advancementProgressLocal, criterionProgressLocal, LocationData.ofString(criteriaCheck.getKey())));
+                            data.writeInstruction(instructionWriter, Instructions2.getCriterionProgress(criterionProgressLocal, advancementProgressLocal, LocationData.ofString(criteriaCheck.getKey())));
                             if(criteriaCheck.getValue()) {
                                 data.writeInstruction(instructionWriter, Instructions2.jumpIfAdvancementCriterionNotDone(criterionProgressLocal, data.contextEndLabel()));
                             }else {
@@ -623,37 +623,37 @@ public class CompilationContext {
         }
         if(selector.yaw() != null || selector.pitch() != null) {
             var rotationLocal = this.<Vec2>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getEntityRotation(entityData.content(), rotationLocal));
+            data.writeInstruction(instructionWriter, Instructions2.getEntityRotation(rotationLocal, entityData.content()));
             if(selector.yaw() != null) {
                 var yaw = this.<Float>createLocal();
-                data.writeInstruction(instructionWriter, Instructions2.getRotationYaw(rotationLocal, yaw));
+                data.writeInstruction(instructionWriter, Instructions2.getRotationYaw(yaw, rotationLocal));
                 jumpIfNotMatchesRange(data, yaw, selector.yaw(), data.contextEndLabel());
             }
             if(selector.pitch() != null) {
                 var pitch = this.<Float>createLocal();
-                data.writeInstruction(instructionWriter, Instructions2.getRotationPitch(rotationLocal, pitch));
+                data.writeInstruction(instructionWriter, Instructions2.getRotationPitch(pitch, rotationLocal));
                 jumpIfNotMatchesRange(data, pitch, selector.pitch(), data.contextEndLabel());
             }
         }
         for(var team : selector.teams()) {
             var entityTeam = this.<Team>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getEntityTeam(entityData.content(), entityTeam));
+            data.writeInstruction(instructionWriter, Instructions2.getEntityTeam(entityTeam, entityData.content()));
             if(team.negated()) {
                 var postJump = data.writeLabel(instructionWriter);
                 instructionWriter.addInstructionBefore(Instructions2.ifNullJump(entityTeam.lower(), postJump), postJump);
                 var entityTeamName = this.<String>createLocal();
-                instructionWriter.addInstructionBefore(Instructions2.getTeamName(entityTeam, entityTeamName), postJump);
+                instructionWriter.addInstructionBefore(Instructions2.getTeamName(entityTeamName, entityTeam), postJump);
                 instructionWriter.addInstructionBefore(Instructions2.ifObjectEqualJump(entityTeamName.lower(), LocationData.ofString(team.data()).lower(), data.contextEndLabel()), postJump);
             }else {
                 data.writeInstruction(instructionWriter, Instructions2.ifNullJump(entityTeam.lower(), data.contextEndLabel()));
                 var entityTeamName = this.<String>createLocal();
-                data.writeInstruction(instructionWriter, Instructions2.getTeamName(entityTeam, entityTeamName));
+                data.writeInstruction(instructionWriter, Instructions2.getTeamName(entityTeamName, entityTeam));
                 data.writeInstruction(instructionWriter, Instructions2.ifObjectNotEqualJump(entityTeamName.lower(), LocationData.ofString(team.data()).lower(), data.contextEndLabel()));
             }
         }
         if(selector.hasTeam() != null) {
             var entityTeam = this.<Team>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getEntityTeam(entityData.content(), entityTeam));
+            data.writeInstruction(instructionWriter, Instructions2.getEntityTeam(entityTeam, entityData.content()));
             if(selector.hasTeam()) {
                 data.writeInstruction(instructionWriter, Instructions2.ifNullJump(entityTeam.lower(), data.contextEndLabel()));
             }else {
@@ -662,31 +662,31 @@ public class CompilationContext {
         }
         if(selector.distance() != null) {
             var thisPosition = this.<Vec3>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getEntityPosition(entityData.content(), thisPosition));
+            data.writeInstruction(instructionWriter, Instructions2.getEntityPosition(thisPosition, entityData.content()));
             var distance = this.<Double>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getDistanceSquared(position, thisPosition, distance));
+            data.writeInstruction(instructionWriter, Instructions2.getDistanceSquared(distance, position, thisPosition));
             jumpIfNotMatchesRange(data, distance, selector.distance().square(), data.contextEndLabel());
         }
         if(selector.dx() != null || selector.dy() != null || selector.dz() != null) {
             var compareX = this.<Double>createLocal();
             var compareY = this.<Double>createLocal();
             var compareZ = this.<Double>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getVec3X(position, compareX));
-            data.writeInstruction(instructionWriter, Instructions2.getVec3Y(position, compareY));
-            data.writeInstruction(instructionWriter, Instructions2.getVec3Z(position, compareZ));
+            data.writeInstruction(instructionWriter, Instructions2.getVec3X(compareX, position));
+            data.writeInstruction(instructionWriter, Instructions2.getVec3Y(compareY, position));
+            data.writeInstruction(instructionWriter, Instructions2.getVec3Z(compareZ, position));
             var aabb = selector.createLocalAABB();
             var transformedMinX = this.<Double>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.valueAddAssign(transformedMinX.forceCast(), compareX.forceCast(), LocationData.ofDouble(aabb.minX()).forceCast()));
+            data.writeInstruction(instructionWriter, Instructions2.valueAdd(transformedMinX.forceCast(), compareX.forceCast(), LocationData.ofDouble(aabb.minX()).forceCast()));
             var transformedMinY = this.<Double>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.valueAddAssign(transformedMinY.forceCast(), compareY.forceCast(), LocationData.ofDouble(aabb.minY()).forceCast()));
+            data.writeInstruction(instructionWriter, Instructions2.valueAdd(transformedMinY.forceCast(), compareY.forceCast(), LocationData.ofDouble(aabb.minY()).forceCast()));
             var transformedMinZ = this.<Double>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.valueAddAssign(transformedMinZ.forceCast(), compareZ.forceCast(), LocationData.ofDouble(aabb.minZ()).forceCast()));
+            data.writeInstruction(instructionWriter, Instructions2.valueAdd(transformedMinZ.forceCast(), compareZ.forceCast(), LocationData.ofDouble(aabb.minZ()).forceCast()));
             var transformedMaxX = this.<Double>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.valueAddAssign(transformedMaxX.forceCast(), compareX.forceCast(), LocationData.ofDouble(aabb.maxX()).forceCast()));
+            data.writeInstruction(instructionWriter, Instructions2.valueAdd(transformedMaxX.forceCast(), compareX.forceCast(), LocationData.ofDouble(aabb.maxX()).forceCast()));
             var transformedMaxY = this.<Double>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.valueAddAssign(transformedMaxY.forceCast(), compareY.forceCast(), LocationData.ofDouble(aabb.maxY()).forceCast()));
+            data.writeInstruction(instructionWriter, Instructions2.valueAdd(transformedMaxY.forceCast(), compareY.forceCast(), LocationData.ofDouble(aabb.maxY()).forceCast()));
             var transformedMaxZ = this.<Double>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.valueAddAssign(transformedMaxZ.forceCast(), compareZ.forceCast(), LocationData.ofDouble(aabb.maxZ()).forceCast()));
+            data.writeInstruction(instructionWriter, Instructions2.valueAdd(transformedMaxZ.forceCast(), compareZ.forceCast(), LocationData.ofDouble(aabb.maxZ()).forceCast()));
             data.writeInstruction(instructionWriter, Instructions2.checkEntityIntersection(entityData.content(), transformedMinX, transformedMinY, transformedMinZ, transformedMaxX, transformedMaxY, transformedMaxZ, data.contextEndLabel()));
         }
         if(!selector.scores().isEmpty()) {
@@ -697,7 +697,7 @@ public class CompilationContext {
                 data = stack.peek();
 
                 var scoreValue = this.<Integer>createLocal();
-                data.writeInstruction(instructionWriter, Instructions2.getScoreValue(scoreData.content(), scoreValue));
+                data.writeInstruction(instructionWriter, Instructions2.getScoreValue(scoreValue, scoreData.content()));
                 jumpIfNotMatchesRange(data, scoreValue, entry.getValue(), data.contextEndLabel());
             }
         }
@@ -708,7 +708,7 @@ public class CompilationContext {
                 break;
             }
             var entityWorld = this.<World>createLocal();
-            data.writeInstruction(instructionWriter, Instructions2.getEntityWorld(entityData.content(), entityWorld));
+            data.writeInstruction(instructionWriter, Instructions2.getEntityWorld(entityWorld, entityData.content()));
             if(predicate.negated()) {
                 data.writeInstruction(instructionWriter, Instructions2.jumpIfPredicateSelectorSucceeds(entityWorld, entityData.content(), data.contextEndLabel(), predicate.data()));
             }else {
@@ -738,21 +738,21 @@ public class CompilationContext {
         }
         var data = current();
         var commandStack = this.<CommandSourceStack>createLocal();
-        writeInstruction(Instructions.makeCommandSourceStack(data.commandSourceStack(), commandStack, data.currentEntity(), data.currentWorld(), data.currentPosition(), data.currentRotation(), data.currentAnchor()));
+        writeInstruction(Instructions.makeCommandSourceStack(commandStack, data.commandSourceStack(), data.currentEntity(), data.currentWorld(), data.currentPosition(), data.currentRotation(), data.currentAnchor()));
         writeInstruction(Instructions2.addListElement(forkingContext.getForkContextList(), commandStack.lower()));
 
         var length = this.<Integer>createLocal();
-        instructionWriter.addInstructionBefore(Instructions2.getListLength(forkingContext.getForkContextList(), length), forkingContext.getForkExecLabel());
+        instructionWriter.addInstructionBefore(Instructions2.getListLength(length, forkingContext.getForkContextList()), forkingContext.getForkExecLabel());
         var index = this.<Integer>createLocal();
         instructionWriter.addInstructionBefore(Instructions2.valueAssign(index, LocationData.ofInteger(0)), forkingContext.getForkExecLabel());
         var iterStart = instructionWriter.createLabelBefore(forkingContext.getForkExecLabel());
         instructionWriter.addInstructionBefore(Instructions2.ifGreaterEqualJump(index, length, forkingContext.getForkExecLabel()), forkingContext.getForkExecLabel());
         var commandStackObj = this.createLocal();
         var cmdStack = this.<CommandSourceStack>createLocal();
-        instructionWriter.addInstructionBefore(Instructions2.getListElement(forkingContext.getForkContextList(), index, commandStackObj), forkingContext.getForkExecLabel());
-        instructionWriter.addInstructionBefore(Instructions2.assumeCommandStack(commandStackObj, cmdStack), forkingContext.getForkExecLabel());
+        instructionWriter.addInstructionBefore(Instructions2.getListElement(commandStackObj, forkingContext.getForkContextList(), index), forkingContext.getForkExecLabel());
+        instructionWriter.addInstructionBefore(Instructions2.assumeCommandStack(cmdStack, commandStackObj), forkingContext.getForkExecLabel());
         var codeLocation = instructionWriter.createLabelBefore(forkingContext.getForkExecLabel());
-        instructionWriter.addInstructionBefore(Instructions2.valueAdd(index, LocationData.ofInteger(1)), forkingContext.getForkExecLabel());
+        instructionWriter.addInstructionBefore(Instructions2.valueAdd(index, index, LocationData.ofInteger(1)), forkingContext.getForkExecLabel());
         instructionWriter.addInstructionBefore(Instructions2.jump(iterStart), forkingContext.getForkExecLabel());
 
         return enterWithoutValue(CompilationContextData.create(cmdStack, codeLocation));

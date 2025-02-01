@@ -38,7 +38,7 @@ public final class Emitter {
             if(context.instruction().type() == InstructionTypes.LOAD_MACRO) {
                 var template = context.instruction().<MacroTemplate<String>>get("macroTemplate");
                 var macroContent = template.writeBytecode(context);
-                context.store("string", macroContent);
+                context.store("result", macroContent);
                 return true;
             }
             if(context.instruction().type() == InstructionTypes.MAKE_COMMAND_SOURCE_STACK) {
@@ -60,15 +60,15 @@ public final class Emitter {
                     var anchorReg = anchor == LocationAnchor.EYES ? loadAnchor_EYES(codeWriter) : loadAnchor_FEET(codeWriter);
                     commandSourceStack = callCommandSourceStack_withAnchor(codeWriter, commandSourceStack, anchorReg);
                 }
-                context.store("to", commandSourceStack);
+                context.store("result", commandSourceStack);
                 return true;
             }
             if(context.instruction().type() == InstructionTypes.CALL_FUNCTIONS) {
                 var functions = context.instruction().<List<DataLocation>>get("functions");
-                var returnValueLocation = context.instruction().<LocationData<Long>>get("returnValue");
+                var returnValueLocation = context.instruction().<LocationData<Long>>get("result");
                 if(functions.isEmpty()) {
                     if(returnValueLocation != null) {
-                        context.store("returnValue", new BytecodeValue.LongValue(1L << 32));
+                        context.store("result", new BytecodeValue.LongValue(1L << 32));
                     }
                 }else {
                     var post = codeWriter.createLabel();
@@ -99,9 +99,9 @@ public final class Emitter {
                         }
 
                         if(returnValueLocation != null) {
-                            context.store("returnValue", returnValue);
+                            context.store("result", returnValue);
                             if(i + 1 != functions.size()) {
-                                var shiftedResult = codeWriter.shiftRight(context.load("returnValue"), new BytecodeValue.IntegerValue(32));
+                                var shiftedResult = codeWriter.shiftRight(context.load("result"), new BytecodeValue.IntegerValue(32));
                                 var shiftedIntResult = codeWriter.castType(shiftedResult, Type.INT_TYPE);
                                 codeWriter.conditionalJump(JumpCondition.NE, shiftedIntResult, new BytecodeValue.IntegerValue(2), post);
                             }
@@ -140,7 +140,7 @@ public final class Emitter {
                 var posY = new BytecodeValue.DoubleValue(pos.y());
                 var posZ = new BytecodeValue.DoubleValue(pos.z());
                 var calculated = callExtensionFunctions_calculateLocalCoordinates(codeWriter, rotX, rotY, fposX, fposY, fposZ, posX, posY, posZ);
-                context.store("to", calculated);
+                context.store("result", calculated);
                 return true;
             }
             if(context.instruction().type() == InstructionTypes.APPLY_POSITION_WORLD) {
@@ -150,7 +150,7 @@ public final class Emitter {
                 BytecodeValue y = pos.isYRelative() ? codeWriter.add(loadVec3_y(codeWriter, context.load("from")), new BytecodeValue.DoubleValue(pos.y())) : new BytecodeValue.DoubleValue(pos.y());
                 BytecodeValue z = pos.isZRelative() ? codeWriter.add(loadVec3_z(codeWriter, context.load("from")), new BytecodeValue.DoubleValue(pos.z())) : new BytecodeValue.DoubleValue(pos.z());
 
-                context.store("to", codeWriter.newObjectCreate(VEC3_INIT_TARGET, x, y, z));
+                context.store("result", codeWriter.newObjectCreate(VEC3_INIT_TARGET, x, y, z));
                 return true;
             }
             if(context.instruction().type() == InstructionTypes.APPLY_ROTATION_WORLD) {
@@ -158,43 +158,7 @@ public final class Emitter {
                 BytecodeValue yaw = rot.isYawRelative() ? codeWriter.add(loadVec2_x(codeWriter, context.load("from")), new BytecodeValue.FloatValue((float) rot.yaw())) : new BytecodeValue.FloatValue((float) rot.yaw());
                 BytecodeValue pitch = rot.isPitchRelative() ? codeWriter.add(loadVec2_y(codeWriter, context.load("from")), new BytecodeValue.FloatValue((float) rot.pitch())) : new BytecodeValue.FloatValue((float) rot.pitch());
 
-                context.store("to", codeWriter.newObjectCreate(VEC2_INIT_TARGET, yaw, pitch));
-                return true;
-            }
-            if(context.instruction().type() == InstructionTypes.CHECK_ENTITY_TYPES) {
-                var entity = context.load("entity");
-                var entityType = callEntity_getType(codeWriter, entity);
-                var success = codeWriter.createLabel();
-                for(var res : context.instruction().<List<DataLocation>>get("types")) {
-                    var compareType = context.fieldStorage().loadEntityType(codeWriter, res);
-                    if(context.instruction().<Boolean>get("negated")) {
-                        codeWriter.conditionalJump(JumpCondition.EQ, entityType, compareType, context.mapLabel("failLabel"));
-                    }else {
-                        codeWriter.conditionalJump(JumpCondition.EQ, entityType, compareType, success);
-                    }
-                }
-                if(!context.instruction().<Boolean>get("negated")) {
-                    codeWriter.jump(context.mapLabel("failLabel"));
-                }
-                codeWriter.label(success);
-                return true;
-            }
-            if(context.instruction().type() == InstructionTypes.ALIGN_POSITION) {
-                var swizzle = context.instruction().<SwizzleArgument>get("swizzle");
-                var x = swizzle.x() ? callMath_floor(codeWriter, loadVec3_x(codeWriter, context.load("position"))) : loadVec3_x(codeWriter, context.load("position"));
-                var y = swizzle.y() ? callMath_floor(codeWriter, loadVec3_y(codeWriter, context.load("position"))) : loadVec3_y(codeWriter, context.load("position"));
-                var z = swizzle.z() ? callMath_floor(codeWriter, loadVec3_z(codeWriter, context.load("position"))) : loadVec3_z(codeWriter, context.load("position"));
-
-                context.store("result", codeWriter.newObjectCreate(VEC3_INIT_TARGET, x, y, z));
-                return true;
-            }
-            if(context.instruction().type() == InstructionTypes.MERGE_POSITIONS) {
-                var position = context.load("position");
-                var x = context.instruction().get("x") != null ? context.load("x") : loadVec3_x(codeWriter, position);
-                var y = context.instruction().get("y") != null ? context.load("y") : loadVec3_y(codeWriter, position);
-                var z = context.instruction().get("z") != null ? context.load("z") : loadVec3_z(codeWriter, position);
-
-                context.store("result", codeWriter.newObjectCreate(VEC3_INIT_TARGET, x, y, z));
+                context.store("result", codeWriter.newObjectCreate(VEC2_INIT_TARGET, yaw, pitch));
                 return true;
             }
 

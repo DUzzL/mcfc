@@ -37,12 +37,14 @@ enum class LexTokenSimpleType : LexToken {
     SEMICOLON,
     COLON,
     ASSIGN,
+    ARROW,
     KW_IF,
     KW_ELSE,
     KW_NULL,
     KW_FALSE,
     KW_TRUE,
     KW_NEW,
+    KW_RETURN,
 }
 
 fun lexTokens(code: String): List<LexToken> {
@@ -97,7 +99,13 @@ fun lexTokens(code: String): List<LexToken> {
             '.' -> return LexTokenSimpleType.DOT
             ',' -> return LexTokenSimpleType.COMMA
             '+' -> return LexTokenSimpleType.PLUS
-            '-' -> return LexTokenSimpleType.MINUS
+            '-' -> {
+                if(index < code.length && code[index] == '>') {
+                    index++
+                    return LexTokenSimpleType.ARROW
+                }
+                return LexTokenSimpleType.MINUS
+            }
             '/' -> return LexTokenSimpleType.SLASH
             '*' -> return LexTokenSimpleType.STAR
             ';' -> return LexTokenSimpleType.SEMICOLON
@@ -153,6 +161,7 @@ fun lexTokens(code: String): List<LexToken> {
                 "false" -> LexTokenSimpleType.KW_FALSE
                 "true" -> LexTokenSimpleType.KW_TRUE
                 "new" -> LexTokenSimpleType.KW_NEW
+                "return" -> LexTokenSimpleType.KW_RETURN
                 else -> LexTokenWord(res)
             }
         }

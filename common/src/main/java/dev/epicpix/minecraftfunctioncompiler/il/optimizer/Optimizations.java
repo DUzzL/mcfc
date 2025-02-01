@@ -67,11 +67,11 @@ public final class Optimizations {
             for(int i = 0; i<pass.context().getInstructionCount(); i++) {
                 var instr = pass.getInstruction(i);
                 if(instr.type() == InstructionTypes2.GET_COMMAND_STACK) {
-                    if(instr.get("stack").equals(stack)) {
+                    if(instr.get("result").equals(stack)) {
                         return;
                     }
                 }else if(instr.type() == InstructionTypes.MAKE_COMMAND_SOURCE_STACK) {
-                    if(instr.get("to").equals(stack)) {
+                    if(instr.get("result").equals(stack)) {
                         entitySource = instr.get("entity");
                         break;
                     }
@@ -79,18 +79,18 @@ public final class Optimizations {
             }
             if(entitySource == null) return;
 
-            var replaceFrom = pass.thisInstruction().get("entity");
+            var replaceFrom = pass.thisInstruction().get("result");
             pass.replaceInstructionData(false, replaceFrom, entitySource);
             pass.removeInstruction(pass.thisInstructionIndex());
 
         }else if(pass.thisInstruction().type() == InstructionTypes.MAKE_COMMAND_SOURCE_STACK) {
             if(pass.thisInstruction().get("anchor") == null && pass.thisInstruction().get("entity") == null && pass.thisInstruction().get("position") == null && pass.thisInstruction().get("rotation") == null && pass.thisInstruction().get("world") == null) {
-                pass.replaceInstructionData(false, pass.thisInstruction().get("to"), pass.thisInstruction().get("from"));
+                pass.replaceInstructionData(false, pass.thisInstruction().get("result"), pass.thisInstruction().get("from"));
                 pass.removeInstruction(pass.thisInstructionIndex());
                 return;
             }
 
-            var stack = pass.thisInstruction().get("to");
+            var stack = pass.thisInstruction().get("result");
 
             if(!pass.isValueUsed(0, pass.context().getInstructionCount(), false, stack)) {
                 pass.removeInstruction(pass.thisInstructionIndex());
@@ -99,13 +99,13 @@ public final class Optimizations {
     }
 
     private static void mergeValues(OptimizationPass pass) {
-        mergePureData(pass, InstructionTypes2.GET_STACK_ENTITY, "stack", "entity");
-        mergePureData(pass, InstructionTypes2.GET_SCOREBOARD_NAME, "entity", "name");
+        mergePureData(pass, InstructionTypes2.GET_STACK_ENTITY, "stack", "result");
+        mergePureData(pass, InstructionTypes2.GET_SCOREBOARD_NAME, "entity", "result");
 
         if(pass.thisInstruction().type() == InstructionTypes2.OBJECT_ASSIGN) {
             var assignFrom = pass.thisInstruction().get("src");
-            var assignTo = pass.thisInstruction().get("dst");
-            var otherAssigns = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.OBJECT_ASSIGN, List.of(new Pair<>("dst", assignFrom)));
+            var assignTo = pass.thisInstruction().get("result");
+            var otherAssigns = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.OBJECT_ASSIGN, List.of(new Pair<>("result", assignFrom)));
             if(!otherAssigns.isEmpty()) return;
 
             pass.replaceInstructionData(false, assignFrom, assignTo);
@@ -113,12 +113,12 @@ public final class Optimizations {
         }else if(pass.thisInstruction().type() == InstructionTypes.CALL_FUNCTIONS) {
             var prev = pass.getOffsetInstruction(-1);
             if(prev != null && prev.type() == InstructionTypes.CALL_FUNCTIONS) {
-                if(pass.thisInstruction().get("returnValue") == null && prev.get("returnValue") == null) {
+                if(pass.thisInstruction().get("result") == null && prev.get("result") == null) {
                     if(Objects.equals(pass.thisInstruction().get("arguments"), prev.get("arguments"))) {
                         if(Objects.equals(pass.thisInstruction().get("stack"), prev.get("stack"))) {
                             var functions = new ArrayList<DataLocation>(prev.get("functions"));
                             functions.addAll(pass.thisInstruction().get("functions"));
-                            pass.replaceInstruction(pass.thisInstructionIndex() - 1, Instructions.callFunctions(functions, prev.get("stack"), prev.get("arguments"), null));
+                            pass.replaceInstruction(pass.thisInstructionIndex() - 1, Instructions.callFunctions(null, functions, prev.get("stack"), prev.get("arguments")));
                             pass.removeInstruction(pass.thisInstructionIndex());
                         }
                     }
@@ -148,7 +148,7 @@ public final class Optimizations {
     private static void removeDuplicateChecks(OptimizationPass pass) {
         if(pass.thisInstruction().type() == InstructionTypes2.IF_NULL_JUMP) {
             var compareData = pass.thisInstruction().get("local");
-            var reassignmentInstrs = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.OBJECT_ASSIGN, List.of(new Pair<>("dst", compareData)));
+            var reassignmentInstrs = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.OBJECT_ASSIGN, List.of(new Pair<>("result", compareData)));
             if(reassignmentInstrs.isEmpty()) {
                 var labelData = pass.thisInstruction().get("label");
                 var delInstrs = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.IF_NULL_JUMP, List.of(new Pair<>("local", compareData), new Pair<>("label", labelData)));
@@ -161,26 +161,26 @@ public final class Optimizations {
                 }
             }
         }else if(pass.thisInstruction().type() == InstructionTypes2.ASSUME_COMMAND_STACK) {
-            var stackFrom = pass.thisInstruction().get("stack_obj");
-            var stackTo = pass.thisInstruction().get("stack");
+            var stackFrom = pass.thisInstruction().get("object");
+            var stackTo = pass.thisInstruction().get("result");
 
-            var def = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes.MAKE_COMMAND_SOURCE_STACK, List.of(new Pair<>("to", stackFrom)));
+            var def = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes.MAKE_COMMAND_SOURCE_STACK, List.of(new Pair<>("result", stackFrom)));
             if(def != null) {
                 pass.replaceInstructionData(false, stackFrom, stackTo);
                 pass.removeInstruction(pass.thisInstructionIndex());
             }
         }else if(pass.thisInstruction().type() == InstructionTypes2.ASSUME_ENTITY) {
-            var entityFrom = pass.thisInstruction().get("entity_obj");
-            var entityTo = pass.thisInstruction().get("entity");
+            var entityFrom = pass.thisInstruction().get("object");
+            var entityTo = pass.thisInstruction().get("result");
 
-            var def = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.ASSUME_ENTITY, List.of(new Pair<>("entity", entityFrom)));
+            var def = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.ASSUME_ENTITY, List.of(new Pair<>("result", entityFrom)));
             if(def != null) {
                 pass.replaceInstructionData(false, entityFrom, entityTo);
                 pass.removeInstruction(pass.thisInstructionIndex());
                 return;
             }
 
-            var def2 = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.ASSUME_PLAYER, List.of(new Pair<>("player", entityFrom)));
+            var def2 = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.ASSUME_PLAYER, List.of(new Pair<>("result", entityFrom)));
             if(def2 != null) {
                 pass.replaceInstructionData(false, entityFrom, entityTo);
                 pass.removeInstruction(pass.thisInstructionIndex());
@@ -191,7 +191,7 @@ public final class Optimizations {
     private static void inlineLists(OptimizationPass pass) {
         if(pass.thisInstruction().type() != InstructionTypes2.CREATE_MUTABLE_LIST) return;
 
-        var list = pass.thisInstruction().<LocationData<List<Object>>>get("list");
+        var list = pass.thisInstruction().<LocationData<List<Object>>>get("result");
 
         var addInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.ADD_LIST_ELEMENT, List.of(new Pair<>("list", list)));
         if(addInstr == null) return;
@@ -203,7 +203,7 @@ public final class Optimizations {
         if(getInstr == null) return;
 
         var condInstr = getInstr - 1;
-        if(!pass.getInstruction(condInstr).containsValue(pass.getInstruction(listLengthInstr).get("size"))) return;
+        if(!pass.getInstruction(condInstr).containsValue(pass.getInstruction(listLengthInstr).get("result"))) return;
         var condInstrType = pass.getInstruction(condInstr).type();
         boolean singleSelector;
         LabelData endLabel;
@@ -228,10 +228,10 @@ public final class Optimizations {
 
             var indexLoc = pass.getInstruction(getInstr).get("index");
 
-            var indexDefInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.VALUE_ASSIGN, List.of(new Pair<>("dst", indexLoc), new Pair<>("src", LocationData.ofInteger(0))));
+            var indexDefInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.VALUE_ASSIGN, List.of(new Pair<>("result", indexLoc), new Pair<>("src", LocationData.ofInteger(0))));
             if(indexDefInstr == null) return;
 
-            var adderInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.VALUE_ADD, List.of(new Pair<>("a", indexLoc), new Pair<>("b", LocationData.ofInteger(1))));
+            var adderInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.VALUE_ADD, List.of(new Pair<>("result", indexLoc), new Pair<>("a", indexLoc), new Pair<>("b", LocationData.ofInteger(1))));
             if(adderInstr == null) return;
 
             var jumpInstr = adderInstr + 1;
@@ -246,7 +246,7 @@ public final class Optimizations {
             }
 
 
-            pass.replaceInstruction(getInstr, Instructions2.objectAssign(pass.getInstruction(getInstr).get("element"), pass.getInstruction(addInstr).get("element")));
+            pass.replaceInstruction(getInstr, Instructions2.objectAssign(pass.getInstruction(getInstr).get("result"), pass.getInstruction(addInstr).get("element")));
             pass.removeInstruction(jumpInstr);
             pass.removeInstruction(adderInstr);
             pass.removeInstruction(condInstr);
@@ -267,7 +267,7 @@ public final class Optimizations {
                 pass.addInstruction(addInstr - 1, r);
             }
         }else {
-            pass.replaceInstruction(getInstr, Instructions2.objectAssign(pass.getInstruction(getInstr).get("element"), pass.getInstruction(addInstr).get("element")));
+            pass.replaceInstruction(getInstr, Instructions2.objectAssign(pass.getInstruction(getInstr).get("result"), pass.getInstruction(addInstr).get("element")));
             pass.removeInstruction(condInstr);
             pass.removeInstruction(listLengthInstr);
             pass.removeInstruction(addInstr);
@@ -291,7 +291,7 @@ public final class Optimizations {
 
     private static void removeUnusedData(OptimizationPass pass) {
         if(pass.thisInstruction().type() == InstructionTypes2.GET_STACK_POSITION) {
-            var result = pass.thisInstruction().get("position");
+            var result = pass.thisInstruction().get("result");
 
             if(!pass.isValueUsed(0, pass.context().getInstructionCount(), false, result)) {
                 pass.removeInstruction(pass.thisInstructionIndex());
