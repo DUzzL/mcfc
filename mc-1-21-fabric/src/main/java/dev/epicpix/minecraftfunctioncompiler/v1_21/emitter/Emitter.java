@@ -166,6 +166,42 @@ public final class Emitter {
                 context.store("result", codeWriter.newObjectCreate(VEC2_INIT_TARGET, yaw, pitch));
                 return true;
             }
+            if(context.instruction().type() == InstructionTypes.CHECK_ENTITY_TYPES) {
+                var entity = context.load("entity");
+                var entityType = callEntity_getType(codeWriter, entity);
+                var success = codeWriter.createLabel();
+                for(var res : context.instruction().<List<DataLocation>>get("types")) {
+                    var compareType = context.fieldStorage().loadEntityType(codeWriter, res);
+                    if(context.instruction().<Boolean>get("negated")) {
+                        codeWriter.conditionalJump(JumpCondition.EQ, entityType, compareType, context.mapLabel("failLabel"));
+                    }else {
+                        codeWriter.conditionalJump(JumpCondition.EQ, entityType, compareType, success);
+                    }
+                }
+                if(!context.instruction().<Boolean>get("negated")) {
+                    codeWriter.jump(context.mapLabel("failLabel"));
+                }
+                codeWriter.label(success);
+                return true;
+            }
+            if(context.instruction().type() == InstructionTypes.ALIGN_POSITION) {
+                var swizzle = context.instruction().<SwizzleArgument>get("swizzle");
+                var x = swizzle.x() ? callMath_floor(codeWriter, loadVec3_x(codeWriter, context.load("position"))) : loadVec3_x(codeWriter, context.load("position"));
+                var y = swizzle.y() ? callMath_floor(codeWriter, loadVec3_y(codeWriter, context.load("position"))) : loadVec3_y(codeWriter, context.load("position"));
+                var z = swizzle.z() ? callMath_floor(codeWriter, loadVec3_z(codeWriter, context.load("position"))) : loadVec3_z(codeWriter, context.load("position"));
+
+                context.store("result", codeWriter.newObjectCreate(VEC3_INIT_TARGET, x, y, z));
+                return true;
+            }
+            if(context.instruction().type() == InstructionTypes.MERGE_POSITIONS) {
+                var position = context.load("position");
+                var x = context.instruction().get("x") != null ? context.load("x") : loadVec3_x(codeWriter, position);
+                var y = context.instruction().get("y") != null ? context.load("y") : loadVec3_y(codeWriter, position);
+                var z = context.instruction().get("z") != null ? context.load("z") : loadVec3_z(codeWriter, position);
+
+                context.store("result", codeWriter.newObjectCreate(VEC3_INIT_TARGET, x, y, z));
+                return true;
+            }
 
             return false;
         });
