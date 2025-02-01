@@ -74,7 +74,7 @@ public final class OptimizationPass {
             var instruction = getInstruction(i);
             if(instruction.type().equals(type)) {
                 for(var data : dataPairs) {
-                    if(!instruction.data()[type.getArgumentIndex(data.first())].equals(data.second())) {
+                    if(!Objects.equals(instruction.data()[type.getArgumentIndex(data.first())], data.second())) {
                         continue next;
                     }
                 }
@@ -136,6 +136,7 @@ public final class OptimizationPass {
                 }else {
                     results.retainAll(sub);
                 }
+                if(results.isEmpty()) break;
             }
             currentStack.pop();
             if(results == null) {

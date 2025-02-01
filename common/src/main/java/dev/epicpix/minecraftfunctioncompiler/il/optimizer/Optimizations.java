@@ -1,10 +1,13 @@
 package dev.epicpix.minecraftfunctioncompiler.il.optimizer;
 
+import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
 import dev.epicpix.minecraftfunctioncompiler.util.Pair;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 
 public final class Optimizations {
     private Optimizations() {}
@@ -81,6 +84,12 @@ public final class Optimizations {
             pass.removeInstruction(pass.thisInstructionIndex());
 
         }else if(pass.thisInstruction().type() == InstructionTypes.MAKE_COMMAND_SOURCE_STACK) {
+            if(pass.thisInstruction().get("anchor") == null && pass.thisInstruction().get("entity") == null && pass.thisInstruction().get("position") == null && pass.thisInstruction().get("rotation") == null && pass.thisInstruction().get("world") == null) {
+                pass.replaceInstructionData(false, pass.thisInstruction().get("to"), pass.thisInstruction().get("from"));
+                pass.removeInstruction(pass.thisInstructionIndex());
+                return;
+            }
+
             var stack = pass.thisInstruction().get("to");
 
             if(!pass.isValueUsed(0, pass.context().getInstructionCount(), false, stack)) {
@@ -101,6 +110,20 @@ public final class Optimizations {
 
             pass.replaceInstructionData(false, assignFrom, assignTo);
             pass.removeInstruction(pass.thisInstructionIndex());
+        }else if(pass.thisInstruction().type() == InstructionTypes.CALL_FUNCTIONS) {
+            var prev = pass.getOffsetInstruction(-1);
+            if(prev != null && prev.type() == InstructionTypes.CALL_FUNCTIONS) {
+                if(pass.thisInstruction().get("returnValue") == null && prev.get("returnValue") == null) {
+                    if(Objects.equals(pass.thisInstruction().get("arguments"), prev.get("arguments"))) {
+                        if(Objects.equals(pass.thisInstruction().get("stack"), prev.get("stack"))) {
+                            var functions = new ArrayList<DataLocation>(prev.get("functions"));
+                            functions.addAll(pass.thisInstruction().get("functions"));
+                            pass.replaceInstruction(pass.thisInstructionIndex() - 1, Instructions.callFunctions(functions, prev.get("stack"), prev.get("arguments"), null));
+                            pass.removeInstruction(pass.thisInstructionIndex());
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -130,7 +153,7 @@ public final class Optimizations {
                 var labelData = pass.thisInstruction().get("label");
                 var delInstrs = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.IF_NULL_JUMP, List.of(new Pair<>("local", compareData), new Pair<>("label", labelData)));
                 if(!delInstrs.isEmpty()) {
-                    var validDelInstrs = new ArrayList<>(pass.findExecutedInstructions());
+                    var validDelInstrs = new HashSet<>(pass.findExecutedInstructions());
                     validDelInstrs.retainAll(delInstrs);
                     if(!validDelInstrs.isEmpty()) {
                         pass.removeInstruction(pass.thisInstructionIndex());
