@@ -28,6 +28,7 @@ public final class DiagnosticIds {
     public static final String COMMAND_INVALID_LOCATION_ANCHOR = "command.error.invalid.location_anchor";
     public static final String COMMAND_INVALID_SCORE_ACCESSOR = "command.error.invalid.score_accessor";
     public static final String COMMAND_INVALID_JSON = "command.error.invalid.json";
+    public static final String COMMAND_INVALID_NBT_DATA_LOCATION = "command.error.invalid.nbt_data_location";
 
     public static final String COMMAND_UNSUPPORTED_MACRO_LOCATION = "command.error.macro.unsupported";
     public static final String COMMAND_EXPECTED_MACRO = "command.error.macro.expected";
@@ -58,6 +59,7 @@ public final class DiagnosticIds {
     public static final String COMMAND_COMPILE_UNKNOWN_COMMAND = "command.compile.unknown_command";
     public static final String COMMAND_COMPILE_UNSUPPORTED_STORE = "command.compile.unsupported_store";
     public static final String COMMAND_COMPILE_UNSUPPORTED_NBT_ACCESS = "command.compile.unsupported_nbt_access";
+    public static final String COMMAND_COMPILE_UNSUPPORTED_NBT_SOURCE_ACCESS = "command.compile.unsupported_nbt_source_access";
     public static final String COMMAND_COMPILE_UNREACHABLE_CODE = "command.compile.unreachable_code";
     public static final String COMMAND_COMPILE_UNEXPECTED_CONTEXT_END = "command.compile.unexpected_context_end";
     public static final String COMMAND_COMPILE_EXPECTED_RESULT = "command.compile.result_storage.expected.result";

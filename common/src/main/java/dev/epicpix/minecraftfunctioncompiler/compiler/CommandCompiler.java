@@ -84,27 +84,31 @@ public final class CommandCompiler {
                 selector.writeInstruction(Instructions2.ifNullJump(attrLocation.lower(), selector.data().contextEndLabel()));
                 selector.writeInstruction(Instructions2.setAttributeBase(attrLocation, cmdData.value()));
             }
-        }else if(command instanceof CommandDataModifyStorageSetValue cmdData) {
-            var storageLocal = context.<NbtCompound>createLocal();
-            var setCountLocal = context.<Integer>createLocal();
+        }else if(command instanceof CommandDataModifySetValue cmdData) {
+            if(cmdData.destination() instanceof NbtDataLocation.Storage loc) {
+                var storageLocal = context.<NbtCompound>createLocal();
+                var setCountLocal = context.<Integer>createLocal();
 
-            context.writeInstruction(Instructions2.getNbtStorage(cmdData.storage(), storageLocal));
-            context.writeInstruction(Instructions2.valueDefine(setCountLocal, LocationData.ofInteger(0)));
+                context.writeInstruction(Instructions2.getNbtStorage(loc.storage(), storageLocal));
+                context.writeInstruction(Instructions2.valueDefine(setCountLocal, LocationData.ofInteger(0)));
 
-            var parts = cmdData.path().parts();
+                var parts = cmdData.path().parts();
 
-            var codeLocation = context.current().writeLabel(context.instructionWriter);
-            try(var innerContext = context.enterWithoutValue(context.current().withContextLabel(codeLocation))) {
-                var value = getNbtPathValue(context, storageLocal.forceCast(), parts.subList(0, parts.size() - 1), true, innerContext.data().contextEndLabel());
+                var codeLocation = context.current().writeLabel(context.instructionWriter);
+                try(var innerContext = context.enterWithoutValue(context.current().withContextLabel(codeLocation))) {
+                    var value = getNbtPathValue(context, storageLocal.forceCast(), parts.subList(0, parts.size() - 1), true, innerContext.data().contextEndLabel());
 
-                var last = parts.get(parts.size() - 1);
-                var tagLocal = context.<NbtTag>createLocal();
-                innerContext.writeInstruction(Instructions2.loadNbtValue(cmdData.value(), tagLocal));
-                assignNbtValue(context, value, last, tagLocal, setCountLocal, innerContext.data().contextEndLabel());
+                    var last = parts.get(parts.size() - 1);
+                    var tagLocal = context.<NbtTag>createLocal();
+                    innerContext.writeInstruction(Instructions2.loadNbtValue(cmdData.value(), tagLocal));
+                    assignNbtValue(context, value, last, tagLocal, setCountLocal, innerContext.data().contextEndLabel());
+                }
+
+                context.writeInstruction(Instructions2.ifEqualJump(setCountLocal, LocationData.ofInteger(0), context.current().contextEndLabel()));
+                context.writeInstruction(Instructions2.setNbtStorage(loc.storage(), storageLocal));
+            }else {
+                throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_NBT_SOURCE_ACCESS, context.getSource(), "Accessing nbt from block/entity sources is not implemented yet"));
             }
-
-            context.writeInstruction(Instructions2.ifEqualJump(setCountLocal, LocationData.ofInteger(0), context.current().contextEndLabel()));
-            context.writeInstruction(Instructions2.setNbtStorage(cmdData.storage(), storageLocal));
         }else if(command instanceof CommandDifficultySet cmdData) {
             context.writeInstruction(Instructions2.setDifficulty(cmdData.difficulty()));
         }else if(command instanceof CommandEffectClear) {

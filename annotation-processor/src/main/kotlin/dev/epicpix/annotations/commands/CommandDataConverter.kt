@@ -255,6 +255,10 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 builder.append("    var a$argumentIndex = NbtParser.readNbtCompound(reader);\n")
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue.Compound")
             }
+            "nbt_data_location" -> {
+                builder.append("    var a$argumentIndex = reader.readNbtDataLocation();\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.NbtDataLocation")
+            }
             "nbt_path" -> {
                 builder.append("    var a$argumentIndex = NbtParser.readNbtPath(reader);\n")
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPath")

@@ -680,4 +680,24 @@ public class StringCommandReader {
         return new ScoreAccessorArgument(objective, scoreHolder);
     }
 
+    public NbtDataLocation readNbtDataLocation() {
+        var kind = readWord();
+        if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_NBT_DATA_LOCATION, "Invalid nbt data location, expected space for next argument");
+        switch(kind) {
+            case "block" -> {
+                var coords = readVec3();
+                return new NbtDataLocation.Block(coords);
+            }
+            case "entity" -> {
+                var entity = SelectorParser.parseSelector(this, true, false);
+                return new NbtDataLocation.Entity(entity);
+            }
+            case "storage" -> {
+                var location = readDataLocation();
+                return new NbtDataLocation.Storage(location);
+            }
+            default -> throw createError(COMMAND_INVALID_NBT_DATA_LOCATION, "Invalid nbt data location source, expected block/entity/storage, got " + kind);
+        }
+    }
+
 }

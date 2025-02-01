@@ -5,7 +5,7 @@ ADVANCEMENT_REVOKE_ONLY_CRITERION/advancement revoke <targets:entity_selector[pl
 
 ATTRIBUTE_BASE_SET/attribute <target:entity_selector[multiple=false]> <attribute:attribute> base set <value:double>
 
-DATA_MODIFY_STORAGE_SET_VALUE/data modify storage <storage:resource_location> <path:nbt_path> set value <value:nbt_value>
+DATA_MODIFY_SET_VALUE/data modify <destination:nbt_data_location> <path:nbt_path> set value <value:nbt_value>
 
 DIFFICULTY_SET/difficulty <difficulty:difficulty>
 
