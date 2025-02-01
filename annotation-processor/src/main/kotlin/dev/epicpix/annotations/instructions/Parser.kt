@@ -37,7 +37,6 @@ data class ParsedTokenInstanceValue(val expression: ParsedTokenExpression) : Par
 
 data class ParsedTokenStatementIf(val expression: ParsedTokenExpression, val code: List<ParsedTokenStatement>, val elseCode: List<ParsedTokenStatement>?) : ParsedTokenStatement
 data class ParsedTokenStatementFunctionCall(val name: String, val instance: ParsedTokenInstanceType?, val arguments: List<ParsedTokenExpression>) : ParsedTokenStatement, ParsedTokenExpression
-data class ParsedTokenStatementDefineVariable(val type: ParsedTokenExpressionType?, val accessor: ParsedTokenValueAccessor, val expression: ParsedTokenExpression?) : ParsedTokenStatement
 data class ParsedTokenStatementAssignVariable(val accessor: ParsedTokenValueAccessor, val expression: ParsedTokenExpression) : ParsedTokenStatement
 
 data class ParsedTokenExpressionField(val name: String, val instance: ParsedTokenInstanceType) : ParsedTokenExpression
@@ -325,34 +324,6 @@ private fun parseCode(iter: ListIterator<LexToken>, valueDefinitions: List<Parse
                 res.add(ParsedTokenStatementIf(expression, code, elseCode))
             } else {
                 res.add(ParsedTokenStatementIf(expression, code, null))
-            }
-        }else if(iter.tryNextTokenType(LexTokenSimpleType.KW_LET)) {
-            val accessor = parseValueAccessor(iter, valueDefinitions)
-            val type = if(iter.tryNextTokenType(LexTokenSimpleType.OPEN_ANGLE_BRACKET)) {
-                var t = ""
-                while(!iter.tryNextTokenType(LexTokenSimpleType.CLOSE_ANGLE_BRACKET)) {
-                    if(iter.tryNextTokenType(LexTokenSimpleType.DOT)) {
-                        t += "."
-                    }else {
-                        t += iter.expectToken<LexTokenWord>().word
-                    }
-                }
-                when(t) {
-                    "boolean" -> ParsedTokenExpressionSimpleType.BOOLEAN
-                    "int" -> ParsedTokenExpressionSimpleType.INTEGER
-                    "float" -> ParsedTokenExpressionSimpleType.FLOAT
-                    "double" -> ParsedTokenExpressionSimpleType.DOUBLE
-                    "label" -> ParsedTokenExpressionSimpleType.LABEL
-                    else -> ParsedTokenExpressionTypeComplex(t)
-                }
-            }else null
-            if(iter.tryNextTokenType(LexTokenSimpleType.SEMICOLON)) {
-                res.add(ParsedTokenStatementDefineVariable(type, accessor, null))
-            }else {
-                iter.expectTokenType(LexTokenSimpleType.ASSIGN)
-                val expression = parseExpression(iter, valueDefinitions, usesObf)
-                iter.expectTokenType(LexTokenSimpleType.SEMICOLON)
-                res.add(ParsedTokenStatementDefineVariable(type, accessor, expression))
             }
         }else if(iter.tryNextTokenType(LexTokenSimpleType.OPEN_BRACKET)) {
             iter.previous()

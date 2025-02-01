@@ -40,7 +40,6 @@ enum class LexTokenSimpleType : LexToken {
     KW_IF,
     KW_ELSE,
     KW_NULL,
-    KW_LET,
     KW_FALSE,
     KW_TRUE,
     KW_NEW,
@@ -151,7 +150,6 @@ fun lexTokens(code: String): List<LexToken> {
                 "if" -> LexTokenSimpleType.KW_IF
                 "else" -> LexTokenSimpleType.KW_ELSE
                 "null" -> LexTokenSimpleType.KW_NULL
-                "let" -> LexTokenSimpleType.KW_LET
                 "false" -> LexTokenSimpleType.KW_FALSE
                 "true" -> LexTokenSimpleType.KW_TRUE
                 "new" -> LexTokenSimpleType.KW_NEW

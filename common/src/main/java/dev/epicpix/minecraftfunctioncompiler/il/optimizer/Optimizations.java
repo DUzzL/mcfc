@@ -228,7 +228,7 @@ public final class Optimizations {
 
             var indexLoc = pass.getInstruction(getInstr).get("index");
 
-            var indexDefInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.VALUE_DEFINE, List.of(new Pair<>("dst", indexLoc), new Pair<>("src", LocationData.ofInteger(0))));
+            var indexDefInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.VALUE_ASSIGN, List.of(new Pair<>("dst", indexLoc), new Pair<>("src", LocationData.ofInteger(0))));
             if(indexDefInstr == null) return;
 
             var adderInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.VALUE_ADD, List.of(new Pair<>("a", indexLoc), new Pair<>("b", LocationData.ofInteger(1))));

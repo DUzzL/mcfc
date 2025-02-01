@@ -689,62 +689,33 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                 writeExpression(writerData.copyLocalTypes(), el, output, uniqId)
             }
             continue
-        }else if(el is ParsedTokenStatementDefineVariable) {
-            val expr = if(el.expression != null) {
-                writeExpression(writerData.copyLocalTypes(), el.expression, output, uniqId)
-            }else null
-            val type = if(el.accessor.scope == ParsedTokenValueAccessorScope.LOCAL) el.type!! else writerData.getAccessorType(el.accessor)
-            val assignType = if(type == ParsedTokenExpressionSimpleType.INTEGER) {
-                "I"
-            }else if(type == ParsedTokenExpressionSimpleType.DOUBLE) {
-                "D"
-            }else if(type == ParsedTokenExpressionSimpleType.FLOAT) {
-                "F"
-            }else if(type == ParsedTokenExpressionSimpleType.BOOLEAN) {
-                "Z"
-            }else if(type is ParsedTokenExpressionTypeComplex) {
-                "L${writerData.mappingData.getClassName(type.typeName.replace('.', '/'))};"
-            }else throw UnsupportedOperationException("Unknown type: ${el.accessor} : $type")
-            writerData.markSet(el.accessor)
-            val storageLocal = writeNextRegister(uniqId, output, "cw.createRegister()")
-            when(el.accessor.scope) {
-                ParsedTokenValueAccessorScope.INSTRUCTION -> throw IllegalArgumentException("Cannot assign values to instruction scope")
-                ParsedTokenValueAccessorScope.CONTEXT -> {
-                    output.appendText("context.store(${writerData.getParamIndex(el.accessor)}, $storageLocal);\n")
-                }
-                ParsedTokenValueAccessorScope.LOCAL -> {
-                    writerData.localTypes[el.accessor.name] = LocalInfo(storageLocal, el.type!!)
-                }
-                ParsedTokenValueAccessorScope.STATIC -> {
-                    output.appendText("context.putStatic(\"${el.accessor.name}\", $storageLocal);\n")
-                }
-            }
-            if(el.expression != null) {
-                if(assignType.first() == 'L') {
-                    val expressionType = evaluateExpressionType(writerData, el.expression)
-                    if(expressionType != ParsedTokenExpressionSimpleType.NULL) {
-                        val expressionClasses = getClassLowerBounds((expressionType as ParsedTokenExpressionTypeComplex).typeName.replace('/', '.'))
-                        if(!expressionClasses.contains((type as ParsedTokenExpressionTypeComplex).typeName)) {
-                            throw IllegalArgumentException("Invalid assign, wrong type: $expressionType, expected $type")
-                        }
-                    }
-                }else if(assignType.first() != 'I' && assignType.first() != 'Z' && assignType.first() != 'D' && assignType.first() != 'F') {
-                    throw IllegalStateException("Unknown assign type: $assignType")
-                }
-                output.appendText("cw.setValue($storageLocal, $expr);\n")
-            }
-            continue
         }else if(el is ParsedTokenStatementAssignVariable) {
+            val type = if(el.accessor.scope == ParsedTokenValueAccessorScope.LOCAL) evaluateExpressionType(writerData, el.expression) else writerData.getAccessorType(el.accessor)
             val expr = writeExpression(writerData.copyLocalTypes(), el.expression, output, uniqId)
             writerData.markSet(el.accessor)
             when(el.accessor.scope) {
                 ParsedTokenValueAccessorScope.INSTRUCTION -> throw IllegalArgumentException("Cannot assign values to instruction scope")
-                ParsedTokenValueAccessorScope.STATIC -> throw IllegalArgumentException("Cannot reassign values in static scope")
+                ParsedTokenValueAccessorScope.STATIC -> {
+                    output.appendText("context.putStatic(\"${el.accessor.name}\", $expr);\n")
+                }
                 ParsedTokenValueAccessorScope.CONTEXT -> {
                     output.appendText("context.store(${writerData.getParamIndex(el.accessor)}, $expr);\n")
                 }
                 ParsedTokenValueAccessorScope.LOCAL -> {
+                    if(writerData.localTypes[el.accessor.name] == null) {
+                        val storageLocal = writeNextRegister(uniqId, output, "cw.createRegister()")
+                        writerData.localTypes[el.accessor.name] = LocalInfo(storageLocal, type)
+                    }
                     output.appendText("cw.setValue(${writerData.localTypes[el.accessor.name]!!.mapping}, $expr);\n")
+                }
+            }
+            if(type is ParsedTokenExpressionTypeComplex) {
+                val expressionType = evaluateExpressionType(writerData, el.expression)
+                if(expressionType != ParsedTokenExpressionSimpleType.NULL) {
+                    val expressionClasses = getClassLowerBounds((expressionType as ParsedTokenExpressionTypeComplex).typeName.replace('/', '.'))
+                    if(!expressionClasses.contains((type as ParsedTokenExpressionTypeComplex).typeName)) {
+                        throw IllegalArgumentException("Invalid assign, wrong type: $expressionType, expected $type")
+                    }
                 }
             }
             continue

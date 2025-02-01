@@ -126,7 +126,9 @@ public final class EmitterContext {
             if(transform instanceof BytecodeRegister reg) {
                 codeWriter.setValue(reg, value);
             }else {
-                transforms.put(location.local(), value);
+                var store = codeWriter.createRegister();
+                codeWriter.setValue(store, value);
+                transforms.put(location.local(), store);
             }
         }else {
             throw new DiagnosticException(Diagnostic.emitterError(EMITTER_INVALID_STORE_LOCATION, this.location, "Invalid field store location: " + location));
