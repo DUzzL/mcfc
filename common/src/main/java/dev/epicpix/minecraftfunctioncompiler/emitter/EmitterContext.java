@@ -14,8 +14,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
 
 import java.util.*;
 
-import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.EMITTER_INVALID_LOAD_LOCATION;
-import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.EMITTER_INVALID_STORE_LOCATION;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.*;
 
 public final class EmitterContext {
     private final DataLocation location;
@@ -105,6 +104,9 @@ public final class EmitterContext {
     public BytecodeValue load(int instructionIndexField) {
         var location = instruction().<LocationData<?>>get(instructionIndexField);
         if(location.local() != null) {
+            if(!transforms.containsKey(location.local())) {
+                throw new DiagnosticException(Diagnostic.emitterError(EMITTER_LOAD_LOCATION_NOT_STORED, this.location, "Cannot load from location: " + location + ", nothing is stored in that location"));
+            }
             return transforms.get(location.local());
         }else if(location.object() instanceof String str) {
             return new BytecodeValue.StringValue(str);

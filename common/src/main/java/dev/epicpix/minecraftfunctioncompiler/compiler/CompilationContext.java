@@ -193,14 +193,14 @@ public class CompilationContext {
         }
         var positionData = getPosition();
         var position = this.<Vec3>createLocal();
-        positionData.writeInstruction(Instructions.applyPositionWorld(positionData.content(), position, pos));
+        positionData.writeInstruction(Instructions.applyPositionWorld(position, positionData.content(), pos));
         return enterWithValue(positionData.data(), position, positionData.stackCount() + 1);
     }
 
     public CompilationData<LocationData<Vec2>> applyRotation(RotationCoordinates rot) {
         var rotationData = getRotation();
         var rotation = this.<Vec2>createLocal();
-        rotationData.writeInstruction(Instructions.applyRotationWorld(rotationData.content(), rotation, rot));
+        rotationData.writeInstruction(Instructions.applyRotationWorld(rotation, rotationData.content(), rot));
         return enterWithValue(rotationData.data(), rotation, rotationData.stackCount() + 1);
     }
 

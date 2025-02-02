@@ -198,7 +198,7 @@ public final class CommandCompiler {
             try(var fContext = context.withForkingContext(forkingContext)) {
                 try(var pos = context.getPosition()) {
                     var newPosition = context.<Vec3>createLocal();
-                    pos.writeInstruction(Instructions.alignPosition(pos.content(), newPosition, cmdData.swizzle()));
+                    pos.writeInstruction(Instructions.alignPosition(newPosition, pos.content(), cmdData.swizzle()));
                     try(var ignored = context.enterWithoutValue(pos.data().withCurrentPosition(newPosition))) {
                         compile(context, fContext.content(), cmdData.command(), result);
                     }
@@ -551,7 +551,7 @@ public final class CommandCompiler {
             context.writeInstruction(Instructions2.cloneNbtValue(clonedArguments, arguments.forceCast()));
             context.writeInstruction(Instructions2.tryAsNbtCompound(validArguments, clonedArguments, current.contextEndLabel()));
             var stack = context.<CommandSourceStack>createLocal();
-            context.writeInstruction(Instructions.makeCommandSourceStack(current.commandSourceStack(), stack, current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
+            context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
             context.writeInstruction(Instructions.callFunctions(null, cmdData.functions(), stack, validArguments));
         }else if(command instanceof CommandFunctionArgsStoragePath cmdData) {
             var current = context.current();
@@ -562,7 +562,7 @@ public final class CommandCompiler {
             var value = getNbtPathValue(context, storageLocal.forceCast(), parts, false, current.contextEndLabel());
             context.writeInstruction(Instructions2.ifNullJump(value.lower(), current.contextEndLabel()));
             var clonedTag = context.<NbtTag>createLocal();
-            context.writeInstruction(Instructions2.cloneNbtValue(value, clonedTag));
+            context.writeInstruction(Instructions2.cloneNbtValue(clonedTag, value));
             var compoundTag = context.<NbtCompound>createLocal();
             context.writeInstruction(Instructions2.tryAsNbtCompound(compoundTag, clonedTag, current.contextEndLabel()));
             var stack = context.<CommandSourceStack>createLocal();

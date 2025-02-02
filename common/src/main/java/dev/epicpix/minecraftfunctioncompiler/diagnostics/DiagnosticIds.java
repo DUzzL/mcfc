@@ -68,6 +68,7 @@ public final class DiagnosticIds {
 
 
     public static final String EMITTER_INVALID_LOAD_LOCATION = "emitter.high_level.error.invalid.location.load";
+    public static final String EMITTER_LOAD_LOCATION_NOT_STORED = "emitter.high_level.error.invalid.location.load.not_stored";
     public static final String EMITTER_INVALID_STORE_LOCATION = "emitter.high_level.error.invalid.location.store";
     public static final String EMITTER_NOT_REGISTERED_INSTRUCTION = "emitter.high_level.error.missing_instruction_emitter";
 

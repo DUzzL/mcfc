@@ -14,7 +14,7 @@ public class InstructionWriter {
     private final ArrayList<Instruction> instructions = new ArrayList<>();
     private final LabelData endLabel;
 
-    private int highestLabelId = 0;
+    private int highestLabelId = 1;
 
     public InstructionWriter() {
         endLabel = LabelData.ofId(highestLabelId++);

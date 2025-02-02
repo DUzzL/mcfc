@@ -74,6 +74,28 @@ public final class GraphGenerator {
         }
     }
 
+    private static int getFlowLabel(int index, List<Instruction> instructions) {
+        for(int i = index - 1; i >= 0; i--) {
+            var instr = instructions.get(i);
+            if(instr.type() == InstructionTypes2.LABEL) {
+                return instr.<LabelData>get("label").id();
+            }
+        }
+        return 0;
+    }
+
+    private static void visitFlowInstruction(int index, List<Instruction> instructions, HashMap<Integer, HashSet<Integer>> edges) {
+        if(!DEBUG_GENERATE_GRAPH) return;
+
+        var instruction = instructions.get(index);
+
+        for(var value : instruction.data()) {
+            if(value instanceof LabelData label) {
+                edges.computeIfAbsent(getFlowLabel(index, instructions), k -> new HashSet<>()).add(label.id());
+            }
+        }
+    }
+
     private static int generateFunctionGraph(List<Instruction> instructions, DataLocation funcId, StringBuilder builder, StringBuilder post, int uid) {
         if(!DEBUG_GENERATE_GRAPH) return 0;
 
@@ -103,6 +125,40 @@ public final class GraphGenerator {
         return uid + instructions.size() + 1;
     }
 
+    private static int generateFunctionFlowGraph(List<Instruction> instructions, DataLocation funcId, StringBuilder builder, int uid) {
+        if(!DEBUG_GENERATE_GRAPH) return 0;
+
+        var safeName = funcId.namespace() + "_" + funcId.path().replace('.', '_').replace('/', '_').replace('-', '_');
+
+        builder.append("  subgraph cluster_").append(safeName).append(" {\n");
+        builder.append("    color=black;\n");
+        builder.append("    label=\"").append(funcId).append("\";\n");
+        builder.append("    x").append(safeName).append("[label=\"<root>\"];\n");
+        HashMap<Integer, String> labels = new HashMap<>();
+        int jIndex = 0;
+        for(var child : instructions) {
+            if(child.type() == InstructionTypes2.LABEL) {
+                labels.put(child.<LabelData>get("label").id(), "x" + (uid + jIndex));
+                builder.append("    x").append(uid + jIndex).append("[label=\"" + child.get("label") + "\"];\n");
+            }
+            jIndex++;
+        }
+        labels.put(0, "x" + safeName);
+        HashMap<Integer, HashSet<Integer>> edges = new HashMap<>();
+        for(int index = 0; index<instructions.size(); index++) {
+            visitFlowInstruction(index, instructions, edges);
+        }
+        for(var edge : edges.entrySet()) {
+            var edgeKey = labels.get(edge.getKey());
+            for(var out : edge.getValue()) {
+                builder.append("    ").append(edgeKey).append(" -> ").append(labels.get(out)).append(";\n");
+            }
+        }
+        builder.append("  }\n");
+
+        return uid + instructions.size() + 1;
+    }
+
     private static void generateFullGraph(Map<DataLocation, List<Instruction>> functions, Path resultDir) throws IOException, InterruptedException {
         if(!DEBUG_GENERATE_GRAPH) return;
 
@@ -119,6 +175,23 @@ public final class GraphGenerator {
         var dotFile = resultDir.resolve("full_graph_high_level.dot");
         Files.writeString(dotFile, builder.toString());
         new ProcessBuilder("dot", "-Tsvg", dotFile.toAbsolutePath().toString(), "-o", resultDir.resolve("full_graph_high_level.svg").toAbsolutePath().toString()).start().waitFor();
+        Files.delete(dotFile);
+    }
+
+    private static void generateFullFlowGraph(Map<DataLocation, List<Instruction>> functions, Path resultDir) throws IOException, InterruptedException {
+        if(!DEBUG_GENERATE_GRAPH) return;
+
+        var builder = new StringBuilder();
+        builder.append("digraph file {\n");
+        var curUid = 0;
+        for(var entry : functions.entrySet()) {
+            curUid = generateFunctionFlowGraph(entry.getValue(), entry.getKey(), builder, curUid);
+        }
+        builder.append("}\n");
+
+        var dotFile = resultDir.resolve("full_flow_graph_high_level.dot");
+        Files.writeString(dotFile, builder.toString());
+        new ProcessBuilder("dot", "-Tsvg", dotFile.toAbsolutePath().toString(), "-o", resultDir.resolve("full_flow_graph_high_level.svg").toAbsolutePath().toString()).start().waitFor();
         Files.delete(dotFile);
     }
 
@@ -147,6 +220,15 @@ public final class GraphGenerator {
                 long start = System.nanoTime();
                 generateFullGraph(functions, resultDir);
                 LoggerFactory.getLogger("minecraftfunctioncompiler").info("Generated graph (full_graph_high_level) in {}ms", (System.nanoTime() - start) / 1000000);
+            } catch(IOException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }).start();
+        new Thread(() -> {
+            try {
+                long start = System.nanoTime();
+                generateFullFlowGraph(functions, resultDir);
+                LoggerFactory.getLogger("minecraftfunctioncompiler").info("Generated graph (full_flow_graph_high_level) in {}ms", (System.nanoTime() - start) / 1000000);
             } catch(IOException | InterruptedException e) {
                 throw new RuntimeException(e);
             }
