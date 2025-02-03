@@ -4,7 +4,7 @@ public class DiagnosticException extends RuntimeException {
     private final Diagnostic diagnostic;
 
     public DiagnosticException(Diagnostic diagnostic) {
-        super(null, diagnostic.cause());
+        super(diagnostic.message(), diagnostic.cause());
         this.diagnostic = diagnostic;
     }
 

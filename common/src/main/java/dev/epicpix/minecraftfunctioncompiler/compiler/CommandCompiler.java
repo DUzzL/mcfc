@@ -5,11 +5,14 @@ import dev.epicpix.minecraftfunctioncompiler.commands.params.*;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPathPart;
+import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
+import dev.epicpix.minecraftfunctioncompiler.data.text.TextContent;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
+import java.util.ArrayDeque;
 import java.util.List;
 
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.*;
@@ -677,9 +680,8 @@ public final class CommandCompiler {
         }else if(command instanceof CommandTitleActionbar cmdData) {
             try(var players = context.forSelector(cmdData.players())) {
                 var playerLocation = context.<Player>createLocal();
-                var textLocation = context.<TextComponent>createLocal();
                 players.writeInstruction(Instructions2.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
-                players.writeInstruction(Instructions2.loadText(textLocation, cmdData.text()));
+                var textLocation = loadText(context, cmdData.text());
                 players.writeInstruction(Instructions2.sendActionbar(playerLocation, textLocation));
             }
         }else if(command instanceof CommandTitleClear cmdData) {
@@ -697,9 +699,8 @@ public final class CommandCompiler {
         }else if(command instanceof CommandTitleSubtitle cmdData) {
             try(var players = context.forSelector(cmdData.players())) {
                 var playerLocation = context.<Player>createLocal();
-                var textLocation = context.<TextComponent>createLocal();
                 players.writeInstruction(Instructions2.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
-                players.writeInstruction(Instructions2.loadText(textLocation, cmdData.text()));
+                var textLocation = loadText(context, cmdData.text());
                 players.writeInstruction(Instructions2.sendSubtitle(playerLocation, textLocation));
             }
         }else if(command instanceof CommandTitleTimes cmdData) {
@@ -711,17 +712,15 @@ public final class CommandCompiler {
         }else if(command instanceof CommandTitleTitle cmdData) {
             try(var players = context.forSelector(cmdData.players())) {
                 var playerLocation = context.<Player>createLocal();
-                var textLocation = context.<TextComponent>createLocal();
                 players.writeInstruction(Instructions2.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
-                players.writeInstruction(Instructions2.loadText(textLocation, cmdData.text()));
+                var textLocation = loadText(context, cmdData.text());
                 players.writeInstruction(Instructions2.sendTitle(playerLocation, textLocation));
             }
         }else if(command instanceof CommandTellraw cmdData) {
             try(var players = context.forSelector(cmdData.players())) {
                 var playerLocation = context.<Player>createLocal();
-                var textLocation = context.<TextComponent>createLocal();
                 players.writeInstruction(Instructions2.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
-                players.writeInstruction(Instructions2.loadText(textLocation, cmdData.text()));
+                var textLocation = loadText(context, cmdData.text());
                 players.writeInstruction(Instructions2.sendSystemMessage(playerLocation, textLocation));
             }
         }else if(command instanceof CommandWeatherClearTimed cmdData) {
@@ -798,5 +797,27 @@ public final class CommandCompiler {
     }
 
     private record NbtListAccessResult(LocationData<NbtList> list, LocationData<Integer> index) {}
+
+    private static LocationData<TextComponent> loadText(CompilationContext context, Text text) {
+        var allText = new ArrayDeque<Text>();
+        allText.add(text);
+        while(!allText.isEmpty()) {
+            var top = allText.pop();
+            if(!(top.content() instanceof TextContent.LiteralText || top.content() instanceof TextContent.KeybindText)) {
+                if(top.content() instanceof TextContent.TranslatableText tr) {
+                    for(var content : tr.args()) {
+                        if(content instanceof Text t) allText.add(t);
+                    }
+                }else {
+                    throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_TEXT, context.getSource(), "Compiling " + top.content().getClass().getSimpleName() + " is not implemented yet"));
+                }
+            }
+            allText.addAll(top.siblings());
+        }
+
+        var textLocation = context.<TextComponent>createLocal();
+        context.writeInstruction(Instructions2.loadText(textLocation, text));
+        return textLocation;
+    }
 
 }

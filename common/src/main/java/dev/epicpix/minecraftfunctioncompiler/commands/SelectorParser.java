@@ -17,9 +17,9 @@ import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.*;
 public final class SelectorParser {
     private SelectorParser() {}
 
-    public static ScoreHolderArgument parseScoreHolder(StringCommandReader scoreHolder) {
+    public static ScoreHolderArgument parseScoreHolder(StringCommandReader scoreHolder, boolean allowMultiple) {
         if(scoreHolder.peek() == '@') {
-            return ScoreHolderArgument.selectSelector(parseSelector(scoreHolder, true, true));
+            return ScoreHolderArgument.selectSelector(parseSelector(scoreHolder, true, allowMultiple));
         }
         MacroTemplate<String> name = scoreHolder.readUntilSpaceWithTemplate(List.of(MacroValidators.NO_STAR));
         if(name.isLiteral("*")) {

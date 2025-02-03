@@ -288,7 +288,7 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCompareOperation")
             }
             "score_holder" -> {
-                builder.append("    var a$argumentIndex = SelectorParser.parseScoreHolder(reader);\n")
+                builder.append("    var a$argumentIndex = SelectorParser.parseScoreHolder(reader, true);\n")
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument")
             }
             "score_accessor" -> {

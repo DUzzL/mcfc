@@ -39,6 +39,10 @@ public class StringCommandReader {
         return new DiagnosticException(Diagnostic.parseError(diagnosticId, source, command, message, cause));
     }
 
+    public boolean allowsMacros() {
+        return allowMacros;
+    }
+
     public String getString() {
         return (allowMacros ? "$" : "") + command;
     }
@@ -674,7 +678,7 @@ public class StringCommandReader {
     }
 
     public ScoreAccessorArgument readScoreAccessor() {
-        ScoreHolderArgument scoreHolder = SelectorParser.parseScoreHolder(this);
+        ScoreHolderArgument scoreHolder = SelectorParser.parseScoreHolder(this, true);
         if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_SCORE_ACCESSOR, "Invalid score accessor, expected space for next argument");
         String objective = readWord();
         return new ScoreAccessorArgument(objective, scoreHolder);

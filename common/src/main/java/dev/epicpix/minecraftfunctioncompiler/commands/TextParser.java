@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
+import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument;
 import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
 import dev.epicpix.minecraftfunctioncompiler.data.text.TextContent;
 import dev.epicpix.minecraftfunctioncompiler.data.text.TextStyle;
@@ -27,6 +28,10 @@ public final class TextParser {
 
     private static DiagnosticException createError(StringCommandReader reader, String diagnosticId, String message) {
         return new DiagnosticException(Diagnostic.parseError(diagnosticId, reader.getSource(), reader.getString(), message));
+    }
+
+    private static DiagnosticException createError(StringCommandReader reader, String diagnosticId, String message, Throwable e) {
+        return new DiagnosticException(Diagnostic.parseError(diagnosticId, reader.getSource(), reader.getString(), message, e));
     }
 
     private static Integer stringToColor(String str) {
@@ -97,6 +102,41 @@ public final class TextParser {
                     }
                 }
                 content = new TextContent.TranslatableText(key, fallback, args);
+            }else if(obj.has("score")) {
+                var score = obj.getAsJsonObject("score");
+                var rawHolder = score.get("name").getAsString();
+                var objective = score.get("objective").getAsString();
+                ScoreHolderArgument holder;
+                try {
+                    holder = SelectorParser.parseScoreHolder(new StringCommandReader(rawHolder, reader.getSource(), reader.allowsMacros()), false);
+                }catch(Exception e) {
+                    if(MinecraftVersion.isCurrentVersionInRange(MinecraftVersion.MC_1_21_2, null)) {
+                        throw createError(reader, TEXT_INVALID, "Failed to parse text score holder: " + e.getMessage() + " | " + rawHolder, e);
+                    }else {
+                        holder = null;
+                    }
+                }
+                content = new TextContent.ScoreText(holder, objective);
+            }else if(obj.has("selector")) {
+                var selector = SelectorParser.parseSelector(new StringCommandReader(obj.get("selector").getAsString(), reader.getSource(), reader.allowsMacros()), true, true);
+                var separator = obj.has("separator") ? jsonToText(obj.get("separator"), reader) : null;
+                content = new TextContent.SelectorText(selector, separator);
+            }else if(obj.has("nbt")) {
+                var separator = obj.has("separator") ? jsonToText(obj.get("separator"), reader) : null;
+                var nbtReader = new StringCommandReader(obj.get("nbt").getAsString(), reader.getSource(), reader.allowsMacros());
+                var nbt = NbtParser.readNbtPath(nbtReader);
+                if(obj.has("block")) {
+                    var block = new StringCommandReader(obj.get("block").getAsString(), reader.getSource(), reader.allowsMacros()).readVec3();
+                    content = new TextContent.NbtBlockText(nbt, separator, block);
+                }else if(obj.has("entity")) {
+                    var selector = SelectorParser.parseSelector(new StringCommandReader(obj.get("entity").getAsString(), reader.getSource(), reader.allowsMacros()), true, true);
+                    content = new TextContent.NbtEntityText(nbt, separator, selector);
+                }else if(obj.has("storage")) {
+                    var storage = new StringCommandReader(obj.get("storage").getAsString(), reader.getSource(), reader.allowsMacros()).readDataLocation();
+                    content = new TextContent.NbtStorageText(nbt, separator, storage);
+                }else {
+                    throw createError(reader, TEXT_INVALID, "Cannot turn \"" + element + "\" into Text");
+                }
             }else {
                 throw createError(reader, TEXT_INVALID, "Cannot turn \"" + element + "\" into Text");
             }
