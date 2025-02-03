@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.BiFunction;
 
-import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DEBUG;
+import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DEBUG_DUMP_CLASS_FILES;
 
 public final class CodeFieldStorageMapKind<T> {
 
@@ -80,31 +80,31 @@ public final class CodeFieldStorageMapKind<T> {
 
 
     private static String getAdvancementName(CodeFieldStorageStorageMap map, DataLocation value) {
-        return DEBUG
+        return DEBUG_DUMP_CLASS_FILES
             ? "advancement$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
             : "A" + map.checkIndex(CodeFieldStorageMapKind.ADVANCEMENT, value);
     }
 
     private static String getAttributeName(CodeFieldStorageStorageMap map, DataLocation value) {
-        return DEBUG
+        return DEBUG_DUMP_CLASS_FILES
             ? "attribute$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
             : "a" + map.checkIndex(CodeFieldStorageMapKind.ATTRIBUTE, value);
     }
 
     private static String getEffectName(CodeFieldStorageStorageMap map, DataLocation value) {
-        return DEBUG
+        return DEBUG_DUMP_CLASS_FILES
             ? "effect$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
             : "e" + map.checkIndex(CodeFieldStorageMapKind.EFFECT, value);
     }
 
     private static String getEntityTypeName(CodeFieldStorageStorageMap map, DataLocation value) {
-        return DEBUG
+        return DEBUG_DUMP_CLASS_FILES
             ? "entityType$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
             : "T" + map.checkIndex(CodeFieldStorageMapKind.ENTITY_TYPE, value);
     }
 
     private static String getFunctionName(CodeFieldStorageStorageMap map, DataLocation value) {
-        return DEBUG
+        return DEBUG_DUMP_CLASS_FILES
             ? "function$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
             : "f" + map.checkIndex(CodeFieldStorageMapKind.FUNCTION, value);
     }
@@ -118,7 +118,7 @@ public final class CodeFieldStorageMapKind<T> {
     }
 
     private static String getPredicateName(CodeFieldStorageStorageMap map, DataLocation value) {
-        return DEBUG
+        return DEBUG_DUMP_CLASS_FILES
             ? "predicate$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
             : "p" + map.checkIndex(CodeFieldStorageMapKind.PREDICATE, value);
     }
@@ -128,13 +128,13 @@ public final class CodeFieldStorageMapKind<T> {
     }
 
     private static String getResourceLocationName(CodeFieldStorageStorageMap map, DataLocation value) {
-        return DEBUG
+        return DEBUG_DUMP_CLASS_FILES
             ? "resourceLocation$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
             : "r" + map.checkIndex(CodeFieldStorageMapKind.RESOURCE_LOCATION, value);
     }
 
     private static String getScoreboardCriterionName(CodeFieldStorageStorageMap map, String value) {
-        return DEBUG
+        return DEBUG_DUMP_CLASS_FILES
             ? "scoreboardCriterion$" + value.replace(':', '$').replace('.', '$')
             : "s" + map.checkIndex(CodeFieldStorageMapKind.SCOREBOARD_CRITERION, value);
     }
@@ -148,7 +148,7 @@ public final class CodeFieldStorageMapKind<T> {
     }
 
     private static String getUuidName(CodeFieldStorageStorageMap map, UUID value) {
-        return DEBUG
+        return DEBUG_DUMP_CLASS_FILES
             ? "uuid$" + value.toString().replace("-", "")
             : "u" + map.checkIndex(CodeFieldStorageMapKind.UUID, value);
     }

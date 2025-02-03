@@ -3,8 +3,10 @@ package dev.epicpix.minecraftfunctioncompiler;
 public final class CommonConstants {
     private CommonConstants() {}
 
-    public static final boolean DEBUG = false;
+    public static final boolean DEBUG_DUMP_CLASS_FILES = false;
+    public static final boolean DEBUG_DUMP_INSTRUCTIONS = false;
     public static final boolean DEBUG_GENERATE_GRAPH = false;
+    public static final boolean DEBUG_PRINT_TIMINGS = false;
     public static final boolean AUTO_SWITCH_FUNCTIONS = true;
     public static final boolean ALLOW_EXTERNAL_DATA_ACCESS = false;
     public static final boolean GENERATE_REGISTRY_FILE = false;

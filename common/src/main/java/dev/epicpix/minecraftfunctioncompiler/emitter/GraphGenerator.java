@@ -75,6 +75,8 @@ public final class GraphGenerator {
     }
 
     private static int getFlowLabel(int index, List<Instruction> instructions) {
+        if(!DEBUG_GENERATE_GRAPH) return -1;
+
         for(int i = index - 1; i >= 0; i--) {
             var instr = instructions.get(i);
             if(instr.type() == InstructionTypes2.LABEL) {

@@ -3,7 +3,6 @@ package dev.epicpix.minecraftfunctioncompiler.loader;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import dev.epicpix.minecraftfunctioncompiler.CommonConstants;
 import dev.epicpix.minecraftfunctioncompiler.commands.*;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
@@ -172,7 +171,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
                 FunctionCompilerReporter.reportExceptionWithInstructions("load_function_class", e, compiledFunctions.get(key));
                 FunctionCompilerReporter.sendReports();
                 resetHandles();
-                if(DEBUG) {
+                if(DEBUG_DUMP_INSTRUCTIONS) {
                     LOGGER.info("Instruction dump:");
                     Instruction.printInstructions(compiledFunctions.get(key), x -> LOGGER.info("┗━ {}", x));
                 }
@@ -199,7 +198,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
         var functionSources = FunctionCodeGenerator.loadFunctionSources(sourceFiles);
         var definedFunctions = FunctionCodeGenerator.parseFunctions(functionSources, lookup, diagnostics);
         var parseTime = (System.nanoTime()-startParse)/1000000000d;
-        if(DEBUG) LOGGER.info("Parsed functions ({}->{}) in {}ms", sourceFiles.size(), definedFunctions.size(), (int) (parseTime*1000));
+        if(DEBUG_PRINT_TIMINGS) LOGGER.info("Parsed functions ({}->{}) in {}ms", sourceFiles.size(), definedFunctions.size(), (int) (parseTime*1000));
 
         setState(State.COMPILING);
         LOGGER.info("Compiling functions");
@@ -207,14 +206,13 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
         var highLevelInstructionCounts = new int[2];
         var compiledFunctions = FunctionCodeGenerator.compileFunctionsHighLevel(definedFunctions, diagnostics, highLevelInstructionCounts, false);
         var compileTime = (System.nanoTime()-startCompile)/1000000000d;
-        if(DEBUG) LOGGER.info("Compiled functions to high level ({}->{}) in {}ms", definedFunctions.size(), compiledFunctions.size(), (int) (compileTime*1000));
+        if(DEBUG_PRINT_TIMINGS) LOGGER.info("Compiled functions to high level ({}->{}) in {}ms", definedFunctions.size(), compiledFunctions.size(), (int) (compileTime*1000));
         LOGGER.info("Optimizing functions");
         var startOptimize = System.nanoTime();
         var optimizedFunctions = FunctionCodeGenerator.optimizeFunctionsHighLevel(compiledFunctions, diagnostics, highLevelInstructionCounts, true);
         var optimizeTime = (System.nanoTime()-startOptimize)/1000000000d;
-        if(DEBUG) {
-            LOGGER.info("Optimized high level instructions in {}ms", (int) (optimizeTime*1000));
-
+        if(DEBUG_PRINT_TIMINGS) LOGGER.info("Optimized high level instructions in {}ms", (int) (optimizeTime * 1000));
+        if(DEBUG_DUMP_INSTRUCTIONS) {
             StringBuilder instructionDump = new StringBuilder();
             var entries = new ArrayList<>(optimizedFunctions.entrySet());
             entries.sort((a, b) -> a.toString().compareToIgnoreCase(b.toString()));
@@ -267,9 +265,8 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
         }
         var classLoadTime = (System.nanoTime()-startLoader)/1000000000d;
 
-        if(DEBUG) {
-            LOGGER.info("Loaded classes in {}ms", (int) (classLoadTime*1000));
-
+        if(DEBUG_PRINT_TIMINGS) LOGGER.info("Loaded classes in {}ms", (int) (classLoadTime * 1000));
+        if(DEBUG_DUMP_INSTRUCTIONS) {
             StringBuilder instructionDump = new StringBuilder();
             var entries = new ArrayList<>(lowLevelFunctions.entrySet());
             entries.sort((a, b) -> a.toString().compareToIgnoreCase(b.toString()));
@@ -313,7 +310,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
         var startHandles = System.nanoTime();
         if(!loadHandles(optimizedFunctions, loadedFunctions, params)) return;
         var handleLoadTime = (System.nanoTime()-startHandles)/1000000000d;
-        if(DEBUG) LOGGER.info("Loaded handles in {}ms", (int) (handleLoadTime*1000));
+        if(DEBUG_PRINT_TIMINGS) LOGGER.info("Loaded handles in {}ms", (int) (handleLoadTime*1000));
 
         var functionCountsData = new FunctionCountsData(sourceFiles.size(), definedFunctions.size(), optimizedFunctions.size());
         var timingData = new TimingData(parseTime, compileTime, optimizeTime, classLoadTime, handleLoadTime);
@@ -354,7 +351,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
     }
 
     private Class<?> defineClass(String name, byte[] data) {
-        if(CommonConstants.DEBUG) {
+        if(DEBUG_DUMP_CLASS_FILES) {
             try {
                 Files.createDirectory(generatedDir);
             }catch(Exception ignored) {}
