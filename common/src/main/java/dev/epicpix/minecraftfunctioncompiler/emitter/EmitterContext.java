@@ -11,6 +11,8 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 import java.util.*;
 
@@ -25,8 +27,8 @@ public final class EmitterContext {
     private final Map<String, BytecodeValue> macroLocations;
     private final List<Instruction> instructions;
 
-    private final Map<Integer, BytecodeValue> transforms = new HashMap<>();
-    private final HashMap<LabelData, BytecodeLabel> labelMappings = new HashMap<>();
+    private final Int2ObjectMap<BytecodeValue> transforms = new Int2ObjectOpenHashMap<>();
+    private final Int2ObjectMap<BytecodeLabel> labelMappings = new Int2ObjectOpenHashMap<>();
 
     private int currentInstructionIndex = 0;
 
@@ -88,12 +90,12 @@ public final class EmitterContext {
     }
 
     public BytecodeLabel mapLabel(LabelData label) {
-        var mapped = labelMappings.get(label);
+        var mapped = labelMappings.get(label.id());
         if(mapped != null) {
             return mapped;
         }
         var bytecodeLabel = codeWriter.createLabel();
-        labelMappings.put(label, bytecodeLabel);
+        labelMappings.put(label.id(), bytecodeLabel);
         return bytecodeLabel;
     }
 
@@ -104,10 +106,10 @@ public final class EmitterContext {
     public BytecodeValue load(int instructionIndexField) {
         var location = instruction().<LocationData<?>>get(instructionIndexField);
         if(location.local() != null) {
-            if(!transforms.containsKey(location.local())) {
+            if(!transforms.containsKey((int)location.local())) {
                 throw new DiagnosticException(Diagnostic.emitterError(EMITTER_LOAD_LOCATION_NOT_STORED, this.location, "Cannot load from location: " + location + ", nothing is stored in that location"));
             }
-            return transforms.get(location.local());
+            return transforms.get((int)location.local());
         }else if(location.object() instanceof String str) {
             return new BytecodeValue.StringValue(str);
         }else if(location.object() instanceof Integer intVal) {
@@ -124,13 +126,13 @@ public final class EmitterContext {
     public void store(int instructionFieldIndex, BytecodeValue value) {
         var location = instruction().<LocationData<?>>get(instructionFieldIndex);
         if(location.local() != null) {
-            var transform = transforms.get(location.local());
+            var transform = transforms.get((int)location.local());
             if(transform instanceof BytecodeRegister reg) {
                 codeWriter.setValue(reg, value);
             }else {
                 var store = codeWriter.createRegister();
                 codeWriter.setValue(store, value);
-                transforms.put(location.local(), store);
+                transforms.put((int)location.local(), store);
             }
         }else {
             throw new DiagnosticException(Diagnostic.emitterError(EMITTER_INVALID_STORE_LOCATION, this.location, "Invalid field store location: " + location));

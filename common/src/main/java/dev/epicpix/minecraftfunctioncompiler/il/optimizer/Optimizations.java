@@ -2,12 +2,11 @@ package dev.epicpix.minecraftfunctioncompiler.il.optimizer;
 
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
-import dev.epicpix.minecraftfunctioncompiler.util.Pair;
+import it.unimi.dsi.fastutil.Pair;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public final class Optimizations {
     private Optimizations() {}
@@ -105,7 +104,7 @@ public final class Optimizations {
         if(pass.thisInstruction().type() == InstructionTypes2.OBJECT_ASSIGN) {
             var assignFrom = pass.thisInstruction().get("src");
             var assignTo = pass.thisInstruction().get("result");
-            var otherAssigns = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.OBJECT_ASSIGN, List.of(new Pair<>("result", assignFrom)));
+            var otherAssigns = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.OBJECT_ASSIGN, List.of(Pair.of("result", assignFrom)));
             if(!otherAssigns.isEmpty()) return;
 
             pass.replaceInstructionData(false, assignFrom, assignTo);
@@ -131,12 +130,12 @@ public final class Optimizations {
         if(pass.thisInstruction().type() == type) {
             var compareData = pass.thisInstruction().get(compare);
             var replaceData = pass.thisInstruction().get(replace);
-            var validReplMatchesInstrs = pass.findInstructions(0, pass.context().getInstructionCount(), false, type, List.of(new Pair<>(compare, compareData)));
+            var validReplMatchesInstrs = pass.findInstructions(0, pass.context().getInstructionCount(), false, type, List.of(Pair.of(compare, compareData)));
             if(!validReplMatchesInstrs.isEmpty()) {
-                var validReplInstrs = new ArrayList<>(pass.findExecutedInstructions());
+                var validReplInstrs = new IntArrayList(pass.findExecutedInstructions());
                 validReplInstrs.retainAll(validReplMatchesInstrs);
                 if(!validReplInstrs.isEmpty()) {
-                    var newReplace = pass.getInstruction(validReplInstrs.get(0)).get(replace);
+                    var newReplace = pass.getInstruction(validReplInstrs.getInt(0)).get(replace);
 
                     pass.replaceInstructionData(false, replaceData, newReplace);
                     pass.removeInstruction(pass.thisInstructionIndex());
@@ -148,12 +147,12 @@ public final class Optimizations {
     private static void removeDuplicateChecks(OptimizationPass pass) {
         if(pass.thisInstruction().type() == InstructionTypes2.IF_NULL_JUMP) {
             var compareData = pass.thisInstruction().get("local");
-            var reassignmentInstrs = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.OBJECT_ASSIGN, List.of(new Pair<>("result", compareData)));
+            var reassignmentInstrs = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.OBJECT_ASSIGN, List.of(Pair.of("result", compareData)));
             if(reassignmentInstrs.isEmpty()) {
                 var labelData = pass.thisInstruction().get("label");
-                var delInstrs = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.IF_NULL_JUMP, List.of(new Pair<>("local", compareData), new Pair<>("label", labelData)));
+                var delInstrs = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes2.IF_NULL_JUMP, List.of(Pair.of("local", compareData), Pair.of("label", labelData)));
                 if(!delInstrs.isEmpty()) {
-                    var validDelInstrs = new HashSet<>(pass.findExecutedInstructions());
+                    var validDelInstrs = new IntOpenHashSet(pass.findExecutedInstructions());
                     validDelInstrs.retainAll(delInstrs);
                     if(!validDelInstrs.isEmpty()) {
                         pass.removeInstruction(pass.thisInstructionIndex());
@@ -164,7 +163,7 @@ public final class Optimizations {
             var stackFrom = pass.thisInstruction().get("object");
             var stackTo = pass.thisInstruction().get("result");
 
-            var def = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes.MAKE_COMMAND_SOURCE_STACK, List.of(new Pair<>("result", stackFrom)));
+            var def = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes.MAKE_COMMAND_SOURCE_STACK, List.of(Pair.of("result", stackFrom)));
             if(def != null) {
                 pass.replaceInstructionData(false, stackFrom, stackTo);
                 pass.removeInstruction(pass.thisInstructionIndex());
@@ -173,14 +172,14 @@ public final class Optimizations {
             var entityFrom = pass.thisInstruction().get("object");
             var entityTo = pass.thisInstruction().get("result");
 
-            var def = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.ASSUME_ENTITY, List.of(new Pair<>("result", entityFrom)));
+            var def = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.ASSUME_ENTITY, List.of(Pair.of("result", entityFrom)));
             if(def != null) {
                 pass.replaceInstructionData(false, entityFrom, entityTo);
                 pass.removeInstruction(pass.thisInstructionIndex());
                 return;
             }
 
-            var def2 = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.ASSUME_PLAYER, List.of(new Pair<>("result", entityFrom)));
+            var def2 = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.ASSUME_PLAYER, List.of(Pair.of("result", entityFrom)));
             if(def2 != null) {
                 pass.replaceInstructionData(false, entityFrom, entityTo);
                 pass.removeInstruction(pass.thisInstructionIndex());
@@ -193,13 +192,13 @@ public final class Optimizations {
 
         var list = pass.thisInstruction().<LocationData<List<Object>>>get("result");
 
-        var addInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.ADD_LIST_ELEMENT, List.of(new Pair<>("list", list)));
+        var addInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.ADD_LIST_ELEMENT, List.of(Pair.of("list", list)));
         if(addInstr == null) return;
 
-        var listLengthInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.GET_LIST_LENGTH, List.of(new Pair<>("list", list)));
+        var listLengthInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.GET_LIST_LENGTH, List.of(Pair.of("list", list)));
         if(listLengthInstr == null) return;
 
-        var getInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.GET_LIST_ELEMENT, List.of(new Pair<>("list", list)));
+        var getInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.GET_LIST_ELEMENT, List.of(Pair.of("list", list)));
         if(getInstr == null) return;
 
         var condInstr = getInstr - 1;
@@ -218,20 +217,20 @@ public final class Optimizations {
             return;
         }
 
-        var endInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.LABEL, List.of(new Pair<>("label", endLabel)));
+        var endInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.LABEL, List.of(Pair.of("label", endLabel)));
         if(endInstr == null) return;
 
-        if(!pass.findInstructions(0, pass.context().getInstructionCount(), false, List.of(InstructionTypes2.SORT_LIST_ENTITY_FURTHEST, InstructionTypes2.SORT_LIST_ENTITY_NEAREST, InstructionTypes2.SHUFFLE_LIST), List.of(new Pair<>("list", list))).isEmpty()) return;
+        if(!pass.findInstructions(0, pass.context().getInstructionCount(), false, List.of(InstructionTypes2.SORT_LIST_ENTITY_FURTHEST, InstructionTypes2.SORT_LIST_ENTITY_NEAREST, InstructionTypes2.SHUFFLE_LIST), List.of(Pair.of("list", list))).isEmpty()) return;
 
         if(!singleSelector) {
             if(!pass.findInstructions(condInstr, endInstr, false, List.of(InstructionTypes.CALL_FUNCTIONS, InstructionTypes2.KILL_ENTITY), List.of()).isEmpty()) return;
 
             var indexLoc = pass.getInstruction(getInstr).get("index");
 
-            var indexDefInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.VALUE_ASSIGN, List.of(new Pair<>("result", indexLoc), new Pair<>("src", LocationData.ofInteger(0))));
+            var indexDefInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.VALUE_ASSIGN, List.of(Pair.of("result", indexLoc), Pair.of("src", LocationData.ofInteger(0))));
             if(indexDefInstr == null) return;
 
-            var adderInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.VALUE_ADD, List.of(new Pair<>("result", indexLoc), new Pair<>("a", indexLoc), new Pair<>("b", LocationData.ofInteger(1))));
+            var adderInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.VALUE_ADD, List.of(Pair.of("result", indexLoc), Pair.of("a", indexLoc), Pair.of("b", LocationData.ofInteger(1))));
             if(adderInstr == null) return;
 
             var jumpInstr = adderInstr + 1;

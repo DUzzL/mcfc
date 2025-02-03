@@ -2,13 +2,14 @@ package dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.stack;
 
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.*;
+import it.unimi.dsi.fastutil.ints.*;
 import org.objectweb.asm.Type;
 
 import java.util.*;
 
 public class StackCompiler {
 
-    private static Type getValueType(BytecodeValue value, HashMap<BytecodeRegister, Type> registerTypeMap) {
+    private static Type getValueType(BytecodeValue value, Int2ObjectMap<Type> registerTypeMap) {
         if(value instanceof BytecodeValue.NullValue) {
             return Type.getType(Object.class);
         }else if(value instanceof BytecodeValue.IntegerValue) {
@@ -24,24 +25,24 @@ public class StackCompiler {
         }else if(value instanceof BytecodeValue.Parameter parameter) {
             return parameter.type();
         }else if(value instanceof BytecodeRegister register) {
-            return registerTypeMap.get(register);
+            return registerTypeMap.get(register.reg());
         }else {
             throw new IllegalArgumentException("Unknown value: " + value);
         }
     }
 
-    private static StackInstruction loadValue(BytecodeValue value, HashMap<BytecodeRegister, Type> registerTypeMap) {
+    private static StackInstruction loadValue(BytecodeValue value, Int2ObjectMap<Type> registerTypeMap) {
         return new StackInstruction.Load(value, getValueType(value, registerTypeMap));
     }
 
-    private static StackInstruction storeValue(BytecodeRegister value, Type type, HashMap<BytecodeRegister, Type> registerTypeMap) {
-        registerTypeMap.put(value, type);
+    private static StackInstruction storeValue(BytecodeRegister value, Type type, Int2ObjectMap<Type> registerTypeMap) {
+        registerTypeMap.put(value.reg(), type);
         return new StackInstruction.Store(value);
     }
 
     public static List<StackInstruction> compileInstructions(List<BytecodeInstruction> instructions) {
         ArrayList<StackInstruction> results = new ArrayList<>();
-        HashMap<BytecodeRegister, Type> registerTypeMap = new HashMap<>();
+        var registerTypeMap = new Int2ObjectOpenHashMap<Type>();
         for(var instr : instructions) {
             if(instr instanceof BytecodeInstruction.RegisterValue v) {
                 if(v.type() == InstructionRVType.SET) {
@@ -180,50 +181,51 @@ public class StackCompiler {
                 throw new IllegalArgumentException("Unknown instruction: " + instr);
             }
         }
-        var registerStoreCount = new HashMap<BytecodeRegister, Integer>();
-        var registerLoadCount = new HashMap<BytecodeRegister, Integer>();
+        var registerStoreCount = new Int2IntOpenHashMap();
+        var registerLoadCount = new Int2IntOpenHashMap();
         for(var instr : results) {
             if(instr instanceof StackInstruction.Load load && load.value() instanceof BytecodeRegister register) {
-                registerLoadCount.put(register, registerLoadCount.getOrDefault(register, 0) + 1);
+                registerLoadCount.put(register.reg(), registerLoadCount.getOrDefault(register.reg(), 0) + 1);
             }
             if(instr instanceof StackInstruction.Store store) {
-                registerStoreCount.put(store.register(), registerStoreCount.getOrDefault(store.register(), 0) + 1);
+                registerStoreCount.put(store.register().reg(), registerStoreCount.getOrDefault(store.register().reg(), 0) + 1);
             }
         }
 
-        var labelLocations = new HashMap<BytecodeLabel, Integer>();
+        var labelLocations = new Int2IntOpenHashMap();
         for(int i = 0; i<results.size(); i++) {
             if(results.get(i) instanceof StackInstruction.Label label) {
-                labelLocations.put(label.label(), i);
+                labelLocations.put(label.label().id(), i);
             }
         }
 
-        var inlineBreaks = new HashSet<Integer>();
-        var singleStoreRegs = new HashMap<BytecodeRegister, Integer>();
+        var inlineBreaks = new IntOpenHashSet();
+        var singleStoreRegs = new Int2IntOpenHashMap();
         for(int i = 0; i<results.size(); i++) {
             var instr = results.get(i);
             if(instr instanceof StackInstruction.Jump jump) {
                 inlineBreaks.add(i);
-                inlineBreaks.add(labelLocations.get(jump.label()));
+                inlineBreaks.add(labelLocations.get(jump.label().id()));
             }else if(instr instanceof StackInstruction.JumpTyped jump) {
                 inlineBreaks.add(i);
-                inlineBreaks.add(labelLocations.get(jump.label()));
+                inlineBreaks.add(labelLocations.get(jump.label().id()));
             }else if(instr instanceof StackInstruction.Return || instr instanceof StackInstruction.ReturnValue) {
                 inlineBreaks.add(i);
             }else if(instr instanceof StackInstruction.Store store) {
-                if(registerStoreCount.get(store.register()) == 1) {
-                    singleStoreRegs.put(store.register(), i);
+                if(registerStoreCount.get(store.register().reg()) == 1) {
+                    singleStoreRegs.put(store.register().reg(), i);
                 }
             }
         }
 
-        var dependencyData = new HashMap<BytecodeRegister, List<Integer>>();
+        var dependencyData = new Int2ObjectOpenHashMap<IntList>();
         DependencyGenerator gen = new DependencyGenerator(results, inlineBreaks);
-        var ssrSorted = singleStoreRegs.keySet().stream().sorted(Comparator.comparingInt(BytecodeRegister::reg)).toList();
-        for(var ssr : ssrSorted) {
+        var ssrSorted = singleStoreRegs.keySet().intStream().sorted();
+        for(var it = ssrSorted.iterator(); it.hasNext(); ) {
+            var ssr = it.nextInt();
             var ssrIndex = singleStoreRegs.get(ssr);
             gen.index = ssrIndex - 1;
-            ArrayList<Integer> dependencies = new ArrayList<>();
+            var dependencies = new IntArrayList();
             if(gen.findDependencies(dependencies, -1)) {
                 dependencyData.put(ssr, dependencies);
             }
@@ -233,8 +235,8 @@ public class StackCompiler {
 
         for(StackInstruction instr : results) {
             if(instr instanceof StackInstruction.Store store) {
-                var dep = dependencyData.get(store.register());
-                if(dep != null && registerLoadCount.getOrDefault(store.register(), 0) == 1) {
+                var dep = dependencyData.get(store.register().reg());
+                if(dep != null && registerLoadCount.getOrDefault(store.register().reg(), 0) == 1) {
                     for(int i = 0; i < dep.size(); i++) {
                         tempInstructions.remove(tempInstructions.size() - 1);
                     }
@@ -298,14 +300,14 @@ public class StackCompiler {
         for(var temp : tempInstructions) {
             if(temp instanceof InlineEvalStore i) {
                 output.addAll(i.instructions);
-                if(registerLoadCount.getOrDefault(i.reg, 0) != 0) {
+                if(registerLoadCount.getOrDefault(i.reg.reg(), 0) != 0) {
                     output.add(new StackInstruction.Store(i.reg));
                 }else {
                     output.add(new StackInstruction.Pop());
                 }
                 continue;
             }else if(temp instanceof StackInstruction.Store store) {
-                if(registerLoadCount.getOrDefault(store.register(), 0) != 0) {
+                if(registerLoadCount.getOrDefault(store.register().reg(), 0) != 0) {
                     output.add(new StackInstruction.Store(store.register()));
                 }else {
                     output.add(new StackInstruction.Pop());
@@ -318,25 +320,26 @@ public class StackCompiler {
         return fixRegisterOffsets(output, registerTypeMap);
     }
 
-    private static List<StackInstruction> fixRegisterOffsets(List<StackInstruction> instrs, HashMap<BytecodeRegister, Type> registerTypeMap) {
+    private static List<StackInstruction> fixRegisterOffsets(List<StackInstruction> instrs, Int2ObjectMap<Type> registerTypeMap) {
         var params = new ArrayList<BytecodeValue.Parameter>();
-        var usedRegisters = new HashSet<BytecodeRegister>();
+        var usedRegisters = new IntOpenHashSet();
         for(var i : instrs) {
             if(i instanceof StackInstruction.Load load) {
                 if(load.value() instanceof BytecodeValue.Parameter param) {
                     params.add(param);
                 }else if(load.value() instanceof BytecodeRegister register) {
-                    usedRegisters.add(register);
+                    usedRegisters.add(register.reg());
                 }
             }else if(i instanceof StackInstruction.Store store) {
-                usedRegisters.add(store.register());
+                usedRegisters.add(store.register().reg());
             }
         }
         var baseReg = params.stream().max(Comparator.comparingInt(BytecodeValue.Parameter::index)).map(BytecodeValue.Parameter::index).orElse(-1) + 1;
-        var mappedRegisters = new HashMap<BytecodeRegister, BytecodeRegister>();
+        var mappedRegisters = new Int2IntOpenHashMap();
         int regIndex = baseReg;
-        for(var reg : usedRegisters.stream().sorted(Comparator.comparingInt(BytecodeRegister::reg)).toList()) {
-            mappedRegisters.put(reg, new BytecodeRegister(regIndex));
+        for(var it = usedRegisters.intStream().sorted().iterator(); it.hasNext(); ) {
+            var reg = it.nextInt();
+            mappedRegisters.put(reg, regIndex);
             var t = registerTypeMap.get(reg);
             if(t != null) {
                 if(t.getSort() == Type.LONG || t.getSort() == Type.DOUBLE) {
@@ -349,25 +352,25 @@ public class StackCompiler {
         for(int i = 0; i<instrs.size(); i++) {
             var instr = instrs.get(i);
             if(instr instanceof StackInstruction.Load load && load.value() instanceof BytecodeRegister register) {
-                output.set(i, new StackInstruction.Load(mappedRegisters.get(register), load.type()));
+                output.set(i, new StackInstruction.Load(new BytecodeRegister(mappedRegisters.get(register.reg())), load.type()));
             }else if(instr instanceof StackInstruction.Store store) {
-                output.set(i, new StackInstruction.Store(mappedRegisters.get(store.register())));
+                output.set(i, new StackInstruction.Store(new BytecodeRegister(mappedRegisters.get(store.register().reg()))));
             }
         }
         return output;
     }
 
     private static boolean isValidInline(List<StackInstruction> instructionsBetween, InlineEvalStore store) {
-        var uses = new HashSet<BytecodeRegister>();
+        var uses = new IntOpenHashSet();
         for(var i : store.instructions) {
             if(i instanceof StackInstruction.Load load && load.value() instanceof BytecodeRegister register) {
-                uses.add(register);
+                uses.add(register.reg());
             }else if(i instanceof StackInstruction.Call call && call.target() instanceof InstructionTarget.FunctionTarget target && target.noReordering()) {
                 return false;
             }
         }
         for(var i : instructionsBetween) {
-            if(i instanceof StackInstruction.Store s && uses.contains(s.register())) {
+            if(i instanceof StackInstruction.Store s && uses.contains(s.register().reg())) {
                 return false;
             }else if(i instanceof StackInstruction.Label || i instanceof StackInstruction.Jump || i instanceof StackInstruction.JumpTyped || i instanceof StackInstruction.Return || i instanceof StackInstruction.ReturnValue) {
                 return false;
@@ -378,15 +381,15 @@ public class StackCompiler {
 
     private static class DependencyGenerator {
         private final List<StackInstruction> instructions;
-        private final Set<Integer> invalidInstructions;
+        private final IntSet invalidInstructions;
         public int index;
 
-        public DependencyGenerator(List<StackInstruction> instructions, Set<Integer> invalidInstructions) {
+        public DependencyGenerator(List<StackInstruction> instructions, IntSet invalidInstructions) {
             this.instructions = instructions;
             this.invalidInstructions = invalidInstructions;
         }
 
-        public boolean findDependencies(ArrayList<Integer> dependencies, int stackDepth) {
+        public boolean findDependencies(IntArrayList dependencies, int stackDepth) {
             while(stackDepth != 0) {
                 if(invalidInstructions.contains(index)) return false;
                 var instr = instructions.get(index);

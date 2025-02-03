@@ -1,5 +1,11 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter.bytecode;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+
 import java.util.*;
 
 public class BytecodeOptimizer {
@@ -11,13 +17,13 @@ public class BytecodeOptimizer {
         private boolean requiresEvaluation = false;
     }
 
-    private static void countRegisterRead(HashMap<BytecodeRegister, RegisterTracker> registerUseCount, BytecodeValue value) {
+    private static void countRegisterRead(Int2ObjectMap<RegisterTracker> registerUseCount, BytecodeValue value) {
         countRegisterRead(registerUseCount, value, null);
     }
 
-    private static void countRegisterRead(HashMap<BytecodeRegister, RegisterTracker> registerUseCount, BytecodeValue value, BytecodeValue by) {
+    private static void countRegisterRead(Int2ObjectMap<RegisterTracker> registerUseCount, BytecodeValue value, BytecodeValue by) {
         if(value instanceof BytecodeRegister reg) {
-            var tracker = registerUseCount.computeIfAbsent(reg, x -> new RegisterTracker());
+            var tracker = registerUseCount.computeIfAbsent(reg.reg(), x -> new RegisterTracker());
             if(by != null) {
                 tracker.readWith.add(by);
             }
@@ -25,20 +31,20 @@ public class BytecodeOptimizer {
         }
     }
 
-    private static void countRegisterWrite(HashMap<BytecodeRegister, RegisterTracker> registerUseCount, BytecodeValue value, boolean requiresEvaluation) {
+    private static void countRegisterWrite(Int2ObjectMap<RegisterTracker> registerUseCount, BytecodeValue value, boolean requiresEvaluation) {
         if(value instanceof BytecodeRegister reg) {
-            var tracker = registerUseCount.computeIfAbsent(reg, x -> new RegisterTracker());
+            var tracker = registerUseCount.computeIfAbsent(reg.reg(), x -> new RegisterTracker());
             tracker.write++;
             tracker.requiresEvaluation |= requiresEvaluation;
         }
     }
 
-    private static BytecodeValue remapValue(HashMap<BytecodeRegister, BytecodeValue> registerDefinitionTracker, BytecodeValue value) {
+    private static BytecodeValue remapValue(Int2ObjectMap<BytecodeValue> registerDefinitionTracker, BytecodeValue value) {
         if(value instanceof BytecodeRegister reg) {
             BytecodeValue prevReg = reg;
             while(true) {
-                if(prevReg instanceof BytecodeRegister) {
-                    var nreg = registerDefinitionTracker.get(prevReg);
+                if(prevReg instanceof BytecodeRegister pReg) {
+                    var nreg = registerDefinitionTracker.get(pReg.reg());
                     if(nreg == null || nreg == prevReg) {
                         return prevReg;
                     }
@@ -54,22 +60,22 @@ public class BytecodeOptimizer {
 
     // merges registers and does dead code elimination on code that uses registers that are not used
     private static List<BytecodeInstruction> cleanUpRegisterValues(List<BytecodeInstruction> instructions) {
-        HashMap<BytecodeRegister, RegisterTracker> registerUseCount = new HashMap<>();
-        HashMap<BytecodeRegister, BytecodeValue> registerDefinitionTracker = new HashMap<>();
+        var registerUseCount = new Int2ObjectOpenHashMap<RegisterTracker>();
+        var registerDefinitionTracker = new Int2ObjectOpenHashMap<BytecodeValue>();
         for(BytecodeInstruction instruction : instructions) {
             if(instruction instanceof BytecodeInstruction.RegisterValue v) {
                 countRegisterWrite(registerUseCount, v.result(), false);
                 countRegisterRead(registerUseCount, v.source(), v.result());
-                registerDefinitionTracker.put(v.result(), v.source());
+                registerDefinitionTracker.put(v.result().reg(), v.source());
             }else if(instruction instanceof BytecodeInstruction.RegisterValueValue v) {
                 countRegisterWrite(registerUseCount, v.result(), false);
                 countRegisterRead(registerUseCount, v.sourceA(), v.result());
                 countRegisterRead(registerUseCount, v.sourceB(), v.result());
-                registerDefinitionTracker.remove(v.result());
+                registerDefinitionTracker.remove(v.result().reg());
             }else if(instruction instanceof BytecodeInstruction.CreateArray v) {
                 countRegisterWrite(registerUseCount, v.result(), false);
                 countRegisterRead(registerUseCount, v.length(), v.result());
-                registerDefinitionTracker.remove(v.result());
+                registerDefinitionTracker.remove(v.result().reg());
             }else if(instruction instanceof BytecodeInstruction.SetArrayValue v) {
                 countRegisterRead(registerUseCount, v.array());
                 countRegisterRead(registerUseCount, v.value());
@@ -84,43 +90,43 @@ public class BytecodeOptimizer {
                 for(var arg : v.arguments()) {
                     countRegisterRead(registerUseCount, arg, v.result());
                 }
-                registerDefinitionTracker.remove(v.result());
+                registerDefinitionTracker.remove(v.result().reg());
             }else if(instruction instanceof BytecodeInstruction.New v) {
                 countRegisterWrite(registerUseCount, v.result(), true);
                 for(var arg : v.arguments()) {
                     countRegisterRead(registerUseCount, arg, v.result());
                 }
-                registerDefinitionTracker.remove(v.result());
+                registerDefinitionTracker.remove(v.result().reg());
             }else if(instruction instanceof BytecodeInstruction.Cast v) {
                 countRegisterWrite(registerUseCount, v.result(), false);
                 countRegisterRead(registerUseCount, v.source(), v.result());
-                registerDefinitionTracker.remove(v.result());
+                registerDefinitionTracker.remove(v.result().reg());
             }else if(instruction instanceof BytecodeInstruction.StringConcat v) {
                 countRegisterWrite(registerUseCount, v.result(), false);
                 for(var arg : v.values()) {
                     countRegisterRead(registerUseCount, arg, v.result());
                 }
-                registerDefinitionTracker.remove(v.result());
+                registerDefinitionTracker.remove(v.result().reg());
             }else if(instruction instanceof BytecodeInstruction.Return v) {
                 countRegisterRead(registerUseCount, v.value());
             }
         }
 
-        for(var entry : registerUseCount.entrySet()) {
+        for(var entry : registerUseCount.int2ObjectEntrySet()) {
             if(entry.getValue().write > 1) {
-                registerDefinitionTracker.remove(entry.getKey());
+                registerDefinitionTracker.remove(entry.getIntKey());
             }
         }
 
-        HashSet<BytecodeRegister> markedEvaluated = new HashSet<>();
-        Stack<BytecodeRegister> markEvaluationStack = new Stack<>();
-        for(var entry : registerUseCount.entrySet()) {
+        var markedEvaluated = new IntOpenHashSet();
+        var markEvaluationStack = new IntArrayList();
+        for(var entry : registerUseCount.int2ObjectEntrySet()) {
             if(entry.getValue().requiresEvaluation || entry.getValue().read != entry.getValue().readWith.size()) {
-                markEvaluationStack.push(entry.getKey());
+                markEvaluationStack.push(entry.getIntKey());
             }
         }
         while(!markEvaluationStack.isEmpty()) {
-            var reg = markEvaluationStack.pop();
+            var reg = markEvaluationStack.popInt();
             if(!markedEvaluated.add(reg)) {
                 continue;
             }
@@ -128,7 +134,7 @@ public class BytecodeOptimizer {
             tracker.requiresEvaluation = true;
             for(var read : tracker.readWith) {
                 if(read instanceof BytecodeRegister mark) {
-                    markEvaluationStack.push(mark);
+                    markEvaluationStack.push(mark.reg());
                 }
             }
         }
@@ -137,7 +143,7 @@ public class BytecodeOptimizer {
 
         for(var instruction : instructions) {
             if(instruction instanceof BytecodeInstruction.RegisterValue v) {
-                if(registerDefinitionTracker.containsKey(v.result())) {
+                if(registerDefinitionTracker.containsKey(v.result().reg())) {
                     continue;
                 }
                 newInstructions.add(new BytecodeInstruction.RegisterValue(v.type(), v.result(), remapValue(registerDefinitionTracker, v.source())));
@@ -204,7 +210,7 @@ public class BytecodeOptimizer {
 
     private static List<BytecodeInstruction> fixJumps(List<BytecodeInstruction> instructions) {
         HashMap<BytecodeLabel, BytecodeLabel> instantJumps = new HashMap<>();
-        HashMap<BytecodeLabel, Integer> preLabelUseCount = new HashMap<>();
+        var preLabelUseCount = new Object2IntOpenHashMap<BytecodeLabel>();
 
         for(int i = 0; i < instructions.size(); i++) {
             var instruction = instructions.get(i);
@@ -223,10 +229,10 @@ public class BytecodeOptimizer {
                 }
             }
         }
-        HashMap<BytecodeLabel, Integer> labelUseCount = new HashMap<>();
-        for(var entry : preLabelUseCount.entrySet()) {
+        var labelUseCount = new Object2IntOpenHashMap<BytecodeLabel>();
+        for(var entry : preLabelUseCount.object2IntEntrySet()) {
             var remappedLabel = getLabel(instantJumps, entry.getKey());
-            labelUseCount.put(remappedLabel, labelUseCount.getOrDefault(remappedLabel, 0) + entry.getValue());
+            labelUseCount.put(remappedLabel, labelUseCount.getOrDefault(remappedLabel, 0) + entry.getIntValue());
         }
         ArrayList<BytecodeInstruction> newInstructions = new ArrayList<>();
         var index = -1;

@@ -3,9 +3,9 @@ package dev.epicpix.minecraftfunctioncompiler.emitter;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2;
 import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
-import dev.epicpix.minecraftfunctioncompiler.util.Pair;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
+import it.unimi.dsi.fastutil.Pair;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
@@ -25,9 +25,9 @@ public final class GraphGenerator {
         if(instruction.type() == InstructionTypes.CALL_FUNCTIONS) {
             var functions = instruction.<List<DataLocation>>get("functions");
             for(var function : functions) {
-                if(!calls.contains(new Pair<>(base, function))) {
+                if(!calls.contains(Pair.of(base, function))) {
                     stringBuilder.append("  func_").append(base.namespace()).append("_").append(base.path().replace('.', '_').replace('-', '_').replace('/', '_')).append(" -> func_").append(function.namespace()).append("_").append(function.path().replace('.', '_').replace('-', '_').replace('/', '_')).append("\n");
-                    calls.add(new Pair<>(base, function));
+                    calls.add(Pair.of(base, function));
                 }
             }
         }

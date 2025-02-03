@@ -3,7 +3,7 @@ package dev.epicpix.minecraftfunctioncompiler.il;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
-import dev.epicpix.minecraftfunctioncompiler.util.Pair;
+import it.unimi.dsi.fastutil.Pair;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -41,7 +41,7 @@ public record Instruction(InstructionType type, Object[] data) {
     public List<Pair<String, Object>> namedEntries() {
         var entries = new ArrayList<Pair<String, Object>>(data.length);
         for(int i = 0; i<data.length; i++) {
-            entries.add(new Pair<>(type.argumentNames()[i], data[i]));
+            entries.add(Pair.of(type.argumentNames()[i], data[i]));
         }
         return entries;
     }
@@ -93,7 +93,7 @@ public record Instruction(InstructionType type, Object[] data) {
         var entries = new ArrayList<Pair<String, Object>>();
         for(var instruction : instructions) {
             for(int i = 0; i<instruction.data.length; i++) {
-                entries.add(new Pair<>(instruction.type.argumentNames()[i], instruction.data[i]));
+                entries.add(Pair.of(instruction.type.argumentNames()[i], instruction.data[i]));
             }
             entries.sort((a, b) -> a.toString().compareToIgnoreCase(b.toString()));
             String args = entries.isEmpty() ? "" : " -> { " + entries.stream().map(it -> it.first() + "=" + (it.second() instanceof String str ? "\"" + str.translateEscapes() + "\"" : it.second())).collect(Collectors.joining(", ")) + " }";

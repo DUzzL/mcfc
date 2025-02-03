@@ -5,6 +5,10 @@ import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPathPart;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+import it.unimi.dsi.fastutil.longs.LongList;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -112,7 +116,7 @@ public final class NbtParser {
                 yield new NbtValue.ByteArray(bytes);
             }
             case 'I' -> {
-                ArrayList<Integer> intList = new ArrayList<>();
+                IntList intList = new IntArrayList();
                 while(reader.peek() != ']') {
                     var value = readNbtValue(reader);
                     if(value instanceof NbtValue.IntegerLiteral literal) {
@@ -130,11 +134,11 @@ public final class NbtParser {
                 }
                 reader.skip();
                 int[] ints = new int[intList.size()];
-                for(int i = 0; i<intList.size(); i++) ints[i] = intList.get(i);
+                for(int i = 0; i<intList.size(); i++) ints[i] = intList.getInt(i);
                 yield new NbtValue.IntegerArray(ints);
             }
             case 'L' -> {
-                ArrayList<Long> longList = new ArrayList<>();
+                LongList longList = new LongArrayList();
                 while(reader.peek() != ']') {
                     var value = readNbtValue(reader);
                     if(value instanceof NbtValue.LongLiteral literal) {
@@ -152,7 +156,7 @@ public final class NbtParser {
                 }
                 reader.skip();
                 long[] longs = new long[longList.size()];
-                for(int i = 0; i<longList.size(); i++) longs[i] = longList.get(i);
+                for(int i = 0; i<longList.size(); i++) longs[i] = longList.getLong(i);
                 yield new NbtValue.LongArray(longs);
             }
             default -> throw createError(reader, NBT_INVALID_ARRAY_TYPE, "Expected 'B', 'I', or 'L' while reading nbt typed array, but got '" + reader.peek() + "'");

@@ -4,6 +4,9 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.objectweb.asm.*;
 
 import java.util.*;
@@ -12,18 +15,18 @@ public class JavaStackCompiler {
 
     private final MethodVisitor mv;
     private final List<StackInstruction> instructions;
-    private final Stack<Integer> toTraverse;
-    private final Stack<Integer> toTraverseEnd;
-    private final HashSet<Integer> traversed;
+    private final IntArrayList toTraverse;
+    private final IntArrayList toTraverseEnd;
+    private final IntSet traversed;
     private final HashMap<BytecodeLabel, Stack<Type>> labelTypeStackMap;
     private final HashMap<BytecodeLabel, Label> labelMap;
 
     private JavaStackCompiler(MethodVisitor mv, List<StackInstruction> instructions) {
         this.mv = mv;
         this.instructions = instructions;
-        this.toTraverse = new Stack<>();
-        this.toTraverseEnd = new Stack<>();
-        this.traversed = new HashSet<>();
+        this.toTraverse = new IntArrayList();
+        this.toTraverseEnd = new IntArrayList();
+        this.traversed = new IntOpenHashSet();
         this.labelTypeStackMap = new HashMap<>();
         this.labelMap = new HashMap<>();
     }
@@ -640,7 +643,7 @@ public class JavaStackCompiler {
         state.toTraverse.push(0);
         var currentStack = new Stack<Type>();
         changeTraversal: while(!state.toTraverse.isEmpty()) {
-            var traverse = state.toTraverse.pop();
+            var traverse = state.toTraverse.popInt();
             var initialInstr = instructions.get(traverse);
             if(initialInstr instanceof StackInstruction.Label label) {
                 currentStack = new Stack<>();
