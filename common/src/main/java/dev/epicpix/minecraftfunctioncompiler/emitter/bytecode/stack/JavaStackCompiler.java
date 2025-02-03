@@ -628,10 +628,6 @@ public class JavaStackCompiler {
         throw new IllegalArgumentException("Unknown instruction: " + instr);
     }
 
-    // TODO: registers don't get transformed to a better location for more compact bytecode
-    // ^^^^ additionally longs/doubles don't have 2 locals assigned to them, which might break if there's a register after a long/double
-    // ^^^^ also, parameters might be overwritten by registers if they don't match one to one with the expected argument indices (this means they will break on long/double)
-    // ^^^^ hacky way to make registers not break, is to add some constant and multiply the register number by 2, so doubles/longs always fit
     public static void compile(MethodVisitor mv, List<StackInstruction> instructions) {
         mv.visitCode();
         JavaStackCompiler state = new JavaStackCompiler(mv, instructions);

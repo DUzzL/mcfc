@@ -109,84 +109,47 @@ public final class OptimizationPass {
         return results;
     }
 
-    public int[] findExecutedInstructions() {
-        return findExecutedInstructionsUntil(thisInstruction);
-    }
-
-    public int[] findExecutedInstructionsUntil(int index) {
-        var res = findExecutedInstructionsUntil(index, new Int2ObjectOpenHashMap<>(), new IntArrayList());
-        if(res == null) return new int[0];
-        return res.intStream().sorted().toArray();
-    }
-
-    private IntSet findExecutedInstructionsUntil(int index, Int2ObjectMap<IntSet> cache, IntArrayList currentStack) {
-        var cached = cache.get(index);
-        if(cached != null) return cached;
-        var data = findExecutedInstructionsUntilInternal(index);
-        if(data.incomplete) {
-            currentStack.push(index);
-            var prevInstrs = getPreviousInstructions(data.finishIndex);
-            IntSet results = null;
-            for(var it = prevInstrs.intIterator(); it.hasNext(); ) {
-                var p = it.nextInt();
-                if(currentStack.contains(p)) {
-                    continue;
-                }
-                var sub = findExecutedInstructionsUntil(p, cache, currentStack);
-                if(sub == null) continue;
-                if(results == null) {
-                    results = new IntOpenHashSet(sub);
-                }else {
-                    results.retainAll(sub);
-                }
-                if(results.isEmpty()) break;
+    public void generateInstructionEdges(Int2ObjectMap<IntSet> forward, Int2ObjectMap<IntSet> backward) {
+        var labelLocations = new Int2IntOpenHashMap();
+        for(int i = 0; i<context.getInstructionCount(); i++) {
+            var instruction = getInstruction(i);
+            if(instruction.type() == InstructionTypes2.LABEL) {
+                labelLocations.put(instruction.<LabelData>get(0).id(), i);
             }
-            currentStack.popInt();
-            if(results == null) {
-                return null;
-            }
-            if(data.partExecuted) {
-                results.addAll(data.part);
-            }
-            var res = results;
-            cache.put(index, res);
-            return res;
-        }else {
-            if(!data.partExecuted) {
-                cache.put(index, null);
-                return null;
-            }
-            cache.put(index, data.part);
-            return data.part;
+            if(backward != null) backward.put(i, new IntLinkedOpenHashSet(2));
         }
-    }
 
-    private boolean recomputeLabelToInstructions = true;
-    private final Int2ObjectMap<IntList> labelToInstructions = new Int2ObjectOpenHashMap<>();
+        for(int i = 0; i<context.getInstructionCount(); i++) {
+            var set = new IntLinkedOpenHashSet(2);
+            var instruction = getInstruction(i);
 
-    private IntList getLabelToInstructions(LabelData label) {
-        if(recomputeLabelToInstructions) {
-            labelToInstructions.clear();
-            for(int i = 0; i<context.getInstructionCount(); i++) {
-                var instr = context.getInstruction(i);
-                for(var data : instr.data()) {
-                    if(data instanceof LabelData lData) {
-                        labelToInstructions.computeIfAbsent(lData.id(), k -> new IntArrayList()).add(i);
+            if(instruction.type().isConditionJump() || instruction.type() == InstructionTypes2.JUMP) {
+                for(var value : instruction.data()) {
+                    if(value instanceof LabelData label) {
+                        var loc = labelLocations.get(label.id());
+                        set.add(loc);
+                        if(backward != null) backward.get(loc).add(i);
                     }
                 }
             }
-            recomputeLabelToInstructions = false;
+            if(instruction.type() != InstructionTypes2.JUMP && instruction.type() != InstructionTypes2.RETURN_SUCCESS && instruction.type() != InstructionTypes2.RETURN_FAIL && i != context.getInstructionCount() - 1) {
+                set.add(i + 1);
+                if(backward != null) backward.get(i + 1).add(i);
+            }
+            forward.put(i, set);
         }
-        return labelToInstructions.get(label.id());
     }
 
-    private IntList getPreviousInstructions(int finishIndex) {
-        var instr = getInstruction(finishIndex);
-        var label = instr.<LabelData>get("label");
-        var prevInstrs = new IntArrayList();
-        prevInstrs.add(finishIndex - 1);
-        prevInstrs.addAll(getLabelToInstructions(label));
-        return prevInstrs;
+    public IntList findExecutedInstructions() {
+        return findExecutedInstructionsUntil(thisInstruction);
+    }
+
+    public IntList findExecutedInstructionsUntil(int index) {
+        var forward = new Int2ObjectOpenHashMap<IntSet>(context.getInstructionCount());
+        var backward = new Int2ObjectOpenHashMap<IntSet>(context.getInstructionCount());
+        generateInstructionEdges(forward, backward);
+        context.tarjan.updateData(forward, backward);
+        return context.tarjan.getDominators(index);
     }
 
     public void replaceInstructionData(boolean includeSelf, Object from, Object to) {
@@ -200,26 +163,6 @@ public final class OptimizationPass {
         }
     }
 
-    private record ExecutedInstructionResults(IntSet part, boolean partExecuted, int finishIndex, boolean incomplete) {}
-
-    private ExecutedInstructionResults findExecutedInstructionsUntilInternal(int index) {
-        var executed = new IntOpenHashSet();
-        int i = index;
-        while(i >= 0) {
-            var instr = getInstruction(i);
-            if(instr.type() == InstructionTypes2.RETURN_SUCCESS || instr.type() == InstructionTypes2.RETURN_FAIL || instr.type() == InstructionTypes2.JUMP) {
-                return new ExecutedInstructionResults(executed, false, i, false);
-            }
-            executed.add(i);
-            if(instr.type() == InstructionTypes2.LABEL) {
-                break;
-            }
-            i--;
-        }
-        return new ExecutedInstructionResults(executed, true, i, i != -1);
-    }
-
-
     public OptimizationContext context() {
         return context;
     }
@@ -227,26 +170,22 @@ public final class OptimizationPass {
     public void addInstruction(int index, Instruction instruction) {
         context.instructions.add(index, instruction);
         resetIndex = Math.min(resetIndex, index);
-        recomputeLabelToInstructions = true;
     }
 
     public void removeInstruction(int index) {
         context.instructions.remove(index);
         resetIndex = Math.min(resetIndex, index);
-        recomputeLabelToInstructions = true;
     }
 
     public void replaceInstruction(int index, Instruction instruction) {
         context.instructions.set(index, instruction);
         resetIndex = Math.min(resetIndex, index);
-        recomputeLabelToInstructions = true;
     }
 
     public void modifyInstructionData(int index, Object[] instructionData) {
         var instr = context.instructions.get(index);
         replaceInstruction(index, new Instruction(instr.type(), instructionData));
         resetIndex = Math.min(resetIndex, index);
-        recomputeLabelToInstructions = true;
     }
 
     public int takeResetIndex() {

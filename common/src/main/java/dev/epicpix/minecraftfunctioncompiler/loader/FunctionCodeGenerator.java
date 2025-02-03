@@ -16,6 +16,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.*;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
+import dev.epicpix.minecraftfunctioncompiler.il.optimizer.LengauerTarjan;
 import dev.epicpix.minecraftfunctioncompiler.il.optimizer.Optimizer;
 import org.objectweb.asm.Type;
 import org.slf4j.Logger;
@@ -111,11 +112,12 @@ public class FunctionCodeGenerator {
 
     public static HashMap<DataLocation, List<Instruction>> optimizeFunctionsHighLevel(HashMap<DataLocation, List<Instruction>> compiled, DiagnosticCollector diagnostics, int[] instructionCounts, boolean addReq) {
         HashMap<DataLocation, List<Instruction>> compiledFunctions = new HashMap<>();
+        var tarjan = new LengauerTarjan();
         for(var func : compiled.entrySet()) {
             var key = func.getKey();
             var value = func.getValue();
             try {
-                var optimized = Optimizer.optimize(value);
+                var optimized = Optimizer.optimize(value, tarjan);
                 if(instructionCounts != null) instructionCounts[1] += optimized.size();
                 if(addReq) optimized = Instructions2.addStaticRequirements(optimized);
                 compiledFunctions.put(key, optimized);

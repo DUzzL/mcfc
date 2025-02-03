@@ -8,12 +8,14 @@ import java.util.List;
 
 public class OptimizationContext {
 
+    final LengauerTarjan tarjan;
     final ArrayList<Instruction> instructions;
     private int nextLocalId;
 
-    OptimizationContext(ArrayList<Instruction> instructions, int nextLocalId) {
+    OptimizationContext(ArrayList<Instruction> instructions, int nextLocalId, LengauerTarjan tarjan) {
         this.instructions = instructions;
         this.nextLocalId = nextLocalId;
+        this.tarjan = tarjan;
     }
 
     public Instruction getInstruction(int index) {
