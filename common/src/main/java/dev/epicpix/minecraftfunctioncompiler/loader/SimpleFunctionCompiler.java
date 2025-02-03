@@ -66,8 +66,9 @@ public class SimpleFunctionCompiler {
                     commands.add(tree);
                 }
             }
-            var highLevel = FunctionCodeGenerator.compileFunctionsHighLevel(parsed, diagnostics, null);
-            for(var compRes : highLevel.entrySet()) {
+            var highLevel = FunctionCodeGenerator.compileFunctionsHighLevel(parsed, diagnostics, null, false);
+            var optimizedHighLevel = FunctionCodeGenerator.optimizeFunctionsHighLevel(highLevel, diagnostics, null, true);
+            for(var compRes : optimizedHighLevel.entrySet()) {
                 var instructionsJson = jsonData(results, "function_high_level_instructions_json", compRes.getKey(), JsonArray::new);
                 instructionsJson.addAll(Instruction.generateInstructionsJson(compRes.getValue()));
                 var instructionsText = jsonData(results, "function_high_level_instructions_txt", compRes.getKey(), JsonArray::new);
@@ -75,13 +76,13 @@ public class SimpleFunctionCompiler {
             }
             var llFunctions = new HashMap<String, List<BytecodeInstruction>>();
             var classGenerators = new ArrayList<ClassGenerator>();
-            for(var key : highLevel.keySet()) {
+            for(var key : optimizedHighLevel.keySet()) {
                 classGenerators.add(FunctionCodeGenerator.generateFunctionClass(
                     params,
                     key,
-                    highLevel.get(key),
+                    optimizedHighLevel.get(key),
                     parsed.get(key).size(),
-                    highLevel.keySet(),
+                    optimizedHighLevel.keySet(),
                     llFunctions
                 ));
             }

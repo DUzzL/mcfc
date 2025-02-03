@@ -88,7 +88,7 @@ public class FunctionCodeGenerator {
         return definedFunctions;
     }
 
-    public static HashMap<DataLocation, List<Instruction>> compileFunctionsHighLevel(HashMap<DataLocation, List<CommandParams>> definedFunctions, DiagnosticCollector diagnostics, int[] instructionCounts) {
+    public static HashMap<DataLocation, List<Instruction>> compileFunctionsHighLevel(HashMap<DataLocation, List<CommandParams>> definedFunctions, DiagnosticCollector diagnostics, int[] instructionCounts, boolean addReq) {
         HashMap<DataLocation, List<Instruction>> compiledFunctions = new HashMap<>();
         for(var func : definedFunctions.entrySet()) {
             var key = func.getKey();
@@ -96,14 +96,34 @@ public class FunctionCodeGenerator {
             try {
                 var compiled = CommandCompiler.compile(key, value);
                 if(instructionCounts != null) instructionCounts[0] += compiled.size();
-                var optimized = Optimizer.optimize(compiled);
-                if(instructionCounts != null) instructionCounts[1] += optimized.size();
-                compiledFunctions.put(key, Instructions2.addStaticRequirements(optimized));
+                if(addReq) compiled = Instructions2.addStaticRequirements(compiled);
+                compiledFunctions.put(key, compiled);
             }catch(DiagnosticException e) {
                 LOGGER.warn("Failed to compile function {} / {}", key, e.getMessage());
                 diagnostics.addDiagnostic(e.toDiagnostic());
             }catch(Throwable e) {
                 LOGGER.error("Failed to compile function {}", key, e);
+                diagnostics.addDiagnostic(Diagnostic.compileError(UNSPECIFIED_COMMAND_ERROR, key, e.getMessage(), e));
+            }
+        }
+        return compiledFunctions;
+    }
+
+    public static HashMap<DataLocation, List<Instruction>> optimizeFunctionsHighLevel(HashMap<DataLocation, List<Instruction>> compiled, DiagnosticCollector diagnostics, int[] instructionCounts, boolean addReq) {
+        HashMap<DataLocation, List<Instruction>> compiledFunctions = new HashMap<>();
+        for(var func : compiled.entrySet()) {
+            var key = func.getKey();
+            var value = func.getValue();
+            try {
+                var optimized = Optimizer.optimize(value);
+                if(instructionCounts != null) instructionCounts[1] += optimized.size();
+                if(addReq) optimized = Instructions2.addStaticRequirements(optimized);
+                compiledFunctions.put(key, optimized);
+            }catch(DiagnosticException e) {
+                LOGGER.warn("Failed to optimize function {} / {}", key, e.getMessage());
+                diagnostics.addDiagnostic(e.toDiagnostic());
+            }catch(Throwable e) {
+                LOGGER.error("Failed to optimize function {}", key, e);
                 diagnostics.addDiagnostic(Diagnostic.compileError(UNSPECIFIED_COMMAND_ERROR, key, e.getMessage(), e));
             }
         }

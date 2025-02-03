@@ -121,6 +121,7 @@ public final class FunctionCompilerReporter {
         JsonObject timingsJson = new JsonObject();
         timingsJson.addProperty("parse", timings.parse());
         timingsJson.addProperty("compile", timings.compile());
+        timingsJson.addProperty("optimize", timings.optimize());
         timingsJson.addProperty("class_load", timings.classLoad());
         timingsJson.addProperty("handle_load", timings.handleLoad());
         compilationStats.add("timings", timingsJson);
