@@ -44,7 +44,7 @@ public final class Optimizations {
         for(int i = 0; i<pass.context().getInstructionCount(); i++) {
             if(i == pass.thisInstructionIndex()) continue;
             var instr = pass.getInstruction(i);
-            if(instr.containsValue(thisLabel)) {
+            if((instr.type() == InstructionTypes2.JUMP || instr.type().isConditionJump()) && instr.containsValue(thisLabel)) {
                 useCount++;
             }
         }
