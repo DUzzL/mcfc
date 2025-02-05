@@ -22,7 +22,6 @@ import org.slf4j.LoggerFactory;
 import java.lang.invoke.MethodHandle;
 import java.util.List;
 
-import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.AUTO_SWITCH_FUNCTIONS;
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.BLOCKING_COMPILATION;
 import static dev.epicpix.minecraftfunctioncompiler.v1_20_2.emitter.MappedUsageDefinitionsExtensions.callCompoundTag_get;
 import static dev.epicpix.minecraftfunctioncompiler.v1_20_2.emitter.MappedUsageDefinitionsExtensions.callTag_stringify;
@@ -35,10 +34,10 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<MinecraftSe
         super(parent, FabricLoader.getInstance().getGameDir().resolve("generated"), minecraftServer, sourceFileProvider.mcfc$getSourceFiles());
     }
 
-    public void loadFunctions(ServerFunctionManager serverFunctionManager, Runnable onComplete) {
+    public void loadFunctions(ServerFunctionManager serverFunctionManager, boolean autoEnable, Runnable onComplete) {
         if(totalFunctionCount() == 0) return;
         if(!BLOCKING_COMPILATION) {
-            if(compileInBackground(() -> loadFunctions(serverFunctionManager, onComplete))) return;
+            if(compileInBackground(() -> loadFunctions(serverFunctionManager, autoEnable, onComplete))) return;
         }
         try {
             RegistryMapping.updateRegistryMaps(minecraftServer, serverFunctionManager);
@@ -61,7 +60,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<MinecraftSe
             }
         };
 
-        loadFunctionClasses(lookup, createCompilationParams(), serverFunctionManager, AUTO_SWITCH_FUNCTIONS);
+        loadFunctionClasses(lookup, createCompilationParams(), serverFunctionManager, autoEnable);
         onComplete.run();
     }
 

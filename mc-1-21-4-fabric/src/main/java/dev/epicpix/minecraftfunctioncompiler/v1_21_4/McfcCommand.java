@@ -14,6 +14,7 @@ import net.minecraft.network.chat.Style;
 
 import java.util.Locale;
 
+import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.AUTO_SWITCH_FUNCTIONS;
 import static net.minecraft.server.commands.FunctionCommand.SUGGEST_FUNCTION;
 
 public class McfcCommand {
@@ -112,7 +113,7 @@ public class McfcCommand {
                 return 0;
             }
             context.getSource().sendSuccess(() -> Component.literal("Started function recompilation"), true);
-            ((FunctionCompilationStarter) context.getSource().getServer().getFunctions()).mcfc$loadFunctions(() -> {
+            ((FunctionCompilationStarter) context.getSource().getServer().getFunctions()).mcfc$loadFunctions(AUTO_SWITCH_FUNCTIONS, () -> {
                 context.getSource().sendSuccess(() -> Component.literal("Finished function recompilation"), true);
             });
             return 1;

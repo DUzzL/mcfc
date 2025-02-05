@@ -21,6 +21,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.Map;
 
+import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.AUTO_SWITCH_FUNCTIONS;
+
 @Mixin(ServerFunctionManager.class)
 public class ServerFunctionManagerMixin implements FunctionCompilationStarter {
 
@@ -30,13 +32,13 @@ public class ServerFunctionManagerMixin implements FunctionCompilationStarter {
 
     @Inject(method = "postReload", at = @At("TAIL"))
     public void postReload(ServerFunctionLibrary serverFunctionLibrary, CallbackInfo ci) {
-        mcfc$loadFunctions(() -> {});
+        mcfc$loadFunctions(AUTO_SWITCH_FUNCTIONS, () -> {});
     }
 
     @Override
-    public void mcfc$loadFunctions(Runnable onComplete) {
+    public void mcfc$loadFunctions(boolean autoEnable, Runnable onComplete) {
         classLoader = new FunctionClassLoader(getClass().getClassLoader(), server, (FunctionCompilerClassLoader.SourceFileProvider) library);
-        classLoader.loadFunctions((ServerFunctionManager) (Object) this, onComplete);
+        classLoader.loadFunctions((ServerFunctionManager) (Object) this, autoEnable, onComplete);
         FunctionCompilerMain.functionClassLoader = classLoader;
     }
 
