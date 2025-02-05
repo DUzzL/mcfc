@@ -53,7 +53,8 @@ public class ServerFunctionManagerMixin implements FunctionCompilationStarter {
 
     @Inject(method = "postReload", at = @At("TAIL"))
     public void postReload(ServerFunctionLibrary serverFunctionLibrary, CallbackInfo ci) {
-        mcfc$loadFunctions(AUTO_SWITCH_FUNCTIONS, () -> {});
+        var autoEnable = (FunctionCompilerMain.functionClassLoader == null || FunctionCompilerMain.functionClassLoader.getState() != FunctionCompilerClassLoader.State.READY_OFF) && AUTO_SWITCH_FUNCTIONS;
+        mcfc$loadFunctions(autoEnable, () -> {});
     }
 
     @Override
