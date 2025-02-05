@@ -27,13 +27,13 @@ public class ServerFunctionManagerMixin implements FunctionCompilationStarter {
 
     @Inject(method = "postReload", at = @At("TAIL"))
     public void postReload(ServerFunctionLibrary serverFunctionLibrary, CallbackInfo ci) {
-        mcfc$loadFunctions();
+        mcfc$loadFunctions(() -> {});
     }
 
     @Override
-    public void mcfc$loadFunctions() {
+    public void mcfc$loadFunctions(Runnable onComplete) {
         classLoader = new FunctionClassLoader(getClass().getClassLoader(), server, (FunctionCompilerClassLoader.SourceFileProvider) library);
-        classLoader.loadFunctions((ServerFunctionManager) (Object) this);
+        classLoader.loadFunctions((ServerFunctionManager) (Object) this, onComplete);
         FunctionCompilerMain.functionClassLoader = classLoader;
     }
 

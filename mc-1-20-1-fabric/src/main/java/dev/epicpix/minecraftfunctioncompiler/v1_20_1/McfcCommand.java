@@ -14,7 +14,6 @@ import net.minecraft.network.chat.Style;
 
 import java.util.Locale;
 
-import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.BLOCKING_COMPILATION;
 import static net.minecraft.server.commands.FunctionCommand.SUGGEST_FUNCTION;
 
 public class McfcCommand {
@@ -28,7 +27,7 @@ public class McfcCommand {
             }
             if(loader.getState() == FunctionCompilerClassLoader.State.READY_OFF || loader.getState() == FunctionCompilerClassLoader.State.READY_ON || loader.getState() == FunctionCompilerClassLoader.State.EXECUTION_FAILED) {
                 loader.tryOn();
-                context.getSource().sendSuccess(() -> Component.literal("Turned on Function Compiler").withStyle(ChatFormatting.GREEN), false);
+                context.getSource().sendSuccess(() -> Component.literal("Turned on Function Compiler"), false);
                 return 1;
             }else {
                 return 0;
@@ -42,7 +41,7 @@ public class McfcCommand {
             }
             if(loader.getState() == FunctionCompilerClassLoader.State.READY_OFF || loader.getState() == FunctionCompilerClassLoader.State.READY_ON || loader.getState() == FunctionCompilerClassLoader.State.EXECUTION_FAILED) {
                 loader.tryOff();
-                context.getSource().sendSuccess(() -> Component.literal("Turned off Function Compiler").withStyle(ChatFormatting.GREEN), false);
+                context.getSource().sendSuccess(() -> Component.literal("Turned off Function Compiler"), false);
                 return 1;
             }else {
                 return 0;
@@ -112,12 +111,10 @@ public class McfcCommand {
                 context.getSource().sendFailure(Component.literal("Function Compiler is not loaded"));
                 return 0;
             }
-            ((FunctionCompilationStarter) context.getSource().getServer().getFunctions()).mcfc$loadFunctions();
-            if(!BLOCKING_COMPILATION) {
-                context.getSource().sendSuccess(() -> Component.literal("Starting function recompilation").withStyle(ChatFormatting.GREEN), false);
-            }else {
-                context.getSource().sendSuccess(() -> Component.literal("Finished function recompilation").withStyle(ChatFormatting.GREEN), false);
-            }
+            context.getSource().sendSuccess(() -> Component.literal("Started function recompilation"), true);
+            ((FunctionCompilationStarter) context.getSource().getServer().getFunctions()).mcfc$loadFunctions(() -> {
+                context.getSource().sendSuccess(() -> Component.literal("Finished function recompilation"), true);
+            });
             return 1;
         }));
         dispatcher.register(base);

@@ -34,10 +34,10 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<MinecraftSe
         super(parent, FabricLoader.getInstance().getGameDir().resolve("generated"), minecraftServer, sourceFileProvider.mcfc$getSourceFiles());
     }
 
-    public void loadFunctions(ServerFunctionManager serverFunctionManager) {
+    public void loadFunctions(ServerFunctionManager serverFunctionManager, Runnable onComplete) {
         if(totalFunctionCount() == 0) return;
         if(!BLOCKING_COMPILATION) {
-            if(compileInBackground(() -> loadFunctions(serverFunctionManager))) return;
+            if(compileInBackground(() -> loadFunctions(serverFunctionManager, onComplete))) return;
         }
         try {
             RegistryMapping.updateRegistryMaps(minecraftServer, serverFunctionManager);
@@ -61,6 +61,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<MinecraftSe
         };
 
         loadFunctionClasses(lookup, createCompilationParams(), serverFunctionManager);
+        onComplete.run();
     }
 
     public void setHandle(DataLocation key, MethodHandle handle) {
