@@ -2,6 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.v1_21_4;
 
 import com.mojang.brigadier.CommandDispatcher;
 import dev.epicpix.minecraftfunctioncompiler.CompileConstants;
+import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilationStarter;
 import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -13,6 +14,7 @@ import net.minecraft.network.chat.Style;
 
 import java.util.Locale;
 
+import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.BLOCKING_COMPILATION;
 import static net.minecraft.server.commands.FunctionCommand.SUGGEST_FUNCTION;
 
 public class McfcCommand {
@@ -75,11 +77,17 @@ public class McfcCommand {
                 tooltip.append(Component.literal("\nSeverity: ").withStyle(ChatFormatting.GREEN));
                 tooltip.append(Component.literal(diagnostic.severity().toString().toLowerCase(Locale.ROOT)).withStyle(ChatFormatting.GOLD));
                 tooltip.append(Component.literal("\nSource: ").withStyle(ChatFormatting.GREEN));
-                tooltip.append(Component.literal(diagnostic.source().toString()).withStyle(ChatFormatting.GOLD));
+                if(diagnostic.source() != null) {
+                    tooltip.append(Component.literal(diagnostic.source().toString()).withStyle(ChatFormatting.GOLD));
+                }else {
+                    tooltip.append(Component.literal("Unknown").withStyle(ChatFormatting.RED));
+                }
                 tooltip.append(Component.literal("\nMessage: ").withStyle(ChatFormatting.GREEN));
                 tooltip.append(Component.literal(diagnostic.message()).withStyle(ChatFormatting.GOLD));
-                tooltip.append(Component.literal("\nExtra: ").withStyle(ChatFormatting.GREEN));
-                tooltip.append(Component.literal(diagnostic.extra()).withStyle(ChatFormatting.GOLD));
+                if(diagnostic.extra() != null) {
+                    tooltip.append(Component.literal("\nExtra: ").withStyle(ChatFormatting.GREEN));
+                    tooltip.append(Component.literal(diagnostic.extra()).withStyle(ChatFormatting.GOLD));
+                }
                 context.getSource().sendSuccess(() -> Component.literal(diagnostic.kind() + " - " + diagnostic.source()).withStyle(Style.EMPTY.applyFormat(ChatFormatting.GREEN).withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, tooltip))), false);
             }
             return diagnostics.size();
@@ -98,6 +106,20 @@ public class McfcCommand {
             }
             return res;
         })));
+        base.then(Commands.literal("recompile").executes(context -> {
+            var loader = FunctionCompilerMain.functionClassLoader;
+            if(loader == null) {
+                context.getSource().sendFailure(Component.literal("Function Compiler is not loaded"));
+                return 0;
+            }
+            ((FunctionCompilationStarter) context.getSource().getServer().getFunctions()).mcfc$loadFunctions();
+            if(!BLOCKING_COMPILATION) {
+                context.getSource().sendSuccess(() -> Component.literal("Starting function recompilation").withStyle(ChatFormatting.GREEN), false);
+            }else {
+                context.getSource().sendSuccess(() -> Component.literal("Finished function recompilation").withStyle(ChatFormatting.GREEN), false);
+            }
+            return 1;
+        }));
         dispatcher.register(base);
     }
 }

@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.compiler;
 
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
+import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2;
 import dev.epicpix.minecraftfunctioncompiler.il.Instructions2;
 import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 
@@ -21,6 +22,18 @@ public class InstructionWriter {
         instructions.add(Instructions2.label(endLabel));
     }
 
+    private int indexOfLabel(LabelData label) {
+        for(int i = 0; i < instructions.size(); i++) {
+            var instr = instructions.get(i);
+            if(instr.type() == InstructionTypes2.LABEL) {
+                if(instr.get(0).equals(label)) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
     public LabelData getEndLabel() {
         return endLabel;
     }
@@ -31,13 +44,13 @@ public class InstructionWriter {
 
     public void addInstructionBefore(Instruction instruction, LabelData before) {
         if(before == NULL_LABEL) return;
-        int labelIndex = instructions.indexOf(Instructions2.label(before));
+        int labelIndex = indexOfLabel(before);
         instructions.add(labelIndex, instruction);
     }
 
     public void addInstructionAfter(Instruction instruction, LabelData after) {
         if(after == NULL_LABEL) return;
-        int labelIndex = instructions.indexOf(Instructions2.label(after));
+        int labelIndex = indexOfLabel(after);
         instructions.add(labelIndex + 1, instruction);
     }
 

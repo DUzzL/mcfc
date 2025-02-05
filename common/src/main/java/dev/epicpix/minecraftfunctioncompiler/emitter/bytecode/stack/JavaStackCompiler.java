@@ -321,7 +321,7 @@ public class JavaStackCompiler {
             int labelLocation;
             for(labelLocation = 0; labelLocation < instructions.size(); labelLocation++) {
                 if(instructions.get(labelLocation) instanceof StackInstruction.Label label) {
-                    if(label.label().equals(jump.label())) {
+                    if(label.label().id() == jump.label().id()) {
                         break;
                     }
                 }
@@ -591,7 +591,7 @@ public class JavaStackCompiler {
             int labelLocation;
             for(labelLocation = 0; labelLocation < instructions.size(); labelLocation++) {
                 if(instructions.get(labelLocation) instanceof StackInstruction.Label label) {
-                    if(label.label().equals(jump.label())) {
+                    if(label.label().id() == jump.label().id()) {
                         break;
                     }
                 }

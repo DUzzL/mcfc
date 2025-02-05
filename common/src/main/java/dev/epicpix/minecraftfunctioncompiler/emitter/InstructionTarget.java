@@ -12,6 +12,12 @@ public interface InstructionTarget {
             String args = Arrays.stream(arguments).map(Class::descriptorString).collect(Collectors.joining(""));
             return new FunctionTarget(desc.substring(1, desc.length() - 1), "<init>", "(" + args + ")V", false, false, true, false);
         }
+
+        public static FunctionTarget staticFunction(Class<?> clazz, String name, Class<?> returnType, Class<?>... arguments) {
+            String desc = clazz.descriptorString();
+            String args = Arrays.stream(arguments).map(Class::descriptorString).collect(Collectors.joining(""));
+            return new FunctionTarget(desc.substring(1, desc.length() - 1), name, "(" + args + ")" + returnType.descriptorString(), true, false, false, false);
+        }
     }
     record FieldTarget(String className, String name, String descriptor, boolean isStatic, boolean isWrite) implements InstructionTarget {
         public static FieldTarget fromReflection(Field field, boolean isWrite) {

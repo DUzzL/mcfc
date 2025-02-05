@@ -193,17 +193,13 @@ public class StackCompiler {
         }
 
         var labelLocations = new Int2IntOpenHashMap();
-        for(int i = 0; i<results.size(); i++) {
-            if(results.get(i) instanceof StackInstruction.Label label) {
-                labelLocations.put(label.label().id(), i);
-            }
-        }
-
         var inlineBreaks = new IntOpenHashSet();
         var singleStoreRegs = new Int2IntOpenHashMap();
         for(int i = 0; i<results.size(); i++) {
             var instr = results.get(i);
-            if(instr instanceof StackInstruction.Jump jump) {
+            if(instr instanceof StackInstruction.Label label) {
+                labelLocations.put(label.label().id(), i);
+            }else if(instr instanceof StackInstruction.Jump jump) {
                 inlineBreaks.add(i);
                 inlineBreaks.add(labelLocations.get(jump.label().id()));
             }else if(instr instanceof StackInstruction.JumpTyped jump) {

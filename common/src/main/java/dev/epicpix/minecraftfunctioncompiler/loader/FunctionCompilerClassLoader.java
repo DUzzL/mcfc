@@ -242,6 +242,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
                 LOGGER.info("Wrote {} lines into instruction_dump_high_level.json", instructionDumpJsonStr.lines().count());
             }catch(Exception ignored) {}
         }
+        LOGGER.info("Loading functions");
 
         setState(State.LOADING);
         HashMap<String, List<BytecodeInstruction>> lowLevelFunctions = new HashMap<>();

@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.mixin.v1_21;
 
+import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilationStarter;
 import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.v1_21.FunctionClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.v1_21.FunctionCompilerMain;
@@ -17,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ServerFunctionManager.class)
-public class ServerFunctionManagerMixin {
+public class ServerFunctionManagerMixin implements FunctionCompilationStarter {
 
     @Shadow public ServerFunctionLibrary library;
     @Unique private FunctionClassLoader classLoader;
@@ -25,6 +26,11 @@ public class ServerFunctionManagerMixin {
 
     @Inject(method = "postReload", at = @At("TAIL"))
     public void postReload(ServerFunctionLibrary serverFunctionLibrary, CallbackInfo ci) {
+        mcfc$loadFunctions();
+    }
+
+    @Override
+    public void mcfc$loadFunctions() {
         classLoader = new FunctionClassLoader(getClass().getClassLoader(), server, (FunctionCompilerClassLoader.SourceFileProvider) library);
         classLoader.loadFunctions((ServerFunctionManager) (Object) this);
         FunctionCompilerMain.functionClassLoader = classLoader;
