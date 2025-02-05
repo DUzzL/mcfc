@@ -1,8 +1,28 @@
 package dev.epicpix.minecraftfunctioncompiler.il;
 
-public record InstructionType(String name, String[] argumentNames, int flags) {
+public record InstructionType(String name, String[] argumentNames, int flags, int id) {
+
+    private static int NEXT_ID;
+
+    public InstructionType {
+        if(id != NEXT_ID) throw new IllegalArgumentException("Don't provide the id argument manually");
+    }
+
+    public InstructionType(String name, String[] argumentNames, int flags) {
+        this(name, argumentNames, flags, ++NEXT_ID);
+    }
+
     public InstructionType(String name, String[] argumentNames) {
         this(name, argumentNames, 0);
+    }
+
+    public boolean equals(Object o) {
+        if(o == null || getClass() != o.getClass()) return false;
+        return id == ((InstructionType) o).id;
+    }
+
+    public int hashCode() {
+        return id;
     }
 
     public static final int CONDITIONAL_JUMP = 1 >> 0;

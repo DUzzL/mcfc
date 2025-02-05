@@ -21,7 +21,7 @@ public record Instruction(InstructionType type, Object[] data) {
     public boolean equals(Object o) {
         if(o == null || getClass() != o.getClass()) return false;
         Instruction that = (Instruction) o;
-        return Objects.equals(type, that.type) && Arrays.deepEquals(data, that.data);
+        return type == that.type && Arrays.deepEquals(data, that.data);
     }
 
     @Override
