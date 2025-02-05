@@ -181,7 +181,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
         return true;
     }
 
-    public void loadFunctionClasses(IArgumentLookup lookup, CompilationParams params, Object serverFunctionManager) {
+    public void loadFunctionClasses(IArgumentLookup lookup, CompilationParams params, Object serverFunctionManager, boolean autoEnable) {
         if(ALLOW_EXTERNAL_DATA_ACCESS && GENERATE_REGISTRY_FILE) {
             try {
                 Files.createDirectory(generatedDir);
@@ -326,7 +326,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
         FunctionCompilerReporter.reportCompilationStatistics(functionCountsData, timingData, codeGenMetrics, diagnostics.getDiagnostics());
 
         FunctionCompilerReporter.sendReports();
-        if(AUTO_SWITCH_FUNCTIONS) {
+        if(autoEnable) {
             LOGGER.info("Switched over to running compiled functions");
             setState(State.READY_ON);
         }else {

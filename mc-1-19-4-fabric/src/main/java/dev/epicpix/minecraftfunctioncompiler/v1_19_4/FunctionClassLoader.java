@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import java.lang.invoke.MethodHandle;
 import java.util.List;
 
+import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.AUTO_SWITCH_FUNCTIONS;
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.BLOCKING_COMPILATION;
 
 public class FunctionClassLoader extends FunctionCompilerClassLoader<MinecraftServer, ResourceLocation, CommandSourceStack, CompoundTag> {
@@ -56,7 +57,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<MinecraftSe
             }
         };
 
-        loadFunctionClasses(lookup, createCompilationParams(), serverFunctionManager);
+        loadFunctionClasses(lookup, createCompilationParams(), serverFunctionManager, AUTO_SWITCH_FUNCTIONS);
         onComplete.run();
     }
 
