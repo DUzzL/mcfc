@@ -10,8 +10,8 @@ Adds commands:
 - `execute unless predicate`
 
 Adds `/mcfc` sub-commands:
-- `print_diagnostics` - Prints all errors from compilation
 - `recompile` - Recompiles all functions
+- `show_diagnostics` - Shows all errors from compilation
 
 Fixes bugs:
 - `execute positioned ^ ^ ^` works only when there's an entity in context
