@@ -14,6 +14,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.*;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
+import dev.epicpix.minecraftfunctioncompiler.profiler.Profiler;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import dev.epicpix.minecraftfunctioncompiler.reporter.CodeGenerationMetrics;
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
@@ -47,6 +48,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
     private final Path generatedDir;
     private final HashMap<DataLocation, List<String>> sourceFiles;
     private final DiagnosticCollector diagnostics = new DiagnosticCollector();
+    private final boolean includeProfilerSupport = Profiler.isProfilerEnabled();
 
     private State state = State.NOTHING_LOADED;
     private MethodHandle resultField;
@@ -82,6 +84,10 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
 
     public void resetHandles() {
         handles.clear();
+    }
+
+    public boolean hasProfilerSupportIncluded() {
+        return includeProfilerSupport;
     }
 
     public final boolean isUseReady() {
@@ -136,12 +142,12 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
         return true;
     }
 
-    private HashMap<DataLocation, Class<?>> loadFunctions(CompilationParams params, HashMap<DataLocation, List<String>> functionSources, HashMap<DataLocation, List<CommandParams>> definedFunctions, HashMap<DataLocation, List<Instruction>> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions, int[] totalClassFileSize) {
+    private HashMap<DataLocation, Class<?>> loadFunctions(CompilationParams params, HashMap<DataLocation, List<String>> functionSources, HashMap<DataLocation, List<Instruction>> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions, int[] totalClassFileSize) {
         var loadedFunctions = new HashMap<DataLocation, Class<?>>();
         var compiledFunctionSet = new HashSet<>(compiledFunctions.keySet());
         for(var key : compiledFunctions.keySet()) {
             try {
-                loadedFunctions.put(key, defineFunction(params, key, compiledFunctions.get(key), definedFunctions.get(key).size(), compiledFunctionSet, lowLevelFunctions, totalClassFileSize));
+                loadedFunctions.put(key, defineFunction(params, key, compiledFunctions.get(key), compiledFunctionSet, lowLevelFunctions, totalClassFileSize));
             }catch(Throwable e) {
                 if(e instanceof DiagnosticException de) {
                     diagnostics.addDiagnostic(de.toDiagnostic());
@@ -248,7 +254,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
         HashMap<String, List<BytecodeInstruction>> lowLevelFunctions = new HashMap<>();
         var startLoader = System.nanoTime();
         var totalClassFileSize = new int[2];
-        var loadedFunctions = loadFunctions(params, functionSources, definedFunctions, optimizedFunctions, lowLevelFunctions, totalClassFileSize);
+        var loadedFunctions = loadFunctions(params, functionSources, optimizedFunctions, lowLevelFunctions, totalClassFileSize);
         if(loadedFunctions == null) return;
 
         try {
@@ -335,8 +341,8 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
         }
     }
 
-    private Class<?> defineFunction(CompilationParams params, DataLocation funcId, List<Instruction> instructions, int commandCount, Set<DataLocation> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions, int[] totalClassFileSize) {
-        var gen = FunctionCodeGenerator.generateFunctionClass(params, funcId, instructions, commandCount, compiledFunctions, lowLevelFunctions);
+    private Class<?> defineFunction(CompilationParams params, DataLocation funcId, List<Instruction> instructions, Set<DataLocation> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions, int[] totalClassFileSize) {
+        var gen = FunctionCodeGenerator.generateFunctionClass(params, funcId, instructions, compiledFunctions, lowLevelFunctions, includeProfilerSupport);
 
         byte[] bytes = gen.finish();
         totalClassFileSize[0] += bytes.length;

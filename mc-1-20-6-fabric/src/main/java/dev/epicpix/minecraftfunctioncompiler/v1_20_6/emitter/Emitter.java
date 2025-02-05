@@ -11,6 +11,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
+import dev.epicpix.minecraftfunctioncompiler.profiler.Profiler;
 import dev.epicpix.minecraftfunctioncompiler.v1_20_6.CompiledCommandResultStore;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
@@ -91,12 +92,13 @@ public final class Emitter {
                             }
                             var functionManager = context.fieldStorage().loadServerFunctionManager(codeWriter);
                             var function = context.fieldStorage().loadFunction(codeWriter, func);
-
+                            if(context.shouldIncludeProfilerSupport()) codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "enterOverhead", void.class, String.class), new BytecodeValue.StringValue(func.toString()));
                             if(context.instruction().get("arguments") != null) {
                                 callExtensionFunctions_executeFunction(codeWriter, functionManager, function, commandSourceStack, codeWriter.castType(context.load("arguments"), Type.getType(CompoundTag.class)));
                             }else {
                                 callServerFunctionManager_execute(codeWriter, functionManager, function, commandSourceStack);
                             }
+                            if(context.shouldIncludeProfilerSupport()) codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "exit", void.class));
                             callThreadLocal_set(codeWriter, mctxtl, mctx);
                             if(returnValueLocation != null) {
                                 returnValue = codeWriter.writeTarget(RUN_RESULT_FIELD_READ_TARGET);

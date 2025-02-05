@@ -11,6 +11,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
+import dev.epicpix.minecraftfunctioncompiler.profiler.Profiler;
 import dev.epicpix.minecraftfunctioncompiler.v1_20_2.CompiledCommandResultStore;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
@@ -91,7 +92,9 @@ public final class Emitter {
                             var functionManager = context.fieldStorage().loadServerFunctionManager(codeWriter);
                             var function = context.fieldStorage().loadFunction(codeWriter, func);
 
+                            if(context.shouldIncludeProfilerSupport()) codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "enterOverhead", void.class, String.class), new BytecodeValue.StringValue(func.toString()));
                             callExtensionFunctions_executeFunction(codeWriter, functionManager, function, commandSourceStack, new BytecodeValue.NullValue(), nbtArgs);
+                            if(context.shouldIncludeProfilerSupport()) codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "exit", void.class));
                             storeServerFunctionManager_context(codeWriter, context.fieldStorage().loadServerFunctionManager(codeWriter), mctx);
                             if(returnValueLocation != null) {
                                 returnValue = codeWriter.writeTarget(RUN_RESULT_FIELD_READ_TARGET);

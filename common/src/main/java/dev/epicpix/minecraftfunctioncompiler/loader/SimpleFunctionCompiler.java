@@ -81,9 +81,9 @@ public class SimpleFunctionCompiler {
                     params,
                     key,
                     optimizedHighLevel.get(key),
-                    parsed.get(key).size(),
                     optimizedHighLevel.keySet(),
-                    llFunctions
+                    llFunctions,
+                    false
                 ));
             }
             classGenerators.add(params.codeFieldStorage().generate(llFunctions));

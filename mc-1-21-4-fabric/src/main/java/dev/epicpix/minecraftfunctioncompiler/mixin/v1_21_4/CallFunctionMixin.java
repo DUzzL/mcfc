@@ -1,11 +1,14 @@
 package dev.epicpix.minecraftfunctioncompiler.mixin.v1_21_4;
 
+import dev.epicpix.minecraftfunctioncompiler.profiler.Profiler;
+import dev.epicpix.minecraftfunctioncompiler.v1_21_4.ExecutionContextExtension;
 import net.minecraft.commands.CommandResultCallback;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.ExecutionCommandSource;
 import net.minecraft.commands.execution.ExecutionContext;
 import net.minecraft.commands.execution.Frame;
 import net.minecraft.commands.execution.tasks.CallFunction;
+import net.minecraft.commands.functions.InstantiatedFunction;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -20,6 +23,7 @@ public class CallFunctionMixin<T extends ExecutionCommandSource<T>> {
 
     @Shadow @Final private CommandResultCallback resultCallback;
     @Shadow @Final private boolean returnParentFrame;
+    @Shadow @Final public InstantiatedFunction<T> function;
 
     @Inject(method = "execute(Lnet/minecraft/commands/ExecutionCommandSource;Lnet/minecraft/commands/execution/ExecutionContext;Lnet/minecraft/commands/execution/Frame;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/commands/execution/ExecutionContext;incrementCost()V", shift = At.Shift.AFTER), cancellable = true)
     public void execute(T source, ExecutionContext<T> executionContext, Frame frame, CallbackInfo ci) {
@@ -34,7 +38,17 @@ public class CallFunctionMixin<T extends ExecutionCommandSource<T>> {
                     frameControl.discard();
                 }
                 ci.cancel();
+                return;
             }
+        }
+        if(Profiler.isProfilerEnabled()) {
+            var ext = (ExecutionContextExtension) executionContext;
+            if(!ext.mcfc$stackDepth().isEmpty() && ext.mcfc$stackDepth().topInt() == frame.depth()) {
+                Profiler.exit();
+            }else {
+                ext.mcfc$stackDepth().push(frame.depth());
+            }
+            Profiler.enterVanilla(function.id().toString());
         }
     }
 

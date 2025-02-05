@@ -10,6 +10,14 @@ Adds commands:
 - `execute unless predicate`
 
 Adds `/mcfc` sub-commands:
+- `profiler`
+  - `disable` - Disables profiler
+  - `enable` - Starts profiling (possibly recompiles code)
+  - `print_trace` - Prints last trace results in console
+  - `print` - Prints profiler results in console
+  - `reset` - Resets current results
+  - `save_trace` - Saves last trace results to disk (`debug/` folder)
+  - `save` - Saves profiler results to disk (`debug/` folder)
 - `recompile` - Recompiles all functions
 - `show_diagnostics` - Shows all errors from compilation
 

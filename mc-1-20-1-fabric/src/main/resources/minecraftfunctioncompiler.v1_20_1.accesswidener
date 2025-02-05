@@ -17,3 +17,4 @@ accessible method net/minecraft/server/ServerFunctionManager$ExecutionContext re
 accessible method net/minecraft/server/ServerFunctionManager$ExecutionContext delayFunctionCall (Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;)V
 accessible method net/minecraft/server/ServerFunctionManager$ExecutionContext runTopCommand (Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;)I
 accessible method net/minecraft/network/chat/Style <init> (Lnet/minecraft/network/chat/TextColor;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Ljava/lang/Boolean;Lnet/minecraft/network/chat/ClickEvent;Lnet/minecraft/network/chat/HoverEvent;Ljava/lang/String;Lnet/minecraft/resources/ResourceLocation;)V
+accessible field net/minecraft/server/ServerFunctionManager$QueuedCommand depth I

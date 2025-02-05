@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.mixin.v1_20_1;
 
+import dev.epicpix.minecraftfunctioncompiler.profiler.Profiler;
 import dev.epicpix.minecraftfunctioncompiler.v1_20_1.FunctionCompilerMain;
 import net.minecraft.server.MinecraftServer;
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,6 +14,8 @@ public class MinecraftServerMixin {
     @Inject(method = "stopServer", at = @At("HEAD"))
     public void stopServer(CallbackInfo ci) {
         FunctionCompilerMain.functionClassLoader = null;
+        Profiler.setProfilerEnabled(false);
+        Profiler.reset();
     }
 
 }

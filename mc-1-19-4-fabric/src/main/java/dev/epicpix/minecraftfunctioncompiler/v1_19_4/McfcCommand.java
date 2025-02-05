@@ -1,10 +1,14 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_19_4;
 
+import com.google.gson.GsonBuilder;
 import com.mojang.brigadier.CommandDispatcher;
 import dev.epicpix.minecraftfunctioncompiler.CompileConstants;
 import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilationStarter;
 import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
+import dev.epicpix.minecraftfunctioncompiler.profiler.Profiler;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
+import net.minecraft.Util;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.item.FunctionArgument;
@@ -12,6 +16,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.Style;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Locale;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.AUTO_SWITCH_FUNCTIONS;
@@ -20,6 +26,94 @@ import static net.minecraft.server.commands.FunctionCommand.SUGGEST_FUNCTION;
 public class McfcCommand {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         var base = Commands.literal("mcfc").requires(stack -> stack.hasPermission(3));
+
+        var profilerBase = Commands.literal("profiler").requires(CommandSourceStack::isPlayer);
+        profilerBase.then(Commands.literal("save_trace").executes(context -> {
+            if(!Profiler.hasData()) {
+                context.getSource().sendFailure(Component.literal("Profiler does not have any tracing data available"));
+                return 0;
+            }
+            if(!Profiler.isProfilerEnabled()) {
+                context.getSource().sendFailure(Component.literal("Profiler is not currently running"));
+                return 0;
+            }
+            var json = Profiler.getJsonTraceTree();
+            var debugFolder = FabricLoader.getInstance().getGameDir().resolve("debug");
+            String name = "mcfc-trace-" + Util.getFilenameFormattedDateTime() + ".json";
+            try {
+                Files.createDirectories(debugFolder);
+                Files.write(debugFolder.resolve(name), new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().toJson(json).getBytes());
+                context.getSource().sendSuccess(Component.literal("Saved trace tree to output file " + name), true);
+            } catch(IOException e) {
+                throw new RuntimeException(e);
+            }
+            return 1;
+        }));
+        profilerBase.then(Commands.literal("print_trace").executes(context -> {
+            if(!Profiler.hasData()) {
+                context.getSource().sendFailure(Component.literal("Profiler does not have any tracing data available"));
+                return 0;
+            }
+            if(!Profiler.isProfilerEnabled()) {
+                context.getSource().sendFailure(Component.literal("Profiler is not currently running"));
+                return 0;
+            }
+            Profiler.printTrace();
+            context.getSource().sendSuccess(Component.literal("Current trace results printed in console"), false);
+            return 1;
+        }));
+        profilerBase.then(Commands.literal("save").executes(context -> {
+            if(!Profiler.hasData()) {
+                context.getSource().sendFailure(Component.literal("Profiler does not have any profiling data available"));
+                return 0;
+            }
+            var json = Profiler.getJsonCallTree();
+            var debugFolder = FabricLoader.getInstance().getGameDir().resolve("debug");
+            String name = "mcfc-prof-" + Util.getFilenameFormattedDateTime() + ".json";
+            try {
+                Files.createDirectories(debugFolder);
+                Files.write(debugFolder.resolve(name), new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().toJson(json).getBytes());
+                context.getSource().sendSuccess(Component.literal("Saved call tree to output file " + name), true);
+            } catch(IOException e) {
+                throw new RuntimeException(e);
+            }
+            return 1;
+        }));
+        profilerBase.then(Commands.literal("print").executes(context -> {
+            if(!Profiler.hasData()) {
+                context.getSource().sendFailure(Component.literal("Profiler does not have any profiling data available"));
+                return 0;
+            }
+            Profiler.printEvents();
+            context.getSource().sendSuccess(Component.literal("Current profiler results printed in console"), false);
+            return 1;
+        }));
+        profilerBase.then(Commands.literal("reset").executes(context -> {
+            Profiler.reset();
+            context.getSource().sendSuccess(Component.literal("Successfully reset current profiler results"), true);
+            return 1;
+        }));
+        profilerBase.then(Commands.literal("enable").executes(context -> {
+            var wasEnabled = Profiler.isProfilerEnabled();
+            Profiler.setProfilerEnabled(true);
+            context.getSource().sendSuccess(Component.literal("Enabled profiler"), true);
+            if(!wasEnabled) {
+                context.getSource().sendSuccess(Component.literal("Started function recompilation"), true);
+                var shouldClear = FunctionCompilerMain.functionClassLoader == null || FunctionCompilerMain.functionClassLoader.getState() != FunctionCompilerClassLoader.State.READY_OFF;
+                ((FunctionCompilationStarter) context.getSource().getServer().getFunctions()).mcfc$loadFunctions(shouldClear && AUTO_SWITCH_FUNCTIONS, () -> {
+                    context.getSource().sendSuccess(Component.literal("Finished function recompilation"), true);
+                    if(shouldClear) Profiler.queueReset();
+                });
+            }
+            return 1;
+        }));
+        profilerBase.then(Commands.literal("disable").executes(context -> {
+            Profiler.setProfilerEnabled(false);
+            context.getSource().sendSuccess(Component.literal("Disabled profiler"), true);
+            return 1;
+        }));
+        base.then(profilerBase);
+
         base.then(Commands.literal("on").executes(context -> {
             var loader = FunctionCompilerMain.functionClassLoader;
             if(loader == null) {

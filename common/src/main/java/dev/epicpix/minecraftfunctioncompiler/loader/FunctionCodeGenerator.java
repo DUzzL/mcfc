@@ -18,6 +18,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
 import dev.epicpix.minecraftfunctioncompiler.il.optimizer.LengauerTarjan;
 import dev.epicpix.minecraftfunctioncompiler.il.optimizer.Optimizer;
+import dev.epicpix.minecraftfunctioncompiler.profiler.Profiler;
 import org.objectweb.asm.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -167,7 +168,7 @@ public class FunctionCodeGenerator {
         context.codeWriter().returnValue(context.codeWriter().writeTarget(target, arguments));
     }
 
-    public static ClassGenerator generateFunctionClass(CompilationParams params, DataLocation funcId, List<Instruction> instructions, int commandCount, Set<DataLocation> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions) {
+    public static ClassGenerator generateFunctionClass(CompilationParams params, DataLocation funcId, List<Instruction> instructions, Set<DataLocation> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions, boolean includeProfilerSupport) {
         var macroInstructions = Instruction.findTyped(instructions, InstructionTypes.LOAD_MACRO);
         var macroInputs = new ArrayList<String>();
         for(var macroInstr : macroInstructions) {
@@ -192,13 +193,13 @@ public class FunctionCodeGenerator {
         Map<String, BytecodeValue> staticArguments = Map.of("CommandSourceStack", staticCommandSourceStack, "FunctionCompound", staticFunctionCompound);
         EmitterContext entryContext;
         if(macroInstructions.isEmpty()) {
-            entryContext = new EmitterContext(funcId, params.codeFieldStorage(), entryWriter, compiledFunctions, new HashMap<>(staticArguments), null, instructions);
+            entryContext = new EmitterContext(funcId, params.codeFieldStorage(), entryWriter, compiledFunctions, new HashMap<>(staticArguments), null, instructions, includeProfilerSupport);
             entryContext.emitForEach();
             entryWriter.returnValue(new BytecodeValue.LongValue(0x2L << 32));
         }else {
             var returnValue = entryWriter.createRegister();
             var instr = List.of(Instructions.callFunctions(LocationData.ofLocal(-3), List.of(funcId), LocationData.ofLocal(-1), LocationData.ofLocal(-2)));
-            entryContext = new EmitterContext(funcId, params.codeFieldStorage(), entryWriter, Collections.emptySet(), new HashMap<>(staticArguments), null, instr);
+            entryContext = new EmitterContext(funcId, params.codeFieldStorage(), entryWriter, Collections.emptySet(), new HashMap<>(staticArguments), null, instr, includeProfilerSupport);
             entryContext.setTransform(-1, staticCommandSourceStack);
             entryContext.setTransform(-2, staticFunctionCompound);
             entryContext.setTransform(-3, returnValue);
@@ -211,6 +212,7 @@ public class FunctionCodeGenerator {
         }
 
         var entryBytecode = BytecodeOptimizer.optimizeInstructions(entryWriter.getInstructions());
+        if(includeProfilerSupport && macroInstructions.isEmpty()) entryBytecode = addProfilerInstructions(entryBytecode, entryWriter, funcId);
         lowLevelFunctions.put(className.replace('/', '.') + "#run", entryBytecode);
         gen.addFunction("run", entryBytecode, Type.LONG_TYPE, params.commandSourceStackType(), params.codeFieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND));
 
@@ -228,12 +230,13 @@ public class FunctionCodeGenerator {
                 writer.setValue(macroRegister, new BytecodeValue.Parameter(i, Type.getType(String.class)));
                 i++;
             }
-            new EmitterContext(funcId, params.codeFieldStorage(), writer, compiledFunctions, new HashMap<>(Map.of("CommandSourceStack", staticCommandSourceStack2)), macroLocations, instructions).emitForEach();
+            new EmitterContext(funcId, params.codeFieldStorage(), writer, compiledFunctions, new HashMap<>(Map.of("CommandSourceStack", staticCommandSourceStack2)), macroLocations, instructions, includeProfilerSupport).emitForEach();
 
             writer.returnValue(new BytecodeValue.LongValue(0x2L << 32));
 
 
             var macroedBytecode = BytecodeOptimizer.optimizeInstructions(writer.getInstructions());
+            if(includeProfilerSupport) macroedBytecode = addProfilerInstructions(macroedBytecode, writer, funcId);
             lowLevelFunctions.put(className.replace('/', '.') + "#runInstanced", macroedBytecode);
             var funcParams = new Type[1 + macroInputs.size()];
             funcParams[0] = params.commandSourceStackType();
@@ -242,6 +245,19 @@ public class FunctionCodeGenerator {
         }
 
         return gen;
+    }
+
+    private static List<BytecodeInstruction> addProfilerInstructions(List<BytecodeInstruction> instructions, CodeWriter cw, DataLocation function) {
+        var newInstructions = new ArrayList<>(instructions);
+        newInstructions.add(0, new BytecodeInstruction.CallTarget(cw.createRegister(), InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "enterCompiled", void.class, String.class), List.of(new BytecodeValue.StringValue(function.toString()))));
+        for(int i = 1; i<newInstructions.size(); i++) {
+            var instruction = newInstructions.get(i);
+            if(instruction instanceof BytecodeInstruction.Return) {
+                newInstructions.add(i, new BytecodeInstruction.CallTarget(cw.createRegister(), InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "exit", void.class), List.of()));
+                i++;
+            }
+        }
+        return newInstructions;
     }
 
 }

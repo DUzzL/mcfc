@@ -2,11 +2,13 @@ package dev.epicpix.minecraftfunctioncompiler.mixin.v1_20_2;
 
 import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilationStarter;
 import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
+import dev.epicpix.minecraftfunctioncompiler.profiler.Profiler;
 import dev.epicpix.minecraftfunctioncompiler.v1_20_2.FunctionClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.v1_20_2.FunctionCompilerMain;
 import net.minecraft.commands.CommandFunction;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerFunctionLibrary;
 import net.minecraft.server.ServerFunctionManager;
@@ -21,12 +23,34 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.AUTO_SWITCH_FUNCTIONS;
 
+import java.util.Collection;
+
 @Mixin(ServerFunctionManager.class)
 public class ServerFunctionManagerMixin implements FunctionCompilationStarter {
 
     @Shadow public ServerFunctionLibrary library;
     @Unique private FunctionClassLoader classLoader;
     @Shadow @Final MinecraftServer server;
+
+    @Inject(method = "executeTagFunctions", at = @At("HEAD"))
+    public void tagStart(Collection<CommandFunction> collection, ResourceLocation resourceLocation, CallbackInfo ci) {
+        if(Profiler.isProfilerEnabled() && !collection.isEmpty()) Profiler.enterVanilla("#" + resourceLocation);
+    }
+
+    @Inject(method = "executeTagFunctions", at = @At("TAIL"))
+    public void tagEnd(Collection<CommandFunction> collection, ResourceLocation resourceLocation, CallbackInfo ci) {
+        if(Profiler.isProfilerEnabled() && !collection.isEmpty()) Profiler.exit();
+    }
+
+    @Inject(method = "tick", at = @At("HEAD"))
+    public void tickStart(CallbackInfo ci) {
+        if(Profiler.isProfilerEnabled()) Profiler.checkResetStatus();
+    }
+
+    @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/ServerFunctionManager;executeTagFunctions(Ljava/util/Collection;Lnet/minecraft/resources/ResourceLocation;)V", ordinal = 1, shift = At.Shift.AFTER))
+    public void tickEnd(CallbackInfo ci) {
+        if(Profiler.isProfilerEnabled()) Profiler.collectEvents();
+    }
 
     @Inject(method = "postReload", at = @At("TAIL"))
     public void postReload(ServerFunctionLibrary serverFunctionLibrary, CallbackInfo ci) {
