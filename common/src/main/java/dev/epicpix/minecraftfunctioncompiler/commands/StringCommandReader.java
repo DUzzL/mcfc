@@ -179,7 +179,7 @@ public class StringCommandReader {
         ArrayList<MacroTemplate.MacroPart> parts = new ArrayList<>();
         ArrayList<MacroValidator> inputValidators = new ArrayList<>(validators);
         inputValidators.add(MacroValidators.IS_WORD);
-        while(canRead() && isWordCharacter(peek())) {
+        while(canRead() && (isWordCharacter(peek()) || isMacro())) {
             parts.add(readMacroChar(inputValidators));
         }
         return new MacroTemplate<>(MacroTemplate.mergeParts(parts), MacroType.STRING_MACRO_TYPE);

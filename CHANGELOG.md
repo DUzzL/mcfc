@@ -1,5 +1,8 @@
 # 0.3.1-alpha.2
 
+Fixes bugs:
+- Macros don't get parsed and compiled properly
+
 ## Details
 - **Released:** In Development
 - **Supported Versions:** 1.19.4, 1.20–1.20.1, 1.20.2, 1.20.3–1.20.4, 1.20.5–1.20.6, 1.21–1.21.1, 1.21.2–1.21.3, 1.21.4
