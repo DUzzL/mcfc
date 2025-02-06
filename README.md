@@ -18,7 +18,7 @@ Put the mod on a fabric server with all the dependencies, the mod will automatic
 
 Of course this mod can't support every command, so it will only generate code for functions which contain only commands which are supported. **Currently, this will not compile every function with macros.** It can't compile some macros because any value could be interpreted in any way, which is hard to implement using only things known at compile-time, but some things could be guessed.
 
-The list of commands supported currently as of `0.3.1-alpha.1` can be found in the [Command Support](/docs/command_support.md) file.
+The list of commands supported currently as of `0.3.1-alpha.2` can be found in the [Command Support](/docs/command_support.md) file.
 
 ## Supported Selectors
 
