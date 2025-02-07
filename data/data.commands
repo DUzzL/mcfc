@@ -65,11 +65,11 @@ KILL/kill <targets:entity_selector:self>
 RETURN_FAIL<1.20.3..>/return fail
 RETURN_VALUE<1.20..>/return <value:int>
 
-SCOREBOARD_PLAYERS_ADD/scoreboard players add <targets:score_accessor> <score:int[minimum=0]>
+SCOREBOARD_PLAYERS_ADD/scoreboard players add <targets:score_accessor> <score:macro_int[minimum=0]>
 SCOREBOARD_PLAYERS_ENABLE/scoreboard players enable <targets:score_accessor>
 SCOREBOARD_PLAYERS_GET/scoreboard players get <targets:score_accessor>
 SCOREBOARD_PLAYERS_OPERATION/scoreboard players operation <targets:score_accessor> <operation:scoreboard_operation> <source:score_accessor>
-SCOREBOARD_PLAYERS_REMOVE/scoreboard players remove <targets:score_accessor> <score:int[minimum=0]>
+SCOREBOARD_PLAYERS_REMOVE/scoreboard players remove <targets:score_accessor> <score:macro_int[minimum=0]>
 SCOREBOARD_PLAYERS_RESET_OBJECTIVE/scoreboard players reset <targets:score_accessor>
 SCOREBOARD_PLAYERS_RESET_ALL/scoreboard players reset <targets:score_holder>
 SCOREBOARD_PLAYERS_SET/scoreboard players set <targets:score_accessor> <score:macro_int>

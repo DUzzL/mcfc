@@ -86,8 +86,8 @@ public class CompilationContext {
     }
 
     public LocationData<String> getResolvedStringMacro(MacroTemplate<String> macro) {
-        if(macro.parts().size() == 1 && macro.parts().get(0) instanceof MacroTemplate.LiteralKind<?> literal) {
-            return LocationData.ofString((String) literal.literal());
+        if(macro.isStatic()) {
+            return LocationData.ofString(macro.getStaticValue());
         }
         var macroString = this.<String>createLocal();
         writeInstruction(Instructions.loadStringMacro(macroString, macro));
@@ -95,8 +95,8 @@ public class CompilationContext {
     }
 
     public LocationData<Integer> getResolvedIntegerMacro(MacroTemplate<Integer> macro) {
-        if(macro.parts().size() == 1 && macro.parts().get(0) instanceof MacroTemplate.LiteralKind<?> literal) {
-            return LocationData.ofInteger((int) literal.literal());
+        if(macro.isStatic()) {
+            return LocationData.ofInteger(macro.getStaticValue());
         }
         var macroInt = this.<Integer>createLocal();
         writeInstruction(Instructions.loadIntegerMacro(macroInt, macro));

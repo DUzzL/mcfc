@@ -592,7 +592,7 @@ public final class CommandCompiler {
         }else if(command instanceof CommandScoreboardPlayersAdd cmdData) {
             try(var targets = context.forScoreAccessors(cmdData.targets())) {
                 try(var scoreData = context.getScoreData(targets.content(), true)) {
-                    scoreData.writeInstruction(Instructions2.addScore(scoreData.content(), LocationData.ofInteger(cmdData.score())));
+                    scoreData.writeInstruction(Instructions2.addScore(scoreData.content(), context.getResolvedIntegerMacro(cmdData.score())));
                 }
             }
         }else if(command instanceof CommandScoreboardPlayersEnable cmdData) {
@@ -652,7 +652,7 @@ public final class CommandCompiler {
         }else if(command instanceof CommandScoreboardPlayersRemove cmdData) {
             try(var targets = context.forScoreAccessors(cmdData.targets())) {
                 try(var scoreData = context.getScoreData(targets.content(), true)) {
-                    scoreData.writeInstruction(Instructions2.removeScore(scoreData.content(), LocationData.ofInteger(cmdData.score())));
+                    scoreData.writeInstruction(Instructions2.removeScore(scoreData.content(), context.getResolvedIntegerMacro(cmdData.score())));
                 }
             }
         }else if(command instanceof CommandScoreboardPlayersResetAll cmdData) {

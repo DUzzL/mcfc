@@ -274,9 +274,11 @@ public class StringCommandReader {
         }
     }
 
-    public MacroTemplate<Integer> readMacroInt() {
+    public MacroTemplate<Integer> readMacroInt(List<MacroValidator> validators) {
         if(isMacro()) {
-            var macro = readMacro(List.of(MacroValidators.IS_INTEGER));
+            var reqValidators = new ArrayList<>(validators);
+            reqValidators.add(0, MacroValidators.IS_INTEGER);
+            var macro = readMacro(reqValidators);
             return new MacroTemplate<>(List.of(macro), MacroType.INT_MACRO_TYPE);
         }else {
             return MacroTemplate.fromInteger(readInt());

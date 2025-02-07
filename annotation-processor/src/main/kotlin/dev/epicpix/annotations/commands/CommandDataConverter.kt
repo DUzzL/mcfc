@@ -248,7 +248,12 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.LocationAnchor")
             }
             "macro_int" -> {
-                builder.append("    var a$argumentIndex = reader.readMacroInt();\n")
+                var requests = mutableListOf<String>()
+                data.kindOptions["minimum"]?.toInt()?.also { min -> requests.add("dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidators.checkIfIntegerMinimum(${min})") }
+                data.kindOptions["maximum"]?.toInt()?.also { max -> requests.add("dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidators.checkIfIntegerMaximum(${max})") }
+                builder.append("    var a$argumentIndex = reader.readMacroInt(List.of(${requests.joinToString(", ")}));\n")
+                data.kindOptions["minimum"]?.toInt()?.also { min -> builder.append("    if(a$argumentIndex.isStatic() && a$argumentIndex.getStaticValue() < $min) ${returnError(catchBlock, argumentDPath, "\"Integer value of \" + a$argumentIndex.getStaticValue() + \" is below allowed value ($min)\"")}\n") }
+                data.kindOptions["maximum"]?.toInt()?.also { max -> builder.append("    if(a$argumentIndex.isStatic() && a$argumentIndex.getStaticValue() > $max) ${returnError(catchBlock, argumentDPath, "\"Integer value of \" + a$argumentIndex.getStaticValue() + \" is above allowed value ($max)\"")}\n") }
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate<Integer>")
             }
             "mob_effect" -> {

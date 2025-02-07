@@ -35,4 +35,14 @@ public final class MacroValidators {
             cw.conditionalJump(JumpCondition.NE, callString_contains(cw, source, new BytecodeValue.StringValue(check)), new BytecodeValue.IntegerValue(0), failureLabel);
         };
     }
+    public static MacroValidator checkIfIntegerMinimum(int min) {
+        return (source, cw, cf, failureLabel) -> {
+            cw.conditionalJump(JumpCondition.LT, callInteger_parseInt(cw, source), new BytecodeValue.IntegerValue(min), failureLabel);
+        };
+    }
+    public static MacroValidator checkIfIntegerMaximum(int min) {
+        return (source, cw, cf, failureLabel) -> {
+            cw.conditionalJump(JumpCondition.GT, callInteger_parseInt(cw, source), new BytecodeValue.IntegerValue(min), failureLabel);
+        };
+    }
 }

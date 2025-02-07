@@ -68,8 +68,18 @@ public record MacroTemplate<T>(List<MacroPart> parts, MacroType<T> macroType) {
         }
     }
 
+    public boolean isStatic() {
+        return parts.size() == 1 && parts.get(0) instanceof LiteralKind<?>;
+    }
+
+    @SuppressWarnings("unchecked")
+    public T getStaticValue() {
+        if(!isStatic()) throw new UnsupportedOperationException("Cannot get static value of !isStatic macro: " + this);
+        return ((LiteralKind<T>) parts.get(0)).literal;
+    }
+
     public boolean isExact(T value) {
-        return parts.size() == 1 && parts.get(0) instanceof LiteralKind<?> literal && literal.literal.equals(value);
+        return isStatic() && getStaticValue().equals(value);
     }
 
     public List<MacroKind> extractMacros() {
