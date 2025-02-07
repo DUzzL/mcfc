@@ -1,5 +1,7 @@
 # 0.3.1-alpha.2
 
+Adds support for integer macros in `scoreboard players set`
+
 Fixes bugs:
 - Macros don't get parsed and compiled properly
 

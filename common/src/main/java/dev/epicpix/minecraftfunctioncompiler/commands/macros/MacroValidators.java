@@ -17,6 +17,18 @@ public final class MacroValidators {
         var matches = callMatcher_matches(cw, callPattern_matcher(cw, cf.loadRegexPattern(cw, "^[0-9a-zA-Z_.+-]*$"), source));
         cw.conditionalJump(JumpCondition.EQ, matches, new BytecodeValue.IntegerValue(0), failureLabel);
     };
+    public static final MacroValidator IS_INTEGER = (source, cw, cf, failureLabel) -> {
+        var matches = callExtensionFunctions_isValidInteger(cw, source);
+        cw.conditionalJump(JumpCondition.EQ, matches, new BytecodeValue.IntegerValue(0), failureLabel);
+    };
+    public static final MacroValidator IS_COMMAND_FLOAT = (source, cw, cf, failureLabel) -> {
+        var matches = callExtensionFunctions_isValidCommandFloat(cw, source);
+        cw.conditionalJump(JumpCondition.EQ, matches, new BytecodeValue.IntegerValue(0), failureLabel);
+    };
+    public static final MacroValidator IS_COMMAND_DOUBLE = (source, cw, cf, failureLabel) -> {
+        var matches = callExtensionFunctions_isValidCommandDouble(cw, source);
+        cw.conditionalJump(JumpCondition.EQ, matches, new BytecodeValue.IntegerValue(0), failureLabel);
+    };
 
     public static MacroValidator checkIfNotContains(String check) {
         return (source, cw, cf, failureLabel) -> {

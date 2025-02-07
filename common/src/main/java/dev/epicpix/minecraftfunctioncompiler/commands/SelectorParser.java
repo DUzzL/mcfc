@@ -22,7 +22,7 @@ public final class SelectorParser {
             return ScoreHolderArgument.selectSelector(parseSelector(scoreHolder, true, allowMultiple));
         }
         MacroTemplate<String> name = scoreHolder.readUntilSpaceWithTemplate(List.of(MacroValidators.NO_STAR));
-        if(name.isLiteral("*")) {
+        if(name.isExact("*")) {
             return ScoreHolderArgument.selectAll();
         }
         return ScoreHolderArgument.selectNamed(name);

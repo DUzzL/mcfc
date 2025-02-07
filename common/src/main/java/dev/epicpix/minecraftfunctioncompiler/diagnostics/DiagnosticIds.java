@@ -75,6 +75,10 @@ public final class DiagnosticIds {
 
 
 
+    public static final String EMITTER_MACRO_MULTIPLE_NON_STRING_ARGUMENTS = "emitter.low_level.error.macro.multiple_arguments_for_non_string";
+
+
+
     public static final String FUNCTION_CLASS_LOAD_FAILED = "function.load.failed.class";
     public static final String FUNCTION_LOAD_FAILED = "function.load.failed";
 

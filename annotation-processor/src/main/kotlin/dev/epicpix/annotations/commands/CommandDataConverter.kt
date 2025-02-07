@@ -247,6 +247,10 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 builder.append("    var a$argumentIndex = reader.readLocationAnchor();\n")
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.LocationAnchor")
             }
+            "macro_int" -> {
+                builder.append("    var a$argumentIndex = reader.readMacroInt();\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate<Integer>")
+            }
             "mob_effect" -> {
                 builder.append("    var a$argumentIndex = reader.readMobEffect();\n")
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.MobEffectData")

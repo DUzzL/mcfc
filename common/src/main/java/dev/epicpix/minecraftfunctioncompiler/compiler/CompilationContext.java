@@ -85,13 +85,22 @@ public class CompilationContext {
         return LocationData.ofLocal(createId());
     }
 
-    public LocationData<String> getResolvedMacro(MacroTemplate<String> macro) {
-        if(macro.parts().size() == 1 && macro.parts().get(0) instanceof MacroTemplate.LiteralKind literal) {
-            return LocationData.ofString(literal.literal());
+    public LocationData<String> getResolvedStringMacro(MacroTemplate<String> macro) {
+        if(macro.parts().size() == 1 && macro.parts().get(0) instanceof MacroTemplate.LiteralKind<?> literal) {
+            return LocationData.ofString((String) literal.literal());
         }
         var macroString = this.<String>createLocal();
-        writeInstruction(Instructions.loadMacro(macroString, macro));
+        writeInstruction(Instructions.loadStringMacro(macroString, macro));
         return macroString;
+    }
+
+    public LocationData<Integer> getResolvedIntegerMacro(MacroTemplate<Integer> macro) {
+        if(macro.parts().size() == 1 && macro.parts().get(0) instanceof MacroTemplate.LiteralKind<?> literal) {
+            return LocationData.ofInteger((int) literal.literal());
+        }
+        var macroInt = this.<Integer>createLocal();
+        writeInstruction(Instructions.loadIntegerMacro(macroInt, macro));
+        return macroInt;
     }
 
     public ResultStorage withResultStorage(boolean requireResultValue, boolean requireSuccessValue) {
@@ -377,7 +386,7 @@ public class CompilationContext {
         if(holder.all()) {
             return forEachScoreHolder(holder.single());
         }else if(holder.name() != null) {
-            var macro = getResolvedMacro(holder.name());
+            var macro = getResolvedStringMacro(holder.name());
             return new CompilationData<>(this, current(), macro, 0);
         }else if(holder.selector() != null) {
             var selector = holder.single() ? holder.selector().limit(1) : holder.selector();
@@ -548,7 +557,7 @@ public class CompilationContext {
         for(var tag : selector.tags()) {
             var tags = this.<Set<String>>createLocal();
             data.writeInstruction(instructionWriter, Instructions2.getEntityTags(tags.forceCast(), entityData.content()));
-            var resolved = getResolvedMacro(tag.data());
+            var resolved = getResolvedStringMacro(tag.data());
             if(tag.negated()) {
                 data.writeInstruction(instructionWriter, Instructions2.jumpIfSetContains(tags.forceCast(), resolved.lower(), data.contextEndLabel()));
             }else {

@@ -76,14 +76,17 @@ public record Instruction(InstructionType type, Object[] data) {
         return replacedData;
     }
 
-    public static List<Instruction> findTyped(List<Instruction> input, InstructionType type) {
+    public static List<Instruction> findTyped(List<Instruction> input, InstructionType... types) {
         List<Instruction> result = List.of();
-        for(var instr : input) {
-            if(instr.type == type) {
-                if(result.isEmpty()) {
-                    result = new ArrayList<>();
+        next: for(var instr : input) {
+            for(var type : types) {
+                if(instr.type == type) {
+                    if(result.isEmpty()) {
+                        result = new ArrayList<>();
+                    }
+                    result.add(instr);
+                    continue next;
                 }
-                result.add(instr);
             }
         }
         return result;

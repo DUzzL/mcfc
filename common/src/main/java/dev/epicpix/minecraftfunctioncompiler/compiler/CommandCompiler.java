@@ -666,7 +666,7 @@ public final class CommandCompiler {
         }else if(command instanceof CommandScoreboardPlayersSet cmdData) {
             try(var targets = context.forScoreAccessors(cmdData.targets())) {
                 try(var scoreData = context.getScoreData(targets.content(), true)) {
-                    scoreData.writeInstruction(Instructions2.setScore(scoreData.content(), LocationData.ofInteger(cmdData.score())));
+                    scoreData.writeInstruction(Instructions2.setScore(scoreData.content(), context.getResolvedIntegerMacro(cmdData.score())));
                 }
             }
         }else if(command instanceof CommandTagAdd cmdData) {

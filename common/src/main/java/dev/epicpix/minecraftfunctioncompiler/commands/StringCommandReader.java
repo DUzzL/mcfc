@@ -119,7 +119,7 @@ public class StringCommandReader {
         if(isMacro()) {
             return readMacro(validators);
         }
-        return new MacroTemplate.LiteralKind(Character.toString(read()));
+        return new MacroTemplate.LiteralKind<>(Character.toString(read()));
     }
 
     public boolean skipIfNext(char c) {
@@ -156,7 +156,7 @@ public class StringCommandReader {
     }
 
     public MacroTemplate<String> readUntilSpaceWithTemplate(List<MacroValidator> validators) {
-        if(!allowMacros) return MacroTemplate.fromLiteral(readUntilSpace());
+        if(!allowMacros) return MacroTemplate.fromStringLiteral(readUntilSpace());
         ArrayList<MacroTemplate.MacroPart> parts = new ArrayList<>();
         ArrayList<MacroValidator> inputValidators = new ArrayList<>(validators);
         inputValidators.add(MacroValidators.NO_SPACE);
@@ -175,7 +175,7 @@ public class StringCommandReader {
     }
 
     public MacroTemplate<String> readMacroWord(List<MacroValidator> validators) {
-        if(!allowMacros) return MacroTemplate.fromLiteral(readWord());
+        if(!allowMacros) return MacroTemplate.fromStringLiteral(readWord());
         ArrayList<MacroTemplate.MacroPart> parts = new ArrayList<>();
         ArrayList<MacroValidator> inputValidators = new ArrayList<>(validators);
         inputValidators.add(MacroValidators.IS_WORD);
@@ -271,6 +271,15 @@ public class StringCommandReader {
             return false;
         }else {
             throw createError(COMMAND_INVALID_BOOLEAN, "Invalid boolean");
+        }
+    }
+
+    public MacroTemplate<Integer> readMacroInt() {
+        if(isMacro()) {
+            var macro = readMacro(List.of(MacroValidators.IS_INTEGER));
+            return new MacroTemplate<>(List.of(macro), MacroType.INT_MACRO_TYPE);
+        }else {
+            return MacroTemplate.fromInteger(readInt());
         }
     }
 

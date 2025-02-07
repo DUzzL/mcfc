@@ -10,6 +10,13 @@ Pattern_matcher = "java/util/regex/Pattern:matcher(Ljava/lang/CharSequence;)Ljav
 Matcher_matches = "java/util/regex/Matcher:matches()Z@M"
 Optional_get = "java/util/Optional:get()Ljava/lang/Object;@M"
 
+ExtensionFunctions_isValidInteger = "dev/epicpix/minecraftfunctioncompiler/emitter/ExtensionFunctions:isValidInteger(Ljava/lang/String;)Z@S"
+Integer_parseInt = "java/lang/Integer:parseInt(Ljava/lang/String;)I@S"
+ExtensionFunctions_isValidCommandFloat = "dev/epicpix/minecraftfunctioncompiler/emitter/ExtensionFunctions:isValidCommandFloat(Ljava/lang/String;)Z@S"
+Float_parseFloat = "java/lang/Float:parseFloat(Ljava/lang/String;)F@S"
+ExtensionFunctions_isValidCommandDouble = "dev/epicpix/minecraftfunctioncompiler/emitter/ExtensionFunctions:isValidCommandDouble(Ljava/lang/String;)Z@S"
+Double_parseDouble = "java/lang/Double:parseDouble(Ljava/lang/String;)D@S"
+
 [definitions_fields]
 Boolean_FALSE = "java/lang/Boolean:FALSE:Ljava/lang/Boolean;@SR"
 Boolean_TRUE = "java/lang/Boolean:TRUE:Ljava/lang/Boolean;@SR"

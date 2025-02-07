@@ -17,7 +17,8 @@ interface InstructionDefinitions {
     // Minecraft specific instructions that have not been converted into data.instructions yet
     Instruction callFunctions(@Nullable @InstructionDestination LocationData<Long> result, List<DataLocation> functions, LocationData<CommandSourceStack> stack, @Nullable @InstructionSource LocationData<NbtCompound> arguments);
     Instruction makeCommandSourceStack(LocationData<CommandSourceStack> result, LocationData<CommandSourceStack> from, @Nullable @InstructionSource LocationData<Entity> entity, @Nullable @InstructionSource LocationData<World> world, @Nullable @InstructionSource LocationData<Vec3> position, @Nullable @InstructionSource LocationData<Vec2> rotation, @Nullable @InstructionSource LocationAnchor anchor);
-    Instruction loadMacro(@InstructionDestination LocationData<String> result, MacroTemplate<String> macroTemplate);
+    Instruction loadStringMacro(@InstructionDestination LocationData<String> result, MacroTemplate<String> macroTemplate);
+    Instruction loadIntegerMacro(@InstructionDestination LocationData<Integer> result, MacroTemplate<Integer> macroTemplate);
     @InstructionConditionalJumpFlag
     Instruction checkScoreCompare(@InstructionSource LocationData<Score> target, @InstructionSource LocationData<Score> source, ScoreboardCompareOperation compareOperation, LabelData failLabel);
     Instruction applyLocalPositionWorld(@InstructionDestination LocationData<Vec3> result, @InstructionSource LocationData<Vec3> fromPosition, @InstructionSource LocationData<Vec2> fromRotation, @InstructionSource LocationData<Double> yOffset, WorldCoordinates position);

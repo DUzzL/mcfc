@@ -35,8 +35,14 @@ public final class Emitter {
     public static void registerInstructionEmitters() {
         EmitterInstructions.registerEmitterInstruction(context -> {
             var codeWriter = context.codeWriter();
-            if(context.instruction().type() == InstructionTypes.LOAD_MACRO) {
+            if(context.instruction().type() == InstructionTypes.LOAD_STRING_MACRO) {
                 var template = context.instruction().<MacroTemplate<String>>get("macroTemplate");
+                var macroContent = template.writeBytecode(context);
+                context.store("result", macroContent);
+                return true;
+            }
+            if(context.instruction().type() == InstructionTypes.LOAD_INTEGER_MACRO) {
+                var template = context.instruction().<MacroTemplate<Integer>>get("macroTemplate");
                 var macroContent = template.writeBytecode(context);
                 context.store("result", macroContent);
                 return true;

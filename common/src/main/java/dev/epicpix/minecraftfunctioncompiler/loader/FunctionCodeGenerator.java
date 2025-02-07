@@ -3,6 +3,7 @@ package dev.epicpix.minecraftfunctioncompiler.loader;
 import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
 import dev.epicpix.minecraftfunctioncompiler.commands.*;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
+import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroType;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidator;
 import dev.epicpix.minecraftfunctioncompiler.compiler.CommandCompiler;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
@@ -12,6 +13,7 @@ import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticResult;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
+import dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.*;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter;
@@ -26,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.UNSPECIFIED_COMMAND_ERROR;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.*;
 
 public class FunctionCodeGenerator {
 
@@ -137,7 +140,9 @@ public class FunctionCodeGenerator {
         BytecodeValue nbtTagToBytecodeString(EmitterContext context, String key, BytecodeLabel errorLabel);
     }
 
-    private static void writeMacroInstanceCreation(NbtTagBytecodeStringGenerator nbtStringGenerator, String className, BytecodeLabel errorLabel, EmitterContext context, List<Instruction> macroInstructions, List<String> macroInputs, Type commandSourceStackType) {
+    private record MacroInput(String source, MacroType<?> type) {}
+
+    private static void writeMacroInstanceCreation(NbtTagBytecodeStringGenerator nbtStringGenerator, String className, BytecodeLabel errorLabel, EmitterContext context, List<Instruction> macroInstructions, List<MacroInput> macroInputs, Type commandSourceStackType) {
         context.codeWriter().conditionalJump(JumpCondition.EQ, context.getStatic("FunctionCompound"), new BytecodeValue.NullValue(), errorLabel);
 
         HashMap<String, HashSet<MacroValidator>> generatedValidators = new HashMap<>();
@@ -158,24 +163,37 @@ public class FunctionCodeGenerator {
             }
         }
 
+        StringBuilder macroArgs = new StringBuilder();
         List<BytecodeValue> arguments = new ArrayList<>();
         arguments.add(context.getStatic("CommandSourceStack"));
-        for(String macro : macroInputs) {
-            arguments.add(nbtStringGenerator.nbtTagToBytecodeString(context, macro, null));
+        for(var macro : macroInputs) {
+            var arg = nbtStringGenerator.nbtTagToBytecodeString(context, macro.source, null);
+            if(macro.type == MacroType.STRING_MACRO_TYPE) {
+                arguments.add(arg);
+            }else if(macro.type == MacroType.INT_MACRO_TYPE) {
+                arguments.add(callInteger_parseInt(context.codeWriter(), arg));
+            }else if(macro.type == MacroType.FLOAT_MACRO_TYPE) {
+                arguments.add(callFloat_parseFloat(context.codeWriter(), arg));
+            }else if(macro.type == MacroType.DOUBLE_MACRO_TYPE) {
+                arguments.add(callDouble_parseDouble(context.codeWriter(), arg));
+            }
+            macroArgs.append(macro.type.getType().getDescriptor());
         }
 
-        var target = new InstructionTarget.FunctionTarget(className, "runInstanced",  "(" + commandSourceStackType.getDescriptor() + "Ljava/lang/String;".repeat(macroInputs.size()) + ")J", true, false, false, true);
+        var target = new InstructionTarget.FunctionTarget(className, "runInstanced",  "(" + commandSourceStackType.getDescriptor() + macroArgs + ")J", true, false, false, true);
         context.codeWriter().returnValue(context.codeWriter().writeTarget(target, arguments));
     }
 
     public static ClassGenerator generateFunctionClass(CompilationParams params, DataLocation funcId, List<Instruction> instructions, Set<DataLocation> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions, boolean includeProfilerSupport) {
-        var macroInstructions = Instruction.findTyped(instructions, InstructionTypes.LOAD_MACRO);
-        var macroInputs = new ArrayList<String>();
+        var macroInstructions = Instruction.findTyped(instructions, InstructionTypes.LOAD_STRING_MACRO, InstructionTypes.LOAD_INTEGER_MACRO);
+        var macroInputs = new ArrayList<MacroInput>();
         for(var macroInstr : macroInstructions) {
-            var macros = macroInstr.<MacroTemplate<String>>get("macroTemplate").extractMacros();
+            var template = macroInstr.<MacroTemplate<?>>get("macroTemplate");
+            var macros = template.extractMacros();
             for(var macro : macros) {
-                if(!macroInputs.contains(macro.source())) {
-                    macroInputs.add(macro.source());
+                var macroInput = new MacroInput(macro.source(), template.macroType());
+                if(!macroInputs.contains(macroInput)) {
+                    macroInputs.add(macroInput);
                 }
             }
         }
@@ -222,12 +240,12 @@ public class FunctionCodeGenerator {
 
             var staticCommandSourceStack2 = writer.createRegister();
             writer.setValue(staticCommandSourceStack2, new BytecodeValue.Parameter(0, params.commandSourceStackType()));
-            HashMap<String, BytecodeValue> macroLocations = new HashMap<>();
+            HashMap<String, BytecodeRegister> macroLocations = new HashMap<>();
             int i = 1;
             for(var macro : macroInputs) {
                 var macroRegister = writer.createRegister();
-                macroLocations.put(macro, macroRegister);
-                writer.setValue(macroRegister, new BytecodeValue.Parameter(i, Type.getType(String.class)));
+                macroLocations.put(macro.source, macroRegister);
+                writer.setValue(macroRegister, new BytecodeValue.Parameter(i, macro.type.getType()));
                 i++;
             }
             new EmitterContext(funcId, params.codeFieldStorage(), writer, compiledFunctions, new HashMap<>(Map.of("CommandSourceStack", staticCommandSourceStack2)), macroLocations, instructions, includeProfilerSupport).emitForEach();
@@ -240,7 +258,9 @@ public class FunctionCodeGenerator {
             lowLevelFunctions.put(className.replace('/', '.') + "#runInstanced", macroedBytecode);
             var funcParams = new Type[1 + macroInputs.size()];
             funcParams[0] = params.commandSourceStackType();
-            Arrays.fill(funcParams, 1, funcParams.length, Type.getType(String.class));
+            for(int j = 1; j<funcParams.length; j++) {
+                funcParams[j] = macroInputs.get(j - 1).type.getType();
+            }
             gen.addFunction("runInstanced", macroedBytecode, Type.LONG_TYPE, funcParams);
         }
 

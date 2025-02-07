@@ -72,7 +72,7 @@ SCOREBOARD_PLAYERS_OPERATION/scoreboard players operation <targets:score_accesso
 SCOREBOARD_PLAYERS_REMOVE/scoreboard players remove <targets:score_accessor> <score:int[minimum=0]>
 SCOREBOARD_PLAYERS_RESET_OBJECTIVE/scoreboard players reset <targets:score_accessor>
 SCOREBOARD_PLAYERS_RESET_ALL/scoreboard players reset <targets:score_holder>
-SCOREBOARD_PLAYERS_SET/scoreboard players set <targets:score_accessor> <score:int>
+SCOREBOARD_PLAYERS_SET/scoreboard players set <targets:score_accessor> <score:macro_int>
 
 TAG_ADD/tag <targets:entity_selector> add <name:word>
 TAG_REMOVE/tag <targets:entity_selector> remove <name:word>

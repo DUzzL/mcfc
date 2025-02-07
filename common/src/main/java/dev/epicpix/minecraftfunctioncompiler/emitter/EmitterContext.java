@@ -26,7 +26,7 @@ public final class EmitterContext {
     private final CodeWriter codeWriter;
     private final Set<DataLocation> compiledFunctions;
     private final Map<String, BytecodeValue> staticArguments;
-    private final Map<String, BytecodeValue> macroLocations;
+    private final Map<String, BytecodeRegister> macroLocations;
     private final List<Instruction> instructions;
 
     private final Int2ObjectMap<BytecodeValue> transforms = new Int2ObjectOpenHashMap<>();
@@ -40,7 +40,7 @@ public final class EmitterContext {
         CodeWriter codeWriter,
         Set<DataLocation> compiledFunctions,
         Map<String, BytecodeValue> staticArguments,
-        Map<String, BytecodeValue> macroLocations,
+        Map<String, BytecodeRegister> macroLocations,
 
         List<Instruction> instructions,
         boolean includeProfilerSupport
@@ -85,7 +85,7 @@ public final class EmitterContext {
         return compiledFunctions;
     }
 
-    public BytecodeValue getMacro(String macro) {
+    public BytecodeRegister getMacro(String macro) {
         return macroLocations.get(macro);
     }
 
