@@ -1,9 +1,10 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_2;
 
+import net.minecraft.Util;
 import net.minecraft.commands.CommandFunction;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.FunctionInstantiationException;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.ServerFunctionManager;
 import net.minecraft.server.ServerScoreboard;
@@ -14,9 +15,10 @@ import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.Score;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.util.*;
+import java.util.regex.Pattern;
 
 // Used in bytecode instructions, to not insert too much code at once
 @SuppressWarnings("unused")
@@ -76,5 +78,111 @@ public class ExtensionFunctions {
         double rz = fx3 * forwards + fu3 * up - cz * left;
         return new Vec3(x + rx, y + ry, z + rz);
     }
+
+    public static String stringifyTag(Tag tag) {
+        if(tag instanceof ByteTag cTag) {
+            return Byte.toString(cTag.getAsByte());
+        }else if(tag instanceof ShortTag cTag) {
+            return Short.toString(cTag.getAsShort());
+        }else if(tag instanceof IntTag cTag) {
+            return Integer.toString(cTag.getAsInt());
+        }else if(tag instanceof LongTag cTag) {
+            return Long.toString(cTag.getAsLong());
+        }else if(tag instanceof FloatTag cTag) {
+            return TAG_DECIMAL_FORMAT.format(cTag.getAsFloat());
+        }else if(tag instanceof DoubleTag cTag) {
+            return TAG_DECIMAL_FORMAT.format(cTag.getAsDouble());
+        }else if(tag instanceof StringTag cTag) {
+            return cTag.getAsString();
+        }else {
+            var builder = new StringBuilder();
+            appendWithUnitsTag(builder, tag);
+            return builder.toString();
+        }
+    }
+
+    private static void appendWithUnitsTag(StringBuilder builder, Tag tag) {
+        if(tag instanceof ByteTag cTag) {
+            builder.append(cTag.getAsByte());
+            builder.append('b');
+        }else if(tag instanceof ShortTag cTag) {
+            builder.append(cTag.getAsShort());
+            builder.append('s');
+        }else if(tag instanceof IntTag cTag) {
+            builder.append(cTag.getAsInt());
+        }else if(tag instanceof LongTag cTag) {
+            builder.append(cTag.getAsLong());
+            builder.append('L');
+        }else if(tag instanceof FloatTag cTag) {
+            builder.append(cTag.getAsFloat());
+            builder.append('f');
+        }else if(tag instanceof DoubleTag cTag) {
+            builder.append(cTag.getAsDouble());
+            builder.append('d');
+        }else if(tag instanceof StringTag cTag) {
+            builder.append(StringTag.quoteAndEscape(cTag.getAsString()));
+        }else if(tag instanceof ByteArrayTag cTag) {
+            builder.append("[B;");
+            var arr = cTag.getAsByteArray();
+            for(int i = 0; i < arr.length; i++) {
+                if(i != 0) builder.append(',');
+                builder.append(arr[i]).append('B');
+            }
+            builder.append(']');
+        }else if(tag instanceof IntArrayTag cTag) {
+            builder.append("[I;");
+            var arr = cTag.getAsIntArray();
+            for(int i = 0; i < arr.length; i++) {
+                if(i != 0) builder.append(',');
+                builder.append(arr[i]);
+            }
+            builder.append(']');
+        }else if(tag instanceof LongArrayTag cTag) {
+            builder.append("[L;");
+            var arr = cTag.getAsLongArray();
+            for(int i = 0; i < arr.length; i++) {
+                if(i != 0) builder.append(',');
+                builder.append(arr[i]).append('L');
+            }
+            builder.append(']');
+        }else if(tag instanceof ListTag cTag) {
+            builder.append("[");
+            for(int i = 0; i < cTag.size(); i++) {
+                if(i != 0) builder.append(',');
+                appendWithUnitsTag(builder, cTag.get(i));
+            }
+            builder.append(']');
+        }else if(tag instanceof CompoundTag cTag) {
+            builder.append('{');
+            var list = new ArrayList<>(cTag.getAllKeys());
+            Collections.sort(list);
+
+            for(int i = 0; i<list.size(); i++) {
+                if(i != 0) builder.append(',');
+
+                appendOptionalStringEscape(builder, list.get(i));
+                builder.append(':');
+                appendWithUnitsTag(builder, cTag.get(list.get(i)));
+            }
+
+            builder.append('}');
+        }else {
+            builder.append(new StringTagVisitor().visit(tag));
+        }
+    }
+
+    private static void appendOptionalStringEscape(StringBuilder builder, String string) {
+        if(STRING_SIMPLE_VALUE.matcher(string).matches()) {
+            builder.append(string);
+        }else {
+            builder.append(StringTag.quoteAndEscape(string));
+        }
+    }
+
+    private static final Pattern STRING_SIMPLE_VALUE = Pattern.compile("[A-Za-z0-9._+-]+");
+    private static final DecimalFormat TAG_DECIMAL_FORMAT = Util.make(new DecimalFormat("#"), format -> {
+        format.setMaximumFractionDigits(15);
+        format.setDecimalFormatSymbols(DecimalFormatSymbols.getInstance(Locale.US));
+    });
 
 }

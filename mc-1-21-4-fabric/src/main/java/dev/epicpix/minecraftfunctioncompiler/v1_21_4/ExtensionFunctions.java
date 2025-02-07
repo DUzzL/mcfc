@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_21_4;
 
 import com.mojang.logging.LogUtils;
+import net.minecraft.Util;
 import net.minecraft.commands.CommandResultCallback;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -8,7 +9,7 @@ import net.minecraft.commands.FunctionInstantiationException;
 import net.minecraft.commands.execution.ExecutionContext;
 import net.minecraft.commands.functions.CommandFunction;
 import net.minecraft.commands.functions.InstantiatedFunction;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.*;
 import net.minecraft.server.ServerFunctionManager;
 import net.minecraft.server.ServerScoreboard;
 import net.minecraft.util.Mth;
@@ -22,8 +23,10 @@ import net.minecraft.world.scores.ScoreAccess;
 import net.minecraft.world.scores.ScoreHolder;
 import org.slf4j.Logger;
 
-import java.util.Comparator;
-import java.util.List;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.util.*;
+import java.util.regex.Pattern;
 
 // Used in bytecode instructions, to not insert too much code at once
 @SuppressWarnings("unused")
@@ -85,5 +88,114 @@ public class ExtensionFunctions {
         double rz = fx3 * forwards + fu3 * up - cz * left;
         return new Vec3(x + rx, y + ry, z + rz);
     }
+
+    public static String stringifyTag(Tag tag) {
+        return switch(tag) {
+            case ByteTag cTag -> Byte.toString(cTag.getAsByte());
+            case ShortTag cTag -> Short.toString(cTag.getAsShort());
+            case IntTag cTag -> Integer.toString(cTag.getAsInt());
+            case LongTag cTag -> Long.toString(cTag.getAsLong());
+            case FloatTag cTag -> TAG_DECIMAL_FORMAT.format(cTag.getAsFloat());
+            case DoubleTag cTag -> TAG_DECIMAL_FORMAT.format(cTag.getAsDouble());
+            case StringTag cTag -> cTag.getAsString();
+            default -> {
+                var builder = new StringBuilder();
+                appendWithUnitsTag(builder, tag);
+                yield builder.toString();
+            }
+        };
+    }
+
+    private static void appendWithUnitsTag(StringBuilder builder, Tag tag) {
+        switch(tag) {
+            case ByteTag cTag -> {
+                builder.append(cTag.getAsByte());
+                builder.append('b');
+            }
+            case ShortTag cTag -> {
+                builder.append(cTag.getAsShort());
+                builder.append('s');
+            }
+            case IntTag cTag -> builder.append(cTag.getAsInt());
+            case LongTag cTag -> {
+                builder.append(cTag.getAsLong());
+                builder.append('L');
+            }
+            case FloatTag cTag -> {
+                builder.append(cTag.getAsFloat());
+                builder.append('f');
+            }
+            case DoubleTag cTag -> {
+                builder.append(cTag.getAsDouble());
+                builder.append('d');
+            }
+            case StringTag cTag -> builder.append(StringTag.quoteAndEscape(cTag.getAsString()));
+            case ByteArrayTag cTag -> {
+                builder.append("[B;");
+                var arr = cTag.getAsByteArray();
+                for(int i = 0; i < arr.length; i++) {
+                    if(i != 0) builder.append(',');
+                    builder.append(arr[i]).append('B');
+                }
+                builder.append(']');
+            }
+            case IntArrayTag cTag -> {
+                builder.append("[I;");
+                var arr = cTag.getAsIntArray();
+                for(int i = 0; i < arr.length; i++) {
+                    if(i != 0) builder.append(',');
+                    builder.append(arr[i]);
+                }
+                builder.append(']');
+            }
+            case LongArrayTag cTag -> {
+                builder.append("[L;");
+                var arr = cTag.getAsLongArray();
+                for(int i = 0; i < arr.length; i++) {
+                    if(i != 0) builder.append(',');
+                    builder.append(arr[i]).append('L');
+                }
+                builder.append(']');
+            }
+            case ListTag cTag -> {
+                builder.append("[");
+                for(int i = 0; i < cTag.size(); i++) {
+                    if(i != 0) builder.append(',');
+                    appendWithUnitsTag(builder, cTag.get(i));
+                }
+                builder.append(']');
+            }
+            case CompoundTag cTag -> {
+                builder.append('{');
+                var list = new ArrayList<>(cTag.getAllKeys());
+                Collections.sort(list);
+
+                for(int i = 0; i < list.size(); i++) {
+                    if(i != 0) builder.append(',');
+
+                    appendOptionalStringEscape(builder, list.get(i));
+                    builder.append(':');
+                    appendWithUnitsTag(builder, cTag.get(list.get(i)));
+                }
+
+                builder.append('}');
+            }
+            default -> builder.append(new StringTagVisitor().visit(tag));
+        }
+    }
+
+    private static void appendOptionalStringEscape(StringBuilder builder, String string) {
+        if(STRING_SIMPLE_VALUE.matcher(string).matches()) {
+            builder.append(string);
+        }else {
+            builder.append(StringTag.quoteAndEscape(string));
+        }
+    }
+
+    private static final Pattern STRING_SIMPLE_VALUE = Pattern.compile("[A-Za-z0-9._+-]+");
+    private static final DecimalFormat TAG_DECIMAL_FORMAT = Util.make(new DecimalFormat("#"), format -> {
+        format.setMaximumFractionDigits(15);
+        format.setDecimalFormatSymbols(DecimalFormatSymbols.getInstance(Locale.US));
+    });
 
 }

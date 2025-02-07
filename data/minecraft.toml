@@ -20,8 +20,7 @@ ShortTag_valueOf = "net/minecraft/nbt/ShortTag:valueOf(S)Lnet/minecraft/nbt/Shor
 StringTag_valueOf = "net/minecraft/nbt/StringTag:valueOf(Ljava/lang/String;)Lnet/minecraft/nbt/StringTag;@S"
 
 CompoundTag_get = "net/minecraft/nbt/CompoundTag:get(Ljava/lang/String;)Lnet/minecraft/nbt/Tag;@M"
-Tag_stringify."1.20.2" = "net/minecraft/commands/CommandFunction$CommandMacro:stringify(Lnet/minecraft/nbt/Tag;)Ljava/lang/String;@S"
-Tag_stringify."1.20.3+" = "net/minecraft/commands/functions/MacroFunction:stringify(Lnet/minecraft/nbt/Tag;)Ljava/lang/String;@S"
+Tag_stringify."1.20.2+" = "dev/epicpix/minecraftfunctioncompiler/_VERSION_/ExtensionFunctions:stringifyTag(Lnet/minecraft/nbt/Tag;)Ljava/lang/String;@S"
 
 ObjectiveCriteria_byName = "net/minecraft/world/scores/criteria/ObjectiveCriteria:byName(Ljava/lang/String;)Ljava/util/Optional;@S"
 
