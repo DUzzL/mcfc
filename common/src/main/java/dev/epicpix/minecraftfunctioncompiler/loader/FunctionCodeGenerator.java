@@ -13,7 +13,6 @@ import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticResult;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
-import dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.*;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter;
@@ -146,6 +145,7 @@ public class FunctionCodeGenerator {
         context.codeWriter().conditionalJump(JumpCondition.EQ, context.getStatic("FunctionCompound"), new BytecodeValue.NullValue(), errorLabel);
 
         HashMap<String, HashSet<MacroValidator>> generatedValidators = new HashMap<>();
+        HashMap<String, BytecodeValue> stringifiedValues = new HashMap<>();
 
         for(var macroInstr : macroInstructions) {
             var macros = macroInstr.<MacroTemplate<String>>get("macroTemplate").extractMacros();
@@ -154,7 +154,7 @@ public class FunctionCodeGenerator {
                 if(generated.containsAll(macro.validators())) {
                     continue;
                 }
-                var value = nbtStringGenerator.nbtTagToBytecodeString(context, macro.source(), errorLabel);
+                var value = stringifiedValues.computeIfAbsent(macro.source(), key -> nbtStringGenerator.nbtTagToBytecodeString(context, key, errorLabel));
                 for(var validator : macro.validators()) {
                     if(generated.add(validator)) {
                         validator.validateGenerated(value, context.codeWriter(), context.fieldStorage(), errorLabel);
@@ -167,7 +167,7 @@ public class FunctionCodeGenerator {
         List<BytecodeValue> arguments = new ArrayList<>();
         arguments.add(context.getStatic("CommandSourceStack"));
         for(var macro : macroInputs) {
-            var arg = nbtStringGenerator.nbtTagToBytecodeString(context, macro.source, null);
+            var arg = stringifiedValues.computeIfAbsent(macro.source(), key -> nbtStringGenerator.nbtTagToBytecodeString(context, key, errorLabel));
             if(macro.type == MacroType.STRING_MACRO_TYPE) {
                 arguments.add(arg);
             }else if(macro.type == MacroType.INT_MACRO_TYPE) {
