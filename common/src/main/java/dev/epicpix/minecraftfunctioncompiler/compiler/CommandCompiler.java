@@ -103,8 +103,10 @@ public final class CommandCompiler {
 
                     var last = parts.get(parts.size() - 1);
                     var tagLocal = context.<NbtTag>createLocal();
+                    var tagCopiedLocal = context.<NbtTag>createLocal();
                     innerContext.writeInstruction(Instructions2.loadNbtValue(tagLocal, cmdData.value()));
-                    assignNbtValue(context, value, last, tagLocal, setCountLocal, innerContext.data().contextEndLabel());
+                    innerContext.writeInstruction(Instructions2.cloneNbtValue(tagCopiedLocal, tagLocal));
+                    assignNbtValue(context, value, last, tagCopiedLocal, setCountLocal, innerContext.data().contextEndLabel());
                 }
 
                 context.writeInstruction(Instructions2.ifEqualJump(setCountLocal, LocationData.ofInteger(0), context.current().contextEndLabel()));

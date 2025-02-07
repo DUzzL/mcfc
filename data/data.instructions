@@ -482,7 +482,7 @@
   [static:CommandStorage].set(map_resource_location([instr:storage_name]), [ctx:tag]);
 }
 
-@LOAD_NBT_VALUE(<dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue> [instr:nbt]) -> <net.minecraft.nbt.Tag> = map_nbt_value([instr:nbt]).copy();
+@LOAD_NBT_VALUE(<dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue> [instr:nbt]) -> <net.minecraft.nbt.Tag> = map_nbt_value([instr:nbt]);
 @CLONE_NBT_VALUE(<net.minecraft.nbt.Tag> [ctx:input]) -> <net.minecraft.nbt.Tag> = [ctx:input].copy();
 
 ##CONDITIONAL_JUMP
