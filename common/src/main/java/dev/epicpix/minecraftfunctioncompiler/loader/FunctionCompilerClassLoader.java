@@ -194,7 +194,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
             }catch(Exception ignored) {}
             try {
                 var registries = DataRegistries.extractRegistries();
-                var registriesStr = new GsonBuilder().setPrettyPrinting().create().toJson(registries);
+                var registriesStr = new GsonBuilder().setPrettyPrinting().serializeNulls().create().toJson(registries);
                 Files.writeString(generatedDir.resolve("registries.json"), registriesStr);
                 LOGGER.info("Wrote {} lines into registries.json", registriesStr.lines().count());
             }catch(Exception ignored) {}
