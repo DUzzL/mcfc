@@ -72,7 +72,8 @@ public final class SelectorParser {
             }
             case 'n' -> {
                 if(!MinecraftVersion.isCurrentVersionInRange(MinecraftVersion.MC_1_21, null)) throwError(reader, SELECTOR_WRONG_MINECRAFT_VERSION, "Selector @n is not available on versions below 1.21");
-                data.requirePlayer = true;
+                if(!allowEntities) throwError(reader, SELECTOR_EXPECTED_PLAYER_TARGETS, "Unable to use @n with a player-only selector");
+                data.requireAlive = true;
                 data.sort = SelectorSort.NEAREST;
                 data.limit = 1;
             }

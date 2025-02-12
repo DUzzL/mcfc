@@ -4,6 +4,7 @@ Adds support for integer macros in `scoreboard players add|remove|set`
 
 Fixes bugs:
 - Macros don't get parsed and compiled properly
+- `@n` selector looks for players instead of entities
 
 ## Details
 - **Released:** In Development
