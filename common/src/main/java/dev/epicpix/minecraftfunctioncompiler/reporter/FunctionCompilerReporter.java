@@ -43,18 +43,27 @@ public final class FunctionCompilerReporter {
     public static void reportRawData(String type, JsonElement data) {
         if(!ENABLE_REPORTING || !dataReportingEnabled) return;
 
+        var minecraftData = new JsonObject();
+        minecraftData.addProperty("name", minecraftVersionName);
+        minecraftData.addProperty("type", minecraftVersionType);
+        minecraftData.addProperty("side", minecraftEnvironment.name().toLowerCase(Locale.ROOT));
+
+        var hostData = new JsonObject();
+        hostData.addProperty("os", System.getProperty("os.name"));
+        hostData.addProperty("arch", System.getProperty("os.arch"));
+        hostData.addProperty("version", System.getProperty("os.version"));
+
         JsonObject sendData = new JsonObject();
         sendData.addProperty("is_dev", isDevelopmentEnvironment || "development".equals(versionCommit));
         sendData.addProperty("is_ide", isDevelopmentEnvironment);
         sendData.addProperty("version_commit", versionCommit);
         sendData.addProperty("version", versionName);
-        sendData.addProperty("minecraft_version_name", minecraftVersionName);
-        sendData.addProperty("minecraft_version_type", minecraftVersionType);
-        sendData.addProperty("minecraft_environment", minecraftEnvironment.name().toLowerCase(Locale.ROOT));
+        sendData.add("minecraft", minecraftData);
+        sendData.add("host", hostData);
         sendData.addProperty("run_uuid", runUuid.toString());
         sendData.addProperty("timestamp", System.currentTimeMillis());
         sendData.addProperty("report_type", type);
-        sendData.addProperty("report_version", "v8");
+        sendData.addProperty("report_version", "v9");
         sendData.add("data", data);
 
         reportQueue.add(sendData);
