@@ -7,8 +7,8 @@ Fixes bugs:
 - `@n` selector looks for players instead of entities
 
 ## Details
-- **Released:** In Development
-- **Supported Versions:** 1.19.4, 1.20–1.20.1, 1.20.2, 1.20.3–1.20.4, 1.20.5–1.20.6, 1.21–1.21.1, 1.21.2–1.21.3, 1.21.4
+- **Released:** 2025-02-23
+- **Supported Versions:** [1.19.4](https://modrinth.com/mod/mcfc/version/0.3.1-alpha.2+1.19.4), [1.20–1.20.1](https://modrinth.com/mod/mcfc/version/0.3.1-alpha.2+1.20.1), [1.20.2](https://modrinth.com/mod/mcfc/version/0.3.1-alpha.2+1.20.2), [1.20.3–1.20.4](https://modrinth.com/mod/mcfc/version/0.3.1-alpha.2+1.20.4), [1.20.5–1.20.6](https://modrinth.com/mod/mcfc/version/0.3.1-alpha.2+1.20.6), [1.21–1.21.1](https://modrinth.com/mod/mcfc/version/0.3.1-alpha.2+1.21), [1.21.2–1.21.3](https://modrinth.com/mod/mcfc/version/0.3.1-alpha.2+1.21.2), [1.21.4](https://modrinth.com/mod/mcfc/version/0.3.1-alpha.2+1.21.4)
 
 # 0.3.1-alpha.1
 
