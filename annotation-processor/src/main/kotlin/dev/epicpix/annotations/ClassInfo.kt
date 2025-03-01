@@ -1,6 +1,8 @@
 package dev.epicpix.annotations
 
 import com.google.devtools.ksp.processing.Resolver
+import com.google.devtools.ksp.symbol.ClassKind
+import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import org.objectweb.asm.*
 import java.lang.reflect.Modifier
@@ -53,6 +55,7 @@ private fun fixKotlinDesc(from: String): String {
         "kotlin.Int" -> "I"
         "kotlin.String" -> "Ljava/lang/String;"
         "kotlin.collections.MutableList" -> "Ljava/util/List;"
+        "kotlin.Array" -> "[Ljava/lang/Object;"
         else -> {
             if(from.startsWith("kotlin.")) throw IllegalArgumentException("Unknown kotlin class: $from")
             "L${from.replace('.', '/')};"
@@ -93,12 +96,21 @@ fun loadClassInfo(className: String): ClassInfo {
         }.getOrElse {
             val classDecl = privateResolver!!.getClassDeclarationByName(privateResolver!!.getKSNameFromString(className))
                 ?: throw IllegalArgumentException("Class not found: $className", it)
+            val enumEntries = classDecl.declarations.filter { it is KSClassDeclaration && it.classKind == ClassKind.ENUM_ENTRY }.map { it as KSClassDeclaration }.toList()
             val methods = classDecl.declarations.filter { it is KSFunctionDeclaration }.map { it as KSFunctionDeclaration }.toList()
             loadedClasses[className] = ClassInfo(
                 name = classDecl.qualifiedName!!.asString(),
                 superClass = "java.lang.Object",
                 interfaces = listOf(),
-                fields = listOf(),
+                fields = enumEntries.map { f ->
+                    ClassFieldInfo(
+                        owner = classDecl.qualifiedName!!.asString().replace('.', '/'),
+                        name = f.simpleName.asString(),
+                        descriptor = fixKotlinDesc(className),
+                        isStatic = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.JAVA_STATIC),
+                        isFinal = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.FINAL)
+                    )
+                },
                 methods = methods.map { f ->
                     ClassMethodInfo(
                         owner = classDecl.qualifiedName!!.asString().replace('.', '/'),

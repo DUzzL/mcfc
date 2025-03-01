@@ -9,6 +9,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
 import dev.epicpix.minecraftfunctioncompiler.data.text.TextContent;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
+import dev.epicpix.minecraftfunctioncompiler.emitter.types.NumberComparisonType;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
@@ -109,7 +110,7 @@ public final class CommandCompiler {
                     assignNbtValue(context, value, last, tagCopiedLocal, setCountLocal, innerContext.data().contextEndLabel());
                 }
 
-                context.writeInstruction(Instructions2.ifEqualJump(setCountLocal, LocationData.ofInteger(0), context.current().contextEndLabel()));
+                context.writeInstruction(Instructions2.ifNumberCompareJump(NumberComparisonType.EQUAL, setCountLocal, LocationData.ofInteger(0), context.current().contextEndLabel()));
                 context.writeInstruction(Instructions2.setNbtStorage(loc.storage(), storageLocal));
             }else {
                 throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_NBT_SOURCE_ACCESS, context.getSource(), "Accessing nbt from block/entity sources is not implemented yet"));
@@ -435,7 +436,7 @@ public final class CommandCompiler {
                     }
                     assignNbtValue(context, value, last, tagLocal, setCountLocal, innerContext.endLabel());
                 }
-                context.writeInstruction(Instructions2.ifEqualJump(setCountLocal, LocationData.ofInteger(0), context.current().contextEndLabel()));
+                context.writeInstruction(Instructions2.ifNumberCompareJump(NumberComparisonType.EQUAL, setCountLocal, LocationData.ofInteger(0), context.current().contextEndLabel()));
                 context.writeInstruction(Instructions2.setNbtStorage(cmdData.storage(), storageLocal));
             }
         }else if(command instanceof CommandExecuteUnlessEntity cmdData) {
@@ -631,13 +632,13 @@ public final class CommandCompiler {
                                     case DIV -> {
                                         var divisor = context.<Integer>createLocal();
                                         sourceScore.writeInstruction(Instructions2.getScoreValue(divisor, sourceScore.content()));
-                                        sourceScore.writeInstruction(Instructions2.ifEqualJump(divisor, LocationData.ofInteger(0), selectorCodeLocation));
+                                        sourceScore.writeInstruction(Instructions2.ifNumberCompareJump(NumberComparisonType.EQUAL, divisor, LocationData.ofInteger(0), selectorCodeLocation));
                                         sourceScore.writeInstruction(Instructions2.runScoreOperationDivide(targetScore.content(), sourceScore.content()));
                                     }
                                     case MOD -> {
                                         var divisor = context.<Integer>createLocal();
                                         sourceScore.writeInstruction(Instructions2.getScoreValue(divisor, sourceScore.content()));
-                                        sourceScore.writeInstruction(Instructions2.ifEqualJump(divisor, LocationData.ofInteger(0), selectorCodeLocation));
+                                        sourceScore.writeInstruction(Instructions2.ifNumberCompareJump(NumberComparisonType.EQUAL, divisor, LocationData.ofInteger(0), selectorCodeLocation));
                                         sourceScore.writeInstruction(Instructions2.runScoreOperationModulo(targetScore.content(), sourceScore.content()));
                                     }
                                     case MIN -> sourceScore.writeInstruction(Instructions2.runScoreOperationMin(targetScore.content(), sourceScore.content()));
@@ -785,7 +786,7 @@ public final class CommandCompiler {
         context.writeInstruction(Instructions2.tryAsNbtList(list, source, failLabel));
         var length = context.<Integer>createLocal();
         context.writeInstruction(Instructions2.getListLength(length, list));
-        context.writeInstruction(Instructions2.ifGreaterEqualJump(LocationData.ofInteger(indexed.index()), length, failLabel));
+        context.writeInstruction(Instructions2.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, LocationData.ofInteger(indexed.index()), length, failLabel));
         var index = context.<Integer>createLocal();
 
         if(indexed.index() >= 0) {

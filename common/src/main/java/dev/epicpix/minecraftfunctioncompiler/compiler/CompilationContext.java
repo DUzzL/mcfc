@@ -5,6 +5,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
+import dev.epicpix.minecraftfunctioncompiler.emitter.types.NumberComparisonType;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
@@ -297,7 +298,7 @@ public class CompilationContext {
 
         var iterStart = data.writeLabel(instructionWriter);
 
-        data.writeInstruction(instructionWriter, Instructions2.ifGreaterEqualJump(index, length, data.contextEndLabel()));
+        data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, length, data.contextEndLabel()));
 
         var playerObj = this.createLocal();
         var player = this.<Player>createLocal();
@@ -359,7 +360,7 @@ public class CompilationContext {
         var listLength = this.<Integer>createLocal();
         data.writeInstruction(instructionWriter, Instructions2.getListLength(listLength, scoreHolders));
         if(single) {
-            data.writeInstruction(instructionWriter, Instructions2.ifEqualJump(listLength, LocationData.ofInteger(0), data.contextEndLabel()));
+            data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.EQUAL, listLength, LocationData.ofInteger(0), data.contextEndLabel()));
             var scoreHolderObj = this.createLocal();
             var scoreHolder = this.<String>createLocal();
             data.writeInstruction(instructionWriter, Instructions2.getListElement(scoreHolderObj, scoreHolders, LocationData.ofInteger(0)));
@@ -370,7 +371,7 @@ public class CompilationContext {
             var index = this.<Integer>createLocal();
             data.writeInstruction(instructionWriter, Instructions2.valueAssign(index, LocationData.ofInteger(0)));
             var iterStart = data.writeLabel(instructionWriter);
-            data.writeInstruction(instructionWriter, Instructions2.ifGreaterEqualJump(index, listLength, data.contextEndLabel()));
+            data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, listLength, data.contextEndLabel()));
             var scoreHolderObj = this.createLocal();
             var scoreHolder = this.<String>createLocal();
             data.writeInstruction(instructionWriter, Instructions2.getListElement(scoreHolderObj, scoreHolders, index));
@@ -455,7 +456,7 @@ public class CompilationContext {
         data.writeInstruction(instructionWriter, Instructions2.getListLength(length, entityList));
         if(selector.limit() != null) {
             if(selector.limit() == 1) {
-                data.writeInstruction(instructionWriter, Instructions2.ifEqualJump(length, LocationData.ofInteger(0), data.contextEndLabel()));
+                data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.EQUAL, length, LocationData.ofInteger(0), data.contextEndLabel()));
                 var entityObj = this.createLocal();
                 var entity = this.<Entity>createLocal();
                 data.writeInstruction(instructionWriter, Instructions2.getListElement(entityObj, entityList, LocationData.ofInteger(0)));
@@ -466,8 +467,8 @@ public class CompilationContext {
                 var index = this.<Integer>createLocal();
                 data.writeInstruction(instructionWriter, Instructions2.valueAssign(index, LocationData.ofInteger(0)));
                 var iterStart = data.writeLabel(instructionWriter);
-                data.writeInstruction(instructionWriter, Instructions2.ifGreaterEqualJump(index, length, data.contextEndLabel()));
-                data.writeInstruction(instructionWriter, Instructions2.ifGreaterEqualJump(index, LocationData.ofInteger(selector.limit()), data.contextEndLabel()));
+                data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, length, data.contextEndLabel()));
+                data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, LocationData.ofInteger(selector.limit()), data.contextEndLabel()));
                 var entityObj = this.createLocal();
                 var entity = this.<Entity>createLocal();
                 data.writeInstruction(instructionWriter, Instructions2.getListElement(entityObj, entityList, index));
@@ -482,7 +483,7 @@ public class CompilationContext {
             var index = this.<Integer>createLocal();
             data.writeInstruction(instructionWriter, Instructions2.valueAssign(index, LocationData.ofInteger(0)));
             var iterStart = data.writeLabel(instructionWriter);
-            data.writeInstruction(instructionWriter, Instructions2.ifGreaterEqualJump(index, length, data.contextEndLabel()));
+            data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, length, data.contextEndLabel()));
             var entityObj = this.createLocal();
             var entity = this.<Entity>createLocal();
             data.writeInstruction(instructionWriter, Instructions2.getListElement(entityObj, entityList, index));
@@ -568,9 +569,9 @@ public class CompilationContext {
             var tagsLength = this.<Integer>createLocal();
             data.writeInstruction(instructionWriter, Instructions2.getSetLength(tagsLength, tags));
             if(selector.hasTags()) {
-                data.writeInstruction(instructionWriter, Instructions2.ifEqualJump(tagsLength, LocationData.ofInteger(0), data.contextEndLabel()));
+                data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.EQUAL, tagsLength, LocationData.ofInteger(0), data.contextEndLabel()));
             }else {
-                data.writeInstruction(instructionWriter, Instructions2.ifNotEqualJump(tagsLength, LocationData.ofInteger(0), data.contextEndLabel()));
+                data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, tagsLength, LocationData.ofInteger(0), data.contextEndLabel()));
             }
         }
         if(selector.level() != null) {
@@ -753,7 +754,7 @@ public class CompilationContext {
         var index = this.<Integer>createLocal();
         instructionWriter.addInstructionBefore(Instructions2.valueAssign(index, LocationData.ofInteger(0)), forkingContext.getForkExecLabel());
         var iterStart = instructionWriter.createLabelBefore(forkingContext.getForkExecLabel());
-        instructionWriter.addInstructionBefore(Instructions2.ifGreaterEqualJump(index, length, forkingContext.getForkExecLabel()), forkingContext.getForkExecLabel());
+        instructionWriter.addInstructionBefore(Instructions2.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, length, forkingContext.getForkExecLabel()), forkingContext.getForkExecLabel());
         var commandStackObj = this.createLocal();
         var cmdStack = this.<CommandSourceStack>createLocal();
         instructionWriter.addInstructionBefore(Instructions2.getListElement(commandStackObj, forkingContext.getForkContextList(), index), forkingContext.getForkExecLabel());
@@ -768,55 +769,55 @@ public class CompilationContext {
 
     public void jumpIfMatchesRange(CompilationContextData data, LocationData<Integer> value, IntRangeArgument range, LabelData label) {
         if(Objects.equals(range.minimum(), range.maximum())) {
-            data.writeInstruction(instructionWriter, Instructions2.ifEqualJump(value, LocationData.ofInteger(range.minimum()), label));
+            data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.EQUAL, value, LocationData.ofInteger(range.minimum()), label));
         }else if(range.minimum() != null && range.maximum() == null) {
-            data.writeInstruction(instructionWriter, Instructions2.ifGreaterEqualJump(value, LocationData.ofInteger(range.minimum()), label));
+            data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, value, LocationData.ofInteger(range.minimum()), label));
         }else if(range.minimum() == null) {
-            data.writeInstruction(instructionWriter, Instructions2.ifLessEqualJump(value, LocationData.ofInteger(range.maximum()), label));
+            data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.LESS_THAN_OR_EQUAL, value, LocationData.ofInteger(range.maximum()), label));
         }else {
             var failure = data.writeLabel(instructionWriter);
-            instructionWriter.addInstructionBefore(Instructions2.ifLessThanJump(value, LocationData.ofInteger(range.minimum()), failure), failure);
-            instructionWriter.addInstructionBefore(Instructions2.ifGreaterThanJump(value, LocationData.ofInteger(range.maximum()), failure), failure);
+            instructionWriter.addInstructionBefore(Instructions2.ifNumberCompareJump(NumberComparisonType.LESS_THAN, value, LocationData.ofInteger(range.minimum()), failure), failure);
+            instructionWriter.addInstructionBefore(Instructions2.ifNumberCompareJump(NumberComparisonType.GREATER_THAN, value, LocationData.ofInteger(range.maximum()), failure), failure);
             instructionWriter.addInstructionBefore(Instructions2.jump(label), failure);
         }
     }
 
     public void jumpIfNotMatchesRange(CompilationContextData data, LocationData<Integer> value, IntRangeArgument range, LabelData label) {
         if(Objects.equals(range.minimum(), range.maximum())) {
-            data.writeInstruction(instructionWriter, Instructions2.ifNotEqualJump(value, LocationData.ofInteger(range.minimum()), label));
+            data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, value, LocationData.ofInteger(range.minimum()), label));
             return;
         }
         if(range.minimum() != null) {
-            data.writeInstruction(instructionWriter, Instructions2.ifLessThanJump(value, LocationData.ofInteger(range.minimum()), label));
+            data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.LESS_THAN, value, LocationData.ofInteger(range.minimum()), label));
         }
         if(range.maximum() != null) {
-            data.writeInstruction(instructionWriter, Instructions2.ifGreaterThanJump(value, LocationData.ofInteger(range.maximum()), label));
+            data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.GREATER_THAN, value, LocationData.ofInteger(range.maximum()), label));
         }
     }
 
     public void jumpIfNotMatchesRange(CompilationContextData data, LocationData<Float> value, FloatRangeArgument range, LabelData label) {
         if(Objects.equals(range.minimum(), range.maximum())) {
-            data.writeInstruction(instructionWriter, Instructions2.ifNotEqualJump(value, LocationData.ofFloat(range.minimum()), label));
+            data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, value, LocationData.ofFloat(range.minimum()), label));
             return;
         }
         if(range.minimum() != null) {
-            data.writeInstruction(instructionWriter, Instructions2.ifLessThanJump(value, LocationData.ofFloat(range.minimum()), label));
+            data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.LESS_THAN, value, LocationData.ofFloat(range.minimum()), label));
         }
         if(range.maximum() != null) {
-            data.writeInstruction(instructionWriter, Instructions2.ifGreaterThanJump(value, LocationData.ofFloat(range.maximum()), label));
+            data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.GREATER_THAN, value, LocationData.ofFloat(range.maximum()), label));
         }
     }
 
     public void jumpIfNotMatchesRange(CompilationContextData data, LocationData<Double> value, DoubleRangeArgument range, LabelData label) {
         if(Objects.equals(range.minimum(), range.maximum())) {
-            data.writeInstruction(instructionWriter, Instructions2.ifNotEqualJump(value, LocationData.ofDouble(range.minimum()), label));
+            data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, value, LocationData.ofDouble(range.minimum()), label));
             return;
         }
         if(range.minimum() != null) {
-            data.writeInstruction(instructionWriter, Instructions2.ifLessThanJump(value, LocationData.ofDouble(range.minimum()), label));
+            data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.LESS_THAN, value, LocationData.ofDouble(range.minimum()), label));
         }
         if(range.maximum() != null) {
-            data.writeInstruction(instructionWriter, Instructions2.ifGreaterThanJump(value, LocationData.ofDouble(range.maximum()), label));
+            data.writeInstruction(instructionWriter, Instructions2.ifNumberCompareJump(NumberComparisonType.GREATER_THAN, value, LocationData.ofDouble(range.maximum()), label));
         }
     }
 

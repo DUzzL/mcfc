@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.il.optimizer;
 
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
+import dev.epicpix.minecraftfunctioncompiler.emitter.types.NumberComparisonType;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
 import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -206,16 +207,17 @@ public final class Optimizations {
         var condInstrType = pass.getInstruction(condInstr).type();
         boolean singleSelector;
         LabelData endLabel;
-        if(condInstrType == InstructionTypes2.IF_EQUAL_JUMP) {
-            if(!pass.getInstruction(condInstr).containsValue(LocationData.ofInteger(0))) return;
-            singleSelector = true;
-            endLabel = pass.getInstruction(condInstr).get("label");
-        }else if(condInstrType == InstructionTypes2.IF_GREATER_EQUAL_JUMP) {
-            singleSelector = false;
-            endLabel = pass.getInstruction(condInstr).get("label");
-        }else {
-            return;
-        }
+        if(condInstrType == InstructionTypes2.IF_NUMBER_COMPARE_JUMP) {
+            var condition = pass.getInstruction(condInstr).<NumberComparisonType>get("compare");
+            if(condition == NumberComparisonType.EQUAL) {
+                if(!pass.getInstruction(condInstr).containsValue(LocationData.ofInteger(0))) return;
+                singleSelector = true;
+                endLabel = pass.getInstruction(condInstr).get("label");
+            }else if(condition == NumberComparisonType.GREATER_THAN_OR_EQUAL) {
+                singleSelector = false;
+                endLabel = pass.getInstruction(condInstr).get("label");
+            }else return;
+        }else return;
 
         var endInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes2.LABEL, List.of(Pair.of("label", endLabel)));
         if(endInstr == null) return;

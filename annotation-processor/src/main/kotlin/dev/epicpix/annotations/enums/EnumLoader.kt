@@ -16,7 +16,7 @@ fun parseEnums(fileContent: String): EnumList {
     val enums = mutableMapOf<String, String>()
     for(line in fileContent.lineSequence()) {
         if(line.isBlank()) continue
-        val parts = line.split(" -> ", limit = 2)
+        val parts = line.split(" <-> ", limit = 2)
         enums[parts[0]] = parts[1]
         enums[parts[1]] = parts[0]
     }

@@ -39,6 +39,8 @@ enum class LexTokenSimpleType : LexToken {
     ASSIGN,
     ARROW,
     KW_IF,
+    KW_COMPILE_IF,
+    KW_COMPILE_MATCH,
     KW_ELSE,
     KW_NULL,
     KW_FALSE,
@@ -156,6 +158,8 @@ fun lexTokens(code: String): List<LexToken> {
             }
             return when(res) {
                 "if" -> LexTokenSimpleType.KW_IF
+                "compile_if" -> LexTokenSimpleType.KW_COMPILE_IF
+                "compile_match" -> LexTokenSimpleType.KW_COMPILE_MATCH
                 "else" -> LexTokenSimpleType.KW_ELSE
                 "null" -> LexTokenSimpleType.KW_NULL
                 "false" -> LexTokenSimpleType.KW_FALSE

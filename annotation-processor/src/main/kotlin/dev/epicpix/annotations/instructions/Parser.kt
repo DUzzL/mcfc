@@ -36,6 +36,8 @@ data class ParsedTokenInstanceStatic(val className: String) : ParsedTokenInstanc
 data class ParsedTokenInstanceValue(val expression: ParsedTokenExpression) : ParsedTokenInstanceType
 
 data class ParsedTokenStatementIf(val expression: ParsedTokenExpression, val code: List<ParsedTokenStatement>, val elseCode: List<ParsedTokenStatement>?) : ParsedTokenStatement
+data class ParsedTokenStatementCompileIf(val expression: ParsedTokenExpression, val code: List<ParsedTokenStatement>, val elseCode: List<ParsedTokenStatement>?) : ParsedTokenStatement
+data class ParsedTokenStatementCompileMatch(val expression: ParsedTokenExpression, val matches: Map<String, List<ParsedTokenStatement>>) : ParsedTokenStatement
 data class ParsedTokenStatementFunctionCall(val name: String, val instance: ParsedTokenInstanceType?, val arguments: List<ParsedTokenExpression>) : ParsedTokenStatement, ParsedTokenExpression
 data class ParsedTokenStatementAssignVariable(val accessor: ParsedTokenValueAccessor, val expression: ParsedTokenExpression) : ParsedTokenStatement
 data class ParsedTokenStatementReturn(val value: ParsedTokenExpression?) : ParsedTokenStatement
@@ -352,6 +354,29 @@ private fun parseCode(iter: ListIterator<LexToken>, valueDefinitions: List<Parse
             } else {
                 res.add(ParsedTokenStatementIf(expression, code, null))
             }
+        }else if(iter.tryNextTokenType(LexTokenSimpleType.KW_COMPILE_IF)) {
+            iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
+            val expression = parseExpression(iter, valueDefinitions, usesObf)
+            iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
+            val code = parseCode(iter, valueDefinitions, usesObf)
+            if(iter.tryNextTokenType(LexTokenSimpleType.KW_ELSE)) {
+                val elseCode = parseCode(iter, valueDefinitions, usesObf)
+                res.add(ParsedTokenStatementCompileIf(expression, code, elseCode))
+            } else {
+                res.add(ParsedTokenStatementCompileIf(expression, code, null))
+            }
+        }else if(iter.tryNextTokenType(LexTokenSimpleType.KW_COMPILE_MATCH)) {
+            iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
+            val expression = parseExpression(iter, valueDefinitions, usesObf)
+            iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
+            iter.expectTokenType(LexTokenSimpleType.OPEN_BRACE)
+            val cases = mutableMapOf<String, List<ParsedTokenStatement>>()
+            while(!iter.tryNextTokenType(LexTokenSimpleType.CLOSE_BRACE)) {
+                val key = iter.expectToken<LexTokenWord>()
+                val code = parseCode(iter, valueDefinitions, usesObf)
+                cases[key.word] = code
+            }
+            res.add(ParsedTokenStatementCompileMatch(expression, cases))
         }else if(iter.tryNextTokenType(LexTokenSimpleType.KW_RETURN)) {
             if(iter.tryNextTokenType(LexTokenSimpleType.SEMICOLON)) {
                 res.add(ParsedTokenStatementReturn(null))

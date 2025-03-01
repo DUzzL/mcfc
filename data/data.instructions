@@ -41,33 +41,15 @@
 }
 
 ##CONDITIONAL_JUMP
-@IF_EQUAL_JUMP(number<T> [ctx:a], number<T> [ctx:b], label [ctx:label]) {
-  _jumpIfEqual([ctx:a], [ctx:b], [ctx:label]);
-}
-
-##CONDITIONAL_JUMP
-@IF_NOT_EQUAL_JUMP(number<T> [ctx:a], number<T> [ctx:b], label [ctx:label]) {
-  _jumpIfNotEqual([ctx:a], [ctx:b], [ctx:label]);
-}
-
-##CONDITIONAL_JUMP
-@IF_GREATER_EQUAL_JUMP(number<T> [ctx:a], number<T> [ctx:b], label [ctx:label]) {
-  _jumpIfGreaterEqual([ctx:a], [ctx:b], [ctx:label]);
-}
-
-##CONDITIONAL_JUMP
-@IF_GREATER_THAN_JUMP(number<T> [ctx:a], number<T> [ctx:b], label [ctx:label]) {
-  _jumpIfGreaterThan([ctx:a], [ctx:b], [ctx:label]);
-}
-
-##CONDITIONAL_JUMP
-@IF_LESS_THAN_JUMP(number<T> [ctx:a], number<T> [ctx:b], label [ctx:label]) {
-  _jumpIfLessThan([ctx:a], [ctx:b], [ctx:label]);
-}
-
-##CONDITIONAL_JUMP
-@IF_LESS_EQUAL_JUMP(number<T> [ctx:a], number<T> [ctx:b], label [ctx:label]) {
-  _jumpIfLessEqual([ctx:a], [ctx:b], [ctx:label]);
+@IF_NUMBER_COMPARE_JUMP(<dev.epicpix.minecraftfunctioncompiler.emitter.types.NumberComparisonType> [instr:compare], number<T> [ctx:a], number<T> [ctx:b], label [ctx:label]) {
+  compile_match([instr:compare]) {
+    EQUAL { _jumpIfEqual([ctx:a], [ctx:b], [ctx:label]); }
+    NOT_EQUAL { _jumpIfNotEqual([ctx:a], [ctx:b], [ctx:label]); }
+    LESS_THAN { _jumpIfLessThan([ctx:a], [ctx:b], [ctx:label]); }
+    LESS_THAN_OR_EQUAL { _jumpIfLessEqual([ctx:a], [ctx:b], [ctx:label]); }
+    GREATER_THAN { _jumpIfGreaterThan([ctx:a], [ctx:b], [ctx:label]); }
+    GREATER_THAN_OR_EQUAL { _jumpIfGreaterEqual([ctx:a], [ctx:b], [ctx:label]); }
+  }
 }
 
 @VALUE_ASSIGN(number<T> [ctx:src]) -> number<T> = [ctx:src];
