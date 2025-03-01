@@ -372,6 +372,8 @@ public class StackCompiler {
         for(var i : instructionsBetween) {
             if(i instanceof StackInstruction.Store s && uses.contains(s.register().reg())) {
                 return false;
+            }else if(i instanceof StackInstruction.Load l && l.value() instanceof BytecodeRegister reg && uses.contains(reg.reg())) {
+                return false;
             }else if(i instanceof StackInstruction.Label || i instanceof StackInstruction.Jump || i instanceof StackInstruction.JumpTyped || i instanceof StackInstruction.Return || i instanceof StackInstruction.ReturnValue) {
                 return false;
             }
