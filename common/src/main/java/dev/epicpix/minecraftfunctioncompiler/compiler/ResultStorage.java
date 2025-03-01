@@ -4,7 +4,7 @@ import dev.epicpix.minecraftfunctioncompiler.commands.CommandParams;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
-import dev.epicpix.minecraftfunctioncompiler.il.Instructions2;
+import dev.epicpix.minecraftfunctioncompiler.il.Instructions;
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
 
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_COMPILE_EXPECTED_RESULT;
@@ -40,21 +40,21 @@ public class ResultStorage {
     public void setResult(InstructionWriter instructionWriter, CompilationContextData context, LocationData<Integer> data) {
         if(storesResult()) {
             updatedResult = true;
-            context.writeInstruction(instructionWriter, Instructions2.valueAssign(result, data));
+            context.writeInstruction(instructionWriter, Instructions.valueAssign(result, data));
         }
     }
 
     public void addResult(InstructionWriter instructionWriter, CompilationContextData context, LocationData<Integer> data) {
         if(storesResult()) {
             updatedResult = true;
-            context.writeInstruction(instructionWriter, Instructions2.valueAdd(result, result, data));
+            context.writeInstruction(instructionWriter, Instructions.valueAdd(result, result, data));
         }
     }
 
     public void updateSuccess(InstructionWriter instructionWriter, CompilationContextData context, boolean failed) {
         if(storesSuccess()) {
             updatedSuccess = true;
-            context.writeInstruction(instructionWriter, Instructions2.valueAssign(success, LocationData.ofInteger(failed ? 0 : 1)));
+            context.writeInstruction(instructionWriter, Instructions.valueAssign(success, LocationData.ofInteger(failed ? 0 : 1)));
         }
     }
 

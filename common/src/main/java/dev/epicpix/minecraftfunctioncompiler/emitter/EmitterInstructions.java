@@ -2,8 +2,8 @@ package dev.epicpix.minecraftfunctioncompiler.emitter;
 
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
-import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2;
-import dev.epicpix.minecraftfunctioncompiler.il.Instructions2;
+import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
+import dev.epicpix.minecraftfunctioncompiler.il.Instructions;
 import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 
 import java.util.ArrayList;
@@ -21,7 +21,7 @@ public final class EmitterInstructions {
     }
 
     public static void emitInstruction(EmitterContext context) {
-        if(context.instruction().type() == InstructionTypes2.LABEL) {
+        if(context.instruction().type() == InstructionTypes.LABEL) {
             context.codeWriter().label(context.mapLabel(context.instruction().<LabelData>get("label")));
             return;
         }

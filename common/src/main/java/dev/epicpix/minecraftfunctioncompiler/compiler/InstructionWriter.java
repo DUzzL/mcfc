@@ -1,8 +1,8 @@
 package dev.epicpix.minecraftfunctioncompiler.compiler;
 
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
-import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2;
-import dev.epicpix.minecraftfunctioncompiler.il.Instructions2;
+import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
+import dev.epicpix.minecraftfunctioncompiler.il.Instructions;
 import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 
 import java.util.ArrayList;
@@ -19,13 +19,13 @@ public class InstructionWriter {
 
     public InstructionWriter() {
         endLabel = LabelData.ofId(highestLabelId++);
-        instructions.add(Instructions2.label(endLabel));
+        instructions.add(Instructions.label(endLabel));
     }
 
     private int indexOfLabel(LabelData label) {
         for(int i = 0; i < instructions.size(); i++) {
             var instr = instructions.get(i);
-            if(instr.type() == InstructionTypes2.LABEL) {
+            if(instr.type() == InstructionTypes.LABEL) {
                 if(instr.get(0).equals(label)) {
                     return i;
                 }
@@ -57,14 +57,14 @@ public class InstructionWriter {
     public LabelData createLabelBefore(LabelData before) {
         if(before == NULL_LABEL) return NULL_LABEL;
         LabelData label = LabelData.ofId(highestLabelId++);
-        addInstructionBefore(Instructions2.label(label), before);
+        addInstructionBefore(Instructions.label(label), before);
         return label;
     }
 
     public LabelData createLabelAfter(LabelData after) {
         if(after == NULL_LABEL) return NULL_LABEL;
         LabelData label = LabelData.ofId(highestLabelId++);
-        addInstructionAfter(Instructions2.label(label), after);
+        addInstructionAfter(Instructions.label(label), after);
         return label;
     }
 

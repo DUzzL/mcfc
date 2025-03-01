@@ -2,7 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.il.optimizer;
 
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionType;
-import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2;
+import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
 import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.ints.*;
@@ -113,7 +113,7 @@ public final class OptimizationPass {
         var labelLocations = new Int2IntOpenHashMap();
         for(int i = 0; i<context.getInstructionCount(); i++) {
             var instruction = getInstruction(i);
-            if(instruction.type() == InstructionTypes2.LABEL) {
+            if(instruction.type() == InstructionTypes.LABEL) {
                 labelLocations.put(instruction.<LabelData>get(0).id(), i);
             }
             if(backward != null) backward.put(i, new IntLinkedOpenHashSet(2));
@@ -123,7 +123,7 @@ public final class OptimizationPass {
             var set = new IntLinkedOpenHashSet(2);
             var instruction = getInstruction(i);
 
-            if(instruction.type().isConditionJump() || instruction.type() == InstructionTypes2.JUMP) {
+            if(instruction.type().isConditionJump() || instruction.type() == InstructionTypes.JUMP) {
                 for(var value : instruction.data()) {
                     if(value instanceof LabelData label) {
                         var loc = labelLocations.get(label.id());
@@ -132,7 +132,7 @@ public final class OptimizationPass {
                     }
                 }
             }
-            if(instruction.type() != InstructionTypes2.JUMP && instruction.type() != InstructionTypes2.RETURN_SUCCESS && instruction.type() != InstructionTypes2.RETURN_FAIL && i != context.getInstructionCount() - 1) {
+            if(instruction.type() != InstructionTypes.JUMP && instruction.type() != InstructionTypes.RETURN_SUCCESS && instruction.type() != InstructionTypes.RETURN_FAIL && i != context.getInstructionCount() - 1) {
                 set.add(i + 1);
                 if(backward != null) backward.get(i + 1).add(i);
             }
@@ -187,8 +187,8 @@ public final class OptimizationPass {
     public void replaceInstruction(int index, Instruction instruction) {
         var prev = context.instructions.set(index, instruction);
         resetIndex = Math.min(resetIndex, index);
-        var oldIsEndingInstruction = prev.type() == InstructionTypes2.JUMP || prev.type() == InstructionTypes2.RETURN_SUCCESS || prev.type() == InstructionTypes2.RETURN_FAIL;
-        var newIsEndingInstruction = instruction.type() == InstructionTypes2.JUMP || instruction.type() == InstructionTypes2.RETURN_SUCCESS || instruction.type() == InstructionTypes2.RETURN_FAIL;
+        var oldIsEndingInstruction = prev.type() == InstructionTypes.JUMP || prev.type() == InstructionTypes.RETURN_SUCCESS || prev.type() == InstructionTypes.RETURN_FAIL;
+        var newIsEndingInstruction = instruction.type() == InstructionTypes.JUMP || instruction.type() == InstructionTypes.RETURN_SUCCESS || instruction.type() == InstructionTypes.RETURN_FAIL;
         if(oldIsEndingInstruction || newIsEndingInstruction || prev.type().isConditionJump() || instruction.type().isConditionJump()) {
             if(!shouldEvaluateNewInstructionPaths && prev.type() == instruction.type()) {
                 var oldData = prev.data();
