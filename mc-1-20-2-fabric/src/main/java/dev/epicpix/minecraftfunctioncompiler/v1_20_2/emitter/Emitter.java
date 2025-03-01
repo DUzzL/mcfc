@@ -120,20 +120,6 @@ public final class Emitter {
                 }
                 return true;
             }
-            if(context.instruction().type() == InstructionTypes.CHECK_SCORE_COMPARE) {
-                var a = callScore_getScore(codeWriter, context.load("target"));
-                var b = callScore_getScore(codeWriter, context.load("source"));
-
-                codeWriter.conditionalJump(switch(context.instruction().<ScoreboardCompareOperation>get("compareOperation")) {
-                    case LT -> JumpCondition.GE;
-                    case LE -> JumpCondition.GT;
-                    case EQ -> JumpCondition.NE;
-                    case NE -> JumpCondition.EQ;
-                    case GE -> JumpCondition.LT;
-                    case GT -> JumpCondition.LE;
-                }, a, b, context.mapLabel("failLabel"));
-                return true;
-            }
             if(context.instruction().type() == InstructionTypes.APPLY_LOCAL_POSITION_WORLD) {
                 var pos = context.instruction().<WorldCoordinates>get("position");
                 if(!pos.localCoordinates()) throw new UnsupportedOperationException("Cannot run APPLY_LOCAL_POSITION_WORLD with non-local coordinates");

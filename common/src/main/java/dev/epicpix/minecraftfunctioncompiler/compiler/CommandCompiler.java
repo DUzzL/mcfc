@@ -287,7 +287,11 @@ public final class CommandCompiler {
                     try(var source = context.forScoreAccessors(cmdData.source().selectSingle())) {
                         try(var targetScore = context.getScoreData(target.content(), false)) {
                             try(var sourceScore = context.getScoreData(source.content(), false)) {
-                                sourceScore.writeInstruction(Instructions.checkScoreCompare(targetScore.content(), sourceScore.content(), cmdData.comparison(), sourceScore.data().contextEndLabel()));
+                                var targetValue = context.<Integer>createLocal();
+                                var sourceValue = context.<Integer>createLocal();
+                                sourceScore.writeInstruction(Instructions2.getScoreValue(targetValue, targetScore.content()));
+                                sourceScore.writeInstruction(Instructions2.getScoreValue(sourceValue, sourceScore.content()));
+                                sourceScore.writeInstruction(Instructions2.ifNumberCompareJump(cmdData.comparison().toNumberComparisonJump(), targetValue, sourceValue, sourceScore.data().contextEndLabel()));
                                 compile(context, fContext.content(), cmdData.command(), result);
                             }
                         }
@@ -499,7 +503,11 @@ public final class CommandCompiler {
                     try(var source = context.forScoreAccessors(cmdData.source().selectSingle())) {
                         try(var targetScore = context.getScoreData(target.content(), false)) {
                             try(var sourceScore = context.getScoreData(source.content(), false)) {
-                                sourceScore.writeInstruction(Instructions.checkScoreCompare(targetScore.content(), sourceScore.content(), cmdData.comparison().negate(), contextLabel));
+                                var targetValue = context.<Integer>createLocal();
+                                var sourceValue = context.<Integer>createLocal();
+                                sourceScore.writeInstruction(Instructions2.getScoreValue(targetValue, targetScore.content()));
+                                sourceScore.writeInstruction(Instructions2.getScoreValue(sourceValue, sourceScore.content()));
+                                sourceScore.writeInstruction(Instructions2.ifNumberCompareJump(cmdData.comparison().negate().toNumberComparisonJump(), targetValue, sourceValue, contextLabel));
                             }
                         }
                     }

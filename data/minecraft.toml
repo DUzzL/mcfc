@@ -40,9 +40,6 @@ Registry_getHolder."1.20.6" = "net/minecraft/core/Registry:getHolder(Lnet/minecr
 Registry_getHolder."1.21" = "net/minecraft/core/Registry:getHolder(Lnet/minecraft/resources/ResourceLocation;)Ljava/util/Optional;@IM"
 Registry_get."1.21.2+" = "net/minecraft/core/Registry:get(Lnet/minecraft/resources/ResourceLocation;)Ljava/util/Optional;@IM"
 
-Score_getScore."1.20.3+" = "net/minecraft/world/scores/ScoreAccess:get()I@IM"
-Score_getScore."1.20.2-" = "net/minecraft/world/scores/Score:getScore()I@M"
-
 ServerFunctionManager_execute."1.20.3+" = "net/minecraft/server/ServerFunctionManager:execute(Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;)V@M"
 ServerFunctionManager_execute."1.20.2+" = "net/minecraft/server/ServerFunctionManager:execute(Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;Lnet/minecraft/nbt/CompoundTag;)I@M"
 ServerFunctionManager_execute."1.20.1-" = "net/minecraft/server/ServerFunctionManager:execute(Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;)I@M"
