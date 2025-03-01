@@ -64,11 +64,8 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
         val a = evaluateExpressionType(writerData, expression.a)
         val b = evaluateExpressionType(writerData, expression.b)
         if(expression.op == ParsedTokenExpressionOperator.ADD || expression.op == ParsedTokenExpressionOperator.SUB || expression.op == ParsedTokenExpressionOperator.MUL) {
-            if(a == ParsedTokenExpressionSimpleType.INTEGER && b == ParsedTokenExpressionSimpleType.INTEGER) {
-                return ParsedTokenExpressionSimpleType.INTEGER
-            }
-            if(a == ParsedTokenExpressionSimpleType.DOUBLE && b == ParsedTokenExpressionSimpleType.DOUBLE) {
-                return ParsedTokenExpressionSimpleType.DOUBLE
+            if(a.isNumber() && a == b) {
+                return a
             }
         }else if(expression.op == ParsedTokenExpressionOperator.SHR) {
             if(a == ParsedTokenExpressionSimpleType.LONG && b == ParsedTokenExpressionSimpleType.INTEGER) {
@@ -77,11 +74,15 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
         }else if(expression.op == ParsedTokenExpressionOperator.NE || expression.op == ParsedTokenExpressionOperator.EQ) {
             if(a.isIntegerLikeType() && b.isIntegerLikeType()) {
                 return ParsedTokenExpressionSimpleType.BOOLEAN
+            }else if(a.isNumber() && a == b) {
+                return ParsedTokenExpressionSimpleType.BOOLEAN
             }else if(a.isObjectLike() && b.isObjectLike()) {
                 return ParsedTokenExpressionSimpleType.BOOLEAN
             }
         }else if(expression.op == ParsedTokenExpressionOperator.LT || expression.op == ParsedTokenExpressionOperator.GT || expression.op == ParsedTokenExpressionOperator.GE || expression.op == ParsedTokenExpressionOperator.LE) {
             if(a.isIntegerLikeType() && b.isIntegerLikeType()) {
+                return ParsedTokenExpressionSimpleType.BOOLEAN
+            }else if(a.isNumber() && a == b) {
                 return ParsedTokenExpressionSimpleType.BOOLEAN
             }
         }
@@ -145,7 +146,7 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
         val paramTypes = expression.arguments.map { evaluateExpressionType(writerData, it) }
         val instance = expression.instance
         val functionMatches = if(instance is ParsedTokenInstanceValue) {
-            val instanceType = evaluateExpressionType(writerData, instance.expression)
+            val instanceType = evaluateExpressionType(writerData, instance.expression).let { if(it is ParsedTokenExpressionTypeGeneric && it.lowerBound != "java.lang.Number") ParsedTokenExpressionTypeComplex(it.lowerBound) else it }
             if(instanceType !is ParsedTokenExpressionTypeComplex) {
                 throw IllegalArgumentException("Cannot run functions on a primitive type: $instanceType")
             }
@@ -242,6 +243,25 @@ private fun ParsedTokenExpressionType.isIntegerLikeType(): Boolean {
     return this == ParsedTokenExpressionSimpleType.INTEGER || this == ParsedTokenExpressionSimpleType.BOOLEAN
 }
 
+private fun ParsedTokenExpressionType.isNumber(): Boolean {
+    return when(this) {
+        ParsedTokenExpressionSimpleType.NUMBER -> true
+        ParsedTokenExpressionSimpleType.INTEGER -> true
+        ParsedTokenExpressionSimpleType.LONG -> true
+        ParsedTokenExpressionSimpleType.FLOAT -> true
+        ParsedTokenExpressionSimpleType.DOUBLE -> true
+        else -> (this is ParsedTokenExpressionTypeGeneric && this.lowerBound == "java.lang.Number") || (this is ParsedTokenExpressionTypeComplex && this.typeName == "java.lang.Number")
+    }
+}
+
+private fun ParsedTokenExpressionType.getClassName(): String? {
+    return when(this) {
+        is ParsedTokenExpressionTypeGeneric -> this.lowerBound
+        is ParsedTokenExpressionTypeComplex -> this.typeName
+        else -> null
+    }
+}
+
 private fun isExpressionSimpleType(writerData: WriterData, expression: ParsedTokenExpression, type: ParsedTokenExpressionSimpleType): Boolean {
     return evaluateExpressionType(writerData, expression) == type
 }
@@ -266,8 +286,12 @@ private fun doesArgumentTypeMatch(matchType: ParsedTokenExpressionType, expected
 
 private fun doesTypeMatch(matchType: ParsedTokenExpressionType, expectedType: ParsedTokenExpressionType): Boolean {
     if(matchType == expectedType) return true
-    if(expectedType is ParsedTokenExpressionTypeComplex) {
-        return matchType == ParsedTokenExpressionSimpleType.NULL || (matchType is ParsedTokenExpressionTypeComplex && (getClassLowerBounds(expectedType.typeName).any { matchType.typeName == it } || getClassLowerBounds(matchType.typeName).any { expectedType.typeName == it }))
+    val expectedClassName = expectedType.getClassName()
+    if(expectedClassName != null) {
+        if(matchType == ParsedTokenExpressionSimpleType.NULL) return true
+        val matchClassName = matchType.getClassName()
+        if(matchClassName == null) return false
+        return getClassLowerBounds(expectedClassName).any { matchClassName == it } || getClassLowerBounds(matchClassName).any { expectedClassName == it }
     }
     return false
 }
@@ -335,19 +359,19 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
         return writeNextRegister(uniqId, output, "new dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue.NullValue()")
     }else if(expression is ParsedTokenExpressionBinary) {
         if(expression.op == ParsedTokenExpressionOperator.ADD) {
-            if(isExpressionSimpleType(writerData, expression, ParsedTokenExpressionSimpleType.INTEGER) || isExpressionSimpleType(writerData, expression, ParsedTokenExpressionSimpleType.DOUBLE)) {
+            if(evaluateExpressionType(writerData, expression).isNumber()) {
                 val argA = writeExpression(writerData.copyLocalTypes(), expression.a, output, uniqId)
                 val argB = writeExpression(writerData.copyLocalTypes(), expression.b, output, uniqId)
                 return writeNextRegister(uniqId, output, "cw.add(${argA}, ${argB})")
             }
         }else if(expression.op == ParsedTokenExpressionOperator.SUB) {
-            if(isExpressionSimpleType(writerData, expression, ParsedTokenExpressionSimpleType.INTEGER) || isExpressionSimpleType(writerData, expression, ParsedTokenExpressionSimpleType.DOUBLE)) {
+            if(evaluateExpressionType(writerData, expression).isNumber()) {
                 val argA = writeExpression(writerData.copyLocalTypes(), expression.a, output, uniqId)
                 val argB = writeExpression(writerData.copyLocalTypes(), expression.b, output, uniqId)
                 return writeNextRegister(uniqId, output, "cw.sub(${argA}, ${argB})")
             }
         }else if(expression.op == ParsedTokenExpressionOperator.MUL) {
-            if(isExpressionSimpleType(writerData, expression, ParsedTokenExpressionSimpleType.INTEGER) || isExpressionSimpleType(writerData, expression, ParsedTokenExpressionSimpleType.DOUBLE)) {
+            if(evaluateExpressionType(writerData, expression).isNumber()) {
                 val argA = writeExpression(writerData.copyLocalTypes(), expression.a, output, uniqId)
                 val argB = writeExpression(writerData.copyLocalTypes(), expression.b, output, uniqId)
                 return writeNextRegister(uniqId, output, "cw.mul(${argA}, ${argB})")
@@ -364,7 +388,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             val paramTypes = expression.arguments.map { evaluateExpressionType(writerData, it) }
             val instance = expression.instance
             val functionMatches = if(instance is ParsedTokenInstanceValue) {
-                val instanceType = evaluateExpressionType(writerData, instance.expression)
+                val instanceType = evaluateExpressionType(writerData, instance.expression).let { if(it is ParsedTokenExpressionTypeGeneric && it.lowerBound != "java.lang.Number") ParsedTokenExpressionTypeComplex(it.lowerBound) else it }
                 if(instanceType !is ParsedTokenExpressionTypeComplex) {
                     throw IllegalArgumentException("Cannot run functions on a primitive type: $instanceType")
                 }

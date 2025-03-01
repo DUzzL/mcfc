@@ -1,3 +1,5 @@
 package dev.epicpix.minecraftfunctioncompiler.data.locations;
 
-public interface NbtList extends NbtTag {}
+import java.util.List;
+
+public interface NbtList extends NbtTag, List<NbtTag> {}

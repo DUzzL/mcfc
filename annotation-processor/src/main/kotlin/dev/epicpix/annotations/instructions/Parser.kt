@@ -53,9 +53,10 @@ enum class ParsedTokenValueAccessorScope {
 
 interface ParsedTokenExpressionType
 data class ParsedTokenExpressionTypeComplex(val typeName: String) : ParsedTokenExpressionType
+data class ParsedTokenExpressionTypeGeneric(val name: String, val lowerBound: String) : ParsedTokenExpressionType
 
 enum class ParsedTokenExpressionSimpleType : ParsedTokenExpressionType {
-    NULL, BOOLEAN, INTEGER, LONG, FLOAT, DOUBLE, LABEL, OBJECT,
+    NULL, BOOLEAN, INTEGER, LONG, FLOAT, DOUBLE, LABEL, OBJECT, NUMBER,
 }
 
 enum class ParsedTokenExpressionOperator {
@@ -87,6 +88,31 @@ private fun parseExpressionTypeWord(iter: ListIterator<LexToken>): ParsedTokenEx
         "float" -> ParsedTokenExpressionSimpleType.FLOAT
         "long" -> ParsedTokenExpressionSimpleType.LONG
         "label" -> ParsedTokenExpressionSimpleType.LABEL
+        "generic" -> {
+            iter.expectTokenType(LexTokenSimpleType.OPEN_ANGLE_BRACKET)
+            val name = iter.expectToken<LexTokenWord>()
+            iter.expectTokenType(LexTokenSimpleType.COLON)
+            var lowerBound = ""
+            while(!iter.tryNextTokenType(LexTokenSimpleType.CLOSE_ANGLE_BRACKET)) {
+                if(iter.tryNextTokenType(LexTokenSimpleType.DOT)) {
+                    lowerBound += "."
+                }else {
+                    val part = iter.expectToken<LexTokenWord>().word
+                    if(part == "_VERSION_") {
+                        lowerBound += PACKAGE_MINECRAFT_VERSION
+                    }else {
+                        lowerBound += part
+                    }
+                }
+            }
+            return ParsedTokenExpressionTypeGeneric(name.word, lowerBound)
+        }
+        "number" -> {
+            iter.expectTokenType(LexTokenSimpleType.OPEN_ANGLE_BRACKET)
+            val name = iter.expectToken<LexTokenWord>()
+            iter.expectTokenType(LexTokenSimpleType.CLOSE_ANGLE_BRACKET)
+            return ParsedTokenExpressionTypeGeneric(name.word, "java.lang.Number")
+        }
         else -> throw IllegalArgumentException("Unknown expression type: ${word.word}")
     }
 }

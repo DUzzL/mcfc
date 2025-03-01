@@ -460,9 +460,25 @@ class MainProcessor(
                 if(named.startsWith("STATIC_")) {
                     return@forEach
                 }
-                impl.appendText("public static $instructionType ${named.snakeToLowerCamelCase()}(")
+                val generics = StringBuilder()
+                if(it.params.any { it.second is ParsedTokenExpressionTypeGeneric }) {
+                    generics.append(" <")
+                    val definedNames = mutableSetOf<String>()
+                    for(i in it.params.indices) {
+                        val (_, type) = it.params[i]
+                        if(type is ParsedTokenExpressionTypeGeneric) {
+                            if(!definedNames.add(type.name)) continue
+                            if(generics.length != 2) {
+                                generics.append(", ")
+                            }
+                            generics.append("${type.name} extends ${javaToMinecraftGenericType(type.lowerBound)}")
+                        }
+                    }
+                    generics.append(">")
+                }
+                impl.appendText("public static$generics $instructionType ${named.snakeToLowerCamelCase()}(")
                 for(i in it.params.indices) {
-                    val (param, type) = it.params[i];
+                    val (param, type) = it.params[i]
                     val typeName = when(param.scope) {
                         ParsedTokenValueAccessorScope.CONTEXT, ParsedTokenValueAccessorScope.RETURN -> {
                             if(type == ParsedTokenExpressionSimpleType.LABEL) {
@@ -480,7 +496,13 @@ class MainProcessor(
                                     }else if(type == ParsedTokenExpressionSimpleType.LONG) {
                                         "Long"
                                     }else if(type is ParsedTokenExpressionTypeComplex) {
-                                        javaToMinecraftGenericType(type.typeName)
+                                        if(param.scope == ParsedTokenValueAccessorScope.RETURN) {
+                                            javaToMinecraftGenericType(type.typeName)
+                                        }else {
+                                            "? extends ${javaToMinecraftGenericType(type.typeName)}"
+                                        }
+                                    }else if(type is ParsedTokenExpressionTypeGeneric) {
+                                        type.name
                                     }else {
                                         TODO("Unknown type: $type")
                                     }
@@ -609,9 +631,9 @@ class MainProcessor(
                             val resolvedType = param.type.resolve()
                             val typeName = kotlinToJavaType(resolvedType.declaration.qualifiedName!!.asString(), false)
                             val typeArgs = resolvedType.arguments.joinToString { arg ->
-                                arg.type?.resolve()?.declaration?.qualifiedName?.asString()?.run {
+                                "? extends " + (arg.type?.resolve()?.declaration?.qualifiedName?.asString()?.run {
                                     kotlinToJavaType(this, true)
-                                } ?: "Object"
+                                } ?: "Object")
                             }
 
                             val fullTypeName = if(typeArgs.isNotEmpty()) "$typeName<$typeArgs>" else typeName

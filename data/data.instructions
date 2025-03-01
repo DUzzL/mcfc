@@ -40,50 +40,48 @@
   _jumpIfEqual(<java.util.Objects>.equals([ctx:a], [ctx:b]), false, [ctx:label]);
 }
 
-// any numeric type as long as they're the same will work here, not worth it making a separate instruction for each type
 ##CONDITIONAL_JUMP
-@IF_EQUAL_JUMP(int [ctx:a], int [ctx:b], label [ctx:label]) {
+@IF_EQUAL_JUMP(number<T> [ctx:a], number<T> [ctx:b], label [ctx:label]) {
   _jumpIfEqual([ctx:a], [ctx:b], [ctx:label]);
 }
 
 ##CONDITIONAL_JUMP
-@IF_NOT_EQUAL_JUMP(int [ctx:a], int [ctx:b], label [ctx:label]) {
+@IF_NOT_EQUAL_JUMP(number<T> [ctx:a], number<T> [ctx:b], label [ctx:label]) {
   _jumpIfNotEqual([ctx:a], [ctx:b], [ctx:label]);
 }
 
 ##CONDITIONAL_JUMP
-@IF_GREATER_EQUAL_JUMP(int [ctx:a], int [ctx:b], label [ctx:label]) {
+@IF_GREATER_EQUAL_JUMP(number<T> [ctx:a], number<T> [ctx:b], label [ctx:label]) {
   _jumpIfGreaterEqual([ctx:a], [ctx:b], [ctx:label]);
 }
 
 ##CONDITIONAL_JUMP
-@IF_GREATER_THAN_JUMP(int [ctx:a], int [ctx:b], label [ctx:label]) {
+@IF_GREATER_THAN_JUMP(number<T> [ctx:a], number<T> [ctx:b], label [ctx:label]) {
   _jumpIfGreaterThan([ctx:a], [ctx:b], [ctx:label]);
 }
 
 ##CONDITIONAL_JUMP
-@IF_LESS_THAN_JUMP(int [ctx:a], int [ctx:b], label [ctx:label]) {
+@IF_LESS_THAN_JUMP(number<T> [ctx:a], number<T> [ctx:b], label [ctx:label]) {
   _jumpIfLessThan([ctx:a], [ctx:b], [ctx:label]);
 }
 
 ##CONDITIONAL_JUMP
-@IF_LESS_EQUAL_JUMP(int [ctx:a], int [ctx:b], label [ctx:label]) {
+@IF_LESS_EQUAL_JUMP(number<T> [ctx:a], number<T> [ctx:b], label [ctx:label]) {
   _jumpIfLessEqual([ctx:a], [ctx:b], [ctx:label]);
 }
 
-@VALUE_ASSIGN(int [ctx:src]) -> int = [ctx:src];
+@VALUE_ASSIGN(number<T> [ctx:src]) -> number<T> = [ctx:src];
 @OBJECT_ASSIGN(<java.lang.Object> [ctx:src]) -> <java.lang.Object> = [ctx:src];
 
-@VALUE_ADD(int [ctx:a], int [ctx:b]) -> int = [ctx:a] + [ctx:b];
-@VALUE_SUB(int [ctx:a], int [ctx:b]) -> int = [ctx:a] - [ctx:b];
+@VALUE_ADD(number<T> [ctx:a], number<T> [ctx:b]) -> number<T> = [ctx:a] + [ctx:b];
+@VALUE_SUB(number<T> [ctx:a], number<T> [ctx:b]) -> number<T> = [ctx:a] - [ctx:b];
 
 @VALUE_MUL_INT_DOUBLE(int [ctx:a], double [ctx:b]) -> double = to_double([ctx:a]) * [ctx:b];
 @VALUE_MUL_DOUBLE(double [ctx:a], double [ctx:b]) -> double = [ctx:a] * [ctx:b];
 
-@DOUBLE_TO_INTEGER(double [ctx:a]) -> int = to_integer([ctx:a]);
-@DOUBLE_TO_FLOAT(double [ctx:a]) -> float = to_float([ctx:a]);
-@INTEGER_TO_DOUBLE(int [ctx:a]) -> double = to_double([ctx:a]);
-@INTEGER_TO_FLOAT(int [ctx:a]) -> float = to_float([ctx:a]);
+@NUMBER_TO_FLOAT(number<T> [ctx:a]) -> float = to_float([ctx:a]);
+@NUMBER_TO_DOUBLE(number<T> [ctx:a]) -> double = to_double([ctx:a]);
+@NUMBER_TO_INTEGER(number<T> [ctx:a]) -> int = to_integer([ctx:a]);
 
 @LABEL(label [ctx:label]);
 
@@ -91,7 +89,7 @@
   _jump([ctx:label]);
 }
 
-@CREATE_MUTABLE_LIST() -> <java.util.List> = new <java.util.ArrayList>();
+@CREATE_MUTABLE_LIST() -> generic<T:java.util.List> = new <java.util.ArrayList>();
 
 @ADD_LIST_ELEMENT(<java.util.List> [ctx:list], <java.lang.Object> [ctx:element]) {
   [ctx:list].add([ctx:element]);
@@ -211,21 +209,21 @@
   [ctx:entity].removeTag([ctx:tag]);
 }
 
-@GET_ENTITY_TAGS(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <java.util.Set> = [ctx:entity].getTags();
+@GET_ENTITY_TAGS(<net.minecraft.world.entity.Entity> [ctx:entity]) -> generic<T:java.util.Set> = [ctx:entity].getTags();
 
-@GET_PLAYERS(<net.minecraft.server.players.PlayerList> [static:PlayerList]) -> <java.util.List> = [static:PlayerList].getPlayers();
+@GET_PLAYERS(<net.minecraft.server.players.PlayerList> [static:PlayerList]) -> generic<T:java.util.List> = [static:PlayerList].getPlayers();
 
-@GET_WORLDS_ITERATOR(<java.lang.Iterable> [static:AllWorlds]) -> <java.util.Iterator> = [static:AllWorlds].iterator();
+@GET_WORLDS_ITERATOR(<java.lang.Iterable> [static:AllWorlds]) -> generic<T:java.util.Iterator> = [static:AllWorlds].iterator();
 
-@GET_ENTITIES(<net.minecraft.server.level.ServerLevel> [ctx:world]) -> <java.util.Iterator> = [ctx:world].getAllEntities().iterator();
+@GET_ENTITIES(<net.minecraft.server.level.ServerLevel> [ctx:world]) -> generic<T:java.util.Iterator> = [ctx:world].getAllEntities().iterator();
 
-@GET_ENTITIES_ITERATOR(<net.minecraft.server.level.ServerLevel> [ctx:world]) -> <java.util.Iterator> = [ctx:world].getAllEntities().iterator();
+@GET_ENTITIES_ITERATOR(<net.minecraft.server.level.ServerLevel> [ctx:world]) -> generic<T:java.util.Iterator> = [ctx:world].getAllEntities().iterator();
 
 @GET_PLAYER(<net.minecraft.server.players.PlayerList> [static:PlayerList], <java.lang.String> [instr:name]) -> <net.minecraft.server.level.ServerPlayer> = [static:PlayerList].getPlayerByName([instr:name]);
 
 @GET_ENTITY(<net.minecraft.server.level.ServerLevel> [ctx:world], <java.util.UUID> [instr:uuid]) -> <net.minecraft.world.entity.Entity> = [ctx:world].getEntity([instr:uuid]);
 
-@GET_SCOREBOARD_HOLDERS(<net.minecraft.server.ServerScoreboard> [static:Scoreboard]) -> <java.util.List> = new <java.util.ArrayList>([static:Scoreboard].playerScores.keySet());
+@GET_SCOREBOARD_HOLDERS(<net.minecraft.server.ServerScoreboard> [static:Scoreboard]) -> generic<T:java.util.List> = new <java.util.ArrayList>([static:Scoreboard].playerScores.keySet());
 
 @GET_OBJECTIVE(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [instr:name]) -> <net.minecraft.world.scores.Objective> = [static:Scoreboard].getObjective([instr:name]);
 
@@ -492,7 +490,7 @@
 }
 
 ##CONDITIONAL_JUMP
-@TRY_AS_NBT_LIST(<net.minecraft.nbt.Tag> [ctx:tag], label [ctx:fail_label]) -> <net.minecraft.nbt.ListTag>{
+@TRY_AS_NBT_LIST(<net.minecraft.nbt.Tag> [ctx:tag], label [ctx:fail_label]) -> <net.minecraft.nbt.ListTag> {
   _jumpIfNotInstanceOf([ctx:tag], <net.minecraft.nbt.ListTag>, [ctx:fail_label]);
   return cast([ctx:tag], <net.minecraft.nbt.ListTag>);
 }

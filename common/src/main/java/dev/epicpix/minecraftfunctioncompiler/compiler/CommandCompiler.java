@@ -99,7 +99,7 @@ public final class CommandCompiler {
 
                 var codeLocation = context.current().writeLabel(context.instructionWriter);
                 try(var innerContext = context.enterWithoutValue(context.current().withContextLabel(codeLocation))) {
-                    var value = getNbtPathValue(context, storageLocal.forceCast(), parts.subList(0, parts.size() - 1), true, innerContext.data().contextEndLabel());
+                    var value = getNbtPathValue(context, storageLocal, parts.subList(0, parts.size() - 1), true, innerContext.data().contextEndLabel());
 
                     var last = parts.get(parts.size() - 1);
                     var tagLocal = context.<NbtTag>createLocal();
@@ -312,7 +312,7 @@ public final class CommandCompiler {
                     var target = context.<LivingEntity>createLocal();
                     currentEntity.writeInstruction(Instructions2.getEntityTarget(target, targetingEntity));
                     currentEntity.writeInstruction(Instructions2.ifNullJump(target.lower(), currentEntity.endLabel()));
-                    try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(target.forceCast()))) {
+                    try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(target))) {
                         compile(context, fContext.content(), cmdData.command(), result);
                     }
                 }
@@ -321,7 +321,7 @@ public final class CommandCompiler {
             try(var fContext = context.withForkingContext(forkingContext)) {
                 try(var currentEntity = context.getCurrentEntity()) {
                     var vehicle = context.<Entity>createLocal();
-                    currentEntity.writeInstruction(Instructions2.getEntityVehicle(currentEntity.content(), vehicle));
+                    currentEntity.writeInstruction(Instructions2.getEntityVehicle(vehicle, currentEntity.content()));
                     currentEntity.writeInstruction(Instructions2.ifNullJump(vehicle.lower(), currentEntity.endLabel()));
                     try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(vehicle))) {
                         compile(context, fContext.content(), cmdData.command(), result);
@@ -394,7 +394,7 @@ public final class CommandCompiler {
                 var parts = cmdData.path().parts();
 
                 try(var innerContext = context.enterLocalScope()) {
-                    var value = getNbtPathValue(context, storageLocal.forceCast(), parts.subList(0, parts.size() - 1), true, innerContext.endLabel());
+                    var value = getNbtPathValue(context, storageLocal, parts.subList(0, parts.size() - 1), true, innerContext.endLabel());
 
                     var last = parts.get(parts.size() - 1);
                     var tagLocal = context.<NbtTag>createLocal();
@@ -405,12 +405,12 @@ public final class CommandCompiler {
                             var multipliedDouble = context.<Double>createLocal();
                             innerContext.writeInstruction(Instructions2.valueMulIntDouble(multipliedDouble, res.result, LocationData.ofDouble(cmdData.scale())));
                             var convertedInteger = context.<Integer>createLocal();
-                            innerContext.writeInstruction(Instructions2.doubleToInteger(convertedInteger, multipliedDouble));
+                            innerContext.writeInstruction(Instructions2.numberToInteger(convertedInteger, multipliedDouble));
                             innerContext.writeInstruction(Instructions2.createIntTag(tagLocal, convertedInteger));
                         }
                     }else if(cmdData.storeType() == ResultStoreType.DOUBLE) {
                         var convertedDouble = context.<Double>createLocal();
-                        innerContext.writeInstruction(Instructions2.integerToDouble(convertedDouble, res.result));
+                        innerContext.writeInstruction(Instructions2.numberToDouble(convertedDouble, res.result));
                         if(cmdData.scale() == 1.0d) {
                             innerContext.writeInstruction(Instructions2.createDoubleTag(tagLocal, convertedDouble));
                         }else {
@@ -421,13 +421,13 @@ public final class CommandCompiler {
                     }else if(cmdData.storeType() == ResultStoreType.FLOAT) {
                         if(cmdData.scale() == 1.0d) {
                             var convertedFloat = context.<Float>createLocal();
-                            innerContext.writeInstruction(Instructions2.integerToFloat(convertedFloat, res.result));
+                            innerContext.writeInstruction(Instructions2.numberToFloat(convertedFloat, res.result));
                             innerContext.writeInstruction(Instructions2.createFloatTag(tagLocal, convertedFloat));
                         }else {
                             var multipliedDouble = context.<Double>createLocal();
                             innerContext.writeInstruction(Instructions2.valueMulIntDouble(multipliedDouble, res.result, LocationData.ofDouble(cmdData.scale())));
                             var convertedFloat = context.<Float>createLocal();
-                            innerContext.writeInstruction(Instructions2.doubleToFloat(convertedFloat, multipliedDouble));
+                            innerContext.writeInstruction(Instructions2.numberToFloat(convertedFloat, multipliedDouble));
                             innerContext.writeInstruction(Instructions2.createFloatTag(tagLocal, convertedFloat));
                         }
                     }else {
@@ -553,7 +553,7 @@ public final class CommandCompiler {
             var clonedArguments = context.<NbtTag>createLocal();
             var validArguments = context.<NbtCompound>createLocal();
             context.writeInstruction(Instructions2.getNbtStorage(arguments, cmdData.storage()));
-            context.writeInstruction(Instructions2.cloneNbtValue(clonedArguments, arguments.forceCast()));
+            context.writeInstruction(Instructions2.cloneNbtValue(clonedArguments, arguments));
             context.writeInstruction(Instructions2.tryAsNbtCompound(validArguments, clonedArguments, current.contextEndLabel()));
             var stack = context.<CommandSourceStack>createLocal();
             context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
@@ -564,7 +564,7 @@ public final class CommandCompiler {
             context.writeInstruction(Instructions2.getNbtStorage(storageLocal, cmdData.storage()));
 
             var parts = cmdData.path().parts();
-            var value = getNbtPathValue(context, storageLocal.forceCast(), parts, false, current.contextEndLabel());
+            var value = getNbtPathValue(context, storageLocal, parts, false, current.contextEndLabel());
             context.writeInstruction(Instructions2.ifNullJump(value.lower(), current.contextEndLabel()));
             var clonedTag = context.<NbtTag>createLocal();
             context.writeInstruction(Instructions2.cloneNbtValue(clonedTag, value));
@@ -742,7 +742,7 @@ public final class CommandCompiler {
         }
     }
 
-    private static LocationData<NbtTag> getNbtPathValue(CompilationContext context, LocationData<NbtTag> source, List<NbtPathPart> parts, boolean tryCreate, LabelData failLabel) {
+    private static LocationData<? extends NbtTag> getNbtPathValue(CompilationContext context, LocationData<? extends NbtTag> source, List<NbtPathPart> parts, boolean tryCreate, LabelData failLabel) {
         for(var part : parts) {
             if(part instanceof NbtPathPart.Named named) {
                 var compound = context.<NbtCompound>createLocal();
@@ -766,7 +766,7 @@ public final class CommandCompiler {
         return source;
     }
 
-    private static void assignNbtValue(CompilationContext context, LocationData<NbtTag> source, NbtPathPart accessor, LocationData<NbtTag> value, LocationData<Integer> modifiedCount, LabelData failLabel) {
+    private static void assignNbtValue(CompilationContext context, LocationData<? extends NbtTag> source, NbtPathPart accessor, LocationData<? extends NbtTag> value, LocationData<Integer> modifiedCount, LabelData failLabel) {
         if(accessor instanceof NbtPathPart.Named named) {
             var valueCompound = context.<NbtCompound>createLocal();
             context.writeInstruction(Instructions2.tryAsNbtCompound(valueCompound, source, failLabel));
@@ -780,11 +780,11 @@ public final class CommandCompiler {
         if(modifiedCount != null) context.writeInstruction(Instructions2.valueAdd(modifiedCount, modifiedCount, LocationData.ofInteger(1)));
     }
 
-    private static NbtListAccessResult accessNbtList(CompilationContext context, LocationData<NbtTag> source, NbtPathPart.ArrayIndexInteger indexed, LabelData failLabel) {
+    private static NbtListAccessResult accessNbtList(CompilationContext context, LocationData<? extends NbtTag> source, NbtPathPart.ArrayIndexInteger indexed, LabelData failLabel) {
         var list = context.<NbtList>createLocal();
         context.writeInstruction(Instructions2.tryAsNbtList(list, source, failLabel));
         var length = context.<Integer>createLocal();
-        context.writeInstruction(Instructions2.getListLength(length, list.forceCast()));
+        context.writeInstruction(Instructions2.getListLength(length, list));
         context.writeInstruction(Instructions2.ifGreaterEqualJump(LocationData.ofInteger(indexed.index()), length, failLabel));
         var index = context.<Integer>createLocal();
 

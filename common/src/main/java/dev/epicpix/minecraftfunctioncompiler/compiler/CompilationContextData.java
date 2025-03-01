@@ -8,7 +8,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
 
 public record CompilationContextData(
         LocationData<CommandSourceStack> commandSourceStack,
-        LocationData<Entity> currentEntity,
+        LocationData<? extends Entity> currentEntity,
         LocationData<World> currentWorld,
         LocationData<Vec3> currentPosition,
         LocationData<Vec2> currentRotation,
@@ -20,7 +20,7 @@ public record CompilationContextData(
         return new CompilationContextData(commandSourceStack, null, null, null, null, null, endLabel);
     }
 
-    public CompilationContextData withCurrentEntity(LocationData<Entity> currentEntity) {
+    public CompilationContextData withCurrentEntity(LocationData<? extends Entity> currentEntity) {
         return new CompilationContextData(commandSourceStack, currentEntity, currentWorld, currentPosition, currentRotation, currentAnchor, contextEndLabel);
     }
 
