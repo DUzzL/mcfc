@@ -10,6 +10,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.text.TextContent;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.emitter.types.NumberComparisonType;
+import dev.epicpix.minecraftfunctioncompiler.emitter.types.ObjectComparisonType;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
@@ -206,7 +207,7 @@ public final class CommandCompiler {
             try(var fContext = context.withForkingContext(forkingContext)) {
                 try(var pos = context.getPosition()) {
                     var newPosition = context.<Vec3>createLocal();
-                    pos.writeInstruction(Instructions.alignPosition(newPosition, pos.content(), cmdData.swizzle()));
+                    pos.writeInstruction(Instructions2.alignPosition(newPosition, pos.content(), cmdData.swizzle()));
                     try(var ignored = context.enterWithoutValue(pos.data().withCurrentPosition(newPosition))) {
                         compile(context, fContext.content(), cmdData.command(), result);
                     }
@@ -622,7 +623,7 @@ public final class CommandCompiler {
                 objective.writeInstruction(Instructions2.getObjectiveCriterion(criterion, objective.content()));
                 var mappedCriterion = context.<ScoreboardCriterion>createLocal();
                 objective.writeInstruction(Instructions2.mapObjectiveCriterion(mappedCriterion, DataRegistries.SCOREBOARD_CRITERIA.getOrThrow("trigger")));
-                objective.writeInstruction(Instructions2.ifObjectNotEquivalentJump(criterion, mappedCriterion, objective.data().contextEndLabel()));
+                objective.writeInstruction(Instructions2.ifObjectCompareJump(ObjectComparisonType.NOT_IDENTITY_EQUAL, criterion, mappedCriterion, objective.data().contextEndLabel()));
                 try(var name = context.forScoreHolder(cmdData.targets().scoreHolder())) {
                     try(var scoreData = context.getScoreData(new ScoreAccessor(objective.content(), name.content()), true)) {
                         scoreData.writeInstruction(Instructions2.scoreUnlock(scoreData.content()));

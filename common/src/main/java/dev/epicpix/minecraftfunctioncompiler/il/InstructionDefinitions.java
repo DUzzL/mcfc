@@ -19,11 +19,6 @@ interface InstructionDefinitions {
     Instruction makeCommandSourceStack(LocationData<CommandSourceStack> result, LocationData<CommandSourceStack> from, @Nullable @InstructionSource LocationData<? extends Entity> entity, @Nullable @InstructionSource LocationData<World> world, @Nullable @InstructionSource LocationData<Vec3> position, @Nullable @InstructionSource LocationData<Vec2> rotation, @Nullable @InstructionSource LocationAnchor anchor);
     Instruction loadStringMacro(@InstructionDestination LocationData<String> result, MacroTemplate<String> macroTemplate);
     Instruction loadIntegerMacro(@InstructionDestination LocationData<Integer> result, MacroTemplate<Integer> macroTemplate);
-    Instruction applyLocalPositionWorld(@InstructionDestination LocationData<Vec3> result, @InstructionSource LocationData<Vec3> fromPosition, @InstructionSource LocationData<Vec2> fromRotation, @InstructionSource LocationData<Double> yOffset, WorldCoordinates position);
-    Instruction applyPositionWorld(@InstructionDestination LocationData<Vec3> result, @InstructionSource LocationData<Vec3> from, WorldCoordinates position);
-    Instruction applyRotationWorld(@InstructionDestination LocationData<Vec2> result, @InstructionSource LocationData<Vec2> from, RotationCoordinates rotation);
     @InstructionConditionalJumpFlag
     Instruction checkEntityTypes(@InstructionSource LocationData<? extends Entity> entity, List<DataLocation> types, boolean negated, LabelData failLabel);
-    Instruction alignPosition(@InstructionDestination LocationData<Vec3> result, @InstructionSource LocationData<Vec3> position, SwizzleArgument swizzle);
-    Instruction mergePositions(@InstructionDestination LocationData<Vec3> result, @InstructionSource LocationData<Vec3> position, @Nullable @InstructionSource LocationData<Double> x, @Nullable @InstructionSource LocationData<Double> y, @Nullable @InstructionSource LocationData<Double> z);
 }

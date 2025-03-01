@@ -15,20 +15,15 @@ import dev.epicpix.minecraftfunctioncompiler.profiler.Profiler;
 import dev.epicpix.minecraftfunctioncompiler.v1_21_2.CompiledCommandResultStore;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.phys.Vec2;
-import net.minecraft.world.phys.Vec3;
 import org.objectweb.asm.Type;
 
 import java.util.List;
 
-import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callMath_floor;
 import static dev.epicpix.minecraftfunctioncompiler.v1_21_2.emitter.MappedUsageDefinitionsExtensions.*;
 
 public final class Emitter {
     private Emitter() {}
 
-    private static final InstructionTarget VEC3_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(Vec3.class, double.class, double.class, double.class);
-    private static final InstructionTarget VEC2_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(Vec2.class, float.class, float.class);
     private static final InstructionTarget COMMAND_RESULT_STORE_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(CompiledCommandResultStore.class);
     private static final InstructionTarget RUN_RESULT_FIELD_READ_TARGET = new InstructionTarget.FieldTarget(CommonConstants.DATA_CLASS, CommonConstants.RUN_RESULT_FIELD, "J", true, false);
     private static final InstructionTarget RUN_RESULT_FIELD_WRITE_TARGET = new InstructionTarget.FieldTarget(CommonConstants.DATA_CLASS, CommonConstants.RUN_RESULT_FIELD, "J", true, true);
@@ -124,42 +119,6 @@ public final class Emitter {
                 }
                 return true;
             }
-            if(context.instruction().type() == InstructionTypes.APPLY_LOCAL_POSITION_WORLD) {
-                var pos = context.instruction().<WorldCoordinates>get("position");
-                if(!pos.localCoordinates()) throw new UnsupportedOperationException("Cannot run APPLY_LOCAL_POSITION_WORLD with non-local coordinates");
-                var rotX = loadVec2_x(codeWriter, context.load("fromRotation"));
-                var rotY = loadVec2_y(codeWriter, context.load("fromRotation"));
-                var fposX = loadVec3_x(codeWriter, context.load("fromPosition"));
-                var fposY = loadVec3_y(codeWriter, context.load("fromPosition"));
-                if(context.instruction().get("yOffset") != null) {
-                    fposY = codeWriter.add(fposY, context.load("yOffset"));
-                }
-                var fposZ = loadVec3_z(codeWriter, context.load("fromPosition"));
-                var posX = new BytecodeValue.DoubleValue(pos.x());
-                var posY = new BytecodeValue.DoubleValue(pos.y());
-                var posZ = new BytecodeValue.DoubleValue(pos.z());
-                var calculated = callExtensionFunctions_calculateLocalCoordinates(codeWriter, rotX, rotY, fposX, fposY, fposZ, posX, posY, posZ);
-                context.store("result", calculated);
-                return true;
-            }
-            if(context.instruction().type() == InstructionTypes.APPLY_POSITION_WORLD) {
-                var pos = context.instruction().<WorldCoordinates>get("position");
-                if(pos.localCoordinates()) throw new UnsupportedOperationException("Cannot run APPLY_POSITION_WORLD with local coordinates");
-                BytecodeValue x = pos.isXRelative() ? codeWriter.add(loadVec3_x(codeWriter, context.load("from")), new BytecodeValue.DoubleValue(pos.x())) : new BytecodeValue.DoubleValue(pos.x());
-                BytecodeValue y = pos.isYRelative() ? codeWriter.add(loadVec3_y(codeWriter, context.load("from")), new BytecodeValue.DoubleValue(pos.y())) : new BytecodeValue.DoubleValue(pos.y());
-                BytecodeValue z = pos.isZRelative() ? codeWriter.add(loadVec3_z(codeWriter, context.load("from")), new BytecodeValue.DoubleValue(pos.z())) : new BytecodeValue.DoubleValue(pos.z());
-
-                context.store("result", codeWriter.newObjectCreate(VEC3_INIT_TARGET, x, y, z));
-                return true;
-            }
-            if(context.instruction().type() == InstructionTypes.APPLY_ROTATION_WORLD) {
-                var rot = context.instruction().<RotationCoordinates>get("rotation");
-                BytecodeValue yaw = rot.isYawRelative() ? codeWriter.add(loadVec2_x(codeWriter, context.load("from")), new BytecodeValue.FloatValue((float) rot.yaw())) : new BytecodeValue.FloatValue((float) rot.yaw());
-                BytecodeValue pitch = rot.isPitchRelative() ? codeWriter.add(loadVec2_y(codeWriter, context.load("from")), new BytecodeValue.FloatValue((float) rot.pitch())) : new BytecodeValue.FloatValue((float) rot.pitch());
-
-                context.store("result", codeWriter.newObjectCreate(VEC2_INIT_TARGET, yaw, pitch));
-                return true;
-            }
             if(context.instruction().type() == InstructionTypes.CHECK_ENTITY_TYPES) {
                 var entity = context.load("entity");
                 var entityType = callEntity_getType(codeWriter, entity);
@@ -176,24 +135,6 @@ public final class Emitter {
                     codeWriter.jump(context.mapLabel("failLabel"));
                 }
                 codeWriter.label(success);
-                return true;
-            }
-            if(context.instruction().type() == InstructionTypes.ALIGN_POSITION) {
-                var swizzle = context.instruction().<SwizzleArgument>get("swizzle");
-                var x = swizzle.x() ? callMath_floor(codeWriter, loadVec3_x(codeWriter, context.load("position"))) : loadVec3_x(codeWriter, context.load("position"));
-                var y = swizzle.y() ? callMath_floor(codeWriter, loadVec3_y(codeWriter, context.load("position"))) : loadVec3_y(codeWriter, context.load("position"));
-                var z = swizzle.z() ? callMath_floor(codeWriter, loadVec3_z(codeWriter, context.load("position"))) : loadVec3_z(codeWriter, context.load("position"));
-
-                context.store("result", codeWriter.newObjectCreate(VEC3_INIT_TARGET, x, y, z));
-                return true;
-            }
-            if(context.instruction().type() == InstructionTypes.MERGE_POSITIONS) {
-                var position = context.load("position");
-                var x = context.instruction().get("x") != null ? context.load("x") : loadVec3_x(codeWriter, position);
-                var y = context.instruction().get("y") != null ? context.load("y") : loadVec3_y(codeWriter, position);
-                var z = context.instruction().get("z") != null ? context.load("z") : loadVec3_z(codeWriter, position);
-
-                context.store("result", codeWriter.newObjectCreate(VEC3_INIT_TARGET, x, y, z));
                 return true;
             }
 

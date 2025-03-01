@@ -6,6 +6,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.emitter.types.NumberComparisonType;
+import dev.epicpix.minecraftfunctioncompiler.emitter.types.ObjectComparisonType;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
@@ -198,19 +199,19 @@ public class CompilationContext {
                 instructionWriter.addInstructionBefore(Instructions2.getAnchorOffset(reassignedOffset, rotationData.data().commandSourceStack(), entityData.content()), skipCode);
                 instructionWriter.addInstructionBefore(Instructions2.valueAssign(offset, reassignedOffset), skipCode);
             }
-            rotationData.writeInstruction(Instructions.applyLocalPositionWorld(position, positionData.content(), rotationData.content(), offset, pos));
+            rotationData.writeInstruction(Instructions2.applyLocalPositionWorld(position, positionData.content(), rotationData.content(), offset, pos));
             return enterWithValue(rotationData.data(), position, entityData.stackCount() + positionData.stackCount() + rotationData.stackCount() + 1);
         }
         var positionData = getPosition();
         var position = this.<Vec3>createLocal();
-        positionData.writeInstruction(Instructions.applyPositionWorld(position, positionData.content(), pos));
+        positionData.writeInstruction(Instructions2.applyPositionWorld(position, positionData.content(), pos));
         return enterWithValue(positionData.data(), position, positionData.stackCount() + 1);
     }
 
     public CompilationData<LocationData<Vec2>> applyRotation(RotationCoordinates rot) {
         var rotationData = getRotation();
         var rotation = this.<Vec2>createLocal();
-        rotationData.writeInstruction(Instructions.applyRotationWorld(rotation, rotationData.content(), rot));
+        rotationData.writeInstruction(Instructions2.applyRotationWorld(rotation, rotationData.content(), rot));
         return enterWithValue(rotationData.data(), rotation, rotationData.stackCount() + 1);
     }
 
@@ -419,7 +420,7 @@ public class CompilationContext {
             LocationData<Vec3> realPosition;
             if(selector.x() != null || selector.y() != null || selector.z() != null) {
                 realPosition = this.createLocal();
-                position.writeInstruction(Instructions.mergePositions(realPosition, position.content(), LocationData.ofDoubleOrNull(selector.x()), LocationData.ofDoubleOrNull(selector.y()), LocationData.ofDoubleOrNull(selector.z())));
+                position.writeInstruction(Instructions2.mergePositions(realPosition, position.content(), LocationData.ofDoubleOrNull(selector.x()), LocationData.ofDoubleOrNull(selector.y()), LocationData.ofDoubleOrNull(selector.z())));
             }else {
                 realPosition = position.content();
             }
@@ -521,7 +522,7 @@ public class CompilationContext {
         if(world != null) {
             LocationData<World> thisWorld = createLocal();
             data.writeInstruction(instructionWriter, Instructions2.getEntityWorld(thisWorld, entityData.content()));
-            data.writeInstruction(instructionWriter, Instructions2.ifObjectNotEquivalentJump(thisWorld, world, data.contextEndLabel()));
+            data.writeInstruction(instructionWriter, Instructions2.ifObjectCompareJump(ObjectComparisonType.NOT_IDENTITY_EQUAL, thisWorld, world, data.contextEndLabel()));
         }
         if(selector.requireAlive()) {
             var alive = this.<Boolean>createLocal();
@@ -539,18 +540,18 @@ public class CompilationContext {
             data.writeInstruction(instructionWriter, Instructions2.mapGamemode(mappedGamemode, gamemode.data()));
             data.writeInstruction(instructionWriter, Instructions2.getGamemode(playerGamemode, playerLocal));
             if(gamemode.negated()) {
-                data.writeInstruction(instructionWriter, Instructions2.ifObjectEquivalentJump(playerGamemode, mappedGamemode, data.contextEndLabel()));
+                data.writeInstruction(instructionWriter, Instructions2.ifObjectCompareJump(ObjectComparisonType.IDENTITY_EQUAL, playerGamemode, mappedGamemode, data.contextEndLabel()));
             }else {
-                data.writeInstruction(instructionWriter, Instructions2.ifObjectNotEquivalentJump(playerGamemode, mappedGamemode, data.contextEndLabel()));
+                data.writeInstruction(instructionWriter, Instructions2.ifObjectCompareJump(ObjectComparisonType.NOT_IDENTITY_EQUAL, playerGamemode, mappedGamemode, data.contextEndLabel()));
             }
         }
         for(var name : selector.names()) {
             var entityName = this.<String>createLocal();
             data.writeInstruction(instructionWriter, Instructions2.getEntityName(entityName, entityData.content()));
             if(name.negated()) {
-                data.writeInstruction(instructionWriter, Instructions2.ifObjectEqualJump(entityName, LocationData.ofString(name.data()), data.contextEndLabel()));
+                data.writeInstruction(instructionWriter, Instructions2.ifObjectCompareJump(ObjectComparisonType.EQUAL, entityName, LocationData.ofString(name.data()), data.contextEndLabel()));
             }else {
-                data.writeInstruction(instructionWriter, Instructions2.ifObjectNotEqualJump(entityName, LocationData.ofString(name.data()), data.contextEndLabel()));
+                data.writeInstruction(instructionWriter, Instructions2.ifObjectCompareJump(ObjectComparisonType.NOT_EQUAL, entityName, LocationData.ofString(name.data()), data.contextEndLabel()));
             }
         }
         for(var tag : selector.tags()) {
@@ -651,12 +652,12 @@ public class CompilationContext {
                 instructionWriter.addInstructionBefore(Instructions2.ifNullJump(entityTeam, postJump), postJump);
                 var entityTeamName = this.<String>createLocal();
                 instructionWriter.addInstructionBefore(Instructions2.getTeamName(entityTeamName, entityTeam), postJump);
-                instructionWriter.addInstructionBefore(Instructions2.ifObjectEqualJump(entityTeamName, LocationData.ofString(team.data()), data.contextEndLabel()), postJump);
+                instructionWriter.addInstructionBefore(Instructions2.ifObjectCompareJump(ObjectComparisonType.EQUAL, entityTeamName, LocationData.ofString(team.data()), data.contextEndLabel()), postJump);
             }else {
                 data.writeInstruction(instructionWriter, Instructions2.ifNullJump(entityTeam, data.contextEndLabel()));
                 var entityTeamName = this.<String>createLocal();
                 data.writeInstruction(instructionWriter, Instructions2.getTeamName(entityTeamName, entityTeam));
-                data.writeInstruction(instructionWriter, Instructions2.ifObjectNotEqualJump(entityTeamName, LocationData.ofString(team.data()), data.contextEndLabel()));
+                data.writeInstruction(instructionWriter, Instructions2.ifObjectCompareJump(ObjectComparisonType.NOT_EQUAL, entityTeamName, LocationData.ofString(team.data()), data.contextEndLabel()));
             }
         }
         if(selector.hasTeam() != null) {

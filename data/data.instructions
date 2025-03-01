@@ -21,23 +21,13 @@
 }
 
 ##CONDITIONAL_JUMP
-@IF_OBJECT_EQUIVALENT_JUMP(<java.lang.Object> [ctx:a], <java.lang.Object> [ctx:b], label [ctx:label]) {
-  _jumpIfEqual([ctx:a], [ctx:b], [ctx:label]);
-}
-
-##CONDITIONAL_JUMP
-@IF_OBJECT_NOT_EQUIVALENT_JUMP(<java.lang.Object> [ctx:a], <java.lang.Object> [ctx:b], label [ctx:label]) {
-  _jumpIfNotEqual([ctx:a], [ctx:b], [ctx:label]);
-}
-
-##CONDITIONAL_JUMP
-@IF_OBJECT_EQUAL_JUMP(<java.lang.Object> [ctx:a], <java.lang.Object> [ctx:b], label [ctx:label]) {
-  _jumpIfNotEqual(<java.util.Objects>.equals([ctx:a], [ctx:b]), false, [ctx:label]);
-}
-
-##CONDITIONAL_JUMP
-@IF_OBJECT_NOT_EQUAL_JUMP(<java.lang.Object> [ctx:a], <java.lang.Object> [ctx:b], label [ctx:label]) {
-  _jumpIfEqual(<java.util.Objects>.equals([ctx:a], [ctx:b]), false, [ctx:label]);
+@IF_OBJECT_COMPARE_JUMP(<dev.epicpix.minecraftfunctioncompiler.emitter.types.ObjectComparisonType> [instr:compare], <java.lang.Object> [ctx:a], <java.lang.Object> [ctx:b], label [ctx:label]) {
+  compile_match([instr:compare]) {
+    EQUAL { _jumpIfNotEqual(<java.util.Objects>.equals([ctx:a], [ctx:b]), false, [ctx:label], false, [ctx:label]); }
+    NOT_EQUAL { _jumpIfEqual(<java.util.Objects>.equals([ctx:a], [ctx:b]), false, [ctx:label], false, [ctx:label]); }
+    IDENTITY_EQUAL { _jumpIfEqual([ctx:a], [ctx:b], [ctx:label]); }
+    NOT_IDENTITY_EQUAL { _jumpIfNotEqual([ctx:a], [ctx:b], [ctx:label]); }
+  }
 }
 
 ##CONDITIONAL_JUMP
@@ -426,15 +416,59 @@
 
 @GET_ENTITY_NAME(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <java.lang.String> = [ctx:entity].getName().getString();
 
-@GET_VEC3_X(<net.minecraft.world.phys.Vec3> [ctx:position]) -> double = [ctx:position].x();
-@GET_VEC3_Y(<net.minecraft.world.phys.Vec3> [ctx:position]) -> double = [ctx:position].y();
-@GET_VEC3_Z(<net.minecraft.world.phys.Vec3> [ctx:position]) -> double = [ctx:position].z();
+@GET_VEC3_X(<net.minecraft.world.phys.Vec3> [ctx:position]) -> double = [ctx:position].x;
+@GET_VEC3_Y(<net.minecraft.world.phys.Vec3> [ctx:position]) -> double = [ctx:position].y;
+@GET_VEC3_Z(<net.minecraft.world.phys.Vec3> [ctx:position]) -> double = [ctx:position].z;
 
 @GET_DISTANCE_SQUARED(<net.minecraft.world.phys.Vec3> [ctx:position_a], <net.minecraft.world.phys.Vec3> [ctx:position_b]) -> double {
-  [local:x] = [ctx:position_a].x() - [ctx:position_b].x();
-  [local:y] = [ctx:position_a].y() - [ctx:position_b].y();
-  [local:z] = [ctx:position_a].z() - [ctx:position_b].z();
+  [local:x] = [ctx:position_a].x - [ctx:position_b].x;
+  [local:y] = [ctx:position_a].y - [ctx:position_b].y;
+  [local:z] = [ctx:position_a].z - [ctx:position_b].z;
   return [local:x]*[local:x] + [local:y]*[local:y] + [local:z]*[local:z];
+}
+
+@APPLY_LOCAL_POSITION_WORLD(<net.minecraft.world.phys.Vec3> [ctx:from_position], <net.minecraft.world.phys.Vec2> [ctx:from_rotation], double [ctx:y_offset], <dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates> [instr:position]) -> <net.minecraft.world.phys.Vec3> {
+  return <dev.epicpix.minecraftfunctioncompiler._VERSION_.ExtensionFunctions>.calculateLocalCoordinates(
+    [ctx:from_rotation].x,
+    [ctx:from_rotation].y,
+    [ctx:from_position].x,
+    [ctx:from_position].y + [ctx:y_offset],
+    [ctx:from_position].z,
+    compile_eval([instr:position].x()),
+    compile_eval([instr:position].y()),
+    compile_eval([instr:position].z())
+  );
+}
+
+@APPLY_POSITION_WORLD(<net.minecraft.world.phys.Vec3> [ctx:from_position], <dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates> [instr:position]) -> <net.minecraft.world.phys.Vec3> {
+  return new <net.minecraft.world.phys.Vec3>(
+    compile_or([instr:position].isXRelative(), [ctx:from_position].x + compile_eval([instr:position].x()), compile_eval([instr:position].x())),
+    compile_or([instr:position].isYRelative(), [ctx:from_position].y + compile_eval([instr:position].y()), compile_eval([instr:position].y())),
+    compile_or([instr:position].isZRelative(), [ctx:from_position].z + compile_eval([instr:position].z()), compile_eval([instr:position].z()))
+  );
+}
+
+@APPLY_ROTATION_WORLD(<net.minecraft.world.phys.Vec2> [ctx:from_rotation], <dev.epicpix.minecraftfunctioncompiler.data.RotationCoordinates> [instr:rotation]) -> <net.minecraft.world.phys.Vec2> {
+  return new <net.minecraft.world.phys.Vec2>(
+    compile_or([instr:rotation].isYawRelative(), [ctx:from_rotation].x + compile_eval(to_float([instr:rotation].yaw())), compile_eval(to_float([instr:rotation].yaw()))),
+    compile_or([instr:rotation].isPitchRelative(), [ctx:from_rotation].y + compile_eval(to_float([instr:rotation].pitch())), compile_eval(to_float([instr:rotation].pitch())))
+  );
+}
+
+@ALIGN_POSITION(<net.minecraft.world.phys.Vec3> [ctx:position], <dev.epicpix.minecraftfunctioncompiler.data.SwizzleArgument> [instr:swizzle]) -> <net.minecraft.world.phys.Vec3> {
+  return new <net.minecraft.world.phys.Vec3>(
+    compile_or([instr:swizzle].x(), <java.lang.Math>.floor([ctx:position].x), [ctx:position].x),
+    compile_or([instr:swizzle].y(), <java.lang.Math>.floor([ctx:position].y), [ctx:position].y),
+    compile_or([instr:swizzle].z(), <java.lang.Math>.floor([ctx:position].z), [ctx:position].z)
+  );
+}
+
+@MERGE_POSITIONS(<net.minecraft.world.phys.Vec3> [ctx:position], double [ctx:x], double [ctx:y], double [ctx:z]) -> <net.minecraft.world.phys.Vec3> {
+  return new <net.minecraft.world.phys.Vec3>(
+    compile_or(compile_is_provided([ctx:x]), [ctx:x], [ctx:position].x),
+    compile_or(compile_is_provided([ctx:y]), [ctx:y], [ctx:position].y),
+    compile_or(compile_is_provided([ctx:z]), [ctx:z], [ctx:position].z)
+  );
 }
 
 @GET_NBT_STORAGE(<net.minecraft.world.level.storage.CommandStorage> [static:CommandStorage], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:storage_name]) -> <net.minecraft.nbt.CompoundTag>
