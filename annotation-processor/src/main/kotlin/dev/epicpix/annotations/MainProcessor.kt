@@ -12,8 +12,6 @@ import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.Origin
 import dev.epicpix.annotations.commands.generateCommandsDataReader
 import dev.epicpix.annotations.commands.parseCommandsData
-import dev.epicpix.annotations.enums.EnumList
-import dev.epicpix.annotations.enums.parseEnums
 import dev.epicpix.annotations.instructions.*
 import net.fabricmc.accesswidener.AccessWidenerReader
 import net.fabricmc.accesswidener.AccessWidenerVisitor
@@ -123,6 +121,7 @@ fun javaToMinecraftGenericType(type: String): String {
             "net.minecraft.server.PlayerAdvancements" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.PlayerAdvancements"
             "net.minecraft.world.entity.Targeting" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.TargetingEntity"
             "net.minecraft.world.entity.TraceableEntity" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.TraceableEntity"
+            "net.minecraft.world.Difficulty" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.DifficultyValue"
             else -> throw IllegalArgumentException("Unknown minecraft class: $type")
         }
     }else {
@@ -187,8 +186,7 @@ class MainProcessor(
             }
         }
         if(options["definitions"] != null) {
-            val enums = parseEnums(loadDataFile("data.enums"))
-            generateInstructionData(file, mappingData, options["definitions"] == "common", minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0, enums, targets)
+            generateInstructionData(file, mappingData, options["definitions"] == "common", minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0, targets)
         }
         if(options["definitions"] == "common") {
             generateConstantsData()
@@ -361,7 +359,7 @@ class MainProcessor(
         mapExtensions.appendText("}\n")
     }
 
-    fun generateInstructionData(file: ParsedFile, mappingData: MappingData?, common: Boolean, majorVer: Int, minorVer: Int, enums: EnumList, targets: MutableList<String>) {
+    fun generateInstructionData(file: ParsedFile, mappingData: MappingData?, common: Boolean, majorVer: Int, minorVer: Int, targets: MutableList<String>) {
         val resultClass = (if(common) file.fileInfo["emitter_noobf_file"]!! else file.fileInfo["emitter_obf_file"]!!).replace("_VERSION_", PACKAGE_MINECRAFT_VERSION ?: "common")
         val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
         val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
@@ -392,10 +390,13 @@ class MainProcessor(
                 if(matchesVersion) {
                     map.appendText("            if(type == ${file.fileInfo["enum_file"]}.${it.name.uppercase()}) {\n")
                     val output = ByteArrayOutputStream()
-                    info[it.name] = generateCode(mappingData, it, file, output, enums, majorVer, minorVer, targets)
+                    val codeGenResult = generateCode(mappingData, it, file, output, majorVer, minorVer, targets)
+                    info[it.name] = codeGenResult.first
                     map.appendText(output.toByteArray().decodeToString().trimEnd().prependIndent("                "))
                     map.appendText("\n")
-                    map.appendText("                return true;\n")
+                    if(codeGenResult.second) {
+                        map.appendText("                return true;\n")
+                    }
                     map.appendText("            }\n")
                 }
             }

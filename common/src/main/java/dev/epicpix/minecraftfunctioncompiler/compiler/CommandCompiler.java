@@ -116,7 +116,9 @@ public final class CommandCompiler {
                 throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_NBT_SOURCE_ACCESS, context.getSource(), "Accessing nbt from block/entity sources is not implemented yet"));
             }
         }else if(command instanceof CommandDifficultySet cmdData) {
-            context.writeInstruction(Instructions2.setDifficulty(cmdData.difficulty()));
+            var difficultyLocation = context.<DifficultyValue>createLocal();
+            context.writeInstruction(Instructions2.mapDifficulty(difficultyLocation, cmdData.difficulty()));
+            context.writeInstruction(Instructions2.setDifficulty(difficultyLocation));
         }else if(command instanceof CommandEffectClear) {
             try(var self = context.getCurrentEntity()) {
                 var livingEntityLocation = context.<LivingEntity>createLocal();

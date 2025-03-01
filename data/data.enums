@@ -1,8 +1,0 @@
-net.minecraft.world.level.GameType.SURVIVAL <-> dev.epicpix.minecraftfunctioncompiler.data.Gamemode.SURVIVAL
-net.minecraft.world.level.GameType.CREATIVE <-> dev.epicpix.minecraftfunctioncompiler.data.Gamemode.CREATIVE
-net.minecraft.world.level.GameType.ADVENTURE <-> dev.epicpix.minecraftfunctioncompiler.data.Gamemode.ADVENTURE
-net.minecraft.world.level.GameType.SPECTATOR <-> dev.epicpix.minecraftfunctioncompiler.data.Gamemode.SPECTATOR
-net.minecraft.world.Difficulty.PEACEFUL <-> dev.epicpix.minecraftfunctioncompiler.data.Difficulty.PEACEFUL
-net.minecraft.world.Difficulty.EASY <-> dev.epicpix.minecraftfunctioncompiler.data.Difficulty.EASY
-net.minecraft.world.Difficulty.NORMAL <-> dev.epicpix.minecraftfunctioncompiler.data.Difficulty.NORMAL
-net.minecraft.world.Difficulty.HARD <-> dev.epicpix.minecraftfunctioncompiler.data.Difficulty.HARD

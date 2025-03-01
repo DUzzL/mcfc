@@ -30,6 +30,7 @@ data class ClassInfo(
     val fields: List<ClassFieldInfo>,
     val methods: List<ClassMethodInfo>,
     val isInterface: Boolean,
+    val isEnum: Boolean,
 )
 
 private val loadedClasses = mutableMapOf<String, ClassInfo>()
@@ -92,6 +93,7 @@ fun loadClassInfo(className: String): ClassInfo {
                     )
                 },
                 isInterface = clz.isInterface,
+                isEnum = clz.isEnum,
             )
         }.getOrElse {
             val classDecl = privateResolver!!.getClassDeclarationByName(privateResolver!!.getKSNameFromString(className))
@@ -120,6 +122,7 @@ fun loadClassInfo(className: String): ClassInfo {
                     )
                 },
                 isInterface = false,
+                isEnum = classDecl.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.ENUM),
             )
         }
         return loadedClasses[className]!!
@@ -134,6 +137,7 @@ fun loadClassInfo(className: String): ClassInfo {
         val fields = mutableListOf<ClassFieldInfo>()
         val methods = mutableListOf<ClassMethodInfo>()
         var isInterface: Boolean? = null
+        var isEnum: Boolean? = null
 
         val classVisitor = object : ClassVisitor(Opcodes.ASM9) {
             override fun visit(version: Int, access: Int, inName: String, signature: String?, inSuperName: String?, inInterfaces: Array<String>) {
@@ -141,6 +145,7 @@ fun loadClassInfo(className: String): ClassInfo {
                 superClass = inSuperName
                 interfaces = inInterfaces.toList()
                 isInterface = Modifier.isInterface(access)
+                isEnum = (access and 0x4000) != 0
                 super.visit(version, access, inName, signature, inSuperName, inInterfaces)
             }
 
@@ -174,6 +179,7 @@ fun loadClassInfo(className: String): ClassInfo {
             fields = fields,
             methods = methods,
             isInterface = isInterface!!,
+            isEnum = isEnum!!,
         )
         return loadedClasses[className]!!
     }

@@ -1,7 +1,6 @@
 package dev.epicpix.annotations.instructions
 
 import dev.epicpix.annotations.*
-import dev.epicpix.annotations.enums.EnumList
 import org.objectweb.asm.Type
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
@@ -14,7 +13,6 @@ data class WriterData(
     val mappingData: MappingData?,
     val accessorMappings: Map<ParsedTokenValueAccessor, ParsedTokenValueAccessor> = mapOf(),
     val localTypes: MutableMap<String, LocalInfo> = mutableMapOf(),
-    val enums: EnumList,
     val file: ParsedFile,
     val params: List<Pair<ParsedTokenValueAccessor, ParsedTokenExpressionType>>,
     val paramStatistics: List<AccessorStatistics> = params.map { AccessorStatistics(it.first) },
@@ -473,28 +471,6 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 val className = ((expression.arguments[1] as ParsedTokenExpressionTyped).type as ParsedTokenExpressionTypeComplex).typeName
                 return writeNextRegister(uniqId, output, "cw.castType($expr, org.objectweb.asm.Type.getType($className.class))")
             }
-            if(expression.name == "map_enum") {
-                val source = expression.arguments[0] as ParsedTokenValueAccessor
-                if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
-                    val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
-                    val destType = ((expression.arguments[1] as ParsedTokenExpressionTyped).type as ParsedTokenExpressionTypeComplex)
-                    val enumMappings = writerData.enums.getEnumMappings(sourceType.typeName, destType.typeName)
-                    if(enumMappings.isNotEmpty()) {
-                        val reg = getNextRegister(uniqId)
-                        output.appendText("var $reg = switch(context.instruction().<${sourceType.typeName}>get(${writerData.getParamIndex(source)})) {\n")
-                        for((k, v) in enumMappings) {
-                            output.appendText("    case $k -> {\n")
-                            val fullClassName = v.substringBeforeLast('.')
-                            val fieldName = v.substringAfterLast('.')
-                            val expr = writeExpression(writerData, ParsedTokenExpressionField(fieldName, ParsedTokenInstanceStatic(fullClassName)), output, uniqId)
-                            output.appendText("        yield $expr;\n")
-                            output.appendText("    }\n")
-                        }
-                        output.appendText("};\n")
-                        return reg
-                    }
-                }
-            }
             if(expression.name == "map_advancement") {
                 val source = expression.arguments[0] as ParsedTokenValueAccessor
                 if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
@@ -620,8 +596,36 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
     throw UnsupportedOperationException("Unsupported expression: $expression")
 }
 
-private fun writeCompileExpression(writerData: WriterData, expression: ParsedTokenExpression): String {
+private fun getCompileExpressionType(writerData: WriterData, expression: ParsedTokenExpression): ParsedTokenExpressionType {
     if(expression is ParsedTokenExpressionBinary) {
+        if(expression.op == ParsedTokenExpressionOperator.EQ) {
+            return ParsedTokenExpressionSimpleType.BOOLEAN
+        }
+    }else if(expression is ParsedTokenValueAccessor) {
+        if(expression.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
+            return writerData.getAccessorType(expression)
+        }
+    }else if(expression is ParsedTokenExpressionField) {
+        val instance = expression.instance
+        val fieldMatch = if(instance is ParsedTokenInstanceStatic) {
+            val matches = getClassAccessibleFields(instance.className).filter { it.isStatic && it.name == expression.name }
+            if(matches.size != 1) {
+                throw IllegalArgumentException("Failed to find field <${instance.className}>.${expression.name}")
+            }
+            matches[0]
+        }else {
+            throw IllegalArgumentException("Cannot access field on non-static instance: $instance")
+        }
+        return ParsedTokenExpressionTypeComplex(fieldMatch.owner.replace("/", ".").replace('$', '.'))
+    }
+    throw IllegalStateException("Unsupported expression: $expression")
+}
+
+
+private fun writeCompileExpression(writerData: WriterData, expression: ParsedTokenExpression): String {
+    if(expression is ParsedTokenExpressionString) {
+        return "\"${expression.string.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")}\""
+    }else if(expression is ParsedTokenExpressionBinary) {
         if(expression.op == ParsedTokenExpressionOperator.EQ) {
             return writeCompileExpression(writerData, expression.a) + " == " + writeCompileExpression(writerData, expression.b)
         }
@@ -699,7 +703,13 @@ private fun doComparison(writerData: WriterData, expression: ParsedTokenExpressi
     }
 }
 
-private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, output: OutputStream, uniqId: AtomicInteger): Boolean {
+enum class ReturnTypeResult(val continuesRunning: Boolean) {
+    CONTINUE(true),
+    SOFT_RETURN(false),
+    HARD_RETURN(false),
+}
+
+private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, output: OutputStream, uniqId: AtomicInteger): ReturnTypeResult {
     for(el in code) {
         if(el is ParsedTokenStatementIf) {
             val failureLabel = getNextLabel(uniqId)
@@ -713,8 +723,11 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                 output.appendText("cw.label($failureLabel);\n")
                 val otherReturn = writeCode(writerData.copyLocalTypes(), el.elseCode, output, uniqId)
                 output.appendText("cw.label($jumpLabel);\n")
-                if(baseReturn && otherReturn) {
-                    return true
+                if(baseReturn == ReturnTypeResult.HARD_RETURN && otherReturn == ReturnTypeResult.HARD_RETURN) {
+                    return ReturnTypeResult.HARD_RETURN
+                }
+                if(!baseReturn.continuesRunning && !otherReturn.continuesRunning) {
+                    return ReturnTypeResult.SOFT_RETURN
                 }
             }else {
                 output.appendText("cw.label($failureLabel);\n")
@@ -728,23 +741,47 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
             if(el.elseCode != null) {
                 output.appendText("else {\n")
                 val otherReturn = writeCode(writerData.copyLocalTypes(), el.elseCode, output, uniqId)
-                if(baseReturn && otherReturn) {
-                    return true
+                if(baseReturn == ReturnTypeResult.HARD_RETURN && otherReturn == ReturnTypeResult.HARD_RETURN) {
+                    return ReturnTypeResult.HARD_RETURN
+                }
+                if(!baseReturn.continuesRunning && !otherReturn.continuesRunning) {
+                    return ReturnTypeResult.SOFT_RETURN
                 }
                 output.appendText("}")
             }
             output.appendText("\n")
             continue
         }else if(el is ParsedTokenStatementCompileMatch) {
+            val comparisonType = getCompileExpressionType(writerData.copyLocalTypes(), el.expression)
             val comparisonString = writeCompileExpression(writerData.copyLocalTypes(), el.expression)
-            output.appendText("switch($comparisonString) {\n")
-            var allReturns = true
-            for((case, code) in el.matches) {
-                output.appendText("case $case -> {\n")
-                allReturns = writeCode(writerData.copyLocalTypes(), code, output, uniqId) && allReturns
+            if(comparisonType is ParsedTokenExpressionTypeComplex && loadClassInfo(comparisonType.typeName).isEnum) {
+                output.appendText("switch($comparisonString) {\n")
+                for((case, code) in el.matches) {
+                    output.appendText("    case $case -> {\n")
+                    val bout = ByteArrayOutputStream()
+                    writeCode(writerData.copyLocalTypes(), code, bout, uniqId)
+                    output.appendText(bout.toByteArray().decodeToString().trimEnd().prependIndent("        ") + "\n")
+                    output.appendText("    }\n")
+                }
                 output.appendText("}\n")
+            }else {
+                val comparisonReg = writeNextRegister(uniqId, output, comparisonString)
+                val entries = el.matches.entries.toList()
+                val casePrefix = if(comparisonType is ParsedTokenExpressionTypeComplex) "${comparisonType.typeName}." else ""
+                for(i in entries.indices) {
+                    val (case, code) = entries[i]
+                    output.appendText("if(java.util.Objects.equals($comparisonReg, $casePrefix$case)) {\n")
+                    val bout = ByteArrayOutputStream()
+                    writeCode(writerData.copyLocalTypes(), code, bout, uniqId)
+                    output.appendText(bout.toByteArray().decodeToString().trimEnd().prependIndent("    ") + "\n")
+                    output.appendText("}")
+                    if(i != entries.size - 1) {
+                        output.appendText("else ")
+                    }else {
+                        output.appendText("\n")
+                    }
+                }
             }
-            output.appendText("}\n")
             continue
         }else if(el is ParsedTokenStatementFunctionCall) {
             if(el.name == "_jump") {
@@ -793,6 +830,13 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                 val scopeAccessor = el.arguments[2] as ParsedTokenValueAccessor
                 writerData.markGet(scopeAccessor)
                 output.appendText("cw.conditionalJump(dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition.LE, $exprA, $exprB, context.mapLabel(${writerData.getParamIndex(scopeAccessor)}));\n")
+            }else if(el.name == "_throwCompileException") {
+                val expressions = mutableListOf<String>()
+                for(arg in el.arguments) {
+                    expressions.add(writeCompileExpression(writerData, arg))
+                }
+                output.appendText("throw new RuntimeException(${expressions.joinToString(" + ") { "$it+\"\"" }});\n")
+                return ReturnTypeResult.HARD_RETURN
             }else if(el.name == "return_fail") {
                 output.appendText("cw.returnValue(new dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue.LongValue(${1L shl 32}L));\n")
             }else if(el.name == "return_success") {
@@ -843,7 +887,7 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                 if(writerData.params.any { it.first.scope == ParsedTokenValueAccessorScope.RETURN }) {
                     throw IllegalArgumentException("Tried to return with no value, when there's a return type in the instruction definition")
                 }
-                return true
+                return ReturnTypeResult.SOFT_RETURN
             }
             val returnAccessor = writerData.params.find { it.first.scope == ParsedTokenValueAccessorScope.RETURN } ?: throw IllegalArgumentException("Tried to return with a value, when there's no return type in the instruction definition")
             val returnType = returnAccessor.second
@@ -853,29 +897,29 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
             }
             val expr = writeExpression(writerData, el.value, output, uniqId)
             output.appendText("context.store(${writerData.getParamIndex(returnAccessor.first)}, $expr);\n")
-            return true
+            return ReturnTypeResult.SOFT_RETURN
         }
         throw Exception(el.toString())
     }
-    return false
+    return ReturnTypeResult.CONTINUE
 }
 
-fun generateCode(mappingData: MappingData?, definition: ParsedTokenInstructionDefinition, file: ParsedFile, output: OutputStream, enums: EnumList, majorVersion: Int, minorVersion: Int, targets: MutableList<String>): List<AccessorStatistics> {
-    val bout = ByteArrayOutputStream()
-    val writerData = WriterData(mappingData = mappingData, file = file, params = definition.params, enums = enums, majorVersion = majorVersion, minorVersion = minorVersion, targets = targets)
+fun generateCode(mappingData: MappingData?, definition: ParsedTokenInstructionDefinition, file: ParsedFile, output: OutputStream, majorVersion: Int, minorVersion: Int, targets: MutableList<String>): Pair<List<AccessorStatistics>, Boolean> {
+    val writerData = WriterData(mappingData = mappingData, file = file, params = definition.params, majorVersion = majorVersion, minorVersion = minorVersion, targets = targets)
+    var writeNormalReturn = true
     if(definition.code.isNotEmpty()) {
         try {
             val hasReturnType = writerData.params.any { it.first.scope == ParsedTokenValueAccessorScope.RETURN }
-            val didReturn = writeCode(writerData, definition.code, bout, AtomicInteger(0))
-            if(hasReturnType && !didReturn) {
+            val didReturn = writeCode(writerData, definition.code, output, AtomicInteger(0))
+            if(hasReturnType && didReturn.continuesRunning) {
                 throw IllegalArgumentException("Not all branches return a value, required since the instruction definition has a return type")
             }
+            writeNormalReturn = didReturn != ReturnTypeResult.HARD_RETURN
         }catch(e: Exception) {
             throw RuntimeException("Failed to write code for instruction definition ${definition.name}", e)
         }
     }
-    output.write(bout.toByteArray())
-    return writerData.paramStatistics
+    return writerData.paramStatistics to writeNormalReturn
 }
 
 fun parseCode(inputCode: String) = parseTokens(lexTokens(inputCode).listIterator())

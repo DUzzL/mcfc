@@ -275,7 +275,16 @@
 @GET_ENTITY_WORLD [-1.19.4] (<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.server.level.ServerLevel> = cast([ctx:entity].getLevel(), <net.minecraft.server.level.ServerLevel>);
 @GET_ENTITY_WORLD [1.20-] (<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.server.level.ServerLevel> = cast([ctx:entity].level(), <net.minecraft.server.level.ServerLevel>);
 
-@MAP_GAMEMODE(<dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:instr_gamemode]) -> <net.minecraft.world.level.GameType> = map_enum([instr:instr_gamemode], <net.minecraft.world.level.GameType>);
+@MAP_GAMEMODE(<dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:gamemode]) -> <net.minecraft.world.level.GameType> {
+  compile_match([instr:gamemode]) {
+    SURVIVAL { return <net.minecraft.world.level.GameType>.SURVIVAL; }
+    CREATIVE { return <net.minecraft.world.level.GameType>.CREATIVE; }
+    ADVENTURE { return <net.minecraft.world.level.GameType>.ADVENTURE; }
+    SPECTATOR { return <net.minecraft.world.level.GameType>.SPECTATOR; }
+  }
+  _throwCompileException("Failed to match any case: ", [instr:gamemode]);
+}
+
 @GET_GAMEMODE(<net.minecraft.server.level.ServerPlayer> [ctx:player]) -> <net.minecraft.world.level.GameType> = [ctx:player].gameMode.getGameModeForPlayer();
 @SET_GAMEMODE(<net.minecraft.server.level.ServerPlayer> [ctx:player], <net.minecraft.world.level.GameType> [ctx:gamemode]) {
   [ctx:player].setGameMode([ctx:gamemode]);
@@ -338,8 +347,19 @@
   [static:MinecraftServer].overworld().setWeatherParameters(0, <net.minecraft.server.level.ServerLevel>.THUNDER_DURATION.sample([static:MinecraftServer].overworld().getRandom()), true, true);
 }
 
-@SET_DIFFICULTY(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <dev.epicpix.minecraftfunctioncompiler.data.Difficulty> [instr:difficulty]) {
-  [static:MinecraftServer].setDifficulty(map_enum([instr:difficulty], <net.minecraft.world.Difficulty>), true);
+
+@MAP_DIFFICULTY(<dev.epicpix.minecraftfunctioncompiler.data.Difficulty> [instr:difficulty]) -> <net.minecraft.world.Difficulty> {
+  compile_match([instr:difficulty]) {
+    PEACEFUL { return <net.minecraft.world.Difficulty>.PEACEFUL; }
+    EASY { return <net.minecraft.world.Difficulty>.EASY; }
+    NORMAL { return <net.minecraft.world.Difficulty>.NORMAL; }
+    HARD { return <net.minecraft.world.Difficulty>.HARD; }
+  }
+  _throwCompileException("Failed to match any case: ", [instr:difficulty]);
+}
+
+@SET_DIFFICULTY(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.world.Difficulty> [ctx:difficulty]) {
+  [static:MinecraftServer].setDifficulty([ctx:difficulty], true);
 }
 
 @CLEAR_ALL_EFFECTS(<net.minecraft.world.entity.LivingEntity> [ctx:entity]) {
