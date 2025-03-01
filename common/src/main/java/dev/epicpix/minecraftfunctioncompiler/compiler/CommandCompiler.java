@@ -84,7 +84,7 @@ public final class CommandCompiler {
                 var attrLocation = context.<AttributeInstance>createLocal();
                 selector.writeInstruction(Instructions2.tryAsLivingEntity(livingEntityLocation, selector.content(), selector.data().contextEndLabel()));
                 selector.writeInstruction(Instructions2.getAttributeInstance(livingEntityLocation, attrLocation, cmdData.attribute().location()));
-                selector.writeInstruction(Instructions2.ifNullJump(attrLocation.lower(), selector.data().contextEndLabel()));
+                selector.writeInstruction(Instructions2.ifNullJump(attrLocation, selector.data().contextEndLabel()));
                 selector.writeInstruction(Instructions2.setAttributeBase(attrLocation, cmdData.value()));
             }
         }else if(command instanceof CommandDataModifySetValue cmdData) {
@@ -119,7 +119,7 @@ public final class CommandCompiler {
         }else if(command instanceof CommandEffectClear) {
             try(var self = context.getCurrentEntity()) {
                 var livingEntityLocation = context.<LivingEntity>createLocal();
-                self.writeInstruction(Instructions2.ifNullJump(self.content().lower(), self.data().contextEndLabel()));
+                self.writeInstruction(Instructions2.ifNullJump(self.content(), self.data().contextEndLabel()));
                 self.writeInstruction(Instructions2.tryAsLivingEntity(livingEntityLocation, self.content(), self.data().contextEndLabel()));
                 self.writeInstruction(Instructions2.clearAllEffects(livingEntityLocation));
             }
@@ -298,7 +298,7 @@ public final class CommandCompiler {
                     currentEntity.writeInstruction(Instructions2.tryAsTraceableEntity(traceableEntity, currentEntity.content(), currentEntity.endLabel()));
                     var origin = context.<Entity>createLocal();
                     currentEntity.writeInstruction(Instructions2.getEntityOrigin(origin, traceableEntity));
-                    currentEntity.writeInstruction(Instructions2.ifNullJump(origin.lower(), currentEntity.endLabel()));
+                    currentEntity.writeInstruction(Instructions2.ifNullJump(origin, currentEntity.endLabel()));
                     try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(origin))) {
                         compile(context, fContext.content(), cmdData.command(), result);
                     }
@@ -311,7 +311,7 @@ public final class CommandCompiler {
                     currentEntity.writeInstruction(Instructions2.tryAsTargetingEntity(targetingEntity, currentEntity.content(), currentEntity.endLabel()));
                     var target = context.<LivingEntity>createLocal();
                     currentEntity.writeInstruction(Instructions2.getEntityTarget(target, targetingEntity));
-                    currentEntity.writeInstruction(Instructions2.ifNullJump(target.lower(), currentEntity.endLabel()));
+                    currentEntity.writeInstruction(Instructions2.ifNullJump(target, currentEntity.endLabel()));
                     try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(target))) {
                         compile(context, fContext.content(), cmdData.command(), result);
                     }
@@ -322,7 +322,7 @@ public final class CommandCompiler {
                 try(var currentEntity = context.getCurrentEntity()) {
                     var vehicle = context.<Entity>createLocal();
                     currentEntity.writeInstruction(Instructions2.getEntityVehicle(vehicle, currentEntity.content()));
-                    currentEntity.writeInstruction(Instructions2.ifNullJump(vehicle.lower(), currentEntity.endLabel()));
+                    currentEntity.writeInstruction(Instructions2.ifNullJump(vehicle, currentEntity.endLabel()));
                     try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(vehicle))) {
                         compile(context, fContext.content(), cmdData.command(), result);
                     }
@@ -565,7 +565,7 @@ public final class CommandCompiler {
 
             var parts = cmdData.path().parts();
             var value = getNbtPathValue(context, storageLocal, parts, false, current.contextEndLabel());
-            context.writeInstruction(Instructions2.ifNullJump(value.lower(), current.contextEndLabel()));
+            context.writeInstruction(Instructions2.ifNullJump(value, current.contextEndLabel()));
             var clonedTag = context.<NbtTag>createLocal();
             context.writeInstruction(Instructions2.cloneNbtValue(clonedTag, value));
             var compoundTag = context.<NbtCompound>createLocal();
@@ -601,7 +601,7 @@ public final class CommandCompiler {
                 objective.writeInstruction(Instructions2.getObjectiveCriterion(criterion, objective.content()));
                 var mappedCriterion = context.<ScoreboardCriterion>createLocal();
                 objective.writeInstruction(Instructions2.mapObjectiveCriterion(mappedCriterion, DataRegistries.SCOREBOARD_CRITERIA.getOrThrow("trigger")));
-                objective.writeInstruction(Instructions2.ifObjectNotEquivalentJump(criterion.lower(), mappedCriterion.lower(), objective.data().contextEndLabel()));
+                objective.writeInstruction(Instructions2.ifObjectNotEquivalentJump(criterion, mappedCriterion, objective.data().contextEndLabel()));
                 try(var name = context.forScoreHolder(cmdData.targets().scoreHolder())) {
                     try(var scoreData = context.getScoreData(new ScoreAccessor(objective.content(), name.content()), true)) {
                         scoreData.writeInstruction(Instructions2.scoreUnlock(scoreData.content()));

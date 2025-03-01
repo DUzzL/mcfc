@@ -34,11 +34,6 @@ public record LocationData<T>(
     }
 
     @SuppressWarnings("unchecked")
-    public LocationData<Object> lower() {
-        return (LocationData<Object>) this;
-    }
-
-    @SuppressWarnings("unchecked")
     public <R> LocationData<R> forceCast() {
         return (LocationData<R>) this;
     }
