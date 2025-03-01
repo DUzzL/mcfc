@@ -62,6 +62,10 @@ public class StackCompiler {
                     results.add(new StackInstruction.Evaluate(StackEvaluationType.SUB));
                 }else if(v.type() == InstructionRVVType.MUL) {
                     results.add(new StackInstruction.Evaluate(StackEvaluationType.MUL));
+                }else if(v.type() == InstructionRVVType.DIV) {
+                    results.add(new StackInstruction.Evaluate(StackEvaluationType.DIV));
+                }else if(v.type() == InstructionRVVType.MOD) {
+                    results.add(new StackInstruction.Evaluate(StackEvaluationType.MOD));
                 }else if(v.type() == InstructionRVVType.SHL) {
                     results.add(new StackInstruction.Evaluate(StackEvaluationType.SHL));
                 }else if(v.type() == InstructionRVVType.SHR) {
@@ -408,7 +412,7 @@ public class StackCompiler {
                 }else if(instr instanceof StackInstruction.Pop) {
                     stackDepth--;
                 }else if(instr instanceof StackInstruction.Evaluate e) {
-                    if(e.evaluationType() == StackEvaluationType.ADD || e.evaluationType() == StackEvaluationType.SUB || e.evaluationType() == StackEvaluationType.MUL || e.evaluationType() == StackEvaluationType.SHL || e.evaluationType() == StackEvaluationType.SHR) {
+                    if(e.evaluationType() == StackEvaluationType.ADD || e.evaluationType() == StackEvaluationType.SUB || e.evaluationType() == StackEvaluationType.MUL || e.evaluationType() == StackEvaluationType.DIV || e.evaluationType() == StackEvaluationType.MOD || e.evaluationType() == StackEvaluationType.SHL || e.evaluationType() == StackEvaluationType.SHR) {
                         stackDepth--;
                     }else {
                         return false;

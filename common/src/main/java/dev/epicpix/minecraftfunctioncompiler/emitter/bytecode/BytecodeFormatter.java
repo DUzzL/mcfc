@@ -73,6 +73,8 @@ public class BytecodeFormatter {
                 case ADD -> formatValue(v.result()) + " = " + formatValue(v.sourceA()) + " + " + formatValue(v.sourceB());
                 case SUB -> formatValue(v.result()) + " = " + formatValue(v.sourceA()) + " - " + formatValue(v.sourceB());
                 case MUL -> formatValue(v.result()) + " = " + formatValue(v.sourceA()) + " * " + formatValue(v.sourceB());
+                case DIV -> formatValue(v.result()) + " = " + formatValue(v.sourceA()) + " / " + formatValue(v.sourceB());
+                case MOD -> formatValue(v.result()) + " = " + formatValue(v.sourceA()) + " % " + formatValue(v.sourceB());
                 case SHL -> formatValue(v.result()) + " = " + formatValue(v.sourceA()) + " << " + formatValue(v.sourceB());
                 case SHR -> formatValue(v.result()) + " = " + formatValue(v.sourceA()) + " >> " + formatValue(v.sourceB());
             };
@@ -173,6 +175,8 @@ public class BytecodeFormatter {
                 case ADD -> instruction.addProperty("type", "add");
                 case SUB -> instruction.addProperty("type", "sub");
                 case MUL -> instruction.addProperty("type", "mul");
+                case DIV -> instruction.addProperty("type", "div");
+                case MOD -> instruction.addProperty("type", "mod");
                 case SHL -> instruction.addProperty("type", "shl");
                 case SHR -> instruction.addProperty("type", "shr");
             }

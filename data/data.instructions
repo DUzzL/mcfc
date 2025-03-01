@@ -57,9 +57,15 @@
 
 @VALUE_ADD(number<T> [ctx:a], number<T> [ctx:b]) -> number<T> = [ctx:a] + [ctx:b];
 @VALUE_SUB(number<T> [ctx:a], number<T> [ctx:b]) -> number<T> = [ctx:a] - [ctx:b];
+@VALUE_MUL(number<T> [ctx:a], number<T> [ctx:b]) -> number<T> = [ctx:a] * [ctx:b];
+@VALUE_DIV(number<T> [ctx:a], number<T> [ctx:b]) -> number<T> = [ctx:a] / [ctx:b];
+@VALUE_MOD(number<T> [ctx:a], number<T> [ctx:b]) -> number<T> = [ctx:a] % [ctx:b];
 
-@VALUE_MUL_INT_DOUBLE(int [ctx:a], double [ctx:b]) -> double = to_double([ctx:a]) * [ctx:b];
-@VALUE_MUL_DOUBLE(double [ctx:a], double [ctx:b]) -> double = [ctx:a] * [ctx:b];
+@INT_FLOOR_DIV(int [ctx:a], int [ctx:b]) -> int = <java.lang.Math>.floorDiv([ctx:a], [ctx:b]);
+@INT_FLOOR_MOD(int [ctx:a], int [ctx:b]) -> int = <java.lang.Math>.floorMod([ctx:a], [ctx:b]);
+
+@INT_MIN(int [ctx:a], int [ctx:b]) -> int = <java.lang.Math>.min([ctx:a], [ctx:b]);
+@INT_MAX(int [ctx:a], int [ctx:b]) -> int = <java.lang.Math>.max([ctx:a], [ctx:b]);
 
 @NUMBER_TO_FLOAT(number<T> [ctx:a]) -> float = to_float([ctx:a]);
 @NUMBER_TO_DOUBLE(number<T> [ctx:a]) -> double = to_double([ctx:a]);
@@ -199,8 +205,6 @@
 
 @GET_ENTITIES(<net.minecraft.server.level.ServerLevel> [ctx:world]) -> generic<T:java.util.Iterator> = [ctx:world].getAllEntities().iterator();
 
-@GET_ENTITIES_ITERATOR(<net.minecraft.server.level.ServerLevel> [ctx:world]) -> generic<T:java.util.Iterator> = [ctx:world].getAllEntities().iterator();
-
 @GET_PLAYER(<net.minecraft.server.players.PlayerList> [static:PlayerList], <java.lang.String> [instr:name]) -> <net.minecraft.server.level.ServerPlayer> = [static:PlayerList].getPlayerByName([instr:name]);
 
 @GET_ENTITY(<net.minecraft.server.level.ServerLevel> [ctx:world], <java.util.UUID> [instr:uuid]) -> <net.minecraft.world.entity.Entity> = [ctx:world].getEntity([instr:uuid]);
@@ -216,12 +220,6 @@
 
 @SET_SCORE [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:score], int [ctx:value]) { [ctx:score].setScore([ctx:value]); }
 @SET_SCORE [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:score], int [ctx:value]) { [ctx:score].set([ctx:value]); }
-
-@ADD_SCORE [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:score], int [ctx:value]) { [ctx:score].setScore([ctx:score].getScore() + [ctx:value]); }
-@ADD_SCORE [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:score], int [ctx:value]) { [ctx:score].set([ctx:score].get() + [ctx:value]); }
-
-@REMOVE_SCORE [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:score], int [ctx:value]) { [ctx:score].setScore([ctx:score].getScore() - [ctx:value]); }
-@REMOVE_SCORE [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:score], int [ctx:value]) { [ctx:score].set([ctx:score].get() - [ctx:value]); }
 
 @KILL_ENTITY [-1.21.1] (<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.server.level.ServerLevel> [ctx:world]) {
   [ctx:entity].kill();
@@ -273,50 +271,14 @@
 @SCORE_DATA_NO_AUTO_CREATE [1.20.3-] (<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name]) -> <net.minecraft.world.scores.ScoreAccess>
   = <dev.epicpix.minecraftfunctioncompiler._VERSION_.ExtensionFunctions>.getScore([static:Scoreboard], <net.minecraft.world.scores.ScoreHolder>.forNameOnly([ctx:name]), [ctx:objective]);
 
-@RUN_SCORE_OPERATION_SET [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) { [ctx:target].setScore([ctx:source].getScore()); }
-@RUN_SCORE_OPERATION_SET [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source]) { [ctx:target].set([ctx:source].get()); }
-
-@RUN_SCORE_OPERATION_PLUS [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) { [ctx:target].setScore([ctx:target].getScore() + [ctx:source].getScore()); }
-@RUN_SCORE_OPERATION_PLUS [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source]) { [ctx:target].set([ctx:target].get() + [ctx:source].get()); }
-
-@RUN_SCORE_OPERATION_MINUS [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) { [ctx:target].setScore([ctx:target].getScore() - [ctx:source].getScore()); }
-@RUN_SCORE_OPERATION_MINUS [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source]) { [ctx:target].set([ctx:target].get() - [ctx:source].get()); }
-
-@RUN_SCORE_OPERATION_MULTIPLY [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) { [ctx:target].setScore([ctx:target].getScore() * [ctx:source].getScore()); }
-@RUN_SCORE_OPERATION_MULTIPLY [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source]) { [ctx:target].set([ctx:target].get() * [ctx:source].get()); }
-
-@RUN_SCORE_OPERATION_DIVIDE [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) { [ctx:target].setScore(<java.lang.Math>.floorDiv([ctx:target].getScore(), [ctx:source].getScore())); }
-@RUN_SCORE_OPERATION_DIVIDE [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source]) { [ctx:target].set(<java.lang.Math>.floorDiv([ctx:target].get(), [ctx:source].get())); }
-
-@RUN_SCORE_OPERATION_MODULO [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) { [ctx:target].setScore(<java.lang.Math>.floorMod([ctx:target].getScore(), [ctx:source].getScore())); }
-@RUN_SCORE_OPERATION_MODULO [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source]) { [ctx:target].set(<java.lang.Math>.floorMod([ctx:target].get(), [ctx:source].get())); }
-
-@RUN_SCORE_OPERATION_MIN [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) { [ctx:target].setScore(<java.lang.Math>.min([ctx:target].getScore(), [ctx:source].getScore())); }
-@RUN_SCORE_OPERATION_MIN [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source]) { [ctx:target].set(<java.lang.Math>.min([ctx:target].get(), [ctx:source].get())); }
-
-@RUN_SCORE_OPERATION_MAX [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) { [ctx:target].setScore(<java.lang.Math>.max([ctx:target].getScore(), [ctx:source].getScore())); }
-@RUN_SCORE_OPERATION_MAX [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source]) { [ctx:target].set(<java.lang.Math>.max([ctx:target].get(), [ctx:source].get())); }
-
-@RUN_SCORE_OPERATION_SWAP [-1.20.2] (<net.minecraft.world.scores.Score> [ctx:target], <net.minecraft.world.scores.Score> [ctx:source]) {
-  [local:temp] = [ctx:target].getScore();
-  [ctx:target].setScore([ctx:source].getScore());
-  [ctx:source].setScore([local:temp]);
-}
-
-@RUN_SCORE_OPERATION_SWAP [1.20.3-] (<net.minecraft.world.scores.ScoreAccess> [ctx:target], <net.minecraft.world.scores.ScoreAccess> [ctx:source]) {
-  [local:temp] = [ctx:target].get();
-  [ctx:target].set([ctx:source].get());
-  [ctx:source].set([local:temp]);
-}
-
 
 @GET_ENTITY_WORLD [-1.19.4] (<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.server.level.ServerLevel> = cast([ctx:entity].getLevel(), <net.minecraft.server.level.ServerLevel>);
 @GET_ENTITY_WORLD [1.20-] (<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.server.level.ServerLevel> = cast([ctx:entity].level(), <net.minecraft.server.level.ServerLevel>);
 
 @MAP_GAMEMODE(<dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:instr_gamemode]) -> <net.minecraft.world.level.GameType> = map_enum([instr:instr_gamemode], <net.minecraft.world.level.GameType>);
 @GET_GAMEMODE(<net.minecraft.server.level.ServerPlayer> [ctx:player]) -> <net.minecraft.world.level.GameType> = [ctx:player].gameMode.getGameModeForPlayer();
-@SET_GAMEMODE(<net.minecraft.server.level.ServerPlayer> [ctx:player], <dev.epicpix.minecraftfunctioncompiler.data.Gamemode> [instr:gamemode]) {
-  [ctx:player].setGameMode(map_enum([instr:gamemode], <net.minecraft.world.level.GameType>));
+@SET_GAMEMODE(<net.minecraft.server.level.ServerPlayer> [ctx:player], <net.minecraft.world.level.GameType> [ctx:gamemode]) {
+  [ctx:player].setGameMode([ctx:gamemode]);
 }
 
 @GET_PLAYER_ADVANCEMENTS(<net.minecraft.server.level.ServerPlayer> [ctx:player]) -> <net.minecraft.server.PlayerAdvancements> = [ctx:player].getAdvancements();

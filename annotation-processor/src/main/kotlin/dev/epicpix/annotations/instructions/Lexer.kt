@@ -34,6 +34,7 @@ enum class LexTokenSimpleType : LexToken {
     MINUS,
     SLASH,
     STAR,
+    PERCENT,
     SEMICOLON,
     COLON,
     ASSIGN,
@@ -110,6 +111,7 @@ fun lexTokens(code: String): List<LexToken> {
             }
             '/' -> return LexTokenSimpleType.SLASH
             '*' -> return LexTokenSimpleType.STAR
+            '%' -> return LexTokenSimpleType.PERCENT
             ';' -> return LexTokenSimpleType.SEMICOLON
             ':' -> return LexTokenSimpleType.COLON
             '^' -> return LexTokenSimpleType.XOR

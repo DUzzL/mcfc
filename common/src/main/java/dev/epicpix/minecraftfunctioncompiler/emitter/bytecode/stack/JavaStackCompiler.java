@@ -205,6 +205,18 @@ public class JavaStackCompiler {
                 mv.visitInsn(a.getOpcode(Opcodes.IMUL));
                 currentTypeStack.push(a);
                 return true;
+            }else if(eval.evaluationType() == StackEvaluationType.DIV) {
+                var a = currentTypeStack.pop();
+                currentTypeStack.pop();
+                mv.visitInsn(a.getOpcode(Opcodes.IDIV));
+                currentTypeStack.push(a);
+                return true;
+            }else if(eval.evaluationType() == StackEvaluationType.MOD) {
+                var a = currentTypeStack.pop();
+                currentTypeStack.pop();
+                mv.visitInsn(a.getOpcode(Opcodes.IREM));
+                currentTypeStack.push(a);
+                return true;
             }else if(eval.evaluationType() == StackEvaluationType.SHL) {
                 currentTypeStack.pop();
                 var a = currentTypeStack.pop();

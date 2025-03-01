@@ -403,8 +403,10 @@ public final class CommandCompiler {
                         if(cmdData.scale() == 1.0d) {
                             innerContext.writeInstruction(Instructions2.createIntTag(tagLocal, res.result));
                         }else {
+                            var resultDouble = context.<Double>createLocal();
+                            innerContext.writeInstruction(Instructions2.numberToDouble(resultDouble, res.result));
                             var multipliedDouble = context.<Double>createLocal();
-                            innerContext.writeInstruction(Instructions2.valueMulIntDouble(multipliedDouble, res.result, LocationData.ofDouble(cmdData.scale())));
+                            innerContext.writeInstruction(Instructions2.valueMul(multipliedDouble, resultDouble, LocationData.ofDouble(cmdData.scale())));
                             var convertedInteger = context.<Integer>createLocal();
                             innerContext.writeInstruction(Instructions2.numberToInteger(convertedInteger, multipliedDouble));
                             innerContext.writeInstruction(Instructions2.createIntTag(tagLocal, convertedInteger));
@@ -416,7 +418,7 @@ public final class CommandCompiler {
                             innerContext.writeInstruction(Instructions2.createDoubleTag(tagLocal, convertedDouble));
                         }else {
                             var multipliedDouble = context.<Double>createLocal();
-                            innerContext.writeInstruction(Instructions2.valueMulDouble(multipliedDouble, convertedDouble, LocationData.ofDouble(cmdData.scale())));
+                            innerContext.writeInstruction(Instructions2.valueMul(multipliedDouble, convertedDouble, LocationData.ofDouble(cmdData.scale())));
                             innerContext.writeInstruction(Instructions2.createDoubleTag(tagLocal, multipliedDouble));
                         }
                     }else if(cmdData.storeType() == ResultStoreType.FLOAT) {
@@ -425,8 +427,10 @@ public final class CommandCompiler {
                             innerContext.writeInstruction(Instructions2.numberToFloat(convertedFloat, res.result));
                             innerContext.writeInstruction(Instructions2.createFloatTag(tagLocal, convertedFloat));
                         }else {
+                            var resultDouble = context.<Double>createLocal();
+                            innerContext.writeInstruction(Instructions2.numberToDouble(resultDouble, res.result));
                             var multipliedDouble = context.<Double>createLocal();
-                            innerContext.writeInstruction(Instructions2.valueMulIntDouble(multipliedDouble, res.result, LocationData.ofDouble(cmdData.scale())));
+                            innerContext.writeInstruction(Instructions2.valueMul(multipliedDouble, resultDouble, LocationData.ofDouble(cmdData.scale())));
                             var convertedFloat = context.<Float>createLocal();
                             innerContext.writeInstruction(Instructions2.numberToFloat(convertedFloat, multipliedDouble));
                             innerContext.writeInstruction(Instructions2.createFloatTag(tagLocal, convertedFloat));
@@ -578,7 +582,9 @@ public final class CommandCompiler {
             try(var selector = context.forSelector(cmdData.targets())) {
                 var playerLocation = context.<Player>createLocal();
                 selector.writeInstruction(Instructions2.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
-                selector.writeInstruction(Instructions2.setGamemode(playerLocation, cmdData.gamemode()));
+                var mappedGamemode = context.<GameType>createLocal();
+                selector.writeInstruction(Instructions2.mapGamemode(mappedGamemode, cmdData.gamemode()));
+                selector.writeInstruction(Instructions2.setGamemode(playerLocation, mappedGamemode));
             }
         }else if(command instanceof CommandKill cmdData) {
             try(var selector = context.forSelector(cmdData.targets())) {
@@ -593,7 +599,11 @@ public final class CommandCompiler {
         }else if(command instanceof CommandScoreboardPlayersAdd cmdData) {
             try(var targets = context.forScoreAccessors(cmdData.targets())) {
                 try(var scoreData = context.getScoreData(targets.content(), true)) {
-                    scoreData.writeInstruction(Instructions2.addScore(scoreData.content(), context.getResolvedIntegerMacro(cmdData.score())));
+                    var scoreValue = context.<Integer>createLocal();
+                    scoreData.writeInstruction(Instructions2.getScoreValue(scoreValue, scoreData.content()));
+                    var updatedScoreValue = context.<Integer>createLocal();
+                    scoreData.writeInstruction(Instructions2.valueAdd(updatedScoreValue, scoreValue, context.getResolvedIntegerMacro(cmdData.score())));
+                    scoreData.writeInstruction(Instructions2.setScore(scoreData.content(), updatedScoreValue));
                 }
             }
         }else if(command instanceof CommandScoreboardPlayersEnable cmdData) {
@@ -625,25 +635,87 @@ public final class CommandCompiler {
                         try(var targetScore = context.getScoreData(targets.content(), true)) {
                             try(var sourceScore = context.getScoreData(source.content(), true)) {
                                 switch(cmdData.operation()) {
-                                    case SET -> sourceScore.writeInstruction(Instructions2.runScoreOperationSet(targetScore.content(), sourceScore.content()));
-                                    case ADD -> sourceScore.writeInstruction(Instructions2.runScoreOperationPlus(targetScore.content(), sourceScore.content()));
-                                    case SUB -> sourceScore.writeInstruction(Instructions2.runScoreOperationMinus(targetScore.content(), sourceScore.content()));
-                                    case MUL -> sourceScore.writeInstruction(Instructions2.runScoreOperationMultiply(targetScore.content(), sourceScore.content()));
+                                    case SET -> {
+                                        var scoreValue = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.getScoreValue(scoreValue, sourceScore.content()));
+                                        sourceScore.writeInstruction(Instructions2.setScore(targetScore.content(), scoreValue));
+                                    }
+                                    case ADD -> {
+                                        var scoreValueA = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.getScoreValue(scoreValueA, sourceScore.content()));
+                                        var scoreValueB = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.getScoreValue(scoreValueB, targetScore.content()));
+                                        var updatedScoreValue = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.valueAdd(updatedScoreValue, scoreValueA, scoreValueB));
+                                        sourceScore.writeInstruction(Instructions2.setScore(targetScore.content(), updatedScoreValue));
+                                    }
+                                    case SUB -> {
+                                        var scoreValueA = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.getScoreValue(scoreValueA, sourceScore.content()));
+                                        var scoreValueB = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.getScoreValue(scoreValueB, targetScore.content()));
+                                        var updatedScoreValue = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.valueSub(updatedScoreValue, scoreValueA, scoreValueB));
+                                        sourceScore.writeInstruction(Instructions2.setScore(targetScore.content(), updatedScoreValue));
+                                    }
+                                    case MUL -> {
+                                        var scoreValueA = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.getScoreValue(scoreValueA, sourceScore.content()));
+                                        var scoreValueB = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.getScoreValue(scoreValueB, targetScore.content()));
+                                        var updatedScoreValue = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.valueMul(updatedScoreValue, scoreValueA, scoreValueB));
+                                        sourceScore.writeInstruction(Instructions2.setScore(targetScore.content(), updatedScoreValue));
+                                    }
                                     case DIV -> {
                                         var divisor = context.<Integer>createLocal();
                                         sourceScore.writeInstruction(Instructions2.getScoreValue(divisor, sourceScore.content()));
                                         sourceScore.writeInstruction(Instructions2.ifNumberCompareJump(NumberComparisonType.EQUAL, divisor, LocationData.ofInteger(0), selectorCodeLocation));
-                                        sourceScore.writeInstruction(Instructions2.runScoreOperationDivide(targetScore.content(), sourceScore.content()));
+                                        var dividend = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.getScoreValue(dividend, targetScore.content()));
+
+                                        var updatedScoreValue = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.intFloorMod(updatedScoreValue, dividend, divisor));
+                                        sourceScore.writeInstruction(Instructions2.setScore(targetScore.content(), updatedScoreValue));
                                     }
                                     case MOD -> {
                                         var divisor = context.<Integer>createLocal();
                                         sourceScore.writeInstruction(Instructions2.getScoreValue(divisor, sourceScore.content()));
                                         sourceScore.writeInstruction(Instructions2.ifNumberCompareJump(NumberComparisonType.EQUAL, divisor, LocationData.ofInteger(0), selectorCodeLocation));
-                                        sourceScore.writeInstruction(Instructions2.runScoreOperationModulo(targetScore.content(), sourceScore.content()));
+                                        var dividend = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.getScoreValue(dividend, targetScore.content()));
+
+                                        var updatedScoreValue = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.intFloorDiv(updatedScoreValue, dividend, divisor));
+                                        sourceScore.writeInstruction(Instructions2.setScore(targetScore.content(), updatedScoreValue));
                                     }
-                                    case MIN -> sourceScore.writeInstruction(Instructions2.runScoreOperationMin(targetScore.content(), sourceScore.content()));
-                                    case MAX -> sourceScore.writeInstruction(Instructions2.runScoreOperationMax(targetScore.content(), sourceScore.content()));
-                                    case SWAP -> sourceScore.writeInstruction(Instructions2.runScoreOperationSwap(targetScore.content(), sourceScore.content()));
+                                    case MIN -> {
+                                        var scoreValueA = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.getScoreValue(scoreValueA, sourceScore.content()));
+                                        var scoreValueB = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.getScoreValue(scoreValueB, targetScore.content()));
+                                        var updatedScoreValue = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.intMin(updatedScoreValue, scoreValueA, scoreValueB));
+                                        sourceScore.writeInstruction(Instructions2.setScore(targetScore.content(), updatedScoreValue));
+                                    }
+                                    case MAX -> {
+                                        var scoreValueA = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.getScoreValue(scoreValueA, sourceScore.content()));
+                                        var scoreValueB = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.getScoreValue(scoreValueB, targetScore.content()));
+                                        var updatedScoreValue = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.intMax(updatedScoreValue, scoreValueA, scoreValueB));
+                                        sourceScore.writeInstruction(Instructions2.setScore(targetScore.content(), updatedScoreValue));
+                                    }
+                                    case SWAP -> {
+                                        var scoreValueA = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.getScoreValue(scoreValueA, sourceScore.content()));
+                                        var scoreValueB = context.<Integer>createLocal();
+                                        sourceScore.writeInstruction(Instructions2.getScoreValue(scoreValueB, targetScore.content()));
+
+                                        sourceScore.writeInstruction(Instructions2.setScore(targetScore.content(), scoreValueA));
+                                        sourceScore.writeInstruction(Instructions2.setScore(sourceScore.content(), scoreValueB));
+                                    }
                                 }
                             }
                         }
@@ -653,7 +725,11 @@ public final class CommandCompiler {
         }else if(command instanceof CommandScoreboardPlayersRemove cmdData) {
             try(var targets = context.forScoreAccessors(cmdData.targets())) {
                 try(var scoreData = context.getScoreData(targets.content(), true)) {
-                    scoreData.writeInstruction(Instructions2.removeScore(scoreData.content(), context.getResolvedIntegerMacro(cmdData.score())));
+                    var scoreValue = context.<Integer>createLocal();
+                    scoreData.writeInstruction(Instructions2.getScoreValue(scoreValue, scoreData.content()));
+                    var updatedScoreValue = context.<Integer>createLocal();
+                    scoreData.writeInstruction(Instructions2.valueSub(updatedScoreValue, scoreValue, context.getResolvedIntegerMacro(cmdData.score())));
+                    scoreData.writeInstruction(Instructions2.setScore(scoreData.content(), updatedScoreValue));
                 }
             }
         }else if(command instanceof CommandScoreboardPlayersResetAll cmdData) {

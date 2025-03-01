@@ -63,7 +63,7 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
     }else if(expression is ParsedTokenExpressionBinary) {
         val a = evaluateExpressionType(writerData, expression.a)
         val b = evaluateExpressionType(writerData, expression.b)
-        if(expression.op == ParsedTokenExpressionOperator.ADD || expression.op == ParsedTokenExpressionOperator.SUB || expression.op == ParsedTokenExpressionOperator.MUL) {
+        if(expression.op == ParsedTokenExpressionOperator.ADD || expression.op == ParsedTokenExpressionOperator.SUB || expression.op == ParsedTokenExpressionOperator.MUL || expression.op == ParsedTokenExpressionOperator.DIV || expression.op == ParsedTokenExpressionOperator.MOD) {
             if(a.isNumber() && a == b) {
                 return a
             }
@@ -391,6 +391,18 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 val argA = writeExpression(writerData.copyLocalTypes(), expression.a, output, uniqId)
                 val argB = writeExpression(writerData.copyLocalTypes(), expression.b, output, uniqId)
                 return writeNextRegister(uniqId, output, "cw.mul(${argA}, ${argB})")
+            }
+        }else if(expression.op == ParsedTokenExpressionOperator.DIV) {
+            if(evaluateExpressionType(writerData, expression).isNumber()) {
+                val argA = writeExpression(writerData.copyLocalTypes(), expression.a, output, uniqId)
+                val argB = writeExpression(writerData.copyLocalTypes(), expression.b, output, uniqId)
+                return writeNextRegister(uniqId, output, "cw.div(${argA}, ${argB})")
+            }
+        }else if(expression.op == ParsedTokenExpressionOperator.MOD) {
+            if(evaluateExpressionType(writerData, expression).isNumber()) {
+                val argA = writeExpression(writerData.copyLocalTypes(), expression.a, output, uniqId)
+                val argB = writeExpression(writerData.copyLocalTypes(), expression.b, output, uniqId)
+                return writeNextRegister(uniqId, output, "cw.mod(${argA}, ${argB})")
             }
         }else if(expression.op == ParsedTokenExpressionOperator.SHR) {
             if(isExpressionSimpleType(writerData, expression, ParsedTokenExpressionSimpleType.LONG) || isExpressionSimpleType(writerData, expression, ParsedTokenExpressionSimpleType.INTEGER)) {

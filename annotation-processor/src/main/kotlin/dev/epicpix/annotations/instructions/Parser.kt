@@ -62,7 +62,7 @@ enum class ParsedTokenExpressionSimpleType : ParsedTokenExpressionType {
 }
 
 enum class ParsedTokenExpressionOperator {
-    ADD, SUB, MUL, DIV, EQ, NE, GT, LT, GE, LE, SHR, SHL,
+    ADD, SUB, MUL, DIV, MOD, EQ, NE, GT, LT, GE, LE, SHR, SHL,
 }
 
 private fun parseExpressionTypeWord(iter: ListIterator<LexToken>): ParsedTokenExpressionType {
@@ -228,6 +228,8 @@ private fun parseExpression3(iter: ListIterator<LexToken>, valueDefinitions: Lis
             ParsedTokenExpressionBinary(exp1, parseExpression4(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.MUL)
         }else if(iter.tryNextTokenType(LexTokenSimpleType.SLASH)) {
             ParsedTokenExpressionBinary(exp1, parseExpression4(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.DIV)
+        }else if(iter.tryNextTokenType(LexTokenSimpleType.PERCENT)) {
+            ParsedTokenExpressionBinary(exp1, parseExpression4(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.MOD)
         }else {
             break
         }
