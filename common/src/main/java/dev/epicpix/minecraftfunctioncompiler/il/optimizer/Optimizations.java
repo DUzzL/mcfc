@@ -113,14 +113,12 @@ public final class Optimizations {
         }else if(pass.thisInstruction().type() == InstructionTypes2.CALL_FUNCTIONS) {
             var prev = pass.getOffsetInstruction(-1);
             if(prev != null && prev.type() == InstructionTypes2.CALL_FUNCTIONS) {
-                if(pass.thisInstruction().get("result") == null && prev.get("result") == null) {
-                    if(Objects.equals(pass.thisInstruction().get("arguments"), prev.get("arguments"))) {
-                        if(Objects.equals(pass.thisInstruction().get("stack"), prev.get("stack"))) {
-                            var functions = new ArrayList<DataLocation>(prev.get("functions"));
-                            functions.addAll(pass.thisInstruction().get("functions"));
-                            pass.replaceInstruction(pass.thisInstructionIndex() - 1, Instructions2.callFunctions(null, functions, prev.get("stack"), prev.get("arguments")));
-                            pass.removeInstruction(pass.thisInstructionIndex());
-                        }
+                if(Objects.equals(pass.thisInstruction().get("arguments"), prev.get("arguments"))) {
+                    if(Objects.equals(pass.thisInstruction().get("stack"), prev.get("stack"))) {
+                        var functions = new ArrayList<DataLocation>(prev.get("functions"));
+                        functions.addAll(pass.thisInstruction().get("functions"));
+                        pass.replaceInstruction(pass.thisInstructionIndex() - 1, Instructions2.callFunctions(functions, prev.get("stack"), prev.get("arguments")));
+                        pass.removeInstruction(pass.thisInstructionIndex());
                     }
                 }
             }

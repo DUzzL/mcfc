@@ -216,7 +216,7 @@ public class FunctionCodeGenerator {
             entryWriter.returnValue(new BytecodeValue.LongValue(0x2L << 32));
         }else {
             var returnValue = entryWriter.createRegister();
-            var instr = List.of(Instructions2.callFunctions(LocationData.ofLocal(-3), List.of(funcId), LocationData.ofLocal(-1), LocationData.ofLocal(-2)));
+            var instr = List.of(Instructions2.callFunctionsWithResult(LocationData.ofLocal(-3), List.of(funcId), LocationData.ofLocal(-1), LocationData.ofLocal(-2)));
             entryContext = new EmitterContext(funcId, params.codeFieldStorage(), entryWriter, Collections.emptySet(), new HashMap<>(staticArguments), null, instr, includeProfilerSupport);
             entryContext.setTransform(-1, staticCommandSourceStack);
             entryContext.setTransform(-2, staticFunctionCompound);

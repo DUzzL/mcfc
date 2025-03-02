@@ -9,7 +9,6 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2;
-import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
 import dev.epicpix.minecraftfunctioncompiler.profiler.Profiler;
 import dev.epicpix.minecraftfunctioncompiler.v1_20_1.CompiledCommandResultStore;
 import net.minecraft.commands.CommandSourceStack;
@@ -31,18 +30,41 @@ public final class Emitter {
             var codeWriter = context.codeWriter();
             if(context.instruction().type() == InstructionTypes2.CALL_FUNCTIONS) {
                 var functions = context.instruction().<List<DataLocation>>get("functions");
-                var returnValueLocation = context.instruction().<LocationData<Long>>get("result");
-                if(functions.isEmpty()) {
-                    if(returnValueLocation != null) {
-                        context.store("result", new BytecodeValue.LongValue(1L << 32));
+                if(!functions.isEmpty()) {
+                    var post = codeWriter.createLabel();
+                    for(var func : functions) {
+                        var commandSourceStack = context.load("stack");
+                        if(context.instruction().get("arguments") != null) throw new IllegalArgumentException("Macro arguments are not supported in 1.20.1");
+                        if(context.compiledFunctions().contains(func)) {
+                            var target = new InstructionTarget.FunctionTarget(("mcfc/function/" + func.namespace() + "/" + func.path()).replace('.', '$'), "run", "(" + CommandSourceStack.class.descriptorString() + context.fieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND).getDescriptor() + ")J", true, false, false, true);
+                            codeWriter.writeTarget(target, commandSourceStack, new BytecodeValue.NullValue());
+                        }else {
+                            var mctx = loadServerFunctionManager_context(codeWriter, context.fieldStorage().loadServerFunctionManager(codeWriter));
+                            storeServerFunctionManager_context(codeWriter, context.fieldStorage().loadServerFunctionManager(codeWriter), new BytecodeValue.NullValue());
+                            var functionManager = context.fieldStorage().loadServerFunctionManager(codeWriter);
+                            var function = context.fieldStorage().loadFunction(codeWriter, func);
+
+                            if(context.shouldIncludeProfilerSupport()) codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "enterOverhead", void.class, String.class), new BytecodeValue.StringValue(func.toString()));
+                            callExtensionFunctions_executeFunction(codeWriter, functionManager, function, commandSourceStack, new BytecodeValue.NullValue());
+                            if(context.shouldIncludeProfilerSupport()) codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "exit", void.class));
+                            storeServerFunctionManager_context(codeWriter, context.fieldStorage().loadServerFunctionManager(codeWriter), mctx);
+                        }
                     }
+                    codeWriter.label(post);
+                }
+                return true;
+            }
+            if(context.instruction().type() == InstructionTypes2.CALL_FUNCTIONS_WITH_RESULT) {
+                var functions = context.instruction().<List<DataLocation>>get("functions");
+                if(functions.isEmpty()) {
+                    context.store("result", new BytecodeValue.LongValue(1L << 32));
                 }else {
                     var post = codeWriter.createLabel();
                     codeWriter.writeTarget(RUN_RESULT_FIELD_WRITE_TARGET, new BytecodeValue.LongValue(2L << 32));
                     for(int i = 0; i < functions.size(); i++) {
                         var func = functions.get(i);
                         var commandSourceStack = context.load("stack");
-                        BytecodeRegister returnValue = null;
+                        BytecodeRegister returnValue;
                         if(context.instruction().get("arguments") != null)
                             throw new IllegalArgumentException("Macro arguments are not supported in 1.20.1");
                         if(context.compiledFunctions().contains(func)) {
@@ -51,28 +73,22 @@ public final class Emitter {
                         }else {
                             var mctx = loadServerFunctionManager_context(codeWriter, context.fieldStorage().loadServerFunctionManager(codeWriter));
                             storeServerFunctionManager_context(codeWriter, context.fieldStorage().loadServerFunctionManager(codeWriter), new BytecodeValue.NullValue());
-                            if(returnValueLocation != null) {
-                                var store = codeWriter.newObjectCreate(COMMAND_RESULT_STORE_INIT_TARGET);
-                                commandSourceStack = callCommandSourceStack_withCallback(codeWriter, commandSourceStack, store);
-                            }
+                            var store = codeWriter.newObjectCreate(COMMAND_RESULT_STORE_INIT_TARGET);
+                            commandSourceStack = callCommandSourceStack_withCallback(codeWriter, commandSourceStack, store);
                             var functionManager = context.fieldStorage().loadServerFunctionManager(codeWriter);
                             var function = context.fieldStorage().loadFunction(codeWriter, func);
                             if(context.shouldIncludeProfilerSupport()) codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "enterOverhead", void.class, String.class), new BytecodeValue.StringValue(func.toString()));
                             callExtensionFunctions_executeFunction(codeWriter, functionManager, function, commandSourceStack, new BytecodeValue.NullValue());
                             if(context.shouldIncludeProfilerSupport()) codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "exit", void.class));
                             storeServerFunctionManager_context(codeWriter, context.fieldStorage().loadServerFunctionManager(codeWriter), mctx);
-                            if(returnValueLocation != null) {
-                                returnValue = codeWriter.writeTarget(RUN_RESULT_FIELD_READ_TARGET);
-                            }
+                            returnValue = codeWriter.writeTarget(RUN_RESULT_FIELD_READ_TARGET);
                         }
 
-                        if(returnValueLocation != null) {
-                            context.store("result", returnValue);
-                            if(i + 1 != functions.size()) {
-                                var shiftedResult = codeWriter.shiftRight(context.load("result"), new BytecodeValue.IntegerValue(32));
-                                var shiftedIntResult = codeWriter.castType(shiftedResult, Type.INT_TYPE);
-                                codeWriter.conditionalJump(JumpCondition.NE, shiftedIntResult, new BytecodeValue.IntegerValue(2), post);
-                            }
+                        context.store("result", returnValue);
+                        if(i + 1 != functions.size()) {
+                            var shiftedResult = codeWriter.shiftRight(context.load("result"), new BytecodeValue.IntegerValue(32));
+                            var shiftedIntResult = codeWriter.castType(shiftedResult, Type.INT_TYPE);
+                            codeWriter.conditionalJump(JumpCondition.NE, shiftedIntResult, new BytecodeValue.IntegerValue(2), post);
                         }
                     }
                     codeWriter.label(post);
