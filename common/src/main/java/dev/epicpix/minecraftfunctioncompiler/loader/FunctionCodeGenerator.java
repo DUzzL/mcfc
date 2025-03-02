@@ -148,7 +148,7 @@ public class FunctionCodeGenerator {
         HashMap<String, BytecodeValue> stringifiedValues = new HashMap<>();
 
         for(var macroInstr : macroInstructions) {
-            var macros = macroInstr.<MacroTemplate<String>>get("macroTemplate").extractMacros();
+            var macros = macroInstr.<MacroTemplate<String>>get("macro").extractMacros();
             for(var macro : macros) {
                 var generated = generatedValidators.computeIfAbsent(macro.source(), k -> new HashSet<>());
                 if(generated.containsAll(macro.validators())) {
@@ -188,7 +188,7 @@ public class FunctionCodeGenerator {
         var macroInstructions = Instruction.findTyped(instructions, InstructionTypes.LOAD_MACRO);
         var macroInputs = new ArrayList<MacroInput>();
         for(var macroInstr : macroInstructions) {
-            var template = macroInstr.<MacroTemplate<?>>get("macroTemplate");
+            var template = macroInstr.<MacroTemplate<?>>get("macro");
             var macros = template.extractMacros();
             for(var macro : macros) {
                 var macroInput = new MacroInput(macro.source(), template.macroType());

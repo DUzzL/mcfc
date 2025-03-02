@@ -27,7 +27,7 @@ public class McfcCommand {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         var base = Commands.literal("mcfc").requires(stack -> stack.hasPermission(3));
 
-        var profilerBase = Commands.literal("profiler").requires(CommandSourceStack::isPlayer);
+        var profilerBase = Commands.literal("profiler");
         profilerBase.then(Commands.literal("save_trace").executes(context -> {
             if(!Profiler.hasData()) {
                 context.getSource().sendFailure(Component.literal("Profiler does not have any tracing data available"));

@@ -879,31 +879,32 @@ private fun doComparison(writerData: WriterData, expression: ParsedTokenExpressi
     }
 }
 
-enum class ReturnTypeResult(val continuesRunning: Boolean) {
-    CONTINUE(true),
-    SOFT_RETURN(false),
-    HARD_RETURN(false),
+enum class ReturnTypeResult {
+    CONTINUE,
+    BREAK,
+    RETURN,
 }
 
-private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, output: OutputStream, uniqId: AtomicInteger): ReturnTypeResult {
+private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, output: OutputStream, uniqId: AtomicInteger, insideCompileBlock: Boolean): ReturnTypeResult {
     for(el in code) {
         if(el is ParsedTokenStatementIf) {
             val failureLabel = getNextLabel(uniqId)
             output.appendText("dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel $failureLabel = cw.createLabel();\n")
             doComparison(writerData.copyLocalTypes(), el.expression, output, failureLabel, uniqId)
-            val baseReturn = writeCode(writerData.copyLocalTypes(), el.code, output, uniqId)
+            val baseReturn = writeCode(writerData.copyLocalTypes(), el.code, output, uniqId, insideCompileBlock)
             if(el.elseCode != null) {
                 val jumpLabel = getNextLabel(uniqId)
                 output.appendText("dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel $jumpLabel = cw.createLabel();\n")
                 output.appendText("cw.jump($jumpLabel);\n")
                 output.appendText("cw.label($failureLabel);\n")
-                val otherReturn = writeCode(writerData.copyLocalTypes(), el.elseCode, output, uniqId)
+                val otherReturn = writeCode(writerData.copyLocalTypes(), el.elseCode, output, uniqId, insideCompileBlock)
                 output.appendText("cw.label($jumpLabel);\n")
-                if(baseReturn == ReturnTypeResult.HARD_RETURN && otherReturn == ReturnTypeResult.HARD_RETURN) {
-                    return ReturnTypeResult.HARD_RETURN
+                if(baseReturn == ReturnTypeResult.RETURN && otherReturn == ReturnTypeResult.RETURN) {
+                    output.appendText("return true;\n")
+                    return ReturnTypeResult.RETURN
                 }
-                if(!baseReturn.continuesRunning && !otherReturn.continuesRunning) {
-                    return ReturnTypeResult.SOFT_RETURN
+                if(baseReturn != ReturnTypeResult.CONTINUE && otherReturn != ReturnTypeResult.CONTINUE) {
+                    return ReturnTypeResult.BREAK
                 }
             }else {
                 output.appendText("cw.label($failureLabel);\n")
@@ -913,19 +914,20 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
             val comparisonString = createCompileExpression(writerData.copyLocalTypes(), el.expression)
             output.appendText("if(${comparisonString.toCompileString(writerData)}) {\n")
             val bout = ByteArrayOutputStream()
-            val baseReturn = writeCode(writerData.copyLocalTypes(), el.code, bout, uniqId)
+            val baseReturn = writeCode(writerData.copyLocalTypes(), el.code, bout, uniqId, true)
             output.appendText(bout.toByteArray().decodeToString().trimEnd().prependIndent("    ") + "\n")
             output.appendText("}")
             if(el.elseCode != null) {
                 output.appendText("else {\n")
                 bout.reset()
-                val otherReturn = writeCode(writerData.copyLocalTypes(), el.elseCode, bout, uniqId)
+                val otherReturn = writeCode(writerData.copyLocalTypes(), el.elseCode, bout, uniqId, true)
                 output.appendText(bout.toByteArray().decodeToString().trimEnd().prependIndent("    ") + "\n")
-                if(baseReturn == ReturnTypeResult.HARD_RETURN && otherReturn == ReturnTypeResult.HARD_RETURN) {
-                    return ReturnTypeResult.HARD_RETURN
+                if(baseReturn == ReturnTypeResult.RETURN && otherReturn == ReturnTypeResult.RETURN) {
+                    output.appendText("return true;\n")
+                    return ReturnTypeResult.RETURN
                 }
-                if(!baseReturn.continuesRunning && !otherReturn.continuesRunning) {
-                    return ReturnTypeResult.SOFT_RETURN
+                if(baseReturn != ReturnTypeResult.CONTINUE && otherReturn != ReturnTypeResult.CONTINUE) {
+                    return ReturnTypeResult.BREAK
                 }
                 output.appendText("}")
             }
@@ -939,7 +941,7 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                 for((case, code) in el.matches) {
                     output.appendText("    case $case -> {\n")
                     val bout = ByteArrayOutputStream()
-                    writeCode(writerData.copyLocalTypes(), code, bout, uniqId)
+                    writeCode(writerData.copyLocalTypes(), code, bout, uniqId, true)
                     output.appendText(bout.toByteArray().decodeToString().trimEnd().prependIndent("        ") + "\n")
                     output.appendText("    }\n")
                 }
@@ -952,7 +954,7 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                     val (case, code) = entries[i]
                     output.appendText("if(java.util.Objects.equals($comparisonReg, $casePrefix$case)) {\n")
                     val bout = ByteArrayOutputStream()
-                    writeCode(writerData.copyLocalTypes(), code, bout, uniqId)
+                    writeCode(writerData.copyLocalTypes(), code, bout, uniqId, true)
                     output.appendText(bout.toByteArray().decodeToString().trimEnd().prependIndent("    ") + "\n")
                     output.appendText("}")
                     if(i != entries.size - 1) {
@@ -1016,14 +1018,16 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                     expressions.add(createCompileExpression(writerData, arg).toCompileString(writerData))
                 }
                 output.appendText("throw new RuntimeException(${expressions.joinToString(" + ") { "$it+\"\"" }});\n")
-                return ReturnTypeResult.HARD_RETURN
+                return ReturnTypeResult.RETURN
             }else if(el.name == "return_fail") {
                 output.appendText("cw.returnValue(new dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue.LongValue(${1L shl 32}L));\n")
+                return ReturnTypeResult.BREAK
             }else if(el.name == "return_success") {
                 val sourceType = evaluateExpressionType(writerData, el.arguments[0])
                 if(sourceType == ParsedTokenExpressionSimpleType.INTEGER) {
                     val expr = writeExpression(writerData, el.arguments[0], output, uniqId)
                     output.appendText("cw.returnValue(cw.castType($expr, org.objectweb.asm.Type.LONG_TYPE));\n")
+                    return ReturnTypeResult.BREAK
                 }else {
                     throw IllegalArgumentException("Invalid return type: $sourceType")
                 }
@@ -1067,7 +1071,11 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                 if(writerData.params.any { it.first.scope == ParsedTokenValueAccessorScope.RETURN }) {
                     throw IllegalArgumentException("Tried to return with no value, when there's a return type in the instruction definition")
                 }
-                return ReturnTypeResult.SOFT_RETURN
+                if(insideCompileBlock) {
+                    output.appendText("return true;\n")
+                    return ReturnTypeResult.RETURN
+                }
+                return ReturnTypeResult.BREAK
             }
             val returnAccessor = writerData.params.find { it.first.scope == ParsedTokenValueAccessorScope.RETURN } ?: throw IllegalArgumentException("Tried to return with a value, when there's no return type in the instruction definition")
             val returnType = returnAccessor.second
@@ -1077,7 +1085,11 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
             }
             val expr = writeExpression(writerData, el.value, output, uniqId)
             output.appendText("context.store(${writerData.getParamIndex(returnAccessor.first)}, $expr);\n")
-            return ReturnTypeResult.SOFT_RETURN
+            if(insideCompileBlock) {
+                output.appendText("return true;\n")
+                return ReturnTypeResult.RETURN
+            }
+            return ReturnTypeResult.BREAK
         }
         throw Exception(el.toString())
     }
@@ -1090,11 +1102,11 @@ fun generateCode(mappingData: MappingData?, definition: ParsedTokenInstructionDe
     if(definition.code.isNotEmpty()) {
         try {
             val hasReturnType = writerData.params.any { it.first.scope == ParsedTokenValueAccessorScope.RETURN }
-            val didReturn = writeCode(writerData, definition.code, output, AtomicInteger(0))
-            if(hasReturnType && didReturn.continuesRunning) {
+            val returnKind = writeCode(writerData, definition.code, output, AtomicInteger(0), false)
+            if(hasReturnType && returnKind == ReturnTypeResult.CONTINUE) {
                 throw IllegalArgumentException("Not all branches return a value, required since the instruction definition has a return type")
             }
-            writeNormalReturn = didReturn != ReturnTypeResult.HARD_RETURN
+            writeNormalReturn = returnKind != ReturnTypeResult.RETURN
         }catch(e: Exception) {
             throw RuntimeException("Failed to write code for instruction definition ${definition.name}", e)
         }
