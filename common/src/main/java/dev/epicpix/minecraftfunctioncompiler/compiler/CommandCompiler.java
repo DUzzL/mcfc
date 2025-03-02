@@ -11,6 +11,7 @@ import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.emitter.types.NumberComparisonType;
 import dev.epicpix.minecraftfunctioncompiler.emitter.types.ObjectComparisonType;
+import dev.epicpix.minecraftfunctioncompiler.emitter.types.SetRandomizedWeatherData;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
@@ -95,7 +96,7 @@ public final class CommandCompiler {
                 var setCountLocal = context.<Integer>createLocal();
 
                 context.writeInstruction(Instructions.getNbtStorage(storageLocal, loc.storage()));
-                context.writeInstruction(Instructions.valueAssign(setCountLocal, LocationData.ofInteger(0)));
+                context.writeInstruction(Instructions.assign(setCountLocal, LocationData.ofInteger(0)));
 
                 var parts = cmdData.path().parts();
 
@@ -397,7 +398,7 @@ public final class CommandCompiler {
                 var setCountLocal = context.<Integer>createLocal();
 
                 context.writeInstruction(Instructions.getNbtStorage(storageLocal, cmdData.storage()));
-                context.writeInstruction(Instructions.valueAssign(setCountLocal, LocationData.ofInteger(0)));
+                context.writeInstruction(Instructions.assign(setCountLocal, LocationData.ofInteger(0)));
 
                 var parts = cmdData.path().parts();
 
@@ -816,15 +817,15 @@ public final class CommandCompiler {
         }else if(command instanceof CommandWeatherClearTimed cmdData) {
             context.writeInstruction(Instructions.setWeatherStatic(cmdData.duration(), 0, false, false));
         }else if(command instanceof CommandWeatherClear) {
-            context.writeInstruction(Instructions.setWeatherDynamicClear());
+            context.writeInstruction(Instructions.setWeatherDynamic(SetRandomizedWeatherData.CLEAR));
         }else if(command instanceof CommandWeatherRainTimed cmdData) {
             context.writeInstruction(Instructions.setWeatherStatic(0, cmdData.duration(), true, false));
         }else if(command instanceof CommandWeatherRain) {
-            context.writeInstruction(Instructions.setWeatherDynamicRain());
+            context.writeInstruction(Instructions.setWeatherDynamic(SetRandomizedWeatherData.RAIN));
         }else if(command instanceof CommandWeatherThunderTimed cmdData) {
             context.writeInstruction(Instructions.setWeatherStatic(0, cmdData.duration(), true, true));
         }else if(command instanceof CommandWeatherThunder) {
-            context.writeInstruction(Instructions.setWeatherDynamicThunder());
+            context.writeInstruction(Instructions.setWeatherDynamic(SetRandomizedWeatherData.THUNDER));
         }else {
             throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNKNOWN_COMMAND, context.getSource(), "Not implemented command: " + command));
         }
@@ -877,9 +878,9 @@ public final class CommandCompiler {
         var index = context.<Integer>createLocal();
 
         if(indexed.index() >= 0) {
-            context.writeInstruction(Instructions.valueAssign(index, LocationData.ofInteger(indexed.index())));
+            context.writeInstruction(Instructions.assign(index, LocationData.ofInteger(indexed.index())));
         }else {
-            context.writeInstruction(Instructions.valueAssign(index, length));
+            context.writeInstruction(Instructions.assign(index, length));
             context.writeInstruction(Instructions.valueSub(index, index, LocationData.ofInteger(-indexed.index())));
         }
 

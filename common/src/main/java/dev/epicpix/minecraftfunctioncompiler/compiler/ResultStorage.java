@@ -40,7 +40,7 @@ public class ResultStorage {
     public void setResult(InstructionWriter instructionWriter, CompilationContextData context, LocationData<Integer> data) {
         if(storesResult()) {
             updatedResult = true;
-            context.writeInstruction(instructionWriter, Instructions.valueAssign(result, data));
+            context.writeInstruction(instructionWriter, Instructions.assign(result, data));
         }
     }
 
@@ -54,7 +54,7 @@ public class ResultStorage {
     public void updateSuccess(InstructionWriter instructionWriter, CompilationContextData context, boolean failed) {
         if(storesSuccess()) {
             updatedSuccess = true;
-            context.writeInstruction(instructionWriter, Instructions.valueAssign(success, LocationData.ofInteger(failed ? 0 : 1)));
+            context.writeInstruction(instructionWriter, Instructions.assign(success, LocationData.ofInteger(failed ? 0 : 1)));
         }
     }
 

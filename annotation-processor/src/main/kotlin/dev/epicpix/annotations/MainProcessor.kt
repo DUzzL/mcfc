@@ -80,7 +80,7 @@ fun remapType(type: Type, mappingData: MappingData?): Type {
 }
 
 fun kotlinToJavaType(type: String, genericUsage: Boolean, generics: List<String> = emptyList()): String {
-    val genericsString = if(generics.isEmpty()) "" else "<${generics.joinToString(", ")}>"
+    val genericsString = if(generics.isEmpty()) "" else "<${generics.joinToString(", ") { "? extends $it" }}>"
     return when(type) {
         "kotlin.Boolean" -> if(!genericUsage) "boolean" else "Boolean"
         "kotlin.Double" -> if(!genericUsage) "double" else "Double"
@@ -88,10 +88,10 @@ fun kotlinToJavaType(type: String, genericUsage: Boolean, generics: List<String>
         "kotlin.Int" -> if(!genericUsage) "int" else "Integer"
         "kotlin.Long" -> if(!genericUsage) "long" else "Long"
         "kotlin.String" -> "String"
-        "kotlin.collections.List" -> if(!genericUsage) "List" else "List<?>"
-        "kotlin.collections.MutableList" -> if(!genericUsage) "List" else "List<?>"
+        "kotlin.collections.List" -> if(!genericUsage) "List" else "List${if(generics.isEmpty()) "<?>" else ""}"
+        "kotlin.collections.MutableList" -> if(!genericUsage) "List" else "List${if(generics.isEmpty()) "<?>" else ""}"
         "kotlin.collections.Map" -> "Map"
-        "java.util.List" -> if(!genericUsage) "List" else "List<?>"
+        "java.util.List" -> if(!genericUsage) "List" else "List${if(generics.isEmpty()) "<?>" else ""}"
         else -> if(type.startsWith("kotlin.")) throw UnsupportedOperationException("Unknown kotlin type: $type") else type
     } + genericsString
 }
@@ -469,11 +469,11 @@ class MainProcessor(
                     for(i in it.params.indices) {
                         val (_, type) = it.params[i]
                         if(type is ParsedTokenExpressionTypeGeneric) {
-                            if(!definedNames.add(type.name)) continue
+                            if(!definedNames.add(type.generic.name)) continue
                             if(generics.length != 2) {
                                 generics.append(", ")
                             }
-                            generics.append("${type.name} extends ${javaToMinecraftGenericType(type.lowerBound.typeName, type.lowerBound.generics.map { it.typeName })}")
+                            generics.append("${type.generic.name} extends ${javaToMinecraftGenericType(type.lowerBound.typeName, type.lowerBound.generics.map { javaToMinecraftGenericType(it.typeName) })}")
                         }
                     }
                     generics.append(">")
@@ -499,12 +499,12 @@ class MainProcessor(
                                         "Long"
                                     }else if(type is ParsedTokenExpressionTypeComplex) {
                                         if(param.scope == ParsedTokenValueAccessorScope.RETURN) {
-                                            javaToMinecraftGenericType(type.typeName, type.generics.map { it.typeName })
+                                            javaToMinecraftGenericType(type.typeName, type.generics.map { javaToMinecraftGenericType(it.typeName) })
                                         }else {
-                                            "? extends ${javaToMinecraftGenericType(type.typeName, type.generics.map { it.typeName })}"
+                                            "? extends ${javaToMinecraftGenericType(type.typeName, type.generics.map { javaToMinecraftGenericType(it.typeName) })}"
                                         }
                                     }else if(type is ParsedTokenExpressionTypeGeneric) {
-                                        type.name
+                                        (if(type.generic.allowExtends) "? extends " else "") + type.generic.name
                                     }else {
                                         TODO("Unknown type: $type")
                                     }
@@ -523,7 +523,7 @@ class MainProcessor(
                             }else if(type == ParsedTokenExpressionSimpleType.LONG) {
                                 "long"
                             }else if(type is ParsedTokenExpressionTypeComplex) {
-                                kotlinToJavaType(type.typeName, false, type.generics.map { it.typeName })
+                                kotlinToJavaType(type.typeName, false, type.generics.map { javaToMinecraftGenericType(it.typeName) })
                             }else {
                                 TODO("$type")
                             }

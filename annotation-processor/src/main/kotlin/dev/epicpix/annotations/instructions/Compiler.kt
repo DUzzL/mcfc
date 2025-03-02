@@ -310,7 +310,7 @@ private fun doesArgumentTypeMatch(matchType: ParsedTokenExpressionType, expected
     }else if(expectedType == Type.DOUBLE_TYPE) {
         return matchType == ParsedTokenExpressionSimpleType.DOUBLE
     }else if(expectedType.sort == Type.OBJECT) {
-        return matchType == ParsedTokenExpressionSimpleType.NULL || (matchType is ParsedTokenExpressionTypeComplex && (getClassLowerBounds(expectedType.className.replace('$', '.')).any { matchType.typeName == it } || getClassLowerBounds(matchType.typeName.replace('$', '.')).any { expectedType.className == it }))
+        return doesTypeMatch(matchType, ParsedTokenExpressionTypeComplex(expectedType.className.replace('$', '.'), emptyList()))
     }else {
         TODO(expectedType.descriptor)
     }
@@ -578,6 +578,10 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 return writeNextRegister(uniqId, output, "cw.castType($expr, org.objectweb.asm.Type.FLOAT_TYPE)")
             }
             if(expression.name == "to_integer") {
+                val exprType = evaluateExpressionType(writerData, expression.arguments[0])
+                if(exprType == ParsedTokenExpressionSimpleType.BOOLEAN) {
+                    return writeExpression(writerData, expression.arguments[0], output, uniqId)
+                }
                 val expr = writeExpression(writerData, expression.arguments[0], output, uniqId)
                 return writeNextRegister(uniqId, output, "cw.castType($expr, org.objectweb.asm.Type.INT_TYPE)")
             }

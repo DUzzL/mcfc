@@ -55,7 +55,9 @@ enum class ParsedTokenValueAccessorScope {
 
 interface ParsedTokenExpressionType
 data class ParsedTokenExpressionTypeComplex(val typeName: String, val generics: List<ParsedTokenExpressionTypeComplex>) : ParsedTokenExpressionType
-data class ParsedTokenExpressionTypeGeneric(val name: String, val lowerBound: ParsedTokenExpressionTypeComplex) : ParsedTokenExpressionType
+data class ParsedTokenExpressionTypeGeneric(val generic: ParsedTokenGenericData, val lowerBound: ParsedTokenExpressionTypeComplex) : ParsedTokenExpressionType
+
+data class ParsedTokenGenericData(val name: String, val allowExtends: Boolean)
 
 enum class ParsedTokenExpressionSimpleType : ParsedTokenExpressionType {
     NULL, BOOLEAN, INTEGER, LONG, FLOAT, DOUBLE, LABEL, OBJECT, NUMBER,
@@ -99,8 +101,14 @@ private fun parseExpressionTypeWord(iter: ListIterator<LexToken>, complexTypeOpe
             iter.expectTokenType(LexTokenSimpleType.OPEN_ANGLE_BRACKET)
             val name = iter.expectToken<LexTokenWord>()
             iter.expectTokenType(LexTokenSimpleType.COLON)
+            val allowExtends = iter.tryNextTokenType(LexTokenSimpleType.PERCENT)
             var lowerBound = ""
             while(!iter.tryNextTokenType(LexTokenSimpleType.CLOSE_ANGLE_BRACKET)) {
+                if(iter.tryNextTokenType(LexTokenSimpleType.OPEN_ANGLE_BRACKET)) {
+                    val generic = parseExpressionTypeWord(iter, true) as ParsedTokenExpressionTypeComplex
+                    iter.expectTokenType(LexTokenSimpleType.CLOSE_ANGLE_BRACKET)
+                    return ParsedTokenExpressionTypeGeneric(ParsedTokenGenericData(name.word, allowExtends), ParsedTokenExpressionTypeComplex(lowerBound, listOf(generic)))
+                }
                 if(iter.tryNextTokenType(LexTokenSimpleType.DOT)) {
                     lowerBound += "."
                 }else {
@@ -112,13 +120,13 @@ private fun parseExpressionTypeWord(iter: ListIterator<LexToken>, complexTypeOpe
                     }
                 }
             }
-            return ParsedTokenExpressionTypeGeneric(name.word, ParsedTokenExpressionTypeComplex(lowerBound, emptyList()))
+            return ParsedTokenExpressionTypeGeneric(ParsedTokenGenericData(name.word, allowExtends), ParsedTokenExpressionTypeComplex(lowerBound, emptyList()))
         }
         "number" -> {
             iter.expectTokenType(LexTokenSimpleType.OPEN_ANGLE_BRACKET)
             val name = iter.expectToken<LexTokenWord>()
             iter.expectTokenType(LexTokenSimpleType.CLOSE_ANGLE_BRACKET)
-            return ParsedTokenExpressionTypeGeneric(name.word, ParsedTokenExpressionTypeComplex("java.lang.Number", emptyList()))
+            return ParsedTokenExpressionTypeGeneric(ParsedTokenGenericData(name.word, false), ParsedTokenExpressionTypeComplex("java.lang.Number", emptyList()))
         }
         else -> throw IllegalArgumentException("Unknown expression type: ${word.word}")
     }
