@@ -568,21 +568,22 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             }
             if(expression.name == "compile_eval") {
                 val compileExprType = evaluateExpressionType(writerData, expression.arguments[0])
-                val compileExpr = writeCompileExpression(writerData, expression.arguments[0])
+                val compileExpr = createCompileExpression(writerData, expression.arguments[0])
                 if(compileExprType == ParsedTokenExpressionSimpleType.INTEGER) {
-                    return writeNextRegister(uniqId, output, "new dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue.IntegerValue(${compileExpr})")
+                    return writeNextRegister(uniqId, output, "new dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue.IntegerValue(${compileExpr.toCompileString(writerData)})")
                 }else if(compileExprType == ParsedTokenExpressionSimpleType.FLOAT) {
-                    return writeNextRegister(uniqId, output, "new dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue.FloatValue(${compileExpr})")
+                    return writeNextRegister(uniqId, output, "new dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue.FloatValue(${compileExpr.toCompileString(writerData)})")
                 }else if(compileExprType == ParsedTokenExpressionSimpleType.DOUBLE) {
-                    return writeNextRegister(uniqId, output, "new dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue.DoubleValue(${compileExpr})")
+                    return writeNextRegister(uniqId, output, "new dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue.DoubleValue(${compileExpr.toCompileString(writerData)})")
                 }
+                throw UnsupportedOperationException("Cannot convert compile type to included type in compile_eval: $compileExprType | $compileExpr")
             }
             if(expression.name == "compile_or") {
-                val condition = writeCompileExpression(writerData, expression.arguments[0])
+                val condition = createCompileExpression(writerData, expression.arguments[0])
                 val resultRegister = getNextRegister(uniqId)
                 val bout = ByteArrayOutputStream()
                 output.appendText("dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue $resultRegister;\n")
-                output.appendText("if($condition) {\n")
+                output.appendText("if(${condition.toCompileString(writerData)}) {\n")
                 bout.appendText("$resultRegister = ${writeExpression(writerData, expression.arguments[1], bout, uniqId)};\n")
                 output.appendText(bout.toByteArray().decodeToString().trimEnd().prependIndent("    ") + "\n")
                 output.appendText("}else {\n")
@@ -633,24 +634,89 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
     throw UnsupportedOperationException("Unsupported expression: $expression")
 }
 
+interface CompileTimeExpression {
+    fun toCompileString(writerData: WriterData): String
+}
+data class CompileTimeExpressionString(val string: String) : CompileTimeExpression {
+    override fun toCompileString(writerData: WriterData): String {
+        return "\"${string.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")}\""
+    }
+}
+object CompileTimeExpressionNull : CompileTimeExpression {
+    override fun toCompileString(writerData: WriterData): String {
+        return "null"
+    }
+}
 
-private fun writeCompileExpression(writerData: WriterData, expression: ParsedTokenExpression): String {
+enum class CompileTimeExpressionComparisonOperator {
+    EQ, NE, GT, LT, GE, LE,
+}
+data class CompileTimeExpressionComparison(val comparison: CompileTimeExpressionComparisonOperator, val a: CompileTimeExpression, val b: CompileTimeExpression) : CompileTimeExpression {
+    override fun toCompileString(writerData: WriterData): String {
+        val stringForm = when(comparison) {
+            CompileTimeExpressionComparisonOperator.EQ -> "=="
+            CompileTimeExpressionComparisonOperator.NE -> "!="
+            CompileTimeExpressionComparisonOperator.GT -> ">"
+            CompileTimeExpressionComparisonOperator.LT -> "<"
+            CompileTimeExpressionComparisonOperator.GE -> ">="
+            CompileTimeExpressionComparisonOperator.LE -> "<="
+        }
+        return "((${a.toCompileString(writerData)}) $stringForm (${b.toCompileString(writerData)}))"
+    }
+}
+data class CompileTimeExpressionAccessor(val accessor: ParsedTokenValueAccessor) : CompileTimeExpression {
+    override fun toCompileString(writerData: WriterData): String {
+        val index = writerData.getParamIndex(accessor)
+        return "context.instruction().<${writerData.getAccessorType(accessor).getGenericClassName()}>get($index)"
+    }
+}
+data class CompileTimeExpressionField(val instance: CompileTimeExpression?, val field: ClassFieldInfo) : CompileTimeExpression {
+    override fun toCompileString(writerData: WriterData): String {
+        val accessInstance = instance?.toCompileString(writerData) ?: field.owner.replace("/", ".")
+        return "$accessInstance.${field.name}"
+    }
+}
+data class CompileTimeExpressionMethod(val instance: CompileTimeExpression?, val method: ClassMethodInfo, val arguments: List<CompileTimeExpression>) : CompileTimeExpression {
+    override fun toCompileString(writerData: WriterData): String {
+        val accessInstance = instance?.toCompileString(writerData) ?: method.owner.replace("/", ".")
+        return "$accessInstance.${method.name}(${arguments.joinToString(", ") { it.toCompileString(writerData) }})"
+    }
+}
+data class CompileTimeExpressionCast(val type: ParsedTokenExpressionType, val expression: CompileTimeExpression) : CompileTimeExpression {
+    override fun toCompileString(writerData: WriterData): String {
+        if(type == ParsedTokenExpressionSimpleType.FLOAT) {
+            return "(float) (${expression.toCompileString(writerData)})"
+        }
+        TODO("cast into $type not implemented")
+    }
+}
+data class CompileTimeExpressionSelect(val condition: CompileTimeExpression, val trueValue: CompileTimeExpression, val falseValue: CompileTimeExpression) : CompileTimeExpression {
+    override fun toCompileString(writerData: WriterData): String {
+        return "((${condition.toCompileString(writerData)}) ? (${trueValue.toCompileString(writerData)}) : (${falseValue.toCompileString(writerData)}))"
+    }
+}
+data class CompileTimeExpressionValueProvided(val accessor: ParsedTokenValueAccessor) : CompileTimeExpression {
+    override fun toCompileString(writerData: WriterData): String {
+        return "context.instruction().get(${writerData.getParamIndex(accessor)}) != null"
+    }
+}
+
+private fun createCompileExpression(writerData: WriterData, expression: ParsedTokenExpression): CompileTimeExpression {
     if(expression is ParsedTokenExpressionString) {
-        return "\"${expression.string.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")}\""
+        return CompileTimeExpressionString(expression.string)
     }else if(expression is ParsedTokenExpressionBinary) {
         if(expression.op == ParsedTokenExpressionOperator.EQ) {
-            return "(${writeCompileExpression(writerData, expression.a)} == ${writeCompileExpression(writerData, expression.b)})"
+            return CompileTimeExpressionComparison(CompileTimeExpressionComparisonOperator.EQ, createCompileExpression(writerData, expression.a), createCompileExpression(writerData, expression.b))
         }else if(expression.op == ParsedTokenExpressionOperator.NE) {
-            return "(${writeCompileExpression(writerData, expression.a)} != ${writeCompileExpression(writerData, expression.b)})"
+            return CompileTimeExpressionComparison(CompileTimeExpressionComparisonOperator.NE, createCompileExpression(writerData, expression.a), createCompileExpression(writerData, expression.b))
         }
     }else if(expression is ParsedTokenExpressionTyped) {
         if(expression.type == ParsedTokenExpressionSimpleType.NULL) {
-            return "null"
+            return CompileTimeExpressionNull
         }
     }else if(expression is ParsedTokenValueAccessor) {
         if(expression.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
-            val index = writerData.getParamIndex(expression)
-            return "context.instruction().<${writerData.getAccessorType(expression).getGenericClassName()}>get($index)"
+            return CompileTimeExpressionAccessor(expression)
         }
     }else if(expression is ParsedTokenExpressionField) {
         val instance = expression.instance
@@ -673,21 +739,21 @@ private fun writeCompileExpression(writerData: WriterData, expression: ParsedTok
         }else {
             throw IllegalArgumentException("Cannot access field on an unknown instance: $instance")
         }
-        return "${if(instance is ParsedTokenInstanceValue) writeCompileExpression(writerData, instance.expression) else fieldMatch.owner.replace("/", ".")}.${fieldMatch.name}"
+        return CompileTimeExpressionField(if(instance is ParsedTokenInstanceValue) createCompileExpression(writerData, instance.expression) else null, fieldMatch)
     }else if(expression is ParsedTokenStatementFunctionCall) {
         if(expression.instance == null) {
             if(expression.name == "to_float") {
-                val expr = writeCompileExpression(writerData, expression.arguments[0])
-                return "(float) ($expr)"
+                val expr = createCompileExpression(writerData, expression.arguments[0])
+                return CompileTimeExpressionCast(ParsedTokenExpressionSimpleType.FLOAT, expr)
             }else if(expression.name == "compile_or") {
-                val condition = writeCompileExpression(writerData, expression.arguments[0])
-                val a = writeCompileExpression(writerData, expression.arguments[1])
-                val b = writeCompileExpression(writerData, expression.arguments[2])
-                return "(($condition) ? ($a) : ($b))"
+                val condition = createCompileExpression(writerData, expression.arguments[0])
+                val trueValue = createCompileExpression(writerData, expression.arguments[1])
+                val falseValue = createCompileExpression(writerData, expression.arguments[2])
+                return CompileTimeExpressionSelect(condition, trueValue, falseValue)
             }else if(expression.name == "compile_is_provided") {
                 val param = expression.arguments[0]
                 if(param is ParsedTokenValueAccessor) {
-                    return "context.instruction().get(${writerData.getParamIndex(param)}) != null"
+                    return CompileTimeExpressionValueProvided(param)
                 }
             }
         }
@@ -713,7 +779,7 @@ private fun writeCompileExpression(writerData: WriterData, expression: ParsedTok
                 val checkStatic = expression.name != "<init>"
                 val matches = getClassAccessibleMethods(instance.className).filter { it.isStatic == checkStatic && it.name == expression.name && Type.getArgumentCount(it.descriptor) == paramTypes.size && Type.getArgumentTypes(it.descriptor).mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }
                 if(matches.size < 1) {
-                    throw IllegalArgumentException("Failed to find function <${instance.className}>.${expression.name}(${paramTypes.joinToString()}): ${checkStatic} ${getClassAccessibleMethods(instance.className)}")
+                    throw IllegalArgumentException("Failed to find function <${instance.className}>.${expression.name}(${paramTypes.joinToString()}): $checkStatic ${getClassAccessibleMethods(instance.className)}")
                 }
                 if(matches.size > 1) {
                     throw IllegalArgumentException("Found too many functions matching <${instance.className}>.${expression.name}(${paramTypes.joinToString()}): $matches")
@@ -724,15 +790,11 @@ private fun writeCompileExpression(writerData: WriterData, expression: ParsedTok
             }
             val def = functionMatches[0]
 
-            val allArguments = mutableListOf<String>()
+            val allArguments = mutableListOf<CompileTimeExpression>()
             for(arg in expression.arguments) {
-                allArguments.add(writeCompileExpression(writerData.copyLocalTypes(), arg))
+                allArguments.add(createCompileExpression(writerData.copyLocalTypes(), arg))
             }
-            return if(def.name == "<init>") {
-                return "${if(instance is ParsedTokenInstanceStatic) instance.className.replace("/", ".") else ""}.${expression.name}(${allArguments.joinToString(", ")})"
-            }else {
-                return "${if(instance is ParsedTokenInstanceValue) writeCompileExpression(writerData, instance.expression) else if(instance is ParsedTokenInstanceStatic) instance.className.replace("/", ".") else ""}.${expression.name}(${allArguments.joinToString(", ")})"
-            }
+            return CompileTimeExpressionMethod(if(instance is ParsedTokenInstanceValue) createCompileExpression(writerData, instance.expression) else null, def, allArguments)
         }else {
             throw UnsupportedOperationException("Unknown function call: ${expression.name} / $expression")
         }
@@ -824,13 +886,17 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
             }
             continue
         }else if(el is ParsedTokenStatementCompileIf) {
-            val comparisonString = writeCompileExpression(writerData.copyLocalTypes(), el.expression)
-            output.appendText("if($comparisonString) {\n")
-            val baseReturn = writeCode(writerData.copyLocalTypes(), el.code, output, uniqId)
+            val comparisonString = createCompileExpression(writerData.copyLocalTypes(), el.expression)
+            output.appendText("if(${comparisonString.toCompileString(writerData)}) {\n")
+            val bout = ByteArrayOutputStream()
+            val baseReturn = writeCode(writerData.copyLocalTypes(), el.code, bout, uniqId)
+            output.appendText(bout.toByteArray().decodeToString().trimEnd().prependIndent("    ") + "\n")
             output.appendText("}")
             if(el.elseCode != null) {
                 output.appendText("else {\n")
-                val otherReturn = writeCode(writerData.copyLocalTypes(), el.elseCode, output, uniqId)
+                bout.reset()
+                val otherReturn = writeCode(writerData.copyLocalTypes(), el.elseCode, bout, uniqId)
+                output.appendText(bout.toByteArray().decodeToString().trimEnd().prependIndent("    ") + "\n")
                 if(baseReturn == ReturnTypeResult.HARD_RETURN && otherReturn == ReturnTypeResult.HARD_RETURN) {
                     return ReturnTypeResult.HARD_RETURN
                 }
@@ -843,9 +909,9 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
             continue
         }else if(el is ParsedTokenStatementCompileMatch) {
             val comparisonType = evaluateExpressionType(writerData.copyLocalTypes(), el.expression)
-            val comparisonString = writeCompileExpression(writerData.copyLocalTypes(), el.expression)
+            val comparisonExpression = createCompileExpression(writerData.copyLocalTypes(), el.expression)
             if(comparisonType is ParsedTokenExpressionTypeComplex && loadClassInfo(comparisonType.typeName).isEnum) {
-                output.appendText("switch($comparisonString) {\n")
+                output.appendText("switch(${comparisonExpression.toCompileString(writerData)}) {\n")
                 for((case, code) in el.matches) {
                     output.appendText("    case $case -> {\n")
                     val bout = ByteArrayOutputStream()
@@ -855,7 +921,7 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                 }
                 output.appendText("}\n")
             }else {
-                val comparisonReg = writeNextRegister(uniqId, output, comparisonString)
+                val comparisonReg = writeNextRegister(uniqId, output, comparisonExpression.toCompileString(writerData))
                 val entries = el.matches.entries.toList()
                 val casePrefix = if(comparisonType is ParsedTokenExpressionTypeComplex) "${comparisonType.typeName}." else ""
                 for(i in entries.indices) {
@@ -923,7 +989,7 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
             }else if(el.name == "_throwCompileException") {
                 val expressions = mutableListOf<String>()
                 for(arg in el.arguments) {
-                    expressions.add(writeCompileExpression(writerData, arg))
+                    expressions.add(createCompileExpression(writerData, arg).toCompileString(writerData))
                 }
                 output.appendText("throw new RuntimeException(${expressions.joinToString(" + ") { "$it+\"\"" }});\n")
                 return ReturnTypeResult.HARD_RETURN

@@ -9,7 +9,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
-import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes3;
+import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2;
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
 import dev.epicpix.minecraftfunctioncompiler.profiler.Profiler;
 import dev.epicpix.minecraftfunctioncompiler.v1_21.CompiledCommandResultStore;
@@ -31,41 +31,19 @@ public final class Emitter {
     public static void registerInstructionEmitters() {
         EmitterInstructions.registerEmitterInstruction(context -> {
             var codeWriter = context.codeWriter();
-            if(context.instruction().type() == InstructionTypes3.LOAD_STRING_MACRO) {
+            if(context.instruction().type() == InstructionTypes2.LOAD_STRING_MACRO) {
                 var template = context.instruction().<MacroTemplate<String>>get("macroTemplate");
                 var macroContent = template.writeBytecode(context);
                 context.store("result", macroContent);
                 return true;
             }
-            if(context.instruction().type() == InstructionTypes3.LOAD_INTEGER_MACRO) {
+            if(context.instruction().type() == InstructionTypes2.LOAD_INTEGER_MACRO) {
                 var template = context.instruction().<MacroTemplate<Integer>>get("macroTemplate");
                 var macroContent = template.writeBytecode(context);
                 context.store("result", macroContent);
                 return true;
             }
-            if(context.instruction().type() == InstructionTypes3.MAKE_COMMAND_SOURCE_STACK) {
-                var commandSourceStack = context.load("from");
-                if(context.instruction().get("entity") != null) {
-                    commandSourceStack = callCommandSourceStack_withEntity(codeWriter, commandSourceStack, context.load("entity"));
-                }
-                if(context.instruction().get("world") != null) {
-                    commandSourceStack = callCommandSourceStack_withLevel(codeWriter, commandSourceStack, context.load("world"));
-                }
-                if(context.instruction().get("position") != null) {
-                    commandSourceStack = callCommandSourceStack_withPosition(codeWriter, commandSourceStack, context.load("position"));
-                }
-                if(context.instruction().get("rotation") != null) {
-                    commandSourceStack = callCommandSourceStack_withRotation(codeWriter, commandSourceStack, context.load("rotation"));
-                }
-                if(context.instruction().get("anchor") != null) {
-                    var anchor = context.instruction().<LocationAnchor>get("anchor");
-                    var anchorReg = anchor == LocationAnchor.EYES ? loadAnchor_EYES(codeWriter) : loadAnchor_FEET(codeWriter);
-                    commandSourceStack = callCommandSourceStack_withAnchor(codeWriter, commandSourceStack, anchorReg);
-                }
-                context.store("result", commandSourceStack);
-                return true;
-            }
-            if(context.instruction().type() == InstructionTypes3.CALL_FUNCTIONS) {
+            if(context.instruction().type() == InstructionTypes2.CALL_FUNCTIONS) {
                 var functions = context.instruction().<List<DataLocation>>get("functions");
                 var returnValueLocation = context.instruction().<LocationData<Long>>get("result");
                 if(functions.isEmpty()) {
@@ -119,7 +97,7 @@ public final class Emitter {
                 }
                 return true;
             }
-            if(context.instruction().type() == InstructionTypes3.CHECK_ENTITY_TYPES) {
+            if(context.instruction().type() == InstructionTypes2.CHECK_ENTITY_TYPES) {
                 var entity = context.load("entity");
                 var entityType = callEntity_getType(codeWriter, entity);
                 var success = codeWriter.createLabel();

@@ -1,11 +1,6 @@
 definition_file = "dev.epicpix.minecraftfunctioncompiler._VERSION_.emitter.MappedUsageDefinitionsExtensions"
 
 [definitions_functions]
-CommandSourceStack_withEntity = "net/minecraft/commands/CommandSourceStack:withEntity(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/commands/CommandSourceStack;@M"
-CommandSourceStack_withLevel = "net/minecraft/commands/CommandSourceStack:withLevel(Lnet/minecraft/server/level/ServerLevel;)Lnet/minecraft/commands/CommandSourceStack;@M"
-CommandSourceStack_withPosition = "net/minecraft/commands/CommandSourceStack:withPosition(Lnet/minecraft/world/phys/Vec3;)Lnet/minecraft/commands/CommandSourceStack;@M"
-CommandSourceStack_withRotation = "net/minecraft/commands/CommandSourceStack:withRotation(Lnet/minecraft/world/phys/Vec2;)Lnet/minecraft/commands/CommandSourceStack;@M"
-CommandSourceStack_withAnchor = "net/minecraft/commands/CommandSourceStack:withAnchor(Lnet/minecraft/commands/arguments/EntityAnchorArgument$Anchor;)Lnet/minecraft/commands/CommandSourceStack;@M"
 CommandSourceStack_withCallback."1.20.2-" = "net/minecraft/commands/CommandSourceStack:withCallback(Lcom/mojang/brigadier/ResultConsumer;)Lnet/minecraft/commands/CommandSourceStack;@M"
 CommandSourceStack_withCallback."1.20.3+" = "net/minecraft/commands/CommandSourceStack:withCallback(Lnet/minecraft/commands/CommandResultCallback;)Lnet/minecraft/commands/CommandSourceStack;@M"
 
@@ -78,9 +73,6 @@ ServerFunctionLibrary_functions = "net/minecraft/server/ServerFunctionLibrary:fu
 BuiltInRegistries_ATTRIBUTE = "net/minecraft/core/registries/BuiltInRegistries:ATTRIBUTE:Lnet/minecraft/core/Registry;@SR"
 BuiltInRegistries_ENTITY_TYPE = "net/minecraft/core/registries/BuiltInRegistries:ENTITY_TYPE:Lnet/minecraft/core/DefaultedRegistry;@SR"
 BuiltInRegistries_MOB_EFFECT = "net/minecraft/core/registries/BuiltInRegistries:MOB_EFFECT:Lnet/minecraft/core/Registry;@SR"
-
-Anchor_EYES = "net/minecraft/commands/arguments/EntityAnchorArgument$Anchor:EYES:Lnet/minecraft/commands/arguments/EntityAnchorArgument$Anchor;@SR"
-Anchor_FEET = "net/minecraft/commands/arguments/EntityAnchorArgument$Anchor:FEET:Lnet/minecraft/commands/arguments/EntityAnchorArgument$Anchor;@SR"
 
 ServerFunctionManager_context."1.20.2-" = "net/minecraft/server/ServerFunctionManager:context:Lnet/minecraft/server/ServerFunctionManager$ExecutionContext;@MRW"
 Commands_CURRENT_EXECUTION_CONTEXT."1.20.3+" = "net/minecraft/commands/Commands:CURRENT_EXECUTION_CONTEXT:Ljava/lang/ThreadLocal;@SR"

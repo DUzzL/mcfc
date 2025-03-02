@@ -171,6 +171,22 @@
 @ASSUME_WORLD(<java.lang.Object> [ctx:object]) -> <net.minecraft.server.level.ServerLevel> = cast([ctx:object], <net.minecraft.server.level.ServerLevel>);
 @ASSUME_ENTITY(<java.lang.Object> [ctx:object]) -> <net.minecraft.world.entity.Entity> = cast([ctx:object], <net.minecraft.world.entity.Entity>);
 
+@MAKE_COMMAND_SOURCE_STACK(
+  <net.minecraft.commands.CommandSourceStack> [ctx:from],
+  <net.minecraft.world.entity.Entity> [ctx:entity],
+  <net.minecraft.server.level.ServerLevel> [ctx:world],
+  <net.minecraft.world.phys.Vec3> [ctx:position],
+  <net.minecraft.world.phys.Vec2> [ctx:rotation],
+  <dev.epicpix.minecraftfunctioncompiler.data.LocationAnchor> [instr:anchor]
+) -> <net.minecraft.commands.CommandSourceStack> {
+  [local:result] = [ctx:from];
+  compile_if(compile_is_provided([ctx:entity])) [local:result] = [local:result].withEntity([ctx:entity]);
+  compile_if(compile_is_provided([ctx:world])) [local:result] = [local:result].withLevel([ctx:world]);
+  compile_if(compile_is_provided([ctx:position])) [local:result] = [local:result].withPosition([ctx:position]);
+  compile_if(compile_is_provided([ctx:rotation])) [local:result] = [local:result].withRotation([ctx:rotation]);
+  compile_if(compile_is_provided([instr:anchor])) [local:result] = [local:result].withAnchor(compile_or([instr:anchor] == <dev.epicpix.minecraftfunctioncompiler.data.LocationAnchor>.EYES, <net.minecraft.commands.arguments.EntityAnchorArgument.Anchor>.EYES, <net.minecraft.commands.arguments.EntityAnchorArgument.Anchor>.FEET));
+  return [local:result];
+}
 
 @GET_COMMAND_STACK(<net.minecraft.commands.CommandSourceStack> [static:CommandSourceStack]) -> <net.minecraft.commands.CommandSourceStack> = [static:CommandSourceStack];
 @GET_STACK_ENTITY(<net.minecraft.commands.CommandSourceStack> [ctx:stack]) -> <net.minecraft.world.entity.Entity> = [ctx:stack].getEntity();

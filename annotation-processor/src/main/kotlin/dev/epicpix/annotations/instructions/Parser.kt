@@ -343,8 +343,8 @@ private fun parseCode(iter: ListIterator<LexToken>, valueDefinitions: List<Parse
     if(iter.peekNextTokenType(LexTokenSimpleType.SEMICOLON)) {
         return res
     }
-    iter.expectTokenType(LexTokenSimpleType.OPEN_BRACE)
-    while(!iter.tryNextTokenType(LexTokenSimpleType.CLOSE_BRACE)) {
+    val single = !iter.tryNextTokenType(LexTokenSimpleType.OPEN_BRACE)
+    while(single || !iter.tryNextTokenType(LexTokenSimpleType.CLOSE_BRACE)) {
         if(iter.tryNextTokenType(LexTokenSimpleType.KW_IF)) {
             iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
             val expression = parseExpression(iter, valueDefinitions, usesObf)
@@ -433,6 +433,7 @@ private fun parseCode(iter: ListIterator<LexToken>, valueDefinitions: List<Parse
                 res.add(expr)
             }
         }
+        if(single) break
     }
     return res
 }

@@ -4,7 +4,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
 import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
-import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes3;
+import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2;
 import it.unimi.dsi.fastutil.Pair;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +22,7 @@ public final class GraphGenerator {
     private static void visitInstructionFunc(Instruction instruction, StringBuilder stringBuilder, DataLocation base, ArrayList<Pair<DataLocation, DataLocation>> calls) {
         if(!DEBUG_GENERATE_GRAPH) return;
 
-        if(instruction.type() == InstructionTypes3.CALL_FUNCTIONS) {
+        if(instruction.type() == InstructionTypes2.CALL_FUNCTIONS) {
             var functions = instruction.<List<DataLocation>>get("functions");
             for(var function : functions) {
                 if(!calls.contains(Pair.of(base, function))) {
@@ -48,7 +48,7 @@ public final class GraphGenerator {
 
         var instrDescription = instruction.namedEntries().stream().map(it -> it.first() + "=" + Objects.toString(it.second()).replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n")).collect(Collectors.joining("\n"));
         stringBuilder.append("    x").append(uid).append("[label=\"").append(instruction.type()).append("\n").append(instrDescription).append("\",shape=box];\n");
-        if(instruction.type() == InstructionTypes3.CALL_FUNCTIONS) {
+        if(instruction.type() == InstructionTypes2.CALL_FUNCTIONS) {
             var functions = instruction.<List<DataLocation>>get("functions");
             for(var function : functions) {
                 post.append("  x").append(uid).append(" -> x").append(function.namespace()).append("_").append(function.path().replace('.', '_').replace('-', '_').replace('/', '_')).append("\n");

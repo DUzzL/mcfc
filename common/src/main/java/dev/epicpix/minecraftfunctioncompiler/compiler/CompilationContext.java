@@ -92,7 +92,7 @@ public class CompilationContext {
             return LocationData.ofString(macro.getStaticValue());
         }
         var macroString = this.<String>createLocal();
-        writeInstruction(Instructions3.loadStringMacro(macroString, macro));
+        writeInstruction(Instructions2.loadStringMacro(macroString, macro));
         return macroString;
     }
 
@@ -101,7 +101,7 @@ public class CompilationContext {
             return LocationData.ofInteger(macro.getStaticValue());
         }
         var macroInt = this.<Integer>createLocal();
-        writeInstruction(Instructions3.loadIntegerMacro(macroInt, macro));
+        writeInstruction(Instructions2.loadIntegerMacro(macroInt, macro));
         return macroInt;
     }
 
@@ -530,7 +530,7 @@ public class CompilationContext {
             data.writeInstruction(instructionWriter, Instructions.ifFalseJump(alive, data.contextEndLabel()));
         }
         if(selector.entityTypes() != null) {
-            data.writeInstruction(instructionWriter, Instructions3.checkEntityTypes(entityData.content(), new ArrayList<>(selector.entityTypes().data()), selector.entityTypes().negated(), data.contextEndLabel()));
+            data.writeInstruction(instructionWriter, Instructions2.checkEntityTypes(entityData.content(), new ArrayList<>(selector.entityTypes().data()), selector.entityTypes().negated(), data.contextEndLabel()));
         }
         for(var gamemode : selector.gamemodes()) {
             var playerLocal = this.<Player>createLocal();
@@ -747,7 +747,7 @@ public class CompilationContext {
         }
         var data = current();
         var commandStack = this.<CommandSourceStack>createLocal();
-        writeInstruction(Instructions3.makeCommandSourceStack(commandStack, data.commandSourceStack(), data.currentEntity(), data.currentWorld(), data.currentPosition(), data.currentRotation(), data.currentAnchor()));
+        writeInstruction(Instructions.makeCommandSourceStack(commandStack, data.commandSourceStack(), data.currentEntity(), data.currentWorld(), data.currentPosition(), data.currentRotation(), data.currentAnchor()));
         writeInstruction(Instructions.addListElement(forkingContext.getForkContextList(), commandStack));
 
         var length = this.<Integer>createLocal();

@@ -70,7 +70,7 @@ public final class Optimizations {
                     if(instr.get("result").equals(stack)) {
                         return;
                     }
-                }else if(instr.type() == InstructionTypes3.MAKE_COMMAND_SOURCE_STACK) {
+                }else if(instr.type() == InstructionTypes.MAKE_COMMAND_SOURCE_STACK) {
                     if(instr.get("result").equals(stack)) {
                         entitySource = instr.get("entity");
                         break;
@@ -83,7 +83,7 @@ public final class Optimizations {
             pass.replaceInstructionData(false, replaceFrom, entitySource);
             pass.removeInstruction(pass.thisInstructionIndex());
 
-        }else if(pass.thisInstruction().type() == InstructionTypes3.MAKE_COMMAND_SOURCE_STACK) {
+        }else if(pass.thisInstruction().type() == InstructionTypes.MAKE_COMMAND_SOURCE_STACK) {
             if(pass.thisInstruction().get("anchor") == null && pass.thisInstruction().get("entity") == null && pass.thisInstruction().get("position") == null && pass.thisInstruction().get("rotation") == null && pass.thisInstruction().get("world") == null) {
                 pass.replaceInstructionData(false, pass.thisInstruction().get("result"), pass.thisInstruction().get("from"));
                 pass.removeInstruction(pass.thisInstructionIndex());
@@ -110,15 +110,15 @@ public final class Optimizations {
 
             pass.replaceInstructionData(false, assignFrom, assignTo);
             pass.removeInstruction(pass.thisInstructionIndex());
-        }else if(pass.thisInstruction().type() == InstructionTypes3.CALL_FUNCTIONS) {
+        }else if(pass.thisInstruction().type() == InstructionTypes2.CALL_FUNCTIONS) {
             var prev = pass.getOffsetInstruction(-1);
-            if(prev != null && prev.type() == InstructionTypes3.CALL_FUNCTIONS) {
+            if(prev != null && prev.type() == InstructionTypes2.CALL_FUNCTIONS) {
                 if(pass.thisInstruction().get("result") == null && prev.get("result") == null) {
                     if(Objects.equals(pass.thisInstruction().get("arguments"), prev.get("arguments"))) {
                         if(Objects.equals(pass.thisInstruction().get("stack"), prev.get("stack"))) {
                             var functions = new ArrayList<DataLocation>(prev.get("functions"));
                             functions.addAll(pass.thisInstruction().get("functions"));
-                            pass.replaceInstruction(pass.thisInstructionIndex() - 1, Instructions3.callFunctions(null, functions, prev.get("stack"), prev.get("arguments")));
+                            pass.replaceInstruction(pass.thisInstructionIndex() - 1, Instructions2.callFunctions(null, functions, prev.get("stack"), prev.get("arguments")));
                             pass.removeInstruction(pass.thisInstructionIndex());
                         }
                     }
@@ -164,7 +164,7 @@ public final class Optimizations {
             var stackFrom = pass.thisInstruction().get("object");
             var stackTo = pass.thisInstruction().get("result");
 
-            var def = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes3.MAKE_COMMAND_SOURCE_STACK, List.of(Pair.of("result", stackFrom)));
+            var def = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes.MAKE_COMMAND_SOURCE_STACK, List.of(Pair.of("result", stackFrom)));
             if(def != null) {
                 pass.replaceInstructionData(false, stackFrom, stackTo);
                 pass.removeInstruction(pass.thisInstructionIndex());
@@ -225,7 +225,7 @@ public final class Optimizations {
         if(!pass.findInstructions(0, pass.context().getInstructionCount(), false, List.of(InstructionTypes.SORT_LIST_ENTITY_FURTHEST, InstructionTypes.SORT_LIST_ENTITY_NEAREST, InstructionTypes.SHUFFLE_LIST), List.of(Pair.of("list", list))).isEmpty()) return;
 
         if(!singleSelector) {
-            if(!pass.findInstructions(condInstr, endInstr, false, List.of(InstructionTypes3.CALL_FUNCTIONS, InstructionTypes.KILL_ENTITY), List.of()).isEmpty()) return;
+            if(!pass.findInstructions(condInstr, endInstr, false, List.of(InstructionTypes2.CALL_FUNCTIONS, InstructionTypes.KILL_ENTITY), List.of()).isEmpty()) return;
 
             var indexLoc = pass.getInstruction(getInstr).get("index");
 

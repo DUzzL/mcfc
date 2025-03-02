@@ -185,7 +185,7 @@ public class FunctionCodeGenerator {
     }
 
     public static ClassGenerator generateFunctionClass(CompilationParams params, DataLocation funcId, List<Instruction> instructions, Set<DataLocation> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions, boolean includeProfilerSupport) {
-        var macroInstructions = Instruction.findTyped(instructions, InstructionTypes3.LOAD_STRING_MACRO, InstructionTypes3.LOAD_INTEGER_MACRO);
+        var macroInstructions = Instruction.findTyped(instructions, InstructionTypes2.LOAD_STRING_MACRO, InstructionTypes2.LOAD_INTEGER_MACRO);
         var macroInputs = new ArrayList<MacroInput>();
         for(var macroInstr : macroInstructions) {
             var template = macroInstr.<MacroTemplate<?>>get("macroTemplate");
@@ -216,7 +216,7 @@ public class FunctionCodeGenerator {
             entryWriter.returnValue(new BytecodeValue.LongValue(0x2L << 32));
         }else {
             var returnValue = entryWriter.createRegister();
-            var instr = List.of(Instructions3.callFunctions(LocationData.ofLocal(-3), List.of(funcId), LocationData.ofLocal(-1), LocationData.ofLocal(-2)));
+            var instr = List.of(Instructions2.callFunctions(LocationData.ofLocal(-3), List.of(funcId), LocationData.ofLocal(-1), LocationData.ofLocal(-2)));
             entryContext = new EmitterContext(funcId, params.codeFieldStorage(), entryWriter, Collections.emptySet(), new HashMap<>(staticArguments), null, instr, includeProfilerSupport);
             entryContext.setTransform(-1, staticCommandSourceStack);
             entryContext.setTransform(-2, staticFunctionCompound);
