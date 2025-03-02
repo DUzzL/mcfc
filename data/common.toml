@@ -16,6 +16,9 @@ Float_parseFloat = "java/lang/Float:parseFloat(Ljava/lang/String;)F@S"
 ExtensionFunctions_isValidCommandDouble = "dev/epicpix/minecraftfunctioncompiler/emitter/ExtensionFunctions:isValidCommandDouble(Ljava/lang/String;)Z@S"
 Double_parseDouble = "java/lang/Double:parseDouble(Ljava/lang/String;)D@S"
 
+ThreadLocal_get = "java/lang/ThreadLocal:get()Ljava/lang/Object;@MN"
+ThreadLocal_set = "java/lang/ThreadLocal:set(Ljava/lang/Object;)V@MN"
+
 [definitions_fields]
 Boolean_FALSE = "java/lang/Boolean:FALSE:Ljava/lang/Boolean;@SR"
 Boolean_TRUE = "java/lang/Boolean:TRUE:Ljava/lang/Boolean;@SR"

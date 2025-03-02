@@ -45,12 +45,7 @@ ExtensionFunctions_executeFunction."1.20.4+" = "dev/epicpix/minecraftfunctioncom
 
 ResourceLocation_fromNamespaceAndPath."1.21+" = "net/minecraft/resources/ResourceLocation:fromNamespaceAndPath(Ljava/lang/String;Ljava/lang/String;)Lnet/minecraft/resources/ResourceLocation;@S"
 
-ThreadLocal_get."1.20.3+" = "java/lang/ThreadLocal:get()Ljava/lang/Object;@MN"
-ThreadLocal_set."1.20.3+" = "java/lang/ThreadLocal:set(Ljava/lang/Object;)V@MN"
-
 Integer_valueOf."1.21.4+" = "java/lang/Integer:valueOf(I)Ljava/lang/Integer;@S"
-
-Entity_getType = "net/minecraft/world/entity/Entity:getType()Lnet/minecraft/world/entity/EntityType;@M"
 
 MinecraftServer_getAdvancements = "net/minecraft/server/MinecraftServer:getAdvancements()Lnet/minecraft/server/ServerAdvancementManager;@M"
 ServerAdvancementManager_getAdvancement."1.20.1-" = "net/minecraft/server/ServerAdvancementManager:getAdvancement(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/advancements/Advancement;@M"

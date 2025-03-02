@@ -1,6 +1,5 @@
 package dev.epicpix.minecraftfunctioncompiler.il;
 
-import dev.epicpix.annotations.InstructionConditionalJumpFlag;
 import dev.epicpix.annotations.InstructionSourceClass;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
@@ -16,6 +15,4 @@ interface InstructionDefinitions {
     Instruction callFunctions(@Nullable LocationData<Long> result, List<DataLocation> functions, LocationData<CommandSourceStack> stack, @Nullable LocationData<NbtCompound> arguments);
     Instruction loadStringMacro(LocationData<String> result, MacroTemplate<String> macroTemplate);
     Instruction loadIntegerMacro(LocationData<Integer> result, MacroTemplate<Integer> macroTemplate);
-    @InstructionConditionalJumpFlag
-    Instruction checkEntityTypes(LocationData<? extends Entity> entity, List<DataLocation> types, boolean negated, LabelData failLabel);
 }

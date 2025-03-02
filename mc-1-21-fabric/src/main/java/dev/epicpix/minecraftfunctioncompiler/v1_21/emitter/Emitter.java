@@ -19,6 +19,8 @@ import org.objectweb.asm.Type;
 
 import java.util.List;
 
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callThreadLocal_get;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callThreadLocal_set;
 import static dev.epicpix.minecraftfunctioncompiler.v1_21.emitter.MappedUsageDefinitionsExtensions.*;
 
 public final class Emitter {
@@ -95,24 +97,6 @@ public final class Emitter {
                     }
                     codeWriter.label(post);
                 }
-                return true;
-            }
-            if(context.instruction().type() == InstructionTypes2.CHECK_ENTITY_TYPES) {
-                var entity = context.load("entity");
-                var entityType = callEntity_getType(codeWriter, entity);
-                var success = codeWriter.createLabel();
-                for(var res : context.instruction().<List<DataLocation>>get("types")) {
-                    var compareType = context.fieldStorage().loadEntityType(codeWriter, res);
-                    if(context.instruction().<Boolean>get("negated")) {
-                        codeWriter.conditionalJump(JumpCondition.EQ, entityType, compareType, context.mapLabel("failLabel"));
-                    }else {
-                        codeWriter.conditionalJump(JumpCondition.EQ, entityType, compareType, success);
-                    }
-                }
-                if(!context.instruction().<Boolean>get("negated")) {
-                    codeWriter.jump(context.mapLabel("failLabel"));
-                }
-                codeWriter.label(success);
                 return true;
             }
 

@@ -530,7 +530,24 @@ public class CompilationContext {
             data.writeInstruction(instructionWriter, Instructions.ifFalseJump(alive, data.contextEndLabel()));
         }
         if(selector.entityTypes() != null) {
-            data.writeInstruction(instructionWriter, Instructions2.checkEntityTypes(entityData.content(), new ArrayList<>(selector.entityTypes().data()), selector.entityTypes().negated(), data.contextEndLabel()));
+            var entityType = this.<EntityTypeValue>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.getEntityType(entityType, entityData.content()));
+
+            if(!selector.entityTypes().negated()) {
+                var jump = data.writeLabel(instructionWriter);
+                for(var compareType : selector.entityTypes().data()) {
+                    var compareEntityType = this.<EntityTypeValue>createLocal();
+                    instructionWriter.addInstructionBefore(Instructions.mapEntityType(compareEntityType, compareType), jump);
+                    instructionWriter.addInstructionBefore(Instructions.ifObjectCompareJump(ObjectComparisonType.IDENTITY_EQUAL, entityType, compareEntityType, jump), jump);
+                }
+                instructionWriter.addInstructionBefore(Instructions.jump(data.contextEndLabel()), jump);
+            }else {
+                for(var compareType : selector.entityTypes().data()) {
+                    var compareEntityType = this.<EntityTypeValue>createLocal();
+                    data.writeInstruction(instructionWriter, Instructions.mapEntityType(compareEntityType, compareType));
+                    data.writeInstruction(instructionWriter, Instructions.ifObjectCompareJump(ObjectComparisonType.IDENTITY_EQUAL, entityType, compareEntityType, data.contextEndLabel()));
+                }
+            }
         }
         for(var gamemode : selector.gamemodes()) {
             var playerLocal = this.<Player>createLocal();

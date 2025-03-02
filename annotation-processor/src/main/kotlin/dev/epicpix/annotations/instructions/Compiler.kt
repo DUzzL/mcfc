@@ -131,6 +131,9 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             if(expression.name == "map_predicate") {
                 return ParsedTokenExpressionTypeComplex("net.minecraft.world.level.storage.loot.predicates.LootItemCondition")
             }
+            if(expression.name == "map_entity_type") {
+                return ParsedTokenExpressionTypeComplex("net.minecraft.world.entity.EntityType")
+            }
             if(expression.name == "to_double") {
                 return ParsedTokenExpressionSimpleType.DOUBLE
             }
@@ -551,6 +554,15 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                     val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
                     if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.DataLocation") {
                         return writeNextRegister(uniqId, output, "context.fieldStorage().loadPredicate(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.DataLocation>get(${writerData.getParamIndex(source)}))")
+                    }
+                }
+            }
+            if(expression.name == "map_entity_type") {
+                val source = expression.arguments[0] as ParsedTokenValueAccessor
+                if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
+                    val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
+                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.DataLocation") {
+                        return writeNextRegister(uniqId, output, "context.fieldStorage().loadEntityType(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.DataLocation>get(${writerData.getParamIndex(source)}))")
                     }
                 }
             }

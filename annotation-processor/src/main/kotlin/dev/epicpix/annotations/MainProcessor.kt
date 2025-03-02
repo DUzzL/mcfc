@@ -5,7 +5,6 @@ import cc.ekblad.toml.tomlMapper
 import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.getAnnotationsByType
 import com.google.devtools.ksp.getDeclaredFunctions
-import com.google.devtools.ksp.isAnnotationPresent
 import com.google.devtools.ksp.processing.*
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
@@ -122,6 +121,7 @@ fun javaToMinecraftGenericType(type: String): String {
             "net.minecraft.world.entity.Targeting" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.TargetingEntity"
             "net.minecraft.world.entity.TraceableEntity" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.TraceableEntity"
             "net.minecraft.world.Difficulty" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.DifficultyValue"
+            "net.minecraft.world.entity.EntityType" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.EntityTypeValue"
             else -> throw IllegalArgumentException("Unknown minecraft class: $type")
         }
     }else {
@@ -620,9 +620,7 @@ class MainProcessor(
                 for(def in defs) {
                     if(def.origin != Origin.SYNTHETIC) {
                         val named = def.simpleName.asString().toUpperSnakeCase()
-                        val conditionJump = def.isAnnotationPresent(InstructionConditionalJumpFlag::class)
-                        val flags = if(conditionJump) listOf("CONDITIONAL_JUMP") else listOf()
-                        types.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.il.InstructionType $named = new dev.epicpix.minecraftfunctioncompiler.il.InstructionType(\"$named\", new String[] {${def.parameters.joinToString { "\"${it.name!!.asString()}\"" }}}${if(flags.isEmpty()) "" else ", ${flags.joinToString(" | ") { "dev.epicpix.minecraftfunctioncompiler.il.InstructionType.$it" }}"});\n")
+                        types.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.il.InstructionType $named = new dev.epicpix.minecraftfunctioncompiler.il.InstructionType(\"$named\", new String[] {${def.parameters.joinToString { "\"${it.name!!.asString()}\"" }}});\n")
                         instructionMappings[named] = "$enumClass.$named"
                         val params = mutableListOf<String>()
                         val instructionType = "dev.epicpix.minecraftfunctioncompiler.il.Instruction"

@@ -235,6 +235,9 @@
   [ctx:entity].kill([ctx:world]);
 }
 
+@MAP_ENTITY_TYPE(<dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:entity_type]) -> <net.minecraft.world.entity.EntityType> = map_entity_type([instr:entity_type]);
+@GET_ENTITY_TYPE(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.world.entity.EntityType> = [ctx:entity].getType();
+
 @GET_ENTITY_POSITION(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.world.phys.Vec3> = [ctx:entity].position();
 @GET_ENTITY_ROTATION(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.world.phys.Vec2> = [ctx:entity].getRotationVector();
 
