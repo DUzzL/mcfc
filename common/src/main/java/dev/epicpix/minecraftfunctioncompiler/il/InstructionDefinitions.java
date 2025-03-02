@@ -1,7 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.il;
 
 import dev.epicpix.annotations.InstructionSourceClass;
-import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
 import org.jetbrains.annotations.Nullable;
@@ -13,6 +12,4 @@ import java.util.List;
 interface InstructionDefinitions {
     // Minecraft specific instructions that have not been converted into data.instructions yet
     Instruction callFunctions(@Nullable LocationData<Long> result, List<DataLocation> functions, LocationData<CommandSourceStack> stack, @Nullable LocationData<NbtCompound> arguments);
-    Instruction loadStringMacro(LocationData<String> result, MacroTemplate<String> macroTemplate);
-    Instruction loadIntegerMacro(LocationData<Integer> result, MacroTemplate<Integer> macroTemplate);
 }

@@ -1,7 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.v1_20_4.emitter;
 
 import dev.epicpix.minecraftfunctioncompiler.CommonConstants;
-import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructions;
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
@@ -33,18 +32,6 @@ public final class Emitter {
     public static void registerInstructionEmitters() {
         EmitterInstructions.registerEmitterInstruction(context -> {
             var codeWriter = context.codeWriter();
-            if(context.instruction().type() == InstructionTypes2.LOAD_STRING_MACRO) {
-                var template = context.instruction().<MacroTemplate<String>>get("macroTemplate");
-                var macroContent = template.writeBytecode(context);
-                context.store("result", macroContent);
-                return true;
-            }
-            if(context.instruction().type() == InstructionTypes2.LOAD_INTEGER_MACRO) {
-                var template = context.instruction().<MacroTemplate<Integer>>get("macroTemplate");
-                var macroContent = template.writeBytecode(context);
-                context.store("result", macroContent);
-                return true;
-            }
             if(context.instruction().type() == InstructionTypes2.CALL_FUNCTIONS) {
                 var functions = context.instruction().<List<DataLocation>>get("functions");
                 var returnValueLocation = context.instruction().<LocationData<Long>>get("result");

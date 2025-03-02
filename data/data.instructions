@@ -144,6 +144,8 @@
 
 @ASSUME_STRING(<java.lang.Object> [ctx:string_obj]) -> <java.lang.String> = cast([ctx:string_obj], <java.lang.String>);
 
+@LOAD_MACRO(<dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate<T> > [instr:macro]) -> generic<T:java.lang.Object> = _loadMacro([instr:macro]);
+
 // Minecraft specific
 @static_MINECRAFT_SERVER(<net.minecraft.commands.CommandSourceStack> [static:CommandSourceStack], <net.minecraft.server.MinecraftServer> [static:MinecraftServer]) {
   [static:MinecraftServer] = [static:CommandSourceStack].getServer();

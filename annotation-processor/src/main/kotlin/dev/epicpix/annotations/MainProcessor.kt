@@ -79,7 +79,8 @@ fun remapType(type: Type, mappingData: MappingData?): Type {
     return Type.getType("L" + (mappingData.getClassName(type.descriptor!!.run { substring(1, length - 1) })) + ";")
 }
 
-fun kotlinToJavaType(type: String, genericUsage: Boolean): String {
+fun kotlinToJavaType(type: String, genericUsage: Boolean, generics: List<String> = emptyList()): String {
+    val genericsString = if(generics.isEmpty()) "" else "<${generics.joinToString(", ")}>"
     return when(type) {
         "kotlin.Boolean" -> if(!genericUsage) "boolean" else "Boolean"
         "kotlin.Double" -> if(!genericUsage) "double" else "Double"
@@ -92,10 +93,10 @@ fun kotlinToJavaType(type: String, genericUsage: Boolean): String {
         "kotlin.collections.Map" -> "Map"
         "java.util.List" -> if(!genericUsage) "List" else "List<?>"
         else -> if(type.startsWith("kotlin.")) throw UnsupportedOperationException("Unknown kotlin type: $type") else type
-    }
+    } + genericsString
 }
 
-fun javaToMinecraftGenericType(type: String): String {
+fun javaToMinecraftGenericType(type: String, generics: List<String> = emptyList()): String {
     if(type.startsWith("net.minecraft.")) {
         return when(type) {
             "net.minecraft.world.entity.Entity" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Entity"
@@ -125,7 +126,7 @@ fun javaToMinecraftGenericType(type: String): String {
             else -> throw IllegalArgumentException("Unknown minecraft class: $type")
         }
     }else {
-        return kotlinToJavaType(type, true)
+        return kotlinToJavaType(type, true, generics)
     }
 }
 
@@ -472,7 +473,7 @@ class MainProcessor(
                             if(generics.length != 2) {
                                 generics.append(", ")
                             }
-                            generics.append("${type.name} extends ${javaToMinecraftGenericType(type.lowerBound)}")
+                            generics.append("${type.name} extends ${javaToMinecraftGenericType(type.lowerBound.typeName, type.lowerBound.generics.map { it.typeName })}")
                         }
                     }
                     generics.append(">")
@@ -498,9 +499,9 @@ class MainProcessor(
                                         "Long"
                                     }else if(type is ParsedTokenExpressionTypeComplex) {
                                         if(param.scope == ParsedTokenValueAccessorScope.RETURN) {
-                                            javaToMinecraftGenericType(type.typeName)
+                                            javaToMinecraftGenericType(type.typeName, type.generics.map { it.typeName })
                                         }else {
-                                            "? extends ${javaToMinecraftGenericType(type.typeName)}"
+                                            "? extends ${javaToMinecraftGenericType(type.typeName, type.generics.map { it.typeName })}"
                                         }
                                     }else if(type is ParsedTokenExpressionTypeGeneric) {
                                         type.name
@@ -522,7 +523,7 @@ class MainProcessor(
                             }else if(type == ParsedTokenExpressionSimpleType.LONG) {
                                 "long"
                             }else if(type is ParsedTokenExpressionTypeComplex) {
-                                kotlinToJavaType(type.typeName, false)
+                                kotlinToJavaType(type.typeName, false, type.generics.map { it.typeName })
                             }else {
                                 TODO("$type")
                             }

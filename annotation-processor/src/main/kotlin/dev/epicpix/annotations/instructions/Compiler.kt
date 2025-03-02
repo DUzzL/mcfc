@@ -92,47 +92,47 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
         return ParsedTokenExpressionSimpleType.BOOLEAN
     }else if(expression is ParsedTokenStatementFunctionCall) {
         if(expression.instance == null) {
-            if(expression.name == "cast" || expression.name == "map_enum") {
+            if(expression.name == "cast") {
                 return (expression.arguments[1] as ParsedTokenExpressionTyped).type as ParsedTokenExpressionTypeComplex
             }
             if(expression.name == "map_advancement") {
-                if(writerData.isAboveVersion(20, 1)) {
-                    return ParsedTokenExpressionTypeComplex("net.minecraft.advancements.AdvancementHolder")
+                return if(writerData.isAboveVersion(20, 1)) {
+                    ParsedTokenExpressionTypeComplex("net.minecraft.advancements.AdvancementHolder", emptyList())
                 }else {
-                    return ParsedTokenExpressionTypeComplex("net.minecraft.advancements.Advancement")
+                    ParsedTokenExpressionTypeComplex("net.minecraft.advancements.Advancement", emptyList())
                 }
             }
             if(expression.name == "map_attribute") {
-                if(writerData.isAboveVersion(20, 4)) {
-                    return ParsedTokenExpressionTypeComplex("net.minecraft.core.Holder")
+                return if(writerData.isAboveVersion(20, 4)) {
+                    ParsedTokenExpressionTypeComplex("net.minecraft.core.Holder", emptyList())
                 }else {
-                    return ParsedTokenExpressionTypeComplex("net.minecraft.world.entity.ai.attributes.Attribute")
+                    ParsedTokenExpressionTypeComplex("net.minecraft.world.entity.ai.attributes.Attribute", emptyList())
                 }
             }
             if(expression.name == "map_mob_effect") {
-                if(writerData.isAboveVersion(20, 4)) {
-                    return ParsedTokenExpressionTypeComplex("net.minecraft.core.Holder")
+                return if(writerData.isAboveVersion(20, 4)) {
+                    ParsedTokenExpressionTypeComplex("net.minecraft.core.Holder", emptyList())
                 }else {
-                    return ParsedTokenExpressionTypeComplex("net.minecraft.world.effect.MobEffect")
+                    ParsedTokenExpressionTypeComplex("net.minecraft.world.effect.MobEffect", emptyList())
                 }
             }
             if(expression.name == "map_resource_location") {
-                return ParsedTokenExpressionTypeComplex("net.minecraft.resources.ResourceLocation")
+                return ParsedTokenExpressionTypeComplex("net.minecraft.resources.ResourceLocation", emptyList())
             }
             if(expression.name == "map_nbt_value") {
-                return ParsedTokenExpressionTypeComplex("net.minecraft.nbt.Tag")
+                return ParsedTokenExpressionTypeComplex("net.minecraft.nbt.Tag", emptyList())
             }
             if(expression.name == "map_scoreboard_criterion") {
-                return ParsedTokenExpressionTypeComplex("net.minecraft.world.scores.criteria.ObjectiveCriteria")
+                return ParsedTokenExpressionTypeComplex("net.minecraft.world.scores.criteria.ObjectiveCriteria", emptyList())
             }
             if(expression.name == "map_text") {
-                return ParsedTokenExpressionTypeComplex("net.minecraft.network.chat.Component")
+                return ParsedTokenExpressionTypeComplex("net.minecraft.network.chat.Component", emptyList())
             }
             if(expression.name == "map_predicate") {
-                return ParsedTokenExpressionTypeComplex("net.minecraft.world.level.storage.loot.predicates.LootItemCondition")
+                return ParsedTokenExpressionTypeComplex("net.minecraft.world.level.storage.loot.predicates.LootItemCondition", emptyList())
             }
             if(expression.name == "map_entity_type") {
-                return ParsedTokenExpressionTypeComplex("net.minecraft.world.entity.EntityType")
+                return ParsedTokenExpressionTypeComplex("net.minecraft.world.entity.EntityType", emptyList())
             }
             if(expression.name == "to_double") {
                 return ParsedTokenExpressionSimpleType.DOUBLE
@@ -152,11 +152,14 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
                 if(typeA != typeB) throw IllegalStateException("compile_or invalid types: ${typeA} | ${typeB}")
                 return typeA
             }
+            if(expression.name == "_loadMacro") {
+                return ParsedTokenExpressionTypeComplex("java.lang.Object", emptyList())
+            }
         }
         val paramTypes = expression.arguments.map { evaluateExpressionType(writerData, it) }
         val instance = expression.instance
         val functionMatches = if(instance is ParsedTokenInstanceValue) {
-            val instanceType = evaluateExpressionType(writerData, instance.expression).let { if(it is ParsedTokenExpressionTypeGeneric && it.lowerBound != "java.lang.Number") ParsedTokenExpressionTypeComplex(it.lowerBound) else it }
+            val instanceType = evaluateExpressionType(writerData, instance.expression).let { if(it is ParsedTokenExpressionTypeGeneric && it.lowerBound.typeName != "java.lang.Number") ParsedTokenExpressionTypeComplex(it.lowerBound.typeName, emptyList()) else it }
             if(instanceType !is ParsedTokenExpressionTypeComplex) {
                 throw IllegalArgumentException("Cannot run functions on a primitive type: $instanceType")
             }
@@ -197,13 +200,13 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             return ParsedTokenExpressionSimpleType.DOUBLE
         }
         if(def.sort == Type.OBJECT) {
-            return ParsedTokenExpressionTypeComplex(def.className.replace('$', '.'))
+            return ParsedTokenExpressionTypeComplex(def.className.replace('$', '.'), emptyList())
         }
         if(expression.name == "<init>") {
             if(functionMatches[0].owner == "java/lang/Object" && functionMatches[0].name == "<init>" && functionMatches[0].descriptor == "()V") {
-                return ParsedTokenExpressionTypeComplex((instance as ParsedTokenInstanceStatic).className.replace('/', '.').replace('$', '.'))
+                return ParsedTokenExpressionTypeComplex((instance as ParsedTokenInstanceStatic).className.replace('/', '.').replace('$', '.'), emptyList())
             }
-            return ParsedTokenExpressionTypeComplex(functionMatches[0].owner.replace('/', '.').replace('$', '.'))
+            return ParsedTokenExpressionTypeComplex(functionMatches[0].owner.replace('/', '.').replace('$', '.'), emptyList())
         }
         throw IllegalArgumentException(def.descriptor)
     }else if(expression is ParsedTokenExpressionField) {
@@ -241,7 +244,7 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             return ParsedTokenExpressionSimpleType.DOUBLE
         }
         if(def.sort == Type.OBJECT) {
-            return ParsedTokenExpressionTypeComplex(def.className.replace('$', '.'))
+            return ParsedTokenExpressionTypeComplex(def.className.replace('$', '.'), emptyList())
         }
         TODO(def.descriptor)
     }
@@ -263,13 +266,13 @@ private fun ParsedTokenExpressionType.isNumber(): Boolean {
         ParsedTokenExpressionSimpleType.LONG -> true
         ParsedTokenExpressionSimpleType.FLOAT -> true
         ParsedTokenExpressionSimpleType.DOUBLE -> true
-        else -> (this is ParsedTokenExpressionTypeGeneric && this.lowerBound == "java.lang.Number") || (this is ParsedTokenExpressionTypeComplex && this.typeName == "java.lang.Number")
+        else -> (this is ParsedTokenExpressionTypeGeneric && this.lowerBound.typeName == "java.lang.Number") || (this is ParsedTokenExpressionTypeComplex && this.typeName == "java.lang.Number")
     }
 }
 
 private fun ParsedTokenExpressionType.getClassName(): String? {
     return when(this) {
-        is ParsedTokenExpressionTypeGeneric -> this.lowerBound
+        is ParsedTokenExpressionTypeGeneric -> this.lowerBound.typeName
         is ParsedTokenExpressionTypeComplex -> this.typeName
         else -> null
     }
@@ -285,7 +288,7 @@ private fun ParsedTokenExpressionType.getGenericClassName(): String {
         ParsedTokenExpressionSimpleType.DOUBLE -> "java.lang.Double"
         ParsedTokenExpressionSimpleType.OBJECT -> "java.lang.Object"
         ParsedTokenExpressionSimpleType.NUMBER -> "java.lang.Number"
-        is ParsedTokenExpressionTypeGeneric -> this.lowerBound
+        is ParsedTokenExpressionTypeGeneric -> this.lowerBound.typeName
         is ParsedTokenExpressionTypeComplex -> this.typeName
         else -> throw IllegalArgumentException("Cannot get generic class name for $this")
     }
@@ -428,7 +431,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             val paramTypes = expression.arguments.map { evaluateExpressionType(writerData, it) }
             val instance = expression.instance
             val functionMatches = if(instance is ParsedTokenInstanceValue) {
-                val instanceType = evaluateExpressionType(writerData, instance.expression).let { if(it is ParsedTokenExpressionTypeGeneric && it.lowerBound != "java.lang.Number") ParsedTokenExpressionTypeComplex(it.lowerBound) else it }
+                val instanceType = evaluateExpressionType(writerData, instance.expression).let { if(it is ParsedTokenExpressionTypeGeneric && it.lowerBound.typeName != "java.lang.Number") ParsedTokenExpressionTypeComplex(it.lowerBound.typeName, emptyList()) else it }
                 if(instanceType !is ParsedTokenExpressionTypeComplex) {
                     throw IllegalArgumentException("Cannot run functions on a primitive type: $instanceType")
                 }
@@ -605,6 +608,15 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 output.appendText("}\n")
                 return resultRegister
             }
+            if(expression.name == "_loadMacro") {
+                val source = expression.arguments[0] as ParsedTokenValueAccessor
+                if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
+                    val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
+                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate") {
+                        return writeNextRegister(uniqId, output, "context.instruction().<dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate>get(${writerData.getParamIndex(source)}).writeBytecode(context)")
+                    }
+                }
+            }
             throw UnsupportedOperationException("Unknown function call: ${expression.name} / $expression")
         }
     }else if(expression is ParsedTokenExpressionField) {
@@ -773,7 +785,7 @@ private fun createCompileExpression(writerData: WriterData, expression: ParsedTo
             val paramTypes = expression.arguments.map { evaluateExpressionType(writerData, it) }
             val instance = expression.instance
             val functionMatches = if(instance is ParsedTokenInstanceValue) {
-                val instanceType = evaluateExpressionType(writerData, instance.expression).let { if(it is ParsedTokenExpressionTypeGeneric && it.lowerBound != "java.lang.Number") ParsedTokenExpressionTypeComplex(it.lowerBound) else it }
+                val instanceType = evaluateExpressionType(writerData, instance.expression).let { if(it is ParsedTokenExpressionTypeGeneric && it.lowerBound.typeName != "java.lang.Number") ParsedTokenExpressionTypeComplex(it.lowerBound.typeName, emptyList()) else it }
                 if(instanceType !is ParsedTokenExpressionTypeComplex) {
                     throw IllegalArgumentException("Cannot run functions on a primitive type: $instanceType")
                 }

@@ -185,7 +185,7 @@ public class FunctionCodeGenerator {
     }
 
     public static ClassGenerator generateFunctionClass(CompilationParams params, DataLocation funcId, List<Instruction> instructions, Set<DataLocation> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions, boolean includeProfilerSupport) {
-        var macroInstructions = Instruction.findTyped(instructions, InstructionTypes2.LOAD_STRING_MACRO, InstructionTypes2.LOAD_INTEGER_MACRO);
+        var macroInstructions = Instruction.findTyped(instructions, InstructionTypes.LOAD_MACRO);
         var macroInputs = new ArrayList<MacroInput>();
         for(var macroInstr : macroInstructions) {
             var template = macroInstr.<MacroTemplate<?>>get("macroTemplate");

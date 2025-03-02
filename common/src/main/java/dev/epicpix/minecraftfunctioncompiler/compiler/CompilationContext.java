@@ -92,7 +92,7 @@ public class CompilationContext {
             return LocationData.ofString(macro.getStaticValue());
         }
         var macroString = this.<String>createLocal();
-        writeInstruction(Instructions2.loadStringMacro(macroString, macro));
+        writeInstruction(Instructions.loadMacro(macroString, macro));
         return macroString;
     }
 
@@ -101,7 +101,7 @@ public class CompilationContext {
             return LocationData.ofInteger(macro.getStaticValue());
         }
         var macroInt = this.<Integer>createLocal();
-        writeInstruction(Instructions2.loadIntegerMacro(macroInt, macro));
+        writeInstruction(Instructions.loadMacro(macroInt, macro));
         return macroInt;
     }
 
