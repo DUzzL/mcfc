@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
+import dev.epicpix.minecraftfunctioncompiler.data.NbtDataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument;
 import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
 import dev.epicpix.minecraftfunctioncompiler.data.text.TextContent;
@@ -127,13 +128,13 @@ public final class TextParser {
                 var nbt = NbtParser.readNbtPath(nbtReader);
                 if(obj.has("block")) {
                     var block = new StringCommandReader(obj.get("block").getAsString(), reader.getSource(), reader.allowsMacros()).readVec3();
-                    content = new TextContent.NbtBlockText(nbt, separator, block);
+                    content = new TextContent.NbtText(nbt, separator, new NbtDataLocation.Block(block));
                 }else if(obj.has("entity")) {
                     var selector = SelectorParser.parseSelector(new StringCommandReader(obj.get("entity").getAsString(), reader.getSource(), reader.allowsMacros()), true, true);
-                    content = new TextContent.NbtEntityText(nbt, separator, selector);
+                    content = new TextContent.NbtText(nbt, separator, new NbtDataLocation.Entity(selector));
                 }else if(obj.has("storage")) {
                     var storage = new StringCommandReader(obj.get("storage").getAsString(), reader.getSource(), reader.allowsMacros()).readDataLocation();
-                    content = new TextContent.NbtStorageText(nbt, separator, storage);
+                    content = new TextContent.NbtText(nbt, separator, new NbtDataLocation.Storage(storage));
                 }else {
                     throw createError(reader, TEXT_INVALID, "Cannot turn \"" + element + "\" into Text");
                 }

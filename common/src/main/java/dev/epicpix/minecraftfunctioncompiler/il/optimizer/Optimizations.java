@@ -102,15 +102,7 @@ public final class Optimizations {
         mergePureData(pass, InstructionTypes.GET_STACK_ENTITY, "stack", "result");
         mergePureData(pass, InstructionTypes.GET_SCOREBOARD_NAME, "entity", "result");
 
-        if(pass.thisInstruction().type() == InstructionTypes.ASSIGN) {
-            var assignFrom = pass.thisInstruction().get("src");
-            var assignTo = pass.thisInstruction().get("result");
-            var otherAssigns = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes.ASSIGN, List.of(Pair.of("result", assignFrom)));
-            if(!otherAssigns.isEmpty()) return;
-
-            pass.replaceInstructionData(false, assignFrom, assignTo);
-            pass.removeInstruction(pass.thisInstructionIndex());
-        }else if(pass.thisInstruction().type() == InstructionTypes2.CALL_FUNCTIONS) {
+        if(pass.thisInstruction().type() == InstructionTypes2.CALL_FUNCTIONS) {
             var prev = pass.getOffsetInstruction(-1);
             if(prev != null && prev.type() == InstructionTypes2.CALL_FUNCTIONS) {
                 if(Objects.equals(pass.thisInstruction().get("arguments"), prev.get("arguments"))) {

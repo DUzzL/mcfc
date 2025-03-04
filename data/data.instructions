@@ -244,6 +244,14 @@
 
 @GET_ENTITY_ALIVE(<net.minecraft.world.entity.Entity> [ctx:entity]) -> int = to_integer([ctx:entity].isAlive());
 
+@GET_ENTITY_NBT(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.nbt.CompoundTag> = [ctx:entity].saveWithoutId(new <net.minecraft.nbt.CompoundTag>());
+
+@GET_PLAYER_SELECTED_ITEM(<net.minecraft.server.level.ServerPlayer> [ctx:player]) -> <net.minecraft.world.item.ItemStack> = [ctx:player].getInventory().getSelected();
+@GET_IS_ITEM_EMPTY(<net.minecraft.world.item.ItemStack> [ctx:item]) -> int = to_integer([ctx:item].isEmpty());
+
+@GET_ITEM_NBT [-1.20.4] (<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.world.item.ItemStack> [ctx:item]) -> <net.minecraft.nbt.CompoundTag> = [ctx:item].save(new <net.minecraft.nbt.CompoundTag>());
+@GET_ITEM_NBT [1.20.5-] (<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.world.item.ItemStack> [ctx:item]) -> <net.minecraft.nbt.CompoundTag> = [ctx:item].save([static:MinecraftServer].registryAccess());
+
 @GET_ROTATION_PITCH(<net.minecraft.world.phys.Vec2> [ctx:rotation]) -> float = [ctx:rotation].x;
 @GET_ROTATION_YAW(<net.minecraft.world.phys.Vec2> [ctx:rotation]) -> float = [ctx:rotation].y;
 

@@ -123,6 +123,7 @@ fun javaToMinecraftGenericType(type: String, generics: List<String> = emptyList(
             "net.minecraft.world.entity.TraceableEntity" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.TraceableEntity"
             "net.minecraft.world.Difficulty" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.DifficultyValue"
             "net.minecraft.world.entity.EntityType" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.EntityTypeValue"
+            "net.minecraft.world.item.ItemStack" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.ItemStack"
             else -> throw IllegalArgumentException("Unknown minecraft class: $type")
         }
     }else {

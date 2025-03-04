@@ -17,6 +17,7 @@ import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
 import java.util.ArrayDeque;
 import java.util.List;
+import java.util.function.Consumer;
 
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.*;
 
@@ -115,7 +116,7 @@ public final class CommandCompiler {
                 context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, setCountLocal, LocationData.ofInteger(0), context.current().contextEndLabel()));
                 context.writeInstruction(Instructions.setNbtStorage(loc.storage(), storageLocal));
             }else {
-                throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_NBT_SOURCE_ACCESS, context.getSource(), "Accessing nbt from block/entity sources is not implemented yet"));
+                throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_NBT_MODIFY_ACCESS, context.getSource(), "Modifying nbt in block/entity is not implemented yet"));
             }
         }else if(command instanceof CommandDifficultySet cmdData) {
             var difficultyLocation = context.<DifficultyValue>createLocal();
@@ -564,32 +565,31 @@ public final class CommandCompiler {
             var stack = context.<CommandSourceStack>createLocal();
             context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
             context.writeInstruction(Instructions2.callFunctions(cmdData.functions(), stack, arguments));
-        }else if(command instanceof CommandFunctionArgsStorage cmdData) {
+        }else if(command instanceof CommandFunctionArgsNbt cmdData) {
             var current = context.current();
-            var arguments = context.<NbtCompound>createLocal();
-            var clonedArguments = context.<NbtTag>createLocal();
-            var validArguments = context.<NbtCompound>createLocal();
-            context.writeInstruction(Instructions.getNbtStorage(arguments, cmdData.storage()));
-            context.writeInstruction(Instructions.cloneNbtValue(clonedArguments, arguments));
-            context.writeInstruction(Instructions.tryAsNbtCompound(validArguments, clonedArguments, current.contextEndLabel()));
-            var stack = context.<CommandSourceStack>createLocal();
-            context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
-            context.writeInstruction(Instructions2.callFunctions(cmdData.functions(), stack, validArguments));
-        }else if(command instanceof CommandFunctionArgsStoragePath cmdData) {
+            forLocatedBaseNbtData(context, cmdData.arguments(), arguments -> {
+                var clonedArguments = context.<NbtTag>createLocal();
+                var validArguments = context.<NbtCompound>createLocal();
+                context.writeInstruction(Instructions.cloneNbtValue(clonedArguments, arguments));
+                context.writeInstruction(Instructions.tryAsNbtCompound(validArguments, clonedArguments, current.contextEndLabel()));
+                var stack = context.<CommandSourceStack>createLocal();
+                context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
+                context.writeInstruction(Instructions2.callFunctions(cmdData.functions(), stack, validArguments));
+            });
+        }else if(command instanceof CommandFunctionArgsNbtPath cmdData) {
             var current = context.current();
-            var storageLocal = context.<NbtCompound>createLocal();
-            context.writeInstruction(Instructions.getNbtStorage(storageLocal, cmdData.storage()));
-
-            var parts = cmdData.path().parts();
-            var value = getNbtPathValue(context, storageLocal, parts, false, current.contextEndLabel());
-            context.writeInstruction(Instructions.ifNullJump(value, current.contextEndLabel()));
-            var clonedTag = context.<NbtTag>createLocal();
-            context.writeInstruction(Instructions.cloneNbtValue(clonedTag, value));
-            var compoundTag = context.<NbtCompound>createLocal();
-            context.writeInstruction(Instructions.tryAsNbtCompound(compoundTag, clonedTag, current.contextEndLabel()));
-            var stack = context.<CommandSourceStack>createLocal();
-            context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
-            context.writeInstruction(Instructions2.callFunctions(cmdData.functions(), stack, compoundTag));
+            forLocatedBaseNbtData(context, cmdData.arguments(), storageLocal -> {
+                var parts = cmdData.path().parts();
+                var value = getNbtPathValue(context, storageLocal, parts, false, current.contextEndLabel());
+                context.writeInstruction(Instructions.ifNullJump(value, current.contextEndLabel()));
+                var clonedTag = context.<NbtTag>createLocal();
+                context.writeInstruction(Instructions.cloneNbtValue(clonedTag, value));
+                var compoundTag = context.<NbtCompound>createLocal();
+                context.writeInstruction(Instructions.tryAsNbtCompound(compoundTag, clonedTag, current.contextEndLabel()));
+                var stack = context.<CommandSourceStack>createLocal();
+                context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
+                context.writeInstruction(Instructions2.callFunctions(cmdData.functions(), stack, compoundTag));
+            });
         }else if(command instanceof CommandGamemode cmdData) {
             try(var selector = context.forSelector(cmdData.targets())) {
                 var playerLocation = context.<Player>createLocal();
@@ -828,6 +828,33 @@ public final class CommandCompiler {
             context.writeInstruction(Instructions.setWeatherDynamic(SetRandomizedWeatherData.THUNDER));
         }else {
             throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNKNOWN_COMMAND, context.getSource(), "Not implemented command: " + command));
+        }
+    }
+
+    private static void forLocatedBaseNbtData(CompilationContext context, NbtDataLocation input, Consumer<LocationData<? extends NbtTag>> consumer) {
+        if(input instanceof NbtDataLocation.Entity loc) {
+            var nbtLocal = context.<NbtCompound>createLocal();
+            try(var entity = context.forSelector(loc.selector())) {
+                context.writeInstruction(Instructions.getEntityNbt(nbtLocal, entity.content()));
+                var playerLabel = context.instructionWriter.createLabelBefore(entity.endLabel());
+                var player = context.<Player>createLocal();
+                context.instructionWriter.addInstructionBefore(Instructions.tryAsPlayer(player, entity.content(), playerLabel), playerLabel);
+                var playerItem = context.<ItemStack>createLocal();
+                context.instructionWriter.addInstructionBefore(Instructions.getPlayerSelectedItem(playerItem, player), playerLabel);
+                var itemEmpty = context.<Integer>createLocal();
+                context.instructionWriter.addInstructionBefore(Instructions.getIsItemEmpty(itemEmpty, playerItem), playerLabel);
+                context.instructionWriter.addInstructionBefore(Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, itemEmpty, LocationData.ofBoolean(false), playerLabel), playerLabel);
+                var itemNbt = context.<NbtCompound>createLocal();
+                context.instructionWriter.addInstructionBefore(Instructions.getItemNbt(itemNbt, playerItem), playerLabel);
+                context.instructionWriter.addInstructionBefore(Instructions.setNbtInCompound(nbtLocal, "SelectedItem", itemNbt), playerLabel);
+                consumer.accept(nbtLocal);
+            }
+        }else if(input instanceof NbtDataLocation.Storage loc) {
+            var nbtLocal = context.<NbtCompound>createLocal();
+            context.writeInstruction(Instructions.getNbtStorage(nbtLocal, loc.storage()));
+            consumer.accept(nbtLocal);
+        }else {
+            throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_NBT_SOURCE_ACCESS, context.getSource(), "Accessing block nbt is not implemented yet"));
         }
     }
 

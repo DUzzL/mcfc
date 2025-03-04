@@ -1,5 +1,8 @@
 # 0.3.2-alpha.1
 
+Adds command:
+- `function ... with entity ...`
+
 Fixes bugs:
 - `execute on vehicle` does not get compiled
 

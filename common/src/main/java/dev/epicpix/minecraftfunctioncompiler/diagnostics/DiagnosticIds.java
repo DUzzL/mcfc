@@ -60,6 +60,7 @@ public final class DiagnosticIds {
     public static final String COMMAND_COMPILE_UNSUPPORTED_STORE = "command.compile.unsupported_store";
     public static final String COMMAND_COMPILE_UNSUPPORTED_NBT_ACCESS = "command.compile.unsupported_nbt_access";
     public static final String COMMAND_COMPILE_UNSUPPORTED_NBT_SOURCE_ACCESS = "command.compile.unsupported_nbt_source_access";
+    public static final String COMMAND_COMPILE_UNSUPPORTED_NBT_MODIFY_ACCESS = "command.compile.unsupported_nbt_modify_access";
     public static final String COMMAND_COMPILE_UNSUPPORTED_TEXT = "command.compile.unsupported_text";
     public static final String COMMAND_COMPILE_UNREACHABLE_CODE = "command.compile.unreachable_code";
     public static final String COMMAND_COMPILE_UNEXPECTED_CONTEXT_END = "command.compile.unexpected_context_end";
