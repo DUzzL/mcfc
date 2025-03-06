@@ -19,7 +19,22 @@ import static dev.epicpix.minecraftfunctioncompiler.CompileConstants.versionName
 public final class FunctionCompilerReporter {
     private FunctionCompilerReporter() {}
 
-    private static boolean dataReportingEnabled = ENABLE_REPORTING;
+    private enum ReportingStatus {
+        DISABLED_BY_COMPILE_CONSTANTS,
+        DISABLED_BY_UNSUPPORTED_VERSION,
+        DISABLED_BY_CONFIG,
+        ENABLED,
+    }
+
+    private static ReportingStatus dataReportingStatus = ENABLE_REPORTING ? ReportingStatus.ENABLED : ReportingStatus.DISABLED_BY_COMPILE_CONSTANTS;
+
+    public static void setReportingEnabled(boolean enable) {
+        if(dataReportingStatus == ReportingStatus.ENABLED && !enable) {
+            dataReportingStatus = ReportingStatus.DISABLED_BY_CONFIG;
+        }else if(dataReportingStatus == ReportingStatus.DISABLED_BY_CONFIG && enable) {
+            dataReportingStatus = ReportingStatus.ENABLED;
+        }
+    }
 
     private static final UUID runUuid = UUID.randomUUID();
     private static final String REPORT_URL = "https://mcfc.mods.epicpix.dev/api/v1/send_reports";
@@ -41,7 +56,7 @@ public final class FunctionCompilerReporter {
 
     @SuppressWarnings("ConstantValue")
     public static void reportRawData(String type, JsonElement data) {
-        if(!ENABLE_REPORTING || !dataReportingEnabled) return;
+        if(!ENABLE_REPORTING || dataReportingStatus != ReportingStatus.ENABLED) return;
 
         var minecraftData = new JsonObject();
         minecraftData.addProperty("name", minecraftVersionName);
@@ -166,7 +181,7 @@ public final class FunctionCompilerReporter {
     }
 
     public static void sendReports() {
-        if(!ENABLE_REPORTING || !dataReportingEnabled || reportQueue.isEmpty()) return;
+        if(!ENABLE_REPORTING || dataReportingStatus != ReportingStatus.ENABLED || reportQueue.isEmpty()) return;
         var sendData = new JsonArray();
         reportQueue.forEach(sendData::add);
         reportQueue.clear();
@@ -186,7 +201,7 @@ public final class FunctionCompilerReporter {
                     if(!respData.get("ok").getAsBoolean()) {
                         var errorId = respData.get("error_id");
                         if(Objects.equals(errorId.getAsString(), "UNSUPPORTED_VERSION")) {
-                            dataReportingEnabled = false;
+                            dataReportingStatus = ReportingStatus.DISABLED_BY_UNSUPPORTED_VERSION;
                         }
                     }
                 }

@@ -3,6 +3,10 @@
 Adds command:
 - `function ... with entity ...`
 
+Adds a config file: `config/mcfc.json`, this file contains currently only contains the `enable_reporting` config option, which enables/disables telemetry
+
+Adds `/mcfc` sub-command: `reload_config`
+
 Fixes bugs:
 - `execute on vehicle` does not get compiled
 

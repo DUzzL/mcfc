@@ -3,6 +3,7 @@ package dev.epicpix.minecraftfunctioncompiler.v1_21;
 import com.google.gson.GsonBuilder;
 import com.mojang.brigadier.CommandDispatcher;
 import dev.epicpix.minecraftfunctioncompiler.CompileConstants;
+import dev.epicpix.minecraftfunctioncompiler.GlobalConfig;
 import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilationStarter;
 import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.profiler.Profiler;
@@ -210,6 +211,24 @@ public class McfcCommand {
             ((FunctionCompilationStarter) context.getSource().getServer().getFunctions()).mcfc$loadFunctions(AUTO_SWITCH_FUNCTIONS, () -> {
                 context.getSource().sendSuccess(() -> Component.literal("Finished function recompilation"), true);
             });
+            return 1;
+        }));
+        base.then(Commands.literal("reload_config").executes(context -> {
+            var configFilePath = FabricLoader.getInstance().getConfigDir().resolve(GlobalConfig.DEFAULT_CONFIG_FILE);
+            if(!Files.exists(configFilePath)) {
+                GlobalConfig.resetConfig();
+                GlobalConfig.saveConfig(configFilePath);
+                context.getSource().sendSuccess(() -> Component.literal("Default mcfc config created and loaded since it did not exist"), true);
+                return 1;
+            }
+            var loadResult = GlobalConfig.loadConfig(configFilePath);
+            if(loadResult == GlobalConfig.ConfigLoadResult.NOT_LOADED) {
+                context.getSource().sendFailure(Component.literal("Failed to load config file, check console for details"));
+            }else if(loadResult == GlobalConfig.ConfigLoadResult.LOADED_OLD) {
+                context.getSource().sendSuccess(() -> Component.literal("Loaded old mcfc config version successfully"), true);
+            }else if(loadResult == GlobalConfig.ConfigLoadResult.LOADED_NEWEST) {
+                context.getSource().sendSuccess(() -> Component.literal("Loaded mcfc config version successfully"), true);
+            }
             return 1;
         }));
         dispatcher.register(base);
