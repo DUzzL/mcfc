@@ -37,8 +37,8 @@ EXECUTE_POSITIONED_POS/execute positioned <pos:vec3> <command:command[root=execu
 EXECUTE_ROTATED_AS/execute rotated as <targets:entity_selector> <command:command[root=execute]>
 EXECUTE_ROTATED_ROT/execute rotated <rot:rotation> <command:command[root=execute]>
 EXECUTE_RUN/execute run <command:command>
-EXECUTE_STORE_RESULT_SCORE/execute store result score <targets:score_accessor> <command:command[root=execute]>
-EXECUTE_STORE_RESULT_STORAGE/execute store result storage <storage:resource_location> <path:nbt_path> <store_type:result_store_type> <scale:double> <command:command[root=execute]>
+EXECUTE_STORE_SCORE/execute store <store_location:result_store_location_type> score <targets:score_accessor> <command:command[root=execute]>
+EXECUTE_STORE_STORAGE/execute store <store_location:result_store_location_type> storage <storage:resource_location> <path:nbt_path> <store_type:result_store_type> <scale:double> <command:command[root=execute]>
 EXECUTE_UNLESS_ENTITY/execute unless entity <entities:entity_selector> <command:command[root=execute]>
 EXECUTE_UNLESS_FUNCTION<1.20.3..>/execute unless function <functions:function> <command:command[root=execute]>
 EXECUTE_UNLESS_PREDICATE/execute unless predicate <predicate:resource_location> <command:command[root=execute]>

@@ -24,10 +24,10 @@ Not all commands are currently implemented in this mod, if a command is not list
 | `execute rotated`                         | Yes             | No result by itself    | No result by itself     |
 | `execute rotated as`                      | Partial[^1]     | No result by itself    | No result by itself     |
 | `execute run`                             | Yes             | No result by itself    | No result by itself     |
-| `execute store result storage ... double` | Partial[^3]     | No result by itself    | No result by itself     |
-| `execute store result storage ... float`  | Partial[^3]     | No result by itself    | No result by itself     |
-| `execute store result storage ... int`    | Partial[^3]     | No result by itself    | No result by itself     |
-| `execute store result score`              | Partial[^1]     | No result by itself    | No result by itself     |
+| `execute store ... storage ... double`    | Partial[^3]     | No result by itself    | No result by itself     |
+| `execute store ... storage ... float`     | Partial[^3]     | No result by itself    | No result by itself     |
+| `execute store ... storage ... int`       | Partial[^3]     | No result by itself    | No result by itself     |
+| `execute store ... score`                 | Partial[^1]     | No result by itself    | No result by itself     |
 | `execute unless entity`                   | Partial[^1]     | No                     | No                      |
 | `execute unless function`                 | Yes             | No                     | No                      |
 | `execute unless predicate`                | Yes             | No                     | No                      |
@@ -50,8 +50,8 @@ Not all commands are currently implemented in this mod, if a command is not list
 | `scoreboard players display name`         | No              | No                     | No                      |
 | `scoreboard players display numberformat` | No              | No                     | No                      |
 | `scoreboard players enable`               | Partial[^1]     | No                     | No                      |
-| `scoreboard players get`                  | Partial[^1]     | Yes                    | No                      |
-| `scoreboard players operation`            | Partial[^1]     | No                     | No                      |
+| `scoreboard players get`                  | Partial[^1]     | Yes                    | Yes                     |
+| `scoreboard players operation`            | Partial[^1]     | Yes                    | Yes                     |
 | `scoreboard players remove`               | Partial[^1]     | No                     | No                      |
 | `scoreboard players reset`                | Partial[^1]     | No                     | No                      |
 | `scoreboard players set`                  | Partial[^1]     | No                     | No                      |

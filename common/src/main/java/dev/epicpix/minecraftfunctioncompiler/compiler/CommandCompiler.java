@@ -29,17 +29,19 @@ public final class CommandCompiler {
         for(var command : commands) {
             var commandLabel = context.current().writeLabel(context.instructionWriter);
             try(var ignored = context.enterWithoutValue(context.current().withContextLabel(commandLabel))) {
-                compile(context, null, command, ResultStorage.empty(source));
+                try(var resultContext = ResultContext.create(context, false, false)) {
+                    compile(context, null, command, resultContext);
+                }
             }
         }
         return context.end();
     }
 
-    private static void compile(CompilationContext context, ForkingContext forkingContext, CommandParams command, ResultStorage result) {
+    private static void compile(CompilationContext context, ForkingContext forkingContext, CommandParams command, ResultContext result) {
         if(command instanceof CommandAdvancementGrantOnly cmdData) {
             var advancementData = DataRegistries.ADVANCEMENT.get(cmdData.advancement());
             if(advancementData == null) return;
-            try(var selector = context.forSelector(cmdData.targets())) {
+            try(var selector = context.forSelector(cmdData.targets(), result)) {
                 var player = context.<Player>createLocal();
                 selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
                 var playerAdvancements = context.<PlayerAdvancements>createLocal();
@@ -52,7 +54,7 @@ public final class CommandCompiler {
             var advancementData = DataRegistries.ADVANCEMENT.get(cmdData.advancement());
             if(advancementData == null) return;
             if(!advancementData.criteria().contains(cmdData.criterion())) return;
-            try(var selector = context.forSelector(cmdData.targets())) {
+            try(var selector = context.forSelector(cmdData.targets(), result)) {
                 var player = context.<Player>createLocal();
                 selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
                 var playerAdvancements = context.<PlayerAdvancements>createLocal();
@@ -62,7 +64,7 @@ public final class CommandCompiler {
         }else if(command instanceof CommandAdvancementRevokeOnly cmdData) {
             var advancementData = DataRegistries.ADVANCEMENT.get(cmdData.advancement());
             if(advancementData == null) return;
-            try(var selector = context.forSelector(cmdData.targets())) {
+            try(var selector = context.forSelector(cmdData.targets(), result)) {
                 var player = context.<Player>createLocal();
                 selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
                 var playerAdvancements = context.<PlayerAdvancements>createLocal();
@@ -75,7 +77,7 @@ public final class CommandCompiler {
             var advancementData = DataRegistries.ADVANCEMENT.get(cmdData.advancement());
             if(advancementData == null) return;
             if(!advancementData.criteria().contains(cmdData.criterion())) return;
-            try(var selector = context.forSelector(cmdData.targets())) {
+            try(var selector = context.forSelector(cmdData.targets(), result)) {
                 var player = context.<Player>createLocal();
                 selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
                 var playerAdvancements = context.<PlayerAdvancements>createLocal();
@@ -83,7 +85,7 @@ public final class CommandCompiler {
                 selector.writeInstruction(Instructions.revokeAdvancementCriterion(playerAdvancements, LocationData.ofString(cmdData.criterion()), advancementData.location()));
             }
         }else if(command instanceof CommandAttributeBaseSet cmdData) {
-            try(var selector = context.forSelector(cmdData.target())) {
+            try(var selector = context.forSelector(cmdData.target(), result)) {
                 var livingEntityLocation = context.<LivingEntity>createLocal();
                 var attrLocation = context.<AttributeInstance>createLocal();
                 selector.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, selector.content(), selector.data().contextEndLabel()));
@@ -130,13 +132,13 @@ public final class CommandCompiler {
                 self.writeInstruction(Instructions.clearAllEffects(livingEntityLocation));
             }
         }else if(command instanceof CommandEffectClearEntities cmdData) {
-            try(var targets = context.forSelector(cmdData.targets())) {
+            try(var targets = context.forSelector(cmdData.targets(), result)) {
                 var livingEntityLocation = context.<LivingEntity>createLocal();
                 targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
                 targets.writeInstruction(Instructions.clearAllEffects(livingEntityLocation));
             }
         }else if(command instanceof CommandEffectClearEntitiesEffect cmdData) {
-            try(var targets = context.forSelector(cmdData.targets())) {
+            try(var targets = context.forSelector(cmdData.targets(), result)) {
                 var livingEntityLocation = context.<LivingEntity>createLocal();
                 targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
                 targets.writeInstruction(Instructions.clearEffect(livingEntityLocation, cmdData.effect().location()));
@@ -144,7 +146,7 @@ public final class CommandCompiler {
         }else if(command instanceof CommandEffectGive cmdData) {
             MobEffectData effect = cmdData.effect();
             try(var self = context.getCurrentEntity()) {
-                try(var targets = context.forSelector(cmdData.targets())) {
+                try(var targets = context.forSelector(cmdData.targets(), result)) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
                     targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
                     targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), effect.instant() ? 1 : 600, 0, true));
@@ -154,7 +156,7 @@ public final class CommandCompiler {
         else if(command instanceof CommandEffectGiveDur cmdData) {
             MobEffectData effect = cmdData.effect();
             try(var self = context.getCurrentEntity()) {
-                try(var targets = context.forSelector(cmdData.targets())) {
+                try(var targets = context.forSelector(cmdData.targets(), result)) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
                     targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
                     targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), cmdData.duration() * (effect.instant() ? 1 : 20), 0, true));
@@ -163,7 +165,7 @@ public final class CommandCompiler {
         }else if(command instanceof CommandEffectGiveDurAmp cmdData) {
             MobEffectData effect = cmdData.effect();
             try(var self = context.getCurrentEntity()) {
-                try(var targets = context.forSelector(cmdData.targets())) {
+                try(var targets = context.forSelector(cmdData.targets(), result)) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
                     targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
                     targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), cmdData.duration() * (effect.instant() ? 1 : 20), cmdData.amplifier(), true));
@@ -172,7 +174,7 @@ public final class CommandCompiler {
         }else if(command instanceof CommandEffectGiveDurAmpShow cmdData) {
             MobEffectData effect = cmdData.effect();
             try(var self = context.getCurrentEntity()) {
-                try(var targets = context.forSelector(cmdData.targets())) {
+                try(var targets = context.forSelector(cmdData.targets(), result)) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
                     targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
                     targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), cmdData.duration() * (effect.instant() ? 1 : 20), cmdData.amplifier(), !cmdData.hideParticles()));
@@ -181,7 +183,7 @@ public final class CommandCompiler {
         }else if(command instanceof CommandEffectGiveInf cmdData) {
             MobEffectData effect = cmdData.effect();
             try(var self = context.getCurrentEntity()) {
-                try(var targets = context.forSelector(cmdData.targets())) {
+                try(var targets = context.forSelector(cmdData.targets(), result)) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
                     targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
                     targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), -1, 0, true));
@@ -190,7 +192,7 @@ public final class CommandCompiler {
         }else if(command instanceof CommandEffectGiveInfAmp cmdData) {
             MobEffectData effect = cmdData.effect();
             try(var self = context.getCurrentEntity()) {
-                try(var targets = context.forSelector(cmdData.targets())) {
+                try(var targets = context.forSelector(cmdData.targets(), result)) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
                     targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
                     targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), -1, cmdData.amplifier(), true));
@@ -199,7 +201,7 @@ public final class CommandCompiler {
         }else if(command instanceof CommandEffectGiveInfAmpShow cmdData) {
             MobEffectData effect = cmdData.effect();
             try(var self = context.getCurrentEntity()) {
-                try(var targets = context.forSelector(cmdData.targets())) {
+                try(var targets = context.forSelector(cmdData.targets(), result)) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
                     targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
                     targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), -1, cmdData.amplifier(), !cmdData.hideParticles()));
@@ -223,7 +225,7 @@ public final class CommandCompiler {
             }
         }else if(command instanceof CommandExecuteAs cmdData) {
             try(var fContext = context.withForkingContext(forkingContext)) {
-                try(var selector = context.forSelector(cmdData.targets())) {
+                try(var selector = context.forSelector(cmdData.targets(), result)) {
                     try(var ignored = context.enterWithoutValue(selector.data().withCurrentEntity(selector.content()))) {
                         compile(context, fContext.content(), cmdData.command(), result);
                     }
@@ -231,7 +233,7 @@ public final class CommandCompiler {
             }
         }else if(command instanceof CommandExecuteAt cmdData) {
             try(var fContext = context.withForkingContext(forkingContext)) {
-                try(var selector = context.forSelector(cmdData.targets())) {
+                try(var selector = context.forSelector(cmdData.targets(), result)) {
                     var world = context.<World>createLocal();
                     var position = context.<Vec3>createLocal();
                     var rotation = context.<Vec2>createLocal();
@@ -245,7 +247,7 @@ public final class CommandCompiler {
             }
         }else if(command instanceof CommandExecuteIfEntity cmdData) {
             try(var fContext = context.withForkingContext(forkingContext)) {
-                try(var ignored = context.forSelector(cmdData.entities().limit(1))) {
+                try(var ignored = context.forSelector(cmdData.entities().limit(1), result)) {
                     compile(context, fContext.content(), cmdData.command(), result);
                 }
             }
@@ -275,7 +277,7 @@ public final class CommandCompiler {
             }
         }else if(command instanceof CommandExecuteIfScoreRange cmdData) {
             try(var fContext = context.withForkingContext(forkingContext)) {
-                try(var scoreAccessor = context.forScoreAccessors(cmdData.target().selectSingle())) {
+                try(var scoreAccessor = context.forScoreAccessors(cmdData.target().selectSingle(), result)) {
                     try(var scoreData = context.getScoreData(scoreAccessor.content(), false)) {
                         var scoreValue = context.<Integer>createLocal();
                         scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
@@ -286,8 +288,8 @@ public final class CommandCompiler {
             }
         }else if(command instanceof CommandExecuteIfScoreCompare cmdData) {
             try(var fContext = context.withForkingContext(forkingContext)) {
-                try(var target = context.forScoreAccessors(cmdData.target().selectSingle())) {
-                    try(var source = context.forScoreAccessors(cmdData.source().selectSingle())) {
+                try(var target = context.forScoreAccessors(cmdData.target().selectSingle(), result)) {
+                    try(var source = context.forScoreAccessors(cmdData.source().selectSingle(), result)) {
                         try(var targetScore = context.getScoreData(target.content(), false)) {
                             try(var sourceScore = context.getScoreData(source.content(), false)) {
                                 var targetValue = context.<Integer>createLocal();
@@ -340,7 +342,7 @@ public final class CommandCompiler {
             }
         }else if(command instanceof CommandExecutePositionedAs cmdData) {
             try(var fContext = context.withForkingContext(forkingContext)) {
-                try(var targets = context.forSelector(cmdData.targets())) {
+                try(var targets = context.forSelector(cmdData.targets(), result)) {
                     var position = context.<Vec3>createLocal();
                     targets.writeInstruction(Instructions.getEntityPosition(position, targets.content()));
                     try(var ignored = context.enterWithoutValue(targets.data().withCurrentPosition(position))) {
@@ -358,7 +360,7 @@ public final class CommandCompiler {
             }
         }else if(command instanceof CommandExecuteRotatedAs cmdData) {
             try(var fContext = context.withForkingContext(forkingContext)) {
-                try(var targets = context.forSelector(cmdData.targets())) {
+                try(var targets = context.forSelector(cmdData.targets(), result)) {
                     var rotation = context.<Vec2>createLocal();
                     targets.writeInstruction(Instructions.getEntityRotation(rotation, targets.content()));
                     try(var ignored = context.enterWithoutValue(targets.data().withCurrentRotation(rotation))) {
@@ -378,22 +380,26 @@ public final class CommandCompiler {
             try(var ignored = context.generateForkExecCode(forkingContext)) {
                 compile(context, forkingContext, cmdData.command(), result);
             }
-        }else if(command instanceof CommandExecuteStoreResultScore cmdData) {
+        }else if(command instanceof CommandExecuteStoreScore cmdData) {
             try(var ignored = context.generateForkExecCode(forkingContext)) {
-                var res = context.withResultStorage(true, false);
-                compile(context, null, cmdData.command(), res);
-                res.checkRequirements(cmdData.command());
-                try(var scoreAccessor = context.forScoreAccessors(cmdData.targets())) {
+                var localResult = ResultContext.create(context, cmdData.storeLocation() == ResultStoreLocationType.SUCCESS, cmdData.storeLocation() == ResultStoreLocationType.RESULT);
+                compile(context, null, cmdData.command(), localResult);
+                localResult.endGeneration();
+                localResult.checkImplemented(cmdData.command());
+                var localResultValue = cmdData.storeLocation() == ResultStoreLocationType.SUCCESS ? localResult.getSuccess() : localResult.getResult();
+                try(var scoreAccessor = context.forScoreAccessors(cmdData.targets(), result)) {
                     try(var scoreData = context.getScoreData(scoreAccessor.content(), true)) {
-                        scoreData.writeInstruction(Instructions.setScore(scoreData.content(), res.result));
+                        scoreData.writeInstruction(Instructions.setScore(scoreData.content(), localResultValue));
                     }
                 }
             }
-        }else if(command instanceof CommandExecuteStoreResultStorage cmdData) {
+        }else if(command instanceof CommandExecuteStoreStorage cmdData) {
             try(var ignored = context.generateForkExecCode(forkingContext)) {
-                var res = context.withResultStorage(true, false);
-                compile(context, null, cmdData.command(), res);
-                res.checkRequirements(cmdData.command());
+                var localResult = ResultContext.create(context, cmdData.storeLocation() == ResultStoreLocationType.SUCCESS, cmdData.storeLocation() == ResultStoreLocationType.RESULT);
+                compile(context, null, cmdData.command(), localResult);
+                localResult.endGeneration();
+                localResult.checkImplemented(cmdData.command());
+                var localResultValue = cmdData.storeLocation() == ResultStoreLocationType.SUCCESS ? localResult.getSuccess() : localResult.getResult();
 
                 var storageLocal = context.<NbtCompound>createLocal();
                 var setCountLocal = context.<Integer>createLocal();
@@ -410,10 +416,10 @@ public final class CommandCompiler {
                     var tagLocal = context.<NbtTag>createLocal();
                     if(cmdData.storeType() == ResultStoreType.INT) {
                         if(cmdData.scale() == 1.0d) {
-                            innerContext.writeInstruction(Instructions.createIntTag(tagLocal, res.result));
+                            innerContext.writeInstruction(Instructions.createIntTag(tagLocal, localResultValue));
                         }else {
                             var resultDouble = context.<Double>createLocal();
-                            innerContext.writeInstruction(Instructions.numberToDouble(resultDouble, res.result));
+                            innerContext.writeInstruction(Instructions.numberToDouble(resultDouble, localResultValue));
                             var multipliedDouble = context.<Double>createLocal();
                             innerContext.writeInstruction(Instructions.valueMul(multipliedDouble, resultDouble, LocationData.ofDouble(cmdData.scale())));
                             var convertedInteger = context.<Integer>createLocal();
@@ -422,7 +428,7 @@ public final class CommandCompiler {
                         }
                     }else if(cmdData.storeType() == ResultStoreType.DOUBLE) {
                         var convertedDouble = context.<Double>createLocal();
-                        innerContext.writeInstruction(Instructions.numberToDouble(convertedDouble, res.result));
+                        innerContext.writeInstruction(Instructions.numberToDouble(convertedDouble, localResultValue));
                         if(cmdData.scale() == 1.0d) {
                             innerContext.writeInstruction(Instructions.createDoubleTag(tagLocal, convertedDouble));
                         }else {
@@ -433,11 +439,11 @@ public final class CommandCompiler {
                     }else if(cmdData.storeType() == ResultStoreType.FLOAT) {
                         if(cmdData.scale() == 1.0d) {
                             var convertedFloat = context.<Float>createLocal();
-                            innerContext.writeInstruction(Instructions.numberToFloat(convertedFloat, res.result));
+                            innerContext.writeInstruction(Instructions.numberToFloat(convertedFloat, localResultValue));
                             innerContext.writeInstruction(Instructions.createFloatTag(tagLocal, convertedFloat));
                         }else {
                             var resultDouble = context.<Double>createLocal();
-                            innerContext.writeInstruction(Instructions.numberToDouble(resultDouble, res.result));
+                            innerContext.writeInstruction(Instructions.numberToDouble(resultDouble, localResultValue));
                             var multipliedDouble = context.<Double>createLocal();
                             innerContext.writeInstruction(Instructions.valueMul(multipliedDouble, resultDouble, LocationData.ofDouble(cmdData.scale())));
                             var convertedFloat = context.<Float>createLocal();
@@ -457,7 +463,7 @@ public final class CommandCompiler {
                 var contextLabel = context.current().contextEndLabel();
                 var codeLocation = context.current().writeLabel(context.instructionWriter);
                 try(var ignored = context.enterWithoutValue(context.current().withContextLabel(codeLocation))) {
-                    try(var selector = context.forSelector(cmdData.entities().limit(1))) {
+                    try(var selector = context.forSelector(cmdData.entities().limit(1), result)) {
                         selector.writeInstruction(Instructions.jump(contextLabel));
                     }
                 }
@@ -490,7 +496,7 @@ public final class CommandCompiler {
         }else if(command instanceof CommandExecuteUnlessScoreRange cmdData) {
             try(var fContext = context.withForkingContext(forkingContext)) {
                 var contextLabel = context.current().contextEndLabel();
-                try(var scoreAccessor = context.forScoreAccessors(cmdData.target().selectSingle())) {
+                try(var scoreAccessor = context.forScoreAccessors(cmdData.target().selectSingle(), result)) {
                     try(var scoreData = context.getScoreData(scoreAccessor.content(), false)) {
                         var scoreValue = context.<Integer>createLocal();
                         scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
@@ -502,8 +508,8 @@ public final class CommandCompiler {
         }else if(command instanceof CommandExecuteUnlessScoreCompare cmdData) {
             try(var fContext = context.withForkingContext(forkingContext)) {
                 var contextLabel = context.current().contextEndLabel();
-                try(var target = context.forScoreAccessors(cmdData.target().selectSingle())) {
-                    try(var source = context.forScoreAccessors(cmdData.source().selectSingle())) {
+                try(var target = context.forScoreAccessors(cmdData.target().selectSingle(), result)) {
+                    try(var source = context.forScoreAccessors(cmdData.source().selectSingle(), result)) {
                         try(var targetScore = context.getScoreData(target.content(), false)) {
                             try(var sourceScore = context.getScoreData(source.content(), false)) {
                                 var targetValue = context.<Integer>createLocal();
@@ -518,37 +524,37 @@ public final class CommandCompiler {
                 compile(context, fContext.content(), cmdData.command(), result);
             }
         }else if(command instanceof CommandExperienceAdd cmdData) {
-            try(var targets = context.forSelector(cmdData.targets())) {
+            try(var targets = context.forSelector(cmdData.targets(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 targets.writeInstruction(Instructions.tryAsPlayer(playerLocation, targets.content(), targets.data().contextEndLabel()));
                 targets.writeInstruction(Instructions.addExperiencePoints(playerLocation, cmdData.amount()));
             }
         }else if(command instanceof CommandExperienceAddPoints cmdData) {
-            try(var targets = context.forSelector(cmdData.targets())) {
+            try(var targets = context.forSelector(cmdData.targets(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 targets.writeInstruction(Instructions.tryAsPlayer(playerLocation, targets.content(), targets.data().contextEndLabel()));
                 targets.writeInstruction(Instructions.addExperiencePoints(playerLocation, cmdData.amount()));
             }
         }else if(command instanceof CommandExperienceAddLevels cmdData) {
-            try(var targets = context.forSelector(cmdData.targets())) {
+            try(var targets = context.forSelector(cmdData.targets(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 targets.writeInstruction(Instructions.tryAsPlayer(playerLocation, targets.content(), targets.data().contextEndLabel()));
                 targets.writeInstruction(Instructions.addExperienceLevels(playerLocation, cmdData.amount()));
             }
         }else if(command instanceof CommandExperienceSet cmdData) {
-            try(var targets = context.forSelector(cmdData.targets())) {
+            try(var targets = context.forSelector(cmdData.targets(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 targets.writeInstruction(Instructions.tryAsPlayer(playerLocation, targets.content(), targets.data().contextEndLabel()));
                 targets.writeInstruction(Instructions.setExperiencePoints(playerLocation, cmdData.amount()));
             }
         }else if(command instanceof CommandExperienceSetPoints cmdData) {
-            try(var targets = context.forSelector(cmdData.targets())) {
+            try(var targets = context.forSelector(cmdData.targets(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 targets.writeInstruction(Instructions.tryAsPlayer(playerLocation, targets.content(), targets.data().contextEndLabel()));
                 targets.writeInstruction(Instructions.setExperiencePoints(playerLocation, cmdData.amount()));
             }
         }else if(command instanceof CommandExperienceSetLevels cmdData) {
-            try(var targets = context.forSelector(cmdData.targets())) {
+            try(var targets = context.forSelector(cmdData.targets(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 targets.writeInstruction(Instructions.tryAsPlayer(playerLocation, targets.content(), targets.data().contextEndLabel()));
                 targets.writeInstruction(Instructions.setExperienceLevels(playerLocation, cmdData.amount()));
@@ -567,7 +573,7 @@ public final class CommandCompiler {
             context.writeInstruction(Instructions2.callFunctions(cmdData.functions(), stack, arguments));
         }else if(command instanceof CommandFunctionArgsNbt cmdData) {
             var current = context.current();
-            forLocatedBaseNbtData(context, cmdData.arguments(), arguments -> {
+            forLocatedBaseNbtData(context, result, cmdData.arguments(), arguments -> {
                 var clonedArguments = context.<NbtTag>createLocal();
                 var validArguments = context.<NbtCompound>createLocal();
                 context.writeInstruction(Instructions.cloneNbtValue(clonedArguments, arguments));
@@ -578,7 +584,7 @@ public final class CommandCompiler {
             });
         }else if(command instanceof CommandFunctionArgsNbtPath cmdData) {
             var current = context.current();
-            forLocatedBaseNbtData(context, cmdData.arguments(), storageLocal -> {
+            forLocatedBaseNbtData(context, result, cmdData.arguments(), storageLocal -> {
                 var parts = cmdData.path().parts();
                 var value = getNbtPathValue(context, storageLocal, parts, false, current.contextEndLabel());
                 context.writeInstruction(Instructions.ifNullJump(value, current.contextEndLabel()));
@@ -591,7 +597,7 @@ public final class CommandCompiler {
                 context.writeInstruction(Instructions2.callFunctions(cmdData.functions(), stack, compoundTag));
             });
         }else if(command instanceof CommandGamemode cmdData) {
-            try(var selector = context.forSelector(cmdData.targets())) {
+            try(var selector = context.forSelector(cmdData.targets(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 selector.writeInstruction(Instructions.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
                 var mappedGamemode = context.<GameType>createLocal();
@@ -599,7 +605,7 @@ public final class CommandCompiler {
                 selector.writeInstruction(Instructions.setGamemode(playerLocation, mappedGamemode));
             }
         }else if(command instanceof CommandKill cmdData) {
-            try(var selector = context.forSelector(cmdData.targets())) {
+            try(var selector = context.forSelector(cmdData.targets(), result)) {
                 try(var world = context.getWorld()) {
                     selector.writeInstruction(Instructions.killEntity(selector.content(), world.content()));
                 }
@@ -609,7 +615,7 @@ public final class CommandCompiler {
         }else if(command instanceof CommandReturnValue cmdData) {
             context.writeInstruction(Instructions.returnSuccess(LocationData.ofInteger(cmdData.value())));
         }else if(command instanceof CommandScoreboardPlayersAdd cmdData) {
-            try(var targets = context.forScoreAccessors(cmdData.targets())) {
+            try(var targets = context.forScoreAccessors(cmdData.targets(), result)) {
                 try(var scoreData = context.getScoreData(targets.content(), true)) {
                     var scoreValue = context.<Integer>createLocal();
                     scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
@@ -619,115 +625,123 @@ public final class CommandCompiler {
                 }
             }
         }else if(command instanceof CommandScoreboardPlayersEnable cmdData) {
-            try(var objective = context.getObjective(cmdData.targets().objective())) {
+            try(var objective = context.getObjective(cmdData.targets().objective(), result)) {
                 var criterion = context.<ScoreboardCriterion>createLocal();
                 objective.writeInstruction(Instructions.getObjectiveCriterion(criterion, objective.content()));
                 var mappedCriterion = context.<ScoreboardCriterion>createLocal();
                 objective.writeInstruction(Instructions.mapObjectiveCriterion(mappedCriterion, DataRegistries.SCOREBOARD_CRITERIA.getOrThrow("trigger")));
                 objective.writeInstruction(Instructions.ifObjectCompareJump(ObjectComparisonType.NOT_IDENTITY_EQUAL, criterion, mappedCriterion, objective.data().contextEndLabel()));
-                try(var name = context.forScoreHolder(cmdData.targets().scoreHolder())) {
+                try(var name = context.forScoreHolder(cmdData.targets().scoreHolder(), result)) {
                     try(var scoreData = context.getScoreData(new ScoreAccessor(objective.content(), name.content()), true)) {
                         scoreData.writeInstruction(Instructions.scoreUnlock(scoreData.content()));
                     }
                 }
             }
         }else if(command instanceof CommandScoreboardPlayersGet cmdData) {
-            try(var targets = context.forScoreAccessors(cmdData.targets())) {
+            result.markImplemented();
+            try(var targets = context.forScoreAccessors(cmdData.targets(), result)) {
                 try(var scoreData = context.getScoreData(targets.content(), false)) {
                     var res = context.<Integer>createLocal();
                     scoreData.writeInstruction(Instructions.getScoreValue(res, scoreData.content()));
-                    result.addResult(context.instructionWriter, scoreData.data(), res);
+                    result.updateResultValue(res);
                 }
             }
         }else if(command instanceof CommandScoreboardPlayersOperation cmdData) {
-            var selectorCodeLocation = context.current().writeLabel(context.instructionWriter);
-            try(var ignored = context.enterWithoutValue(context.current().withContextLabel(selectorCodeLocation))) {
-                try(var targets = context.forScoreAccessors(cmdData.targets())) {
-                    try(var source = context.forScoreAccessors(cmdData.source())) {
-                        try(var targetScore = context.getScoreData(targets.content(), true)) {
-                            try(var sourceScore = context.getScoreData(source.content(), true)) {
-                                switch(cmdData.operation()) {
-                                    case SET -> {
-                                        var scoreValue = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValue, sourceScore.content()));
-                                        sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), scoreValue));
-                                    }
-                                    case ADD -> {
-                                        var scoreValueA = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueA, sourceScore.content()));
-                                        var scoreValueB = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
-                                        var updatedScoreValue = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.valueAdd(updatedScoreValue, scoreValueA, scoreValueB));
-                                        sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
-                                    }
-                                    case SUB -> {
-                                        var scoreValueA = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueA, sourceScore.content()));
-                                        var scoreValueB = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
-                                        var updatedScoreValue = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.valueSub(updatedScoreValue, scoreValueA, scoreValueB));
-                                        sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
-                                    }
-                                    case MUL -> {
-                                        var scoreValueA = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueA, sourceScore.content()));
-                                        var scoreValueB = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
-                                        var updatedScoreValue = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.valueMul(updatedScoreValue, scoreValueA, scoreValueB));
-                                        sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
-                                    }
-                                    case DIV -> {
-                                        var divisor = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(divisor, sourceScore.content()));
-                                        sourceScore.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, divisor, LocationData.ofInteger(0), selectorCodeLocation));
-                                        var dividend = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(dividend, targetScore.content()));
+            result.markImplemented();
+            try(var targets = context.forScoreAccessors(cmdData.targets(), result)) {
+                try(var source = context.forScoreAccessors(cmdData.source(), result)) {
+                    try(var targetScore = context.getScoreData(targets.content(), true)) {
+                        try(var sourceScore = context.getScoreData(source.content(), true)) {
+                            switch(cmdData.operation()) {
+                                case SET -> {
+                                    var scoreValue = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.getScoreValue(scoreValue, sourceScore.content()));
+                                    sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), scoreValue));
+                                    result.updateResultValue(scoreValue);
+                                }
+                                case ADD -> {
+                                    var scoreValueA = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueA, sourceScore.content()));
+                                    var scoreValueB = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
+                                    var updatedScoreValue = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.valueAdd(updatedScoreValue, scoreValueA, scoreValueB));
+                                    sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
+                                    result.updateResultValue(updatedScoreValue);
+                                }
+                                case SUB -> {
+                                    var scoreValueA = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueA, sourceScore.content()));
+                                    var scoreValueB = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
+                                    var updatedScoreValue = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.valueSub(updatedScoreValue, scoreValueA, scoreValueB));
+                                    sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
+                                    result.updateResultValue(updatedScoreValue);
+                                }
+                                case MUL -> {
+                                    var scoreValueA = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueA, sourceScore.content()));
+                                    var scoreValueB = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
+                                    var updatedScoreValue = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.valueMul(updatedScoreValue, scoreValueA, scoreValueB));
+                                    sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
+                                    result.updateResultValue(updatedScoreValue);
+                                }
+                                case DIV -> {
+                                    var divisor = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.getScoreValue(divisor, sourceScore.content()));
+                                    sourceScore.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, divisor, LocationData.ofInteger(0), result.markAndGetErrorLabel()));
+                                    var dividend = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.getScoreValue(dividend, targetScore.content()));
 
-                                        var updatedScoreValue = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.intFloorMod(updatedScoreValue, dividend, divisor));
-                                        sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
-                                    }
-                                    case MOD -> {
-                                        var divisor = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(divisor, sourceScore.content()));
-                                        sourceScore.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, divisor, LocationData.ofInteger(0), selectorCodeLocation));
-                                        var dividend = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(dividend, targetScore.content()));
+                                    var updatedScoreValue = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.intFloorMod(updatedScoreValue, dividend, divisor));
+                                    sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
+                                    result.updateResultValue(updatedScoreValue);
+                                }
+                                case MOD -> {
+                                    var divisor = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.getScoreValue(divisor, sourceScore.content()));
+                                    sourceScore.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, divisor, LocationData.ofInteger(0), result.markAndGetErrorLabel()));
+                                    var dividend = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.getScoreValue(dividend, targetScore.content()));
 
-                                        var updatedScoreValue = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.intFloorDiv(updatedScoreValue, dividend, divisor));
-                                        sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
-                                    }
-                                    case MIN -> {
-                                        var scoreValueA = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueA, sourceScore.content()));
-                                        var scoreValueB = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
-                                        var updatedScoreValue = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.intMin(updatedScoreValue, scoreValueA, scoreValueB));
-                                        sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
-                                    }
-                                    case MAX -> {
-                                        var scoreValueA = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueA, sourceScore.content()));
-                                        var scoreValueB = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
-                                        var updatedScoreValue = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.intMax(updatedScoreValue, scoreValueA, scoreValueB));
-                                        sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
-                                    }
-                                    case SWAP -> {
-                                        var scoreValueA = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueA, sourceScore.content()));
-                                        var scoreValueB = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
+                                    var updatedScoreValue = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.intFloorDiv(updatedScoreValue, dividend, divisor));
+                                    sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
+                                    result.updateResultValue(updatedScoreValue);
+                                }
+                                case MIN -> {
+                                    var scoreValueA = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueA, sourceScore.content()));
+                                    var scoreValueB = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
+                                    var updatedScoreValue = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.intMin(updatedScoreValue, scoreValueA, scoreValueB));
+                                    sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
+                                    result.updateResultValue(updatedScoreValue);
+                                }
+                                case MAX -> {
+                                    var scoreValueA = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueA, sourceScore.content()));
+                                    var scoreValueB = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
+                                    var updatedScoreValue = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.intMax(updatedScoreValue, scoreValueA, scoreValueB));
+                                    sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
+                                    result.updateResultValue(updatedScoreValue);
+                                }
+                                case SWAP -> {
+                                    var scoreValueA = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueA, sourceScore.content()));
+                                    var scoreValueB = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
 
-                                        sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), scoreValueA));
-                                        sourceScore.writeInstruction(Instructions.setScore(sourceScore.content(), scoreValueB));
-                                    }
+                                    sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), scoreValueA));
+                                    sourceScore.writeInstruction(Instructions.setScore(sourceScore.content(), scoreValueB));
+                                    result.updateResultValue(scoreValueA);
                                 }
                             }
                         }
@@ -735,7 +749,7 @@ public final class CommandCompiler {
                 }
             }
         }else if(command instanceof CommandScoreboardPlayersRemove cmdData) {
-            try(var targets = context.forScoreAccessors(cmdData.targets())) {
+            try(var targets = context.forScoreAccessors(cmdData.targets(), result)) {
                 try(var scoreData = context.getScoreData(targets.content(), true)) {
                     var scoreValue = context.<Integer>createLocal();
                     scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
@@ -745,70 +759,70 @@ public final class CommandCompiler {
                 }
             }
         }else if(command instanceof CommandScoreboardPlayersResetAll cmdData) {
-            try(var name = context.forScoreHolder(cmdData.targets())) {
+            try(var name = context.forScoreHolder(cmdData.targets(), result)) {
                 name.writeInstruction(Instructions.resetPlayerScore(name.content()));
             }
         }else if(command instanceof CommandScoreboardPlayersResetObjective cmdData) {
-            try(var objective = context.getObjective(cmdData.targets().objective())) {
-                try(var name = context.forScoreHolder(cmdData.targets().scoreHolder())) {
+            try(var objective = context.getObjective(cmdData.targets().objective(), result)) {
+                try(var name = context.forScoreHolder(cmdData.targets().scoreHolder(), result)) {
                     name.writeInstruction(Instructions.resetScore(objective.content(), name.content()));
                 }
             }
         }else if(command instanceof CommandScoreboardPlayersSet cmdData) {
-            try(var targets = context.forScoreAccessors(cmdData.targets())) {
+            try(var targets = context.forScoreAccessors(cmdData.targets(), result)) {
                 try(var scoreData = context.getScoreData(targets.content(), true)) {
                     scoreData.writeInstruction(Instructions.setScore(scoreData.content(), context.getResolvedIntegerMacro(cmdData.score())));
                 }
             }
         }else if(command instanceof CommandTagAdd cmdData) {
-            try(var entity = context.forSelector(cmdData.targets())) {
+            try(var entity = context.forSelector(cmdData.targets(), result)) {
                 entity.writeInstruction(Instructions.addEntityTag(entity.content(), LocationData.ofString(cmdData.name())));
             }
         }else if(command instanceof CommandTagRemove cmdData) {
-            try(var entity = context.forSelector(cmdData.targets())) {
+            try(var entity = context.forSelector(cmdData.targets(), result)) {
                 entity.writeInstruction(Instructions.removeEntityTag(entity.content(), LocationData.ofString(cmdData.name())));
             }
         }else if(command instanceof CommandTitleActionbar cmdData) {
-            try(var players = context.forSelector(cmdData.players())) {
+            try(var players = context.forSelector(cmdData.players(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
                 var textLocation = loadText(context, cmdData.text());
                 players.writeInstruction(Instructions.sendActionbar(playerLocation, textLocation));
             }
         }else if(command instanceof CommandTitleClear cmdData) {
-            try(var players = context.forSelector(cmdData.players())) {
+            try(var players = context.forSelector(cmdData.players(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
                 players.writeInstruction(Instructions.sendTitlesClear(playerLocation));
             }
         }else if(command instanceof CommandTitleReset cmdData) {
-            try(var players = context.forSelector(cmdData.players())) {
+            try(var players = context.forSelector(cmdData.players(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
                 players.writeInstruction(Instructions.sendTitlesReset(playerLocation));
             }
         }else if(command instanceof CommandTitleSubtitle cmdData) {
-            try(var players = context.forSelector(cmdData.players())) {
+            try(var players = context.forSelector(cmdData.players(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
                 var textLocation = loadText(context, cmdData.text());
                 players.writeInstruction(Instructions.sendSubtitle(playerLocation, textLocation));
             }
         }else if(command instanceof CommandTitleTimes cmdData) {
-            try(var players = context.forSelector(cmdData.players())) {
+            try(var players = context.forSelector(cmdData.players(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
                 players.writeInstruction(Instructions.sendTitlesTimes(playerLocation, cmdData.fadeIn(), cmdData.stay(), cmdData.fadeOut()));
             }
         }else if(command instanceof CommandTitleTitle cmdData) {
-            try(var players = context.forSelector(cmdData.players())) {
+            try(var players = context.forSelector(cmdData.players(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
                 var textLocation = loadText(context, cmdData.text());
                 players.writeInstruction(Instructions.sendTitle(playerLocation, textLocation));
             }
         }else if(command instanceof CommandTellraw cmdData) {
-            try(var players = context.forSelector(cmdData.players())) {
+            try(var players = context.forSelector(cmdData.players(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
                 var textLocation = loadText(context, cmdData.text());
@@ -831,10 +845,10 @@ public final class CommandCompiler {
         }
     }
 
-    private static void forLocatedBaseNbtData(CompilationContext context, NbtDataLocation input, Consumer<LocationData<? extends NbtTag>> consumer) {
+    private static void forLocatedBaseNbtData(CompilationContext context, ResultContext resultContext, NbtDataLocation input, Consumer<LocationData<? extends NbtTag>> consumer) {
         if(input instanceof NbtDataLocation.Entity loc) {
             var nbtLocal = context.<NbtCompound>createLocal();
-            try(var entity = context.forSelector(loc.selector())) {
+            try(var entity = context.forSelector(loc.selector(), resultContext)) {
                 context.writeInstruction(Instructions.getEntityNbt(nbtLocal, entity.content()));
                 var playerLabel = context.instructionWriter.createLabelBefore(entity.endLabel());
                 var player = context.<Player>createLocal();

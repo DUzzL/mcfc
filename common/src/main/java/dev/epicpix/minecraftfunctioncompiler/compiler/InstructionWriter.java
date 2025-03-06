@@ -56,16 +56,20 @@ public class InstructionWriter {
 
     public LabelData createLabelBefore(LabelData before) {
         if(before == NULL_LABEL) return NULL_LABEL;
-        LabelData label = LabelData.ofId(highestLabelId++);
+        LabelData label = createDeferredLabel();
         addInstructionBefore(Instructions.label(label), before);
         return label;
     }
 
     public LabelData createLabelAfter(LabelData after) {
         if(after == NULL_LABEL) return NULL_LABEL;
-        LabelData label = LabelData.ofId(highestLabelId++);
+        LabelData label = createDeferredLabel();
         addInstructionAfter(Instructions.label(label), after);
         return label;
+    }
+
+    public LabelData createDeferredLabel() {
+        return LabelData.ofId(highestLabelId++);
     }
 
 }

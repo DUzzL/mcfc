@@ -602,6 +602,15 @@ public class StringCommandReader {
         };
     }
 
+    public ResultStoreLocationType readResultStoreLocationType() {
+        String str = readWord();
+        return switch (str) {
+            case "result" -> ResultStoreLocationType.RESULT;
+            case "success" -> ResultStoreLocationType.SUCCESS;
+            default -> throw createError(COMMAND_INVALID_RESULT_STORE_LOCATION_TYPE, "Invalid result store location type: " + str);
+        };
+    }
+
     public SelectorSort readSelectorSort() {
         String str = readWord();
         return switch (str) {

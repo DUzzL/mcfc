@@ -78,7 +78,7 @@ public final class FunctionCompilerReporter {
         sendData.addProperty("run_uuid", runUuid.toString());
         sendData.addProperty("timestamp", System.currentTimeMillis());
         sendData.addProperty("report_type", type);
-        sendData.addProperty("report_version", "v9");
+        sendData.addProperty("report_version", "v10");
         sendData.add("data", data);
 
         reportQueue.add(sendData);
@@ -140,6 +140,7 @@ public final class FunctionCompilerReporter {
         functionCountsJson.addProperty("found", functionCounts.foundFunctionCount());
         functionCountsJson.addProperty("parsed", functionCounts.parsedFunctionCount());
         functionCountsJson.addProperty("compiled", functionCounts.compiledFunctionCount());
+        functionCountsJson.addProperty("loaded", functionCounts.loadedFunctionCount());
         compilationStats.add("function_counts", functionCountsJson);
 
         JsonObject timingsJson = new JsonObject();

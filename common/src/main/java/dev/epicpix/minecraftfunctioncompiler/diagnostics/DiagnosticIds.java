@@ -25,6 +25,7 @@ public final class DiagnosticIds {
     public static final String COMMAND_INVALID_DIFFICULTY = "command.error.invalid.difficulty";
     public static final String COMMAND_INVALID_MOB_EFFECT = "command.error.invalid.mob_effect";
     public static final String COMMAND_INVALID_RESULT_STORE_TYPE = "command.error.invalid.result_store_type";
+    public static final String COMMAND_INVALID_RESULT_STORE_LOCATION_TYPE = "command.error.invalid.result_store_location_type";
     public static final String COMMAND_INVALID_LOCATION_ANCHOR = "command.error.invalid.location_anchor";
     public static final String COMMAND_INVALID_SCORE_ACCESSOR = "command.error.invalid.score_accessor";
     public static final String COMMAND_INVALID_JSON = "command.error.invalid.json";
@@ -64,8 +65,7 @@ public final class DiagnosticIds {
     public static final String COMMAND_COMPILE_UNSUPPORTED_TEXT = "command.compile.unsupported_text";
     public static final String COMMAND_COMPILE_UNREACHABLE_CODE = "command.compile.unreachable_code";
     public static final String COMMAND_COMPILE_UNEXPECTED_CONTEXT_END = "command.compile.unexpected_context_end";
-    public static final String COMMAND_COMPILE_EXPECTED_RESULT = "command.compile.result_storage.expected.result";
-    public static final String COMMAND_COMPILE_EXPECTED_SUCCESS = "command.compile.result_storage.expected.success";
+    public static final String COMMAND_COMPILE_RESULT_NOT_IMPLEMENTED = "command.compile.result_context.not_implemented";
 
 
 
@@ -82,6 +82,7 @@ public final class DiagnosticIds {
 
     public static final String FUNCTION_CLASS_LOAD_FAILED = "function.load.failed.class";
     public static final String FUNCTION_LOAD_FAILED = "function.load.failed";
+    public static final String FUNCTION_LOAD_TOO_BIG = "function.load.too_big";
 
 
 

@@ -215,6 +215,9 @@ public final class Optimizations {
         if(!pass.findInstructions(0, pass.context().getInstructionCount(), false, List.of(InstructionTypes.SORT_LIST_ENTITY_FURTHEST, InstructionTypes.SORT_LIST_ENTITY_NEAREST, InstructionTypes.SHUFFLE_LIST), List.of(Pair.of("list", list))).isEmpty()) return;
 
         if(!singleSelector) {
+            var sizeCheckInstr = pass.getInstruction(listLengthInstr + 1);
+            if(sizeCheckInstr != null && sizeCheckInstr.type() == InstructionTypes.IF_NUMBER_COMPARE_JUMP && sizeCheckInstr.containsValue(pass.getInstruction(listLengthInstr).get("result")) && sizeCheckInstr.containsValue(LocationData.ofInteger(0))) return;
+
             if(!pass.findInstructions(condInstr, endInstr, false, List.of(InstructionTypes2.CALL_FUNCTIONS, InstructionTypes.KILL_ENTITY), List.of()).isEmpty()) return;
 
             var indexLoc = pass.getInstruction(getInstr).get("index");

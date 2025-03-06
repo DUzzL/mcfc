@@ -284,6 +284,10 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 builder.append("    var a$argumentIndex = reader.readDataLocation();\n")
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.DataLocation")
             }
+            "result_store_location_type" -> {
+                builder.append("    var a$argumentIndex = reader.readResultStoreLocationType();\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.ResultStoreLocationType")
+            }
             "result_store_type" -> {
                 builder.append("    var a$argumentIndex = reader.readResultStoreType();\n")
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.ResultStoreType")

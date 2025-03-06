@@ -1,7 +1,15 @@
 # 0.3.2-alpha.1
 
-Adds command:
+Adds commands:
 - `function ... with entity ...`
+- `execute store success storage ... double`
+- `execute store success storage ... float`
+- `execute store success storage ... int`
+- `execute store success score`
+
+Added storing result and success support to:
+- `scoreboard players get` (`success` storing is new)
+- `scoreboard players operation`
 
 Adds a config file: `config/mcfc.json`, this file contains currently only contains the `enable_reporting` config option, which enables/disables telemetry
 

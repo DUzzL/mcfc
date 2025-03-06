@@ -5,10 +5,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.epicpix.minecraftfunctioncompiler.commands.*;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
-import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
-import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticCollector;
-import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
-import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticKind;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.*;
 import dev.epicpix.minecraftfunctioncompiler.emitter.GraphGenerator;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.*;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
@@ -254,7 +251,16 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
         HashMap<String, List<BytecodeInstruction>> lowLevelFunctions = new HashMap<>();
         var startLoader = System.nanoTime();
         var totalClassFileSize = new int[2];
-        var loadedFunctions = loadFunctions(params, functionSources, optimizedFunctions, lowLevelFunctions, totalClassFileSize);
+        var loadableFunctions = new HashMap<DataLocation, List<Instruction>>();
+        for(var entry : optimizedFunctions.entrySet()) {
+            if(entry.getValue().size() > 600) {
+                diagnostics.addDiagnostic(new Diagnostic(DiagnosticKind.LOAD_ERROR, FUNCTION_LOAD_TOO_BIG, "Function has too many instructions, ignoring", null, entry.getKey(), null, null));
+                LOGGER.warn("Function has too many instructions, ignoring: {}", entry.getKey());
+            }else {
+                loadableFunctions.put(entry.getKey(), entry.getValue());
+            }
+        }
+        var loadedFunctions = loadFunctions(params, functionSources, loadableFunctions, lowLevelFunctions, totalClassFileSize);
         if(loadedFunctions == null) return;
 
         try {
@@ -315,11 +321,11 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
         }
 
         var startHandles = System.nanoTime();
-        if(!loadHandles(optimizedFunctions, loadedFunctions, params)) return;
+        if(!loadHandles(loadableFunctions, loadedFunctions, params)) return;
         var handleLoadTime = (System.nanoTime()-startHandles)/1000000000d;
         if(DEBUG_PRINT_TIMINGS) LOGGER.info("Loaded handles in {}ms", (int) (handleLoadTime*1000));
 
-        var functionCountsData = new FunctionCountsData(sourceFiles.size(), definedFunctions.size(), optimizedFunctions.size());
+        var functionCountsData = new FunctionCountsData(sourceFiles.size(), definedFunctions.size(), optimizedFunctions.size(), loadableFunctions.size());
         var timingData = new TimingData(parseTime, compileTime, optimizeTime, classLoadTime, handleLoadTime);
         var codeGenMetrics = new CodeGenerationMetrics(
             definedFunctions.values().stream().mapToInt(List::size).sum(),

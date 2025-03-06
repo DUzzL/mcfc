@@ -105,20 +105,6 @@ public class CompilationContext {
         return macroInt;
     }
 
-    public ResultStorage withResultStorage(boolean requireResultValue, boolean requireSuccessValue) {
-        LocationData<Integer> rValue = null;
-        if(requireResultValue) {
-            rValue = this.createLocal();
-            writeInstruction(Instructions.assign(rValue, LocationData.ofInteger(0)));
-        }
-        LocationData<Integer> sValue = null;
-        if(requireSuccessValue) {
-            sValue = this.createLocal();
-            writeInstruction(Instructions.assign(sValue, LocationData.ofInteger(0)));
-        }
-        return new ResultStorage(source, rValue, sValue);
-    }
-
     public CompilationData<LocationData<? extends Entity>> getCurrentEntity() {
         var data = current();
         if(data.currentEntity() != null) {
@@ -314,12 +300,12 @@ public class CompilationContext {
         return enterWithValue(data.withContextLabel(codeLocation), player);
     }
 
-    public CompilationData<LocationData<Objective>> getObjective(String objectiveName) {
+    public CompilationData<LocationData<Objective>> getObjective(String objectiveName, ResultContext resultContext) {
         var data = current();
 
         LocationData<Objective> objective = createLocal();
         data.writeInstruction(instructionWriter, Instructions.getObjective(objective, objectiveName));
-        data.writeInstruction(instructionWriter, Instructions.ifNullJump(objective, data.contextEndLabel()));
+        data.writeInstruction(instructionWriter, Instructions.ifNullJump(objective, resultContext.markAndGetErrorLabel()));
 
         var codeLocation = data.writeLabel(instructionWriter);
 
@@ -327,9 +313,9 @@ public class CompilationContext {
     }
 
     @SuppressWarnings("resource")
-    public CompilationData<ScoreAccessor> forScoreAccessors(ScoreAccessorArgument accessor) {
-        var objectiveName = getObjective(accessor.objective());
-        var scoreHolder = forScoreHolder(accessor.scoreHolder());
+    public CompilationData<ScoreAccessor> forScoreAccessors(ScoreAccessorArgument accessor, ResultContext resultContext) {
+        var objectiveName = getObjective(accessor.objective(), resultContext);
+        var scoreHolder = forScoreHolder(accessor.scoreHolder(), resultContext);
         return enterWithValue(scoreHolder.data(), new ScoreAccessor(objectiveName.content(), scoreHolder.content()), objectiveName.stackCount() + scoreHolder.stackCount() + 1);
     }
 
@@ -354,7 +340,7 @@ public class CompilationContext {
         }
     }
 
-    public CompilationData<LocationData<String>> forEachScoreHolder(boolean single) {
+    public CompilationData<LocationData<String>> forEachScoreHolder(boolean single, ResultContext resultContext) {
         var data = current();
         var scoreHolders = this.<List<? extends String>>createLocal();
         data.writeInstruction(instructionWriter, Instructions.getScoreboardHolders(scoreHolders));
@@ -384,16 +370,16 @@ public class CompilationContext {
         }
     }
 
-    public CompilationData<LocationData<String>> forScoreHolder(ScoreHolderArgument holder) {
+    public CompilationData<LocationData<String>> forScoreHolder(ScoreHolderArgument holder, ResultContext resultContext) {
         if(holder.all()) {
-            return forEachScoreHolder(holder.single());
+            return forEachScoreHolder(holder.single(), resultContext);
         }else if(holder.name() != null) {
             var macro = getResolvedStringMacro(holder.name());
             return new CompilationData<>(this, current(), macro, 0);
         }else if(holder.selector() != null) {
             var selector = holder.single() ? holder.selector().limit(1) : holder.selector();
             @SuppressWarnings("resource")
-            var selectorData = forSelector(selector);
+            var selectorData = forSelector(selector, resultContext);
             var name = this.<String>createLocal();
             selectorData.writeInstruction(Instructions.getScoreboardName(name, selectorData.content()));
             var codeLocation = instructionWriter.createLabelBefore(selectorData.data().contextEndLabel());
@@ -402,7 +388,7 @@ public class CompilationContext {
         throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNREACHABLE_CODE, source, "Unreachable code reached"));
     }
 
-    public CompilationData<LocationData<? extends Entity>> forSelector(SelectorArgument selector) {
+    public CompilationData<LocationData<? extends Entity>> forSelector(SelectorArgument selector, ResultContext resultContext) {
         var data = current();
         if(selector.requirePlayer() && selector.excludesPlayers()) {
             return new CompilationData<>(this, data.withContextLabel(InstructionWriter.NULL_LABEL), createLocal(), 0);
@@ -432,12 +418,12 @@ public class CompilationContext {
             try(var ignored = enterWithoutValue(data.withContextLabel(selectorCodeLocation))) {
                 if(selector.worldLimited()) {
                     try(var world = getWorld()) {
-                        try(var selectorData = forSelectorSelect(selector, realPosition, world.content())) {
+                        try(var selectorData = forSelectorSelect(selector, realPosition, world.content(), resultContext)) {
                             selectorData.writeInstruction(Instructions.addListElement(entityList, selectorData.content()));
                         }
                     }
                 }else {
-                    try(var selectorData = forSelectorSelect(selector, realPosition, null)) {
+                    try(var selectorData = forSelectorSelect(selector, realPosition, null, resultContext)) {
                         selectorData.writeInstruction(Instructions.addListElement(entityList, selectorData.content()));
                     }
                 }
@@ -455,6 +441,7 @@ public class CompilationContext {
 
         var length = this.<Integer>createLocal();
         data.writeInstruction(instructionWriter, Instructions.getListLength(length, entityList));
+        if(resultContext.generatingSuccess()) data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, length, LocationData.ofInteger(0), resultContext.markAndGetErrorLabel()));
         if(selector.limit() != null) {
             if(selector.limit() == 1) {
                 data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, length, LocationData.ofInteger(0), data.contextEndLabel()));
@@ -498,7 +485,7 @@ public class CompilationContext {
     }
 
     @SuppressWarnings("resource")
-    private CompilationData<LocationData<? extends Entity>> forSelectorSelect(SelectorArgument selector, LocationData<Vec3> position, LocationData<World> world) {
+    private CompilationData<LocationData<? extends Entity>> forSelectorSelect(SelectorArgument selector, LocationData<Vec3> position, LocationData<World> world, ResultContext resultContext) {
         CompilationData<LocationData<? extends Entity>> entityData;
         if(selector.playerName() != null) {
             entityData = forPlayer(selector.playerName()).changeType();
@@ -511,10 +498,10 @@ public class CompilationContext {
         }else {
             entityData = forEachEntity(world);
         }
-        return forSelectorBase(entityData, selector, position, world);
+        return forSelectorBase(entityData, selector, position, world, resultContext);
     }
 
-    private CompilationData<LocationData<? extends Entity>> forSelectorBase(CompilationData<LocationData<? extends Entity>> entityData, SelectorArgument selector, LocationData<Vec3> position, LocationData<World> world) {
+    private CompilationData<LocationData<? extends Entity>> forSelectorBase(CompilationData<LocationData<? extends Entity>> entityData, SelectorArgument selector, LocationData<Vec3> position, LocationData<World> world, ResultContext resultContext) {
         var data = entityData.data();
         int stackCount = entityData.stackCount();
         int stackStart = stack.size();
@@ -523,11 +510,6 @@ public class CompilationContext {
             LocationData<World> thisWorld = createLocal();
             data.writeInstruction(instructionWriter, Instructions.getEntityWorld(thisWorld, entityData.content()));
             data.writeInstruction(instructionWriter, Instructions.ifObjectCompareJump(ObjectComparisonType.NOT_IDENTITY_EQUAL, thisWorld, world, data.contextEndLabel()));
-        }
-        if(selector.requireAlive()) {
-            var alive = this.<Integer>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.getEntityAlive(alive, entityData.content()));
-            data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, alive, LocationData.ofBoolean(false), data.contextEndLabel()));
         }
         if(selector.entityTypes() != null) {
             var entityType = this.<EntityTypeValue>createLocal();
@@ -548,6 +530,11 @@ public class CompilationContext {
                     data.writeInstruction(instructionWriter, Instructions.ifObjectCompareJump(ObjectComparisonType.IDENTITY_EQUAL, entityType, compareEntityType, data.contextEndLabel()));
                 }
             }
+        }
+        if(selector.requireAlive()) {
+            var alive = this.<Integer>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.getEntityAlive(alive, entityData.content()));
+            data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, alive, LocationData.ofBoolean(false), data.contextEndLabel()));
         }
         for(var gamemode : selector.gamemodes()) {
             var playerLocal = this.<Player>createLocal();
@@ -717,7 +704,7 @@ public class CompilationContext {
         }
         if(!selector.scores().isEmpty()) {
             for(var entry : selector.scores().entrySet()) {
-                var objectiveData = getObjective(entry.getKey());
+                var objectiveData = getObjective(entry.getKey(), resultContext);
                 var nameData = getScoreboardName(entityData.content());
                 var scoreData = getScoreData(new ScoreAccessor(objectiveData.content(), nameData), false);
                 data = stack.peek();
