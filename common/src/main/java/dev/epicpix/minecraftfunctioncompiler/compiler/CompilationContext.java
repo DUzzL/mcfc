@@ -326,7 +326,11 @@ public class CompilationContext {
         return name;
     }
 
-    public CompilationData<LocationData<Score>> getScoreData(ScoreAccessor accessor, boolean autoCreate) {
+    public CompilationData<LocationData<Score>> getScoreDataAutoCreate(ScoreAccessor accessor) {
+        return getScoreData(accessor, null, true);
+    }
+
+    public CompilationData<LocationData<Score>> getScoreData(ScoreAccessor accessor, LabelData failLabel, boolean autoCreate) {
         var data = current();
         LocationData<Score> score = createLocal();
         if(autoCreate) {
@@ -334,7 +338,7 @@ public class CompilationContext {
             return new CompilationData<>(this, data, score, 0);
         }else {
             data.writeInstruction(instructionWriter, Instructions.scoreDataNoAutoCreate(score, accessor.objective(), accessor.scoreHolder()));
-            data.writeInstruction(instructionWriter, Instructions.ifNullJump(score, data.contextEndLabel()));
+            data.writeInstruction(instructionWriter, Instructions.ifNullJump(score, failLabel));
             var codeLocation = data.writeLabel(instructionWriter);
             return enterWithValue(data.withContextLabel(codeLocation), score);
         }
@@ -346,8 +350,8 @@ public class CompilationContext {
         data.writeInstruction(instructionWriter, Instructions.getScoreboardHolders(scoreHolders));
         var listLength = this.<Integer>createLocal();
         data.writeInstruction(instructionWriter, Instructions.getListLength(listLength, scoreHolders));
+        data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, listLength, LocationData.ofInteger(0), resultContext.markAndGetErrorLabel()));
         if(single) {
-            data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, listLength, LocationData.ofInteger(0), data.contextEndLabel()));
             var scoreHolderObj = this.createLocal();
             var scoreHolder = this.<String>createLocal();
             data.writeInstruction(instructionWriter, Instructions.getListElement(scoreHolderObj, scoreHolders, LocationData.ofInteger(0)));
@@ -706,7 +710,7 @@ public class CompilationContext {
             for(var entry : selector.scores().entrySet()) {
                 var objectiveData = getObjective(entry.getKey(), resultContext);
                 var nameData = getScoreboardName(entityData.content());
-                var scoreData = getScoreData(new ScoreAccessor(objectiveData.content(), nameData), false);
+                var scoreData = getScoreData(new ScoreAccessor(objectiveData.content(), nameData), data.contextEndLabel(), false);
                 data = stack.peek();
 
                 var scoreValue = this.<Integer>createLocal();

@@ -278,7 +278,7 @@ public final class CommandCompiler {
         }else if(command instanceof CommandExecuteIfScoreRange cmdData) {
             try(var fContext = context.withForkingContext(forkingContext)) {
                 try(var scoreAccessor = context.forScoreAccessors(cmdData.target().selectSingle(), result)) {
-                    try(var scoreData = context.getScoreData(scoreAccessor.content(), false)) {
+                    try(var scoreData = context.getScoreData(scoreAccessor.content(), result.markAndGetErrorLabel(), false)) {
                         var scoreValue = context.<Integer>createLocal();
                         scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
                         context.jumpIfNotMatchesRange(scoreData.data(), scoreValue, cmdData.range(), scoreData.data().contextEndLabel());
@@ -290,8 +290,8 @@ public final class CommandCompiler {
             try(var fContext = context.withForkingContext(forkingContext)) {
                 try(var target = context.forScoreAccessors(cmdData.target().selectSingle(), result)) {
                     try(var source = context.forScoreAccessors(cmdData.source().selectSingle(), result)) {
-                        try(var targetScore = context.getScoreData(target.content(), false)) {
-                            try(var sourceScore = context.getScoreData(source.content(), false)) {
+                        try(var targetScore = context.getScoreData(target.content(), result.markAndGetErrorLabel(), false)) {
+                            try(var sourceScore = context.getScoreData(source.content(), result.markAndGetErrorLabel(), false)) {
                                 var targetValue = context.<Integer>createLocal();
                                 var sourceValue = context.<Integer>createLocal();
                                 sourceScore.writeInstruction(Instructions.getScoreValue(targetValue, targetScore.content()));
@@ -388,7 +388,7 @@ public final class CommandCompiler {
                 localResult.checkImplemented(cmdData.command());
                 var localResultValue = cmdData.storeLocation() == ResultStoreLocationType.SUCCESS ? localResult.getSuccess() : localResult.getResult();
                 try(var scoreAccessor = context.forScoreAccessors(cmdData.targets(), result)) {
-                    try(var scoreData = context.getScoreData(scoreAccessor.content(), true)) {
+                    try(var scoreData = context.getScoreDataAutoCreate(scoreAccessor.content())) {
                         scoreData.writeInstruction(Instructions.setScore(scoreData.content(), localResultValue));
                     }
                 }
@@ -497,7 +497,7 @@ public final class CommandCompiler {
             try(var fContext = context.withForkingContext(forkingContext)) {
                 var contextLabel = context.current().contextEndLabel();
                 try(var scoreAccessor = context.forScoreAccessors(cmdData.target().selectSingle(), result)) {
-                    try(var scoreData = context.getScoreData(scoreAccessor.content(), false)) {
+                    try(var scoreData = context.getScoreData(scoreAccessor.content(), result.markAndGetErrorLabel(), false)) {
                         var scoreValue = context.<Integer>createLocal();
                         scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
                         context.jumpIfMatchesRange(scoreData.data(), scoreValue, cmdData.range(), contextLabel);
@@ -510,8 +510,8 @@ public final class CommandCompiler {
                 var contextLabel = context.current().contextEndLabel();
                 try(var target = context.forScoreAccessors(cmdData.target().selectSingle(), result)) {
                     try(var source = context.forScoreAccessors(cmdData.source().selectSingle(), result)) {
-                        try(var targetScore = context.getScoreData(target.content(), false)) {
-                            try(var sourceScore = context.getScoreData(source.content(), false)) {
+                        try(var targetScore = context.getScoreData(target.content(), result.markAndGetErrorLabel(), false)) {
+                            try(var sourceScore = context.getScoreData(source.content(), result.markAndGetErrorLabel(), false)) {
                                 var targetValue = context.<Integer>createLocal();
                                 var sourceValue = context.<Integer>createLocal();
                                 sourceScore.writeInstruction(Instructions.getScoreValue(targetValue, targetScore.content()));
@@ -616,7 +616,7 @@ public final class CommandCompiler {
             context.writeInstruction(Instructions.returnSuccess(LocationData.ofInteger(cmdData.value())));
         }else if(command instanceof CommandScoreboardPlayersAdd cmdData) {
             try(var targets = context.forScoreAccessors(cmdData.targets(), result)) {
-                try(var scoreData = context.getScoreData(targets.content(), true)) {
+                try(var scoreData = context.getScoreDataAutoCreate(targets.content())) {
                     var scoreValue = context.<Integer>createLocal();
                     scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
                     var updatedScoreValue = context.<Integer>createLocal();
@@ -632,7 +632,7 @@ public final class CommandCompiler {
                 objective.writeInstruction(Instructions.mapObjectiveCriterion(mappedCriterion, DataRegistries.SCOREBOARD_CRITERIA.getOrThrow("trigger")));
                 objective.writeInstruction(Instructions.ifObjectCompareJump(ObjectComparisonType.NOT_IDENTITY_EQUAL, criterion, mappedCriterion, objective.data().contextEndLabel()));
                 try(var name = context.forScoreHolder(cmdData.targets().scoreHolder(), result)) {
-                    try(var scoreData = context.getScoreData(new ScoreAccessor(objective.content(), name.content()), true)) {
+                    try(var scoreData = context.getScoreDataAutoCreate(new ScoreAccessor(objective.content(), name.content()))) {
                         scoreData.writeInstruction(Instructions.scoreUnlock(scoreData.content()));
                     }
                 }
@@ -640,7 +640,7 @@ public final class CommandCompiler {
         }else if(command instanceof CommandScoreboardPlayersGet cmdData) {
             result.markImplemented();
             try(var targets = context.forScoreAccessors(cmdData.targets(), result)) {
-                try(var scoreData = context.getScoreData(targets.content(), false)) {
+                try(var scoreData = context.getScoreData(targets.content(), result.markAndGetErrorLabel(), false)) {
                     var res = context.<Integer>createLocal();
                     scoreData.writeInstruction(Instructions.getScoreValue(res, scoreData.content()));
                     result.updateResultValue(res);
@@ -650,8 +650,8 @@ public final class CommandCompiler {
             result.markImplemented();
             try(var targets = context.forScoreAccessors(cmdData.targets(), result)) {
                 try(var source = context.forScoreAccessors(cmdData.source(), result)) {
-                    try(var targetScore = context.getScoreData(targets.content(), true)) {
-                        try(var sourceScore = context.getScoreData(source.content(), true)) {
+                    try(var targetScore = context.getScoreDataAutoCreate(targets.content())) {
+                        try(var sourceScore = context.getScoreDataAutoCreate(source.content())) {
                             switch(cmdData.operation()) {
                                 case SET -> {
                                     var scoreValue = context.<Integer>createLocal();
@@ -750,7 +750,7 @@ public final class CommandCompiler {
             }
         }else if(command instanceof CommandScoreboardPlayersRemove cmdData) {
             try(var targets = context.forScoreAccessors(cmdData.targets(), result)) {
-                try(var scoreData = context.getScoreData(targets.content(), true)) {
+                try(var scoreData = context.getScoreDataAutoCreate(targets.content())) {
                     var scoreValue = context.<Integer>createLocal();
                     scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
                     var updatedScoreValue = context.<Integer>createLocal();
@@ -770,7 +770,7 @@ public final class CommandCompiler {
             }
         }else if(command instanceof CommandScoreboardPlayersSet cmdData) {
             try(var targets = context.forScoreAccessors(cmdData.targets(), result)) {
-                try(var scoreData = context.getScoreData(targets.content(), true)) {
+                try(var scoreData = context.getScoreDataAutoCreate(targets.content())) {
                     scoreData.writeInstruction(Instructions.setScore(scoreData.content(), context.getResolvedIntegerMacro(cmdData.score())));
                 }
             }
