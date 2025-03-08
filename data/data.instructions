@@ -121,6 +121,9 @@
   return_success([ctx:value]);
 }
 
+@EXTRACT_RETURN_SUCCESS(long [ctx:from]) -> int = to_integer([ctx:from] >> 32);
+@EXTRACT_RETURN_RESULT(long [ctx:from]) -> int = to_integer([ctx:from]);
+
 ##CONDITIONAL_JUMP
 @JUMP_IF_VOID_RETURN_VALUE(long [ctx:return_value], label [ctx:label]) {
   _jumpIfEqual(to_integer([ctx:return_value] >> 32), 2, [ctx:label]);

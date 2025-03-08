@@ -63,6 +63,7 @@ GAMEMODE/gamemode <gamemode:gamemode> <targets:entity_selector[players]:self>
 KILL/kill <targets:entity_selector:self>
 
 RETURN_FAIL<1.20.3..>/return fail
+RETURN_RUN<1.20.3..>/return run <command:command>
 RETURN_VALUE<1.20..>/return <value:int>
 
 SCOREBOARD_PLAYERS_ADD/scoreboard players add <targets:score_accessor> <score:macro_int[minimum=0]>

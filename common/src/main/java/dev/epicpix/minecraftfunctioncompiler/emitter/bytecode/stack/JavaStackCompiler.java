@@ -426,11 +426,11 @@ public class JavaStackCompiler {
                 mv.visitInsn(a.getOpcode(Opcodes.IREM));
                 return;
             }else if(eval.evaluationType() == StackEvaluationType.SHL) {
-                var a = get(currentTypeStack, -1);
+                var a = get(currentTypeStack, -2);
                 mv.visitInsn(a.getOpcode(Opcodes.ISHL));
                 return;
             }else if(eval.evaluationType() == StackEvaluationType.SHR) {
-                var a = get(currentTypeStack, -1);
+                var a = get(currentTypeStack, -2);
                 mv.visitInsn(a.getOpcode(Opcodes.ISHR));
                 return;
             }else {

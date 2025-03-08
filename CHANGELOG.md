@@ -8,8 +8,10 @@ Adds commands:
 - `execute store success storage ... float`
 - `execute store success storage ... int`
 - `execute store success score`
+- `return run`
 
 Added storing result and success support to:
+- `function` (for all currently supported sub-commands)
 - `scoreboard players get` (`success` storing is new)
 - `scoreboard players operation`
 

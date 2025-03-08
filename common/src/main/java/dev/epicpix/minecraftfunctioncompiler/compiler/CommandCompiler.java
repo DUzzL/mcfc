@@ -5,7 +5,6 @@ import dev.epicpix.minecraftfunctioncompiler.commands.params.*;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPathPart;
-import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue;
 import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
 import dev.epicpix.minecraftfunctioncompiler.data.text.TextContent;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
@@ -561,41 +560,45 @@ public final class CommandCompiler {
                 targets.writeInstruction(Instructions.setExperienceLevels(playerLocation, cmdData.amount()));
             }
         }else if(command instanceof CommandFunction cmdData) {
+            result.markImplemented();
             var current = context.current();
             var stack = context.<CommandSourceStack>createLocal();
             context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
-            context.writeInstruction(Instructions2.callFunctions(cmdData.functions(), stack, null));
+            callFunctionsAndProvideResult(context, result, cmdData.functions(), stack, null);
         }else if(command instanceof CommandFunctionArgs cmdData) {
+            result.markImplemented();
             var current = context.current();
             var arguments = context.<NbtCompound>createLocal();
             context.writeInstruction(Instructions.loadNbtValue(arguments.forceCast(), cmdData.arguments()));
             var stack = context.<CommandSourceStack>createLocal();
             context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
-            context.writeInstruction(Instructions2.callFunctions(cmdData.functions(), stack, arguments));
+            callFunctionsAndProvideResult(context, result, cmdData.functions(), stack, arguments);
         }else if(command instanceof CommandFunctionArgsNbt cmdData) {
+            result.markImplemented();
             var current = context.current();
             forLocatedBaseNbtData(context, result, cmdData.arguments(), arguments -> {
                 var clonedArguments = context.<NbtTag>createLocal();
                 var validArguments = context.<NbtCompound>createLocal();
                 context.writeInstruction(Instructions.cloneNbtValue(clonedArguments, arguments));
-                context.writeInstruction(Instructions.tryAsNbtCompound(validArguments, clonedArguments, current.contextEndLabel()));
+                context.writeInstruction(Instructions.tryAsNbtCompound(validArguments, clonedArguments, result.markAndGetErrorLabel()));
                 var stack = context.<CommandSourceStack>createLocal();
                 context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
-                context.writeInstruction(Instructions2.callFunctions(cmdData.functions(), stack, validArguments));
+                callFunctionsAndProvideResult(context, result, cmdData.functions(), stack, validArguments);
             });
         }else if(command instanceof CommandFunctionArgsNbtPath cmdData) {
+            result.markImplemented();
             var current = context.current();
             forLocatedBaseNbtData(context, result, cmdData.arguments(), storageLocal -> {
                 var parts = cmdData.path().parts();
-                var value = getNbtPathValue(context, storageLocal, parts, false, current.contextEndLabel());
-                context.writeInstruction(Instructions.ifNullJump(value, current.contextEndLabel()));
+                var value = getNbtPathValue(context, storageLocal, parts, false, result.markAndGetErrorLabel());
+                context.writeInstruction(Instructions.ifNullJump(value, result.markAndGetErrorLabel()));
                 var clonedTag = context.<NbtTag>createLocal();
                 context.writeInstruction(Instructions.cloneNbtValue(clonedTag, value));
                 var compoundTag = context.<NbtCompound>createLocal();
-                context.writeInstruction(Instructions.tryAsNbtCompound(compoundTag, clonedTag, current.contextEndLabel()));
+                context.writeInstruction(Instructions.tryAsNbtCompound(compoundTag, clonedTag, result.markAndGetErrorLabel()));
                 var stack = context.<CommandSourceStack>createLocal();
                 context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
-                context.writeInstruction(Instructions2.callFunctions(cmdData.functions(), stack, compoundTag));
+                callFunctionsAndProvideResult(context, result, cmdData.functions(), stack, compoundTag);
             });
         }else if(command instanceof CommandGamemode cmdData) {
             try(var selector = context.forSelector(cmdData.targets(), result)) {
@@ -613,6 +616,19 @@ public final class CommandCompiler {
             }
         }else if(command instanceof CommandReturnFail) {
             context.writeInstruction(Instructions.returnFail());
+        }else if(command instanceof CommandReturnRun cmdData) {
+            var current = context.current();
+
+            var localResult = ResultContext.create(context, true, true);
+            compile(context, null, cmdData.command(), localResult);
+            localResult.endGeneration();
+            localResult.checkImplemented(cmdData.command());
+
+            var jumpLabel = current.writeLabel(context.instructionWriter);
+            context.instructionWriter.addInstructionBefore(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, localResult.getSuccess(), LocationData.ofInteger(0), jumpLabel), jumpLabel);
+            context.instructionWriter.addInstructionBefore(Instructions.returnSuccess(localResult.getResult()), jumpLabel);
+            current.writeInstruction(context.instructionWriter, Instructions.returnFail());
+
         }else if(command instanceof CommandReturnValue cmdData) {
             context.writeInstruction(Instructions.returnSuccess(LocationData.ofInteger(cmdData.value())));
         }else if(command instanceof CommandScoreboardPlayersAdd cmdData) {
@@ -843,6 +859,22 @@ public final class CommandCompiler {
             context.writeInstruction(Instructions.setWeatherDynamic(SetRandomizedWeatherData.THUNDER));
         }else {
             throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNKNOWN_COMMAND, context.getSource(), "Not implemented command: " + command));
+        }
+    }
+
+    private static void callFunctionsAndProvideResult(CompilationContext context, ResultContext resultContext, List<DataLocation> functions, LocationData<? extends CommandSourceStack> stack, LocationData<? extends NbtCompound> arguments) {
+        if(resultContext.generatingResult() || resultContext.generatingSuccess()) {
+            var resultValue = context.<Long>createLocal();
+            context.writeInstruction(Instructions2.callFunctionsWithResult(resultValue, functions, stack, arguments));
+            var successFunctionValue = context.<Integer>createLocal();
+            context.writeInstruction(Instructions.extractReturnSuccess(successFunctionValue, resultValue));
+
+            context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, successFunctionValue, LocationData.ofInteger(0), resultContext.markAndGetErrorLabel()));
+            var resultFunctionValue = context.<Integer>createLocal();
+            context.writeInstruction(Instructions.extractReturnResult(resultFunctionValue, resultValue));
+            resultContext.updateResultValue(resultFunctionValue);
+        }else {
+            context.writeInstruction(Instructions2.callFunctions(functions, stack, arguments));
         }
     }
 

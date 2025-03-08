@@ -35,17 +35,15 @@ Not all commands are currently implemented in this mod, if a command is not list
 | `experience add`                          | Yes          | No                     | No                      |
 | `experience set`                          | Yes          | No                     | No                      |
 | `function ... with block`                 | No           | No                     | No                      |
-| `function ... with entity ...`            | Yes          | No                     | No                      |
-| `function ... with entity ... <path>`     | Partial[^2]  | No                     | No                      |
-| `function ... with storage ...`           | Yes          | No                     | No                      |
-| `function ... with storage ... <path>`    | Partial[^2]  | No                     | No                      |
-| `function ... <arguments>`                | Yes          | No                     | No                      |
-| `function`                                | Yes          | No                     | No                      |
+| `function ... with entity ...`            | Yes          | Yes                    | Yes                     |
+| `function ... with entity ... <path>`     | Partial[^2]  | Yes                    | Yes                     |
+| `function ... with storage ...`           | Yes          | Yes                    | Yes                     |
+| `function ... with storage ... <path>`    | Partial[^2]  | Yes                    | Yes                     |
+| `function ... <arguments>`                | Yes          | Yes                    | Yes                     |
+| `function`                                | Yes          | Yes                    | Yes                     |
 | `gamemode`                                | Yes          | No                     | No                      |
 | `kill`                                    | Yes          | No                     | No                      |
-| `return <value>`                          | Yes          | No                     | No                      |
-| `return fail`                             | Yes          | No                     | No                      |
-| `return run`                              | No           | No                     | No                      |
+| `return`                                  | Yes          | No                     | No                      |
 | `scoreboard players add`                  | Yes          | No                     | No                      |
 | `scoreboard players display name`         | No           | No                     | No                      |
 | `scoreboard players display numberformat` | No           | No                     | No                      |
