@@ -22,7 +22,7 @@ The list of commands supported currently as of `0.3.2-alpha.1` can be found in t
 
 ## Supported Selectors
 
-Currently, the majority of selector parameters are implemented, the only one which is not implemented yet is `nbt`.
+All the selectors are supported, and all their options.
 
 ## How it works
 

@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.data;
 
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
+import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue;
 
 import java.util.List;
 import java.util.Map;
@@ -34,7 +35,8 @@ public record SelectorArgument(
     Double dy,
     Double dz,
     Map<DataLocation, SelectorAdvancementCheck> advancements,
-    List<NegatableData<DataLocation>> predicates
+    List<NegatableData<DataLocation>> predicates,
+    List<NegatableData<NbtValue.Compound>> nbts
 ) {
 
     private SelectorArgument(UUID entityUuid, String playerName, boolean self) {
@@ -66,6 +68,7 @@ public record SelectorArgument(
                 null,
                 null,
                 null,
+                List.of(),
                 List.of()
         );
     }
@@ -111,7 +114,8 @@ public record SelectorArgument(
                 dy,
                 dz,
                 advancements,
-                predicates
+                predicates,
+                nbts
         );
     }
 

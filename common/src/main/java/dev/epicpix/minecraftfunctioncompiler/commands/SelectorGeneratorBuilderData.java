@@ -2,6 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.commands;
 
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
+import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,6 +36,7 @@ public class SelectorGeneratorBuilderData {
     public Double dz = null;
     public HashMap<DataLocation, SelectorAdvancementCheck> advancements = null;
     public final ArrayList<NegatableData<DataLocation>> predicates = new ArrayList<>();
+    public final ArrayList<NegatableData<NbtValue.Compound>> nbts = new ArrayList<>();
 
     public SelectorArgument build() {
         return new SelectorArgument(
@@ -65,7 +67,8 @@ public class SelectorGeneratorBuilderData {
             dy,
             dz,
             advancements != null ? Map.copyOf(advancements) : null,
-            List.copyOf(predicates)
+            List.copyOf(predicates),
+            List.copyOf(nbts)
         );
     }
 

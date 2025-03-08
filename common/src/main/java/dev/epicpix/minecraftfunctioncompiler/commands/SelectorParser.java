@@ -291,6 +291,11 @@ public final class SelectorParser {
             var predicate = reader.readDataLocation();
             data.predicates.add(new NegatableData<>(predicate, negated));
         });
+        registerSelectorOption("nbt", (reader, data) -> {
+            var negated = reader.skipIfNext('!');
+            var compound = NbtParser.readNbtCompound(reader);
+            data.nbts.add(new NegatableData<>(compound, negated));
+        });
     }
 
 

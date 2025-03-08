@@ -5,6 +5,7 @@ import dev.epicpix.minecraftfunctioncompiler.commands.params.*;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPathPart;
+import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue;
 import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
 import dev.epicpix.minecraftfunctioncompiler.data.text.TextContent;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
@@ -847,21 +848,8 @@ public final class CommandCompiler {
 
     private static void forLocatedBaseNbtData(CompilationContext context, ResultContext resultContext, NbtDataLocation input, Consumer<LocationData<? extends NbtTag>> consumer) {
         if(input instanceof NbtDataLocation.Entity loc) {
-            var nbtLocal = context.<NbtCompound>createLocal();
             try(var entity = context.forSelector(loc.selector(), resultContext)) {
-                context.writeInstruction(Instructions.getEntityNbt(nbtLocal, entity.content()));
-                var playerLabel = context.instructionWriter.createLabelBefore(entity.endLabel());
-                var player = context.<Player>createLocal();
-                context.instructionWriter.addInstructionBefore(Instructions.tryAsPlayer(player, entity.content(), playerLabel), playerLabel);
-                var playerItem = context.<ItemStack>createLocal();
-                context.instructionWriter.addInstructionBefore(Instructions.getPlayerSelectedItem(playerItem, player), playerLabel);
-                var itemEmpty = context.<Integer>createLocal();
-                context.instructionWriter.addInstructionBefore(Instructions.getIsItemEmpty(itemEmpty, playerItem), playerLabel);
-                context.instructionWriter.addInstructionBefore(Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, itemEmpty, LocationData.ofBoolean(false), playerLabel), playerLabel);
-                var itemNbt = context.<NbtCompound>createLocal();
-                context.instructionWriter.addInstructionBefore(Instructions.getItemNbt(itemNbt, playerItem), playerLabel);
-                context.instructionWriter.addInstructionBefore(Instructions.setNbtInCompound(nbtLocal, "SelectedItem", itemNbt), playerLabel);
-                consumer.accept(nbtLocal);
+                consumer.accept(context.getEntityNbt(entity.content()));
             }
         }else if(input instanceof NbtDataLocation.Storage loc) {
             var nbtLocal = context.<NbtCompound>createLocal();

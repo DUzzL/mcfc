@@ -3,6 +3,7 @@ package dev.epicpix.minecraftfunctioncompiler.compiler;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
+import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.emitter.types.NumberComparisonType;
@@ -711,7 +712,7 @@ public class CompilationContext {
                 var objectiveData = getObjective(entry.getKey(), resultContext);
                 var nameData = getScoreboardName(entityData.content());
                 var scoreData = getScoreData(new ScoreAccessor(objectiveData.content(), nameData), data.contextEndLabel(), false);
-                data = stack.peek();
+                data = current();
 
                 var scoreValue = this.<Integer>createLocal();
                 data.writeInstruction(instructionWriter, Instructions.getScoreValue(scoreValue, scoreData.content()));
@@ -730,6 +731,18 @@ public class CompilationContext {
                 data.writeInstruction(instructionWriter, Instructions.jumpIfPredicateSelectorSucceeds(entityWorld, entityData.content(), data.contextEndLabel(), predicate.data()));
             }else {
                 data.writeInstruction(instructionWriter, Instructions.jumpIfPredicateSelectorFails(entityWorld, entityData.content(), data.contextEndLabel(), predicate.data()));
+            }
+        }
+        if(!selector.nbts().isEmpty()) {
+            var entityNbt = getEntityNbt(entityData.content());
+            for(var nbtCheck : selector.nbts()) {
+                if(nbtCheck.negated()) {
+                    var successLabel = data.writeLabel(instructionWriter);
+                    compareNbt(data.withContextLabel(successLabel), successLabel, entityNbt, nbtCheck.data(), true);
+                    instructionWriter.addInstructionBefore(Instructions.jump(data.contextEndLabel()), successLabel);
+                }else {
+                    compareNbt(data, data.contextEndLabel(), entityNbt, nbtCheck.data(), true);
+                }
             }
         }
         stackCount += stack.size() - stackStart;
@@ -827,6 +840,81 @@ public class CompilationContext {
         }
         if(range.maximum() != null) {
             data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN, value, LocationData.ofDouble(range.maximum()), label));
+        }
+    }
+
+    public LocationData<NbtCompound> getEntityNbt(LocationData<? extends Entity> entity) {
+        var nbtLocal = this.<NbtCompound>createLocal();
+        writeInstruction(Instructions.getEntityNbt(nbtLocal, entity));
+        var playerLabel = instructionWriter.createLabelBefore(current().contextEndLabel());
+        var player = this.<Player>createLocal();
+        instructionWriter.addInstructionBefore(Instructions.tryAsPlayer(player, entity, playerLabel), playerLabel);
+        var playerItem = this.<ItemStack>createLocal();
+        instructionWriter.addInstructionBefore(Instructions.getPlayerSelectedItem(playerItem, player), playerLabel);
+        var itemEmpty = this.<Integer>createLocal();
+        instructionWriter.addInstructionBefore(Instructions.getIsItemEmpty(itemEmpty, playerItem), playerLabel);
+        instructionWriter.addInstructionBefore(Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, itemEmpty, LocationData.ofBoolean(false), playerLabel), playerLabel);
+        var itemNbt = this.<NbtCompound>createLocal();
+        instructionWriter.addInstructionBefore(Instructions.getItemNbt(itemNbt, playerItem), playerLabel);
+        instructionWriter.addInstructionBefore(Instructions.setNbtInCompound(nbtLocal, "SelectedItem", itemNbt), playerLabel);
+        return nbtLocal;
+    }
+
+    public void compareNbt(CompilationContextData current, LabelData errorLabel, LocationData<? extends NbtTag> data, NbtValue test, boolean ignoreListOrder) {
+        current.writeInstruction(instructionWriter, Instructions.ifNullJump(data, errorLabel));
+
+        if(test instanceof NbtValue.Compound testCompound) {
+            var dataCompound = this.<NbtCompound>createLocal();
+            current.writeInstruction(instructionWriter, Instructions.tryAsNbtCompound(dataCompound, data, errorLabel));
+            for(var entry : testCompound.values().entrySet()) {
+                var innerData = this.<NbtTag>createLocal();
+                current.writeInstruction(instructionWriter, Instructions.getNbtFromCompound(innerData, dataCompound, entry.getKey()));
+                compareNbt(current, errorLabel, innerData, entry.getValue(), ignoreListOrder);
+            }
+        }else if(test instanceof NbtValue.Array testList) {
+            var dataList = this.<NbtList>createLocal();
+            current.writeInstruction(instructionWriter, Instructions.tryAsNbtList(dataList, data, errorLabel));
+            var dataListLength = this.<Integer>createLocal();
+            current.writeInstruction(instructionWriter, Instructions.getListLength(dataListLength, dataList));
+
+            if(ignoreListOrder) {
+                if(testList.values().isEmpty()) {
+                    current.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, dataListLength, LocationData.ofInteger(0), errorLabel));
+                }else {
+                    current.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.LESS_THAN, dataListLength, LocationData.ofInteger(testList.values().size()), errorLabel));
+                    for(var testElement : testList.values()) {
+                        var index = this.<Integer>createLocal();
+                        current.writeInstruction(instructionWriter, Instructions.assign(index, LocationData.ofInteger(0)));
+
+                        var iterEndLabel = current.writeLabel(instructionWriter);
+                        var newCurrent = current.withContextLabel(iterEndLabel);
+                        var iterStartLabel = newCurrent.writeLabel(instructionWriter);
+                        newCurrent.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, dataListLength, errorLabel));
+
+                        var dataElement = this.<NbtTag>createLocal();
+                        newCurrent.writeInstruction(instructionWriter, Instructions.getListElement(dataElement, dataList, index));
+                        var codeLocation = newCurrent.writeLabel(instructionWriter);
+                        compareNbt(newCurrent.withContextLabel(codeLocation), codeLocation, dataElement, testElement, true);
+                        newCurrent.withContextLabel(codeLocation).writeInstruction(instructionWriter, Instructions.jump(iterEndLabel));
+
+                        newCurrent.writeInstruction(instructionWriter, Instructions.valueAdd(index, index, LocationData.ofInteger(1)));
+                        newCurrent.writeInstruction(instructionWriter, Instructions.jump(iterStartLabel));
+                    }
+                }
+            }else {
+                current.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, dataListLength, LocationData.ofInteger(testList.values().size()), errorLabel));
+                int index = 0;
+                for(var testElement : testList.values()) {
+                    var dataElement = this.<NbtTag>createLocal();
+                    current.writeInstruction(instructionWriter, Instructions.getListElement(dataElement, dataList, LocationData.ofInteger(index)));
+                    compareNbt(current, errorLabel, dataElement, testElement, false);
+                    index++;
+                }
+            }
+        }else {
+            var testConst = this.<NbtTag>createLocal();
+            current.writeInstruction(instructionWriter, Instructions.loadNbtValue(testConst, test));
+            current.writeInstruction(instructionWriter, Instructions.ifObjectCompareJump(ObjectComparisonType.NOT_EQUAL, data, testConst, errorLabel));
         }
     }
 
