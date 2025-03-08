@@ -698,7 +698,7 @@ public final class CommandCompiler {
                                     sourceScore.writeInstruction(Instructions.getScoreValue(dividend, targetScore.content()));
 
                                     var updatedScoreValue = context.<Integer>createLocal();
-                                    sourceScore.writeInstruction(Instructions.intFloorMod(updatedScoreValue, dividend, divisor));
+                                    sourceScore.writeInstruction(Instructions.intFloorDiv(updatedScoreValue, dividend, divisor));
                                     sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
                                     result.updateResultValue(updatedScoreValue);
                                 }
@@ -710,7 +710,7 @@ public final class CommandCompiler {
                                     sourceScore.writeInstruction(Instructions.getScoreValue(dividend, targetScore.content()));
 
                                     var updatedScoreValue = context.<Integer>createLocal();
-                                    sourceScore.writeInstruction(Instructions.intFloorDiv(updatedScoreValue, dividend, divisor));
+                                    sourceScore.writeInstruction(Instructions.intFloorMod(updatedScoreValue, dividend, divisor));
                                     sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
                                     result.updateResultValue(updatedScoreValue);
                                 }
