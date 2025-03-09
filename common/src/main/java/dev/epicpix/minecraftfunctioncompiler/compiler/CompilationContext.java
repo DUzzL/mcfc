@@ -267,7 +267,7 @@ public class CompilationContext {
         var data = current();
 
         var player = this.<Player>createLocal();
-        data.writeInstruction(instructionWriter, Instructions.getPlayer(player, playerName));
+        data.writeInstruction(instructionWriter, Instructions.getPlayer(player, LocationData.ofString(playerName)));
         data.writeInstruction(instructionWriter, Instructions.ifNullJump(player, data.contextEndLabel()));
         var codeLocation = data.writeLabel(instructionWriter);
 
@@ -305,7 +305,7 @@ public class CompilationContext {
         var data = current();
 
         LocationData<Objective> objective = createLocal();
-        data.writeInstruction(instructionWriter, Instructions.getObjective(objective, objectiveName));
+        data.writeInstruction(instructionWriter, Instructions.getObjective(objective, LocationData.ofString(objectiveName)));
         data.writeInstruction(instructionWriter, Instructions.ifNullJump(objective, resultContext.markAndGetErrorLabel()));
 
         var codeLocation = data.writeLabel(instructionWriter);
@@ -856,7 +856,7 @@ public class CompilationContext {
         instructionWriter.addInstructionBefore(Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, itemEmpty, LocationData.ofBoolean(false), playerLabel), playerLabel);
         var itemNbt = this.<NbtCompound>createLocal();
         instructionWriter.addInstructionBefore(Instructions.getItemNbt(itemNbt, playerItem), playerLabel);
-        instructionWriter.addInstructionBefore(Instructions.setNbtInCompound(nbtLocal, "SelectedItem", itemNbt), playerLabel);
+        instructionWriter.addInstructionBefore(Instructions.setNbtInCompound(nbtLocal, LocationData.ofString("SelectedItem"), itemNbt), playerLabel);
         return nbtLocal;
     }
 
@@ -868,7 +868,7 @@ public class CompilationContext {
             current.writeInstruction(instructionWriter, Instructions.tryAsNbtCompound(dataCompound, data, errorLabel));
             for(var entry : testCompound.values().entrySet()) {
                 var innerData = this.<NbtTag>createLocal();
-                current.writeInstruction(instructionWriter, Instructions.getNbtFromCompound(innerData, dataCompound, entry.getKey()));
+                current.writeInstruction(instructionWriter, Instructions.getNbtFromCompound(innerData, dataCompound, LocationData.ofString(entry.getKey())));
                 compareNbt(current, errorLabel, innerData, entry.getValue(), ignoreListOrder);
             }
         }else if(test instanceof NbtValue.Array testList) {

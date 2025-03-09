@@ -91,7 +91,7 @@ public final class CommandCompiler {
                 selector.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, selector.content(), selector.data().contextEndLabel()));
                 selector.writeInstruction(Instructions.getAttributeInstance(livingEntityLocation, attrLocation, cmdData.attribute().location()));
                 selector.writeInstruction(Instructions.ifNullJump(attrLocation, selector.data().contextEndLabel()));
-                selector.writeInstruction(Instructions.setAttributeBase(attrLocation, cmdData.value()));
+                selector.writeInstruction(Instructions.setAttributeBase(attrLocation, LocationData.ofDouble(cmdData.value())));
             }
         }else if(command instanceof CommandDataModifySetValue cmdData) {
             if(cmdData.destination() instanceof NbtDataLocation.Storage loc) {
@@ -149,7 +149,7 @@ public final class CommandCompiler {
                 try(var targets = context.forSelector(cmdData.targets(), result)) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
                     targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
-                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), effect.instant() ? 1 : 600, 0, true));
+                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(effect.instant() ? 1 : 600), LocationData.ofInteger(0), true));
                 }
             }
         }
@@ -159,7 +159,7 @@ public final class CommandCompiler {
                 try(var targets = context.forSelector(cmdData.targets(), result)) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
                     targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
-                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), cmdData.duration() * (effect.instant() ? 1 : 20), 0, true));
+                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(cmdData.duration() * (effect.instant() ? 1 : 20)), LocationData.ofInteger(0), true));
                 }
             }
         }else if(command instanceof CommandEffectGiveDurAmp cmdData) {
@@ -168,7 +168,7 @@ public final class CommandCompiler {
                 try(var targets = context.forSelector(cmdData.targets(), result)) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
                     targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
-                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), cmdData.duration() * (effect.instant() ? 1 : 20), cmdData.amplifier(), true));
+                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(cmdData.duration() * (effect.instant() ? 1 : 20)), LocationData.ofInteger(cmdData.amplifier()), true));
                 }
             }
         }else if(command instanceof CommandEffectGiveDurAmpShow cmdData) {
@@ -177,7 +177,7 @@ public final class CommandCompiler {
                 try(var targets = context.forSelector(cmdData.targets(), result)) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
                     targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
-                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), cmdData.duration() * (effect.instant() ? 1 : 20), cmdData.amplifier(), !cmdData.hideParticles()));
+                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(cmdData.duration() * (effect.instant() ? 1 : 20)), LocationData.ofInteger(cmdData.amplifier()), !cmdData.hideParticles()));
                 }
             }
         }else if(command instanceof CommandEffectGiveInf cmdData) {
@@ -186,7 +186,7 @@ public final class CommandCompiler {
                 try(var targets = context.forSelector(cmdData.targets(), result)) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
                     targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
-                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), -1, 0, true));
+                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(-1), LocationData.ofInteger(0), true));
                 }
             }
         }else if(command instanceof CommandEffectGiveInfAmp cmdData) {
@@ -195,7 +195,7 @@ public final class CommandCompiler {
                 try(var targets = context.forSelector(cmdData.targets(), result)) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
                     targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
-                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), -1, cmdData.amplifier(), true));
+                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(-1), LocationData.ofInteger(cmdData.amplifier()), true));
                 }
             }
         }else if(command instanceof CommandEffectGiveInfAmpShow cmdData) {
@@ -204,7 +204,7 @@ public final class CommandCompiler {
                 try(var targets = context.forSelector(cmdData.targets(), result)) {
                     var livingEntityLocation = context.<LivingEntity>createLocal();
                     targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
-                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), -1, cmdData.amplifier(), !cmdData.hideParticles()));
+                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(-1), LocationData.ofInteger(cmdData.amplifier()), !cmdData.hideParticles()));
                 }
             }
         }else if(command instanceof CommandExecuteAlign cmdData) {
@@ -527,37 +527,37 @@ public final class CommandCompiler {
             try(var targets = context.forSelector(cmdData.targets(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 targets.writeInstruction(Instructions.tryAsPlayer(playerLocation, targets.content(), targets.data().contextEndLabel()));
-                targets.writeInstruction(Instructions.addExperiencePoints(playerLocation, cmdData.amount()));
+                targets.writeInstruction(Instructions.addExperiencePoints(playerLocation, context.getResolvedIntegerMacro(cmdData.amount())));
             }
         }else if(command instanceof CommandExperienceAddPoints cmdData) {
             try(var targets = context.forSelector(cmdData.targets(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 targets.writeInstruction(Instructions.tryAsPlayer(playerLocation, targets.content(), targets.data().contextEndLabel()));
-                targets.writeInstruction(Instructions.addExperiencePoints(playerLocation, cmdData.amount()));
+                targets.writeInstruction(Instructions.addExperiencePoints(playerLocation, context.getResolvedIntegerMacro(cmdData.amount())));
             }
         }else if(command instanceof CommandExperienceAddLevels cmdData) {
             try(var targets = context.forSelector(cmdData.targets(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 targets.writeInstruction(Instructions.tryAsPlayer(playerLocation, targets.content(), targets.data().contextEndLabel()));
-                targets.writeInstruction(Instructions.addExperienceLevels(playerLocation, cmdData.amount()));
+                targets.writeInstruction(Instructions.addExperienceLevels(playerLocation, context.getResolvedIntegerMacro(cmdData.amount())));
             }
         }else if(command instanceof CommandExperienceSet cmdData) {
             try(var targets = context.forSelector(cmdData.targets(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 targets.writeInstruction(Instructions.tryAsPlayer(playerLocation, targets.content(), targets.data().contextEndLabel()));
-                targets.writeInstruction(Instructions.setExperiencePoints(playerLocation, cmdData.amount()));
+                targets.writeInstruction(Instructions.setExperiencePoints(playerLocation, context.getResolvedIntegerMacro(cmdData.amount())));
             }
         }else if(command instanceof CommandExperienceSetPoints cmdData) {
             try(var targets = context.forSelector(cmdData.targets(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 targets.writeInstruction(Instructions.tryAsPlayer(playerLocation, targets.content(), targets.data().contextEndLabel()));
-                targets.writeInstruction(Instructions.setExperiencePoints(playerLocation, cmdData.amount()));
+                targets.writeInstruction(Instructions.setExperiencePoints(playerLocation, context.getResolvedIntegerMacro(cmdData.amount())));
             }
         }else if(command instanceof CommandExperienceSetLevels cmdData) {
             try(var targets = context.forSelector(cmdData.targets(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 targets.writeInstruction(Instructions.tryAsPlayer(playerLocation, targets.content(), targets.data().contextEndLabel()));
-                targets.writeInstruction(Instructions.setExperienceLevels(playerLocation, cmdData.amount()));
+                targets.writeInstruction(Instructions.setExperienceLevels(playerLocation, context.getResolvedIntegerMacro(cmdData.amount())));
             }
         }else if(command instanceof CommandFunction cmdData) {
             result.markImplemented();
@@ -829,7 +829,7 @@ public final class CommandCompiler {
             try(var players = context.forSelector(cmdData.players(), result)) {
                 var playerLocation = context.<Player>createLocal();
                 players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
-                players.writeInstruction(Instructions.sendTitlesTimes(playerLocation, cmdData.fadeIn(), cmdData.stay(), cmdData.fadeOut()));
+                players.writeInstruction(Instructions.sendTitlesTimes(playerLocation, LocationData.ofInteger(cmdData.fadeIn()), LocationData.ofInteger(cmdData.stay()), LocationData.ofInteger(cmdData.fadeOut())));
             }
         }else if(command instanceof CommandTitleTitle cmdData) {
             try(var players = context.forSelector(cmdData.players(), result)) {
@@ -846,15 +846,15 @@ public final class CommandCompiler {
                 players.writeInstruction(Instructions.sendSystemMessage(playerLocation, textLocation));
             }
         }else if(command instanceof CommandWeatherClearTimed cmdData) {
-            context.writeInstruction(Instructions.setWeatherStatic(cmdData.duration(), 0, false, false));
+            context.writeInstruction(Instructions.setWeatherStatic(LocationData.ofInteger(cmdData.duration()), LocationData.ofInteger(0), false, false));
         }else if(command instanceof CommandWeatherClear) {
             context.writeInstruction(Instructions.setWeatherDynamic(SetRandomizedWeatherData.CLEAR));
         }else if(command instanceof CommandWeatherRainTimed cmdData) {
-            context.writeInstruction(Instructions.setWeatherStatic(0, cmdData.duration(), true, false));
+            context.writeInstruction(Instructions.setWeatherStatic(LocationData.ofInteger(0), LocationData.ofInteger(cmdData.duration()), true, false));
         }else if(command instanceof CommandWeatherRain) {
             context.writeInstruction(Instructions.setWeatherDynamic(SetRandomizedWeatherData.RAIN));
         }else if(command instanceof CommandWeatherThunderTimed cmdData) {
-            context.writeInstruction(Instructions.setWeatherStatic(0, cmdData.duration(), true, true));
+            context.writeInstruction(Instructions.setWeatherStatic(LocationData.ofInteger(0), LocationData.ofInteger(cmdData.duration()), true, true));
         }else if(command instanceof CommandWeatherThunder) {
             context.writeInstruction(Instructions.setWeatherDynamic(SetRandomizedWeatherData.THUNDER));
         }else {
@@ -899,9 +899,9 @@ public final class CommandCompiler {
                 context.writeInstruction(Instructions.tryAsNbtCompound(compound, source, failLabel));
                 var storage = context.<NbtTag>createLocal();
                 if(tryCreate) {
-                    context.writeInstruction(Instructions.getNbtFromCompoundOrCreate(storage, compound, named.name()));
+                    context.writeInstruction(Instructions.getNbtFromCompoundOrCreate(storage, compound, LocationData.ofString(named.name())));
                 }else {
-                    context.writeInstruction(Instructions.getNbtFromCompound(storage, compound, named.name()));
+                    context.writeInstruction(Instructions.getNbtFromCompound(storage, compound, LocationData.ofString(named.name())));
                 }
                 source = storage;
             }else if(part instanceof NbtPathPart.ArrayIndexInteger indexed) {
@@ -920,7 +920,7 @@ public final class CommandCompiler {
         if(accessor instanceof NbtPathPart.Named named) {
             var valueCompound = context.<NbtCompound>createLocal();
             context.writeInstruction(Instructions.tryAsNbtCompound(valueCompound, source, failLabel));
-            context.writeInstruction(Instructions.setNbtInCompound(valueCompound, named.name(), value));
+            context.writeInstruction(Instructions.setNbtInCompound(valueCompound, LocationData.ofString(named.name()), value));
         }else if(accessor instanceof NbtPathPart.ArrayIndexInteger indexed) {
             var listAccess = accessNbtList(context, source, indexed, failLabel);
             context.writeInstruction(Instructions.setNbtInList(listAccess.list, listAccess.index, value, failLabel));

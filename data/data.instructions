@@ -215,13 +215,13 @@
 
 @GET_ENTITIES(<net.minecraft.server.level.ServerLevel> [ctx:world]) -> <java.util.Iterator<net.minecraft.world.entity.Entity> > = [ctx:world].getAllEntities().iterator();
 
-@GET_PLAYER(<net.minecraft.server.players.PlayerList> [static:PlayerList], <java.lang.String> [instr:name]) -> <net.minecraft.server.level.ServerPlayer> = [static:PlayerList].getPlayerByName([instr:name]);
+@GET_PLAYER(<net.minecraft.server.players.PlayerList> [static:PlayerList], <java.lang.String> [ctx:name]) -> <net.minecraft.server.level.ServerPlayer> = [static:PlayerList].getPlayerByName([ctx:name]);
 
 @GET_ENTITY(<net.minecraft.server.level.ServerLevel> [ctx:world], <java.util.UUID> [instr:uuid]) -> <net.minecraft.world.entity.Entity> = [ctx:world].getEntity([instr:uuid]);
 
 @GET_SCOREBOARD_HOLDERS(<net.minecraft.server.ServerScoreboard> [static:Scoreboard]) -> <java.util.List<java.lang.String> > = new <java.util.ArrayList>([static:Scoreboard].playerScores.keySet());
 
-@GET_OBJECTIVE(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [instr:name]) -> <net.minecraft.world.scores.Objective> = [static:Scoreboard].getObjective([instr:name]);
+@GET_OBJECTIVE(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [ctx:name]) -> <net.minecraft.world.scores.Objective> = [static:Scoreboard].getObjective([ctx:name]);
 
 @GET_SCOREBOARD_NAME(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <java.lang.String> = [ctx:entity].getScoreboardName();
 
@@ -348,12 +348,12 @@
   [ctx:attribute] = [ctx:entity].getAttributes().getInstance(map_attribute([instr:attribute_name]));
 }
 
-@SET_ATTRIBUTE_BASE(<net.minecraft.world.entity.ai.attributes.AttributeInstance> [ctx:attribute], double [instr:value]) {
-  [ctx:attribute].setBaseValue([instr:value]);
+@SET_ATTRIBUTE_BASE(<net.minecraft.world.entity.ai.attributes.AttributeInstance> [ctx:attribute], double [ctx:value]) {
+  [ctx:attribute].setBaseValue([ctx:value]);
 }
 
-@SET_WEATHER_STATIC(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], int [instr:clear_weather_time], int [instr:rain_time], boolean [instr:raining], boolean [instr:thundering]) {
-  [static:MinecraftServer].overworld().setWeatherParameters([instr:clear_weather_time], [instr:rain_time], [instr:raining], [instr:thundering]);
+@SET_WEATHER_STATIC(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], int [ctx:clear_weather_time], int [ctx:rain_time], boolean [instr:raining], boolean [instr:thundering]) {
+  [static:MinecraftServer].overworld().setWeatherParameters([ctx:clear_weather_time], [ctx:rain_time], [instr:raining], [instr:thundering]);
 }
 
 @SET_WEATHER_DYNAMIC(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <dev.epicpix.minecraftfunctioncompiler.emitter.types.SetRandomizedWeatherData> [instr:option]) {
@@ -393,26 +393,26 @@
   [ctx:entity].removeEffect(map_mob_effect([instr:effect_name]));
 }
 
-@GIVE_EFFECT(<net.minecraft.world.entity.Entity> [ctx:from_entity], <net.minecraft.world.entity.LivingEntity> [ctx:to_entity], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:effect_name], int [instr:duration], int [instr:amplifier], boolean [instr:show_particles]) {
-  [ctx:to_entity].addEffect(new <net.minecraft.world.effect.MobEffectInstance>(map_mob_effect([instr:effect_name]), [instr:duration], [instr:amplifier], false, [instr:show_particles]), [ctx:from_entity]);
+@GIVE_EFFECT(<net.minecraft.world.entity.Entity> [ctx:from_entity], <net.minecraft.world.entity.LivingEntity> [ctx:to_entity], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:effect_name], int [ctx:duration], int [ctx:amplifier], boolean [instr:show_particles]) {
+  [ctx:to_entity].addEffect(new <net.minecraft.world.effect.MobEffectInstance>(map_mob_effect([instr:effect_name]), [ctx:duration], [ctx:amplifier], false, [instr:show_particles]), [ctx:from_entity]);
 }
 
-@ADD_EXPERIENCE_POINTS(<net.minecraft.server.level.ServerPlayer> [ctx:player], int [instr:points]) {
-  [ctx:player].giveExperiencePoints([instr:points]);
+@ADD_EXPERIENCE_POINTS(<net.minecraft.server.level.ServerPlayer> [ctx:player], int [ctx:points]) {
+  [ctx:player].giveExperiencePoints([ctx:points]);
 }
 
-@ADD_EXPERIENCE_LEVELS(<net.minecraft.server.level.ServerPlayer> [ctx:player], int [instr:levels]) {
-  [ctx:player].giveExperienceLevels([instr:levels]);
+@ADD_EXPERIENCE_LEVELS(<net.minecraft.server.level.ServerPlayer> [ctx:player], int [ctx:levels]) {
+  [ctx:player].giveExperienceLevels([ctx:levels]);
 }
 
-@SET_EXPERIENCE_POINTS(<net.minecraft.server.level.ServerPlayer> [ctx:player], int [instr:points]) {
-  if([instr:points] < [ctx:player].getXpNeededForNextLevel()) {
-    [ctx:player].setExperiencePoints([instr:points]);
+@SET_EXPERIENCE_POINTS(<net.minecraft.server.level.ServerPlayer> [ctx:player], int [ctx:points]) {
+  if([ctx:points] < [ctx:player].getXpNeededForNextLevel()) {
+    [ctx:player].setExperiencePoints([ctx:points]);
   }
 }
 
-@SET_EXPERIENCE_LEVELS(<net.minecraft.server.level.ServerPlayer> [ctx:player], int [instr:levels]) {
-  [ctx:player].setExperienceLevels([instr:levels]);
+@SET_EXPERIENCE_LEVELS(<net.minecraft.server.level.ServerPlayer> [ctx:player], int [ctx:levels]) {
+  [ctx:player].setExperienceLevels([ctx:levels]);
 }
 
 @GET_EXPERIENCE_LEVEL(<net.minecraft.server.level.ServerPlayer> [ctx:player]) -> int = [ctx:player].experienceLevel;
@@ -526,20 +526,20 @@
   return cast([ctx:tag], <net.minecraft.nbt.ListTag>);
 }
 
-@SET_NBT_IN_COMPOUND(<net.minecraft.nbt.CompoundTag> [ctx:in], <java.lang.String> [instr:name], <net.minecraft.nbt.Tag> [ctx:value]) {
-  [ctx:in].put([instr:name], [ctx:value]);
+@SET_NBT_IN_COMPOUND(<net.minecraft.nbt.CompoundTag> [ctx:in], <java.lang.String> [ctx:name], <net.minecraft.nbt.Tag> [ctx:value]) {
+  [ctx:in].put([ctx:name], [ctx:value]);
 }
 
-@GET_NBT_FROM_COMPOUND_OR_CREATE(<net.minecraft.nbt.CompoundTag> [ctx:from], <java.lang.String> [instr:name]) -> <net.minecraft.nbt.Tag> {
-  [local:value] = [ctx:from].get([instr:name]);
+@GET_NBT_FROM_COMPOUND_OR_CREATE(<net.minecraft.nbt.CompoundTag> [ctx:from], <java.lang.String> [ctx:name]) -> <net.minecraft.nbt.Tag> {
+  [local:value] = [ctx:from].get([ctx:name]);
   if([local:value] == null) {
     [local:value] = new <net.minecraft.nbt.CompoundTag>();
-    [ctx:from].put([instr:name], [local:value]);
+    [ctx:from].put([ctx:name], [local:value]);
   }
   return [local:value];
 }
 
-@GET_NBT_FROM_COMPOUND(<net.minecraft.nbt.CompoundTag> [ctx:from], <java.lang.String> [instr:name]) -> <net.minecraft.nbt.Tag> = [ctx:from].get([instr:name]);
+@GET_NBT_FROM_COMPOUND(<net.minecraft.nbt.CompoundTag> [ctx:from], <java.lang.String> [ctx:name]) -> <net.minecraft.nbt.Tag> = [ctx:from].get([ctx:name]);
 
 @GET_NBT_LIST_SIZE(<net.minecraft.nbt.ListTag> [ctx:list]) -> int = [ctx:list].size();
 @GET_NBT_FROM_LIST(<net.minecraft.nbt.ListTag> [ctx:from], int [ctx:index]) -> <net.minecraft.nbt.Tag> = [ctx:from].get([ctx:index]);
@@ -612,8 +612,8 @@
   [ctx:player].connection.send(new <net.minecraft.network.protocol.game.ClientboundClearTitlesPacket>(true));
 }
 
-@SEND_TITLES_TIMES(<net.minecraft.server.level.ServerPlayer> [ctx:player], int [instr:fade_in], int [instr:stay], int [instr:fade_out]) {
-  [ctx:player].connection.send(new <net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket>([instr:fade_in], [instr:stay], [instr:fade_out]));
+@SEND_TITLES_TIMES(<net.minecraft.server.level.ServerPlayer> [ctx:player], int [ctx:fade_in], int [ctx:stay], int [ctx:fade_out]) {
+  [ctx:player].connection.send(new <net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket>([ctx:fade_in], [ctx:stay], [ctx:fade_out]));
 }
 
 ##CONDITIONAL_JUMP

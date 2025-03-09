@@ -46,12 +46,12 @@ EXECUTE_UNLESS_SCORE_RANGE/execute unless score <target:score_accessor> matches 
 EXECUTE_UNLESS_SCORE_COMPARE/execute unless score <target:score_accessor> <comparison:score_comparison> <source:score_accessor> <command:command[root=execute]>
 
 =DEFINE/xp/experience
-EXPERIENCE_ADD/experience add <targets:entity_selector[players]> <amount:int>
-EXPERIENCE_ADD_POINTS/experience add <targets:entity_selector[players]> <amount:int> points
-EXPERIENCE_ADD_LEVELS/experience add <targets:entity_selector[players]> <amount:int> levels
-EXPERIENCE_SET/experience set <targets:entity_selector[players]> <amount:int[minimum=0]>
-EXPERIENCE_SET_POINTS/experience set <targets:entity_selector[players]> <amount:int[minimum=0]> points
-EXPERIENCE_SET_LEVELS/experience set <targets:entity_selector[players]> <amount:int[minimum=0]> levels
+EXPERIENCE_ADD/experience add <targets:entity_selector[players]> <amount:macro_int>
+EXPERIENCE_ADD_POINTS/experience add <targets:entity_selector[players]> <amount:macro_int> points
+EXPERIENCE_ADD_LEVELS/experience add <targets:entity_selector[players]> <amount:macro_int> levels
+EXPERIENCE_SET/experience set <targets:entity_selector[players]> <amount:macro_int[minimum=0]>
+EXPERIENCE_SET_POINTS/experience set <targets:entity_selector[players]> <amount:macro_int[minimum=0]> points
+EXPERIENCE_SET_LEVELS/experience set <targets:entity_selector[players]> <amount:macro_int[minimum=0]> levels
 
 FUNCTION/function <functions:function>
 FUNCTION_ARGS<1.20.2..>/function <functions:function> <arguments:nbt_compound>
