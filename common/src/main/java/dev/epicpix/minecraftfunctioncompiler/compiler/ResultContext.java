@@ -16,16 +16,22 @@ public final class ResultContext implements AutoCloseable {
     private final LocationData<Integer> result;
     private final LabelData errorLabel;
     private final LabelData endErrorLabel;
+    private final boolean labelsAlreadyGenerated;
 
     private boolean requiresErrorLabelJump;
     private boolean markedImplemented;
 
-    private ResultContext(CompilationContext context, LocationData<Integer> success, LocationData<Integer> result, LabelData errorLabel, LabelData endErrorLabel) {
+    private ResultContext(CompilationContext context, LocationData<Integer> success, LocationData<Integer> result, LabelData errorLabel, LabelData endErrorLabel, boolean labelsAlreadyGenerated) {
         this.context = context;
         this.success = success;
         this.result = result;
         this.errorLabel = errorLabel;
         this.endErrorLabel = endErrorLabel;
+        this.labelsAlreadyGenerated = labelsAlreadyGenerated;
+    }
+
+    public static ResultContext create(CompilationContext context, LabelData exitLabel) {
+        return new ResultContext(context, null, null, exitLabel, exitLabel, true);
     }
 
     public static ResultContext create(CompilationContext context, boolean generateSuccess, boolean generateResult) {
@@ -39,7 +45,7 @@ public final class ResultContext implements AutoCloseable {
         if(result != null) context.instructionWriter.addInstructionBefore(Instructions.assign(result, LocationData.ofInteger(0)), at);
         var endErrorLabel = context.instructionWriter.createDeferredLabel();
         var startErrorLabel = context.instructionWriter.createDeferredLabel();
-        return new ResultContext(context, success, result, startErrorLabel, endErrorLabel);
+        return new ResultContext(context, success, result, startErrorLabel, endErrorLabel, false);
     }
 
     public void markImplemented() {
@@ -82,7 +88,7 @@ public final class ResultContext implements AutoCloseable {
     }
 
     public void close() {
-        if(requiresErrorLabelJump) {
+        if(requiresErrorLabelJump && !labelsAlreadyGenerated) {
             if(result != null || success != null) {
                 context.writeInstruction(Instructions.jump(endErrorLabel));
                 context.writeInstruction(Instructions.label(errorLabel));

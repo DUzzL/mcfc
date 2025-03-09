@@ -3,6 +3,9 @@
 Adds macro support in:
 - `xp` (all integer arguments)
 
+Fixes bugs:
+- `execute unless score` does not execute the rest of the command if the score is not defined
+
 ## Details
 - **Released:** In Development
 - **Supported Versions:** 1.19.4, 1.20–1.20.1, 1.20.2, 1.20.3–1.20.4, 1.20.5–1.20.6, 1.21–1.21.1, 1.21.2–1.21.3, 1.21.4

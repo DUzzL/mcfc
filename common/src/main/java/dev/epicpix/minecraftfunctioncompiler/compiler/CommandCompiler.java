@@ -496,30 +496,38 @@ public final class CommandCompiler {
         }else if(command instanceof CommandExecuteUnlessScoreRange cmdData) {
             try(var fContext = context.withForkingContext(forkingContext)) {
                 var contextLabel = context.current().contextEndLabel();
-                try(var scoreAccessor = context.forScoreAccessors(cmdData.target().selectSingle(), result)) {
-                    try(var scoreData = context.getScoreData(scoreAccessor.content(), result.markAndGetErrorLabel(), false)) {
-                        var scoreValue = context.<Integer>createLocal();
-                        scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
-                        context.jumpIfMatchesRange(scoreData.data(), scoreValue, cmdData.range(), contextLabel);
+                try(var scope = context.enterLocalScope()) {
+                    var scopeResult = ResultContext.create(context, scope.endLabel());
+                    try(var scoreAccessor = context.forScoreAccessors(cmdData.target().selectSingle(), scopeResult)) {
+                        try(var scoreData = context.getScoreData(scoreAccessor.content(), scopeResult.markAndGetErrorLabel(), false)) {
+                            var scoreValue = context.<Integer>createLocal();
+                            scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
+                            context.jumpIfMatchesRange(scoreData.data(), scoreValue, cmdData.range(), contextLabel);
+                        }
                     }
+                    scopeResult.close();
                 }
                 compile(context, fContext.content(), cmdData.command(), result);
             }
         }else if(command instanceof CommandExecuteUnlessScoreCompare cmdData) {
             try(var fContext = context.withForkingContext(forkingContext)) {
                 var contextLabel = context.current().contextEndLabel();
-                try(var target = context.forScoreAccessors(cmdData.target().selectSingle(), result)) {
-                    try(var source = context.forScoreAccessors(cmdData.source().selectSingle(), result)) {
-                        try(var targetScore = context.getScoreData(target.content(), result.markAndGetErrorLabel(), false)) {
-                            try(var sourceScore = context.getScoreData(source.content(), result.markAndGetErrorLabel(), false)) {
-                                var targetValue = context.<Integer>createLocal();
-                                var sourceValue = context.<Integer>createLocal();
-                                sourceScore.writeInstruction(Instructions.getScoreValue(targetValue, targetScore.content()));
-                                sourceScore.writeInstruction(Instructions.getScoreValue(sourceValue, sourceScore.content()));
-                                sourceScore.writeInstruction(Instructions.ifNumberCompareJump(cmdData.comparison().negate().toNumberComparisonJump(), targetValue, sourceValue, contextLabel));
+                try(var scope = context.enterLocalScope()) {
+                    var scopeResult = ResultContext.create(context, scope.endLabel());
+                    try(var target = context.forScoreAccessors(cmdData.target().selectSingle(), scopeResult)) {
+                        try(var source = context.forScoreAccessors(cmdData.source().selectSingle(), scopeResult)) {
+                            try(var targetScore = context.getScoreData(target.content(), scopeResult.markAndGetErrorLabel(), false)) {
+                                try(var sourceScore = context.getScoreData(source.content(), scopeResult.markAndGetErrorLabel(), false)) {
+                                    var targetValue = context.<Integer>createLocal();
+                                    var sourceValue = context.<Integer>createLocal();
+                                    sourceScore.writeInstruction(Instructions.getScoreValue(targetValue, targetScore.content()));
+                                    sourceScore.writeInstruction(Instructions.getScoreValue(sourceValue, sourceScore.content()));
+                                    sourceScore.writeInstruction(Instructions.ifNumberCompareJump(cmdData.comparison().negate().toNumberComparisonJump(), targetValue, sourceValue, contextLabel));
+                                }
                             }
                         }
                     }
+                    scopeResult.close();
                 }
                 compile(context, fContext.content(), cmdData.command(), result);
             }
