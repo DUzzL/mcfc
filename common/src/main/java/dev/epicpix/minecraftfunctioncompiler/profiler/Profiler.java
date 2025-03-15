@@ -5,7 +5,6 @@ import com.google.gson.JsonObject;
 import com.sun.management.ThreadMXBean;
 import dev.epicpix.minecraftfunctioncompiler.GlobalConfig;
 import it.unimi.dsi.fastutil.ints.IntObjectPair;
-import it.unimi.dsi.fastutil.longs.LongArrayList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,11 +17,15 @@ public final class Profiler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("minecraftfunctioncompiler:profiler");
 
-    private record Event(long timeNanos, long memoryBytes, long eventData, String function) {}
+    private static final int TYPE_EXIT = 0;
+    private static final int TYPE_ROOT = 1;
+    private static final int TYPE_COMPILED = 2;
+    private static final int TYPE_VANILLA = 3;
+    private static final int TYPE_OVERHEAD = 4;
+
+    private record Event(long timeNanos, long memoryBytes, int extra, String function) {}
 
     private static final ArrayList<Event> eventList = new ArrayList<>();
-    private static final LongArrayList eventDataStack = new LongArrayList();
-    private static long eventId;
     private static boolean profilerEnabled;
     private static boolean resetQueued;
 
@@ -51,28 +54,26 @@ public final class Profiler {
 
     public static void enterCompiled(String function) {
         if(!profilerEnabled) return;
-        enter(function, 0);
+        enter(function, TYPE_COMPILED);
     }
 
     public static void enterVanilla(String function) {
         if(!profilerEnabled) return;
-        enter(function, 1);
+        enter(function, TYPE_VANILLA);
     }
 
     public static void enterOverhead(String function) {
         if(!profilerEnabled) return;
-        enter(function, 2);
+        enter(function, TYPE_OVERHEAD);
     }
 
     public static void exit() {
         if(!profilerEnabled) return;
-        eventList.add(new Event(System.nanoTime(), getMemoryBytes(), eventDataStack.popLong(), null));
+        eventList.add(new Event(System.nanoTime(), getMemoryBytes(), TYPE_EXIT, null));
     }
 
     private static void enter(String function, int extra) {
-        long eventData = ((long) extra << 61) | eventId++;
-        eventList.add(new Event(System.nanoTime(), getMemoryBytes(), eventData, function));
-        eventDataStack.push(eventData);
+        eventList.add(new Event(System.nanoTime(), getMemoryBytes(), extra, function));
     }
 
     private static final ThreadMXBean threadMxBean = (ThreadMXBean) ManagementFactory.getThreadMXBean();
@@ -81,8 +82,7 @@ public final class Profiler {
         if(threadMxBean.isThreadAllocatedMemorySupported()) {
             threadMxBean.setThreadAllocatedMemoryEnabled(true);
         }else {
-            var logger = LoggerFactory.getLogger("minecraftfunctioncompiler:profiler");
-            logger.warn("Thread allocated memory is not supported. Will not be able to collect memory usage.");
+            LOGGER.warn("Thread allocated memory is not supported. Will not be able to collect memory usage.");
         }
     }
 
@@ -97,21 +97,27 @@ public final class Profiler {
     }
 
     private record CallTree(long totalDuration, long totalMemory, int extra, int execCount, String function, List<CallTree> children) {}
+    private record CallTreeState(long nanosState, long bytesState, int extra, String function, ArrayList<CallTree> children) {}
 
     private static CallTree generateCallTree() {
-        var main = eventList.remove(eventList.size() - 1);
-        var children = new ArrayList<CallTree>();
-        var extra = (int) (main.eventData >> 61);
+        var stack = new Stack<CallTreeState>();
+
+        var baseEntry = eventList.remove(eventList.size() - 1);
+        stack.push(new CallTreeState(baseEntry.timeNanos, baseEntry.memoryBytes, baseEntry.extra, baseEntry.function, new ArrayList<>()));
+
         while(!eventList.isEmpty()) {
-            var next = eventList.get(eventList.size() - 1);
-            if(next.function == null && next.eventData == main.eventData) {
-                eventList.remove(eventList.size() - 1);
-                return new CallTree(next.timeNanos - main.timeNanos, next.memoryBytes - main.memoryBytes, extra, 1, main.function, children);
+            var next = eventList.remove(eventList.size() - 1);
+            if(next.function == null && next.extra == TYPE_EXIT) {
+                var top = stack.pop();
+                var tree = new CallTree(next.timeNanos - top.nanosState, next.memoryBytes - top.bytesState, top.extra, 1, top.function, top.children);
+                if(stack.isEmpty()) return tree;
+                stack.peek().children.add(tree);
             }else {
-                children.add(generateCallTree());
+                stack.push(new CallTreeState(next.timeNanos, next.memoryBytes, next.extra, next.function, new ArrayList<>()));
             }
         }
-        return new CallTree(-1, -1, extra, 1, main.function, children);
+
+        throw new IllegalArgumentException("Unfinished call tree");
     }
 
     private static void printCallTree(CallTree tree, BiConsumer<String, Boolean> writer) {
@@ -123,12 +129,12 @@ public final class Profiler {
         }
         if(tree.execCount != 0) selfDuration /= tree.execCount;
         if(tree.execCount != 0) selfMemory /= tree.execCount;
-        if(tree.extra == -1) {
+        if(tree.extra == TYPE_ROOT) {
             writer.accept("x" + tree.execCount + " root @ " + selfDuration + "ns self + " + selfMemory + " bytes self", true);
-        }else if(tree.extra == 2) {
+        }else if(tree.extra == TYPE_OVERHEAD) {
             writer.accept("x" + tree.execCount + " overhead " + tree.function + " @ " + selfDuration + "ns self + " + selfMemory + " bytes self", true);
         }else {
-            writer.accept("x" + tree.execCount + " function " + tree.function + (tree.extra == 1 ? " (vanilla)" : "") + " @ " + selfDuration + "ns self + " + selfMemory + " bytes self", true);
+            writer.accept("x" + tree.execCount + " function " + tree.function + (tree.extra == TYPE_VANILLA ? " (vanilla)" : "") + " @ " + selfDuration + "ns self + " + selfMemory + " bytes self", true);
         }
         for(int i = 0; i < tree.children.size(); i++) {
             var child = tree.children.get(i);
@@ -144,8 +150,8 @@ public final class Profiler {
 
     }
 
-    private static CallTree previousTree = new CallTree(0, 0, -1, 0, null, List.of());
-    private static CallTree mergedTree = new CallTree(0, 0, -1, 0, null, List.of());
+    private static CallTree previousTree = new CallTree(0, 0, TYPE_ROOT, 0, null, List.of());
+    private static CallTree mergedTree = new CallTree(0, 0, TYPE_ROOT, 0, null, List.of());
 
     private static void mergeChildren(HashMap<IntObjectPair<String>, CallTree> squashedChildren, List<CallTree> children) {
         for(var child : children) {
@@ -186,17 +192,17 @@ public final class Profiler {
             totalMemory += tree.totalMemory;
             children.add(tree);
         }
-        previousTree = new CallTree(totalTime, totalMemory, -1, 1, null, children);
+        previousTree = new CallTree(totalTime, totalMemory, TYPE_ROOT, 1, null, children);
         mergedTree = mergeTrees(mergedTree, previousTree);
     }
 
     private static JsonObject treeToJson(CallTree tree) {
         var obj = new JsonObject();
-        if(tree.extra == 0) obj.addProperty("type", "compiled");
-        else if(tree.extra == 1) obj.addProperty("type", "vanilla");
-        else if(tree.extra == 2) obj.addProperty("type", "context_switch_overhead");
-        else if(tree.extra == -1) obj.addProperty("type", "root");
-        if(tree.extra != -1) obj.addProperty("function", tree.function);
+        if(tree.extra == TYPE_COMPILED) obj.addProperty("type", "compiled");
+        else if(tree.extra == TYPE_VANILLA) obj.addProperty("type", "vanilla");
+        else if(tree.extra == TYPE_OVERHEAD) obj.addProperty("type", "context_switch_overhead");
+        else if(tree.extra == TYPE_ROOT) obj.addProperty("type", "root");
+        if(tree.extra != TYPE_ROOT) obj.addProperty("function", tree.function);
         obj.addProperty("execution_count", tree.execCount);
         obj.addProperty("total_ns", tree.totalDuration);
         obj.addProperty("total_bytes", tree.totalMemory);
@@ -234,9 +240,8 @@ public final class Profiler {
 
     public static void reset() {
         eventList.clear();
-        eventDataStack.clear();
-        previousTree = new CallTree(0, 0, -1, 0, null, List.of());
-        mergedTree = new CallTree(0, 0, -1, 0, null, List.of());
+        previousTree = new CallTree(0, 0, TYPE_ROOT, 0, null, List.of());
+        mergedTree = new CallTree(0, 0, TYPE_ROOT, 0, null, List.of());
         resetQueued = false;
     }
 

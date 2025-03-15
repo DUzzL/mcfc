@@ -53,6 +53,7 @@ public final class GlobalConfig {
                 var version = content.get("version").getAsInt();
                 if(version == 1) {
                     enableReporting = getOrDefault(content, "enable_reporting", ENABLE_REPORTING);
+                    profilerCollectMemoryUsage = true;
                     if(enableReporting) {
                         if(!ENABLE_REPORTING) {
                             LOGGER.warn("This version was not compiled with telemetry reporting, \"enable_reporting\" config option ignored");
