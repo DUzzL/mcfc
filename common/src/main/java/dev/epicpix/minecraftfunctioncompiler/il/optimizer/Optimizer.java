@@ -53,6 +53,7 @@ public class Optimizer {
             queueNext = false;
 
             for(var opt : Optimizations.OPTIMIZATIONS) {
+                if(context.getInstructionCount() == 0) return;
                 if(recheckDeadCode) {
                     removeDeadCodeQuick(pass);
                     recheckDeadCode = false;

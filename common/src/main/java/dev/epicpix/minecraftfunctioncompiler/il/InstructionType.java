@@ -25,7 +25,8 @@ public record InstructionType(String name, String[] argumentNames, int flags, in
         return id;
     }
 
-    public static final int CONDITIONAL_JUMP = 1 >> 0;
+    public static final int CONDITIONAL_JUMP = 1 << 0;
+    public static final int PURE = 1 << 1;
 
     public String toString() {
         return name;
@@ -42,6 +43,10 @@ public record InstructionType(String name, String[] argumentNames, int flags, in
 
     public boolean isConditionJump() {
         return (flags & CONDITIONAL_JUMP) != 0;
+    }
+
+    public boolean isPure() {
+        return (flags & PURE) != 0;
     }
 
     public boolean returnsValue() {

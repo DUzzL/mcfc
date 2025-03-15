@@ -87,13 +87,6 @@ public final class Optimizations {
             if(pass.thisInstruction().get("anchor") == null && pass.thisInstruction().get("entity") == null && pass.thisInstruction().get("position") == null && pass.thisInstruction().get("rotation") == null && pass.thisInstruction().get("world") == null) {
                 pass.replaceInstructionData(false, pass.thisInstruction().get("result"), pass.thisInstruction().get("from"));
                 pass.removeInstruction(pass.thisInstructionIndex());
-                return;
-            }
-
-            var stack = pass.thisInstruction().get("result");
-
-            if(!pass.isValueUsed(0, pass.context().getInstructionCount(), false, stack)) {
-                pass.removeInstruction(pass.thisInstructionIndex());
             }
         }
     }
@@ -113,6 +106,10 @@ public final class Optimizations {
                         pass.removeInstruction(pass.thisInstructionIndex());
                     }
                 }
+            }
+        }else if(pass.thisInstruction().type() == InstructionTypes.MERGE_POSITIONS) {
+            if(pass.thisInstruction().get("x") != null && pass.thisInstruction().get("y") != null && pass.thisInstruction().get("z") != null) {
+                pass.replaceInstruction(pass.thisInstructionIndex(), Instructions.createPosition(pass.thisInstruction().get("result"), pass.thisInstruction().get("x"), pass.thisInstruction().get("y"), pass.thisInstruction().get("z")));
             }
         }
     }
@@ -284,7 +281,7 @@ public final class Optimizations {
     }
 
     private static void removeUnusedData(OptimizationPass pass) {
-        if(pass.thisInstruction().type() == InstructionTypes.GET_STACK_POSITION) {
+        if(pass.thisInstruction().type().isPure()) {
             var result = pass.thisInstruction().get("result");
 
             if(!pass.isValueUsed(0, pass.context().getInstructionCount(), false, result)) {

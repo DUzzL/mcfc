@@ -225,13 +225,14 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
                 instructionDump.append("│ function ").append(entry.getKey()).append("\n");
                 var commandCount = definedFunctions.get(entry.getKey()).size();
                 instructionDump.append("│ ┣━ ").append(commandCount).append(" command").append(commandCount != 1 ? "s" : "").append("\n");
-                var instructionCount = optimizedFunctions.get(entry.getKey()).size();
+                var instructions = entry.getValue();
+                var instructionCount = instructions.size();
                 instructionDump.append("│ ┗━ ").append(instructionCount).append(" instruction").append(instructionCount != 1 ? "s" : "").append(" (around ").append(String.format("%.02f", commandCount == 0 ? 0d : (double)instructionCount / commandCount)).append(" instructions per command)").append("\n");
                 instructionDump.append("│\n");
-                Instruction.printInstructions(entry.getValue(), line -> instructionDump.append("│ ┗━ ").append(line).append("\n"));
+                Instruction.printInstructions(instructions, line -> instructionDump.append("│ ┗━ ").append(line).append("\n"));
                 instructionDump.append("└──\n");
                 instructionDump.append("\n");
-                instructionsJson.add(entry.getKey().toString(), Instruction.generateInstructionsJson(entry.getValue()));
+                instructionsJson.add(entry.getKey().toString(), Instruction.generateInstructionsJson(instructions));
             }
             try {
                 Files.createDirectory(generatedDir);
@@ -243,6 +244,36 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
                 String instructionDumpJsonStr = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(instructionsJson);
                 Files.writeString(generatedDir.resolve("instruction_dump_high_level.json"), instructionDumpJsonStr);
                 LOGGER.info("Wrote {} lines into instruction_dump_high_level.json", instructionDumpJsonStr.lines().count());
+            }catch(Exception ignored) {}
+
+            var instructionDump2 = new StringBuilder();
+            entries = new ArrayList<>(compiledFunctions.entrySet());
+            entries.sort((a, b) -> a.toString().compareToIgnoreCase(b.toString()));
+            instructionsJson = new JsonObject();
+            for(var entry : entries) {
+                instructionDump2.append("┌──\n");
+                instructionDump2.append("│ function ").append(entry.getKey()).append("\n");
+                var commandCount = definedFunctions.get(entry.getKey()).size();
+                instructionDump2.append("│ ┣━ ").append(commandCount).append(" command").append(commandCount != 1 ? "s" : "").append("\n");
+                var instructions = Instructions.addStaticRequirements(entry.getValue());
+                var instructionCount = instructions.size();
+                instructionDump2.append("│ ┗━ ").append(instructionCount).append(" instruction").append(instructionCount != 1 ? "s" : "").append(" (around ").append(String.format("%.02f", commandCount == 0 ? 0d : (double)instructionCount / commandCount)).append(" instructions per command)").append("\n");
+                instructionDump2.append("│\n");
+                Instruction.printInstructions(instructions, line -> instructionDump2.append("│ ┗━ ").append(line).append("\n"));
+                instructionDump2.append("└──\n");
+                instructionDump2.append("\n");
+                instructionsJson.add(entry.getKey().toString(), Instruction.generateInstructionsJson(instructions));
+            }
+            try {
+                Files.createDirectory(generatedDir);
+            }catch(Exception ignored) {}
+            try {
+                String instructionDumpStr = instructionDump2.toString();
+                Files.writeString(generatedDir.resolve("instruction_dump_high_level_no_opt.txt"), instructionDumpStr);
+                LOGGER.info("Wrote {} lines into instruction_dump_high_level_no_opt.txt", instructionDumpStr.lines().count());
+                String instructionDumpJsonStr = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(instructionsJson);
+                Files.writeString(generatedDir.resolve("instruction_dump_high_level_no_opt.json"), instructionDumpJsonStr);
+                LOGGER.info("Wrote {} lines into instruction_dump_high_level_no_opt.json", instructionDumpJsonStr.lines().count());
             }catch(Exception ignored) {}
         }
         LOGGER.info("Loading functions");
