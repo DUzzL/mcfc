@@ -20,10 +20,11 @@ public final class GlobalConfig {
 
     public static final String DEFAULT_CONFIG_FILE = "mcfc.json";
 
-    private static final int CONFIG_VERSION = 1;
+    private static final int CONFIG_VERSION = 2;
 
 
     public static boolean enableReporting = ENABLE_REPORTING;
+    public static boolean profilerCollectMemoryUsage = true;
 
     public static void loadAndSaveConfig(Path path) {
         var loadResult = loadConfig(path);
@@ -41,6 +42,7 @@ public final class GlobalConfig {
 
     public static void resetConfig() {
         enableReporting = ENABLE_REPORTING;
+        profilerCollectMemoryUsage = true;
         FunctionCompilerReporter.setReportingEnabled(enableReporting);
     }
 
@@ -49,8 +51,19 @@ public final class GlobalConfig {
             try {
                 var content = GSON.fromJson(Files.readString(path), JsonObject.class);
                 var version = content.get("version").getAsInt();
-                if(version == CONFIG_VERSION) {
+                if(version == 1) {
                     enableReporting = getOrDefault(content, "enable_reporting", ENABLE_REPORTING);
+                    if(enableReporting) {
+                        if(!ENABLE_REPORTING) {
+                            LOGGER.warn("This version was not compiled with telemetry reporting, \"enable_reporting\" config option ignored");
+                            enableReporting = false;
+                        }
+                    }
+                    FunctionCompilerReporter.setReportingEnabled(enableReporting);
+                    return ConfigLoadResult.LOADED_OLD;
+                }else if(version == CONFIG_VERSION) {
+                    enableReporting = getOrDefault(content, "enable_reporting", ENABLE_REPORTING);
+                    profilerCollectMemoryUsage = getOrDefault(content, "profiler_collect_memory_usage", true);
                     if(enableReporting) {
                         if(!ENABLE_REPORTING) {
                             LOGGER.warn("This version was not compiled with telemetry reporting, \"enable_reporting\" config option ignored");
@@ -74,6 +87,7 @@ public final class GlobalConfig {
         content.addProperty("_note", "To use new config options, first run the new version (for a proper config update), and then edit the config.");
         content.addProperty("version", CONFIG_VERSION);
         content.addProperty("enable_reporting", enableReporting);
+        content.addProperty("profiler_collect_memory_usage", profilerCollectMemoryUsage);
         try {
             Files.createDirectories(path.getParent());
             Files.writeString(path, GSON.toJson(content));

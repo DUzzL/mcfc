@@ -3,6 +3,9 @@
 Adds macro support in:
 - `xp` (all integer arguments)
 
+Added config option:
+- `profiler_collect_memory_usage` (default `true`) - Disables/Enables whether the profiler will collect memory usage (disabling this will make the profiler faster)
+
 Fixes bugs:
 - `execute unless score` does not execute the rest of the command if the score is not defined
 

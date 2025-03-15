@@ -3,6 +3,7 @@ package dev.epicpix.minecraftfunctioncompiler.profiler;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.sun.management.ThreadMXBean;
+import dev.epicpix.minecraftfunctioncompiler.GlobalConfig;
 import it.unimi.dsi.fastutil.ints.IntObjectPair;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import org.slf4j.Logger;
@@ -86,6 +87,9 @@ public final class Profiler {
     }
 
     private static long getMemoryBytes() {
+        if(!GlobalConfig.profilerCollectMemoryUsage) {
+            return 0;
+        }
         if(threadMxBean.isThreadAllocatedMemorySupported()) {
             return threadMxBean.getCurrentThreadAllocatedBytes();
         }
