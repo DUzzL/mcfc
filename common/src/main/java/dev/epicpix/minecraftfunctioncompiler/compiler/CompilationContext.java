@@ -416,6 +416,30 @@ public class CompilationContext {
                 realPosition = position.content();
             }
 
+            var boxes = new ArrayList<SelectorBox>();
+            if(selector.dx() != null || selector.dy() != null || selector.dz() != null) {
+                var compareX = this.<Double>createLocal();
+                var compareY = this.<Double>createLocal();
+                var compareZ = this.<Double>createLocal();
+                position.writeInstruction(Instructions.getVec3X(compareX, realPosition));
+                position.writeInstruction(Instructions.getVec3Y(compareY, realPosition));
+                position.writeInstruction(Instructions.getVec3Z(compareZ, realPosition));
+                var aabb = selector.createLocalAABB();
+                var transformedMinX = this.<Double>createLocal();
+                position.writeInstruction(Instructions.valueAdd(transformedMinX, compareX, LocationData.ofDouble(aabb.minX())));
+                var transformedMinY = this.<Double>createLocal();
+                position.writeInstruction(Instructions.valueAdd(transformedMinY, compareY, LocationData.ofDouble(aabb.minY())));
+                var transformedMinZ = this.<Double>createLocal();
+                position.writeInstruction(Instructions.valueAdd(transformedMinZ, compareZ, LocationData.ofDouble(aabb.minZ())));
+                var transformedMaxX = this.<Double>createLocal();
+                position.writeInstruction(Instructions.valueAdd(transformedMaxX, compareX, LocationData.ofDouble(aabb.maxX())));
+                var transformedMaxY = this.<Double>createLocal();
+                position.writeInstruction(Instructions.valueAdd(transformedMaxY, compareY, LocationData.ofDouble(aabb.maxY())));
+                var transformedMaxZ = this.<Double>createLocal();
+                position.writeInstruction(Instructions.valueAdd(transformedMaxZ, compareZ, LocationData.ofDouble(aabb.maxZ())));
+                boxes.add(new SelectorBox(transformedMinX, transformedMinY, transformedMinZ, transformedMaxX, transformedMaxY, transformedMaxZ));
+            }
+
             data.writeInstruction(instructionWriter, Instructions.createMutableList(entityList));
 
             var selectorCodeLocation = data.writeLabel(instructionWriter);
@@ -423,12 +447,12 @@ public class CompilationContext {
             try(var ignored = enterWithoutValue(data.withContextLabel(selectorCodeLocation))) {
                 if(selector.worldLimited()) {
                     try(var world = getWorld()) {
-                        try(var selectorData = forSelectorSelect(selector, realPosition, world.content(), resultContext)) {
+                        try(var selectorData = forSelectorSelect(selector, realPosition, world.content(), boxes, resultContext)) {
                             selectorData.writeInstruction(Instructions.addListElement(entityList, selectorData.content()));
                         }
                     }
                 }else {
-                    try(var selectorData = forSelectorSelect(selector, realPosition, null, resultContext)) {
+                    try(var selectorData = forSelectorSelect(selector, realPosition, null, boxes, resultContext)) {
                         selectorData.writeInstruction(Instructions.addListElement(entityList, selectorData.content()));
                     }
                 }
@@ -489,8 +513,10 @@ public class CompilationContext {
         }
     }
 
+    private record SelectorBox(LocationData<Double> minX, LocationData<Double> minY, LocationData<Double> minZ, LocationData<Double> maxX, LocationData<Double> maxY, LocationData<Double> maxZ) {}
+
     @SuppressWarnings("resource")
-    private CompilationData<LocationData<? extends Entity>> forSelectorSelect(SelectorArgument selector, LocationData<Vec3> position, LocationData<World> world, ResultContext resultContext) {
+    private CompilationData<LocationData<? extends Entity>> forSelectorSelect(SelectorArgument selector, LocationData<Vec3> position, LocationData<World> world, List<SelectorBox> boxes, ResultContext resultContext) {
         CompilationData<LocationData<? extends Entity>> entityData;
         if(selector.playerName() != null) {
             entityData = forPlayer(selector.playerName()).changeType();
@@ -503,10 +529,10 @@ public class CompilationContext {
         }else {
             entityData = forEachEntity(world);
         }
-        return forSelectorBase(entityData, selector, position, world, resultContext);
+        return forSelectorBase(entityData, selector, position, world, boxes, resultContext);
     }
 
-    private CompilationData<LocationData<? extends Entity>> forSelectorBase(CompilationData<LocationData<? extends Entity>> entityData, SelectorArgument selector, LocationData<Vec3> position, LocationData<World> world, ResultContext resultContext) {
+    private CompilationData<LocationData<? extends Entity>> forSelectorBase(CompilationData<LocationData<? extends Entity>> entityData, SelectorArgument selector, LocationData<Vec3> position, LocationData<World> world, List<SelectorBox> boxes, ResultContext resultContext) {
         var data = entityData.data();
         int stackCount = entityData.stackCount();
         int stackStart = stack.size();
@@ -685,27 +711,8 @@ public class CompilationContext {
             data.writeInstruction(instructionWriter, Instructions.getDistanceSquared(distance, position, thisPosition));
             jumpIfNotMatchesRange(data, distance, selector.distance().square(), data.contextEndLabel());
         }
-        if(selector.dx() != null || selector.dy() != null || selector.dz() != null) {
-            var compareX = this.<Double>createLocal();
-            var compareY = this.<Double>createLocal();
-            var compareZ = this.<Double>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.getVec3X(compareX, position));
-            data.writeInstruction(instructionWriter, Instructions.getVec3Y(compareY, position));
-            data.writeInstruction(instructionWriter, Instructions.getVec3Z(compareZ, position));
-            var aabb = selector.createLocalAABB();
-            var transformedMinX = this.<Double>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.valueAdd(transformedMinX, compareX, LocationData.ofDouble(aabb.minX())));
-            var transformedMinY = this.<Double>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.valueAdd(transformedMinY, compareY, LocationData.ofDouble(aabb.minY())));
-            var transformedMinZ = this.<Double>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.valueAdd(transformedMinZ, compareZ, LocationData.ofDouble(aabb.minZ())));
-            var transformedMaxX = this.<Double>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.valueAdd(transformedMaxX, compareX, LocationData.ofDouble(aabb.maxX())));
-            var transformedMaxY = this.<Double>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.valueAdd(transformedMaxY, compareY, LocationData.ofDouble(aabb.maxY())));
-            var transformedMaxZ = this.<Double>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.valueAdd(transformedMaxZ, compareZ, LocationData.ofDouble(aabb.maxZ())));
-            data.writeInstruction(instructionWriter, Instructions.checkEntityIntersection(entityData.content(), transformedMinX, transformedMinY, transformedMinZ, transformedMaxX, transformedMaxY, transformedMaxZ, data.contextEndLabel()));
+        for(var box : boxes) {
+            data.writeInstruction(instructionWriter, Instructions.checkEntityIntersection(entityData.content(), box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ, data.contextEndLabel()));
         }
         if(!selector.scores().isEmpty()) {
             for(var entry : selector.scores().entrySet()) {
