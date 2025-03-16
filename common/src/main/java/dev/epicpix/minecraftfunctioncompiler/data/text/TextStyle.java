@@ -31,4 +31,11 @@ public record TextStyle(Integer color, Integer shadowColor, Boolean bold, Boolea
     public boolean isEmpty() {
         return EMPTY.equals(this);
     }
+
+    public boolean isCompilationSupported() {
+        if(hoverEvent != null && hoverEvent.action() == TextHoverEvent.Action.SHOW_TEXT) {
+            return ((Text)hoverEvent.value()).isCompilationSupported();
+        }
+        return true;
+    }
 }

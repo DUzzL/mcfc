@@ -6,7 +6,6 @@ import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPathPart;
 import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
-import dev.epicpix.minecraftfunctioncompiler.data.text.TextContent;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.emitter.types.NumberComparisonType;
@@ -15,7 +14,6 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.types.SetRandomizedWeatherD
 import dev.epicpix.minecraftfunctioncompiler.il.*;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
-import java.util.ArrayDeque;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -959,20 +957,8 @@ public final class CommandCompiler {
     private record NbtListAccessResult(LocationData<NbtList> list, LocationData<Integer> index) {}
 
     private static LocationData<TextComponent> loadText(CompilationContext context, Text text) {
-        var allText = new ArrayDeque<Text>();
-        allText.add(text);
-        while(!allText.isEmpty()) {
-            var top = allText.pop();
-            if(!(top.content() instanceof TextContent.LiteralText || top.content() instanceof TextContent.KeybindText)) {
-                if(top.content() instanceof TextContent.TranslatableText tr) {
-                    for(var content : tr.args()) {
-                        if(content instanceof Text t) allText.add(t);
-                    }
-                }else {
-                    throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_TEXT, context.getSource(), "Compiling " + top.content().getClass().getSimpleName() + " is not implemented yet"));
-                }
-            }
-            allText.addAll(top.siblings());
+        if(!text.isCompilationSupported()) {
+            throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_TEXT, context.getSource(), "Compiling " + text + " is not implemented yet"));
         }
 
         var textLocation = context.<TextComponent>createLocal();

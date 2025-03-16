@@ -19,4 +19,10 @@ public record Text(List<Text> siblings, TextStyle style, TextContent content) {
         consumer.accept(this);
     }
 
+    public boolean isCompilationSupported() {
+        for(var sibling : siblings) if(!sibling.isCompilationSupported()) return false;
+        if(!style.isCompilationSupported()) return false;
+        return content.isCompilationSupported();
+    }
+
 }
