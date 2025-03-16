@@ -263,6 +263,59 @@ public class CompilationContext {
         }
     }
 
+    private CompilationData<LocationData<? extends Entity>> forEachEntityInside(LocationData<World> inWorld, SelectorBox box, int limit) {
+        var data = current();
+        if(inWorld == null) {
+            var worldIter = this.<Iterator<? extends World>>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.getWorldsIterator(worldIter));
+            var iterWorldStart = data.writeLabel(instructionWriter);
+            data.writeInstruction(instructionWriter, Instructions.jumpIfIteratorHasNoNext(worldIter, data.contextEndLabel()));
+            var worldObj = this.createLocal();
+            var world = this.<World>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.iteratorNext(worldObj, worldIter));
+            data.writeInstruction(instructionWriter, Instructions.assumeWorld(world, worldObj));
+            var entities = this.<List<? extends Entity>>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.getEntitiesInside(entities, inWorld, box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ, LocationData.ofInteger(limit)));
+            var listLength = this.<Integer>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.getListLength(listLength, entities));
+
+            var index = this.<Integer>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.assign(index, LocationData.ofInteger(0)));
+            var iterEntityStart = data.writeLabel(instructionWriter);
+            data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, listLength, iterWorldStart));
+            var entityObj = this.createLocal();
+            var entity = this.<Entity>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.getListElement(entityObj, entities, index));
+            data.writeInstruction(instructionWriter, Instructions.assumeEntity(entity, entityObj));
+
+            var codeLocation = data.writeLabel(instructionWriter);
+            data.writeInstruction(instructionWriter, Instructions.valueAdd(index, index, LocationData.ofInteger(1)));
+            data.writeInstruction(instructionWriter, Instructions.jump(iterEntityStart));
+
+            return enterWithValue(data.withContextLabel(codeLocation), entity);
+        }else {
+            var entities = this.<List<? extends Entity>>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.getEntitiesInside(entities, inWorld, box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ, LocationData.ofInteger(limit)));
+            var listLength = this.<Integer>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.getListLength(listLength, entities));
+
+            var index = this.<Integer>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.assign(index, LocationData.ofInteger(0)));
+            var iterStart = data.writeLabel(instructionWriter);
+            data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, listLength, data.contextEndLabel()));
+            var entityObj = this.createLocal();
+            var entity = this.<Entity>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.getListElement(entityObj, entities, index));
+            data.writeInstruction(instructionWriter, Instructions.assumeEntity(entity, entityObj));
+
+            var codeLocation = data.writeLabel(instructionWriter);
+            data.writeInstruction(instructionWriter, Instructions.valueAdd(index, index, LocationData.ofInteger(1)));
+            data.writeInstruction(instructionWriter, Instructions.jump(iterStart));
+
+            return enterWithValue(data.withContextLabel(codeLocation), entity);
+        }
+    }
+
     public CompilationData<LocationData<Player>> forPlayer(String playerName) {
         var data = current();
 
@@ -416,7 +469,7 @@ public class CompilationContext {
                 realPosition = position.content();
             }
 
-            var boxes = new ArrayList<SelectorBox>();
+            SelectorBox volumeBox = null;
             if(selector.dx() != null || selector.dy() != null || selector.dz() != null) {
                 var compareX = this.<Double>createLocal();
                 var compareY = this.<Double>createLocal();
@@ -437,7 +490,30 @@ public class CompilationContext {
                 position.writeInstruction(Instructions.valueAdd(transformedMaxY, compareY, LocationData.ofDouble(aabb.maxY())));
                 var transformedMaxZ = this.<Double>createLocal();
                 position.writeInstruction(Instructions.valueAdd(transformedMaxZ, compareZ, LocationData.ofDouble(aabb.maxZ())));
-                boxes.add(new SelectorBox(transformedMinX, transformedMinY, transformedMinZ, transformedMaxX, transformedMaxY, transformedMaxZ));
+                volumeBox = new SelectorBox(transformedMinX, transformedMinY, transformedMinZ, transformedMaxX, transformedMaxY, transformedMaxZ);
+            }
+
+            SelectorBox selectBox = volumeBox;
+            if(selectBox == null && selector.distance() != null && selector.distance().maximum() != null) {
+                var compareX = this.<Double>createLocal();
+                var compareY = this.<Double>createLocal();
+                var compareZ = this.<Double>createLocal();
+                position.writeInstruction(Instructions.getVec3X(compareX, realPosition));
+                position.writeInstruction(Instructions.getVec3Y(compareY, realPosition));
+                position.writeInstruction(Instructions.getVec3Z(compareZ, realPosition));
+                var transformedMinX = this.<Double>createLocal();
+                position.writeInstruction(Instructions.valueSub(transformedMinX, compareX, LocationData.ofDouble(selector.distance().maximum())));
+                var transformedMinY = this.<Double>createLocal();
+                position.writeInstruction(Instructions.valueSub(transformedMinY, compareY, LocationData.ofDouble(selector.distance().maximum())));
+                var transformedMinZ = this.<Double>createLocal();
+                position.writeInstruction(Instructions.valueSub(transformedMinZ, compareZ, LocationData.ofDouble(selector.distance().maximum())));
+                var transformedMaxX = this.<Double>createLocal();
+                position.writeInstruction(Instructions.valueAdd(transformedMaxX, compareX, LocationData.ofDouble(selector.distance().maximum() + 1)));
+                var transformedMaxY = this.<Double>createLocal();
+                position.writeInstruction(Instructions.valueAdd(transformedMaxY, compareY, LocationData.ofDouble(selector.distance().maximum() + 1)));
+                var transformedMaxZ = this.<Double>createLocal();
+                position.writeInstruction(Instructions.valueAdd(transformedMaxZ, compareZ, LocationData.ofDouble(selector.distance().maximum() + 1)));
+                selectBox = new SelectorBox(transformedMinX, transformedMinY, transformedMinZ, transformedMaxX, transformedMaxY, transformedMaxZ);
             }
 
             data.writeInstruction(instructionWriter, Instructions.createMutableList(entityList));
@@ -447,12 +523,12 @@ public class CompilationContext {
             try(var ignored = enterWithoutValue(data.withContextLabel(selectorCodeLocation))) {
                 if(selector.worldLimited()) {
                     try(var world = getWorld()) {
-                        try(var selectorData = forSelectorSelect(selector, realPosition, world.content(), boxes, resultContext)) {
+                        try(var selectorData = forSelectorSelect(selector, realPosition, world.content(), volumeBox, selectBox, resultContext)) {
                             selectorData.writeInstruction(Instructions.addListElement(entityList, selectorData.content()));
                         }
                     }
                 }else {
-                    try(var selectorData = forSelectorSelect(selector, realPosition, null, boxes, resultContext)) {
+                    try(var selectorData = forSelectorSelect(selector, realPosition, null, volumeBox, selectBox, resultContext)) {
                         selectorData.writeInstruction(Instructions.addListElement(entityList, selectorData.content()));
                     }
                 }
@@ -516,7 +592,7 @@ public class CompilationContext {
     private record SelectorBox(LocationData<Double> minX, LocationData<Double> minY, LocationData<Double> minZ, LocationData<Double> maxX, LocationData<Double> maxY, LocationData<Double> maxZ) {}
 
     @SuppressWarnings("resource")
-    private CompilationData<LocationData<? extends Entity>> forSelectorSelect(SelectorArgument selector, LocationData<Vec3> position, LocationData<World> world, List<SelectorBox> boxes, ResultContext resultContext) {
+    private CompilationData<LocationData<? extends Entity>> forSelectorSelect(SelectorArgument selector, LocationData<Vec3> position, LocationData<World> world, SelectorBox volumeBox, SelectorBox selectBox, ResultContext resultContext) {
         CompilationData<LocationData<? extends Entity>> entityData;
         if(selector.playerName() != null) {
             entityData = forPlayer(selector.playerName()).changeType();
@@ -527,12 +603,19 @@ public class CompilationContext {
         }else if(selector.requirePlayer()) {
             entityData = forEachPlayer().changeType();
         }else {
-            entityData = forEachEntity(world);
+            if(selectBox != null) {
+                int limit = Integer.MAX_VALUE;
+                if(selector.sort() == SelectorSort.ARBITRARY && selector.distance() == null && selector.limit() != null) limit = selector.limit();
+                entityData = forEachEntityInside(world, selectBox, limit);
+                if(selectBox.equals(volumeBox)) volumeBox = null;
+            }else {
+                entityData = forEachEntity(world);
+            }
         }
-        return forSelectorBase(entityData, selector, position, world, boxes, resultContext);
+        return forSelectorBase(entityData, selector, position, world, volumeBox, resultContext);
     }
 
-    private CompilationData<LocationData<? extends Entity>> forSelectorBase(CompilationData<LocationData<? extends Entity>> entityData, SelectorArgument selector, LocationData<Vec3> position, LocationData<World> world, List<SelectorBox> boxes, ResultContext resultContext) {
+    private CompilationData<LocationData<? extends Entity>> forSelectorBase(CompilationData<LocationData<? extends Entity>> entityData, SelectorArgument selector, LocationData<Vec3> position, LocationData<World> world, SelectorBox volumeBox, ResultContext resultContext) {
         var data = entityData.data();
         int stackCount = entityData.stackCount();
         int stackStart = stack.size();
@@ -711,8 +794,8 @@ public class CompilationContext {
             data.writeInstruction(instructionWriter, Instructions.getDistanceSquared(distance, position, thisPosition));
             jumpIfNotMatchesRange(data, distance, selector.distance().square(), data.contextEndLabel());
         }
-        for(var box : boxes) {
-            data.writeInstruction(instructionWriter, Instructions.checkEntityIntersection(entityData.content(), box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ, data.contextEndLabel()));
+        if(volumeBox != null) {
+            data.writeInstruction(instructionWriter, Instructions.checkEntityIntersection(entityData.content(), volumeBox.minX, volumeBox.minY, volumeBox.minZ, volumeBox.maxX, volumeBox.maxY, volumeBox.maxZ, data.contextEndLabel()));
         }
         if(!selector.scores().isEmpty()) {
             for(var entry : selector.scores().entrySet()) {

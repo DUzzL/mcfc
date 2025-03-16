@@ -249,6 +249,10 @@
 @GET_ENTITIES(<net.minecraft.server.level.ServerLevel> [ctx:world]) -> <java.util.Iterator<net.minecraft.world.entity.Entity> > = [ctx:world].getAllEntities().iterator();
 
 ##PURE
+@GET_ENTITIES_INSIDE(<net.minecraft.server.level.ServerLevel> [ctx:world], double [ctx:min_x], double [ctx:min_y], double [ctx:min_z], double [ctx:max_x], double [ctx:max_y], double [ctx:max_z], int [ctx:limit]) -> <java.util.List<net.minecraft.world.entity.Entity> >
+  = <dev.epicpix.minecraftfunctioncompiler._VERSION_.ExtensionFunctions>.getEntitiesInside([ctx:world], [ctx:min_x], [ctx:min_y], [ctx:min_z], [ctx:max_x], [ctx:max_y], [ctx:max_z], [ctx:limit]);
+
+##PURE
 @GET_PLAYER(<net.minecraft.server.players.PlayerList> [static:PlayerList], <java.lang.String> [ctx:name]) -> <net.minecraft.server.level.ServerPlayer> = [static:PlayerList].getPlayerByName([ctx:name]);
 
 ##PURE

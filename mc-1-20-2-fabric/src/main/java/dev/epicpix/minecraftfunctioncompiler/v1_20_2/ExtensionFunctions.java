@@ -4,10 +4,12 @@ import net.minecraft.Util;
 import net.minecraft.commands.CommandFunction;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.FunctionInstantiationException;
+import net.minecraft.core.SectionPos;
 import net.minecraft.nbt.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.ServerFunctionManager;
 import net.minecraft.server.ServerScoreboard;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
@@ -184,5 +186,46 @@ public class ExtensionFunctions {
         format.setMaximumFractionDigits(15);
         format.setDecimalFormatSymbols(DecimalFormatSymbols.getInstance(Locale.US));
     });
+
+
+    public static List<Entity> getEntitiesInside(ServerLevel level, double minX, double minY, double minZ, double maxX, double maxY, double maxZ, int limit) {
+        var result = new ArrayList<Entity>();
+        var sectionStorage = level.entityManager.sectionStorage;
+
+        int chunkMinX = Mth.floor(minX - 2) >> 4;
+        int chunkMinY = Mth.floor(minY - 4) >> 4;
+        int chunkMinZ = Mth.floor(minZ - 2) >> 4;
+        int chunkMaxX = Mth.floor(maxX + 2) >> 4;
+        int chunkMaxY = Mth.floor(maxY) >> 4;
+        int chunkMaxZ = Mth.floor(maxZ + 2) >> 4;
+
+        for(var chunkX = chunkMinX; chunkX <= chunkMaxX; chunkX++) {
+            long chunksStart = SectionPos.asLong(chunkX, 0, 0);
+            long chunksEnd = SectionPos.asLong(chunkX, -1, -1);
+
+            var sectIter = sectionStorage.sectionIds.subSet(chunksStart, chunksEnd + 1L).iterator();
+            while(sectIter.hasNext()) {
+                var sectionId = sectIter.nextLong();
+                int chunkY = SectionPos.y(sectionId);
+                int chunkZ = SectionPos.z(sectionId);
+                if (chunkY >= chunkMinY && chunkY <= chunkMaxY && chunkZ >= chunkMinZ && chunkZ <= chunkMaxZ) {
+                    var section = sectionStorage.getSection(sectionId);
+                    if (section != null && !section.isEmpty() && section.getStatus().isAccessible()) {
+                        var entities = section.storage.find(Entity.class);
+                        if(!entities.isEmpty()) {
+                            for(var entity : entities) {
+                                if(entity.getBoundingBox().intersects(minX, minY, minZ, maxX, maxY, maxZ)) {
+                                    result.add(entity);
+                                    if(result.size() >= limit) return result;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
 
 }
