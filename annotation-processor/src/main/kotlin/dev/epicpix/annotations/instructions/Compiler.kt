@@ -128,6 +128,9 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             if(expression.name == "map_text") {
                 return ParsedTokenExpressionTypeComplex("net.minecraft.network.chat.Component", emptyList())
             }
+            if(expression.name == "map_text_style") {
+                return ParsedTokenExpressionTypeComplex("net.minecraft.network.chat.Style", emptyList())
+            }
             if(expression.name == "map_predicate") {
                 return ParsedTokenExpressionTypeComplex("net.minecraft.world.level.storage.loot.predicates.LootItemCondition", emptyList())
             }
@@ -311,6 +314,8 @@ private fun doesArgumentTypeMatch(matchType: ParsedTokenExpressionType, expected
         return matchType == ParsedTokenExpressionSimpleType.DOUBLE
     }else if(expectedType.sort == Type.OBJECT) {
         return doesTypeMatch(matchType, ParsedTokenExpressionTypeComplex(expectedType.className.replace('$', '.'), emptyList()))
+    }else if(expectedType.sort == Type.ARRAY) {
+        return false
     }else {
         TODO(expectedType.descriptor)
     }
@@ -548,6 +553,15 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                     val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
                     if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.text.Text") {
                         return writeNextRegister(uniqId, output, "context.fieldStorage().loadText(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.text.Text>get(${writerData.getParamIndex(source)}))")
+                    }
+                }
+            }
+            if(expression.name == "map_text_style") {
+                val source = expression.arguments[0] as ParsedTokenValueAccessor
+                if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
+                    val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
+                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.text.TextStyle") {
+                        return writeNextRegister(uniqId, output, "context.fieldStorage().loadTextStyle(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.text.TextStyle>get(${writerData.getParamIndex(source)}))")
                     }
                 }
             }

@@ -124,6 +124,8 @@ fun javaToMinecraftGenericType(type: String, generics: List<String> = emptyList(
             "net.minecraft.world.Difficulty" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.DifficultyValue"
             "net.minecraft.world.entity.EntityType" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.EntityTypeValue"
             "net.minecraft.world.item.ItemStack" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.ItemStack"
+            "net.minecraft.network.chat.Style" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.TextComponentStyle"
+            "net.minecraft.network.chat.MutableComponent" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.TextComponentMutable"
             else -> throw IllegalArgumentException("Unknown minecraft class: $type")
         }
     }else {

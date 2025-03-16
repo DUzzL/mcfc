@@ -1,5 +1,7 @@
 # 0.3.2-alpha.2
 
+Adds `selector` support in text
+
 Adds macro support in:
 - `xp` (all integer arguments)
 

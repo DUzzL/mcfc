@@ -68,4 +68,4 @@ Not all commands are currently implemented in this mod, if a command is not list
 
 [^1]: Only `/difficulty` with the difficulty argument is supported.
 [^2]: Only named `a.b`, and by index `a[0]` paths are allowed.
-[^3]: The following text components are not supported: `score`, `nbt`, `selector`, and text styles `clickEvent`, `hoverEvent`.
+[^3]: The following text components are not supported: `score`, `nbt`, and text styles `clickEvent`, `hoverEvent`.

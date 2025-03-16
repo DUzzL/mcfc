@@ -13,12 +13,21 @@ public interface TextContent {
         public boolean isCompilationSupported() {
             return true;
         }
+        public boolean isConstant() {
+            return true;
+        }
     }
 
     record TranslatableText(String key, String fallback, List<Object> args) implements TextContent {
         public boolean isCompilationSupported() {
             for(var arg : args) {
-                if(arg instanceof Text text && !text.isCompilationSupported()) return false;
+                if(arg instanceof Text text && (!text.isCompilationSupported() || !text.isConstant())) return false;
+            }
+            return true;
+        }
+        public boolean isConstant() {
+            for(var arg : args) {
+                if(arg instanceof Text text && !text.isConstant()) return false;
             }
             return true;
         }
@@ -28,16 +37,27 @@ public interface TextContent {
         public boolean isCompilationSupported() {
             return true;
         }
+        public boolean isConstant() {
+            return true;
+        }
     }
 
     record ScoreText(ScoreHolderArgument scoreHolder, String objective) implements TextContent {
         public boolean isCompilationSupported() {
             return false;
         }
+        public boolean isConstant() {
+            return false;
+        }
     }
 
     record SelectorText(SelectorArgument selector, Text separator) implements TextContent {
+        public static final Text DEFAULT_SEPARATOR = new Text(List.of(), new TextStyle(0xaaaaaa, null, null, null, null, null, null, null, null, null, null), new LiteralText(", "));
+
         public boolean isCompilationSupported() {
+            return separator == null || separator.isCompilationSupported();
+        }
+        public boolean isConstant() {
             return false;
         }
     }
@@ -46,8 +66,12 @@ public interface TextContent {
         public boolean isCompilationSupported() {
             return false;
         }
+        public boolean isConstant() {
+            return false;
+        }
     }
 
     boolean isCompilationSupported();
+    boolean isConstant();
 
 }

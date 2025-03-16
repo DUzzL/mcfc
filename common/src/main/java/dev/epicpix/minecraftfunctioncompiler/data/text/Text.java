@@ -25,4 +25,10 @@ public record Text(List<Text> siblings, TextStyle style, TextContent content) {
         return content.isCompilationSupported();
     }
 
+    public boolean isConstant() {
+        for(var sibling : siblings) if(!sibling.isConstant()) return false;
+        if(!style.isConstant()) return false;
+        return content.isConstant();
+    }
+
 }

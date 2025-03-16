@@ -446,21 +446,28 @@ public class CompilationContext {
         throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNREACHABLE_CODE, source, "Unreachable code reached"));
     }
 
-    public CompilationData<LocationData<? extends Entity>> forSelector(SelectorArgument selector, ResultContext resultContext) {
+    public LocationData<List<? extends Entity>> getSelectorList(SelectorArgument selector, ResultContext resultContext) {
         var data = current();
+
+        LocationData<List<? extends Entity>> entityList = createLocal();
+        data.writeInstruction(instructionWriter, Instructions.createMutableList(entityList));
+
         if(selector.requirePlayer() && selector.excludesPlayers()) {
-            return new CompilationData<>(this, data.withContextLabel(InstructionWriter.NULL_LABEL), createLocal(), 0);
+            return entityList;
         }
         for(var predicate : selector.predicates()) {
             var predicateData = DataRegistries.PREDICATE.get(predicate.data());
             if(predicateData == null) {
-                return new CompilationData<>(this, data.withContextLabel(InstructionWriter.NULL_LABEL), createLocal(), 0);
+                return entityList;
             }
         }
 
-        LocationData<List<Entity>> entityList = createLocal();
-
         try(var position = getPosition()) {
+            if(resultContext == null) {
+                //noinspection resource
+                resultContext = ResultContext.create(this, position.endLabel());
+            }
+
             LocationData<Vec3> realPosition;
             if(selector.x() != null || selector.y() != null || selector.z() != null) {
                 realPosition = this.createLocal();
@@ -516,8 +523,6 @@ public class CompilationContext {
                 selectBox = new SelectorBox(transformedMinX, transformedMinY, transformedMinZ, transformedMaxX, transformedMaxY, transformedMaxZ);
             }
 
-            data.writeInstruction(instructionWriter, Instructions.createMutableList(entityList));
-
             var selectorCodeLocation = data.writeLabel(instructionWriter);
 
             try(var ignored = enterWithoutValue(data.withContextLabel(selectorCodeLocation))) {
@@ -543,7 +548,12 @@ public class CompilationContext {
                 data.writeInstruction(instructionWriter, Instructions.shuffleList(entityList));
             }
         }
+        return entityList;
+    }
 
+    public CompilationData<LocationData<? extends Entity>> forSelector(SelectorArgument selector, ResultContext resultContext) {
+        var data = current();
+        var entityList = getSelectorList(selector, resultContext);
         var length = this.<Integer>createLocal();
         data.writeInstruction(instructionWriter, Instructions.getListLength(length, entityList));
         if(resultContext.generatingSuccess()) data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, length, LocationData.ofInteger(0), resultContext.markAndGetErrorLabel()));

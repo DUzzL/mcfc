@@ -6,6 +6,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPathPart;
 import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
+import dev.epicpix.minecraftfunctioncompiler.data.text.TextContent;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.emitter.types.NumberComparisonType;
@@ -956,14 +957,34 @@ public final class CommandCompiler {
 
     private record NbtListAccessResult(LocationData<NbtList> list, LocationData<Integer> index) {}
 
-    private static LocationData<TextComponent> loadText(CompilationContext context, Text text) {
+    private static LocationData<? extends TextComponent> loadText(CompilationContext context, Text text) {
         if(!text.isCompilationSupported()) {
             throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_TEXT, context.getSource(), "Compiling " + text + " is not implemented yet"));
         }
 
-        var textLocation = context.<TextComponent>createLocal();
-        context.writeInstruction(Instructions.loadText(textLocation, text));
-        return textLocation;
+        if(text.isConstant()) {
+            var textLocation = context.<TextComponent>createLocal();
+            context.writeInstruction(Instructions.loadText(textLocation, text));
+            return textLocation;
+        }else {
+            if(text.content() instanceof TextContent.SelectorText selector) {
+                var selectorResult = context.getSelectorList(selector.selector(), null);
+                var separator = loadText(context, selector.separator() != null ? selector.separator() : TextContent.SelectorText.DEFAULT_SEPARATOR);
+                var textLocation = context.<TextComponentMutable>createLocal();
+                context.writeInstruction(Instructions.formatEntityTextList(textLocation, selectorResult, separator));
+                if(!text.style().isEmpty()) {
+                    var style = context.<TextComponentStyle>createLocal();
+                    context.writeInstruction(Instructions.loadTextStyle(style, text.style()));
+                    context.writeInstruction(Instructions.setTextStyle(textLocation, style));
+                }
+                for(var sibling : text.siblings()) {
+                    var otherText = loadText(context, sibling);
+                    context.writeInstruction(Instructions.appendText(textLocation, otherText));
+                }
+                return textLocation;
+            }
+            throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNREACHABLE_CODE, context.getSource(), "Unreachable code, tried to compile unknown non-constant text: " + text));
+        }
     }
 
 }

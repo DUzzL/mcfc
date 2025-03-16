@@ -686,6 +686,20 @@
 ##PURE
 @LOAD_TEXT(<dev.epicpix.minecraftfunctioncompiler.data.text.Text> [instr:in_text]) -> <net.minecraft.network.chat.Component> = map_text([instr:in_text]).copy();
 
+##PURE
+@LOAD_TEXT_STYLE(<dev.epicpix.minecraftfunctioncompiler.data.text.TextStyle> [instr:in_style]) -> <net.minecraft.network.chat.Style> = map_text_style([instr:in_style]);
+
+@SET_TEXT_STYLE(<net.minecraft.network.chat.MutableComponent> [ctx:text], <net.minecraft.network.chat.Style> [ctx:style]) {
+  [ctx:text].withStyle([ctx:style]);
+}
+
+@APPEND_TEXT(<net.minecraft.network.chat.MutableComponent> [ctx:text], <net.minecraft.network.chat.Component> [ctx:other]) {
+  [ctx:text].append([ctx:other]);
+}
+
+@FORMAT_ENTITY_TEXT_LIST(<java.util.List<net.minecraft.world.entity.Entity> > [ctx:entities], <net.minecraft.network.chat.Component> [ctx:separator]) -> <net.minecraft.network.chat.MutableComponent>
+  = <dev.epicpix.minecraftfunctioncompiler._VERSION_.ExtensionFunctions>.formatEntityTextList([ctx:entities], [ctx:separator]);
+
 @SEND_SYSTEM_MESSAGE(<net.minecraft.server.level.ServerPlayer> [ctx:player], <net.minecraft.network.chat.Component> [ctx:text]) {
   [ctx:player].sendSystemMessage([ctx:text], false);
 }

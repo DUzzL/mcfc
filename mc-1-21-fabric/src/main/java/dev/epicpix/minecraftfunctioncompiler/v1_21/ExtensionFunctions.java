@@ -11,6 +11,8 @@ import net.minecraft.commands.functions.CommandFunction;
 import net.minecraft.commands.functions.InstantiatedFunction;
 import net.minecraft.core.SectionPos;
 import net.minecraft.nbt.*;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.ServerFunctionManager;
 import net.minecraft.server.ServerScoreboard;
 import net.minecraft.server.level.ServerLevel;
@@ -238,6 +240,26 @@ public class ExtensionFunctions {
         }
 
         return result;
+    }
+
+    public static MutableComponent formatEntityTextList(List<? extends Entity> entities, Component separator) {
+        if(entities.isEmpty()) {
+            return Component.empty();
+        }else if (entities.size() == 1) {
+            return entities.get(0).getDisplayName().copy();
+        }else {
+            MutableComponent result = Component.empty();
+            boolean first = false;
+
+            for(var entity : entities) {
+                if(!first) result.append(separator);
+
+                result.append(entity.getDisplayName());
+                first = true;
+            }
+
+            return result;
+        }
     }
 
 }
