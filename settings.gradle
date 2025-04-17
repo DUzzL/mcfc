@@ -4,11 +4,20 @@ pluginManagement {
             name = 'Fabric'
             url = 'https://maven.fabricmc.net/'
         }
+        maven {
+            name = 'epicpix releases'
+            url = 'https://maven.epicpix.dev/releases'
+        }
+        maven {
+            name = 'epicpix snapshots'
+            url = 'https://maven.epicpix.dev/snapshots'
+        }
         gradlePluginPortal()
     }
     plugins {
         id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
         id 'com.google.devtools.ksp' version "2.1.0-1.0.29"
+        id 'dev.epicpix.java-class-downgrader' version '1.0-SNAPSHOT'
     }
 }
 plugins {

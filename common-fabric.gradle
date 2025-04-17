@@ -7,6 +7,7 @@ repositories {
 }
 
 apply plugin: 'com.google.devtools.ksp'
+apply plugin: 'dev.epicpix.java-class-downgrader'
 
 dependencies {
     implementation(project(":annotation-processor"))
@@ -40,16 +41,15 @@ ksp {
 def targetJavaVersion = project.ext.java_version
 tasks.withType(JavaCompile).configureEach {
     it.options.encoding = "UTF-8"
-    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
-        it.options.release = targetJavaVersion
-    }
+    it.targetCompatibility = "21"
+    it.sourceCompatibility = "21"
+}
+
+classDowngrader {
+    it.targetJavaVersion.set(JavaVersion.toVersion(targetJavaVersion))
 }
 
 java {
-    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
-    if (JavaVersion.current() < javaVersion) {
-        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
-    }
     base.archivesName = project.archives_base_name
     withSourcesJar()
 
@@ -89,5 +89,5 @@ jar {
 }
 
 kotlin {
-    jvmToolchain(targetJavaVersion)
+    jvmToolchain(21)
 }

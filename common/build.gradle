@@ -1,12 +1,14 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '2.1.0'
     id 'com.google.devtools.ksp' version "2.1.0-1.0.29"
+    id 'dev.epicpix.java-class-downgrader' version '1.0-SNAPSHOT'
 }
 
 group = "dev.epicpix"
 version = project.mod_version
 
 apply plugin: 'com.google.devtools.ksp'
+apply plugin: 'dev.epicpix.java-class-downgrader'
 
 repositories {
     mavenCentral()
@@ -32,6 +34,12 @@ gradle.taskGraph.whenReady { taskExecutionGraph ->
     }
 }
 
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = "UTF-8"
+    it.targetCompatibility = "21"
+    it.sourceCompatibility = "21"
+}
+
 ksp {
     arg("data_dir", file("../data/").absolutePath)
     arg("definitions", "common")
@@ -41,6 +49,10 @@ ksp {
     }
 }
 
+classDowngrader {
+    it.targetJavaVersion = JavaVersion.VERSION_17
+}
+
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
