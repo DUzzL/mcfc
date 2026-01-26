@@ -36,7 +36,6 @@ ksp {
     arg("accesswidener", file("src/main/resources/minecraftfunctioncompiler.v${project.minecraft_version.replaceAll("\\.", "_")}.accesswidener").absolutePath)
 }
 
-def targetJavaVersion = project.ext.java_version
 tasks.withType(JavaCompile).configureEach {
     it.options.encoding = "UTF-8"
     it.targetCompatibility = "21"
@@ -45,12 +44,12 @@ tasks.withType(JavaCompile).configureEach {
 
 java {
     base.archivesName = project.archives_base_name
-    withSourcesJar()
-
-    tasks.named("sourcesJar") {
-        from project(':common').sourceSets.main.java
-        from project(':common').sourceSets.main.resources
-    }
+    // broken
+//    withSourcesJar()
+//    tasks.named("sourcesJar") {
+//        from project(':common').sourceSets.main.java
+//        from project(':common').sourceSets.main.resources
+//    }
 }
 
 loom {
