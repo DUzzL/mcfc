@@ -41,12 +41,10 @@ public class FunctionCodeGenerator {
             ArrayList<String> commands = new ArrayList<>();
             for(int i = 0; i<values.size(); i++) {
                 StringBuilder value = new StringBuilder(values.get(i).trim());
-                if(MinecraftVersion.isCurrentVersionInRange(MinecraftVersion.MC_1_20_2, null)) {
-                    while(value.toString().endsWith("\\")) {
-                        String next = values.get(++i).trim();
-                        value.deleteCharAt(value.length() - 1);
-                        value.append(next);
-                    }
+                while(value.toString().endsWith("\\")) {
+                    String next = values.get(++i).trim();
+                    value.deleteCharAt(value.length() - 1);
+                    value.append(next);
                 }
                 if(value.isEmpty() || value.charAt(0) == '#') continue;
                 commands.add(value.toString());
@@ -67,7 +65,7 @@ public class FunctionCodeGenerator {
                 for(String value : values) {
                     currentCommand = value;
                     DiagnosticResult<CommandParams> res;
-                    if(MinecraftVersion.isCurrentVersionInRange(MinecraftVersion.MC_1_20_2, null) && currentCommand.startsWith("$")) {
+                    if(currentCommand.startsWith("$")) {
                         res = CommandParser.parseCommand(currentCommand.substring(1), key, true, lookup);
                     }else {
                         res = CommandParser.parseCommand(currentCommand, key, false, lookup);

@@ -60,7 +60,7 @@ fun lexTokens(code: String): List<LexToken> {
             while(index < code.length && " \t\n\r".contains(code[index])) {
                 index++
             }
-            while(code[index] == '/' && index + 1 < code.length && code[index + 1] == '/') {
+            while(index < code.length && code[index] == '/' && index + 1 < code.length && code[index + 1] == '/') {
                 index += 2
                 while(index < code.length && !"\n\r".contains(code[index])) {
                     index++
@@ -69,6 +69,7 @@ fun lexTokens(code: String): List<LexToken> {
                 if(index >= code.length) return null
             }
         }
+        if(index >= code.length) return null
         var res = code[index++].toString()
         when(res.first()) {
             '{' -> return LexTokenSimpleType.OPEN_BRACE

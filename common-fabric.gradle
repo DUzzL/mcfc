@@ -30,7 +30,6 @@ ksp {
     arg("definitions", "minecraft")
     arg("data_dir", file("../data/").absolutePath)
     project.afterEvaluate {
-        arg("mappingsFile", loom.mappingsFile.absolutePath)
         arg("jars", project.configurations.runtimeClasspath.incoming.files.join(File.pathSeparator))
     }
     arg("minecraft_version", project.minecraft_version)
@@ -80,7 +79,6 @@ jar {
     from("LICENSE") {
         rename { "${it}_${project.archivesBaseName}"}
     }
-    exclude("minecraftfunctioncompiler.v${project.minecraft_version.replaceAll("\\.", "_")}.generated.accesswidener")
 }
 
 kotlin {

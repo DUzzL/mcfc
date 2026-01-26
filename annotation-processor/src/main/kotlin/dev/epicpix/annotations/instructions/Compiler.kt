@@ -10,7 +10,6 @@ data class AccessorStatistics(val accessor: ParsedTokenValueAccessor, var gets: 
 data class LocalInfo(val mapping: String, val type: ParsedTokenExpressionType)
 
 data class WriterData(
-    val mappingData: MappingData?,
     val accessorMappings: Map<ParsedTokenValueAccessor, ParsedTokenValueAccessor> = mapOf(),
     val localTypes: MutableMap<String, LocalInfo> = mutableMapOf(),
     val file: ParsedFile,
@@ -465,9 +464,9 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             }
             val def = functionMatches[0].run { if(owner == "java/lang/Object" && name == "<init>" && descriptor == "()V") ClassMethodInfo((instance as ParsedTokenInstanceStatic).className.replace('.', '/'), "<init>", "()V", false) else this }
             val classOwner = loadClassInfo(def.owner.replace('/', '.').replace('$', '.'))
-            val className = writerData.mappingData.getClassName(def.owner)
-            val methodName = writerData.mappingData.getMethodName(def.owner, def.name, def.descriptor)
-            val methodDescriptor = remapType(Type.getMethodType(def.descriptor), writerData.mappingData).descriptor
+            val className = def.owner
+            val methodName = def.name
+            val methodDescriptor = def.descriptor
 
             val allArguments = mutableListOf<String>()
             if(instance is ParsedTokenInstanceValue) {
@@ -658,9 +657,9 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
         }else {
             throw IllegalArgumentException("Cannot access field on unknown instance: $instance")
         }
-        val className = writerData.mappingData.getClassName(fieldMatch.owner)
-        val fieldName = writerData.mappingData.getFieldName(fieldMatch.owner, fieldMatch.name, fieldMatch.descriptor)
-        val fieldDescriptor = remapType(Type.getType(fieldMatch.descriptor), writerData.mappingData).descriptor
+        val className = fieldMatch.owner
+        val fieldName = fieldMatch.name
+        val fieldDescriptor = fieldMatch.descriptor
         val allArguments = mutableListOf<String>()
         if(instance is ParsedTokenInstanceValue) {
             allArguments.add(writeExpression(writerData.copyLocalTypes(), instance.expression, output, uniqId))
@@ -1114,8 +1113,8 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
     return ReturnTypeResult.CONTINUE
 }
 
-fun generateCode(mappingData: MappingData?, definition: ParsedTokenInstructionDefinition, file: ParsedFile, output: OutputStream, majorVersion: Int, minorVersion: Int, targets: MutableList<String>): Pair<List<AccessorStatistics>, Boolean> {
-    val writerData = WriterData(mappingData = mappingData, file = file, params = definition.params, majorVersion = majorVersion, minorVersion = minorVersion, targets = targets)
+fun generateCode(definition: ParsedTokenInstructionDefinition, file: ParsedFile, output: OutputStream, majorVersion: Int, minorVersion: Int, targets: MutableList<String>): Pair<List<AccessorStatistics>, Boolean> {
+    val writerData = WriterData(file = file, params = definition.params, majorVersion = majorVersion, minorVersion = minorVersion, targets = targets)
     var writeNormalReturn = true
     if(definition.code.isNotEmpty()) {
         try {

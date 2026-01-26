@@ -12,28 +12,16 @@ import com.google.devtools.ksp.symbol.Origin
 import dev.epicpix.annotations.commands.generateCommandsDataReader
 import dev.epicpix.annotations.commands.parseCommandsData
 import dev.epicpix.annotations.instructions.*
-import net.fabricmc.accesswidener.AccessWidenerReader
-import net.fabricmc.accesswidener.AccessWidenerVisitor
-import net.fabricmc.accesswidener.AccessWidenerWriter
-import net.fabricmc.tinyremapper.IMappingProvider
-import net.fabricmc.tinyremapper.TinyUtils
 import org.objectweb.asm.Type
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.OutputStream
 import java.nio.file.Files
-import java.nio.file.Paths
 import java.util.jar.JarFile
 
 fun OutputStream.appendText(str: String) {
     this.write(str.toByteArray())
 }
-
-data class MappingData(
-    val mappedClasses: MutableMap<String, String> = mutableMapOf(),
-    val mappedMethods: MutableMap<IMappingProvider.Member, String> = mutableMapOf(),
-    val mappedFields: MutableMap<IMappingProvider.Member, String> = mutableMapOf(),
-)
 
 data class DefinitionPriorityTree(val def: ParsedTokenInstructionDefinition, val backwardConnections: MutableList<DefinitionPriorityTree> = mutableListOf()) {
     fun length(): Int {
@@ -46,19 +34,6 @@ data class DefinitionPriorityTree(val def: ParsedTokenInstructionDefinition, val
     }
 }
 
-fun MappingData?.getClassName(name: String): String {
-    if(this == null) return name
-    return mappedClasses[name] ?: (if(!name.startsWith("net/minecraft")) name else error("No class mapping for $name"))
-}
-fun MappingData?.getMethodName(owner: String, name: String, desc: String): String {
-    if(this == null) return name
-    return mappedMethods.entries.find { it.key.name == name && it.key.owner == owner && it.key.desc == desc }?.value ?: (if(!owner.startsWith("net/minecraft")) name else error("No method mapping for $owner.$name $desc"))
-}
-fun MappingData?.getFieldName(owner: String, name: String, desc: String): String {
-    if(this == null) return name
-    return mappedFields.entries.find { it.key.name == name && it.key.owner == owner && it.key.desc == desc }?.value ?: (if(!owner.startsWith("net/minecraft")) name else error("No field mapping for $owner.$name $desc"))
-}
-
 private lateinit var dataDir: String
 
 fun loadToml(file: String): Map<String, Any> {
@@ -67,16 +42,6 @@ fun loadToml(file: String): Map<String, Any> {
 
 fun loadDataFile(file: String): String {
     return Files.readString(File(dataDir, file).toPath())
-}
-
-fun remapType(type: Type, mappingData: MappingData?): Type {
-    if(mappingData == null) return type
-    if(type.sort == Type.METHOD) {
-        val params = type.argumentTypes.map { remapType(it, mappingData) }
-        return Type.getMethodType(type.returnType.run { remapType(this, mappingData) }, *params.toTypedArray())
-    }
-    if(type.sort != Type.OBJECT) return type
-    return Type.getType("L" + (mappingData.getClassName(type.descriptor!!.run { substring(1, length - 1) })) + ";")
 }
 
 fun kotlinToJavaType(type: String, genericUsage: Boolean, generics: List<String> = emptyList()): String {
@@ -103,7 +68,7 @@ fun javaToMinecraftGenericType(type: String, generics: List<String> = emptyList(
             "net.minecraft.world.entity.LivingEntity" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.LivingEntity"
             "net.minecraft.server.level.ServerPlayer" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Player"
             "net.minecraft.world.scores.Objective" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Objective"
-            "net.minecraft.world.scores.Score" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Score"
+            "net.minecraft.world.scores.ScoreAccess" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Score"
             "net.minecraft.world.phys.Vec3" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Vec3"
             "net.minecraft.world.phys.Vec2" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Vec2"
             "net.minecraft.server.level.ServerLevel" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.World"
@@ -146,18 +111,6 @@ class MainProcessor(
         invoked = true
         dataDir = options["data_dir"]!!
 
-        val mappingData = if(options["isJarTask"] == "true" && options["mappingsFile"] != null) MappingData() else null
-        if(mappingData != null) {
-            val mappingsPath = Paths.get(options["mappingsFile"]!!)
-            val mappingProvider = TinyUtils.createTinyMappingProvider(mappingsPath, "named", "intermediary")
-            mappingProvider.load(object : IMappingProvider.MappingAcceptor {
-                override fun acceptClass(srcName: String, dstName: String) { mappingData.mappedClasses[srcName] = dstName }
-                override fun acceptMethod(method: IMappingProvider.Member, dstName: String) { mappingData.mappedMethods[method] = dstName }
-                override fun acceptField(field: IMappingProvider.Member, dstName: String) { mappingData.mappedFields[field] = dstName }
-                override fun acceptMethodArg(method: IMappingProvider.Member?, lvIndex: Int, dstName: String?) {}
-                override fun acceptMethodVar(method: IMappingProvider.Member?, lvIndex: Int, startOpIdx: Int, asmIndex: Int, dstName: String?) {}
-            })
-        }
         val jarFiles = mutableListOf<JarFile>()
         val jarFileMappings = mutableMapOf<String, Int>()
         if(options["jars"] != null) {
@@ -186,38 +139,15 @@ class MainProcessor(
         val emitterTargetsClass = "$emitterPackage.EmitterTargets"
         if(definitions != null) {
             if(definitions["definition_file"] != null) {
-                generateFunctionMapping(mappingData, definitions, minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0, emitterTargetsClass, targets)
+                generateFunctionMapping(definitions, minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0, emitterTargetsClass, targets)
             }
         }
         if(options["definitions"] != null) {
-            generateInstructionData(file, mappingData, options["definitions"] == "common", minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0, targets)
+            generateInstructionData(file, options["definitions"] == "common", minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0, targets)
         }
         if(options["definitions"] == "common") {
             generateConstantsData()
             generateCommandsData()
-        }
-        if(PACKAGE_MINECRAFT_VERSION != null && mappingData != null) {
-            val accessWidenerWriter = AccessWidenerWriter()
-            AccessWidenerReader(object : AccessWidenerVisitor {
-                override fun visitHeader(namespace: String?) {
-                    accessWidenerWriter.visitHeader("intermediary")
-                }
-
-                override fun visitClass(name: String, access: AccessWidenerReader.AccessType, transitive: Boolean) {
-                    accessWidenerWriter.visitClass(mappingData.getClassName(name), access, transitive)
-                }
-
-                override fun visitMethod(owner: String, name: String, descriptor: String, access: AccessWidenerReader.AccessType, transitive: Boolean) {
-                    accessWidenerWriter.visitMethod(mappingData.getClassName(owner), mappingData.getMethodName(owner, name, descriptor), remapType(Type.getMethodType(descriptor), mappingData).descriptor, access, transitive)
-                }
-
-                override fun visitField(owner: String, name: String, descriptor: String, access: AccessWidenerReader.AccessType, transitive: Boolean) {
-                    accessWidenerWriter.visitField(mappingData.getClassName(owner), mappingData.getFieldName(owner, name, descriptor), remapType(Type.getType(descriptor), mappingData).descriptor, access, transitive)
-                }
-            }).read(Files.readAllBytes(Paths.get(options["accesswidener"]!!)))
-            val generatedAccessWidener = codeGenerator.createNewFile(Dependencies.ALL_FILES, "", "minecraftfunctioncompiler.$PACKAGE_MINECRAFT_VERSION.generated", "accesswidener")
-            generatedAccessWidener.write(accessWidenerWriter.write())
-            generatedAccessWidener.close()
         }
         return listOf()
     }
@@ -274,7 +204,7 @@ class MainProcessor(
         return index
     }
 
-    fun generateFunctionMapping(mappingData: MappingData?, data: Map<String, Any>, majorVer: Int, minorVer: Int, emitterTargetsClass: String, targets: MutableList<String>) {
+    fun generateFunctionMapping(data: Map<String, Any>, majorVer: Int, minorVer: Int, emitterTargetsClass: String, targets: MutableList<String>) {
         val resultClass = (data["definition_file"] as String).replace("_VERSION_", PACKAGE_MINECRAFT_VERSION ?: "common")
         val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
         val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
@@ -309,16 +239,15 @@ class MainProcessor(
             val content = findVersionSpecific(v)
             if(content != null) {
                 val fullDescriptor = content.split("@")[0].replace(Regex.fromLiteral("_VERSION_")) { PACKAGE_MINECRAFT_VERSION ?: throw IllegalArgumentException("Tried to use _VERSION_ in a common env") }
-                val className = mappingData.getClassName(fullDescriptor.split(":")[0])
-                val methodDescriptor = remapType(Type.getMethodType("(" + fullDescriptor.split("(")[1]), mappingData)
+                val className = fullDescriptor.split(":")[0]
+                val methodDescriptor = Type.getMethodType("(" + fullDescriptor.split("(")[1])
                 val callDetails = content.split("@")[1]
-                val notObfuscated = callDetails.contains("O")
-                val methodName = if(notObfuscated) fullDescriptor.split(":")[1].split("(")[0] else mappingData.getMethodName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1].split("(")[0], "(" + fullDescriptor.split("(")[1])
+                val methodName = fullDescriptor.split(":")[1].split("(")[0]
                 val isStatic = !callDetails.contains("M")
                 val isInterface = callDetails.contains("I")
                 val noReorder = callDetails.contains("N")
                 val target = "new dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget.FunctionTarget(\"$className\", \"$methodName\", \"${methodDescriptor.descriptor}\", ${isStatic}, ${isInterface}, ${methodName == "<init>"}, ${noReorder})"
-                var args = mutableListOf<String>()
+                val args = mutableListOf<String>()
                 if(!isStatic) args.add("self")
                 for(arg in methodDescriptor.argumentTypes.indices) {
                     args.add("r$arg")
@@ -335,9 +264,9 @@ class MainProcessor(
             val content = findVersionSpecific(v)
             if(content != null) {
                 val fullDescriptor = content.split("@")[0].replace(Regex.fromLiteral("_VERSION_")) { PACKAGE_MINECRAFT_VERSION ?: throw IllegalArgumentException("Tried to use _VERSION_ in a common env") }
-                val className = mappingData.getClassName(fullDescriptor.split(":")[0])
-                val fieldDescriptor = remapType(Type.getType(fullDescriptor.split(":")[2]), mappingData).descriptor
-                val fieldName = mappingData.getFieldName(fullDescriptor.split(":")[0], fullDescriptor.split(":")[1], fullDescriptor.split(":")[2])
+                val className = fullDescriptor.split(":")[0]
+                val fieldDescriptor = fullDescriptor.split(":")[2]
+                val fieldName = fullDescriptor.split(":")[1]
                 val callDetails = content.split("@").getOrNull(1)
                 if(callDetails != null) {
                     val isStatic = !callDetails.contains("M")
@@ -363,7 +292,7 @@ class MainProcessor(
         mapExtensions.appendText("}\n")
     }
 
-    fun generateInstructionData(file: ParsedFile, mappingData: MappingData?, common: Boolean, majorVer: Int, minorVer: Int, targets: MutableList<String>) {
+    fun generateInstructionData(file: ParsedFile, common: Boolean, majorVer: Int, minorVer: Int, targets: MutableList<String>) {
         val resultClass = (if(common) file.fileInfo["emitter_noobf_file"]!! else file.fileInfo["emitter_obf_file"]!!).replace("_VERSION_", PACKAGE_MINECRAFT_VERSION ?: "common")
         val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
         val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
@@ -394,7 +323,7 @@ class MainProcessor(
                 if(matchesVersion) {
                     map.appendText("            if(type == ${file.fileInfo["enum_file"]}.${it.name.uppercase()}) {\n")
                     val output = ByteArrayOutputStream()
-                    val codeGenResult = generateCode(mappingData, it, file, output, majorVer, minorVer, targets)
+                    val codeGenResult = generateCode(it, file, output, majorVer, minorVer, targets)
                     info[it.name] = codeGenResult.first
                     map.appendText(output.toByteArray().decodeToString().trimEnd().prependIndent("                "))
                     map.appendText("\n")

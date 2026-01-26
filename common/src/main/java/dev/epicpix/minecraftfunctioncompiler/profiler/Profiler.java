@@ -12,6 +12,8 @@ import java.lang.management.ManagementFactory;
 import java.util.*;
 import java.util.function.BiConsumer;
 
+/// @deprecated This class will be removed, and Command Profiler will be used as a library instead
+@Deprecated(forRemoval = true)
 public final class Profiler {
     private Profiler() {}
 

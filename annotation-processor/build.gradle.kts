@@ -15,8 +15,6 @@ dependencies {
     implementation("com.squareup:javapoet:1.12.1")
     implementation("com.google.devtools.ksp:symbol-processing-api:2.1.0-1.0.28")
     implementation("cc.ekblad:4koma:1.2.0")
-    implementation("net.fabricmc:tiny-remapper:0.8.2")
-    implementation("net.fabricmc:access-widener:2.1.0")
     implementation("org.ow2.asm:asm:9.6")
 }
 

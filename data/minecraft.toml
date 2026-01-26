@@ -1,8 +1,7 @@
 definition_file = "dev.epicpix.minecraftfunctioncompiler._VERSION_.emitter.MappedUsageDefinitionsExtensions"
 
 [definitions_functions]
-CommandSourceStack_withCallback."1.20.2-" = "net/minecraft/commands/CommandSourceStack:withCallback(Lcom/mojang/brigadier/ResultConsumer;)Lnet/minecraft/commands/CommandSourceStack;@M"
-CommandSourceStack_withCallback."1.20.3+" = "net/minecraft/commands/CommandSourceStack:withCallback(Lnet/minecraft/commands/CommandResultCallback;)Lnet/minecraft/commands/CommandSourceStack;@M"
+CommandSourceStack_withCallback = "net/minecraft/commands/CommandSourceStack:withCallback(Lnet/minecraft/commands/CommandResultCallback;)Lnet/minecraft/commands/CommandSourceStack;@M"
 
 CollectionTag_add = "net/minecraft/nbt/CollectionTag:add(ILnet/minecraft/nbt/Tag;)V@M"
 ByteTag_valueOf = "net/minecraft/nbt/ByteTag:valueOf(B)Lnet/minecraft/nbt/ByteTag;@S"
@@ -15,7 +14,7 @@ ShortTag_valueOf = "net/minecraft/nbt/ShortTag:valueOf(S)Lnet/minecraft/nbt/Shor
 StringTag_valueOf = "net/minecraft/nbt/StringTag:valueOf(Ljava/lang/String;)Lnet/minecraft/nbt/StringTag;@S"
 
 CompoundTag_get = "net/minecraft/nbt/CompoundTag:get(Ljava/lang/String;)Lnet/minecraft/nbt/Tag;@M"
-Tag_stringify."1.20.2+" = "dev/epicpix/minecraftfunctioncompiler/_VERSION_/ExtensionFunctions:stringifyTag(Lnet/minecraft/nbt/Tag;)Ljava/lang/String;@S"
+Tag_stringify = "dev/epicpix/minecraftfunctioncompiler/_VERSION_/ExtensionFunctions:stringifyTag(Lnet/minecraft/nbt/Tag;)Ljava/lang/String;@S"
 
 ObjectiveCriteria_byName = "net/minecraft/world/scores/criteria/ObjectiveCriteria:byName(Ljava/lang/String;)Ljava/util/Optional;@S"
 
@@ -29,38 +28,25 @@ MutableComponent_withStyle = "net/minecraft/network/chat/MutableComponent:withSt
 MutableComponent_append = "net/minecraft/network/chat/MutableComponent:append(Lnet/minecraft/network/chat/Component;)Lnet/minecraft/network/chat/MutableComponent;@M"
 TextColor_fromRgb = "net/minecraft/network/chat/TextColor:fromRgb(I)Lnet/minecraft/network/chat/TextColor;@S"
 
-Registry_get."1.21.1-" = "net/minecraft/core/Registry:get(Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/Object;@IM"
-Registry_getValue."1.21.2+" = "net/minecraft/core/Registry:getValue(Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/Object;@IM"
-Registry_getHolder."1.20.6" = "net/minecraft/core/Registry:getHolder(Lnet/minecraft/resources/ResourceLocation;)Ljava/util/Optional;@IM"
-Registry_getHolder."1.21" = "net/minecraft/core/Registry:getHolder(Lnet/minecraft/resources/ResourceLocation;)Ljava/util/Optional;@IM"
-Registry_get."1.21.2+" = "net/minecraft/core/Registry:get(Lnet/minecraft/resources/ResourceLocation;)Ljava/util/Optional;@IM"
+Registry_getValue = "net/minecraft/core/Registry:getValue(Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/Object;@IM"
+Registry_get = "net/minecraft/core/Registry:get(Lnet/minecraft/resources/ResourceLocation;)Ljava/util/Optional;@IM"
 
-ServerFunctionManager_execute."1.20.3+" = "net/minecraft/server/ServerFunctionManager:execute(Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;)V@M"
-ServerFunctionManager_execute."1.20.2+" = "net/minecraft/server/ServerFunctionManager:execute(Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;Lnet/minecraft/nbt/CompoundTag;)I@M"
-ServerFunctionManager_execute."1.20.1-" = "net/minecraft/server/ServerFunctionManager:execute(Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;)I@M"
+ServerFunctionManager_execute = "net/minecraft/server/ServerFunctionManager:execute(Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;)V@M"
 
-ExtensionFunctions_executeFunction."1.20.1-" = "dev/epicpix/minecraftfunctioncompiler/_VERSION_/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;)V@SN"
-ExtensionFunctions_executeFunction."1.20.2" = "dev/epicpix/minecraftfunctioncompiler/_VERSION_/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/server/ServerFunctionManager$TraceCallbacks;Lnet/minecraft/nbt/CompoundTag;)V@SN"
-ExtensionFunctions_executeFunction."1.20.4+" = "dev/epicpix/minecraftfunctioncompiler/_VERSION_/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@SN"
+ExtensionFunctions_executeFunction = "dev/epicpix/minecraftfunctioncompiler/_VERSION_/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@SN"
 
-ResourceLocation_fromNamespaceAndPath."1.21+" = "net/minecraft/resources/ResourceLocation:fromNamespaceAndPath(Ljava/lang/String;Ljava/lang/String;)Lnet/minecraft/resources/ResourceLocation;@S"
+ResourceLocation_fromNamespaceAndPath = "net/minecraft/resources/ResourceLocation:fromNamespaceAndPath(Ljava/lang/String;Ljava/lang/String;)Lnet/minecraft/resources/ResourceLocation;@S"
 
-Integer_valueOf."1.21.4+" = "java/lang/Integer:valueOf(I)Ljava/lang/Integer;@S"
+Integer_valueOf = "java/lang/Integer:valueOf(I)Ljava/lang/Integer;@S"
 
 MinecraftServer_getAdvancements = "net/minecraft/server/MinecraftServer:getAdvancements()Lnet/minecraft/server/ServerAdvancementManager;@M"
-ServerAdvancementManager_getAdvancement."1.20.1-" = "net/minecraft/server/ServerAdvancementManager:getAdvancement(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/advancements/Advancement;@M"
-ServerAdvancementManager_get."1.20.2+" = "net/minecraft/server/ServerAdvancementManager:get(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/advancements/AdvancementHolder;@M"
+ServerAdvancementManager_get = "net/minecraft/server/ServerAdvancementManager:get(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/advancements/AdvancementHolder;@M"
 
-MinecraftServer_getPredicateManager."1.19.4-" = "net/minecraft/server/MinecraftServer:getPredicateManager()Lnet/minecraft/world/level/storage/loot/PredicateManager;@M"
-PredicateManager_get."1.19.4-" = "net/minecraft/world/level/storage/loot/PredicateManager:get(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/world/level/storage/loot/predicates/LootItemCondition;@M"
-MinecraftServer_getLootData."1.20.1,1.20.2,1.20.4" = "net/minecraft/server/MinecraftServer:getLootData()Lnet/minecraft/world/level/storage/loot/LootDataManager;@M"
-LootDataResolver_getElement."1.20.1,1.20.2,1.20.4" = "net/minecraft/world/level/storage/loot/LootDataResolver:getElement(Lnet/minecraft/world/level/storage/loot/LootDataType;Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/Object;@IMO"
-MinecraftServer_reloadableRegistries."1.20.6+" = "net/minecraft/server/MinecraftServer:reloadableRegistries()Lnet/minecraft/server/ReloadableServerRegistries$Holder;@M"
-ReloadableServerRegistriesHolder_lookup."1.20.6+" = "net/minecraft/server/ReloadableServerRegistries$Holder:lookup()Lnet/minecraft/core/HolderGetter$Provider;@M"
-HolderGetterProvider_get."1.20.6,1.21" = "net/minecraft/core/HolderGetter$Provider:get(Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/resources/ResourceKey;)Ljava/util/Optional;@IM"
-HolderGetterProvider_get."1.21.2+" = "net/minecraft/core/HolderGetter$Provider:get(Lnet/minecraft/resources/ResourceKey;)Ljava/util/Optional;@IM"
-ResourceKey_create."1.20.6+" = "net/minecraft/resources/ResourceKey:create(Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/resources/ResourceKey;@S"
-Holder_value."1.20.6+" = "net/minecraft/core/Holder:value()Ljava/lang/Object;@IM"
+MinecraftServer_reloadableRegistries = "net/minecraft/server/MinecraftServer:reloadableRegistries()Lnet/minecraft/server/ReloadableServerRegistries$Holder;@M"
+ReloadableServerRegistriesHolder_lookup = "net/minecraft/server/ReloadableServerRegistries$Holder:lookup()Lnet/minecraft/core/HolderGetter$Provider;@M"
+HolderGetterProvider_get = "net/minecraft/core/HolderGetter$Provider:get(Lnet/minecraft/resources/ResourceKey;)Ljava/util/Optional;@IM"
+ResourceKey_create = "net/minecraft/resources/ResourceKey:create(Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/resources/ResourceKey;@S"
+Holder_value = "net/minecraft/core/Holder:value()Ljava/lang/Object;@IM"
 
 [definitions_fields]
 ServerFunctionManager_library = "net/minecraft/server/ServerFunctionManager:library:Lnet/minecraft/server/ServerFunctionLibrary;@MR"
@@ -69,8 +55,6 @@ BuiltInRegistries_ATTRIBUTE = "net/minecraft/core/registries/BuiltInRegistries:A
 BuiltInRegistries_ENTITY_TYPE = "net/minecraft/core/registries/BuiltInRegistries:ENTITY_TYPE:Lnet/minecraft/core/DefaultedRegistry;@SR"
 BuiltInRegistries_MOB_EFFECT = "net/minecraft/core/registries/BuiltInRegistries:MOB_EFFECT:Lnet/minecraft/core/Registry;@SR"
 
-ServerFunctionManager_context."1.20.2-" = "net/minecraft/server/ServerFunctionManager:context:Lnet/minecraft/server/ServerFunctionManager$ExecutionContext;@MRW"
-Commands_CURRENT_EXECUTION_CONTEXT."1.20.3+" = "net/minecraft/commands/Commands:CURRENT_EXECUTION_CONTEXT:Ljava/lang/ThreadLocal;@SR"
+Commands_CURRENT_EXECUTION_CONTEXT = "net/minecraft/commands/Commands:CURRENT_EXECUTION_CONTEXT:Ljava/lang/ThreadLocal;@SR"
 
-LootDataType_PREDICATE."1.20.1,1.20.2,1.20.4" = "net/minecraft/world/level/storage/loot/LootDataType:PREDICATE:Lnet/minecraft/world/level/storage/loot/LootDataType;@SR"
-Registries_PREDICATE."1.20.6+" = "net/minecraft/core/registries/Registries:PREDICATE:Lnet/minecraft/resources/ResourceKey;@SR"
+Registries_PREDICATE = "net/minecraft/core/registries/Registries:PREDICATE:Lnet/minecraft/resources/ResourceKey;@SR"

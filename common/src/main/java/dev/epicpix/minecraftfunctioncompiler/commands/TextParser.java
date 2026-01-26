@@ -111,11 +111,7 @@ public final class TextParser {
                 try {
                     holder = SelectorParser.parseScoreHolder(new StringCommandReader(rawHolder, reader.getSource(), reader.allowsMacros()), false);
                 }catch(Exception e) {
-                    if(MinecraftVersion.isCurrentVersionInRange(MinecraftVersion.MC_1_21_2, null)) {
-                        throw createError(reader, TEXT_INVALID, "Failed to parse text score holder: " + e.getMessage() + " | " + rawHolder, e);
-                    }else {
-                        holder = null;
-                    }
+                    throw createError(reader, TEXT_INVALID, "Failed to parse text score holder: " + e.getMessage() + " | " + rawHolder, e);
                 }
                 content = new TextContent.ScoreText(holder, objective);
             }else if(obj.has("selector")) {
