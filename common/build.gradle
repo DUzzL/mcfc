@@ -1,14 +1,12 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '2.1.0'
     id 'com.google.devtools.ksp' version "2.1.0-1.0.29"
-    id 'dev.epicpix.java-class-downgrader' version '1.0-SNAPSHOT'
 }
 
 group = "dev.epicpix"
 version = project.mod_version
 
 apply plugin: 'com.google.devtools.ksp'
-apply plugin: 'dev.epicpix.java-class-downgrader'
 
 repositories {
     mavenCentral()
@@ -47,10 +45,6 @@ ksp {
     if("true" == System.getenv("CI")) {
         arg("commit", System.getenv("CI_COMMIT_SHA"))
     }
-}
-
-classDowngrader {
-    it.targetJavaVersion = JavaVersion.VERSION_17
 }
 
 kotlin {

@@ -3,7 +3,6 @@ plugins {
     id 'maven-publish'
     id 'org.jetbrains.kotlin.jvm' version '2.1.0'
     id 'com.google.devtools.ksp' version "2.1.0-1.0.29"
-    id 'dev.epicpix.java-class-downgrader' version '1.0-SNAPSHOT'
 }
 
 ext {

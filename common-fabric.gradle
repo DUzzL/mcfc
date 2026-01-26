@@ -7,7 +7,6 @@ repositories {
 }
 
 apply plugin: 'com.google.devtools.ksp'
-apply plugin: 'dev.epicpix.java-class-downgrader'
 
 dependencies {
     implementation(project(":annotation-processor"))
@@ -43,10 +42,6 @@ tasks.withType(JavaCompile).configureEach {
     it.options.encoding = "UTF-8"
     it.targetCompatibility = "21"
     it.sourceCompatibility = "21"
-}
-
-classDowngrader {
-    it.targetJavaVersion.set(JavaVersion.toVersion(targetJavaVersion))
 }
 
 java {

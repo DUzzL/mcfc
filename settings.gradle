@@ -4,20 +4,11 @@ pluginManagement {
             name = 'Fabric'
             url = 'https://maven.fabricmc.net/'
         }
-        maven {
-            name = 'epicpix releases'
-            url = 'https://maven.epicpix.dev/releases'
-        }
-        maven {
-            name = 'epicpix snapshots'
-            url = 'https://maven.epicpix.dev/snapshots'
-        }
         gradlePluginPortal()
     }
     plugins {
         id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
         id 'com.google.devtools.ksp' version "2.1.0-1.0.29"
-        id 'dev.epicpix.java-class-downgrader' version '1.0-SNAPSHOT'
     }
 }
 plugins {
@@ -26,11 +17,4 @@ plugins {
 
 include 'annotation-processor'
 include 'mc-1-21-4-fabric'
-include 'mc-1-21-2-fabric'
-include 'mc-1-21-fabric'
-include 'mc-1-20-6-fabric'
-include 'mc-1-20-4-fabric'
-include 'mc-1-20-2-fabric'
-include 'mc-1-20-1-fabric'
-include 'mc-1-19-4-fabric'
 include 'common'
