@@ -198,7 +198,7 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 }
                 builder.append("    if(a$tempIndex.isError()) return a$tempIndex;\n")
                 builder.append("    var a$argumentIndex = a$tempIndex.getResult();\n")
-                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.commands.CommandParams")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.commands.params.CommandParams")
             }
             "difficulty" -> {
                 builder.append("    var a$argumentIndex = reader.readDifficulty();\n")
@@ -381,11 +381,11 @@ private fun returnWrappedError(catchBlock: String?, argumentDPath: String?, str:
 fun generateCommandsDataReader(data: ParsedCommandData): Pair<String, Map<String, List<Pair<String, String>>>> {
     val builder = StringBuilder()
     val uid = AtomicInteger()
-    builder.append("public static DiagnosticResult<CommandParams> parseCommand(String command, DataLocation source, boolean allowMacros, IArgumentLookup lookup) {\n")
+    builder.append("public static DiagnosticResult<dev.epicpix.minecraftfunctioncompiler.commands.params.CommandParams> parseCommand(String command, DataLocation source, boolean allowMacros, IArgumentLookup lookup) {\n")
     builder.append("    return parseCommand(new StringCommandReader(command, source, allowMacros), lookup);\n")
     builder.append("}\n")
     builder.append("\n")
-    builder.append("public static DiagnosticResult<CommandParams> parseCommand(StringCommandReader reader, IArgumentLookup lookup) {\n")
+    builder.append("public static DiagnosticResult<dev.epicpix.minecraftfunctioncompiler.commands.params.CommandParams> parseCommand(StringCommandReader reader, IArgumentLookup lookup) {\n")
     builder.append("    var commandName = reader.readWord();\n")
     builder.append("    if(!reader.skipArgumentWhitespace()) ${returnError(null, null, "\"Missing space after argument @ \" + commandName")}\n")
     builder.append("    return switch(commandName) {\n")
@@ -401,7 +401,7 @@ fun generateCommandsDataReader(data: ParsedCommandData): Pair<String, Map<String
     builder.append("\n")
     val commandTypes = mutableMapOf<String, List<Pair<String, String>>>()
     for((k, v) in data.commandTree) {
-        builder.append("public static DiagnosticResult<CommandParams> parseCommand_$k(StringCommandReader reader, IArgumentLookup lookup) {\n")
+        builder.append("public static DiagnosticResult<dev.epicpix.minecraftfunctioncompiler.commands.params.CommandParams> parseCommand_$k(StringCommandReader reader, IArgumentLookup lookup) {\n")
         val innerBuilder = StringBuilder()
         generateArgumentReaderVersionCheck(k, v, innerBuilder, commandTypes, uid, "", k, mapOf(), listOf(), null, true)
         builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent("    ") + "\n")

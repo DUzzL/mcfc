@@ -1,6 +1,5 @@
 package dev.epicpix.minecraftfunctioncompiler.compiler;
 
-import dev.epicpix.minecraftfunctioncompiler.commands.CommandParams;
 import dev.epicpix.minecraftfunctioncompiler.commands.params.*;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.data.locations.*;

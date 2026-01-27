@@ -190,13 +190,31 @@ class MainProcessor(
             map.close()
         }
         run {
+            val names = mutableListOf<String>()
+
             for((kind, types) in cmdTypes) {
                 val paramsClassName = "_COMMAND_$kind".snakeToLowerCamelCase()
                 val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, "dev.epicpix.minecraftfunctioncompiler.commands.params", paramsClassName, "java")
+                names.add("dev.epicpix.minecraftfunctioncompiler.commands.params.$paramsClassName")
                 map.appendText("package dev.epicpix.minecraftfunctioncompiler.commands.params;\n")
-                map.appendText("public record $paramsClassName(\n${types.joinToString(",\n") { (name, type) -> "    $type ${name.snakeToLowerCamelCase()}" }}\n) implements dev.epicpix.minecraftfunctioncompiler.commands.CommandParams {}\n")
+                map.appendText("public record $paramsClassName(\n${types.joinToString(",\n") { (name, type) -> "    $type ${name.snakeToLowerCamelCase()}" }}\n) implements dev.epicpix.minecraftfunctioncompiler.commands.params.CommandParams {}\n")
                 map.close()
             }
+
+            val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, "dev.epicpix.minecraftfunctioncompiler.commands.params", "CommandParams", "java")
+            map.appendText("package dev.epicpix.minecraftfunctioncompiler.commands.params;\n")
+            map.appendText("public sealed interface CommandParams permits\n")
+            var i = 0
+            for(name in names) {
+                if(++i == names.size) {
+                    map.appendText("    $name\n")
+                }else {
+                    map.appendText("    $name,\n")
+                }
+            }
+            map.appendText("{}\n")
+            map.close()
+
         }
     }
 

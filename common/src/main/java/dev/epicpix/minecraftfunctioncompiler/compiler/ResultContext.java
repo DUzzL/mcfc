@@ -1,6 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.compiler;
 
-import dev.epicpix.minecraftfunctioncompiler.commands.CommandParams;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandParams;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.il.Instructions;
