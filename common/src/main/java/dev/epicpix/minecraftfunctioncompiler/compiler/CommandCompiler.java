@@ -486,7 +486,7 @@ public final class CommandCompiler {
                 var criterion = context.<ScoreboardCriterion>createLocal();
                 objective.writeInstruction(Instructions.getObjectiveCriterion(criterion, objective.content()));
                 var mappedCriterion = context.<ScoreboardCriterion>createLocal();
-                objective.writeInstruction(Instructions.mapObjectiveCriterion(mappedCriterion, DataRegistries.SCOREBOARD_CRITERIA.getOrThrow("trigger")));
+                objective.writeInstruction(Instructions.mapObjectiveCriterion(mappedCriterion, DataRegistries.SCOREBOARD_CRITERIA.get("trigger").orElseThrow()));
                 objective.writeInstruction(Instructions.ifObjectCompareJump(ObjectComparisonType.NOT_IDENTITY_EQUAL, criterion, mappedCriterion, objective.data().contextEndLabel()));
                 try(var name = context.forScoreHolder(cmdData.targets().scoreHolder(), result)) {
                     try(var scoreData = context.getScoreDataAutoCreate(new ScoreAccessor(objective.content(), name.content()))) {

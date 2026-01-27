@@ -12,13 +12,12 @@ import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.ALLOW_EXTERN
 public final class DataRegistries {
     private DataRegistries() {}
 
-    public static final DataRegistry<AdvancementData> ADVANCEMENT = new DataRegistry<>();
-    public static final DataRegistry<AttributeData> ATTRIBUTE = new DataRegistry<>();
-    public static final DataRegistry<EntityData> ENTITY_TYPE = new DataRegistry<>();
-    public static final DataRegistry<List<DataLocation>> ENTITY_TAGS = new DataRegistry<>();
+    public static final TaggableDataRegistry<AdvancementData> ADVANCEMENT = new TaggableDataRegistry<>();
+    public static final TaggableDataRegistry<AttributeData> ATTRIBUTE = new TaggableDataRegistry<>();
+    public static final TaggableDataRegistry<EntityData> ENTITY_TYPE = new TaggableDataRegistry<>();
     public static final DataRegistry<List<DataLocation>> FUNCTION_TAGS = new DataRegistry<>();
-    public static final DataRegistry<MobEffectData> MOB_EFFECT = new DataRegistry<>();
-    public static final DataRegistry<PredicateData> PREDICATE = new DataRegistry<>();
+    public static final TaggableDataRegistry<MobEffectData> MOB_EFFECT = new TaggableDataRegistry<>();
+    public static final TaggableDataRegistry<PredicateData> PREDICATE = new TaggableDataRegistry<>();
 
     public static final RawDataRegistry<String, ScoreboardCriterionData> SCOREBOARD_CRITERIA = new RawDataRegistry<>();
 
@@ -27,7 +26,7 @@ public final class DataRegistries {
         var registries = new JsonObject();
 
         var advancementRegistry = new JsonObject();
-        for(var entry : ADVANCEMENT.entrySet()) {
+        for(var entry : ADVANCEMENT.elementEntrySet()) {
             var data = entry.getValue();
             var obj = new JsonObject();
             obj.addProperty("parent", data.parent() == null ? null : data.parent().toString());
@@ -41,7 +40,7 @@ public final class DataRegistries {
         registries.add("ADVANCEMENT", advancementRegistry);
 
         var attributeRegistry = new JsonObject();
-        for(var entry : ATTRIBUTE.entrySet()) {
+        for(var entry : ATTRIBUTE.elementEntrySet()) {
             var data = entry.getValue();
             var obj = new JsonObject();
             obj.addProperty("default_value", data.defaultValue());
@@ -52,7 +51,7 @@ public final class DataRegistries {
         registries.add("ATTRIBUTE", attributeRegistry);
 
         var entityClassRegistry = new JsonObject();
-        for(var entry : ENTITY_TYPE.entrySet()) {
+        for(var entry : ENTITY_TYPE.elementEntrySet()) {
             var data = entry.getValue();
             var obj = new JsonObject();
             obj.addProperty("summonable", data.summonable());
@@ -61,7 +60,7 @@ public final class DataRegistries {
         registries.add("ENTITY_TYPE", entityClassRegistry);
 
         var entityTagsRegistry = new JsonObject();
-        for(var entry : ENTITY_TAGS.entrySet()) {
+        for(var entry : ENTITY_TYPE.tagsEntrySet()) {
             var data = entry.getValue();
             var obj = new JsonArray();
             for(var entity : data) {
@@ -83,7 +82,7 @@ public final class DataRegistries {
         registries.add("FUNCTION_TAGS", functionTagsRegistry);
 
         var mobEffectRegistry = new JsonObject();
-        for(var entry : MOB_EFFECT.entrySet()) {
+        for(var entry : MOB_EFFECT.elementEntrySet()) {
             var data = entry.getValue();
             var obj = new JsonObject();
             obj.addProperty("instant", data.instant());
@@ -92,7 +91,7 @@ public final class DataRegistries {
         registries.add("MOB_EFFECT", mobEffectRegistry);
 
         var predicateRegistry = new JsonObject();
-        for(var entry : PREDICATE.entrySet()) {
+        for(var entry : PREDICATE.elementEntrySet()) {
             predicateRegistry.add(entry.getKey().toString(), new JsonObject());
         }
         registries.add("PREDICATE", predicateRegistry);
@@ -118,7 +117,7 @@ public final class DataRegistries {
             var location = new DataLocation(advancements.getKey());
             var criteria = new ArrayList<String>();
             for(var name : advancement.getAsJsonArray("criteria")) criteria.add(name.getAsString());
-            ADVANCEMENT.set(location, new AdvancementData(location, advancement.get("parent").isJsonNull() ? null : new DataLocation(advancement.get("parent").getAsString()), List.copyOf(criteria)));
+            ADVANCEMENT.setElement(location, new AdvancementData(location, advancement.get("parent").isJsonNull() ? null : new DataLocation(advancement.get("parent").getAsString()), List.copyOf(criteria)));
         }
         ADVANCEMENT.freeze();
 
@@ -126,7 +125,7 @@ public final class DataRegistries {
         for(var attributes : registries.getAsJsonObject("ATTRIBUTE").entrySet()) {
             var attribute = attributes.getValue().getAsJsonObject();
             var location = new DataLocation(attributes.getKey());
-            ATTRIBUTE.set(location, new AttributeData(location, attribute.get("default_value").getAsDouble(), attribute.get("minimum_value").getAsDouble(), attribute.get("maximum_value").getAsDouble()));
+            ATTRIBUTE.setElement(location, new AttributeData(location, attribute.get("default_value").getAsDouble(), attribute.get("minimum_value").getAsDouble(), attribute.get("maximum_value").getAsDouble()));
         }
         ATTRIBUTE.freeze();
 
@@ -134,19 +133,16 @@ public final class DataRegistries {
         for(var entityClasses : registries.getAsJsonObject("ENTITY_TYPE").entrySet()) {
             var entityClass = entityClasses.getValue().getAsJsonObject();
             var location = new DataLocation(entityClasses.getKey());
-            ENTITY_TYPE.set(location, new EntityData(location, entityClass.get("summonable").getAsBoolean()));
+            ENTITY_TYPE.setElement(location, new EntityData(location, entityClass.get("summonable").getAsBoolean()));
         }
-        ENTITY_TYPE.freeze();
-
-        ENTITY_TAGS.reset();
         for(var entityTags : registries.getAsJsonObject("ENTITY_TAGS").entrySet()) {
             var functionLocations = entityTags.getValue().getAsJsonArray();
             var location = new DataLocation(entityTags.getKey());
             var entities = new ArrayList<DataLocation>();
             for(var loc : functionLocations) entities.add(new DataLocation(loc.getAsString()));
-            ENTITY_TAGS.set(location, List.copyOf(entities));
+            ENTITY_TYPE.setTag(location, List.copyOf(entities));
         }
-        ENTITY_TAGS.freeze();
+        ENTITY_TYPE.freeze();
 
         FUNCTION_TAGS.reset();
         for(var functionTags : registries.getAsJsonObject("FUNCTION_TAGS").entrySet()) {
@@ -162,14 +158,14 @@ public final class DataRegistries {
         for(var mobEffects : registries.getAsJsonObject("MOB_EFFECT").entrySet()) {
             var mobEffect = mobEffects.getValue().getAsJsonObject();
             var location = new DataLocation(mobEffects.getKey());
-            MOB_EFFECT.set(location, new MobEffectData(location, mobEffect.get("instant").getAsBoolean()));
+            MOB_EFFECT.setElement(location, new MobEffectData(location, mobEffect.get("instant").getAsBoolean()));
         }
         MOB_EFFECT.freeze();
 
         PREDICATE.reset();
         for(var predicates : registries.getAsJsonObject("PREDICATE").entrySet()) {
             var location = new DataLocation(predicates.getKey());
-            PREDICATE.set(location, new PredicateData(location));
+            PREDICATE.setElement(location, new PredicateData(location));
         }
         PREDICATE.freeze();
 

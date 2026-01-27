@@ -454,8 +454,8 @@ public class CompilationContext {
             return entityList;
         }
         for(var predicate : selector.predicates()) {
-            var predicateData = DataRegistries.PREDICATE.get(predicate.data());
-            if(predicateData == null) {
+            var predicateData = DataRegistries.PREDICATE.getElement(predicate.data());
+            if(predicateData.isEmpty()) {
                 return entityList;
             }
         }
@@ -711,11 +711,12 @@ public class CompilationContext {
         if(selector.advancements() != null && !selector.advancements().isEmpty()) {
             var possible = true;
             out: for(var check : selector.advancements().entrySet()) {
-                var advancement = DataRegistries.ADVANCEMENT.get(check.getKey());
-                if(advancement == null) {
+                var advancementOption = DataRegistries.ADVANCEMENT.getElement(check.getKey());
+                if(advancementOption.isEmpty()) {
                     possible = false;
                     break;
                 }
+                var advancement = advancementOption.get();
                 if(check.getValue() instanceof SelectorAdvancementCheck.CriteriaCompleted criteriaCompleted) {
                     for(var criterion : criteriaCompleted.criteria().keySet()) {
                         if(!advancement.criteria().contains(criterion)) {

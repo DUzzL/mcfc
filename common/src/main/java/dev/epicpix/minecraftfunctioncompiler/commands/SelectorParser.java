@@ -1,6 +1,5 @@
 package dev.epicpix.minecraftfunctioncompiler.commands;
 
-import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidators;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
@@ -169,11 +168,11 @@ public final class SelectorParser {
             if(!tag) {
                 types = List.of(type);
             }else {
-                types = DataRegistries.ENTITY_TAGS.get(type);
+                types = DataRegistries.ENTITY_TYPE.getTag(type);
                 if(types == null) types = List.of();
             }
             for(var it : types) {
-                if(DataRegistries.ENTITY_TYPE.get(it) == null) throwError(reader, SELECTOR_INVALID_ENTITY, "Unsupported entity type: " + it);
+                if(DataRegistries.ENTITY_TYPE.getElement(it).isEmpty()) throwError(reader, SELECTOR_INVALID_ENTITY, "Unsupported entity type: " + it);
             }
             data.entityTypes = new NegatableData<>(types, negated);
         });

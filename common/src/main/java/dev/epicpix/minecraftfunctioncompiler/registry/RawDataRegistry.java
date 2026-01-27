@@ -1,9 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.registry;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class RawDataRegistry<K, T> {
     private boolean frozen = false;
@@ -22,14 +19,10 @@ public class RawDataRegistry<K, T> {
         values = Map.copyOf(values);
     }
 
-    public T get(K location) {
-        return values.get(location);
-    }
-
-    public T getOrThrow(K location) {
-        var value = get(location);
-        if(value == null) throw new IllegalArgumentException("Failed to get value from key \"" + location + "\" from registry");
-        return value;
+    public Optional<T> get(K location) {
+        var value = values.get(location);
+        if(value == null) return Optional.empty();
+        return Optional.of(value);
     }
 
     public void set(K location, T value) {
@@ -40,7 +33,7 @@ public class RawDataRegistry<K, T> {
     }
 
     public Set<Map.Entry<K, T>> entrySet() {
-        return new HashSet<>(values.entrySet());
+        return Collections.unmodifiableSet(values.entrySet());
     }
 
 }

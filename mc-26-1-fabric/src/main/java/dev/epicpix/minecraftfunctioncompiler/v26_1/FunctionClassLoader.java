@@ -50,8 +50,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<MinecraftSe
             public List<DataLocation> lookupFunctions(TaggableLocation functions) {
                 if(functions.isTag()) {
                     var tags = DataRegistries.FUNCTION_TAGS.get(functions.location());
-                    if(tags == null) return List.of();
-                    return tags;
+                    return tags.orElseGet(List::of);
                 }else if(serverFunctionManager.library.functions.containsKey(Identifier.parse(functions.location().toString()))) {
                     return List.of(functions.location());
                 }else {

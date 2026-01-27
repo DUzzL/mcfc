@@ -550,11 +550,11 @@ public class StringCommandReader {
 
     public AttributeData readAttribute() {
         DataLocation location = readDataLocation();
-        AttributeData attribute = DataRegistries.ATTRIBUTE.get(location);
-        if(attribute == null) {
+        var attribute = DataRegistries.ATTRIBUTE.getElement(location);
+        if(attribute.isEmpty()) {
             throw createError(COMMAND_INVALID_ATTRIBUTE, "Unknown attribute: " + location);
         }
-        return attribute;
+        return attribute.get();
     }
 
     public int readTime() {
@@ -582,11 +582,11 @@ public class StringCommandReader {
 
     public MobEffectData readMobEffect() {
         DataLocation location = readDataLocation();
-        MobEffectData attribute = DataRegistries.MOB_EFFECT.get(location);
-        if(attribute == null) {
+        var effect = DataRegistries.MOB_EFFECT.getElement(location);
+        if(effect.isEmpty()) {
             throw createError(COMMAND_INVALID_MOB_EFFECT, "Unknown effect: " + location);
         }
-        return attribute;
+        return effect.get();
     }
 
     public ResultStoreType readResultStoreType() {
