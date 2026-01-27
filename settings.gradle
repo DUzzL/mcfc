@@ -7,12 +7,12 @@ pluginManagement {
         gradlePluginPortal()
     }
     plugins {
-        id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
+        id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
         id 'com.google.devtools.ksp' version "2.3.4"
     }
 }
 plugins {
-    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
 
 include 'annotation-processor'
