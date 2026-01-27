@@ -1,3 +1,9 @@
+# 0.4.0-alpha.1
+
+## Details
+- **Released:** In Development
+- **Supported Versions:** None
+
 # 0.3.2-alpha.2
 
 Adds `selector` support in text
