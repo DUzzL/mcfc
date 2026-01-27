@@ -44,7 +44,7 @@ tasks.withType(JavaCompile).configureEach {
 
 java {
     base.archivesName = project.archives_base_name
-    // broken
+    // broken: https://github.com/eclipse-jdt/eclipse.jdt.core/issues/4789
 //    withSourcesJar()
 //    tasks.named("sourcesJar") {
 //        from project(':common').sourceSets.main.java
