@@ -5,6 +5,7 @@ import dev.epicpix.minecraftfunctioncompiler.reporter.MinecraftEnvironment;
 import net.minecraft.DetectedVersion;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.main.GameConfig;
+import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -17,7 +18,7 @@ public class MinecraftMixin {
 
     @Shadow @Final private String versionType;
 
-    @Inject(method = "<init>", at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;versionType:Ljava/lang/String;", shift = At.Shift.AFTER))
+    @Inject(method = "<init>", at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;versionType:Ljava/lang/String;", shift = At.Shift.AFTER, opcode = Opcodes.PUTFIELD))
     public void init(GameConfig gameConfig, CallbackInfo ci) {
         FunctionCompilerReporter.setMinecraftVersion(DetectedVersion.BUILT_IN.getName(), versionType, MinecraftEnvironment.CLIENT);
     }
