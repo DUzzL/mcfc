@@ -1,5 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.il;
 
+import org.jetbrains.annotations.NotNull;
+
 public record InstructionType(String name, String[] argumentNames, int flags, int id) {
 
     private static int NEXT_ID;
@@ -28,6 +30,7 @@ public record InstructionType(String name, String[] argumentNames, int flags, in
     public static final int CONDITIONAL_JUMP = 1 << 0;
     public static final int PURE = 1 << 1;
 
+    @NotNull
     public String toString() {
         return name;
     }

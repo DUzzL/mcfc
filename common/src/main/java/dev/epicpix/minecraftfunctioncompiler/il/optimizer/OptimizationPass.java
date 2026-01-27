@@ -125,8 +125,8 @@ public final class OptimizationPass {
 
             if(instruction.type().isConditionJump() || instruction.type() == InstructionTypes.JUMP) {
                 for(var value : instruction.data()) {
-                    if(value instanceof LabelData label) {
-                        var loc = labelLocations.get(label.id());
+                    if(value instanceof LabelData(int id)) {
+                        var loc = labelLocations.get(id);
                         set.add(loc);
                         if(backward != null) backward.get(loc).add(i);
                     }

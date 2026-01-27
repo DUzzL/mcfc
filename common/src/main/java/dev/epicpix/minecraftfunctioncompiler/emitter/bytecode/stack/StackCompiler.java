@@ -10,25 +10,17 @@ import java.util.*;
 public class StackCompiler {
 
     private static Type getValueType(BytecodeValue value, Int2ObjectMap<Type> registerTypeMap) {
-        if(value instanceof BytecodeValue.NullValue) {
-            return Type.getType(Object.class);
-        }else if(value instanceof BytecodeValue.IntegerValue) {
-            return Type.INT_TYPE;
-        }else if(value instanceof BytecodeValue.LongValue) {
-            return Type.LONG_TYPE;
-        }else if(value instanceof BytecodeValue.FloatValue) {
-            return Type.FLOAT_TYPE;
-        }else if(value instanceof BytecodeValue.DoubleValue) {
-            return Type.DOUBLE_TYPE;
-        }else if(value instanceof BytecodeValue.StringValue) {
-            return Type.getType(String.class);
-        }else if(value instanceof BytecodeValue.Parameter parameter) {
-            return parameter.type();
-        }else if(value instanceof BytecodeRegister register) {
-            return registerTypeMap.get(register.reg());
-        }else {
-            throw new IllegalArgumentException("Unknown value: " + value);
-        }
+        return switch(value) {
+            case BytecodeValue.NullValue _ -> Type.getType(Object.class);
+            case BytecodeValue.IntegerValue _ -> Type.INT_TYPE;
+            case BytecodeValue.LongValue _ -> Type.LONG_TYPE;
+            case BytecodeValue.FloatValue _ -> Type.FLOAT_TYPE;
+            case BytecodeValue.DoubleValue _ -> Type.DOUBLE_TYPE;
+            case BytecodeValue.StringValue _ -> Type.getType(String.class);
+            case BytecodeValue.Parameter parameter -> parameter.type();
+            case BytecodeRegister(int reg) -> registerTypeMap.get(reg);
+            case null -> throw new IllegalArgumentException("Unknown value: " + value);
+        };
     }
 
     private static StackInstruction loadValue(BytecodeValue value, Int2ObjectMap<Type> registerTypeMap) {
@@ -44,122 +36,121 @@ public class StackCompiler {
         ArrayList<StackInstruction> results = new ArrayList<>();
         var registerTypeMap = new Int2ObjectOpenHashMap<Type>();
         for(var instr : instructions) {
-            if(instr instanceof BytecodeInstruction.RegisterValue v) {
-                if(v.type() == InstructionRVType.SET) {
-                    var sourceType = getValueType(v.source(), registerTypeMap);
-                    results.add(new StackInstruction.Load(v.source(), sourceType));
-                    results.add(storeValue(v.result(), sourceType, registerTypeMap));
+            if(instr instanceof BytecodeInstruction.RegisterValue(InstructionRVType type, BytecodeRegister result, BytecodeValue source)) {
+                if(type == InstructionRVType.SET) {
+                    var sourceType = getValueType(source, registerTypeMap);
+                    results.add(new StackInstruction.Load(source, sourceType));
+                    results.add(storeValue(result, sourceType, registerTypeMap));
                 }else {
-                    throw new IllegalArgumentException("Unknown instruction RegisterValue type: " + v.type());
+                    throw new IllegalArgumentException("Unknown instruction RegisterValue type: " + type);
                 }
-            }else if(instr instanceof BytecodeInstruction.RegisterValueValue v) {
-                var sourceType = getValueType(v.sourceA(), registerTypeMap);
-                results.add(new StackInstruction.Load(v.sourceA(), sourceType));
-                results.add(new StackInstruction.Load(v.sourceB(), sourceType));
-                if(v.type() == InstructionRVVType.ADD) {
+            }else if(instr instanceof BytecodeInstruction.RegisterValueValue(InstructionRVVType type, BytecodeRegister result, BytecodeValue sourceA, BytecodeValue sourceB)) {
+                var sourceType = getValueType(sourceA, registerTypeMap);
+                results.add(new StackInstruction.Load(sourceA, sourceType));
+                results.add(new StackInstruction.Load(sourceB, sourceType));
+                if(type == InstructionRVVType.ADD) {
                     results.add(new StackInstruction.Evaluate(StackEvaluationType.ADD));
-                }else if(v.type() == InstructionRVVType.SUB) {
+                }else if(type == InstructionRVVType.SUB) {
                     results.add(new StackInstruction.Evaluate(StackEvaluationType.SUB));
-                }else if(v.type() == InstructionRVVType.MUL) {
+                }else if(type == InstructionRVVType.MUL) {
                     results.add(new StackInstruction.Evaluate(StackEvaluationType.MUL));
-                }else if(v.type() == InstructionRVVType.DIV) {
+                }else if(type == InstructionRVVType.DIV) {
                     results.add(new StackInstruction.Evaluate(StackEvaluationType.DIV));
-                }else if(v.type() == InstructionRVVType.MOD) {
+                }else if(type == InstructionRVVType.MOD) {
                     results.add(new StackInstruction.Evaluate(StackEvaluationType.MOD));
-                }else if(v.type() == InstructionRVVType.SHL) {
+                }else if(type == InstructionRVVType.SHL) {
                     results.add(new StackInstruction.Evaluate(StackEvaluationType.SHL));
-                }else if(v.type() == InstructionRVVType.SHR) {
+                }else if(type == InstructionRVVType.SHR) {
                     results.add(new StackInstruction.Evaluate(StackEvaluationType.SHR));
                 }else {
-                    throw new IllegalArgumentException("Unknown instruction RegisterValueValue type: " + v.type());
+                    throw new IllegalArgumentException("Unknown instruction RegisterValueValue type: " + type);
                 }
-                results.add(storeValue(v.result(), sourceType, registerTypeMap));
-            }else if(instr instanceof BytecodeInstruction.CreateArray v) {
-                results.add(loadValue(v.length(), registerTypeMap));
-                results.add(new StackInstruction.NewArray(v.contentType()));
-                results.add(storeValue(v.result(), Type.getType("[" + v.contentType().getDescriptor()), registerTypeMap));
-            }else if(instr instanceof BytecodeInstruction.SetArrayValue v) {
-                results.add(loadValue(v.array(), registerTypeMap));
-                results.add(loadValue(v.index(), registerTypeMap));
-                results.add(loadValue(v.value(), registerTypeMap));
+                results.add(storeValue(result, sourceType, registerTypeMap));
+            }else if(instr instanceof BytecodeInstruction.CreateArray(BytecodeRegister result, BytecodeValue length, Type contentType)) {
+                results.add(loadValue(length, registerTypeMap));
+                results.add(new StackInstruction.NewArray(contentType));
+                results.add(storeValue(result, Type.getType("[" + contentType.getDescriptor()), registerTypeMap));
+            }else if(instr instanceof BytecodeInstruction.SetArrayValue(BytecodeValue array, BytecodeValue index, BytecodeValue value1)) {
+                results.add(loadValue(array, registerTypeMap));
+                results.add(loadValue(index, registerTypeMap));
+                results.add(loadValue(value1, registerTypeMap));
                 results.add(new StackInstruction.ArrayStore());
-            }else if(instr instanceof BytecodeInstruction.InstanceCheckJump v) {
-                results.add(loadValue(v.a(), registerTypeMap));
-                results.add(new StackInstruction.JumpTyped(v.ifIsInstance() ? StackJumpType.IF_INSTANCEOF : StackJumpType.IF_NOT_INSTANCEOF, v.type(), v.label()));
-            }else if(instr instanceof BytecodeInstruction.ConditionalJump v) {
-                results.add(loadValue(v.a(), registerTypeMap));
-                var other = v.b();
-                if((other instanceof BytecodeValue.IntegerValue vbi && vbi.value() == 0) || (other instanceof BytecodeValue.LongValue vbl && vbl.value() == 0) || (other instanceof BytecodeValue.FloatValue vbf && vbf.value() == 0) || (other instanceof BytecodeValue.DoubleValue vbd && vbd.value() == 0)) {
-                    results.add(new StackInstruction.Jump(switch(v.condition()) {
+            }else if(instr instanceof BytecodeInstruction.InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, Type type, BytecodeLabel label)) {
+                results.add(loadValue(a, registerTypeMap));
+                results.add(new StackInstruction.JumpTyped(ifIsInstance ? StackJumpType.IF_INSTANCEOF : StackJumpType.IF_NOT_INSTANCEOF, type, label));
+            }else if(instr instanceof BytecodeInstruction.ConditionalJump(JumpCondition condition, BytecodeValue a, BytecodeValue other, BytecodeLabel label)) {
+                results.add(loadValue(a, registerTypeMap));
+                if((other instanceof BytecodeValue.IntegerValue(int value) && value == 0) || (other instanceof BytecodeValue.LongValue(long value) && value == 0) || (other instanceof BytecodeValue.FloatValue(float value) && value == 0) || (other instanceof BytecodeValue.DoubleValue(double value) && value == 0)) {
+                    results.add(new StackInstruction.Jump(switch(condition) {
                         case EQ -> StackJumpType.IF_EQUAL_ZERO;
                         case NE -> StackJumpType.IF_NOT_EQUAL_ZERO;
                         case LT -> StackJumpType.IF_LESS_THAN_ZERO;
                         case LE -> StackJumpType.IF_LESS_EQUAL_ZERO;
                         case GT -> StackJumpType.IF_GREATER_THAN_ZERO;
                         case GE -> StackJumpType.IF_GREATER_EQUAL_ZERO;
-                    }, v.label()));
+                    }, label));
                     continue;
                 }
                 if(other instanceof BytecodeValue.NullValue) {
-                    results.add(new StackInstruction.Jump(switch(v.condition()) {
+                    results.add(new StackInstruction.Jump(switch(condition) {
                         case EQ -> StackJumpType.IF_NULL;
                         case NE -> StackJumpType.IF_NOT_NULL;
-                        default -> throw new IllegalArgumentException("Invalid condition for comparison with null: " + v.condition());
-                    }, v.label()));
+                        default -> throw new IllegalArgumentException("Invalid condition for comparison with null: " + condition);
+                    }, label));
                     continue;
                 }
                 results.add(loadValue(other, registerTypeMap));
-                results.add(new StackInstruction.Jump(switch(v.condition()) {
+                results.add(new StackInstruction.Jump(switch(condition) {
                     case EQ -> StackJumpType.IF_EQUAL;
                     case NE -> StackJumpType.IF_NOT_EQUAL;
                     case LT -> StackJumpType.IF_LESS_THAN;
                     case LE -> StackJumpType.IF_LESS_EQUAL;
                     case GT -> StackJumpType.IF_GREATER_THAN;
                     case GE -> StackJumpType.IF_GREATER_EQUAL;
-                }, v.label()));
-            }else if(instr instanceof BytecodeInstruction.Jump v) {
-                results.add(new StackInstruction.Jump(StackJumpType.GOTO, v.label()));
-            }else if(instr instanceof BytecodeInstruction.Label v) {
-                results.add(new StackInstruction.Label(v.label()));
-            }else if(instr instanceof BytecodeInstruction.CallTarget v) {
-                if(v.target() instanceof InstructionTarget.FunctionTarget f) {
-                    for(var arg : v.arguments()) {
+                }, label));
+            }else if(instr instanceof BytecodeInstruction.Jump(BytecodeLabel label)) {
+                results.add(new StackInstruction.Jump(StackJumpType.GOTO, label));
+            }else if(instr instanceof BytecodeInstruction.Label(BytecodeLabel label)) {
+                results.add(new StackInstruction.Label(label));
+            }else if(instr instanceof BytecodeInstruction.CallTarget(BytecodeRegister result, InstructionTarget target, List<BytecodeValue> arguments)) {
+                if(target instanceof InstructionTarget.FunctionTarget f) {
+                    for(var arg : arguments) {
                         results.add(loadValue(arg, registerTypeMap));
                     }
                     results.add(new StackInstruction.Call(f));
                     var returnType = Type.getReturnType(f.descriptor());
                     if(returnType != Type.VOID_TYPE) {
-                        results.add(storeValue(v.result(), returnType, registerTypeMap));
+                        results.add(storeValue(result, returnType, registerTypeMap));
                     }
-                }else if(v.target() instanceof InstructionTarget.FieldTarget f) {
-                    for(var arg : v.arguments()) {
+                }else if(target instanceof InstructionTarget.FieldTarget f) {
+                    for(var arg : arguments) {
                         results.add(loadValue(arg, registerTypeMap));
                     }
                     results.add(new StackInstruction.Call(f));
                     if(!f.isWrite()) {
-                        results.add(storeValue(v.result(), Type.getType(f.descriptor()), registerTypeMap));
+                        results.add(storeValue(result, Type.getType(f.descriptor()), registerTypeMap));
                     }
                 }
-            }else if(instr instanceof BytecodeInstruction.New v) {
-                var f = (InstructionTarget.FunctionTarget) v.target();
+            }else if(instr instanceof BytecodeInstruction.New(BytecodeRegister result, InstructionTarget target, List<BytecodeValue> arguments)) {
+                var f = (InstructionTarget.FunctionTarget) target;
                 results.add(new StackInstruction.New(Type.getType("L" + f.className() + ";")));
-                results.add(storeValue(v.result(), Type.getType("L" + f.className() + ";"), registerTypeMap));
-                results.add(loadValue(v.result(), registerTypeMap));
-                for(var arg : v.arguments()) {
+                results.add(storeValue(result, Type.getType("L" + f.className() + ";"), registerTypeMap));
+                results.add(loadValue(result, registerTypeMap));
+                for(var arg : arguments) {
                     results.add(loadValue(arg, registerTypeMap));
                 }
                 results.add(new StackInstruction.Call(f));
-            }else if(instr instanceof BytecodeInstruction.Cast v) {
-                results.add(loadValue(v.source(), registerTypeMap));
-                results.add(new StackInstruction.Cast(v.type()));
-                results.add(storeValue(v.result(), v.type(), registerTypeMap));
-            }else if(instr instanceof BytecodeInstruction.StringConcat v) {
+            }else if(instr instanceof BytecodeInstruction.Cast(BytecodeRegister result, BytecodeValue source, Type type)) {
+                results.add(loadValue(source, registerTypeMap));
+                results.add(new StackInstruction.Cast(type));
+                results.add(storeValue(result, type, registerTypeMap));
+            }else if(instr instanceof BytecodeInstruction.StringConcat(BytecodeRegister result, List<BytecodeValue> values)) {
                 ArrayList<String> staticStrings = new ArrayList<>();
                 boolean isConstant = true;
                 boolean onlyStrings = true;
-                for(var value : v.values()) {
-                    if(value instanceof BytecodeValue.StringValue sv) {
-                        staticStrings.add(sv.value());
+                for(var value : values) {
+                    if(value instanceof BytecodeValue.StringValue(String staticString)) {
+                        staticStrings.add(staticString);
                     }else {
                         isConstant = false;
                         staticStrings.add(null);
@@ -175,9 +166,9 @@ public class StackCompiler {
                 }else {
                     results.add(new StackInstruction.Load(new BytecodeValue.StringValue(String.join("", staticStrings)), Type.getType(String.class)));
                 }
-                results.add(storeValue(v.result(), Type.getType(String.class), registerTypeMap));
-            }else if(instr instanceof BytecodeInstruction.Return v) {
-                results.add(loadValue(v.value(), registerTypeMap));
+                results.add(storeValue(result, Type.getType(String.class), registerTypeMap));
+            }else if(instr instanceof BytecodeInstruction.Return(BytecodeValue value)) {
+                results.add(loadValue(value, registerTypeMap));
                 results.add(new StackInstruction.ReturnValue());
             }else if(instr instanceof BytecodeInstruction.ReturnVoid) {
                 results.add(new StackInstruction.Return());
@@ -188,11 +179,11 @@ public class StackCompiler {
         var registerStoreCount = new Int2IntOpenHashMap();
         var registerLoadCount = new Int2IntOpenHashMap();
         for(var instr : results) {
-            if(instr instanceof StackInstruction.Load load && load.value() instanceof BytecodeRegister register) {
-                registerLoadCount.put(register.reg(), registerLoadCount.getOrDefault(register.reg(), 0) + 1);
+            if(instr instanceof StackInstruction.Load load && load.value() instanceof BytecodeRegister(int reg)) {
+                registerLoadCount.put(reg, registerLoadCount.getOrDefault(reg, 0) + 1);
             }
-            if(instr instanceof StackInstruction.Store store) {
-                registerStoreCount.put(store.register().reg(), registerStoreCount.getOrDefault(store.register().reg(), 0) + 1);
+            if(instr instanceof StackInstruction.Store(BytecodeRegister register)) {
+                registerStoreCount.put(register.reg(), registerStoreCount.getOrDefault(register.reg(), 0) + 1);
             }
         }
 
@@ -201,8 +192,8 @@ public class StackCompiler {
         var singleStoreRegs = new Int2IntOpenHashMap();
         for(int i = 0; i<results.size(); i++) {
             var instr = results.get(i);
-            if(instr instanceof StackInstruction.Label label) {
-                labelLocations.put(label.label().id(), i);
+            if(instr instanceof StackInstruction.Label(BytecodeLabel label)) {
+                labelLocations.put(label.id(), i);
             }else if(instr instanceof StackInstruction.Jump jump) {
                 inlineBreaks.add(i);
                 inlineBreaks.add(labelLocations.get(jump.label().id()));
@@ -211,9 +202,9 @@ public class StackCompiler {
                 inlineBreaks.add(labelLocations.get(jump.label().id()));
             }else if(instr instanceof StackInstruction.Return || instr instanceof StackInstruction.ReturnValue) {
                 inlineBreaks.add(i);
-            }else if(instr instanceof StackInstruction.Store store) {
-                if(registerStoreCount.get(store.register().reg()) == 1) {
-                    singleStoreRegs.put(store.register().reg(), i);
+            }else if(instr instanceof StackInstruction.Store(BytecodeRegister register)) {
+                if(registerStoreCount.get(register.reg()) == 1) {
+                    singleStoreRegs.put(register.reg(), i);
                 }
             }
         }
@@ -234,17 +225,17 @@ public class StackCompiler {
         ArrayList<StackInstruction> tempInstructions = new ArrayList<>();
 
         for(StackInstruction instr : results) {
-            if(instr instanceof StackInstruction.Store store) {
-                var dep = dependencyData.get(store.register().reg());
-                if(dep != null && registerLoadCount.getOrDefault(store.register().reg(), 0) == 1) {
+            if(instr instanceof StackInstruction.Store(BytecodeRegister register)) {
+                var dep = dependencyData.get(register.reg());
+                if(dep != null && registerLoadCount.getOrDefault(register.reg(), 0) == 1) {
                     for(int i = 0; i < dep.size(); i++) {
-                        tempInstructions.remove(tempInstructions.size() - 1);
+                        tempInstructions.removeLast();
                     }
                     ArrayList<StackInstruction> instrs = new ArrayList<>();
                     for(var d : dep) {
                         instrs.add(results.get(d));
                     }
-                    tempInstructions.add(new InlineEvalStore(store.register(), instrs));
+                    tempInstructions.add(new InlineEvalStore(register, instrs));
                     continue;
                 }
             }
@@ -298,17 +289,17 @@ public class StackCompiler {
 
         ArrayList<StackInstruction> output = new ArrayList<>();
         for(var temp : tempInstructions) {
-            if(temp instanceof InlineEvalStore i) {
-                output.addAll(i.instructions);
-                if(registerLoadCount.getOrDefault(i.reg.reg(), 0) != 0) {
-                    output.add(new StackInstruction.Store(i.reg));
+            if(temp instanceof InlineEvalStore(BytecodeRegister reg, ArrayList<StackInstruction> instructions1)) {
+                output.addAll(instructions1);
+                if(registerLoadCount.getOrDefault(reg.reg(), 0) != 0) {
+                    output.add(new StackInstruction.Store(reg));
                 }else {
                     output.add(new StackInstruction.Pop());
                 }
                 continue;
-            }else if(temp instanceof StackInstruction.Store store) {
-                if(registerLoadCount.getOrDefault(store.register().reg(), 0) != 0) {
-                    output.add(new StackInstruction.Store(store.register()));
+            }else if(temp instanceof StackInstruction.Store(BytecodeRegister register)) {
+                if(registerLoadCount.getOrDefault(register.reg(), 0) != 0) {
+                    output.add(new StackInstruction.Store(register));
                 }else {
                     output.add(new StackInstruction.Pop());
                 }
@@ -327,11 +318,11 @@ public class StackCompiler {
             if(i instanceof StackInstruction.Load load) {
                 if(load.value() instanceof BytecodeValue.Parameter param) {
                     params.add(param);
-                }else if(load.value() instanceof BytecodeRegister register) {
-                    usedRegisters.add(register.reg());
+                }else if(load.value() instanceof BytecodeRegister(int reg)) {
+                    usedRegisters.add(reg);
                 }
-            }else if(i instanceof StackInstruction.Store store) {
-                usedRegisters.add(store.register().reg());
+            }else if(i instanceof StackInstruction.Store(BytecodeRegister register)) {
+                usedRegisters.add(register.reg());
             }
         }
         var baseReg = params.stream().max(Comparator.comparingInt(BytecodeValue.Parameter::index)).map(BytecodeValue.Parameter::index).orElse(-1) + 1;
@@ -351,10 +342,10 @@ public class StackCompiler {
         ArrayList<StackInstruction> output = new ArrayList<>(instrs);
         for(int i = 0; i<instrs.size(); i++) {
             var instr = instrs.get(i);
-            if(instr instanceof StackInstruction.Load load && load.value() instanceof BytecodeRegister register) {
-                output.set(i, new StackInstruction.Load(new BytecodeRegister(mappedRegisters.get(register.reg())), load.type()));
-            }else if(instr instanceof StackInstruction.Store store) {
-                output.set(i, new StackInstruction.Store(new BytecodeRegister(mappedRegisters.get(store.register().reg()))));
+            if(instr instanceof StackInstruction.Load(BytecodeValue value, Type type) && value instanceof BytecodeRegister(int reg)) {
+                output.set(i, new StackInstruction.Load(new BytecodeRegister(mappedRegisters.get(reg)), type));
+            }else if(instr instanceof StackInstruction.Store(BytecodeRegister register)) {
+                output.set(i, new StackInstruction.Store(new BytecodeRegister(mappedRegisters.get(register.reg()))));
             }
         }
         return output;
@@ -363,16 +354,16 @@ public class StackCompiler {
     private static boolean isValidInline(List<StackInstruction> instructionsBetween, InlineEvalStore store) {
         var uses = new IntOpenHashSet();
         for(var i : store.instructions) {
-            if(i instanceof StackInstruction.Load load && load.value() instanceof BytecodeRegister register) {
-                uses.add(register.reg());
-            }else if(i instanceof StackInstruction.Call call && call.target() instanceof InstructionTarget.FunctionTarget target && target.noReordering()) {
+            if(i instanceof StackInstruction.Load load && load.value() instanceof BytecodeRegister(int reg)) {
+                uses.add(reg);
+            }else if(i instanceof StackInstruction.Call(InstructionTarget target) && target instanceof InstructionTarget.FunctionTarget functionTarget && functionTarget.noReordering()) {
                 return false;
             }
         }
         for(var i : instructionsBetween) {
-            if(i instanceof StackInstruction.Store s && uses.contains(s.register().reg())) {
+            if(i instanceof StackInstruction.Store(BytecodeRegister register) && uses.contains(register.reg())) {
                 return false;
-            }else if(i instanceof StackInstruction.Load l && l.value() instanceof BytecodeRegister reg && uses.contains(reg.reg())) {
+            }else if(i instanceof StackInstruction.Load l && l.value() instanceof BytecodeRegister(int reg) && uses.contains(reg)) {
                 return false;
             }else if(i instanceof StackInstruction.Label || i instanceof StackInstruction.Jump || i instanceof StackInstruction.JumpTyped || i instanceof StackInstruction.Return || i instanceof StackInstruction.ReturnValue) {
                 return false;
@@ -397,13 +388,13 @@ public class StackCompiler {
                 var instr = instructions.get(index);
                 if(instr instanceof StackInstruction.Load) {
                     stackDepth++;
-                }else if(instr instanceof StackInstruction.Call c) {
-                    if(c.target() instanceof InstructionTarget.FunctionTarget f) {
+                }else if(instr instanceof StackInstruction.Call(InstructionTarget target)) {
+                    if(target instanceof InstructionTarget.FunctionTarget f) {
                         var fdesc = Type.getType(f.descriptor());
                         int consumed = fdesc.getArgumentTypes().length + (f.isStatic() ? 0 : 1);
                         int returned = fdesc.getReturnType() == Type.VOID_TYPE ? 0 : 1;
                         stackDepth += returned - consumed;
-                    }else if(c.target() instanceof InstructionTarget.FieldTarget f) {
+                    }else if(target instanceof InstructionTarget.FieldTarget f) {
                         if(!f.isStatic()) stackDepth--;
                         stackDepth += f.isWrite() ? -1 : 1;
                     }else {
@@ -413,8 +404,8 @@ public class StackCompiler {
                     stackDepth++;
                 }else if(instr instanceof StackInstruction.Pop) {
                     stackDepth--;
-                }else if(instr instanceof StackInstruction.Evaluate e) {
-                    if(e.evaluationType() == StackEvaluationType.ADD || e.evaluationType() == StackEvaluationType.SUB || e.evaluationType() == StackEvaluationType.MUL || e.evaluationType() == StackEvaluationType.DIV || e.evaluationType() == StackEvaluationType.MOD || e.evaluationType() == StackEvaluationType.SHL || e.evaluationType() == StackEvaluationType.SHR) {
+                }else if(instr instanceof StackInstruction.Evaluate(StackEvaluationType evaluationType)) {
+                    if(evaluationType == StackEvaluationType.ADD || evaluationType == StackEvaluationType.SUB || evaluationType == StackEvaluationType.MUL || evaluationType == StackEvaluationType.DIV || evaluationType == StackEvaluationType.MOD || evaluationType == StackEvaluationType.SHL || evaluationType == StackEvaluationType.SHR) {
                         stackDepth--;
                     }else {
                         return false;

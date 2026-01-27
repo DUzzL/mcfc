@@ -2,7 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.emitter.bytecode;
 
 import org.objectweb.asm.Type;
 
-public interface BytecodeValue {
+public sealed interface BytecodeValue permits BytecodeRegister, BytecodeValue.DoubleValue, BytecodeValue.FloatValue, BytecodeValue.IntegerValue, BytecodeValue.LongValue, BytecodeValue.NullValue, BytecodeValue.Parameter, BytecodeValue.StringValue {
     int cost();
 
     record IntegerValue(int value) implements BytecodeValue {

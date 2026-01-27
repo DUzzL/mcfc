@@ -5,7 +5,7 @@ import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 
-import java.net.URL;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -37,7 +37,7 @@ public final class FunctionCompilerReporter {
     }
 
     private static final UUID runUuid = UUID.randomUUID();
-    private static final String REPORT_URL = "https://mcfc.mods.epicpix.dev/api/v1/send_reports";
+    private static final URI REPORT_URI = URI.create("https://mcfc.mods.epicpix.dev/api/v1/send_reports");
     private static final HttpClient httpClient = HttpClient.newHttpClient();
 
     private static String minecraftVersionName = null;
@@ -191,7 +191,7 @@ public final class FunctionCompilerReporter {
             try {
                 var response = httpClient.send(
                         HttpRequest.newBuilder()
-                                .uri(new URL(REPORT_URL).toURI())
+                                .uri(REPORT_URI)
                                 .POST(HttpRequest.BodyPublishers.ofString(new Gson().toJson(sendData)))
                                 .setHeader("Content-Type", "application/json")
                                 .build(),

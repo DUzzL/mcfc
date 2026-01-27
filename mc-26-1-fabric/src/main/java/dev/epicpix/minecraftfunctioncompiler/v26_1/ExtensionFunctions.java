@@ -251,7 +251,7 @@ public class ExtensionFunctions {
         if(entities.isEmpty()) {
             return Component.empty();
         }else if (entities.size() == 1) {
-            return entities.get(0).getDisplayName().copy();
+            return entities.getFirst().getDisplayName().copy();
         }else {
             MutableComponent result = Component.empty();
             boolean first = false;

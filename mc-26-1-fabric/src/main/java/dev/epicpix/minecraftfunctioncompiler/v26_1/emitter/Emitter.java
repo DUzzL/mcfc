@@ -47,13 +47,13 @@ public final class Emitter {
                             callThreadLocal_set(codeWriter, mctxtl, new BytecodeValue.NullValue());
                             var functionManager = context.fieldStorage().loadServerFunctionManager(codeWriter);
                             var function = context.fieldStorage().loadFunction(codeWriter, func);
-                            if(context.shouldIncludeProfilerSupport()) codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "enterOverhead", void.class, String.class), new BytecodeValue.StringValue(func.toString()));
+                            codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "enterOverhead", void.class, String.class), new BytecodeValue.StringValue(func.toString()));
                             if(context.instruction().get("arguments") != null) {
                                 callExtensionFunctions_executeFunction(codeWriter, functionManager, function, commandSourceStack, codeWriter.castType(context.load("arguments"), Type.getType(CompoundTag.class)));
                             }else {
                                 callServerFunctionManager_execute(codeWriter, functionManager, function, commandSourceStack);
                             }
-                            if(context.shouldIncludeProfilerSupport()) codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "exit", void.class));
+                            codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "exit", void.class));
                             callThreadLocal_set(codeWriter, mctxtl, mctx);
                         }
                     }
@@ -84,13 +84,13 @@ public final class Emitter {
                             commandSourceStack = callCommandSourceStack_withCallback(codeWriter, commandSourceStack, store);
                             var functionManager = context.fieldStorage().loadServerFunctionManager(codeWriter);
                             var function = context.fieldStorage().loadFunction(codeWriter, func);
-                            if(context.shouldIncludeProfilerSupport()) codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "enterOverhead", void.class, String.class), new BytecodeValue.StringValue(func.toString()));
+                            codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "enterOverhead", void.class, String.class), new BytecodeValue.StringValue(func.toString()));
                             if(context.instruction().get("arguments") != null) {
                                 callExtensionFunctions_executeFunction(codeWriter, functionManager, function, commandSourceStack, codeWriter.castType(context.load("arguments"), Type.getType(CompoundTag.class)));
                             }else {
                                 callServerFunctionManager_execute(codeWriter, functionManager, function, commandSourceStack);
                             }
-                            if(context.shouldIncludeProfilerSupport()) codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "exit", void.class));
+                            codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "exit", void.class));
                             callThreadLocal_set(codeWriter, mctxtl, mctx);
                             returnValue = codeWriter.writeTarget(RUN_RESULT_FIELD_READ_TARGET);
                         }

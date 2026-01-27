@@ -8,7 +8,7 @@ plugins {
 ext {
     minecraft_version = "26.1-snapshot-5"
     loader_version = "0.18.3"
-    java_version = 21
+    java_version = 25
 }
 
 apply from: "../common-fabric.gradle"

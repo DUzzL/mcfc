@@ -32,7 +32,7 @@ public final class Optimizations {
             for(int o = 0; o<instrCount; o++) {
                 if(o == pass.thisInstructionIndex()) continue;
                 var instr = pass.getInstruction(o);
-                Object[] replacedInstructionData = instr.optReplaceDataIf(value -> value instanceof LabelData label && label.id() == thisLabel.id(), newLabel);
+                Object[] replacedInstructionData = instr.optReplaceDataIf(value -> value instanceof LabelData(int id) && id == thisLabel.id(), newLabel);
                 if(replacedInstructionData != null) {
                     pass.modifyInstructionData(o, replacedInstructionData);
                 }

@@ -6,7 +6,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 import org.objectweb.asm.Type;
 
-public interface StackInstruction {
+public sealed interface StackInstruction permits StackCompiler.InlineEvalStore, StackInstruction.ArrayStore, StackInstruction.Call, StackInstruction.Cast, StackInstruction.Evaluate, StackInstruction.EvaluateString, StackInstruction.Jump, StackInstruction.JumpTyped, StackInstruction.Label, StackInstruction.Load, StackInstruction.New, StackInstruction.NewArray, StackInstruction.Pop, StackInstruction.Return, StackInstruction.ReturnValue, StackInstruction.Store {
 
     record Load(BytecodeValue value, Type type) implements StackInstruction {}
     record Store(BytecodeRegister register) implements StackInstruction {}

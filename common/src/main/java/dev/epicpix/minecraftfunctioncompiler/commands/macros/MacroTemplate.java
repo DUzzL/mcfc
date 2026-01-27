@@ -24,14 +24,14 @@ public record MacroTemplate<T>(List<MacroPart> parts, MacroType<T> macroType) {
                 var part = parts.get(0);
                 if(part instanceof MacroKind macro) {
                     return context.getMacro(macro.source);
-                }else if(part instanceof MacroTemplate.LiteralKind<?> literal) {
+                }else if(part instanceof LiteralKind<?>(Object literal)) {
                     var staticContent = context.codeWriter().createRegister();
                     if(macroType == MacroType.INT_MACRO_TYPE) {
-                        context.codeWriter().setValue(staticContent, new BytecodeValue.IntegerValue((int) literal.literal));
+                        context.codeWriter().setValue(staticContent, new BytecodeValue.IntegerValue((int) literal));
                     }else if(macroType == MacroType.FLOAT_MACRO_TYPE) {
-                        context.codeWriter().setValue(staticContent, new BytecodeValue.FloatValue((float) literal.literal));
+                        context.codeWriter().setValue(staticContent, new BytecodeValue.FloatValue((float) literal));
                     }else if(macroType == MacroType.DOUBLE_MACRO_TYPE) {
-                        context.codeWriter().setValue(staticContent, new BytecodeValue.DoubleValue((double) literal.literal));
+                        context.codeWriter().setValue(staticContent, new BytecodeValue.DoubleValue((double) literal));
                     }
                     return staticContent;
                 }
@@ -41,15 +41,15 @@ public record MacroTemplate<T>(List<MacroPart> parts, MacroType<T> macroType) {
         for(var part : parts) {
             if(part instanceof MacroKind macro) {
                 concatArgs.add(context.getMacro(macro.source));
-            }else if(part instanceof LiteralKind<?> literal) {
+            }else if(part instanceof LiteralKind<?>(Object literal)) {
                 if(macroType == MacroType.STRING_MACRO_TYPE) {
-                    concatArgs.add(new BytecodeValue.StringValue((String) literal.literal));
+                    concatArgs.add(new BytecodeValue.StringValue((String) literal));
                 }else if(macroType == MacroType.INT_MACRO_TYPE) {
-                    concatArgs.add(new BytecodeValue.IntegerValue((int) literal.literal));
+                    concatArgs.add(new BytecodeValue.IntegerValue((int) literal));
                 }else if(macroType == MacroType.FLOAT_MACRO_TYPE) {
-                    concatArgs.add(new BytecodeValue.FloatValue((float) literal.literal));
+                    concatArgs.add(new BytecodeValue.FloatValue((float) literal));
                 }else if(macroType == MacroType.DOUBLE_MACRO_TYPE) {
-                    concatArgs.add(new BytecodeValue.DoubleValue((double) literal.literal));
+                    concatArgs.add(new BytecodeValue.DoubleValue((double) literal));
                 }
             }
         }

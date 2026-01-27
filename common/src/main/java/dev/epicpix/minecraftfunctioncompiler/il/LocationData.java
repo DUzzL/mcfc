@@ -1,5 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.il;
 
+import org.jetbrains.annotations.NotNull;
+
 @SuppressWarnings("unused")
 public record LocationData<T>(
         Integer local,
@@ -38,6 +40,7 @@ public record LocationData<T>(
         return (LocationData<R>) this;
     }
 
+    @NotNull
     public String toString() {
         if(local != null) {
             return "local<" + local + ">";

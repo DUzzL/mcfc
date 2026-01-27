@@ -19,8 +19,6 @@ import java.util.*;
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.*;
 
 public final class EmitterContext {
-    private final boolean includeProfilerSupport;
-
     private final DataLocation location;
     private final CodeFieldStorage fieldStorage;
     private final CodeWriter codeWriter;
@@ -42,8 +40,7 @@ public final class EmitterContext {
         Map<String, BytecodeValue> staticArguments,
         Map<String, BytecodeRegister> macroLocations,
 
-        List<Instruction> instructions,
-        boolean includeProfilerSupport
+        List<Instruction> instructions
     ) {
         this.location = location;
         this.fieldStorage = fieldStorage;
@@ -52,11 +49,6 @@ public final class EmitterContext {
         this.staticArguments = staticArguments;
         this.macroLocations = macroLocations;
         this.instructions = instructions;
-        this.includeProfilerSupport = includeProfilerSupport;
-    }
-
-    public boolean shouldIncludeProfilerSupport() {
-        return includeProfilerSupport;
     }
 
     public void emitForEach() {

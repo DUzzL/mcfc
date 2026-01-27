@@ -46,7 +46,6 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     private final Path generatedDir;
     private final HashMap<DataLocation, List<String>> sourceFiles;
     private final DiagnosticCollector diagnostics = new DiagnosticCollector();
-    private final boolean includeProfilerSupport = true;
 
     private State state = State.NOTHING_LOADED;
     private MethodHandle resultField;
@@ -82,10 +81,6 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
 
     public void resetHandles() {
         handles.clear();
-    }
-
-    public boolean hasProfilerSupportIncluded() {
-        return includeProfilerSupport;
     }
 
     public final boolean isUseReady() {
@@ -380,7 +375,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     }
 
     private Class<?> defineFunction(CompilationParams params, DataLocation funcId, List<Instruction> instructions, Set<DataLocation> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions, int[] totalClassFileSize) {
-        var gen = FunctionCodeGenerator.generateFunctionClass(params, funcId, instructions, compiledFunctions, lowLevelFunctions, includeProfilerSupport);
+        var gen = FunctionCodeGenerator.generateFunctionClass(params, funcId, instructions, compiledFunctions, lowLevelFunctions);
 
         byte[] bytes = gen.finish();
         totalClassFileSize[0] += bytes.length;
