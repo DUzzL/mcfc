@@ -45,7 +45,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
     private final Path generatedDir;
     private final HashMap<DataLocation, List<String>> sourceFiles;
     private final DiagnosticCollector diagnostics = new DiagnosticCollector();
-    private final boolean includeProfilerSupport = Profiler.isProfilerEnabled();
+    private final boolean includeProfilerSupport = true;
 
     private State state = State.NOTHING_LOADED;
     private MethodHandle resultField;

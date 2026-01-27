@@ -1,7 +1,5 @@
 package dev.epicpix.minecraftfunctioncompiler.mixin.v1_21_4;
 
-import dev.epicpix.minecraftfunctioncompiler.profiler.Profiler;
-import dev.epicpix.minecraftfunctioncompiler.v1_21_4.ExecutionContextExtension;
 import net.minecraft.commands.CommandResultCallback;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.ExecutionCommandSource;
@@ -18,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import static dev.epicpix.minecraftfunctioncompiler.v1_21_4.FunctionCompilerMain.functionClassLoader;
 
-@Mixin(CallFunction.class)
+@Mixin(value = CallFunction.class, priority = 990)
 public class CallFunctionMixin<T extends ExecutionCommandSource<T>> {
 
     @Shadow @Final private CommandResultCallback resultCallback;
@@ -38,17 +36,7 @@ public class CallFunctionMixin<T extends ExecutionCommandSource<T>> {
                     frameControl.discard();
                 }
                 ci.cancel();
-                return;
             }
-        }
-        if(Profiler.isProfilerEnabled()) {
-            var ext = (ExecutionContextExtension) executionContext;
-            if(!ext.mcfc$stackDepth().isEmpty() && ext.mcfc$stackDepth().topInt() == frame.depth()) {
-                Profiler.exit();
-            }else {
-                ext.mcfc$stackDepth().push(frame.depth());
-            }
-            Profiler.enterVanilla(function.id().toString());
         }
     }
 

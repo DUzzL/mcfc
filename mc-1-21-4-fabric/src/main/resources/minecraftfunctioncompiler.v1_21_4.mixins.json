@@ -6,7 +6,6 @@
   "mixins": [
     "CallFunctionMixin",
     "CommandsMixin",
-    "ExecutionContextMixin",
     "MinecraftServerMixin",
     "ServerFunctionLibraryMixin",
     "ServerFunctionManagerMixin"
