@@ -11,7 +11,6 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.*;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
-import dev.epicpix.minecraftfunctioncompiler.profiler.Profiler;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import dev.epicpix.minecraftfunctioncompiler.reporter.CodeGenerationMetrics;
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
@@ -35,7 +34,9 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     private static final Logger LOGGER = LoggerFactory.getLogger("minecraftfunctioncompiler");
 
     public interface SourceFileProvider {
-        Map<DataLocation, List<String>> mcfc$getSourceFiles();
+        default Map<DataLocation, List<String>> mcfc$getSourceFiles() {
+            throw new UnsupportedOperationException();
+        }
     }
 
     private final HashMap<TIdentifier, MethodHandle> handles = new HashMap<>();

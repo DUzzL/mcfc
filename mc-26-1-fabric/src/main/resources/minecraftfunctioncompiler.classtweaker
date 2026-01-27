@@ -1,4 +1,7 @@
-accessWidener v2 official
+classTweaker v1 official
+
+inject-interface net/minecraft/server/ServerFunctionLibrary dev/epicpix/minecraftfunctioncompiler/loader/FunctionCompilerClassLoader$SourceFileProvider
+
 accessible field net/minecraft/world/scores/Scoreboard playerScores Ljava/util/Map;
 accessible class net/minecraft/world/scores/PlayerScores
 accessible field net/minecraft/commands/arguments/ScoreHolderArgument$SelectorResult selector Lnet/minecraft/commands/arguments/selector/EntitySelector;

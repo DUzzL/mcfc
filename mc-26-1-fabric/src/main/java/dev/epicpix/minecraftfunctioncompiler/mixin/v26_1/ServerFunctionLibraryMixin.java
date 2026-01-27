@@ -30,6 +30,7 @@ public class ServerFunctionLibraryMixin implements FunctionCompilerClassLoader.S
         }
     }
 
+    @Override
     public Map<DataLocation, List<String>> mcfc$getSourceFiles() {
         return new HashMap<>(sources);
     }

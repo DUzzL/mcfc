@@ -52,7 +52,7 @@ java {
 }
 
 loom {
-    accessWidenerPath = file("src/main/resources/minecraftfunctioncompiler.accesswidener")
+    accessWidenerPath = file("src/main/resources/minecraftfunctioncompiler.classtweaker")
 }
 
 processResources {

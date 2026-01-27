@@ -34,7 +34,7 @@ public class ServerFunctionManagerMixin implements FunctionCompilationStarter {
 
     @Override
     public void mcfc$loadFunctions(boolean autoEnable, Runnable onComplete) {
-        classLoader = new FunctionClassLoader(getClass().getClassLoader(), server, (FunctionCompilerClassLoader.SourceFileProvider) library);
+        classLoader = new FunctionClassLoader(getClass().getClassLoader(), server, library);
         classLoader.loadFunctions((ServerFunctionManager) (Object) this, autoEnable, onComplete);
         FunctionCompilerMain.functionClassLoader = classLoader;
     }
