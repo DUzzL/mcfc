@@ -30,7 +30,7 @@ import java.util.*;
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.*;
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.*;
 
-public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLocation, TCommandSourceStack, TCompoundTag> extends ClassLoader {
+public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier, TCommandSourceStack, TCompoundTag> extends ClassLoader {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("minecraftfunctioncompiler");
 
@@ -38,7 +38,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
         Map<DataLocation, List<String>> mcfc$getSourceFiles();
     }
 
-    private final HashMap<TResourceLocation, MethodHandle> handles = new HashMap<>();
+    private final HashMap<TIdentifier, MethodHandle> handles = new HashMap<>();
 
     public final ClassLoader parent;
     public final TMinecraftServer minecraftServer;
@@ -406,15 +406,15 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TResourceLoc
         return defineClass(name, data, 0, data.length);
     }
 
-    public boolean hasFunctionLoaded(TResourceLocation location) {
+    public boolean hasFunctionLoaded(TIdentifier location) {
         return handles.containsKey(location);
     }
 
-    public void setHandle(TResourceLocation key, MethodHandle handle) {
+    public void setHandle(TIdentifier key, MethodHandle handle) {
         handles.put(key, handle);
     }
 
-    public long runFunction(TResourceLocation location, TCommandSourceStack stack, TCompoundTag compound) {
+    public long runFunction(TIdentifier location, TCommandSourceStack stack, TCompoundTag compound) {
         try {
             return (long) handles.get(location).invoke(stack, compound);
         } catch (Throwable e) {

@@ -82,7 +82,7 @@ public final class CodeFieldStorage {
         return cw.getDataField(CodeFieldStorageMapKind.REGEX_PATTERN.generateName(map, value), map.getValueType(CodeFieldStorageMapKind.REGEX_PATTERN));
     }
 
-    public BytecodeRegister loadResourceLocation(CodeWriter cw, DataLocation value) {
+    public BytecodeRegister loadIdentifier(CodeWriter cw, DataLocation value) {
         map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, value);
         return cw.getDataField(CodeFieldStorageMapKind.RESOURCE_LOCATION.generateName(map, value), map.getValueType(CodeFieldStorageMapKind.RESOURCE_LOCATION));
     }

@@ -237,7 +237,7 @@
 }
 
 ##PURE
-@GET_ENTITY_TAGS(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <java.util.Set<java.lang.String> > = [ctx:entity].getTags();
+@GET_ENTITY_TAGS(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <java.util.Set<java.lang.String> > = [ctx:entity].entityTags();
 
 ##PURE
 @GET_PLAYERS(<net.minecraft.server.players.PlayerList> [static:PlayerList]) -> <java.util.List<net.minecraft.server.level.ServerPlayer> > = [static:PlayerList].getPlayers();
@@ -289,16 +289,18 @@
 ##PURE
 @GET_ENTITY_ALIVE(<net.minecraft.world.entity.Entity> [ctx:entity]) -> int = to_integer([ctx:entity].isAlive());
 
-##PURE
-@GET_ENTITY_NBT(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.nbt.CompoundTag> = [ctx:entity].saveWithoutId(new <net.minecraft.nbt.CompoundTag>());
+// // no longer uses nbt
+// ##PURE
+// @GET_ENTITY_NBT(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.nbt.CompoundTag> = [ctx:entity].saveWithoutId(new <net.minecraft.nbt.CompoundTag>());
 
 ##PURE
-@GET_PLAYER_SELECTED_ITEM(<net.minecraft.server.level.ServerPlayer> [ctx:player]) -> <net.minecraft.world.item.ItemStack> = [ctx:player].getInventory().getSelected();
+@GET_PLAYER_SELECTED_ITEM(<net.minecraft.server.level.ServerPlayer> [ctx:player]) -> <net.minecraft.world.item.ItemStack> = [ctx:player].getInventory().getSelectedItem();
 ##PURE
 @GET_IS_ITEM_EMPTY(<net.minecraft.world.item.ItemStack> [ctx:item]) -> int = to_integer([ctx:item].isEmpty());
 
-##PURE
-@GET_ITEM_NBT(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.world.item.ItemStack> [ctx:item]) -> <net.minecraft.nbt.CompoundTag> = [ctx:item].save([static:MinecraftServer].registryAccess());
+// // method no longer exists
+// ##PURE
+// @GET_ITEM_NBT(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.world.item.ItemStack> [ctx:item]) -> <net.minecraft.nbt.CompoundTag> = [ctx:item].save([static:MinecraftServer].registryAccess());
 
 ##PURE
 @GET_ROTATION_PITCH(<net.minecraft.world.phys.Vec2> [ctx:rotation]) -> float = [ctx:rotation].x;
@@ -354,8 +356,9 @@
 ##PURE
 @GET_PLAYER_ADVANCEMENTS(<net.minecraft.server.level.ServerPlayer> [ctx:player]) -> <net.minecraft.server.PlayerAdvancements> = [ctx:player].getAdvancements();
 
-@GET_ADVANCEMENT_PROGRESS(<net.minecraft.server.PlayerAdvancements> [ctx:player_advancements], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:advancement_name]) -> <net.minecraft.advancements.AdvancementProgress>
-  = [ctx:player_advancements].getOrStartProgress(map_advancement([instr:advancement_name]));
+// // requires advancement holder
+// @GET_ADVANCEMENT_PROGRESS(<net.minecraft.server.PlayerAdvancements> [ctx:player_advancements], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:advancement_name]) -> <net.minecraft.advancements.AdvancementProgress>
+//  = [ctx:player_advancements].getOrStartProgress(map_advancement([instr:advancement_name]));
 
 @JUMP_IF_ADVANCEMENT_NOT_DONE(<net.minecraft.advancements.AdvancementProgress> [ctx:advancement_progress], label [ctx:label]) {
   _jumpIfEqual([ctx:advancement_progress].isDone(), false, [ctx:label]);
@@ -376,22 +379,26 @@
   _jumpIfNotEqual([ctx:criterion_progress].isDone(), false, [ctx:label]);
 }
 
-@AWARD_ADVANCEMENT_CRITERION(<net.minecraft.server.PlayerAdvancements> [ctx:player_advancements], <java.lang.String> [ctx:criterion], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:advancement_name]) {
-  [ctx:player_advancements].award(map_advancement([instr:advancement_name]), [ctx:criterion]);
-}
+// // requires advancement holder
+// @AWARD_ADVANCEMENT_CRITERION(<net.minecraft.server.PlayerAdvancements> [ctx:player_advancements], <java.lang.String> [ctx:criterion], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:advancement_name]) {
+//   [ctx:player_advancements].award(map_advancement([instr:advancement_name]), [ctx:criterion]);
+// }
 
-@REVOKE_ADVANCEMENT_CRITERION(<net.minecraft.server.PlayerAdvancements> [ctx:player_advancements], <java.lang.String> [ctx:criterion], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:advancement_name]) {
-  [ctx:player_advancements].revoke(map_advancement([instr:advancement_name]), [ctx:criterion]);
-}
+// // requires advancement holder
+// @REVOKE_ADVANCEMENT_CRITERION(<net.minecraft.server.PlayerAdvancements> [ctx:player_advancements], <java.lang.String> [ctx:criterion], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:advancement_name]) {
+//   [ctx:player_advancements].revoke(map_advancement([instr:advancement_name]), [ctx:criterion]);
+// }
 
-##PURE
-@GET_ATTRIBUTE_INSTANCE(<net.minecraft.world.entity.LivingEntity> [ctx:entity], <net.minecraft.world.entity.ai.attributes.AttributeInstance> [ctx:attribute], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:attribute_name]) {
-  [ctx:attribute] = [ctx:entity].getAttributes().getInstance(map_attribute([instr:attribute_name]));
-}
+// // requires Holder<Attribute>
+// ##PURE
+// @GET_ATTRIBUTE_INSTANCE(<net.minecraft.world.entity.LivingEntity> [ctx:entity], <net.minecraft.world.entity.ai.attributes.AttributeInstance> [ctx:attribute], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:attribute_name]) {
+//   [ctx:attribute] = [ctx:entity].getAttributes().getInstance(map_attribute([instr:attribute_name]));
+// }
 
-@SET_ATTRIBUTE_BASE(<net.minecraft.world.entity.ai.attributes.AttributeInstance> [ctx:attribute], double [ctx:value]) {
-  [ctx:attribute].setBaseValue([ctx:value]);
-}
+// // requires Holder<Attribute>
+// @SET_ATTRIBUTE_BASE(<net.minecraft.world.entity.ai.attributes.AttributeInstance> [ctx:attribute], double [ctx:value]) {
+//   [ctx:attribute].setBaseValue([ctx:value]);
+// }
 
 @SET_WEATHER_STATIC(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], int [ctx:clear_weather_time], int [ctx:rain_time], boolean [instr:raining], boolean [instr:thundering]) {
   [static:MinecraftServer].overworld().setWeatherParameters([ctx:clear_weather_time], [ctx:rain_time], [instr:raining], [instr:thundering]);
@@ -430,13 +437,15 @@
   [ctx:entity].removeAllEffects();
 }
 
-@CLEAR_EFFECT(<net.minecraft.world.entity.LivingEntity> [ctx:entity], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:effect_name]) {
-  [ctx:entity].removeEffect(map_mob_effect([instr:effect_name]));
-}
+// // requires Holder<MobEffect>
+// @CLEAR_EFFECT(<net.minecraft.world.entity.LivingEntity> [ctx:entity], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:effect_name]) {
+//   [ctx:entity].removeEffect(map_mob_effect([instr:effect_name]));
+// }
 
-@GIVE_EFFECT(<net.minecraft.world.entity.Entity> [ctx:from_entity], <net.minecraft.world.entity.LivingEntity> [ctx:to_entity], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:effect_name], int [ctx:duration], int [ctx:amplifier], boolean [instr:show_particles]) {
-  [ctx:to_entity].addEffect(new <net.minecraft.world.effect.MobEffectInstance>(map_mob_effect([instr:effect_name]), [ctx:duration], [ctx:amplifier], false, [instr:show_particles]), [ctx:from_entity]);
-}
+// // requires Holder<MobEffect>
+// @GIVE_EFFECT(<net.minecraft.world.entity.Entity> [ctx:from_entity], <net.minecraft.world.entity.LivingEntity> [ctx:to_entity], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:effect_name], int [ctx:duration], int [ctx:amplifier], boolean [instr:show_particles]) {
+//   [ctx:to_entity].addEffect(new <net.minecraft.world.effect.MobEffectInstance>(map_mob_effect([instr:effect_name]), [ctx:duration], [ctx:amplifier], false, [instr:show_particles]), [ctx:from_entity]);
+// }
 
 @ADD_EXPERIENCE_POINTS(<net.minecraft.server.level.ServerPlayer> [ctx:player], int [ctx:points]) {
   [ctx:player].giveExperiencePoints([ctx:points]);
@@ -703,55 +712,50 @@
   _jumpIfEqual([ctx:entity].getBoundingBox().intersects([ctx:min_x], [ctx:min_y], [ctx:min_z], [ctx:max_x], [ctx:max_y], [ctx:max_z]), false, [ctx:fail_label]);
 }
 
-##CONDITIONAL_JUMP
-@JUMP_IF_PREDICATE_SELECTOR_SUCCEEDS [-1.19.4] (<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.entity.Entity> [ctx:entity], label [ctx:label], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:predicate_name]) {
-  [local:context] = new <net.minecraft.world.level.storage.loot.LootContext.Builder>([ctx:world])
-     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.THIS_ENTITY, [ctx:entity])
-     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.ORIGIN, [ctx:entity].position())
-     .create(<net.minecraft.world.level.storage.loot.parameters.LootContextParamSets>.SELECTOR);
-  _jumpIfNotEqual(map_predicate([instr:predicate_name]).test([local:context]), false, [ctx:label]);
-}
+// // completely different constructor
+// ##CONDITIONAL_JUMP
+// @JUMP_IF_PREDICATE_SELECTOR_SUCCEEDS(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.entity.Entity> [ctx:entity], label [ctx:label], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:predicate_name]) {
+//   [local:params] = new <net.minecraft.world.level.storage.loot.LootParams.Builder>([ctx:world])
+//      .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.THIS_ENTITY, [ctx:entity])
+//      .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.ORIGIN, [ctx:entity].position())
+//      .create(<net.minecraft.world.level.storage.loot.parameters.LootContextParamSets>.SELECTOR);
+//   [local:context] = new <net.minecraft.world.level.storage.loot.LootContext.Builder>([local:params]).create(<java.util.Optional>.empty());
+//   [local:context].pushVisitedElement(<net.minecraft.world.level.storage.loot.LootContext>.createVisitedEntry(map_predicate([instr:predicate_name])));
+//   _jumpIfNotEqual(map_predicate([instr:predicate_name]).test([local:context]), false, [ctx:label]);
+// }
 
-##CONDITIONAL_JUMP
-@JUMP_IF_PREDICATE_SELECTOR_SUCCEEDS(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.entity.Entity> [ctx:entity], label [ctx:label], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:predicate_name]) {
-  [local:params] = new <net.minecraft.world.level.storage.loot.LootParams.Builder>([ctx:world])
-     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.THIS_ENTITY, [ctx:entity])
-     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.ORIGIN, [ctx:entity].position())
-     .create(<net.minecraft.world.level.storage.loot.parameters.LootContextParamSets>.SELECTOR);
-  [local:context] = new <net.minecraft.world.level.storage.loot.LootContext.Builder>([local:params]).create(<java.util.Optional>.empty());
-  [local:context].pushVisitedElement(<net.minecraft.world.level.storage.loot.LootContext>.createVisitedEntry(map_predicate([instr:predicate_name])));
-  _jumpIfNotEqual(map_predicate([instr:predicate_name]).test([local:context]), false, [ctx:label]);
-}
+// // completely different constructor
+// ##CONDITIONAL_JUMP
+// @JUMP_IF_PREDICATE_SELECTOR_FAILS(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.entity.Entity> [ctx:entity], label [ctx:label], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:predicate_name]) {
+//   [local:params] = new <net.minecraft.world.level.storage.loot.LootParams.Builder>([ctx:world])
+//      .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.THIS_ENTITY, [ctx:entity])
+//      .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.ORIGIN, [ctx:entity].position())
+//      .create(<net.minecraft.world.level.storage.loot.parameters.LootContextParamSets>.SELECTOR);
+//   [local:context] = new <net.minecraft.world.level.storage.loot.LootContext.Builder>([local:params]).create(<java.util.Optional>.empty());
+//   [local:context].pushVisitedElement(<net.minecraft.world.level.storage.loot.LootContext>.createVisitedEntry(map_predicate([instr:predicate_name])));
+//   _jumpIfEqual(map_predicate([instr:predicate_name]).test([local:context]), false, [ctx:label]);
+// }
 
-##CONDITIONAL_JUMP
-@JUMP_IF_PREDICATE_SELECTOR_FAILS(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.entity.Entity> [ctx:entity], label [ctx:label], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:predicate_name]) {
-  [local:params] = new <net.minecraft.world.level.storage.loot.LootParams.Builder>([ctx:world])
-     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.THIS_ENTITY, [ctx:entity])
-     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.ORIGIN, [ctx:entity].position())
-     .create(<net.minecraft.world.level.storage.loot.parameters.LootContextParamSets>.SELECTOR);
-  [local:context] = new <net.minecraft.world.level.storage.loot.LootContext.Builder>([local:params]).create(<java.util.Optional>.empty());
-  [local:context].pushVisitedElement(<net.minecraft.world.level.storage.loot.LootContext>.createVisitedEntry(map_predicate([instr:predicate_name])));
-  _jumpIfEqual(map_predicate([instr:predicate_name]).test([local:context]), false, [ctx:label]);
-}
+// // completely different constructor
+// ##CONDITIONAL_JUMP
+// @JUMP_IF_PREDICATE_COMMAND_SUCCEEDS(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.phys.Vec3> [ctx:position], label [ctx:label], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:predicate_name]) {
+//   [local:params] = new <net.minecraft.world.level.storage.loot.LootParams.Builder>([ctx:world])
+//      .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.THIS_ENTITY, [ctx:entity])
+//      .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.ORIGIN, [ctx:position])
+//      .create(<net.minecraft.world.level.storage.loot.parameters.LootContextParamSets>.COMMAND);
+//   [local:context] = new <net.minecraft.world.level.storage.loot.LootContext.Builder>([local:params]).create(<java.util.Optional>.empty());
+//   [local:context].pushVisitedElement(<net.minecraft.world.level.storage.loot.LootContext>.createVisitedEntry(map_predicate([instr:predicate_name])));
+//   _jumpIfNotEqual(map_predicate([instr:predicate_name]).test([local:context]), false, [ctx:label]);
+// }
 
-##CONDITIONAL_JUMP
-@JUMP_IF_PREDICATE_COMMAND_SUCCEEDS(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.phys.Vec3> [ctx:position], label [ctx:label], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:predicate_name]) {
-  [local:params] = new <net.minecraft.world.level.storage.loot.LootParams.Builder>([ctx:world])
-     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.THIS_ENTITY, [ctx:entity])
-     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.ORIGIN, [ctx:position])
-     .create(<net.minecraft.world.level.storage.loot.parameters.LootContextParamSets>.COMMAND);
-  [local:context] = new <net.minecraft.world.level.storage.loot.LootContext.Builder>([local:params]).create(<java.util.Optional>.empty());
-  [local:context].pushVisitedElement(<net.minecraft.world.level.storage.loot.LootContext>.createVisitedEntry(map_predicate([instr:predicate_name])));
-  _jumpIfNotEqual(map_predicate([instr:predicate_name]).test([local:context]), false, [ctx:label]);
-}
-
-##CONDITIONAL_JUMP
-@JUMP_IF_PREDICATE_COMMAND_FAILS(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.phys.Vec3> [ctx:position], label [ctx:label], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:predicate_name]) {
-  [local:params] = new <net.minecraft.world.level.storage.loot.LootParams.Builder>([ctx:world])
-     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.THIS_ENTITY, [ctx:entity])
-     .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.ORIGIN, [ctx:position])
-     .create(<net.minecraft.world.level.storage.loot.parameters.LootContextParamSets>.COMMAND);
-  [local:context] = new <net.minecraft.world.level.storage.loot.LootContext.Builder>([local:params]).create(<java.util.Optional>.empty());
-  [local:context].pushVisitedElement(<net.minecraft.world.level.storage.loot.LootContext>.createVisitedEntry(map_predicate([instr:predicate_name])));
-  _jumpIfEqual(map_predicate([instr:predicate_name]).test([local:context]), false, [ctx:label]);
-}
+// // completely different constructor
+// ##CONDITIONAL_JUMP
+// @JUMP_IF_PREDICATE_COMMAND_FAILS(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.phys.Vec3> [ctx:position], label [ctx:label], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:predicate_name]) {
+//   [local:params] = new <net.minecraft.world.level.storage.loot.LootParams.Builder>([ctx:world])
+//      .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.THIS_ENTITY, [ctx:entity])
+//      .withParameter(<net.minecraft.world.level.storage.loot.parameters.LootContextParams>.ORIGIN, [ctx:position])
+//      .create(<net.minecraft.world.level.storage.loot.parameters.LootContextParamSets>.COMMAND);
+//   [local:context] = new <net.minecraft.world.level.storage.loot.LootContext.Builder>([local:params]).create(<java.util.Optional>.empty());
+//   [local:context].pushVisitedElement(<net.minecraft.world.level.storage.loot.LootContext>.createVisitedEntry(map_predicate([instr:predicate_name])));
+//   _jumpIfEqual(map_predicate([instr:predicate_name]).test([local:context]), false, [ctx:label]);
+// }

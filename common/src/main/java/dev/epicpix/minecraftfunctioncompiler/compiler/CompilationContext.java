@@ -736,25 +736,26 @@ public class CompilationContext {
                 data.writeInstruction(instructionWriter, Instructions.getPlayerAdvancements(playerAdvancements, playerLocal));
 
                 for(var check : selector.advancements().entrySet()) {
-                    var advancementProgressLocal = this.<AdvancementProgress>createLocal();
-                    data.writeInstruction(instructionWriter, Instructions.getAdvancementProgress(advancementProgressLocal, playerAdvancements, check.getKey()));
-                    if(check.getValue() instanceof SelectorAdvancementCheck.AdvancementCompleted advancementCompleted) {
-                        if(advancementCompleted.done()) {
-                            data.writeInstruction(instructionWriter, Instructions.jumpIfAdvancementNotDone(advancementProgressLocal, data.contextEndLabel()));
-                        }else {
-                            data.writeInstruction(instructionWriter, Instructions.jumpIfAdvancementDone(advancementProgressLocal, data.contextEndLabel()));
-                        }
-                    }else if(check.getValue() instanceof SelectorAdvancementCheck.CriteriaCompleted criteriaCompleted) {
-                        for(var criteriaCheck : criteriaCompleted.criteria().entrySet()) {
-                            var criterionProgressLocal = this.<CriterionProgress>createLocal();
-                            data.writeInstruction(instructionWriter, Instructions.getCriterionProgress(criterionProgressLocal, advancementProgressLocal, LocationData.ofString(criteriaCheck.getKey())));
-                            if(criteriaCheck.getValue()) {
-                                data.writeInstruction(instructionWriter, Instructions.jumpIfAdvancementCriterionNotDone(criterionProgressLocal, data.contextEndLabel()));
-                            }else {
-                                data.writeInstruction(instructionWriter, Instructions.jumpIfAdvancementCriterionDone(criterionProgressLocal, data.contextEndLabel()));
-                            }
-                        }
-                    }
+                    throw new RuntimeException("getAdvancementProgress instruction is not supported");
+//                    var advancementProgressLocal = this.<AdvancementProgress>createLocal();
+//                    data.writeInstruction(instructionWriter, Instructions.getAdvancementProgress(advancementProgressLocal, playerAdvancements, check.getKey()));
+//                    if(check.getValue() instanceof SelectorAdvancementCheck.AdvancementCompleted advancementCompleted) {
+//                        if(advancementCompleted.done()) {
+//                            data.writeInstruction(instructionWriter, Instructions.jumpIfAdvancementNotDone(advancementProgressLocal, data.contextEndLabel()));
+//                        }else {
+//                            data.writeInstruction(instructionWriter, Instructions.jumpIfAdvancementDone(advancementProgressLocal, data.contextEndLabel()));
+//                        }
+//                    }else if(check.getValue() instanceof SelectorAdvancementCheck.CriteriaCompleted criteriaCompleted) {
+//                        for(var criteriaCheck : criteriaCompleted.criteria().entrySet()) {
+//                            var criterionProgressLocal = this.<CriterionProgress>createLocal();
+//                            data.writeInstruction(instructionWriter, Instructions.getCriterionProgress(criterionProgressLocal, advancementProgressLocal, LocationData.ofString(criteriaCheck.getKey())));
+//                            if(criteriaCheck.getValue()) {
+//                                data.writeInstruction(instructionWriter, Instructions.jumpIfAdvancementCriterionNotDone(criterionProgressLocal, data.contextEndLabel()));
+//                            }else {
+//                                data.writeInstruction(instructionWriter, Instructions.jumpIfAdvancementCriterionDone(criterionProgressLocal, data.contextEndLabel()));
+//                            }
+//                        }
+//                    }
                 }
             }
         }
@@ -820,18 +821,19 @@ public class CompilationContext {
             }
         }
         for(var predicate : selector.predicates()) {
-            var predicateData = DataRegistries.PREDICATE.get(predicate.data());
-            if(predicateData == null) {
-                data.writeInstruction(instructionWriter, Instructions.jump(data.contextEndLabel()));
-                break;
-            }
-            var entityWorld = this.<World>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.getEntityWorld(entityWorld, entityData.content()));
-            if(predicate.negated()) {
-                data.writeInstruction(instructionWriter, Instructions.jumpIfPredicateSelectorSucceeds(entityWorld, entityData.content(), data.contextEndLabel(), predicate.data()));
-            }else {
-                data.writeInstruction(instructionWriter, Instructions.jumpIfPredicateSelectorFails(entityWorld, entityData.content(), data.contextEndLabel(), predicate.data()));
-            }
+            throw new RuntimeException("jumpIfPredicateSelectedSucceeds and jumpIfPredicateSelectorFails instructions are not implemented");
+//            var predicateData = DataRegistries.PREDICATE.get(predicate.data());
+//            if(predicateData == null) {
+//                data.writeInstruction(instructionWriter, Instructions.jump(data.contextEndLabel()));
+//                break;
+//            }
+//            var entityWorld = this.<World>createLocal();
+//            data.writeInstruction(instructionWriter, Instructions.getEntityWorld(entityWorld, entityData.content()));
+//            if(predicate.negated()) {
+//                data.writeInstruction(instructionWriter, Instructions.jumpIfPredicateSelectorSucceeds(entityWorld, entityData.content(), data.contextEndLabel(), predicate.data()));
+//            }else {
+//                data.writeInstruction(instructionWriter, Instructions.jumpIfPredicateSelectorFails(entityWorld, entityData.content(), data.contextEndLabel(), predicate.data()));
+//            }
         }
         if(!selector.nbts().isEmpty()) {
             var entityNbt = getEntityNbt(entityData.content());
@@ -944,20 +946,21 @@ public class CompilationContext {
     }
 
     public LocationData<NbtCompound> getEntityNbt(LocationData<? extends Entity> entity) {
-        var nbtLocal = this.<NbtCompound>createLocal();
-        writeInstruction(Instructions.getEntityNbt(nbtLocal, entity));
-        var playerLabel = instructionWriter.createLabelBefore(current().contextEndLabel());
-        var player = this.<Player>createLocal();
-        instructionWriter.addInstructionBefore(Instructions.tryAsPlayer(player, entity, playerLabel), playerLabel);
-        var playerItem = this.<ItemStack>createLocal();
-        instructionWriter.addInstructionBefore(Instructions.getPlayerSelectedItem(playerItem, player), playerLabel);
-        var itemEmpty = this.<Integer>createLocal();
-        instructionWriter.addInstructionBefore(Instructions.getIsItemEmpty(itemEmpty, playerItem), playerLabel);
-        instructionWriter.addInstructionBefore(Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, itemEmpty, LocationData.ofBoolean(false), playerLabel), playerLabel);
-        var itemNbt = this.<NbtCompound>createLocal();
-        instructionWriter.addInstructionBefore(Instructions.getItemNbt(itemNbt, playerItem), playerLabel);
-        instructionWriter.addInstructionBefore(Instructions.setNbtInCompound(nbtLocal, LocationData.ofString("SelectedItem"), itemNbt), playerLabel);
-        return nbtLocal;
+        throw new RuntimeException("getEntityNbt not implemented");
+//        var nbtLocal = this.<NbtCompound>createLocal();
+//        writeInstruction(Instructions.getEntityNbt(nbtLocal, entity));
+//        var playerLabel = instructionWriter.createLabelBefore(current().contextEndLabel());
+//        var player = this.<Player>createLocal();
+//        instructionWriter.addInstructionBefore(Instructions.tryAsPlayer(player, entity, playerLabel), playerLabel);
+//        var playerItem = this.<ItemStack>createLocal();
+//        instructionWriter.addInstructionBefore(Instructions.getPlayerSelectedItem(playerItem, player), playerLabel);
+//        var itemEmpty = this.<Integer>createLocal();
+//        instructionWriter.addInstructionBefore(Instructions.getIsItemEmpty(itemEmpty, playerItem), playerLabel);
+//        instructionWriter.addInstructionBefore(Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, itemEmpty, LocationData.ofBoolean(false), playerLabel), playerLabel);
+//        var itemNbt = this.<NbtCompound>createLocal();
+//        instructionWriter.addInstructionBefore(Instructions.getItemNbt(itemNbt, playerItem), playerLabel);
+//        instructionWriter.addInstructionBefore(Instructions.setNbtInCompound(nbtLocal, LocationData.ofString("SelectedItem"), itemNbt), playerLabel);
+//        return nbtLocal;
     }
 
     public void compareNbt(CompilationContextData current, LabelData errorLabel, LocationData<? extends NbtTag> data, NbtValue test, boolean ignoreListOrder) {

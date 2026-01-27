@@ -116,7 +116,7 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
                 }
             }
             if(expression.name == "map_resource_location") {
-                return ParsedTokenExpressionTypeComplex("net.minecraft.resources.ResourceLocation", emptyList())
+                return ParsedTokenExpressionTypeComplex("net.minecraft.resources.Identifier", emptyList())
             }
             if(expression.name == "map_nbt_value") {
                 return ParsedTokenExpressionTypeComplex("net.minecraft.nbt.Tag", emptyList())
@@ -524,7 +524,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
                     val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
                     if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.DataLocation") {
-                        return writeNextRegister(uniqId, output, "context.fieldStorage().loadResourceLocation(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.DataLocation>get(${writerData.getParamIndex(source)}))")
+                        return writeNextRegister(uniqId, output, "context.fieldStorage().loadIdentifier(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.DataLocation>get(${writerData.getParamIndex(source)}))")
                     }
                 }
             }
@@ -886,7 +886,6 @@ private fun doComparison(writerData: WriterData, expression: ParsedTokenExpressi
                 ParsedTokenExpressionOperator.LE -> output.appendText("cw.conditionalJump(dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition.GT, $exprA, $exprB, $failureLabel);\n")
                 ParsedTokenExpressionOperator.GT -> output.appendText("cw.conditionalJump(dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition.LE, $exprA, $exprB, $failureLabel);\n")
                 ParsedTokenExpressionOperator.GE -> output.appendText("cw.conditionalJump(dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition.LT, $exprA, $exprB, $failureLabel);\n")
-                else -> {}
             }
         }else {
             throw IllegalArgumentException("Unsupported expression comparison type: ${evaluateExpressionType(writerData, expression.a)} ${expression.op} ${evaluateExpressionType(writerData, expression.b)}")

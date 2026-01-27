@@ -14,8 +14,7 @@ dependencies {
     ksp project(":annotation-processor")
 
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings loom.officialMojangMappings()
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 }
 
 project.ext.isJarTask = false
@@ -32,14 +31,14 @@ ksp {
     project.afterEvaluate {
         arg("jars", project.configurations.runtimeClasspath.incoming.files.join(File.pathSeparator))
     }
-    arg("minecraft_version", project.minecraft_version)
-    arg("accesswidener", file("src/main/resources/minecraftfunctioncompiler.v${project.minecraft_version.replaceAll("\\.", "_")}.accesswidener").absolutePath)
+    arg("minecraft_version", project.minecraft_version.split("-")[0])
+    arg("accesswidener", file("src/main/resources/minecraftfunctioncompiler.accesswidener").absolutePath)
 }
 
 tasks.withType(JavaCompile).configureEach {
     it.options.encoding = "UTF-8"
-    it.targetCompatibility = "21"
-    it.sourceCompatibility = "21"
+    it.targetCompatibility = "25"
+    it.sourceCompatibility = "25"
 }
 
 java {
@@ -53,7 +52,7 @@ java {
 }
 
 loom {
-    accessWidenerPath = file("src/main/resources/minecraftfunctioncompiler.v${project.minecraft_version.replaceAll("\\.", "_")}.accesswidener")
+    accessWidenerPath = file("src/main/resources/minecraftfunctioncompiler.accesswidener")
 }
 
 processResources {
@@ -81,5 +80,5 @@ jar {
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(25)
 }

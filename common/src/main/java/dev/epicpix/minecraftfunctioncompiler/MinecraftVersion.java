@@ -1,7 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler;
 
 public enum MinecraftVersion {
-    MC_1_21_4("1.21.4"),
     MC_26_1("26.1"),
     ;
 
@@ -18,7 +17,7 @@ public enum MinecraftVersion {
 
     public static MinecraftVersion getByName(String ver) {
         for(var version : values()) {
-            if(version.name.equals(ver)) {
+            if(ver.startsWith(version.getName())) {
                 return version;
             }
         }

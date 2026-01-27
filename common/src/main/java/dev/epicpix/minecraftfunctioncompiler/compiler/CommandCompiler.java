@@ -38,60 +38,65 @@ public final class CommandCompiler {
 
     private static void compile(CompilationContext context, ForkingContext forkingContext, CommandParams command, ResultContext result) {
         if(command instanceof CommandAdvancementGrantOnly cmdData) {
-            var advancementData = DataRegistries.ADVANCEMENT.get(cmdData.advancement());
-            if(advancementData == null) return;
-            try(var selector = context.forSelector(cmdData.targets(), result)) {
-                var player = context.<Player>createLocal();
-                selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
-                var playerAdvancements = context.<PlayerAdvancements>createLocal();
-                selector.writeInstruction(Instructions.getPlayerAdvancements(playerAdvancements, player));
-                for(var criterion : advancementData.criteria()) {
-                    selector.writeInstruction(Instructions.awardAdvancementCriterion(playerAdvancements, LocationData.ofString(criterion), advancementData.location()));
-                }
-            }
+            throw new RuntimeException("awardAdvancementCriterion instruction is not supported");
+//            var advancementData = DataRegistries.ADVANCEMENT.get(cmdData.advancement());
+//            if(advancementData == null) return;
+//            try(var selector = context.forSelector(cmdData.targets(), result)) {
+//                var player = context.<Player>createLocal();
+//                selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
+//                var playerAdvancements = context.<PlayerAdvancements>createLocal();
+//                selector.writeInstruction(Instructions.getPlayerAdvancements(playerAdvancements, player));
+//                for(var criterion : advancementData.criteria()) {
+//                    selector.writeInstruction(Instructions.awardAdvancementCriterion(playerAdvancements, LocationData.ofString(criterion), advancementData.location()));
+//                }
+//            }
         }else if(command instanceof CommandAdvancementGrantOnlyCriterion cmdData) {
-            var advancementData = DataRegistries.ADVANCEMENT.get(cmdData.advancement());
-            if(advancementData == null) return;
-            if(!advancementData.criteria().contains(cmdData.criterion())) return;
-            try(var selector = context.forSelector(cmdData.targets(), result)) {
-                var player = context.<Player>createLocal();
-                selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
-                var playerAdvancements = context.<PlayerAdvancements>createLocal();
-                selector.writeInstruction(Instructions.getPlayerAdvancements(playerAdvancements, player));
-                selector.writeInstruction(Instructions.awardAdvancementCriterion(playerAdvancements, LocationData.ofString(cmdData.criterion()), advancementData.location()));
-            }
+            throw new RuntimeException("awardAdvancementCriterion instruction is not supported");
+//            var advancementData = DataRegistries.ADVANCEMENT.get(cmdData.advancement());
+//            if(advancementData == null) return;
+//            if(!advancementData.criteria().contains(cmdData.criterion())) return;
+//            try(var selector = context.forSelector(cmdData.targets(), result)) {
+//                var player = context.<Player>createLocal();
+//                selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
+//                var playerAdvancements = context.<PlayerAdvancements>createLocal();
+//                selector.writeInstruction(Instructions.getPlayerAdvancements(playerAdvancements, player));
+//                selector.writeInstruction(Instructions.awardAdvancementCriterion(playerAdvancements, LocationData.ofString(cmdData.criterion()), advancementData.location()));
+//            }
         }else if(command instanceof CommandAdvancementRevokeOnly cmdData) {
-            var advancementData = DataRegistries.ADVANCEMENT.get(cmdData.advancement());
-            if(advancementData == null) return;
-            try(var selector = context.forSelector(cmdData.targets(), result)) {
-                var player = context.<Player>createLocal();
-                selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
-                var playerAdvancements = context.<PlayerAdvancements>createLocal();
-                selector.writeInstruction(Instructions.getPlayerAdvancements(playerAdvancements, player));
-                for(var criterion : advancementData.criteria()) {
-                    selector.writeInstruction(Instructions.revokeAdvancementCriterion(playerAdvancements, LocationData.ofString(criterion), advancementData.location()));
-                }
-            }
+            throw new RuntimeException("revokeAdvancementCriterion instruction is not supported");
+//            var advancementData = DataRegistries.ADVANCEMENT.get(cmdData.advancement());
+//            if(advancementData == null) return;
+//            try(var selector = context.forSelector(cmdData.targets(), result)) {
+//                var player = context.<Player>createLocal();
+//                selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
+//                var playerAdvancements = context.<PlayerAdvancements>createLocal();
+//                selector.writeInstruction(Instructions.getPlayerAdvancements(playerAdvancements, player));
+//                for(var criterion : advancementData.criteria()) {
+//                    selector.writeInstruction(Instructions.revokeAdvancementCriterion(playerAdvancements, LocationData.ofString(criterion), advancementData.location()));
+//                }
+//            }
         }else if(command instanceof CommandAdvancementRevokeOnlyCriterion cmdData) {
-            var advancementData = DataRegistries.ADVANCEMENT.get(cmdData.advancement());
-            if(advancementData == null) return;
-            if(!advancementData.criteria().contains(cmdData.criterion())) return;
-            try(var selector = context.forSelector(cmdData.targets(), result)) {
-                var player = context.<Player>createLocal();
-                selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
-                var playerAdvancements = context.<PlayerAdvancements>createLocal();
-                selector.writeInstruction(Instructions.getPlayerAdvancements(playerAdvancements, player));
-                selector.writeInstruction(Instructions.revokeAdvancementCriterion(playerAdvancements, LocationData.ofString(cmdData.criterion()), advancementData.location()));
-            }
+            throw new RuntimeException("revokeAdvancementCriterion instruction is not supported");
+//            var advancementData = DataRegistries.ADVANCEMENT.get(cmdData.advancement());
+//            if(advancementData == null) return;
+//            if(!advancementData.criteria().contains(cmdData.criterion())) return;
+//            try(var selector = context.forSelector(cmdData.targets(), result)) {
+//                var player = context.<Player>createLocal();
+//                selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
+//                var playerAdvancements = context.<PlayerAdvancements>createLocal();
+//                selector.writeInstruction(Instructions.getPlayerAdvancements(playerAdvancements, player));
+//                selector.writeInstruction(Instructions.revokeAdvancementCriterion(playerAdvancements, LocationData.ofString(cmdData.criterion()), advancementData.location()));
+//            }
         }else if(command instanceof CommandAttributeBaseSet cmdData) {
-            try(var selector = context.forSelector(cmdData.target(), result)) {
-                var livingEntityLocation = context.<LivingEntity>createLocal();
-                var attrLocation = context.<AttributeInstance>createLocal();
-                selector.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, selector.content(), selector.data().contextEndLabel()));
-                selector.writeInstruction(Instructions.getAttributeInstance(livingEntityLocation, attrLocation, cmdData.attribute().location()));
-                selector.writeInstruction(Instructions.ifNullJump(attrLocation, selector.data().contextEndLabel()));
-                selector.writeInstruction(Instructions.setAttributeBase(attrLocation, LocationData.ofDouble(cmdData.value())));
-            }
+            throw new RuntimeException("getAttributeInstance and setAttributeBase instructions is not supported");
+//            try(var selector = context.forSelector(cmdData.target(), result)) {
+//                var livingEntityLocation = context.<LivingEntity>createLocal();
+//                var attrLocation = context.<AttributeInstance>createLocal();
+//                selector.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, selector.content(), selector.data().contextEndLabel()));
+//                selector.writeInstruction(Instructions.getAttributeInstance(livingEntityLocation, attrLocation, cmdData.attribute().location()));
+//                selector.writeInstruction(Instructions.ifNullJump(attrLocation, selector.data().contextEndLabel()));
+//                selector.writeInstruction(Instructions.setAttributeBase(attrLocation, LocationData.ofDouble(cmdData.value())));
+//            }
         }else if(command instanceof CommandDataModifySetValue cmdData) {
             if(cmdData.destination() instanceof NbtDataLocation.Storage loc) {
                 var storageLocal = context.<NbtCompound>createLocal();
@@ -137,75 +142,83 @@ public final class CommandCompiler {
                 targets.writeInstruction(Instructions.clearAllEffects(livingEntityLocation));
             }
         }else if(command instanceof CommandEffectClearEntitiesEffect cmdData) {
-            try(var targets = context.forSelector(cmdData.targets(), result)) {
-                var livingEntityLocation = context.<LivingEntity>createLocal();
-                targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
-                targets.writeInstruction(Instructions.clearEffect(livingEntityLocation, cmdData.effect().location()));
-            }
+            throw new RuntimeException("clearEffect instruction is not supported");
+//            try(var targets = context.forSelector(cmdData.targets(), result)) {
+//                var livingEntityLocation = context.<LivingEntity>createLocal();
+//                targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
+//                targets.writeInstruction(Instructions.clearEffect(livingEntityLocation, cmdData.effect().location()));
+//            }
         }else if(command instanceof CommandEffectGive cmdData) {
-            MobEffectData effect = cmdData.effect();
-            try(var self = context.getCurrentEntity()) {
-                try(var targets = context.forSelector(cmdData.targets(), result)) {
-                    var livingEntityLocation = context.<LivingEntity>createLocal();
-                    targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
-                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(effect.instant() ? 1 : 600), LocationData.ofInteger(0), true));
-                }
-            }
+            throw new RuntimeException("giveEffect instruction is not supported");
+//            MobEffectData effect = cmdData.effect();
+//            try(var self = context.getCurrentEntity()) {
+//                try(var targets = context.forSelector(cmdData.targets(), result)) {
+//                    var livingEntityLocation = context.<LivingEntity>createLocal();
+//                    targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
+//                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(effect.instant() ? 1 : 600), LocationData.ofInteger(0), true));
+//                }
+//            }
         }
         else if(command instanceof CommandEffectGiveDur cmdData) {
-            MobEffectData effect = cmdData.effect();
-            try(var self = context.getCurrentEntity()) {
-                try(var targets = context.forSelector(cmdData.targets(), result)) {
-                    var livingEntityLocation = context.<LivingEntity>createLocal();
-                    targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
-                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(cmdData.duration() * (effect.instant() ? 1 : 20)), LocationData.ofInteger(0), true));
-                }
-            }
+            throw new RuntimeException("giveEffect instruction is not supported");
+//            MobEffectData effect = cmdData.effect();
+//            try(var self = context.getCurrentEntity()) {
+//                try(var targets = context.forSelector(cmdData.targets(), result)) {
+//                    var livingEntityLocation = context.<LivingEntity>createLocal();
+//                    targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
+//                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(cmdData.duration() * (effect.instant() ? 1 : 20)), LocationData.ofInteger(0), true));
+//                }
+//            }
         }else if(command instanceof CommandEffectGiveDurAmp cmdData) {
-            MobEffectData effect = cmdData.effect();
-            try(var self = context.getCurrentEntity()) {
-                try(var targets = context.forSelector(cmdData.targets(), result)) {
-                    var livingEntityLocation = context.<LivingEntity>createLocal();
-                    targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
-                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(cmdData.duration() * (effect.instant() ? 1 : 20)), LocationData.ofInteger(cmdData.amplifier()), true));
-                }
-            }
+            throw new RuntimeException("giveEffect instruction is not supported");
+//            MobEffectData effect = cmdData.effect();
+//            try(var self = context.getCurrentEntity()) {
+//                try(var targets = context.forSelector(cmdData.targets(), result)) {
+//                    var livingEntityLocation = context.<LivingEntity>createLocal();
+//                    targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
+//                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(cmdData.duration() * (effect.instant() ? 1 : 20)), LocationData.ofInteger(cmdData.amplifier()), true));
+//                }
+//            }
         }else if(command instanceof CommandEffectGiveDurAmpShow cmdData) {
-            MobEffectData effect = cmdData.effect();
-            try(var self = context.getCurrentEntity()) {
-                try(var targets = context.forSelector(cmdData.targets(), result)) {
-                    var livingEntityLocation = context.<LivingEntity>createLocal();
-                    targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
-                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(cmdData.duration() * (effect.instant() ? 1 : 20)), LocationData.ofInteger(cmdData.amplifier()), !cmdData.hideParticles()));
-                }
-            }
+            throw new RuntimeException("giveEffect instruction is not supported");
+//            MobEffectData effect = cmdData.effect();
+//            try(var self = context.getCurrentEntity()) {
+//                try(var targets = context.forSelector(cmdData.targets(), result)) {
+//                    var livingEntityLocation = context.<LivingEntity>createLocal();
+//                    targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
+//                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(cmdData.duration() * (effect.instant() ? 1 : 20)), LocationData.ofInteger(cmdData.amplifier()), !cmdData.hideParticles()));
+//                }
+//            }
         }else if(command instanceof CommandEffectGiveInf cmdData) {
-            MobEffectData effect = cmdData.effect();
-            try(var self = context.getCurrentEntity()) {
-                try(var targets = context.forSelector(cmdData.targets(), result)) {
-                    var livingEntityLocation = context.<LivingEntity>createLocal();
-                    targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
-                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(-1), LocationData.ofInteger(0), true));
-                }
-            }
+            throw new RuntimeException("giveEffect instruction is not supported");
+//            MobEffectData effect = cmdData.effect();
+//            try(var self = context.getCurrentEntity()) {
+//                try(var targets = context.forSelector(cmdData.targets(), result)) {
+//                    var livingEntityLocation = context.<LivingEntity>createLocal();
+//                    targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
+//                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(-1), LocationData.ofInteger(0), true));
+//                }
+//            }
         }else if(command instanceof CommandEffectGiveInfAmp cmdData) {
-            MobEffectData effect = cmdData.effect();
-            try(var self = context.getCurrentEntity()) {
-                try(var targets = context.forSelector(cmdData.targets(), result)) {
-                    var livingEntityLocation = context.<LivingEntity>createLocal();
-                    targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
-                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(-1), LocationData.ofInteger(cmdData.amplifier()), true));
-                }
-            }
+            throw new RuntimeException("giveEffect instruction is not supported");
+//            MobEffectData effect = cmdData.effect();
+//            try(var self = context.getCurrentEntity()) {
+//                try(var targets = context.forSelector(cmdData.targets(), result)) {
+//                    var livingEntityLocation = context.<LivingEntity>createLocal();
+//                    targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
+//                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(-1), LocationData.ofInteger(cmdData.amplifier()), true));
+//                }
+//            }
         }else if(command instanceof CommandEffectGiveInfAmpShow cmdData) {
-            MobEffectData effect = cmdData.effect();
-            try(var self = context.getCurrentEntity()) {
-                try(var targets = context.forSelector(cmdData.targets(), result)) {
-                    var livingEntityLocation = context.<LivingEntity>createLocal();
-                    targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
-                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(-1), LocationData.ofInteger(cmdData.amplifier()), !cmdData.hideParticles()));
-                }
-            }
+            throw new RuntimeException("giveEffect instruction is not supported");
+//            MobEffectData effect = cmdData.effect();
+//            try(var self = context.getCurrentEntity()) {
+//                try(var targets = context.forSelector(cmdData.targets(), result)) {
+//                    var livingEntityLocation = context.<LivingEntity>createLocal();
+//                    targets.writeInstruction(Instructions.tryAsLivingEntity(livingEntityLocation, targets.content(), targets.data().contextEndLabel()));
+//                    targets.writeInstruction(Instructions.giveEffect(self.content(), livingEntityLocation, effect.location(), LocationData.ofInteger(-1), LocationData.ofInteger(cmdData.amplifier()), !cmdData.hideParticles()));
+//                }
+//            }
         }else if(command instanceof CommandExecuteAlign cmdData) {
             try(var fContext = context.withForkingContext(forkingContext)) {
                 try(var pos = context.getPosition()) {
@@ -267,8 +280,9 @@ public final class CommandCompiler {
                     try(var entity = context.getCurrentEntity()) {
                         try(var world = context.getWorld()) {
                             try(var position = context.getPosition()) {
-                                entity.writeInstruction(Instructions.jumpIfPredicateCommandFails(world.content(), entity.content(), position.content(), fContext.endLabel(), cmdData.predicate()));
-                                compile(context, fContext.content(), cmdData.command(), result);
+                                throw new RuntimeException("jumpIfPredicateSelectorFails instructions are not implemented");
+//                                entity.writeInstruction(Instructions.jumpIfPredicateCommandFails(world.content(), entity.content(), position.content(), fContext.endLabel(), cmdData.predicate()));
+//                                compile(context, fContext.content(), cmdData.command(), result);
                             }
                         }
                     }
@@ -485,8 +499,9 @@ public final class CommandCompiler {
                     try(var entity = context.getCurrentEntity()) {
                         try(var world = context.getWorld()) {
                             try(var position = context.getPosition()) {
-                                entity.writeInstruction(Instructions.jumpIfPredicateCommandSucceeds(world.content(), entity.content(), position.content(), fContext.endLabel(), cmdData.predicate()));
-                                compile(context, fContext.content(), cmdData.command(), result);
+                                throw new RuntimeException("jumpIfPredicateSelectedSucceeds instructions are not implemented");
+//                                entity.writeInstruction(Instructions.jumpIfPredicateCommandSucceeds(world.content(), entity.content(), position.content(), fContext.endLabel(), cmdData.predicate()));
+//                                compile(context, fContext.content(), cmdData.command(), result);
                             }
                         }
                     }

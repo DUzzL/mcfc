@@ -47,7 +47,7 @@ public final class CodeFieldStorageMapKind<T> {
     public static final CodeFieldStorageMapKind<NbtValue> NBT_VALUE = new CodeFieldStorageMapKind<>("NBT_VALUE", CodeFieldStorageMapKind::getNbtValueName);
     public static final CodeFieldStorageMapKind<DataLocation> PREDICATE = new CodeFieldStorageMapKind<>("REGEX_PATTERN", CodeFieldStorageMapKind::getPredicateName);
     public static final CodeFieldStorageMapKind<String> REGEX_PATTERN = new CodeFieldStorageMapKind<>("REGEX_PATTERN", CodeFieldStorageMapKind::getRegexPatternName);
-    public static final CodeFieldStorageMapKind<DataLocation> RESOURCE_LOCATION = new CodeFieldStorageMapKind<>("RESOURCE_LOCATION", CodeFieldStorageMapKind::getResourceLocationName);
+    public static final CodeFieldStorageMapKind<DataLocation> RESOURCE_LOCATION = new CodeFieldStorageMapKind<>("RESOURCE_LOCATION", CodeFieldStorageMapKind::getIdentifierName);
     public static final CodeFieldStorageMapKind<String> SCOREBOARD_CRITERION = new CodeFieldStorageMapKind<>("SCOREBOARD_CRITERION", CodeFieldStorageMapKind::getScoreboardCriterionName);
     public static final CodeFieldStorageMapKind<Text> TEXT = new CodeFieldStorageMapKind<>("TEXT", CodeFieldStorageMapKind::getTextName);
     public static final CodeFieldStorageMapKind<TextStyle> TEXT_STYLE = new CodeFieldStorageMapKind<>("TEXT_STYLE", CodeFieldStorageMapKind::getTextStyleName);
@@ -127,7 +127,7 @@ public final class CodeFieldStorageMapKind<T> {
         return "R" + map.checkIndex(CodeFieldStorageMapKind.REGEX_PATTERN, value);
     }
 
-    private static String getResourceLocationName(CodeFieldStorageStorageMap map, DataLocation value) {
+    private static String getIdentifierName(CodeFieldStorageStorageMap map, DataLocation value) {
         return DEBUG_DUMP_CLASS_FILES
             ? "resourceLocation$" + value.toString().replace('/', '$').replace(':', '$').replace('.', '$')
             : "r" + map.checkIndex(CodeFieldStorageMapKind.RESOURCE_LOCATION, value);

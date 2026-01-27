@@ -4,7 +4,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.NbtDataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument;
@@ -146,7 +145,7 @@ public final class TextParser {
             }
 
             Integer color = obj.has("color") ? stringToColor(obj.get("color").getAsString()) : null;
-            Integer shadowColor = MinecraftVersion.isCurrentVersionInRange(MinecraftVersion.MC_1_21_4, null) ? (obj.has("shadow_color") ? contentToColor(obj.get("shadow_color"), reader) : null) : null;
+            Integer shadowColor = obj.has("shadow_color") ? contentToColor(obj.get("shadow_color"), reader) : null;
             Boolean bold = obj.has("bold") ? obj.get("bold").getAsBoolean() : null;
             Boolean italic = obj.has("italic") ? obj.get("italic").getAsBoolean() : null;
             Boolean underlined = obj.has("underlined") ? obj.get("underlined").getAsBoolean() : null;

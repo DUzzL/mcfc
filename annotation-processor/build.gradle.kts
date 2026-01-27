@@ -15,7 +15,7 @@ dependencies {
     implementation("com.squareup:javapoet:1.12.1")
     implementation("com.google.devtools.ksp:symbol-processing-api:2.3.4")
     implementation("com.google.code.gson:gson:2.13.2")
-    implementation("org.ow2.asm:asm:9.6")
+    implementation("org.ow2.asm:asm:9.9")
 }
 
 kotlin {
