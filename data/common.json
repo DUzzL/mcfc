@@ -2,27 +2,27 @@
   "definition_file": "dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions",
 
   "definitions_functions": {
-    "Map_get": "java/util/Map:get(Ljava/lang/Object;)Ljava/lang/Object;@IM",
-    "String_contains": "java/lang/String:contains(Ljava/lang/CharSequence;)Z@M",
-    "String_isEmpty": "java/lang/String:isEmpty()Z@M",
-    "Pattern_compile": "java/util/regex/Pattern:compile(Ljava/lang/String;)Ljava/util/regex/Pattern;@S",
-    "Pattern_matcher": "java/util/regex/Pattern:matcher(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;@M",
-    "Matcher_matches": "java/util/regex/Matcher:matches()Z@M",
-    "Optional_get": "java/util/Optional:get()Ljava/lang/Object;@M",
+    "Map_get": "java/util/Map:get(Ljava/lang/Object;)Ljava/lang/Object;",
+    "String_contains": "java/lang/String:contains(Ljava/lang/CharSequence;)Z",
+    "String_isEmpty": "java/lang/String:isEmpty()Z",
+    "Pattern_compile": "java/util/regex/Pattern:compile(Ljava/lang/String;)Ljava/util/regex/Pattern;",
+    "Pattern_matcher": "java/util/regex/Pattern:matcher(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;",
+    "Matcher_matches": "java/util/regex/Matcher:matches()Z",
+    "Optional_get": "java/util/Optional:get()Ljava/lang/Object;",
 
-    "ExtensionFunctions_isValidInteger": "dev/epicpix/minecraftfunctioncompiler/emitter/ExtensionFunctions:isValidInteger(Ljava/lang/String;)Z@S",
-    "Integer_parseInt": "java/lang/Integer:parseInt(Ljava/lang/String;)I@S",
-    "ExtensionFunctions_isValidCommandFloat": "dev/epicpix/minecraftfunctioncompiler/emitter/ExtensionFunctions:isValidCommandFloat(Ljava/lang/String;)Z@S",
-    "Float_parseFloat": "java/lang/Float:parseFloat(Ljava/lang/String;)F@S",
-    "ExtensionFunctions_isValidCommandDouble": "dev/epicpix/minecraftfunctioncompiler/emitter/ExtensionFunctions:isValidCommandDouble(Ljava/lang/String;)Z@S",
-    "Double_parseDouble": "java/lang/Double:parseDouble(Ljava/lang/String;)D@S",
+    "ExtensionFunctions_isValidInteger": "dev/epicpix/minecraftfunctioncompiler/emitter/ExtensionFunctions:isValidInteger(Ljava/lang/String;)Z",
+    "Integer_parseInt": "java/lang/Integer:parseInt(Ljava/lang/String;)I",
+    "ExtensionFunctions_isValidCommandFloat": "dev/epicpix/minecraftfunctioncompiler/emitter/ExtensionFunctions:isValidCommandFloat(Ljava/lang/String;)Z",
+    "Float_parseFloat": "java/lang/Float:parseFloat(Ljava/lang/String;)F",
+    "ExtensionFunctions_isValidCommandDouble": "dev/epicpix/minecraftfunctioncompiler/emitter/ExtensionFunctions:isValidCommandDouble(Ljava/lang/String;)Z",
+    "Double_parseDouble": "java/lang/Double:parseDouble(Ljava/lang/String;)D",
 
-    "ThreadLocal_get": "java/lang/ThreadLocal:get()Ljava/lang/Object;@MN",
-    "ThreadLocal_set": "java/lang/ThreadLocal:set(Ljava/lang/Object;)V@MN"
+    "ThreadLocal_get": "java/lang/ThreadLocal:get()Ljava/lang/Object;@N",
+    "ThreadLocal_set": "java/lang/ThreadLocal:set(Ljava/lang/Object;)V@N"
   },
 
   "definitions_fields": {
-    "Boolean_FALSE": "java/lang/Boolean:FALSE:Ljava/lang/Boolean;@SR",
-    "Boolean_TRUE": "java/lang/Boolean:TRUE:Ljava/lang/Boolean;@SR"
+    "Boolean_FALSE": "java/lang/Boolean:FALSE:Ljava/lang/Boolean;@R",
+    "Boolean_TRUE": "java/lang/Boolean:TRUE:Ljava/lang/Boolean;@R"
   }
 }

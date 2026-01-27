@@ -12,6 +12,7 @@ data class ClassFieldInfo(
     val owner: String,
     val name: String,
     val descriptor: String,
+    val isPublic: Boolean,
     val isStatic: Boolean,
     val isFinal: Boolean,
 )
@@ -20,6 +21,7 @@ data class ClassMethodInfo(
     val owner: String,
     val name: String,
     val descriptor: String,
+    val isPublic: Boolean,
     val isStatic: Boolean,
 )
 
@@ -29,6 +31,7 @@ data class ClassInfo(
     val interfaces: List<String>,
     val fields: List<ClassFieldInfo>,
     val methods: List<ClassMethodInfo>,
+    val isPublic: Boolean,
     val isInterface: Boolean,
     val isEnum: Boolean,
 )
@@ -75,13 +78,14 @@ fun loadClassInfo(className: String): ClassInfo {
                 superClass = clz.superclass?.descriptorString()?.run { substring(1, length - 1) },
                 interfaces = clz.interfaces.map { it.descriptorString().run { substring(1, length - 1) } },
                 fields = clz.declaredFields.map { f ->
-                    ClassFieldInfo(owner = clz.descriptorString().run { substring(1, length - 1) }, name = f.name, descriptor = f.type.descriptorString(), isStatic = Modifier.isStatic(f.modifiers), isFinal = Modifier.isFinal(f.modifiers))
+                    ClassFieldInfo(owner = clz.descriptorString().run { substring(1, length - 1) }, name = f.name, descriptor = f.type.descriptorString(), isPublic = Modifier.isPublic(f.modifiers), isStatic = Modifier.isStatic(f.modifiers), isFinal = Modifier.isFinal(f.modifiers))
                 },
                 methods = clz.declaredMethods.map { f ->
                     ClassMethodInfo(
                         owner = clz.descriptorString().run { substring(1, length - 1) },
                         name = f.name,
                         descriptor = "(${f.parameters.joinToString("") { p -> p.type.descriptorString() }})${f.returnType.descriptorString()}",
+                        isPublic = Modifier.isPublic(f.modifiers),
                         isStatic = Modifier.isStatic(f.modifiers),
                     )
                 } + clz.declaredConstructors.map { f ->
@@ -89,9 +93,11 @@ fun loadClassInfo(className: String): ClassInfo {
                         owner = clz.descriptorString().run { substring(1, length - 1) },
                         name = "<init>",
                         descriptor = "(${f.parameters.joinToString("") { p -> p.type.descriptorString() }})V",
+                        isPublic = Modifier.isPublic(f.modifiers),
                         isStatic = false,
                     )
                 },
+                isPublic = Modifier.isPublic(clz.modifiers),
                 isInterface = clz.isInterface,
                 isEnum = clz.isEnum,
             )
@@ -109,8 +115,9 @@ fun loadClassInfo(className: String): ClassInfo {
                         owner = classDecl.qualifiedName!!.asString().replace('.', '/'),
                         name = f.simpleName.asString(),
                         descriptor = fixKotlinDesc(className),
+                        isPublic = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.PUBLIC),
                         isStatic = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.JAVA_STATIC),
-                        isFinal = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.FINAL)
+                        isFinal = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.FINAL),
                     )
                 },
                 methods = methods.map { f ->
@@ -118,9 +125,11 @@ fun loadClassInfo(className: String): ClassInfo {
                         owner = classDecl.qualifiedName!!.asString().replace('.', '/'),
                         name = f.simpleName.asString(),
                         descriptor = "(${f.parameters.joinToString("") { p -> fixKotlinDesc(p.type.resolve().declaration.qualifiedName!!.asString()) }})${fixKotlinDesc(f.returnType!!.resolve().declaration.qualifiedName!!.asString())}",
-                        isStatic = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.JAVA_STATIC)
+                        isPublic = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.PUBLIC),
+                        isStatic = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.JAVA_STATIC),
                     )
                 },
+                isPublic = classDecl.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.PUBLIC),
                 isInterface = false,
                 isEnum = classDecl.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.ENUM),
             )
@@ -136,6 +145,7 @@ fun loadClassInfo(className: String): ClassInfo {
         var interfaces: List<String>? = null
         val fields = mutableListOf<ClassFieldInfo>()
         val methods = mutableListOf<ClassMethodInfo>()
+        var isPublic: Boolean? = null
         var isInterface: Boolean? = null
         var isEnum: Boolean? = null
 
@@ -144,6 +154,7 @@ fun loadClassInfo(className: String): ClassInfo {
                 outName = inName
                 superClass = inSuperName
                 interfaces = inInterfaces.toList()
+                isPublic = Modifier.isPublic(access)
                 isInterface = Modifier.isInterface(access)
                 isEnum = (access and 0x4000) != 0
                 super.visit(version, access, inName, signature, inSuperName, inInterfaces)
@@ -154,6 +165,7 @@ fun loadClassInfo(className: String): ClassInfo {
                     owner = outName!!,
                     name = name,
                     descriptor = descriptor,
+                    isPublic = Modifier.isPublic(access),
                     isStatic = Modifier.isStatic(access),
                     isFinal = Modifier.isFinal(access),
                 ))
@@ -165,6 +177,7 @@ fun loadClassInfo(className: String): ClassInfo {
                     owner = outName!!,
                     name = name,
                     descriptor = descriptor,
+                    isPublic = Modifier.isPublic(access),
                     isStatic = Modifier.isStatic(access),
                 ))
                 return super.visitMethod(access, name, descriptor, signature, exceptions)
@@ -178,11 +191,39 @@ fun loadClassInfo(className: String): ClassInfo {
             interfaces = interfaces!!,
             fields = fields,
             methods = methods,
+            isPublic = isPublic!!,
             isInterface = isInterface!!,
             isEnum = isEnum!!,
         )
         return loadedClasses[className]!!
     }
+}
+
+fun ClassInfo.checkPublic(): ClassInfo {
+    if(!isPublic) {
+        throw IllegalAccessError("Tried to access class $name, while it is not public")
+    }
+    return this
+}
+
+fun ClassFieldInfo.checkPublic(): ClassFieldInfo {
+    if(!isPublic) {
+        throw IllegalAccessError("Tried to access field $owner:$name:$descriptor, while it is not public")
+    }
+    if(!loadClassInfo(owner.replace('/', '.').replace('$', '.')).isPublic) {
+        throw IllegalAccessError("Tried to access field $owner:$name:$descriptor, while the class is not public")
+    }
+    return this
+}
+
+fun ClassMethodInfo.checkPublic(): ClassMethodInfo {
+    if(!isPublic) {
+        throw IllegalAccessError("Tried to access method $owner:$name$descriptor, while it is not public")
+    }
+    if(!loadClassInfo(owner.replace('/', '.').replace('$', '.')).isPublic) {
+        throw IllegalAccessError("Tried to access method $owner:$name$descriptor, while the class is not public")
+    }
+    return this
 }
 
 fun getClassAccessibleFields(className: String): Set<ClassFieldInfo> {

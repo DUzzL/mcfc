@@ -54,7 +54,7 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
         set(CodeFieldStorageMapKind.NBT_VALUE, new CodeFieldStorageMapValue<>(Type.getType(Tag.class), (cf, cw, value) -> writeNbtValue(value, cw)));
         set(CodeFieldStorageMapKind.PREDICATE, new CodeFieldStorageMapValue<>(Type.getType(LootItemCondition.class), (cf, cw, value) -> {
             var resourceKey = callResourceKey_create(cw, loadRegistries_PREDICATE(cw), cf.loadIdentifier(cw, value));
-            return cw.castType(callHolder_value(cw, callOptional_get(cw, callHolderGetterProvider_get(cw, callReloadableServerRegistriesHolder_lookup(cw, callMinecraftServer_reloadableRegistries(cw, cf.getGeneratorMinecraftServer())), resourceKey))), Type.getType(LootItemCondition.class));
+            return cw.castType(callHolder_value(cw, callOptional_get(cw, callHolderLookupProvider_get(cw, callReloadableServerRegistriesHolder_lookup(cw, callMinecraftServer_reloadableRegistries(cw, cf.getGeneratorMinecraftServer())), resourceKey))), Type.getType(LootItemCondition.class));
         }));
         set(CodeFieldStorageMapKind.RESOURCE_LOCATION, new CodeFieldStorageMapValue<>(Type.getType(Identifier.class), (cf, cw, value) -> {
             return callIdentifier_fromNamespaceAndPath(cw, new BytecodeValue.StringValue(value.namespace()), new BytecodeValue.StringValue(value.path()));
@@ -113,7 +113,7 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
             var listTag = cw.newObjectCreate(LIST_TAG_INIT_TARGET);
             List<NbtValue> values = arr.values();
             for(int i = 0; i < values.size(); i++) {
-                callCollectionTag_add(cw, listTag, new BytecodeValue.IntegerValue(i), writeNbtValue(values.get(i), cw));
+                callCollectionTag_addTag(cw, listTag, new BytecodeValue.IntegerValue(i), writeNbtValue(values.get(i), cw));
             }
             return listTag;
         }else if(value instanceof NbtValue.ByteArray barr) {

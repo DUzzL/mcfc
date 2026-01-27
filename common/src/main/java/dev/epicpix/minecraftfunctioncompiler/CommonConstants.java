@@ -11,7 +11,7 @@ public final class CommonConstants {
     public static final boolean ALLOW_EXTERNAL_DATA_ACCESS = false;
     public static final boolean GENERATE_REGISTRY_FILE = false;
     public static final boolean BLOCKING_COMPILATION = false;
-    public static final boolean ENABLE_REPORTING = true;
+    public static final boolean ENABLE_REPORTING = false;
     public static final boolean INCLUDE_SIMPLE_COMPILER = false;
     public static final String DATA_CLASS = "mcfc/function/data";
 

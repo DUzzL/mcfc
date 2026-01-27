@@ -338,7 +338,7 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 TODO("Reading '$kindInfo' kind is not implemented @$argumentPath <${data.argName}>")
             }
         }
-        val newArguments = arguments + mapOf(data.argName!! to "a$argumentIndex")
+        val newArguments = arguments + mapOf(data.argName to "a$argumentIndex")
         if(data.kind == "command") {
             generateCommandReturn(builder, commandTypes, data.executableCommand!!, newArguments, newTypedArguments)
             builder.append("}\n")

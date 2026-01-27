@@ -6,7 +6,7 @@ before_script:
 
 build:
   stage: build
-  script: ./gradlew build
+  script: ./gradlew build --stacktrace
   after_script:
     - mv $(find -name "mcfc-*.jar" ! -wholename "*devlibs/*") ./
   artifacts:

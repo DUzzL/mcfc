@@ -29,6 +29,7 @@ data class DefinitionPriorityTree(val def: ParsedTokenInstructionDefinition, val
         if(backwardConnections.isEmpty()) return 1
         return 1 + backwardConnections.maxOf { it.length() }
     }
+
     fun getAll(): List<DefinitionPriorityTree> {
         if(backwardConnections.isEmpty()) return listOf(this)
         return backwardConnections.fold(listOf(this)) { acc, v -> acc + v.getAll() }
@@ -94,7 +95,7 @@ fun javaToMinecraftGenericType(type: String, generics: List<String> = emptyList(
             "net.minecraft.network.chat.MutableComponent" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.TextComponentMutable"
             else -> throw IllegalArgumentException("Unknown minecraft class: $type")
         }
-    }else {
+    } else {
         return kotlinToJavaType(type, true, generics)
     }
 }
@@ -135,16 +136,19 @@ class MainProcessor(
         generateInstructionData(resolver)
         val targets = mutableListOf<String>()
         val file = parseCode(loadDataFile("data.instructions"))
-        val emitterClass = (if(options["definitions"] == "common") file.fileInfo["emitter_noobf_file"]!! else file.fileInfo["emitter_obf_file"]!!).replace("_VERSION_", PACKAGE_MINECRAFT_VERSION ?: "common")
+        val emitterClass = (if(options["definitions"] == "common") file.fileInfo["emitter_noobf_file"]!! else file.fileInfo["emitter_obf_file"]!!).replace("_VERSION_", PACKAGE_MINECRAFT_VERSION
+            ?: "common")
         val emitterPackage = emitterClass.substring(0, emitterClass.lastIndexOf('.'))
         val emitterTargetsClass = "$emitterPackage.EmitterTargets"
         if(definitions != null) {
             if(definitions["definition_file"] != null) {
-                generateFunctionMapping(definitions, minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0, emitterTargetsClass, targets)
+                generateFunctionMapping(definitions, minecraftVersion?.getOrNull(1)?.toIntOrNull()
+                    ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0, emitterTargetsClass, targets)
             }
         }
         if(options["definitions"] != null) {
-            generateInstructionData(file, options["definitions"] == "common", minecraftVersion?.getOrNull(1)?.toIntOrNull() ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0, targets)
+            generateInstructionData(file, options["definitions"] == "common", minecraftVersion?.getOrNull(1)?.toIntOrNull()
+                ?: 1, minecraftVersion?.getOrNull(2)?.toIntOrNull() ?: 0, targets)
         }
         if(options["definitions"] == "common") {
             generateConstantsData()
@@ -208,13 +212,13 @@ class MainProcessor(
     fun generateFunctionMapping(data: Map<String, JsonElement>, majorVer: Int, minorVer: Int, emitterTargetsClass: String, targets: MutableList<String>) {
         val resultClass = data["definition_file"]!!.asString.replace("_VERSION_", PACKAGE_MINECRAFT_VERSION ?: "common")
         val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
-        val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
+        val resultName = resultClass.substring(resultClass.lastIndexOf('.') + 1)
         val mapExtensions = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")
         mapExtensions.appendText("package $resultPackage;\n")
         mapExtensions.appendText("import static $emitterTargetsClass.TARGETS;\n")
         mapExtensions.appendText("public final class $resultName {\n")
         mapExtensions.appendText("    private $resultName() {}\n")
-        fun findVersionSpecific(v: JsonElement?): String? {
+        fun getForCurrentVersion(v: JsonElement?): String? {
             if(v?.isJsonObject == true) {
                 val v = v.asJsonObject!!.asMap()
                 v.forEach { (sk, v) ->
@@ -232,58 +236,69 @@ class MainProcessor(
                     }
                 }
                 return null
-            }else {
+            } else {
                 return v?.asString!!
             }
         }
         data["definitions_functions"]?.asJsonObject?.asMap()?.forEach { (k, v) ->
-            val content = findVersionSpecific(v)
+            val content = getForCurrentVersion(v)
             if(content != null) {
-                val fullDescriptor = content.split("@")[0].replace(Regex.fromLiteral("_VERSION_")) { PACKAGE_MINECRAFT_VERSION ?: throw IllegalArgumentException("Tried to use _VERSION_ in a common env") }
+                val fullDescriptor = content.split("@")[0].replace(Regex.fromLiteral("_VERSION_")) {
+                    PACKAGE_MINECRAFT_VERSION ?: throw IllegalArgumentException("Tried to use _VERSION_ in common env")
+                }
                 val className = fullDescriptor.split(":")[0]
                 val methodDescriptor = Type.getMethodType("(" + fullDescriptor.split("(")[1])
-                val callDetails = content.split("@")[1]
                 val methodName = fullDescriptor.split(":")[1].split("(")[0]
-                val isStatic = !callDetails.contains("M")
-                val isInterface = callDetails.contains("I")
+                val classInfo = loadClassInfo(className.replace('/', '.').replace('$', '.'))
+                val methodInfo = classInfo.methods.find { f -> f.name == methodName && f.descriptor == methodDescriptor.descriptor }?.checkPublic() ?: throw IllegalArgumentException("Failed to find method $className:$methodName$methodDescriptor")
+
+                val callDetails = content.split("@").getOrElse(1) { "" }
                 val noReorder = callDetails.contains("N")
-                val target = "new dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget.FunctionTarget(\"$className\", \"$methodName\", \"${methodDescriptor.descriptor}\", ${isStatic}, ${isInterface}, ${methodName == "<init>"}, ${noReorder})"
+                val target = "new dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget.FunctionTarget(\"$className\", \"$methodName\", \"${methodDescriptor.descriptor}\", ${methodInfo.isStatic}, ${classInfo.isInterface}, ${methodName == "<init>"}, ${noReorder})"
                 val args = mutableListOf<String>()
-                if(!isStatic) args.add("self")
+                if(!methodInfo.isStatic) args.add("self")
                 for(arg in methodDescriptor.argumentTypes.indices) {
                     args.add("r$arg")
                 }
 
                 if(methodDescriptor.returnType == Type.VOID_TYPE) {
                     mapExtensions.appendText("    public static void call$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter${args.joinToString("") { ", dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue $it" }}) { codeWriter.writeTarget(TARGETS[${getTarget(target, targets)}]${args.joinToString("") { ", $it" }}); }\n")
-                }else {
+                } else {
                     mapExtensions.appendText("    public static dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister call$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter${args.joinToString("") { ", dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue $it" }}) { return codeWriter.writeTarget(TARGETS[${getTarget(target, targets)}]${args.joinToString("") { ", $it" }}); }\n")
                 }
             }
         }
         data["definitions_fields"]?.asJsonObject?.asMap()?.forEach { (k, v) ->
-            val content = findVersionSpecific(v)
+            val content = getForCurrentVersion(v)
             if(content != null) {
-                val fullDescriptor = content.split("@")[0].replace(Regex.fromLiteral("_VERSION_")) { PACKAGE_MINECRAFT_VERSION ?: throw IllegalArgumentException("Tried to use _VERSION_ in a common env") }
+                val fullDescriptor = content.split("@")[0].replace(Regex.fromLiteral("_VERSION_")) {
+                    PACKAGE_MINECRAFT_VERSION
+                        ?: throw IllegalArgumentException("Tried to use _VERSION_ in a common env")
+                }
                 val className = fullDescriptor.split(":")[0]
-                val fieldDescriptor = fullDescriptor.split(":")[2]
                 val fieldName = fullDescriptor.split(":")[1]
+                val fieldDescriptor = fullDescriptor.split(":")[2]
+                val fieldInfo = loadClassInfo(className.replace('/', '.').replace('$', '.')).fields.find { f -> f.name == fieldName && f.descriptor == fieldDescriptor }?.checkPublic() ?: throw IllegalArgumentException("Failed to find field $className:$fieldName:$fieldDescriptor")
+
                 val callDetails = content.split("@").getOrNull(1)
                 if(callDetails != null) {
-                    val isStatic = !callDetails.contains("M")
+                    val isStatic = fieldInfo.isStatic
                     if(callDetails.contains("R")) {
                         val target = "new dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget.FieldTarget(\"$className\", \"$fieldName\", \"$fieldDescriptor\", ${isStatic}, false)"
                         if(isStatic) {
                             mapExtensions.appendText("    public static dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister load$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { return codeWriter.writeTarget(TARGETS[${getTarget(target, targets)}]); }\n")
-                        }else {
+                        } else {
                             mapExtensions.appendText("    public static dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister load$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter, dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue self) { return codeWriter.writeTarget(TARGETS[${getTarget(target, targets)}], self); }\n")
                         }
                     }
                     if(callDetails.contains("W")) {
+                        if(fieldInfo.isFinal) {
+                            throw IllegalArgumentException("Cannot generate a field write definition for $className:$fieldName:$fieldDescriptor because it is final")
+                        }
                         val target = "new dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget.FieldTarget(\"$className\", \"$fieldName\", \"$fieldDescriptor\", ${isStatic}, true)"
                         if(isStatic) {
                             mapExtensions.appendText("    public static void store$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter, dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue value) { codeWriter.writeTarget(TARGETS[${getTarget(target, targets)}], value); }\n")
-                        }else {
+                        } else {
                             mapExtensions.appendText("    public static void store$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter, dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue self, dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue value) { codeWriter.writeTarget(TARGETS[${getTarget(target, targets)}], self, value); }\n")
                         }
                     }
@@ -294,9 +309,10 @@ class MainProcessor(
     }
 
     fun generateInstructionData(file: ParsedFile, common: Boolean, majorVer: Int, minorVer: Int, targets: MutableList<String>) {
-        val resultClass = (if(common) file.fileInfo["emitter_noobf_file"]!! else file.fileInfo["emitter_obf_file"]!!).replace("_VERSION_", PACKAGE_MINECRAFT_VERSION ?: "common")
+        val resultClass = (if(common) file.fileInfo["emitter_noobf_file"]!! else file.fileInfo["emitter_obf_file"]!!).replace("_VERSION_", PACKAGE_MINECRAFT_VERSION
+            ?: "common")
         val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
-        val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
+        val resultName = resultClass.substring(resultClass.lastIndexOf('.') + 1)
         val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")
         map.appendText("package $resultPackage;\n")
         map.appendText("import static ${resultPackage}.EmitterTargets.TARGETS;\n")
@@ -349,7 +365,7 @@ class MainProcessor(
             val target = targets[targetIndex]
             if(targetIndex != targets.size - 1) {
                 mapTargets.appendText("        $target,\n")
-            }else {
+            } else {
                 mapTargets.appendText("        $target\n")
             }
         }
@@ -359,15 +375,15 @@ class MainProcessor(
         if(common) {
             val generatorClass = file.fileInfo["generator_file"]!!
             val generatorResultPackage = generatorClass.substring(0, generatorClass.lastIndexOf('.'))
-            val generatorResultClass = generatorClass.substring(generatorClass.lastIndexOf('.')+1)
+            val generatorResultClass = generatorClass.substring(generatorClass.lastIndexOf('.') + 1)
             val enumClass = file.fileInfo["enum_file"]!!
             val enumResultPackage = enumClass.substring(0, enumClass.lastIndexOf('.'))
-            val enumResultClass = enumClass.substring(enumClass.lastIndexOf('.')+1)
+            val enumResultClass = enumClass.substring(enumClass.lastIndexOf('.') + 1)
 
             val impl = codeGenerator.createNewFile(Dependencies.ALL_FILES, generatorResultPackage, generatorResultClass, "java")
             impl.appendText("package $generatorResultPackage;\n")
             impl.appendText("import java.util.*;\n")
-            impl.appendText("public final class ${generatorResultClass} {\n")
+            impl.appendText("public final class $generatorResultClass {\n")
 
             val types = codeGenerator.createNewFile(Dependencies.ALL_FILES, enumResultPackage, enumResultClass, "java")
             types.appendText("package $enumResultPackage;\n")
@@ -418,55 +434,42 @@ class MainProcessor(
                         ParsedTokenValueAccessorScope.CONTEXT, ParsedTokenValueAccessorScope.RETURN -> {
                             if(type == ParsedTokenExpressionSimpleType.LABEL) {
                                 "dev.epicpix.minecraftfunctioncompiler.il.LabelData"
-                            }else {
+                            } else {
                                 "dev.epicpix.minecraftfunctioncompiler.il.LocationData<${
-                                    if(type == ParsedTokenExpressionSimpleType.INTEGER) {
-                                        "Integer"
-                                    }else if(type == ParsedTokenExpressionSimpleType.BOOLEAN) {
-                                        "Boolean"
-                                    }else if(type == ParsedTokenExpressionSimpleType.DOUBLE) {
-                                        "Double"
-                                    }else if(type == ParsedTokenExpressionSimpleType.FLOAT) {
-                                        "Float"
-                                    }else if(type == ParsedTokenExpressionSimpleType.LONG) {
-                                        "Long"
-                                    }else if(type is ParsedTokenExpressionTypeComplex) {
-                                        if(param.scope == ParsedTokenValueAccessorScope.RETURN) {
-                                            javaToMinecraftGenericType(type.typeName, type.generics.map { javaToMinecraftGenericType(it.typeName) })
-                                        }else {
-                                            "? extends ${javaToMinecraftGenericType(type.typeName, type.generics.map { javaToMinecraftGenericType(it.typeName) })}"
+                                    when(type) {
+                                        ParsedTokenExpressionSimpleType.INTEGER -> "Integer"
+                                        ParsedTokenExpressionSimpleType.BOOLEAN -> "Boolean"
+                                        ParsedTokenExpressionSimpleType.DOUBLE -> "Double"
+                                        ParsedTokenExpressionSimpleType.FLOAT -> "Float"
+                                        ParsedTokenExpressionSimpleType.LONG -> "Long"
+                                        is ParsedTokenExpressionTypeComplex -> {
+                                            if(param.scope == ParsedTokenValueAccessorScope.RETURN) {
+                                                javaToMinecraftGenericType(type.typeName, type.generics.map { javaToMinecraftGenericType(it.typeName) })
+                                            } else {
+                                                "? extends ${javaToMinecraftGenericType(type.typeName, type.generics.map { javaToMinecraftGenericType(it.typeName) })}"
+                                            }
                                         }
-                                    }else if(type is ParsedTokenExpressionTypeGeneric) {
-                                        (if(type.generic.allowExtends) "? extends " else "") + type.generic.name
-                                    }else {
-                                        TODO("Unknown type: $type")
+                                        is ParsedTokenExpressionTypeGeneric -> (if(type.generic.allowExtends) "? extends " else "") + type.generic.name
+                                        else -> TODO("Unknown type: $type")
                                     }
                                 }>"
                             }
                         }
+
                         ParsedTokenValueAccessorScope.INSTRUCTION -> {
-                            if(type == ParsedTokenExpressionSimpleType.INTEGER) {
-                                "int"
-                            }else if(type == ParsedTokenExpressionSimpleType.BOOLEAN) {
-                                "boolean"
-                            }else if(type == ParsedTokenExpressionSimpleType.DOUBLE) {
-                                "double"
-                            }else if(type == ParsedTokenExpressionSimpleType.FLOAT) {
-                                "float"
-                            }else if(type == ParsedTokenExpressionSimpleType.LONG) {
-                                "long"
-                            }else if(type is ParsedTokenExpressionTypeComplex) {
-                                kotlinToJavaType(type.typeName, false, type.generics.map { javaToMinecraftGenericType(it.typeName) })
-                            }else {
-                                TODO("$type")
+                            when(type) {
+                                ParsedTokenExpressionSimpleType.INTEGER -> "int"
+                                ParsedTokenExpressionSimpleType.BOOLEAN -> "boolean"
+                                ParsedTokenExpressionSimpleType.DOUBLE -> "double"
+                                ParsedTokenExpressionSimpleType.FLOAT -> "float"
+                                ParsedTokenExpressionSimpleType.LONG -> "long"
+                                is ParsedTokenExpressionTypeComplex -> kotlinToJavaType(type.typeName, false, type.generics.map { javaToMinecraftGenericType(it.typeName) })
+                                else -> TODO("$type")
                             }
                         }
-                        ParsedTokenValueAccessorScope.LOCAL -> {
-                            continue
-                        }
-                        ParsedTokenValueAccessorScope.STATIC -> {
-                            continue
-                        }
+
+                        ParsedTokenValueAccessorScope.LOCAL -> continue
+                        ParsedTokenValueAccessorScope.STATIC -> continue
                     }
 
                     impl.appendText("$typeName ${param.name.snakeToLowerCamelCase()}")
@@ -488,7 +491,8 @@ class MainProcessor(
                 for(param in staticParams) {
                     val checkName = "static${param.first.name}".toUpperSnakeCase()
                     if(it.name.uppercase() != checkName) {
-                        tree.backwardConnections.add(defs.find { treeDef -> treeDef.def.name.uppercase() == checkName } ?: throw NullPointerException("Definition with name '$checkName' not found"))
+                        tree.backwardConnections.add(defs.find { treeDef -> treeDef.def.name.uppercase() == checkName }
+                            ?: throw NullPointerException("Definition with name '$checkName' not found"))
                     }
                 }
             }
@@ -535,10 +539,10 @@ class MainProcessor(
             val annotation = it.getAnnotationsByType(InstructionSourceClass::class).first()
             val generatorClass = annotation.generatorClass
             val generatorResultPackage = generatorClass.substring(0, generatorClass.lastIndexOf('.'))
-            val generatorResultClass = generatorClass.substring(generatorClass.lastIndexOf('.')+1)
+            val generatorResultClass = generatorClass.substring(generatorClass.lastIndexOf('.') + 1)
             val enumClass = annotation.enumClass
             val enumResultPackage = enumClass.substring(0, enumClass.lastIndexOf('.'))
-            val enumResultClass = enumClass.substring(enumClass.lastIndexOf('.')+1)
+            val enumResultClass = enumClass.substring(enumClass.lastIndexOf('.') + 1)
 
             val impl = codeGenerator.createNewFile(Dependencies(true, (it as KSClassDeclaration).containingFile!!), generatorResultPackage, generatorResultClass, "java")
             impl.appendText("package $generatorResultPackage;\n")
@@ -592,7 +596,7 @@ class MainProcessor(
 }
 
 fun String.toUpperSnakeCase() = split(Regex("(?=[A-Z])")).joinToString("_").uppercase()
-fun String.snakeToLowerCamelCase() = Regex("_[a-zA-Z]").replace(lowercase()) { it.value.replace("_","").uppercase() }
+fun String.snakeToLowerCamelCase() = Regex("_[a-zA-Z]").replace(lowercase()) { it.value.replace("_", "").uppercase() }
 
 class MainProcessorProvider : SymbolProcessorProvider {
     override fun create(
