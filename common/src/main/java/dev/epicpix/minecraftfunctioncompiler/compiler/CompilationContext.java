@@ -366,7 +366,6 @@ public class CompilationContext {
         return enterWithValue(data.withContextLabel(codeLocation), objective);
     }
 
-    @SuppressWarnings("resource")
     public CompilationData<ScoreAccessor> forScoreAccessors(ScoreAccessorArgument accessor, ResultContext resultContext) {
         var objectiveName = getObjective(accessor.objective(), resultContext);
         var scoreHolder = forScoreHolder(accessor.scoreHolder(), resultContext);
@@ -436,7 +435,6 @@ public class CompilationContext {
             return new CompilationData<>(this, current(), macro, 0);
         }else if(holder.selector() != null) {
             var selector = holder.single() ? holder.selector().limit(1) : holder.selector();
-            @SuppressWarnings("resource")
             var selectorData = forSelector(selector, resultContext);
             var name = this.<String>createLocal();
             selectorData.writeInstruction(Instructions.getScoreboardName(name, selectorData.content()));
@@ -730,33 +728,7 @@ public class CompilationContext {
             if(!possible) {
                 data.writeInstruction(instructionWriter, Instructions.jump(data.contextEndLabel()));
             }else {
-                var playerLocal = this.<Player>createLocal();
-                data.writeInstruction(instructionWriter, Instructions.tryAsPlayer(playerLocal, entityData.content(), data.contextEndLabel()));
-                var playerAdvancements = this.<PlayerAdvancements>createLocal();
-                data.writeInstruction(instructionWriter, Instructions.getPlayerAdvancements(playerAdvancements, playerLocal));
-
-                for(var check : selector.advancements().entrySet()) {
-                    throw new RuntimeException("getAdvancementProgress instruction is not supported");
-//                    var advancementProgressLocal = this.<AdvancementProgress>createLocal();
-//                    data.writeInstruction(instructionWriter, Instructions.getAdvancementProgress(advancementProgressLocal, playerAdvancements, check.getKey()));
-//                    if(check.getValue() instanceof SelectorAdvancementCheck.AdvancementCompleted advancementCompleted) {
-//                        if(advancementCompleted.done()) {
-//                            data.writeInstruction(instructionWriter, Instructions.jumpIfAdvancementNotDone(advancementProgressLocal, data.contextEndLabel()));
-//                        }else {
-//                            data.writeInstruction(instructionWriter, Instructions.jumpIfAdvancementDone(advancementProgressLocal, data.contextEndLabel()));
-//                        }
-//                    }else if(check.getValue() instanceof SelectorAdvancementCheck.CriteriaCompleted criteriaCompleted) {
-//                        for(var criteriaCheck : criteriaCompleted.criteria().entrySet()) {
-//                            var criterionProgressLocal = this.<CriterionProgress>createLocal();
-//                            data.writeInstruction(instructionWriter, Instructions.getCriterionProgress(criterionProgressLocal, advancementProgressLocal, LocationData.ofString(criteriaCheck.getKey())));
-//                            if(criteriaCheck.getValue()) {
-//                                data.writeInstruction(instructionWriter, Instructions.jumpIfAdvancementCriterionNotDone(criterionProgressLocal, data.contextEndLabel()));
-//                            }else {
-//                                data.writeInstruction(instructionWriter, Instructions.jumpIfAdvancementCriterionDone(criterionProgressLocal, data.contextEndLabel()));
-//                            }
-//                        }
-//                    }
-                }
+                throw new RuntimeException("advancements are not supported");
             }
         }
         if(selector.yaw() != null || selector.pitch() != null) {
@@ -820,32 +792,11 @@ public class CompilationContext {
                 jumpIfNotMatchesRange(data, scoreValue, entry.getValue(), data.contextEndLabel());
             }
         }
-        for(var predicate : selector.predicates()) {
-            throw new RuntimeException("jumpIfPredicateSelectedSucceeds and jumpIfPredicateSelectorFails instructions are not implemented");
-//            var predicateData = DataRegistries.PREDICATE.get(predicate.data());
-//            if(predicateData == null) {
-//                data.writeInstruction(instructionWriter, Instructions.jump(data.contextEndLabel()));
-//                break;
-//            }
-//            var entityWorld = this.<World>createLocal();
-//            data.writeInstruction(instructionWriter, Instructions.getEntityWorld(entityWorld, entityData.content()));
-//            if(predicate.negated()) {
-//                data.writeInstruction(instructionWriter, Instructions.jumpIfPredicateSelectorSucceeds(entityWorld, entityData.content(), data.contextEndLabel(), predicate.data()));
-//            }else {
-//                data.writeInstruction(instructionWriter, Instructions.jumpIfPredicateSelectorFails(entityWorld, entityData.content(), data.contextEndLabel(), predicate.data()));
-//            }
+        if(!selector.predicates().isEmpty()) {
+            throw new RuntimeException("predicates are not implemented");
         }
         if(!selector.nbts().isEmpty()) {
-            var entityNbt = getEntityNbt(entityData.content());
-            for(var nbtCheck : selector.nbts()) {
-                if(nbtCheck.negated()) {
-                    var successLabel = data.writeLabel(instructionWriter);
-                    compareNbt(data.withContextLabel(successLabel), successLabel, entityNbt, nbtCheck.data(), true);
-                    instructionWriter.addInstructionBefore(Instructions.jump(data.contextEndLabel()), successLabel);
-                }else {
-                    compareNbt(data, data.contextEndLabel(), entityNbt, nbtCheck.data(), true);
-                }
-            }
+            throw new RuntimeException("entity nbt not implemented");
         }
         stackCount += stack.size() - stackStart;
         return enterWithValue(data, entityData.content(), stackCount + 1);
@@ -947,20 +898,6 @@ public class CompilationContext {
 
     public LocationData<NbtCompound> getEntityNbt(LocationData<? extends Entity> entity) {
         throw new RuntimeException("getEntityNbt not implemented");
-//        var nbtLocal = this.<NbtCompound>createLocal();
-//        writeInstruction(Instructions.getEntityNbt(nbtLocal, entity));
-//        var playerLabel = instructionWriter.createLabelBefore(current().contextEndLabel());
-//        var player = this.<Player>createLocal();
-//        instructionWriter.addInstructionBefore(Instructions.tryAsPlayer(player, entity, playerLabel), playerLabel);
-//        var playerItem = this.<ItemStack>createLocal();
-//        instructionWriter.addInstructionBefore(Instructions.getPlayerSelectedItem(playerItem, player), playerLabel);
-//        var itemEmpty = this.<Integer>createLocal();
-//        instructionWriter.addInstructionBefore(Instructions.getIsItemEmpty(itemEmpty, playerItem), playerLabel);
-//        instructionWriter.addInstructionBefore(Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, itemEmpty, LocationData.ofBoolean(false), playerLabel), playerLabel);
-//        var itemNbt = this.<NbtCompound>createLocal();
-//        instructionWriter.addInstructionBefore(Instructions.getItemNbt(itemNbt, playerItem), playerLabel);
-//        instructionWriter.addInstructionBefore(Instructions.setNbtInCompound(nbtLocal, LocationData.ofString("SelectedItem"), itemNbt), playerLabel);
-//        return nbtLocal;
     }
 
     public void compareNbt(CompilationContextData current, LabelData errorLabel, LocationData<? extends NbtTag> data, NbtValue test, boolean ignoreListOrder) {

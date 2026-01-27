@@ -1,24 +1,6 @@
-ADVANCEMENT_GRANT_ONLY/advancement grant <targets:entity_selector[players]> only <advancement:resource_location>
-ADVANCEMENT_GRANT_ONLY_CRITERION/advancement grant <targets:entity_selector[players]> only <advancement:resource_location> <criterion:greedy_string>
-ADVANCEMENT_REVOKE_ONLY/advancement revoke <targets:entity_selector[players]> only <advancement:resource_location>
-ADVANCEMENT_REVOKE_ONLY_CRITERION/advancement revoke <targets:entity_selector[players]> only <advancement:resource_location> <criterion:greedy_string>
-
-ATTRIBUTE_BASE_SET/attribute <target:entity_selector[multiple=false]> <attribute:attribute> base set <value:double>
-
 DATA_MODIFY_SET_VALUE/data modify <destination:nbt_data_location> <path:nbt_path> set value <value:nbt_value>
 
 DIFFICULTY_SET/difficulty <difficulty:difficulty>
-
-EFFECT_CLEAR/effect clear
-EFFECT_CLEAR_ENTITIES/effect clear <targets:entity_selector>
-EFFECT_CLEAR_ENTITIES_EFFECT/effect clear <targets:entity_selector> <effect:mob_effect>
-EFFECT_GIVE/effect give <targets:entity_selector> <effect:mob_effect>
-EFFECT_GIVE_DUR/effect give <targets:entity_selector> <effect:mob_effect> <duration:int[minimum=1,maximum=1000000]>
-EFFECT_GIVE_DUR_AMP/effect give <targets:entity_selector> <effect:mob_effect> <duration:int[minimum=1,maximum=1000000]> <amplifier:int[minimum=0,maximum=255]>
-EFFECT_GIVE_DUR_AMP_SHOW/effect give <targets:entity_selector> <effect:mob_effect> <duration:int[minimum=1,maximum=1000000]> <amplifier:int[minimum=0,maximum=255]> <hide_particles:boolean>
-EFFECT_GIVE_INF/effect give <targets:entity_selector> <effect:mob_effect> infinite
-EFFECT_GIVE_INF_AMP/effect give <targets:entity_selector> <effect:mob_effect> infinite <amplifier:int[minimum=0,maximum=255]>
-EFFECT_GIVE_INF_AMP_SHOW/effect give <targets:entity_selector> <effect:mob_effect> infinite <amplifier:int[minimum=0,maximum=255]> <hide_particles:boolean>
 
 EXECUTE_ALIGN/execute align <swizzle:swizzle> <command:command[root=execute]>
 EXECUTE_ANCHORED/execute anchored <anchor:location_anchor> <command:command[root=execute]>
@@ -26,7 +8,6 @@ EXECUTE_AS/execute as <targets:entity_selector> <command:command[root=execute]>
 EXECUTE_AT/execute at <targets:entity_selector> <command:command[root=execute]>
 EXECUTE_IF_ENTITY/execute if entity <entities:entity_selector> <command:command[root=execute]>
 EXECUTE_IF_FUNCTION/execute if function <functions:function> <command:command[root=execute]>
-EXECUTE_IF_PREDICATE/execute if predicate <predicate:resource_location> <command:command[root=execute]>
 EXECUTE_IF_SCORE_RANGE/execute if score <target:score_accessor> matches <range:int_range> <command:command[root=execute]>
 EXECUTE_IF_SCORE_COMPARE/execute if score <target:score_accessor> <comparison:score_comparison> <source:score_accessor> <command:command[root=execute]>
 EXECUTE_ON_ORIGIN/execute on origin <command:command[root=execute]>
@@ -41,7 +22,6 @@ EXECUTE_STORE_SCORE/execute store <store_location:result_store_location_type> sc
 EXECUTE_STORE_STORAGE/execute store <store_location:result_store_location_type> storage <storage:resource_location> <path:nbt_path> <store_type:result_store_type> <scale:double> <command:command[root=execute]>
 EXECUTE_UNLESS_ENTITY/execute unless entity <entities:entity_selector> <command:command[root=execute]>
 EXECUTE_UNLESS_FUNCTION/execute unless function <functions:function> <command:command[root=execute]>
-EXECUTE_UNLESS_PREDICATE/execute unless predicate <predicate:resource_location> <command:command[root=execute]>
 EXECUTE_UNLESS_SCORE_RANGE/execute unless score <target:score_accessor> matches <range:int_range> <command:command[root=execute]>
 EXECUTE_UNLESS_SCORE_COMPARE/execute unless score <target:score_accessor> <comparison:score_comparison> <source:score_accessor> <command:command[root=execute]>
 
