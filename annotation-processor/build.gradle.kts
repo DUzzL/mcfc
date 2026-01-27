@@ -1,9 +1,9 @@
 plugins {
-    kotlin("jvm") version "2.1.0"
+    kotlin("jvm") version "2.3.0"
 }
 
 group = "dev.epicpix"
-version = project.properties.get("mod_version")!!
+version = project.properties["mod_version"]!!
 
 repositories {
     mavenCentral()
@@ -13,8 +13,8 @@ repositories {
 
 dependencies {
     implementation("com.squareup:javapoet:1.12.1")
-    implementation("com.google.devtools.ksp:symbol-processing-api:2.1.0-1.0.28")
-    implementation("cc.ekblad:4koma:1.2.0")
+    implementation("com.google.devtools.ksp:symbol-processing-api:2.3.4")
+    implementation("com.google.code.gson:gson:2.13.2")
     implementation("org.ow2.asm:asm:9.6")
 }
 

@@ -1,7 +1,5 @@
 package dev.epicpix.annotations
 
-import cc.ekblad.toml.decode
-import cc.ekblad.toml.tomlMapper
 import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.getAnnotationsByType
 import com.google.devtools.ksp.getDeclaredFunctions
@@ -9,6 +7,9 @@ import com.google.devtools.ksp.processing.*
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.Origin
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 import dev.epicpix.annotations.commands.generateCommandsDataReader
 import dev.epicpix.annotations.commands.parseCommandsData
 import dev.epicpix.annotations.instructions.*
@@ -36,8 +37,8 @@ data class DefinitionPriorityTree(val def: ParsedTokenInstructionDefinition, val
 
 private lateinit var dataDir: String
 
-fun loadToml(file: String): Map<String, Any> {
-    return tomlMapper {  }.decode(loadDataFile("$file.toml"))
+fun loadJson(file: String): Map<String, JsonElement> {
+    return GsonBuilder().create().fromJson(loadDataFile("$file.json"), JsonObject::class.java).asMap()
 }
 
 fun loadDataFile(file: String): String {
@@ -130,7 +131,7 @@ class MainProcessor(
         setResolver(resolver)
         PACKAGE_MINECRAFT_VERSION = options["minecraft_version"]?.replace(".", "_")?.run { "v$this" }
         val minecraftVersion = options["minecraft_version"]?.split(".")
-        val definitions = options["definitions"]?.let { loadToml(it) }
+        val definitions = options["definitions"]?.let { loadJson(it) }
         generateInstructionData(resolver)
         val targets = mutableListOf<String>()
         val file = parseCode(loadDataFile("data.instructions"))
@@ -204,8 +205,8 @@ class MainProcessor(
         return index
     }
 
-    fun generateFunctionMapping(data: Map<String, Any>, majorVer: Int, minorVer: Int, emitterTargetsClass: String, targets: MutableList<String>) {
-        val resultClass = (data["definition_file"] as String).replace("_VERSION_", PACKAGE_MINECRAFT_VERSION ?: "common")
+    fun generateFunctionMapping(data: Map<String, JsonElement>, majorVer: Int, minorVer: Int, emitterTargetsClass: String, targets: MutableList<String>) {
+        val resultClass = data["definition_file"]!!.asString.replace("_VERSION_", PACKAGE_MINECRAFT_VERSION ?: "common")
         val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
         val resultName = resultClass.substring(resultClass.lastIndexOf('.')+1)
         val mapExtensions = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")
@@ -213,12 +214,12 @@ class MainProcessor(
         mapExtensions.appendText("import static $emitterTargetsClass.TARGETS;\n")
         mapExtensions.appendText("public final class $resultName {\n")
         mapExtensions.appendText("    private $resultName() {}\n")
-        fun findVersionSpecific(v: Any?): String? {
-            if(v is Map<*, *>) {
+        fun findVersionSpecific(v: JsonElement?): String? {
+            if(v?.isJsonObject == true) {
+                val v = v.asJsonObject!!.asMap()
                 v.forEach { (sk, v) ->
-                    sk as String
                     for(k in sk.split(",")) {
-                        v as String
+                        val v = v.asString!!
                         val minecraftVersion = k.split(".")
                         val cMajor = minecraftVersion[1].replace("+", "").replace("-", "").toInt()
                         val cMinor = minecraftVersion.getOrNull(2)?.filter { it.isDigit() }?.toIntOrNull() ?: 0
@@ -232,10 +233,10 @@ class MainProcessor(
                 }
                 return null
             }else {
-                return v as String
+                return v?.asString!!
             }
         }
-        (data["definitions_functions"] as? Map<*, *>)?.forEach { (k, v) ->
+        data["definitions_functions"]?.asJsonObject?.asMap()?.forEach { (k, v) ->
             val content = findVersionSpecific(v)
             if(content != null) {
                 val fullDescriptor = content.split("@")[0].replace(Regex.fromLiteral("_VERSION_")) { PACKAGE_MINECRAFT_VERSION ?: throw IllegalArgumentException("Tried to use _VERSION_ in a common env") }
@@ -260,7 +261,7 @@ class MainProcessor(
                 }
             }
         }
-        (data["definitions_fields"] as? Map<*, *>)?.forEach { (k, v) ->
+        data["definitions_fields"]?.asJsonObject?.asMap()?.forEach { (k, v) ->
             val content = findVersionSpecific(v)
             if(content != null) {
                 val fullDescriptor = content.split("@")[0].replace(Regex.fromLiteral("_VERSION_")) { PACKAGE_MINECRAFT_VERSION ?: throw IllegalArgumentException("Tried to use _VERSION_ in a common env") }
