@@ -462,7 +462,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             }else {
                 throw IllegalArgumentException("Cannot run function on unknown instance: $instance")
             }
-            val def = functionMatches[0].run { if(owner == "java/lang/Object" && name == "<init>" && descriptor == "()V") ClassMethodInfo((instance as ParsedTokenInstanceStatic).className.replace('.', '/'), "<init>", "()V", isPublic = true, isStatic = false) else this }
+            val def = functionMatches[0].run { if(owner == "java/lang/Object" && name == "<init>" && descriptor == "()V") ClassMethodInfo((instance as ParsedTokenInstanceStatic).className.replace('.', '/'), "<init>", "()V", isPublic = true, isStatic = false) else this }.checkPublic()
             val classOwner = loadClassInfo(def.owner.replace('/', '.').replace('$', '.'))
             val className = def.owner
             val methodName = def.name
@@ -656,7 +656,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             matches[0]
         }else {
             throw IllegalArgumentException("Cannot access field on unknown instance: $instance")
-        }
+        }.checkPublic()
         val className = fieldMatch.owner
         val fieldName = fieldMatch.name
         val fieldDescriptor = fieldMatch.descriptor
