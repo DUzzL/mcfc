@@ -3,7 +3,14 @@ package dev.epicpix.minecraftfunctioncompiler.commands.macros;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition;
 
-import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.*;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callExtensionFunctions_isValidCommandDouble;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callExtensionFunctions_isValidCommandFloat;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callExtensionFunctions_isValidInteger;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callInteger_parseInt;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callMatcher_matches;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callPattern_matcher;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callString_contains;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callString_isEmpty;
 
 public final class MacroValidators {
     private MacroValidators() {}

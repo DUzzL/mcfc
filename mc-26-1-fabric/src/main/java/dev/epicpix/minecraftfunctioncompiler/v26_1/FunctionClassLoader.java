@@ -1,13 +1,13 @@
 package dev.epicpix.minecraftfunctioncompiler.v26_1;
 
-import dev.epicpix.minecraftfunctioncompiler.loader.CompilationParams;
-import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.commands.IArgumentLookup;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.TaggableLocation;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
+import dev.epicpix.minecraftfunctioncompiler.loader.CompilationParams;
+import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;

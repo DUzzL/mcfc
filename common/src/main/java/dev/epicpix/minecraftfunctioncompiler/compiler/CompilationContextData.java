@@ -1,7 +1,11 @@
 package dev.epicpix.minecraftfunctioncompiler.compiler;
 
 import dev.epicpix.minecraftfunctioncompiler.data.LocationAnchor;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
+import dev.epicpix.minecraftfunctioncompiler.data.locations.CommandSourceStack;
+import dev.epicpix.minecraftfunctioncompiler.data.locations.Entity;
+import dev.epicpix.minecraftfunctioncompiler.data.locations.Vec2;
+import dev.epicpix.minecraftfunctioncompiler.data.locations.Vec3;
+import dev.epicpix.minecraftfunctioncompiler.data.locations.World;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData;

@@ -2,7 +2,11 @@ package dev.epicpix.minecraftfunctioncompiler.registry;
 
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 public class TaggableDataRegistry<T> {
 

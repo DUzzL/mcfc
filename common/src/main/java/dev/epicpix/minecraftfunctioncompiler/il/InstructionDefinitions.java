@@ -1,8 +1,9 @@
 package dev.epicpix.minecraftfunctioncompiler.il;
 
 import dev.epicpix.annotations.InstructionSourceClass;
-import dev.epicpix.minecraftfunctioncompiler.data.*;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
+import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
+import dev.epicpix.minecraftfunctioncompiler.data.locations.CommandSourceStack;
+import dev.epicpix.minecraftfunctioncompiler.data.locations.NbtCompound;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;

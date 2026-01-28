@@ -1,17 +1,22 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter;
 
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
-import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
-import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
+import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2;
+import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 import it.unimi.dsi.fastutil.Pair;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DEBUG_GENERATE_GRAPH;

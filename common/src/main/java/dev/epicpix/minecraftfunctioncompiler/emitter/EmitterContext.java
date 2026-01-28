@@ -15,9 +15,14 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.jspecify.annotations.Nullable;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
-import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.*;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.EMITTER_INVALID_LOAD_LOCATION;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.EMITTER_INVALID_STORE_LOCATION;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.EMITTER_LOAD_LOCATION_NOT_STORED;
 
 public final class EmitterContext {
     private final DataLocation location;

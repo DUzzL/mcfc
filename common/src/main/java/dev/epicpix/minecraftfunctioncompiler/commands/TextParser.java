@@ -17,7 +17,10 @@ import org.jspecify.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.*;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.TEXT_INVALID;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.TEXT_INVALID_COLOR;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.TEXT_INVALID_UNSUPPORTED_CLICK_EVENT;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.TEXT_INVALID_UNSUPPORTED_HOVER_EVENT;
 
 public final class TextParser {
     private TextParser() {}

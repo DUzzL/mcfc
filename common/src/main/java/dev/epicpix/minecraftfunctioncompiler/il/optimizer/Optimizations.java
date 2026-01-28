@@ -2,12 +2,21 @@ package dev.epicpix.minecraftfunctioncompiler.il.optimizer;
 
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.emitter.types.NumberComparisonType;
-import dev.epicpix.minecraftfunctioncompiler.il.*;
+import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
+import dev.epicpix.minecraftfunctioncompiler.il.InstructionType;
+import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
+import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2;
+import dev.epicpix.minecraftfunctioncompiler.il.Instructions;
+import dev.epicpix.minecraftfunctioncompiler.il.Instructions2;
+import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
+import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
 import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 public final class Optimizations {
     private Optimizations() {}

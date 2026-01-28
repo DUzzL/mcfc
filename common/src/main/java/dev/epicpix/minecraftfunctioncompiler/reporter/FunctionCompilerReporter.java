@@ -1,6 +1,9 @@
 package dev.epicpix.minecraftfunctioncompiler.reporter;
 
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
@@ -10,7 +13,12 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.UUID;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.ENABLE_REPORTING;
 import static dev.epicpix.minecraftfunctioncompiler.CompileConstants.isDevelopmentEnvironment;

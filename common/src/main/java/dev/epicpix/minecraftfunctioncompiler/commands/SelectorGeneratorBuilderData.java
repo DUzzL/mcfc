@@ -1,7 +1,15 @@
 package dev.epicpix.minecraftfunctioncompiler.commands;
 
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
-import dev.epicpix.minecraftfunctioncompiler.data.*;
+import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
+import dev.epicpix.minecraftfunctioncompiler.data.DoubleRangeArgument;
+import dev.epicpix.minecraftfunctioncompiler.data.FloatRangeArgument;
+import dev.epicpix.minecraftfunctioncompiler.data.Gamemode;
+import dev.epicpix.minecraftfunctioncompiler.data.IntRangeArgument;
+import dev.epicpix.minecraftfunctioncompiler.data.NegatableData;
+import dev.epicpix.minecraftfunctioncompiler.data.SelectorAdvancementCheck;
+import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument;
+import dev.epicpix.minecraftfunctioncompiler.data.SelectorSort;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue;
 import org.jspecify.annotations.Nullable;
 

@@ -1,10 +1,15 @@
 package dev.epicpix.minecraftfunctioncompiler.il.optimizer;
 
-import it.unimi.dsi.fastutil.ints.*;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.NullUnmarked;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 @NullUnmarked
 public class LengauerTarjan {

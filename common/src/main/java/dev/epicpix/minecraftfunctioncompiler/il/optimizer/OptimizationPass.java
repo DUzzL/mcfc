@@ -5,10 +5,18 @@ import dev.epicpix.minecraftfunctioncompiler.il.InstructionType;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
 import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 import it.unimi.dsi.fastutil.Pair;
-import it.unimi.dsi.fastutil.ints.*;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntLinkedOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.jspecify.annotations.Nullable;
 
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
 
 public final class OptimizationPass {
 

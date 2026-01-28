@@ -2,7 +2,13 @@ package dev.epicpix.minecraftfunctioncompiler.registry;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import dev.epicpix.minecraftfunctioncompiler.data.*;
+import dev.epicpix.minecraftfunctioncompiler.data.AdvancementData;
+import dev.epicpix.minecraftfunctioncompiler.data.AttributeData;
+import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
+import dev.epicpix.minecraftfunctioncompiler.data.EntityData;
+import dev.epicpix.minecraftfunctioncompiler.data.MobEffectData;
+import dev.epicpix.minecraftfunctioncompiler.data.PredicateData;
+import dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCriterionData;
 
 import java.util.ArrayList;
 import java.util.List;

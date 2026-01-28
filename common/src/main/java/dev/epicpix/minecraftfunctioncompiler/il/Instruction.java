@@ -6,7 +6,11 @@ import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import it.unimi.dsi.fastutil.Pair;
 import org.jspecify.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;

@@ -2,9 +2,12 @@ package dev.epicpix.minecraftfunctioncompiler.il.optimizer;
 
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
-import it.unimi.dsi.fastutil.ints.*;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntSet;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Optimizer {
 

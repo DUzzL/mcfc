@@ -9,7 +9,10 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.jspecify.annotations.Nullable;
 
 import java.lang.constant.ClassDesc;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 
 public class BytecodeOptimizer {
 

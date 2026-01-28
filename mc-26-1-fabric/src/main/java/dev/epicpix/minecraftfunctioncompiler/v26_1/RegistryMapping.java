@@ -1,6 +1,12 @@
 package dev.epicpix.minecraftfunctioncompiler.v26_1;
 
-import dev.epicpix.minecraftfunctioncompiler.data.*;
+import dev.epicpix.minecraftfunctioncompiler.data.AdvancementData;
+import dev.epicpix.minecraftfunctioncompiler.data.AttributeData;
+import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
+import dev.epicpix.minecraftfunctioncompiler.data.EntityData;
+import dev.epicpix.minecraftfunctioncompiler.data.MobEffectData;
+import dev.epicpix.minecraftfunctioncompiler.data.PredicateData;
+import dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCriterionData;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;

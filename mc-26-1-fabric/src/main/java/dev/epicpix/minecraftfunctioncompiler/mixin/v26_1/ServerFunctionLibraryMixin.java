@@ -1,8 +1,8 @@
 package dev.epicpix.minecraftfunctioncompiler.mixin.v26_1;
 
 import com.llamalad7.mixinextras.sugar.Local;
-import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
+import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.functions.CommandFunction;
 import net.minecraft.resources.Identifier;

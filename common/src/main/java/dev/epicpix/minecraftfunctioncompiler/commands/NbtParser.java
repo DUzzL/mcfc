@@ -15,7 +15,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.*;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.NBT_EMPTY_KEY;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.NBT_INVALID_ARRAY_TYPE;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.NBT_INVALID_SYNTAX;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.NBT_MISMATCHED_TYPE;
 
 public final class NbtParser {
     private NbtParser() {}

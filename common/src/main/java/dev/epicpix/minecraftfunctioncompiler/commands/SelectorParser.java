@@ -2,7 +2,13 @@ package dev.epicpix.minecraftfunctioncompiler.commands;
 
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidators;
-import dev.epicpix.minecraftfunctioncompiler.data.*;
+import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
+import dev.epicpix.minecraftfunctioncompiler.data.FloatRangeArgument;
+import dev.epicpix.minecraftfunctioncompiler.data.NegatableData;
+import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument;
+import dev.epicpix.minecraftfunctioncompiler.data.SelectorAdvancementCheck;
+import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument;
+import dev.epicpix.minecraftfunctioncompiler.data.SelectorSort;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
@@ -11,7 +17,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
-import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.*;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.SELECTOR_EXPECTED_PLAYER_TARGETS;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.SELECTOR_EXPECTED_SINGULAR_TARGET;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.SELECTOR_INVALID_ENTITY;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.SELECTOR_INVALID_SYNTAX;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.SELECTOR_INVALID_TARGET;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.SELECTOR_OPTION_CANNOT_REPEAT;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.SELECTOR_OPTION_INVALID;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.SELECTOR_UNKNOWN_OPTION;
 
 public final class SelectorParser {
     private SelectorParser() {}
