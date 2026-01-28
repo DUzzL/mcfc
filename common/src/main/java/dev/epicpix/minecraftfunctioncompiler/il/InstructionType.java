@@ -1,6 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.il;
 
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public record InstructionType(String name, String[] argumentNames, int flags, int id) {
 
@@ -18,7 +18,7 @@ public record InstructionType(String name, String[] argumentNames, int flags, in
         this(name, argumentNames, 0);
     }
 
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if(o == null || getClass() != o.getClass()) return false;
         return id == ((InstructionType) o).id;
     }
@@ -30,7 +30,6 @@ public record InstructionType(String name, String[] argumentNames, int flags, in
     public static final int CONDITIONAL_JUMP = 1 << 0;
     public static final int PURE = 1 << 1;
 
-    @NotNull
     public String toString() {
         return name;
     }

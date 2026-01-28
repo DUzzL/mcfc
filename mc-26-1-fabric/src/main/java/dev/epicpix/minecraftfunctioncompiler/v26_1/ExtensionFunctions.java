@@ -25,6 +25,7 @@ import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerScores;
 import net.minecraft.world.scores.ScoreAccess;
 import net.minecraft.world.scores.ScoreHolder;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.text.DecimalFormat;
@@ -38,7 +39,7 @@ public class ExtensionFunctions {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public static ScoreAccess getScore(ServerScoreboard scoreboard, ScoreHolder player, Objective objective) {
+    public static @Nullable ScoreAccess getScore(ServerScoreboard scoreboard, ScoreHolder player, Objective objective) {
         PlayerScores map = scoreboard.playerScores.get(player.getScoreboardName());
         if (map == null) return null;
         return map.get(objective) == null ? null : scoreboard.getOrCreatePlayerScore(player, objective);
@@ -179,7 +180,7 @@ public class ExtensionFunctions {
 
                     appendOptionalStringEscape(builder, list.get(i));
                     builder.append(':');
-                    appendWithUnitsTag(builder, cTag.get(list.get(i)));
+                    appendWithUnitsTag(builder, Objects.requireNonNull(cTag.get(list.get(i))));
                 }
 
                 builder.append('}');

@@ -1,11 +1,11 @@
 package dev.epicpix.minecraftfunctioncompiler.il;
 
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.Nullable;
 
 @SuppressWarnings("unused")
 public record LocationData<T>(
-        Integer local,
-        Object object
+        @Nullable Integer local,
+        @Nullable Object object
 ) {
     public static <T> LocationData<T> ofLocal(int local) {
         return new LocationData<>(local, null);
@@ -31,7 +31,7 @@ public record LocationData<T>(
         return new LocationData<>(null, doubleValue);
     }
 
-    public static LocationData<Double> ofDoubleOrNull(Double doubleValue) {
+    public static @Nullable LocationData<Double> ofDoubleOrNull(@Nullable Double doubleValue) {
         return doubleValue != null ? new LocationData<>(null, doubleValue) : null;
     }
 
@@ -40,7 +40,6 @@ public record LocationData<T>(
         return (LocationData<R>) this;
     }
 
-    @NotNull
     public String toString() {
         if(local != null) {
             return "local<" + local + ">";

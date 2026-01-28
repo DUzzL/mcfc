@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.commands.macros;
 
+import org.jspecify.annotations.Nullable;
 import org.objectweb.asm.Type;
 
 import java.util.Objects;
@@ -26,7 +27,7 @@ public final class MacroType<T> {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if(o == null || getClass() != o.getClass()) return false;
         MacroType<?> macroType = (MacroType<?>) o;
         return Objects.equals(type, macroType.type);

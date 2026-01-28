@@ -3,6 +3,7 @@ package dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.stack;
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.*;
 import it.unimi.dsi.fastutil.ints.*;
+import org.jspecify.annotations.Nullable;
 import org.objectweb.asm.Type;
 
 import java.util.*;
@@ -36,144 +37,152 @@ public class StackCompiler {
         ArrayList<StackInstruction> results = new ArrayList<>();
         var registerTypeMap = new Int2ObjectOpenHashMap<Type>();
         for(var instr : instructions) {
-            if(instr instanceof BytecodeInstruction.RegisterValue(InstructionRVType type, BytecodeRegister result, BytecodeValue source)) {
-                if(type == InstructionRVType.SET) {
-                    var sourceType = getValueType(source, registerTypeMap);
-                    results.add(new StackInstruction.Load(source, sourceType));
-                    results.add(storeValue(result, sourceType, registerTypeMap));
-                }else {
-                    throw new IllegalArgumentException("Unknown instruction RegisterValue type: " + type);
-                }
-            }else if(instr instanceof BytecodeInstruction.RegisterValueValue(InstructionRVVType type, BytecodeRegister result, BytecodeValue sourceA, BytecodeValue sourceB)) {
-                var sourceType = getValueType(sourceA, registerTypeMap);
-                results.add(new StackInstruction.Load(sourceA, sourceType));
-                results.add(new StackInstruction.Load(sourceB, sourceType));
-                if(type == InstructionRVVType.ADD) {
-                    results.add(new StackInstruction.Evaluate(StackEvaluationType.ADD));
-                }else if(type == InstructionRVVType.SUB) {
-                    results.add(new StackInstruction.Evaluate(StackEvaluationType.SUB));
-                }else if(type == InstructionRVVType.MUL) {
-                    results.add(new StackInstruction.Evaluate(StackEvaluationType.MUL));
-                }else if(type == InstructionRVVType.DIV) {
-                    results.add(new StackInstruction.Evaluate(StackEvaluationType.DIV));
-                }else if(type == InstructionRVVType.MOD) {
-                    results.add(new StackInstruction.Evaluate(StackEvaluationType.MOD));
-                }else if(type == InstructionRVVType.SHL) {
-                    results.add(new StackInstruction.Evaluate(StackEvaluationType.SHL));
-                }else if(type == InstructionRVVType.SHR) {
-                    results.add(new StackInstruction.Evaluate(StackEvaluationType.SHR));
-                }else {
-                    throw new IllegalArgumentException("Unknown instruction RegisterValueValue type: " + type);
-                }
-                results.add(storeValue(result, sourceType, registerTypeMap));
-            }else if(instr instanceof BytecodeInstruction.CreateArray(BytecodeRegister result, BytecodeValue length, Type contentType)) {
-                results.add(loadValue(length, registerTypeMap));
-                results.add(new StackInstruction.NewArray(contentType));
-                results.add(storeValue(result, Type.getType("[" + contentType.getDescriptor()), registerTypeMap));
-            }else if(instr instanceof BytecodeInstruction.SetArrayValue(BytecodeValue array, BytecodeValue index, BytecodeValue value1)) {
-                results.add(loadValue(array, registerTypeMap));
-                results.add(loadValue(index, registerTypeMap));
-                results.add(loadValue(value1, registerTypeMap));
-                results.add(new StackInstruction.ArrayStore());
-            }else if(instr instanceof BytecodeInstruction.InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, Type type, BytecodeLabel label)) {
-                results.add(loadValue(a, registerTypeMap));
-                results.add(new StackInstruction.JumpTyped(ifIsInstance ? StackJumpType.IF_INSTANCEOF : StackJumpType.IF_NOT_INSTANCEOF, type, label));
-            }else if(instr instanceof BytecodeInstruction.ConditionalJump(JumpCondition condition, BytecodeValue a, BytecodeValue other, BytecodeLabel label)) {
-                results.add(loadValue(a, registerTypeMap));
-                if((other instanceof BytecodeValue.IntegerValue(int value) && value == 0) || (other instanceof BytecodeValue.LongValue(long value) && value == 0) || (other instanceof BytecodeValue.FloatValue(float value) && value == 0) || (other instanceof BytecodeValue.DoubleValue(double value) && value == 0)) {
-                    results.add(new StackInstruction.Jump(switch(condition) {
-                        case EQ -> StackJumpType.IF_EQUAL_ZERO;
-                        case NE -> StackJumpType.IF_NOT_EQUAL_ZERO;
-                        case LT -> StackJumpType.IF_LESS_THAN_ZERO;
-                        case LE -> StackJumpType.IF_LESS_EQUAL_ZERO;
-                        case GT -> StackJumpType.IF_GREATER_THAN_ZERO;
-                        case GE -> StackJumpType.IF_GREATER_EQUAL_ZERO;
-                    }, label));
-                    continue;
-                }
-                if(other instanceof BytecodeValue.NullValue) {
-                    results.add(new StackInstruction.Jump(switch(condition) {
-                        case EQ -> StackJumpType.IF_NULL;
-                        case NE -> StackJumpType.IF_NOT_NULL;
-                        default -> throw new IllegalArgumentException("Invalid condition for comparison with null: " + condition);
-                    }, label));
-                    continue;
-                }
-                results.add(loadValue(other, registerTypeMap));
-                results.add(new StackInstruction.Jump(switch(condition) {
-                    case EQ -> StackJumpType.IF_EQUAL;
-                    case NE -> StackJumpType.IF_NOT_EQUAL;
-                    case LT -> StackJumpType.IF_LESS_THAN;
-                    case LE -> StackJumpType.IF_LESS_EQUAL;
-                    case GT -> StackJumpType.IF_GREATER_THAN;
-                    case GE -> StackJumpType.IF_GREATER_EQUAL;
-                }, label));
-            }else if(instr instanceof BytecodeInstruction.Jump(BytecodeLabel label)) {
-                results.add(new StackInstruction.Jump(StackJumpType.GOTO, label));
-            }else if(instr instanceof BytecodeInstruction.Label(BytecodeLabel label)) {
-                results.add(new StackInstruction.Label(label));
-            }else if(instr instanceof BytecodeInstruction.CallTarget(BytecodeRegister result, InstructionTarget target, List<BytecodeValue> arguments)) {
-                if(target instanceof InstructionTarget.FunctionTarget f) {
-                    for(var arg : arguments) {
-                        results.add(loadValue(arg, registerTypeMap));
-                    }
-                    results.add(new StackInstruction.Call(f));
-                    var returnType = Type.getReturnType(f.descriptor());
-                    if(returnType != Type.VOID_TYPE) {
-                        results.add(storeValue(result, returnType, registerTypeMap));
-                    }
-                }else if(target instanceof InstructionTarget.FieldTarget f) {
-                    for(var arg : arguments) {
-                        results.add(loadValue(arg, registerTypeMap));
-                    }
-                    results.add(new StackInstruction.Call(f));
-                    if(!f.isWrite()) {
-                        results.add(storeValue(result, Type.getType(f.descriptor()), registerTypeMap));
-                    }
-                }
-            }else if(instr instanceof BytecodeInstruction.New(BytecodeRegister result, InstructionTarget target, List<BytecodeValue> arguments)) {
-                var f = (InstructionTarget.FunctionTarget) target;
-                results.add(new StackInstruction.New(Type.getType("L" + f.className() + ";")));
-                results.add(storeValue(result, Type.getType("L" + f.className() + ";"), registerTypeMap));
-                results.add(loadValue(result, registerTypeMap));
-                for(var arg : arguments) {
-                    results.add(loadValue(arg, registerTypeMap));
-                }
-                results.add(new StackInstruction.Call(f));
-            }else if(instr instanceof BytecodeInstruction.Cast(BytecodeRegister result, BytecodeValue source, Type type)) {
-                results.add(loadValue(source, registerTypeMap));
-                results.add(new StackInstruction.Cast(type));
-                results.add(storeValue(result, type, registerTypeMap));
-            }else if(instr instanceof BytecodeInstruction.StringConcat(BytecodeRegister result, List<BytecodeValue> values)) {
-                ArrayList<String> staticStrings = new ArrayList<>();
-                boolean isConstant = true;
-                boolean onlyStrings = true;
-                for(var value : values) {
-                    if(value instanceof BytecodeValue.StringValue(String staticString)) {
-                        staticStrings.add(staticString);
+            switch(instr) {
+                case BytecodeInstruction.RegisterValue(InstructionRVType type, BytecodeRegister result, BytecodeValue source) -> {
+                    if(type == InstructionRVType.SET) {
+                        var sourceType = getValueType(source, registerTypeMap);
+                        results.add(new StackInstruction.Load(source, sourceType));
+                        results.add(storeValue(result, sourceType, registerTypeMap));
                     }else {
-                        isConstant = false;
-                        staticStrings.add(null);
-                        var valueType = getValueType(value, registerTypeMap);
-                        onlyStrings &= valueType.equals(Type.getType(String.class));
-                        results.add(loadValue(value, registerTypeMap));
+                        throw new IllegalArgumentException("Unknown instruction RegisterValue type: " + type);
                     }
                 }
-                if(!isConstant) {
-                    if(!onlyStrings || staticStrings.size() != 1) {
-                        results.add(new StackInstruction.EvaluateString(staticStrings.toArray(new String[0])));
+                case BytecodeInstruction.RegisterValueValue(InstructionRVVType type, BytecodeRegister result, BytecodeValue sourceA, BytecodeValue sourceB) -> {
+                    var sourceType = getValueType(sourceA, registerTypeMap);
+                    results.add(new StackInstruction.Load(sourceA, sourceType));
+                    results.add(new StackInstruction.Load(sourceB, sourceType));
+                    if(type == InstructionRVVType.ADD) {
+                        results.add(new StackInstruction.Evaluate(StackEvaluationType.ADD));
+                    }else if(type == InstructionRVVType.SUB) {
+                        results.add(new StackInstruction.Evaluate(StackEvaluationType.SUB));
+                    }else if(type == InstructionRVVType.MUL) {
+                        results.add(new StackInstruction.Evaluate(StackEvaluationType.MUL));
+                    }else if(type == InstructionRVVType.DIV) {
+                        results.add(new StackInstruction.Evaluate(StackEvaluationType.DIV));
+                    }else if(type == InstructionRVVType.MOD) {
+                        results.add(new StackInstruction.Evaluate(StackEvaluationType.MOD));
+                    }else if(type == InstructionRVVType.SHL) {
+                        results.add(new StackInstruction.Evaluate(StackEvaluationType.SHL));
+                    }else if(type == InstructionRVVType.SHR) {
+                        results.add(new StackInstruction.Evaluate(StackEvaluationType.SHR));
+                    }else {
+                        throw new IllegalArgumentException("Unknown instruction RegisterValueValue type: " + type);
                     }
-                }else {
-                    results.add(new StackInstruction.Load(new BytecodeValue.StringValue(String.join("", staticStrings)), Type.getType(String.class)));
+                    results.add(storeValue(result, sourceType, registerTypeMap));
                 }
-                results.add(storeValue(result, Type.getType(String.class), registerTypeMap));
-            }else if(instr instanceof BytecodeInstruction.Return(BytecodeValue value)) {
-                results.add(loadValue(value, registerTypeMap));
-                results.add(new StackInstruction.ReturnValue());
-            }else if(instr instanceof BytecodeInstruction.ReturnVoid) {
-                results.add(new StackInstruction.Return());
-            }else {
-                throw new IllegalArgumentException("Unknown instruction: " + instr);
+                case BytecodeInstruction.CreateArray(BytecodeRegister result, BytecodeValue length, Type contentType) -> {
+                    results.add(loadValue(length, registerTypeMap));
+                    results.add(new StackInstruction.NewArray(contentType));
+                    results.add(storeValue(result, Type.getType("[" + contentType.getDescriptor()), registerTypeMap));
+                }
+                case BytecodeInstruction.SetArrayValue(BytecodeValue array, BytecodeValue index, BytecodeValue value1) -> {
+                    results.add(loadValue(array, registerTypeMap));
+                    results.add(loadValue(index, registerTypeMap));
+                    results.add(loadValue(value1, registerTypeMap));
+                    results.add(new StackInstruction.ArrayStore());
+                }
+                case BytecodeInstruction.InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, Type type, BytecodeLabel label) -> {
+                    results.add(loadValue(a, registerTypeMap));
+                    results.add(new StackInstruction.JumpTyped(ifIsInstance ? StackJumpType.IF_INSTANCEOF : StackJumpType.IF_NOT_INSTANCEOF, type, label));
+                }
+                case BytecodeInstruction.ConditionalJump(JumpCondition condition, BytecodeValue a, BytecodeValue other, BytecodeLabel label) -> {
+                    results.add(loadValue(a, registerTypeMap));
+                    if((other instanceof BytecodeValue.IntegerValue bvi && bvi.value() == 0) || (other instanceof BytecodeValue.LongValue bvl && bvl.value() == 0) || (other instanceof BytecodeValue.FloatValue bvf && bvf.value() == 0) || (other instanceof BytecodeValue.DoubleValue bvd && bvd.value() == 0)) {
+                        results.add(new StackInstruction.Jump(switch(condition) {
+                            case EQ -> StackJumpType.IF_EQUAL_ZERO;
+                            case NE -> StackJumpType.IF_NOT_EQUAL_ZERO;
+                            case LT -> StackJumpType.IF_LESS_THAN_ZERO;
+                            case LE -> StackJumpType.IF_LESS_EQUAL_ZERO;
+                            case GT -> StackJumpType.IF_GREATER_THAN_ZERO;
+                            case GE -> StackJumpType.IF_GREATER_EQUAL_ZERO;
+                        }, label));
+                        continue;
+                    }
+                    if(other instanceof BytecodeValue.NullValue) {
+                        results.add(new StackInstruction.Jump(switch(condition) {
+                            case EQ -> StackJumpType.IF_NULL;
+                            case NE -> StackJumpType.IF_NOT_NULL;
+                            default -> throw new IllegalArgumentException("Invalid condition for comparison with null: " + condition);
+                        }, label));
+                        continue;
+                    }
+                    results.add(loadValue(other, registerTypeMap));
+                    results.add(new StackInstruction.Jump(switch(condition) {
+                        case EQ -> StackJumpType.IF_EQUAL;
+                        case NE -> StackJumpType.IF_NOT_EQUAL;
+                        case LT -> StackJumpType.IF_LESS_THAN;
+                        case LE -> StackJumpType.IF_LESS_EQUAL;
+                        case GT -> StackJumpType.IF_GREATER_THAN;
+                        case GE -> StackJumpType.IF_GREATER_EQUAL;
+                    }, label));
+                }
+                case BytecodeInstruction.Jump(BytecodeLabel label) -> results.add(new StackInstruction.Jump(StackJumpType.GOTO, label));
+                case BytecodeInstruction.Label(BytecodeLabel label) -> results.add(new StackInstruction.Label(label));
+                case BytecodeInstruction.CallTarget(BytecodeRegister result, InstructionTarget target, List<BytecodeValue> arguments) -> {
+                    if(target instanceof InstructionTarget.FunctionTarget f) {
+                        for(var arg : arguments) {
+                            results.add(loadValue(arg, registerTypeMap));
+                        }
+                        results.add(new StackInstruction.Call(f));
+                        var returnType = Type.getReturnType(f.descriptor());
+                        if(returnType != Type.VOID_TYPE) {
+                            results.add(storeValue(result, returnType, registerTypeMap));
+                        }
+                    }else if(target instanceof InstructionTarget.FieldTarget f) {
+                        for(var arg : arguments) {
+                            results.add(loadValue(arg, registerTypeMap));
+                        }
+                        results.add(new StackInstruction.Call(f));
+                        if(!f.isWrite()) {
+                            results.add(storeValue(result, Type.getType(f.descriptor()), registerTypeMap));
+                        }
+                    }
+                }
+                case BytecodeInstruction.New(BytecodeRegister result, InstructionTarget target, List<BytecodeValue> arguments) -> {
+                    var f = (InstructionTarget.FunctionTarget) target;
+                    results.add(new StackInstruction.New(Type.getType("L" + f.className() + ";")));
+                    results.add(storeValue(result, Type.getType("L" + f.className() + ";"), registerTypeMap));
+                    results.add(loadValue(result, registerTypeMap));
+                    for(var arg : arguments) {
+                        results.add(loadValue(arg, registerTypeMap));
+                    }
+                    results.add(new StackInstruction.Call(f));
+                }
+                case BytecodeInstruction.Cast(BytecodeRegister result, BytecodeValue source, Type type) -> {
+                    results.add(loadValue(source, registerTypeMap));
+                    results.add(new StackInstruction.Cast(type));
+                    results.add(storeValue(result, type, registerTypeMap));
+                }
+                case BytecodeInstruction.StringConcat(BytecodeRegister result, List<BytecodeValue> values) -> {
+                    ArrayList<@Nullable String> staticStrings = new ArrayList<>();
+                    boolean isConstant = true;
+                    boolean onlyStrings = true;
+                    for(var value : values) {
+                        if(value instanceof BytecodeValue.StringValue(String staticString)) {
+                            staticStrings.add(staticString);
+                        }else {
+                            isConstant = false;
+                            staticStrings.add(null);
+                            var valueType = getValueType(value, registerTypeMap);
+                            onlyStrings &= valueType.equals(Type.getType(String.class));
+                            results.add(loadValue(value, registerTypeMap));
+                        }
+                    }
+                    if(!isConstant) {
+                        if(!onlyStrings || staticStrings.size() != 1) {
+                            results.add(new StackInstruction.EvaluateString(staticStrings.toArray(new @Nullable String[0])));
+                        }
+                    }else {
+                        results.add(new StackInstruction.Load(new BytecodeValue.StringValue(String.join("", staticStrings)), Type.getType(String.class)));
+                    }
+                    results.add(storeValue(result, Type.getType(String.class), registerTypeMap));
+                }
+                case BytecodeInstruction.Return(BytecodeValue value) -> {
+                    results.add(loadValue(value, registerTypeMap));
+                    results.add(new StackInstruction.ReturnValue());
+                }
+                case BytecodeInstruction.ReturnVoid _ -> results.add(new StackInstruction.Return());
+                case null, default -> throw new IllegalArgumentException("Unknown instruction: " + instr);
             }
         }
         var registerStoreCount = new Int2IntOpenHashMap();
@@ -209,7 +218,7 @@ public class StackCompiler {
             }
         }
 
-        var dependencyData = new Int2ObjectOpenHashMap<IntList>();
+        var dependencyData = new Int2ObjectOpenHashMap<@Nullable IntList>();
         DependencyGenerator gen = new DependencyGenerator(results, inlineBreaks);
         var ssrSorted = singleStoreRegs.keySet().intStream().sorted();
         for(var it = ssrSorted.iterator(); it.hasNext(); ) {
@@ -311,7 +320,7 @@ public class StackCompiler {
         return fixRegisterOffsets(output, registerTypeMap);
     }
 
-    private static List<StackInstruction> fixRegisterOffsets(List<StackInstruction> instrs, Int2ObjectMap<Type> registerTypeMap) {
+    private static List<StackInstruction> fixRegisterOffsets(List<StackInstruction> instrs, Int2ObjectMap<@Nullable Type> registerTypeMap) {
         var params = new ArrayList<BytecodeValue.Parameter>();
         var usedRegisters = new IntOpenHashSet();
         for(var i : instrs) {

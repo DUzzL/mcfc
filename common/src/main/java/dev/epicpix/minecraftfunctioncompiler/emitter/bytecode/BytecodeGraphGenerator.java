@@ -34,8 +34,8 @@ public class BytecodeGraphGenerator {
             for(var instr : instructions) {
                 int selfId = indexToId.get(index);
 
-                if(instr instanceof BytecodeInstruction.Jump jump) {
-                    int jumpId = indexToId.get(instructions.indexOf(new BytecodeInstruction.Label(jump.label())));
+                if(instr instanceof BytecodeInstruction.Jump(BytecodeLabel label)) {
+                    int jumpId = indexToId.get(instructions.indexOf(new BytecodeInstruction.Label(label)));
                     builder.append("    x").append(selfId).append(" -> x").append(jumpId).append(" [color=red]").append("\n");
                     index++;
                     continue;

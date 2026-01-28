@@ -2,13 +2,13 @@ package dev.epicpix.minecraftfunctioncompiler.commands.macros;
 
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
-import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.EMITTER_MACRO_MULTIPLE_NON_STRING_ARGUMENTS;
@@ -21,9 +21,9 @@ public record MacroTemplate<T>(List<MacroPart> parts, MacroType<T> macroType) {
             if(parts.size() != 1) {
                 throw new DiagnosticException(Diagnostic.emitterError(EMITTER_MACRO_MULTIPLE_NON_STRING_ARGUMENTS, context.location(), "Macro contains multiple parts while not being a string macro: \"" + this + "\" | " + macroType));
             }else {
-                var part = parts.get(0);
+                var part = parts.getFirst();
                 if(part instanceof MacroKind macro) {
-                    return context.getMacro(macro.source);
+                    return Objects.requireNonNull(context.getMacro(macro.source));
                 }else if(part instanceof LiteralKind<?>(Object literal)) {
                     var staticContent = context.codeWriter().createRegister();
                     if(macroType == MacroType.INT_MACRO_TYPE) {
@@ -40,7 +40,7 @@ public record MacroTemplate<T>(List<MacroPart> parts, MacroType<T> macroType) {
         ArrayList<BytecodeValue> concatArgs = new ArrayList<>();
         for(var part : parts) {
             if(part instanceof MacroKind macro) {
-                concatArgs.add(context.getMacro(macro.source));
+                concatArgs.add(Objects.requireNonNull(context.getMacro(macro.source)));
             }else if(part instanceof LiteralKind<?>(Object literal)) {
                 if(macroType == MacroType.STRING_MACRO_TYPE) {
                     concatArgs.add(new BytecodeValue.StringValue((String) literal));
@@ -69,13 +69,13 @@ public record MacroTemplate<T>(List<MacroPart> parts, MacroType<T> macroType) {
     }
 
     public boolean isStatic() {
-        return parts.size() == 1 && parts.get(0) instanceof LiteralKind<?>;
+        return parts.size() == 1 && parts.getFirst() instanceof LiteralKind<?>;
     }
 
     @SuppressWarnings("unchecked")
     public T getStaticValue() {
         if(!isStatic()) throw new UnsupportedOperationException("Cannot get static value of !isStatic macro: " + this);
-        return ((LiteralKind<T>) parts.get(0)).literal;
+        return ((LiteralKind<T>) parts.getFirst()).literal;
     }
 
     public boolean isExact(T value) {
@@ -100,9 +100,9 @@ public record MacroTemplate<T>(List<MacroPart> parts, MacroType<T> macroType) {
         ArrayList<MacroPart> newParts = new ArrayList<>();
         for(int i = 0; i<parts.size(); i++) {
             var value = parts.get(i);
-            if(value instanceof LiteralKind<?> literal && literal.literal instanceof String strLiteral) {
+            if(value instanceof LiteralKind<?>(Object literal) && literal instanceof String strLiteral) {
                 StringBuilder totalLiteral = new StringBuilder(strLiteral);
-                while(i + 1 < parts.size() && parts.get(i + 1) instanceof LiteralKind<?> nextLiteral && nextLiteral.literal instanceof String nextStrLiteral) {
+                while(i + 1 < parts.size() && parts.get(i + 1) instanceof LiteralKind<?>(Object nextLiteral) && nextLiteral instanceof String nextStrLiteral) {
                     totalLiteral.append(nextStrLiteral);
                     i++;
                 }

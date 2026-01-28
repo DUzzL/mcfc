@@ -4,23 +4,22 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import it.unimi.dsi.fastutil.Pair;
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-public record Instruction(InstructionType type, Object[] data) {
+public record Instruction(InstructionType type, @Nullable Object[] data) {
 
-    @NotNull
     @Override
     public String toString() {
         return "Instruction{type=" + type + ", data=" + Arrays.toString(data) + "}";
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if(o == null || getClass() != o.getClass()) return false;
         Instruction that = (Instruction) o;
         return type == that.type && Arrays.deepEquals(data, that.data);
@@ -32,11 +31,11 @@ public record Instruction(InstructionType type, Object[] data) {
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T get(int index) {
+    public <T> @Nullable T get(int index) {
         return (T) data[index];
     }
 
-    public <T> T get(String key) {
+    public <T> @Nullable T get(String key) {
         return get(type.getArgumentIndex(key));
     }
 
@@ -55,24 +54,30 @@ public record Instruction(InstructionType type, Object[] data) {
         return false;
     }
 
-    public Object[] optReplaceData(Object src, Object dst) {
-        Object[] replacedData = null;
+    public Optional<@Nullable Object[]> optReplaceData(Object src, Object dst) {
+        Optional<@Nullable Object[]> replacedData = Optional.empty();
         for(int d = 0; d<data.length; d++) {
             var value = data[d];
             if(Objects.equals(value, src)) {
-                if(replacedData == null) replacedData = data.clone();
-                replacedData[d] = dst;
+                if(replacedData.isPresent()) {
+                    replacedData.get()[d] = dst;
+                }else {
+                    replacedData = Optional.of(data.clone());
+                }
             }
         }
         return replacedData;
     }
 
-    public Object[] optReplaceDataIf(Predicate<Object> check, Object dst) {
-        Object[] replacedData = null;
+    public Optional<@Nullable Object[]> optReplaceDataIf(Predicate<@Nullable Object> check, Object dst) {
+        Optional<@Nullable Object[]> replacedData = Optional.empty();
         for(int d = 0; d<data.length; d++) {
             if(check.test(data[d])) {
-                if(replacedData == null) replacedData = data.clone();
-                replacedData[d] = dst;
+                if(replacedData.isPresent()) {
+                    replacedData.get()[d] = dst;
+                }else {
+                    replacedData = Optional.of(data.clone());
+                }
             }
         }
         return replacedData;
@@ -125,7 +130,7 @@ public record Instruction(InstructionType type, Object[] data) {
         return entries;
     }
 
-    private static JsonObject serializeType(Object value) {
+    private static JsonObject serializeType(@Nullable Object value) {
         JsonObject object = new JsonObject();
         switch(value) {
             case null -> object.addProperty("type", "null");

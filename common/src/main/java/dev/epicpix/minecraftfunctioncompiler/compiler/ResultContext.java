@@ -6,14 +6,15 @@ import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.il.Instructions;
 import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
+import org.jspecify.annotations.Nullable;
 
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_COMPILE_RESULT_NOT_IMPLEMENTED;
 
 public final class ResultContext implements AutoCloseable {
 
     private final CompilationContext context;
-    private final LocationData<Integer> success;
-    private final LocationData<Integer> result;
+    private final @Nullable LocationData<Integer> success;
+    private final @Nullable LocationData<Integer> result;
     private final LabelData errorLabel;
     private final LabelData endErrorLabel;
     private final boolean labelsAlreadyGenerated;
@@ -21,7 +22,7 @@ public final class ResultContext implements AutoCloseable {
     private boolean requiresErrorLabelJump;
     private boolean markedImplemented;
 
-    private ResultContext(CompilationContext context, LocationData<Integer> success, LocationData<Integer> result, LabelData errorLabel, LabelData endErrorLabel, boolean labelsAlreadyGenerated) {
+    private ResultContext(CompilationContext context, @Nullable LocationData<Integer> success, @Nullable LocationData<Integer> result, LabelData errorLabel, LabelData endErrorLabel, boolean labelsAlreadyGenerated) {
         this.context = context;
         this.success = success;
         this.result = result;

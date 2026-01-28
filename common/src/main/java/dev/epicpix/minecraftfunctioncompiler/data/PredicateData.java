@@ -1,4 +1,3 @@
 package dev.epicpix.minecraftfunctioncompiler.data;
 
-public record PredicateData(DataLocation location) {
-}
+public record PredicateData(DataLocation location) {}

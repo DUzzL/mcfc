@@ -1,8 +1,21 @@
 package dev.epicpix.minecraftfunctioncompiler.data.text;
 
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
+import org.jspecify.annotations.Nullable;
 
-public record TextStyle(Integer color, Integer shadowColor, Boolean bold, Boolean italic, Boolean underlined, Boolean strikethrough, Boolean obfuscated, TextClickEvent clickEvent, TextHoverEvent<?> hoverEvent, String insertion, DataLocation font) {
+public record TextStyle(
+    @Nullable Integer color,
+    @Nullable Integer shadowColor,
+    @Nullable Boolean bold,
+    @Nullable Boolean italic,
+    @Nullable Boolean underlined,
+    @Nullable Boolean strikethrough,
+    @Nullable Boolean obfuscated,
+    @Nullable TextClickEvent clickEvent,
+    @Nullable TextHoverEvent<?> hoverEvent,
+    @Nullable String insertion,
+    @Nullable DataLocation font
+) {
     private static final TextStyle EMPTY = new TextStyle(null, null, null, null, null, null, null, null, null,null, null);
 
     public static TextStyle empty() {

@@ -1,8 +1,10 @@
 package dev.epicpix.minecraftfunctioncompiler.data;
 
+import org.jspecify.annotations.Nullable;
+
 public record DoubleRangeArgument(
-        Double minimum,
-        Double maximum
+        @Nullable Double minimum,
+        @Nullable Double maximum
 ) {
     public String toString() {
         return (minimum != null ? minimum : "") + ".." + (maximum != null ? maximum : "");

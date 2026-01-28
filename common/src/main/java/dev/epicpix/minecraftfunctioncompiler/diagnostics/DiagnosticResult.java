@@ -1,5 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.diagnostics;
 
+import org.jspecify.annotations.Nullable;
+
 public interface DiagnosticResult<T> {
 
     static <T> DiagnosticResult<T> result(T result) {
@@ -17,14 +19,14 @@ public interface DiagnosticResult<T> {
         return this instanceof Error;
     }
 
-    default T getResult() {
+    default @Nullable T getResult() {
         if(this instanceof Result<T>) {
             return ((Result<T>) this).result;
         }
         return null;
     }
 
-    default Diagnostic getError() {
+    default @Nullable Diagnostic getError() {
         if(this instanceof Error<T>) {
             return ((Error<T>) this).diagnostic;
         }

@@ -6,6 +6,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
 import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.ints.*;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
@@ -33,8 +34,9 @@ public final class OptimizationPass {
         return getInstruction(thisInstruction);
     }
 
-    public Instruction getOffsetInstruction(int offset) {
-        return getInstruction(thisInstruction + offset);
+    public @Nullable Instruction previousInstruction() {
+        if(thisInstruction < 1) return null;
+        return getInstruction(thisInstruction - 1);
     }
 
     public boolean isValueUsed(int start, int end, boolean includeSelf, Object value) {
@@ -56,7 +58,7 @@ public final class OptimizationPass {
             for(var type : types) {
                 if(instruction.type() == type) {
                     for(var data : dataPairs) {
-                        if(!instruction.data()[instruction.type().getArgumentIndex(data.first())].equals(data.second())) {
+                        if(!Objects.equals(instruction.data()[instruction.type().getArgumentIndex(data.first())], data.second())) {
                             continue next;
                         }
                     }
@@ -84,7 +86,7 @@ public final class OptimizationPass {
         return results;
     }
 
-    public Integer findSingleInstruction(int start, int end, boolean includeSelf, InstructionType type, List<Pair<String, Object>> dataPairs) {
+    public @Nullable Integer findSingleInstruction(int start, int end, boolean includeSelf, InstructionType type, List<Pair<String, Object>> dataPairs) {
         var instrs = findInstructions(start, end, includeSelf, type, dataPairs);
         if(instrs.size() != 1) return null;
         return instrs.getInt(0);
@@ -109,12 +111,12 @@ public final class OptimizationPass {
         return results;
     }
 
-    public void generateInstructionEdges(Int2ObjectMap<IntSet> forward, Int2ObjectMap<IntSet> backward) {
+    public void generateInstructionEdges(Int2ObjectMap<IntSet> forward, @Nullable Int2ObjectMap<IntSet> backward) {
         var labelLocations = new Int2IntOpenHashMap();
         for(int i = 0; i<context.getInstructionCount(); i++) {
             var instruction = getInstruction(i);
             if(instruction.type() == InstructionTypes.LABEL) {
-                labelLocations.put(instruction.<LabelData>get(0).id(), i);
+                labelLocations.put(Objects.requireNonNull(instruction.<LabelData>get(0)).id(), i);
             }
             if(backward != null) backward.put(i, new IntLinkedOpenHashSet(2));
         }
@@ -160,8 +162,8 @@ public final class OptimizationPass {
             if(!includeSelf && i == thisInstruction) continue;
             var instr = getInstruction(i);
             var replacedInstructionData = instr.optReplaceData(from, to);
-            if(replacedInstructionData != null) {
-                modifyInstructionData(i, replacedInstructionData);
+            if(replacedInstructionData.isPresent()) {
+                modifyInstructionData(i, replacedInstructionData.get());
             }
         }
     }
@@ -205,7 +207,7 @@ public final class OptimizationPass {
         }
     }
 
-    public void modifyInstructionData(int index, Object[] instructionData) {
+    public void modifyInstructionData(int index, @Nullable Object[] instructionData) {
         var instr = context.instructions.get(index);
         replaceInstruction(index, new Instruction(instr.type(), instructionData));
         resetIndex = Math.min(resetIndex, index);

@@ -215,6 +215,11 @@ class MainProcessor(
             map.appendText("{}\n")
             map.close()
 
+            val map2 = codeGenerator.createNewFile(Dependencies.ALL_FILES, "dev.epicpix.minecraftfunctioncompiler.commands.params", "package-info", "java")
+            map2.appendText("@org.jspecify.annotations.NullMarked\n")
+            map2.appendText("package dev.epicpix.minecraftfunctioncompiler.commands.params;\n")
+            map2.close()
+
         }
     }
 

@@ -19,7 +19,7 @@ public class BytecodeFormatter {
             if(target.isStatic()) {
                 return target.className().replace('/', '.') + "." + target.name();
             }else {
-                return formatValue(args.get(0)) + "." + target.name();
+                return formatValue(args.getFirst()) + "." + target.name();
             }
         }else if(instructionTarget instanceof InstructionTarget.FunctionTarget target) {
             if(target.isStatic()) {
@@ -27,7 +27,7 @@ public class BytecodeFormatter {
                 return target.className().replace('/', '.') + "." + target.name() + "(" + callArgs + ")";
             }else {
                 var callArgs = args.stream().skip(1).map(BytecodeFormatter::formatValue).collect(Collectors.joining(", "));
-                return formatValue(args.get(0)) + "." + target.name() + "(" + callArgs + ")";
+                return formatValue(args.getFirst()) + "." + target.name() + "(" + callArgs + ")";
             }
         }else {
             throw new IllegalArgumentException("Unknown target: " + instructionTarget);
@@ -38,254 +38,254 @@ public class BytecodeFormatter {
         return type.getClassName();
     }
 
-    private static String formatValue(BytecodeValue value) {
-        if(value instanceof BytecodeValue.NullValue) {
-            return "<null>";
-        }else if(value instanceof BytecodeValue.IntegerValue intVal) {
-            return Integer.toString(intVal.value());
-        }else if(value instanceof BytecodeValue.LongValue longVal) {
-            return longVal.value() + "L";
-        }else if(value instanceof BytecodeValue.FloatValue floatVal) {
-            return floatVal.value() + "F";
-        }else if(value instanceof BytecodeValue.DoubleValue doubleVal) {
-            return doubleVal.value() + "D";
-        }else if(value instanceof BytecodeValue.StringValue stringValue) {
-            return "\"" + stringValue.value()
-                .replace("\\", "\\\\")
-                .replace("\n", "\\n")
-                .replace("\"", "\\\"") + "\"";
-        }else if(value instanceof BytecodeValue.Parameter parameter) {
-            return "parameter<" + parameter.index() + "," + formatType(parameter.type()) + ">";
-        }else if(value instanceof BytecodeRegister register) {
-            return "r" + register.reg();
-        }else {
-            throw new IllegalArgumentException("Unknown value: " + value);
-        }
+    private static String formatValue(BytecodeValue bytecodeValue) {
+        return switch(bytecodeValue) {
+            case BytecodeValue.NullValue _ -> "<null>";
+            case BytecodeValue.IntegerValue(int value) -> Integer.toString(value);
+            case BytecodeValue.LongValue(long value) -> value + "L";
+            case BytecodeValue.FloatValue(float value) -> value + "F";
+            case BytecodeValue.DoubleValue(double value) -> value + "D";
+            case BytecodeValue.StringValue(String value) -> "\"" + value.replace("\\", "\\\\").replace("\n", "\\n").replace("\"", "\\\"") + "\"";
+            case BytecodeValue.Parameter(int index, Type type) -> "parameter<" + index + "," + formatType(type) + ">";
+            case BytecodeRegister(int reg) -> "r" + reg;
+        };
     }
 
     public static String formatInstruction(BytecodeInstruction instr) {
-        if(instr instanceof BytecodeInstruction.RegisterValue v) {
-            return switch(v.type()) {
-                case SET -> formatValue(v.result()) + " = " + formatValue(v.source());
-            };
-        }else if(instr instanceof BytecodeInstruction.RegisterValueValue v) {
-            return switch(v.type()) {
-                case ADD -> formatValue(v.result()) + " = " + formatValue(v.sourceA()) + " + " + formatValue(v.sourceB());
-                case SUB -> formatValue(v.result()) + " = " + formatValue(v.sourceA()) + " - " + formatValue(v.sourceB());
-                case MUL -> formatValue(v.result()) + " = " + formatValue(v.sourceA()) + " * " + formatValue(v.sourceB());
-                case DIV -> formatValue(v.result()) + " = " + formatValue(v.sourceA()) + " / " + formatValue(v.sourceB());
-                case MOD -> formatValue(v.result()) + " = " + formatValue(v.sourceA()) + " % " + formatValue(v.sourceB());
-                case SHL -> formatValue(v.result()) + " = " + formatValue(v.sourceA()) + " << " + formatValue(v.sourceB());
-                case SHR -> formatValue(v.result()) + " = " + formatValue(v.sourceA()) + " >> " + formatValue(v.sourceB());
-            };
-        }else if(instr instanceof BytecodeInstruction.CreateArray v) {
-            return formatValue(v.result()) + " = new " + formatType(v.contentType()) + "[" + formatValue(v.length()) + "]";
-        }else if(instr instanceof BytecodeInstruction.SetArrayValue v) {
-            return formatValue(v.array()) + "[" + formatValue(v.index()) + "]" + " = " + formatValue(v.value());
-        }else if(instr instanceof BytecodeInstruction.InstanceCheckJump v) {
-            return formatLabel(v.label()) + " <- " + formatValue(v.a()) + (v.ifIsInstance() ? " " : " !") + "instanceof " + formatType(v.type());
-        }else if(instr instanceof BytecodeInstruction.ConditionalJump v) {
-            return formatLabel(v.label()) + " <- " + formatValue(v.a()) + " " + switch(v.condition()) {
-                case EQ -> "==";
-                case NE -> "!=";
-                case LT -> "<";
-                case LE -> "<=";
-                case GT -> ">";
-                case GE -> ">=";
-            } + " " + formatValue(v.b());
-        }else if(instr instanceof BytecodeInstruction.Jump v) {
-            return formatLabel(v.label()) + " <- true";
-        }else if(instr instanceof BytecodeInstruction.Label v) {
-            return formatLabel(v.label()) + ":";
-        }else if(instr instanceof BytecodeInstruction.CallTarget v) {
-            if(v.target() instanceof InstructionTarget.FieldTarget target) {
-                if(target.isWrite()) {
-                    return formatTarget(target, v.arguments()) + " = " + formatValue(v.arguments().get(target.isStatic() ? 0 : 1));
+        return switch(instr) {
+            case BytecodeInstruction.RegisterValue(InstructionRVType type, BytecodeRegister result, BytecodeValue source) ->
+                switch(type) {
+                    case SET -> formatValue(result) + " = " + formatValue(source);
+                };
+            case BytecodeInstruction.RegisterValueValue(InstructionRVVType type, BytecodeRegister result, BytecodeValue sourceA, BytecodeValue sourceB) ->
+                switch(type) {
+                    case ADD -> formatValue(result) + " = " + formatValue(sourceA) + " + " + formatValue(sourceB);
+                    case SUB -> formatValue(result) + " = " + formatValue(sourceA) + " - " + formatValue(sourceB);
+                    case MUL -> formatValue(result) + " = " + formatValue(sourceA) + " * " + formatValue(sourceB);
+                    case DIV -> formatValue(result) + " = " + formatValue(sourceA) + " / " + formatValue(sourceB);
+                    case MOD -> formatValue(result) + " = " + formatValue(sourceA) + " % " + formatValue(sourceB);
+                    case SHL -> formatValue(result) + " = " + formatValue(sourceA) + " << " + formatValue(sourceB);
+                    case SHR -> formatValue(result) + " = " + formatValue(sourceA) + " >> " + formatValue(sourceB);
+                };
+            case BytecodeInstruction.CreateArray(BytecodeRegister result, BytecodeValue length, Type contentType) -> formatValue(result) + " = new " + formatType(contentType) + "[" + formatValue(length) + "]";
+            case BytecodeInstruction.SetArrayValue(BytecodeValue array, BytecodeValue index, BytecodeValue value) -> formatValue(array) + "[" + formatValue(index) + "]" + " = " + formatValue(value);
+            case BytecodeInstruction.InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, Type type, BytecodeLabel label) -> formatLabel(label) + " <- " + formatValue(a) + (ifIsInstance ? " " : " !") + "instanceof " + formatType(type);
+            case BytecodeInstruction.ConditionalJump(JumpCondition condition, BytecodeValue a, BytecodeValue b, BytecodeLabel label) ->
+                formatLabel(label) + " <- " + formatValue(a) + " " + switch(condition) {
+                    case EQ -> "==";
+                    case NE -> "!=";
+                    case LT -> "<";
+                    case LE -> "<=";
+                    case GT -> ">";
+                    case GE -> ">=";
+                } + " " + formatValue(b);
+            case BytecodeInstruction.Jump(BytecodeLabel label) -> formatLabel(label) + " <- true";
+            case BytecodeInstruction.Label(BytecodeLabel label) -> formatLabel(label) + ":";
+            case BytecodeInstruction.CallTarget(BytecodeRegister result, InstructionTarget target1, List<BytecodeValue> arguments) -> {
+                if(target1 instanceof InstructionTarget.FieldTarget target) {
+                    if(target.isWrite()) {
+                        yield formatTarget(target, arguments) + " = " + formatValue(arguments.get(target.isStatic() ? 0 : 1));
+                    }else {
+                        yield formatValue(result) + " = " + formatTarget(target, arguments);
+                    }
+                }else if(target1 instanceof InstructionTarget.FunctionTarget target) {
+                    yield formatValue(result) + " = " + formatTarget(target, arguments);
                 }else {
-                    return formatValue(v.result()) + " = " + formatTarget(target, v.arguments());
+                    throw new IllegalArgumentException("Unknown target: " + target1);
                 }
-            }else if(v.target() instanceof InstructionTarget.FunctionTarget target) {
-                return formatValue(v.result()) + " = " + formatTarget(target, v.arguments());
-            }else {
-                throw new IllegalArgumentException("Unknown target: " + v.target());
             }
-        }else if(instr instanceof BytecodeInstruction.New v) {
-            if(v.target() instanceof InstructionTarget.FunctionTarget target && !target.isStatic() && target.isSpecial() && target.name().equals("<init>")) {
-                var callArgs = v.arguments().stream().map(BytecodeFormatter::formatValue).collect(Collectors.joining(", "));
-                return formatValue(v.result()) + " = new " + target.className().replace('/', '.') + "(" + callArgs + ")";
-            }else {
-                throw new IllegalArgumentException("Unknown target: " + v.target());
+            case BytecodeInstruction.New(BytecodeRegister result, InstructionTarget target, List<BytecodeValue> arguments) -> {
+                if(target instanceof InstructionTarget.FunctionTarget functionTarget && !functionTarget.isStatic() && functionTarget.isSpecial() && functionTarget.name().equals("<init>")) {
+                    var callArgs = arguments.stream().map(BytecodeFormatter::formatValue).collect(Collectors.joining(", "));
+                    yield formatValue(result) + " = new " + functionTarget.className().replace('/', '.') + "(" + callArgs + ")";
+                }else {
+                    throw new IllegalArgumentException("Unknown target: " + target);
+                }
             }
-        }else if(instr instanceof BytecodeInstruction.Cast v) {
-            return formatValue(v.result()) + " = (" + formatType(v.type()) + ") " + formatValue(v.source());
-        }else if(instr instanceof BytecodeInstruction.StringConcat v) {
-            var values = v.values().stream().map(BytecodeFormatter::formatValue).collect(Collectors.joining(" ++ "));
-            return formatValue(v.result()) + " = ++ " + values;
-        }else if(instr instanceof BytecodeInstruction.Return v) {
-            return "return " + formatValue(v.value());
-        }else if(instr instanceof BytecodeInstruction.ReturnVoid) {
-            return "return";
-        }else {
-            throw new IllegalArgumentException("Unknown instruction: " + instr);
-        }
+            case BytecodeInstruction.Cast(BytecodeRegister result, BytecodeValue source, Type type) -> formatValue(result) + " = (" + formatType(type) + ") " + formatValue(source);
+            case BytecodeInstruction.StringConcat(BytecodeRegister result, List<BytecodeValue> values) -> {
+                var strValues = values.stream().map(BytecodeFormatter::formatValue).collect(Collectors.joining(" ++ "));
+                yield formatValue(result) + " = ++ " + strValues;
+            }
+            case BytecodeInstruction.Return(BytecodeValue value) -> "return " + formatValue(value);
+            case BytecodeInstruction.ReturnVoid _ -> "return";
+        };
     }
 
-    private static JsonObject valueToJson(BytecodeValue value) {
+    private static JsonObject valueToJson(BytecodeValue bytecodeValue) {
         JsonObject v = new JsonObject();
-        if(value instanceof BytecodeValue.NullValue) {
-            v.addProperty("type", "null");
-        }else if(value instanceof BytecodeValue.IntegerValue intVal) {
-            v.addProperty("type", "int");
-            v.addProperty("value", intVal.value());
-        }else if(value instanceof BytecodeValue.LongValue longVal) {
-            v.addProperty("type", "long");
-            v.addProperty("value", longVal.value());
-        }else if(value instanceof BytecodeValue.FloatValue floatVal) {
-            v.addProperty("type", "float");
-            v.addProperty("value", floatVal.value());
-        }else if(value instanceof BytecodeValue.DoubleValue doubleVal) {
-            v.addProperty("type", "double");
-            v.addProperty("value", doubleVal.value());
-        }else if(value instanceof BytecodeValue.StringValue stringValue) {
-            v.addProperty("type", "string");
-            v.addProperty("value", stringValue.value());
-        }else if(value instanceof BytecodeValue.Parameter parameter) {
-            v.addProperty("type", "parameter");
-            v.addProperty("index", parameter.index());
-            v.addProperty("descriptor", parameter.type().getDescriptor());
-        }else if(value instanceof BytecodeRegister register) {
-            v.addProperty("type", "register");
-            v.addProperty("reg", register.reg());
-        }else {
-            throw new IllegalArgumentException("Unknown value: " + value);
+        switch(bytecodeValue) {
+            case BytecodeValue.NullValue _ -> v.addProperty("type", "null");
+            case BytecodeValue.IntegerValue(int value) -> {
+                v.addProperty("type", "int");
+                v.addProperty("value", value);
+            }
+            case BytecodeValue.LongValue(long value) -> {
+                v.addProperty("type", "long");
+                v.addProperty("value", value);
+            }
+            case BytecodeValue.FloatValue(float value) -> {
+                v.addProperty("type", "float");
+                v.addProperty("value", value);
+            }
+            case BytecodeValue.DoubleValue(double value) -> {
+                v.addProperty("type", "double");
+                v.addProperty("value", value);
+            }
+            case BytecodeValue.StringValue(String value) -> {
+                v.addProperty("type", "string");
+                v.addProperty("value", value);
+            }
+            case BytecodeValue.Parameter(int index, Type type) -> {
+                v.addProperty("type", "parameter");
+                v.addProperty("index", index);
+                v.addProperty("descriptor", type.getDescriptor());
+            }
+            case BytecodeRegister(int reg) -> {
+                v.addProperty("type", "register");
+                v.addProperty("reg", reg);
+            }
         }
         return v;
     }
 
     public static JsonObject instructionToJson(BytecodeInstruction instr) {
         JsonObject instruction = new JsonObject();
-        if(instr instanceof BytecodeInstruction.RegisterValue v) {
-            switch(v.type()) {
-                case SET -> instruction.addProperty("type", "set");
+        switch(instr) {
+            case BytecodeInstruction.RegisterValue(InstructionRVType type, BytecodeRegister result, BytecodeValue source) -> {
+                switch(type) {
+                    case SET -> instruction.addProperty("type", "set");
+                }
+                instruction.add("source", valueToJson(source));
+                instruction.add("result", valueToJson(result));
             }
-            instruction.add("source", valueToJson(v.source()));
-            instruction.add("result", valueToJson(v.result()));
-        }else if(instr instanceof BytecodeInstruction.RegisterValueValue v) {
-            switch(v.type()) {
-                case ADD -> instruction.addProperty("type", "add");
-                case SUB -> instruction.addProperty("type", "sub");
-                case MUL -> instruction.addProperty("type", "mul");
-                case DIV -> instruction.addProperty("type", "div");
-                case MOD -> instruction.addProperty("type", "mod");
-                case SHL -> instruction.addProperty("type", "shl");
-                case SHR -> instruction.addProperty("type", "shr");
+            case BytecodeInstruction.RegisterValueValue(InstructionRVVType type, BytecodeRegister result, BytecodeValue sourceA, BytecodeValue sourceB) -> {
+                switch(type) {
+                    case ADD -> instruction.addProperty("type", "add");
+                    case SUB -> instruction.addProperty("type", "sub");
+                    case MUL -> instruction.addProperty("type", "mul");
+                    case DIV -> instruction.addProperty("type", "div");
+                    case MOD -> instruction.addProperty("type", "mod");
+                    case SHL -> instruction.addProperty("type", "shl");
+                    case SHR -> instruction.addProperty("type", "shr");
+                }
+                instruction.add("source_a", valueToJson(sourceA));
+                instruction.add("source_b", valueToJson(sourceB));
+                instruction.add("result", valueToJson(result));
             }
-            instruction.add("source_a", valueToJson(v.sourceA()));
-            instruction.add("source_b", valueToJson(v.sourceB()));
-            instruction.add("result", valueToJson(v.result()));
-        }else if(instr instanceof BytecodeInstruction.CreateArray v) {
-            instruction.addProperty("type", "new_array");
-            instruction.addProperty("class", v.contentType().getDescriptor());
-            instruction.add("length", valueToJson(v.length()));
-            instruction.add("result", valueToJson(v.result()));
-        }else if(instr instanceof BytecodeInstruction.SetArrayValue v) {
-            instruction.addProperty("type", "set_array_value");
-            instruction.add("array", valueToJson(v.array()));
-            instruction.add("index", valueToJson(v.index()));
-            instruction.add("value", valueToJson(v.value()));
-        }else if(instr instanceof BytecodeInstruction.InstanceCheckJump v) {
-            instruction.addProperty("type", "instance_check_jump");
-            instruction.addProperty("label", v.label().id());
-            instruction.addProperty("is", v.ifIsInstance());
-            instruction.addProperty("class", v.type().getDescriptor());
-            instruction.add("value", valueToJson(v.a()));
-        }else if(instr instanceof BytecodeInstruction.ConditionalJump v) {
-            instruction.addProperty("type", "conditional_jump");
-            instruction.addProperty("label", v.label().id());
-            switch(v.condition()) {
-                case EQ -> instruction.addProperty("condition", "equal");
-                case NE -> instruction.addProperty("condition", "not_equal");
-                case LT -> instruction.addProperty("condition", "less_than");
-                case LE -> instruction.addProperty("condition", "less_equal");
-                case GT -> instruction.addProperty("condition", "greater_than");
-                case GE -> instruction.addProperty("condition", "greater_equal");
+            case BytecodeInstruction.CreateArray(BytecodeRegister result, BytecodeValue length, Type contentType) -> {
+                instruction.addProperty("type", "new_array");
+                instruction.addProperty("class", contentType.getDescriptor());
+                instruction.add("length", valueToJson(length));
+                instruction.add("result", valueToJson(result));
             }
-            instruction.add("value_a", valueToJson(v.a()));
-            instruction.add("value_b", valueToJson(v.b()));
-        }else if(instr instanceof BytecodeInstruction.Jump v) {
-            instruction.addProperty("type", "jump");
-            instruction.addProperty("label", v.label().id());
-        }else if(instr instanceof BytecodeInstruction.Label v) {
-            instruction.addProperty("type", "label");
-            instruction.addProperty("label", v.label().id());
-        }else if(instr instanceof BytecodeInstruction.CallTarget v) {
-            instruction.addProperty("type", "call_target");
-            if(v.target() instanceof InstructionTarget.FieldTarget target) {
-                instruction.addProperty("target_type", "field");
-                instruction.addProperty("class", target.className());
-                instruction.addProperty("name", target.name());
-                instruction.addProperty("descriptor", target.descriptor());
-                instruction.addProperty("is_static", target.isStatic());
-                instruction.addProperty("is_write", target.isWrite());
+            case BytecodeInstruction.SetArrayValue(BytecodeValue array, BytecodeValue index, BytecodeValue value) -> {
+                instruction.addProperty("type", "set_array_value");
+                instruction.add("array", valueToJson(array));
+                instruction.add("index", valueToJson(index));
+                instruction.add("value", valueToJson(value));
+            }
+            case BytecodeInstruction.InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, Type type, BytecodeLabel label) -> {
+                instruction.addProperty("type", "instance_check_jump");
+                instruction.addProperty("label", label.id());
+                instruction.addProperty("is", ifIsInstance);
+                instruction.addProperty("class", type.getDescriptor());
+                instruction.add("value", valueToJson(a));
+            }
+            case BytecodeInstruction.ConditionalJump(JumpCondition condition, BytecodeValue a, BytecodeValue b, BytecodeLabel label) -> {
+                instruction.addProperty("type", "conditional_jump");
+                instruction.addProperty("label", label.id());
+                switch(condition) {
+                    case EQ -> instruction.addProperty("condition", "equal");
+                    case NE -> instruction.addProperty("condition", "not_equal");
+                    case LT -> instruction.addProperty("condition", "less_than");
+                    case LE -> instruction.addProperty("condition", "less_equal");
+                    case GT -> instruction.addProperty("condition", "greater_than");
+                    case GE -> instruction.addProperty("condition", "greater_equal");
+                }
+                instruction.add("value_a", valueToJson(a));
+                instruction.add("value_b", valueToJson(b));
+            }
+            case BytecodeInstruction.Jump(BytecodeLabel label) -> {
+                instruction.addProperty("type", "jump");
+                instruction.addProperty("label", label.id());
+            }
+            case BytecodeInstruction.Label(BytecodeLabel label) -> {
+                instruction.addProperty("type", "label");
+                instruction.addProperty("label", label.id());
+            }
+            case BytecodeInstruction.CallTarget(BytecodeRegister result, InstructionTarget target, List<BytecodeValue> arguments) -> {
+                instruction.addProperty("type", "call_target");
+                if(target instanceof InstructionTarget.FieldTarget(
+                    String className, String name, String descriptor, boolean isStatic, boolean isWrite
+                )) {
+                    instruction.addProperty("target_type", "field");
+                    instruction.addProperty("class", className);
+                    instruction.addProperty("name", name);
+                    instruction.addProperty("descriptor", descriptor);
+                    instruction.addProperty("is_static", isStatic);
+                    instruction.addProperty("is_write", isWrite);
+                    var args = new JsonArray();
+                    for(var arg : arguments) {
+                        args.add(valueToJson(arg));
+                    }
+                    instruction.add("args", args);
+                    instruction.add("result", valueToJson(result));
+                }else if(target instanceof InstructionTarget.FunctionTarget(String className, String name, String descriptor, boolean isStatic, boolean isInterface, boolean isSpecial, boolean noReordering)) {
+                    instruction.addProperty("target_type", "method");
+                    instruction.addProperty("class", className);
+                    instruction.addProperty("name", name);
+                    instruction.addProperty("descriptor", descriptor);
+                    instruction.addProperty("is_static", isStatic);
+                    instruction.addProperty("is_interface", isInterface);
+                    instruction.addProperty("is_special", isSpecial);
+                    instruction.addProperty("no_reordering", noReordering);
+                    var args = new JsonArray();
+                    for(var arg : arguments) {
+                        args.add(valueToJson(arg));
+                    }
+                    instruction.add("args", args);
+                    instruction.add("result", valueToJson(result));
+                }else {
+                    throw new IllegalArgumentException("Unknown target: " + target);
+                }
+            }
+            case BytecodeInstruction.New(BytecodeRegister result, InstructionTarget target, List<BytecodeValue> arguments) -> {
+                instruction.addProperty("type", "new_object");
+                if(target instanceof InstructionTarget.FunctionTarget functionTarget && !functionTarget.isStatic() && functionTarget.isSpecial() && functionTarget.name().equals("<init>")) {
+                    instruction.addProperty("class", functionTarget.className());
+                    instruction.addProperty("descriptor", functionTarget.descriptor());
+                    instruction.addProperty("no_reordering", functionTarget.noReordering());
+                    var args = new JsonArray();
+                    for(var arg : arguments) {
+                        args.add(valueToJson(arg));
+                    }
+                    instruction.add("args", args);
+                    instruction.add("result", valueToJson(result));
+                }else {
+                    throw new IllegalArgumentException("Unknown target: " + target);
+                }
+            }
+            case BytecodeInstruction.Cast(BytecodeRegister result, BytecodeValue source, Type type) -> {
+                instruction.addProperty("type", "cast");
+                instruction.addProperty("class", type.getDescriptor());
+                instruction.add("source", valueToJson(source));
+                instruction.add("result", valueToJson(result));
+            }
+            case BytecodeInstruction.StringConcat(BytecodeRegister result, List<BytecodeValue> values) -> {
+                instruction.addProperty("type", "string_concat");
                 var args = new JsonArray();
-                for(var arg : v.arguments()) {
+                for(var arg : values) {
                     args.add(valueToJson(arg));
                 }
                 instruction.add("args", args);
-                instruction.add("result", valueToJson(v.result()));
-            }else if(v.target() instanceof InstructionTarget.FunctionTarget target) {
-                instruction.addProperty("target_type", "method");
-                instruction.addProperty("class", target.className());
-                instruction.addProperty("name", target.name());
-                instruction.addProperty("descriptor", target.descriptor());
-                instruction.addProperty("is_static", target.isStatic());
-                instruction.addProperty("is_interface", target.isInterface());
-                instruction.addProperty("is_special", target.isSpecial());
-                instruction.addProperty("no_reordering", target.noReordering());
-                var args = new JsonArray();
-                for(var arg : v.arguments()) {
-                    args.add(valueToJson(arg));
-                }
-                instruction.add("args", args);
-                instruction.add("result", valueToJson(v.result()));
-            }else {
-                throw new IllegalArgumentException("Unknown target: " + v.target());
+                instruction.add("result", valueToJson(result));
             }
-        }else if(instr instanceof BytecodeInstruction.New v) {
-            instruction.addProperty("type", "new_object");
-            if(v.target() instanceof InstructionTarget.FunctionTarget target && !target.isStatic() && target.isSpecial() && target.name().equals("<init>")) {
-                instruction.addProperty("class", target.className());
-                instruction.addProperty("descriptor", target.descriptor());
-                instruction.addProperty("no_reordering", target.noReordering());
-                var args = new JsonArray();
-                for(var arg : v.arguments()) {
-                    args.add(valueToJson(arg));
-                }
-                instruction.add("args", args);
-                instruction.add("result", valueToJson(v.result()));
-            }else {
-                throw new IllegalArgumentException("Unknown target: " + v.target());
+            case BytecodeInstruction.Return(BytecodeValue value) -> {
+                instruction.addProperty("type", "return_value");
+                instruction.add("value", valueToJson(value));
             }
-        }else if(instr instanceof BytecodeInstruction.Cast v) {
-            instruction.addProperty("type", "cast");
-            instruction.addProperty("class", v.type().getDescriptor());
-            instruction.add("source", valueToJson(v.source()));
-            instruction.add("result", valueToJson(v.result()));
-        }else if(instr instanceof BytecodeInstruction.StringConcat v) {
-            instruction.addProperty("type", "string_concat");
-            var args = new JsonArray();
-            for(var arg : v.values()) {
-                args.add(valueToJson(arg));
-            }
-            instruction.add("args", args);
-            instruction.add("result", valueToJson(v.result()));
-        }else if(instr instanceof BytecodeInstruction.Return v) {
-            instruction.addProperty("type", "return_value");
-            instruction.add("value", valueToJson(v.value()));
-        }else if(instr instanceof BytecodeInstruction.ReturnVoid) {
-            instruction.addProperty("type", "return_void");
-        }else {
-            throw new IllegalArgumentException("Unknown instruction: " + instr);
+            case BytecodeInstruction.ReturnVoid _ -> instruction.addProperty("type", "return_void");
         }
         return instruction;
     }

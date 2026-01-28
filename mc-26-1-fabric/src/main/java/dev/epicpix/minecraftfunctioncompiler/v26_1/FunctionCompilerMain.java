@@ -7,9 +7,10 @@ import dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.Emitter;
 import dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.Emitter2;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
+import org.jspecify.annotations.Nullable;
 
 public class FunctionCompilerMain implements ModInitializer {
-    public static FunctionClassLoader functionClassLoader;
+    public static @Nullable FunctionClassLoader functionClassLoader;
     public FunctionCompilerMain() {
         GlobalConfig.loadAndSaveConfig(FabricLoader.getInstance().getConfigDir().resolve(GlobalConfig.DEFAULT_CONFIG_FILE));
     }

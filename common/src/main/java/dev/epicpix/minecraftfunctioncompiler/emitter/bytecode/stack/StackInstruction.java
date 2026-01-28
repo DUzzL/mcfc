@@ -4,6 +4,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
+import org.jspecify.annotations.Nullable;
 import org.objectweb.asm.Type;
 
 public sealed interface StackInstruction permits StackCompiler.InlineEvalStore, StackInstruction.ArrayStore, StackInstruction.Call, StackInstruction.Cast, StackInstruction.Evaluate, StackInstruction.EvaluateString, StackInstruction.Jump, StackInstruction.JumpTyped, StackInstruction.Label, StackInstruction.Load, StackInstruction.New, StackInstruction.NewArray, StackInstruction.Pop, StackInstruction.Return, StackInstruction.ReturnValue, StackInstruction.Store {
@@ -18,7 +19,7 @@ public sealed interface StackInstruction permits StackCompiler.InlineEvalStore, 
     record Return() implements StackInstruction {}
     record Pop() implements StackInstruction {}
     record Evaluate(StackEvaluationType evaluationType) implements StackInstruction {}
-    record EvaluateString(String[] template) implements StackInstruction {}
+    record EvaluateString(@Nullable String[] template) implements StackInstruction {}
     record Cast(Type type) implements StackInstruction {}
     record Jump(StackJumpType jumpType, BytecodeLabel label) implements StackInstruction {}
     record JumpTyped(StackJumpType jumpType, Type type, BytecodeLabel label) implements StackInstruction {}

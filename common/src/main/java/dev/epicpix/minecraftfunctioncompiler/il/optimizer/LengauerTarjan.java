@@ -1,9 +1,12 @@
 package dev.epicpix.minecraftfunctioncompiler.il.optimizer;
 
 import it.unimi.dsi.fastutil.ints.*;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
 
 import java.util.*;
 
+@NullUnmarked
 public class LengauerTarjan {
     private Int2ObjectMap<IntSet> successors;
     private Int2ObjectMap<IntSet> predecessors;
@@ -40,7 +43,7 @@ public class LengauerTarjan {
         }
     }
 
-    public void updateData(Int2ObjectMap<IntSet> forward, Int2ObjectMap<IntSet> backward) {
+    public void updateData(@NonNull Int2ObjectMap<IntSet> forward, @NonNull Int2ObjectMap<IntSet> backward) {
         predecessors = backward;
         successors = forward;
         resize(forward.size());
@@ -57,7 +60,7 @@ public class LengauerTarjan {
         computeDominatorTree();
     }
 
-    public IntList getDominators(int target) {
+    public @NonNull IntList getDominators(int target) {
         var dominators = new IntArrayList();
         if(target >= dfnum.length || target < 0) return IntList.of();
         while(target != -1) {

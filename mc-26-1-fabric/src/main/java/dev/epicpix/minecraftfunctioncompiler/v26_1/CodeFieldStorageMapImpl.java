@@ -15,6 +15,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
+import org.jspecify.annotations.Nullable;
 import org.objectweb.asm.Type;
 
 import java.util.ArrayList;
@@ -97,7 +98,7 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
         }));
     }
 
-    private static BytecodeValue writeBoolean(CodeWriter cw, Boolean value) {
+    private static BytecodeValue writeBoolean(CodeWriter cw, @Nullable Boolean value) {
         if(value == null) {
             return new BytecodeValue.NullValue();
         }else {

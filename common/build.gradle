@@ -21,6 +21,7 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("org.slf4j:slf4j-api:2.0.1")
     implementation("it.unimi.dsi:fastutil:8.5.9")
+    api("org.jspecify:jspecify:1.0.0")
     ksp project(":annotation-processor")
 }
 

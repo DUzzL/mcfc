@@ -5,7 +5,7 @@ import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-public interface InstructionTarget {
+public sealed interface InstructionTarget permits InstructionTarget.FieldTarget, InstructionTarget.FunctionTarget {
     record FunctionTarget(String className, String name, String descriptor, boolean isStatic, boolean isInterface, boolean isSpecial, boolean noReordering) implements InstructionTarget {
         public static FunctionTarget initFunction(Class<?> clazz, Class<?>... arguments) {
             String desc = clazz.descriptorString();

@@ -5,6 +5,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 public class OptimizationContext {
 
@@ -19,8 +20,7 @@ public class OptimizationContext {
     }
 
     public Instruction getInstruction(int index) {
-        if(index < 0 || index >= instructions.size()) return null;
-        return instructions.get(index);
+        return instructions.get(Objects.checkIndex(index, instructions.size()));
     }
 
     public List<Instruction> getInstructions() {

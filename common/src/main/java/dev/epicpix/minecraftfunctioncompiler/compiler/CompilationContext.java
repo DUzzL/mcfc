@@ -3,13 +3,15 @@ package dev.epicpix.minecraftfunctioncompiler.compiler;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
-import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.emitter.types.NumberComparisonType;
 import dev.epicpix.minecraftfunctioncompiler.emitter.types.ObjectComparisonType;
 import dev.epicpix.minecraftfunctioncompiler.il.*;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
@@ -34,7 +36,8 @@ public class CompilationContext {
         return source;
     }
 
-    public <T> CompilationData<T> enterWithValue(CompilationContextData data, T value, int stackCount) {
+    @NullUnmarked
+    public <T> @NonNull CompilationData<T> enterWithValue(@NonNull CompilationContextData data, T value, int stackCount) {
         enterWith(data);
         return new CompilationData<>(this, data, value, stackCount);
     }
@@ -106,7 +109,7 @@ public class CompilationContext {
         return macroInt;
     }
 
-    public CompilationData<LocationData<? extends Entity>> getCurrentEntity() {
+    public CompilationData<@Nullable LocationData<? extends Entity>> getCurrentEntity() {
         var data = current();
         if(data.currentEntity() != null) {
             return new CompilationData<>(this, data, data.currentEntity(), 0);
@@ -119,7 +122,7 @@ public class CompilationContext {
         }
     }
 
-    public CompilationData<LocationData<? extends Entity>> getCurrentNullableEntity() {
+    public CompilationData<@Nullable LocationData<? extends Entity>> getCurrentNullableEntity() {
         var data = current();
         if(data.currentEntity() != null) {
             return new CompilationData<>(this, data, data.currentEntity(), 0);
@@ -131,7 +134,7 @@ public class CompilationContext {
         }
     }
 
-    public CompilationData<LocationData<Vec3>> getPosition() {
+    public CompilationData<@Nullable LocationData<Vec3>> getPosition() {
         var data = current();
         if(data.currentPosition() != null) {
             return new CompilationData<>(this, data, data.currentPosition(), 0);
@@ -142,7 +145,7 @@ public class CompilationContext {
         }
     }
 
-    public CompilationData<LocationData<Vec2>> getRotation() {
+    public CompilationData<@Nullable LocationData<Vec2>> getRotation() {
         var data = current();
         if(data.currentRotation() != null) {
             return new CompilationData<>(this, data, data.currentRotation(), 0);
@@ -153,7 +156,7 @@ public class CompilationContext {
         }
     }
 
-    public CompilationData<LocationData<World>> getWorld() {
+    public CompilationData<@Nullable LocationData<World>> getWorld() {
         var data = current();
         if(data.currentWorld() != null) {
             return new CompilationData<>(this, data, data.currentWorld(), 0);
@@ -223,7 +226,7 @@ public class CompilationContext {
         return enterWithValue(data.withContextLabel(codeLocation), entity);
     }
 
-    public CompilationData<LocationData<? extends Entity>> forEachEntity(LocationData<World> inWorld) {
+    public CompilationData<LocationData<? extends Entity>> forEachEntity(@Nullable LocationData<World> inWorld) {
         var data = current();
         if(inWorld == null) {
             var worldIter = this.<Iterator<? extends World>>createLocal();
@@ -263,7 +266,7 @@ public class CompilationContext {
         }
     }
 
-    private CompilationData<LocationData<? extends Entity>> forEachEntityInside(LocationData<World> inWorld, SelectorBox box, int limit) {
+    private CompilationData<LocationData<? extends Entity>> forEachEntityInside(@Nullable LocationData<World> inWorld, SelectorBox box, int limit) {
         var data = current();
         if(inWorld == null) {
             var worldIter = this.<Iterator<? extends World>>createLocal();
@@ -383,7 +386,7 @@ public class CompilationContext {
         return getScoreData(accessor, null, true);
     }
 
-    public CompilationData<LocationData<Score>> getScoreData(ScoreAccessor accessor, LabelData failLabel, boolean autoCreate) {
+    public CompilationData<LocationData<Score>> getScoreData(ScoreAccessor accessor, @Nullable LabelData failLabel, boolean autoCreate) {
         var data = current();
         LocationData<Score> score = createLocal();
         if(autoCreate) {
@@ -444,7 +447,7 @@ public class CompilationContext {
         throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNREACHABLE_CODE, source, "Unreachable code reached"));
     }
 
-    public LocationData<List<? extends Entity>> getSelectorList(SelectorArgument selector, ResultContext resultContext) {
+    public LocationData<List<? extends Entity>> getSelectorList(SelectorArgument selector, @Nullable ResultContext resultContext) {
         var data = current();
 
         LocationData<List<? extends Entity>> entityList = createLocal();
@@ -600,7 +603,7 @@ public class CompilationContext {
     private record SelectorBox(LocationData<Double> minX, LocationData<Double> minY, LocationData<Double> minZ, LocationData<Double> maxX, LocationData<Double> maxY, LocationData<Double> maxZ) {}
 
     @SuppressWarnings("resource")
-    private CompilationData<LocationData<? extends Entity>> forSelectorSelect(SelectorArgument selector, LocationData<Vec3> position, LocationData<World> world, SelectorBox volumeBox, SelectorBox selectBox, ResultContext resultContext) {
+    private CompilationData<LocationData<? extends Entity>> forSelectorSelect(SelectorArgument selector, LocationData<Vec3> position, @Nullable LocationData<World> world, @Nullable SelectorBox volumeBox, @Nullable SelectorBox selectBox, ResultContext resultContext) {
         CompilationData<LocationData<? extends Entity>> entityData;
         if(selector.playerName() != null) {
             entityData = forPlayer(selector.playerName()).changeType();
@@ -623,7 +626,7 @@ public class CompilationContext {
         return forSelectorBase(entityData, selector, position, world, volumeBox, resultContext);
     }
 
-    private CompilationData<LocationData<? extends Entity>> forSelectorBase(CompilationData<LocationData<? extends Entity>> entityData, SelectorArgument selector, LocationData<Vec3> position, LocationData<World> world, SelectorBox volumeBox, ResultContext resultContext) {
+    private CompilationData<LocationData<? extends Entity>> forSelectorBase(CompilationData<LocationData<? extends Entity>> entityData, SelectorArgument selector, LocationData<Vec3> position, @Nullable LocationData<World> world, @Nullable SelectorBox volumeBox, ResultContext resultContext) {
         var data = entityData.data();
         int stackCount = entityData.stackCount();
         int stackStart = stack.size();
@@ -717,8 +720,8 @@ public class CompilationContext {
                     break;
                 }
                 var advancement = advancementOption.get();
-                if(check.getValue() instanceof SelectorAdvancementCheck.CriteriaCompleted criteriaCompleted) {
-                    for(var criterion : criteriaCompleted.criteria().keySet()) {
+                if(check.getValue() instanceof SelectorAdvancementCheck.CriteriaCompleted(Map<String, Boolean> criteria)) {
+                    for(var criterion : criteria.keySet()) {
                         if(!advancement.criteria().contains(criterion)) {
                             possible = false;
                             break out;
@@ -803,7 +806,7 @@ public class CompilationContext {
         return enterWithValue(data, entityData.content(), stackCount + 1);
     }
 
-    public CompilationData<ForkingContext> withForkingContext(ForkingContext forkingContext) {
+    public CompilationData<@Nullable ForkingContext> withForkingContext(@Nullable ForkingContext forkingContext) {
         if(forkingContext != null) {
             return new CompilationData<>(this, current(), forkingContext, 0);
         }
@@ -816,7 +819,7 @@ public class CompilationContext {
         return enterWithValue(data.withContextLabel(inForkCodeLocation), newForkingContext);
     }
 
-    public CompilationData<Object> generateForkExecCode(ForkingContext forkingContext) {
+    public CompilationData<Object> generateForkExecCode(@Nullable ForkingContext forkingContext) {
         if(forkingContext == null) {
             return new CompilationData<>(this, current(), null, 0);
         }
@@ -845,6 +848,7 @@ public class CompilationContext {
 
     public void jumpIfMatchesRange(CompilationContextData data, LocationData<Integer> value, IntRangeArgument range, LabelData label) {
         if(Objects.equals(range.minimum(), range.maximum())) {
+            if(range.minimum() == null) throw new IllegalArgumentException("range does not have minimum nor maximum");
             data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, value, LocationData.ofInteger(range.minimum()), label));
         }else if(range.minimum() != null && range.maximum() == null) {
             data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, value, LocationData.ofInteger(range.minimum()), label));
@@ -860,6 +864,7 @@ public class CompilationContext {
 
     public void jumpIfNotMatchesRange(CompilationContextData data, LocationData<Integer> value, IntRangeArgument range, LabelData label) {
         if(Objects.equals(range.minimum(), range.maximum())) {
+            if(range.minimum() == null) throw new IllegalArgumentException("range does not have minimum nor maximum");
             data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, value, LocationData.ofInteger(range.minimum()), label));
             return;
         }
@@ -873,6 +878,7 @@ public class CompilationContext {
 
     public void jumpIfNotMatchesRange(CompilationContextData data, LocationData<Float> value, FloatRangeArgument range, LabelData label) {
         if(Objects.equals(range.minimum(), range.maximum())) {
+            if(range.minimum() == null) throw new IllegalArgumentException("range does not have minimum nor maximum");
             data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, value, LocationData.ofFloat(range.minimum()), label));
             return;
         }
@@ -886,6 +892,7 @@ public class CompilationContext {
 
     public void jumpIfNotMatchesRange(CompilationContextData data, LocationData<Double> value, DoubleRangeArgument range, LabelData label) {
         if(Objects.equals(range.minimum(), range.maximum())) {
+            if(range.minimum() == null) throw new IllegalArgumentException("range does not have minimum nor maximum");
             data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, value, LocationData.ofDouble(range.minimum()), label));
             return;
         }
@@ -894,68 +901,6 @@ public class CompilationContext {
         }
         if(range.maximum() != null) {
             data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN, value, LocationData.ofDouble(range.maximum()), label));
-        }
-    }
-
-    public LocationData<NbtCompound> getEntityNbt(LocationData<? extends Entity> entity) {
-        throw new RuntimeException("getEntityNbt not implemented");
-    }
-
-    public void compareNbt(CompilationContextData current, LabelData errorLabel, LocationData<? extends NbtTag> data, NbtValue test, boolean ignoreListOrder) {
-        current.writeInstruction(instructionWriter, Instructions.ifNullJump(data, errorLabel));
-
-        if(test instanceof NbtValue.Compound testCompound) {
-            var dataCompound = this.<NbtCompound>createLocal();
-            current.writeInstruction(instructionWriter, Instructions.tryAsNbtCompound(dataCompound, data, errorLabel));
-            for(var entry : testCompound.values().entrySet()) {
-                var innerData = this.<NbtTag>createLocal();
-                current.writeInstruction(instructionWriter, Instructions.getNbtFromCompound(innerData, dataCompound, LocationData.ofString(entry.getKey())));
-                compareNbt(current, errorLabel, innerData, entry.getValue(), ignoreListOrder);
-            }
-        }else if(test instanceof NbtValue.Array testList) {
-            var dataList = this.<NbtList>createLocal();
-            current.writeInstruction(instructionWriter, Instructions.tryAsNbtList(dataList, data, errorLabel));
-            var dataListLength = this.<Integer>createLocal();
-            current.writeInstruction(instructionWriter, Instructions.getListLength(dataListLength, dataList));
-
-            if(ignoreListOrder) {
-                if(testList.values().isEmpty()) {
-                    current.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, dataListLength, LocationData.ofInteger(0), errorLabel));
-                }else {
-                    current.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.LESS_THAN, dataListLength, LocationData.ofInteger(testList.values().size()), errorLabel));
-                    for(var testElement : testList.values()) {
-                        var index = this.<Integer>createLocal();
-                        current.writeInstruction(instructionWriter, Instructions.assign(index, LocationData.ofInteger(0)));
-
-                        var iterEndLabel = current.writeLabel(instructionWriter);
-                        var newCurrent = current.withContextLabel(iterEndLabel);
-                        var iterStartLabel = newCurrent.writeLabel(instructionWriter);
-                        newCurrent.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, dataListLength, errorLabel));
-
-                        var dataElement = this.<NbtTag>createLocal();
-                        newCurrent.writeInstruction(instructionWriter, Instructions.getListElement(dataElement, dataList, index));
-                        var codeLocation = newCurrent.writeLabel(instructionWriter);
-                        compareNbt(newCurrent.withContextLabel(codeLocation), codeLocation, dataElement, testElement, true);
-                        newCurrent.withContextLabel(codeLocation).writeInstruction(instructionWriter, Instructions.jump(iterEndLabel));
-
-                        newCurrent.writeInstruction(instructionWriter, Instructions.valueAdd(index, index, LocationData.ofInteger(1)));
-                        newCurrent.writeInstruction(instructionWriter, Instructions.jump(iterStartLabel));
-                    }
-                }
-            }else {
-                current.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, dataListLength, LocationData.ofInteger(testList.values().size()), errorLabel));
-                int index = 0;
-                for(var testElement : testList.values()) {
-                    var dataElement = this.<NbtTag>createLocal();
-                    current.writeInstruction(instructionWriter, Instructions.getListElement(dataElement, dataList, LocationData.ofInteger(index)));
-                    compareNbt(current, errorLabel, dataElement, testElement, false);
-                    index++;
-                }
-            }
-        }else {
-            var testConst = this.<NbtTag>createLocal();
-            current.writeInstruction(instructionWriter, Instructions.loadNbtValue(testConst, test));
-            current.writeInstruction(instructionWriter, Instructions.ifObjectCompareJump(ObjectComparisonType.NOT_EQUAL, data, testConst, errorLabel));
         }
     }
 

@@ -20,6 +20,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.*;
 import dev.epicpix.minecraftfunctioncompiler.il.optimizer.LengauerTarjan;
 import dev.epicpix.minecraftfunctioncompiler.il.optimizer.Optimizer;
 import dev.epicpix.minecraftfunctioncompiler.profiler.Profiler;
+import org.jspecify.annotations.Nullable;
 import org.objectweb.asm.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,11 +73,12 @@ public class FunctionCodeGenerator {
                     }
                     if(res.isError()) {
                         var diag = res.getError();
+                        assert diag != null;
                         LOGGER.warn("Unable to parse function {} / {}", key, diag.message());
                         diagnostics.addDiagnostic(diag);
                         continue nextFunction;
                     }
-                    parsed.add(res.getResult());
+                    parsed.add(Objects.requireNonNull(res.getResult()));
                 }
                 definedFunctions.put(key, parsed);
             } catch (DiagnosticException e) {
@@ -84,13 +86,14 @@ public class FunctionCodeGenerator {
                 diagnostics.addDiagnostic(e.toDiagnostic());
             } catch (Throwable e) {
                 LOGGER.error("Unable to parse function {}", key, e);
+                assert currentCommand != null;
                 diagnostics.addDiagnostic(Diagnostic.parseError(UNSPECIFIED_COMMAND_ERROR, key, currentCommand, e.getMessage(), e));
             }
         }
         return definedFunctions;
     }
 
-    public static HashMap<DataLocation, List<Instruction>> compileFunctionsHighLevel(HashMap<DataLocation, List<CommandParams>> definedFunctions, DiagnosticCollector diagnostics, int[] instructionCounts, boolean addReq) {
+    public static HashMap<DataLocation, List<Instruction>> compileFunctionsHighLevel(HashMap<DataLocation, List<CommandParams>> definedFunctions, DiagnosticCollector diagnostics, int @Nullable [] instructionCounts, boolean addReq) {
         HashMap<DataLocation, List<Instruction>> compiledFunctions = new HashMap<>();
         for(var func : definedFunctions.entrySet()) {
             var key = func.getKey();
@@ -111,7 +114,7 @@ public class FunctionCodeGenerator {
         return compiledFunctions;
     }
 
-    public static HashMap<DataLocation, List<Instruction>> optimizeFunctionsHighLevel(HashMap<DataLocation, List<Instruction>> compiled, DiagnosticCollector diagnostics, int[] instructionCounts, boolean addReq) {
+    public static HashMap<DataLocation, List<Instruction>> optimizeFunctionsHighLevel(HashMap<DataLocation, List<Instruction>> compiled, DiagnosticCollector diagnostics, int @Nullable [] instructionCounts, boolean addReq) {
         HashMap<DataLocation, List<Instruction>> compiledFunctions = new HashMap<>();
         var tarjan = new LengauerTarjan();
         for(var func : compiled.entrySet()) {
@@ -134,7 +137,7 @@ public class FunctionCodeGenerator {
     }
 
     public interface NbtTagBytecodeStringGenerator {
-        BytecodeValue nbtTagToBytecodeString(EmitterContext context, String key, BytecodeLabel errorLabel);
+        BytecodeValue nbtTagToBytecodeString(EmitterContext context, String key, @Nullable BytecodeLabel errorLabel);
     }
 
     private record MacroInput(String source, MacroType<?> type) {}
@@ -146,7 +149,7 @@ public class FunctionCodeGenerator {
         HashMap<String, BytecodeValue> stringifiedValues = new HashMap<>();
 
         for(var macroInstr : macroInstructions) {
-            var macros = macroInstr.<MacroTemplate<String>>get("macro").extractMacros();
+            var macros = Objects.requireNonNull(macroInstr.<MacroTemplate<String>>get("macro")).extractMacros();
             for(var macro : macros) {
                 var generated = generatedValidators.computeIfAbsent(macro.source(), k -> new HashSet<>());
                 if(generated.containsAll(macro.validators())) {
@@ -187,7 +190,7 @@ public class FunctionCodeGenerator {
         var macroInputs = new ArrayList<MacroInput>();
         for(var macroInstr : macroInstructions) {
             var template = macroInstr.<MacroTemplate<?>>get("macro");
-            var macros = template.extractMacros();
+            var macros = Objects.requireNonNull(template).extractMacros();
             for(var macro : macros) {
                 var macroInput = new MacroInput(macro.source(), template.macroType());
                 if(!macroInputs.contains(macroInput)) {
@@ -246,7 +249,7 @@ public class FunctionCodeGenerator {
                 writer.setValue(macroRegister, new BytecodeValue.Parameter(i, macro.type.getType()));
                 i++;
             }
-            new EmitterContext(funcId, params.codeFieldStorage(), writer, compiledFunctions, new HashMap<>(Map.of("CommandSourceStack", staticCommandSourceStack2)), macroLocations, instructions, includeProfilerSupport).emitForEach();
+            new EmitterContext(funcId, params.codeFieldStorage(), writer, compiledFunctions, new HashMap<>(Map.of("CommandSourceStack", staticCommandSourceStack2)), macroLocations, instructions).emitForEach();
 
             writer.returnValue(new BytecodeValue.LongValue(0x2L << 32));
 

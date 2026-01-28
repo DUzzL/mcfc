@@ -4,6 +4,7 @@ import com.google.gson.*;
 import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
+import org.jspecify.annotations.Nullable;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -40,8 +41,11 @@ public final class FunctionCompilerReporter {
     private static final URI REPORT_URI = URI.create("https://mcfc.mods.epicpix.dev/api/v1/send_reports");
     private static final HttpClient httpClient = HttpClient.newHttpClient();
 
+    @Nullable
     private static String minecraftVersionName = null;
+    @Nullable
     private static String minecraftVersionType = null;
+    @Nullable
     private static MinecraftEnvironment minecraftEnvironment = null;
 
     public static void setMinecraftVersion(String version, String versionType, MinecraftEnvironment environment) {
@@ -57,6 +61,7 @@ public final class FunctionCompilerReporter {
     @SuppressWarnings("ConstantValue")
     public static void reportRawData(String type, JsonElement data) {
         if(!ENABLE_REPORTING || dataReportingStatus != ReportingStatus.ENABLED) return;
+        if(minecraftVersionName == null || minecraftVersionType == null || minecraftEnvironment == null) return;
 
         var minecraftData = new JsonObject();
         minecraftData.addProperty("name", minecraftVersionName);

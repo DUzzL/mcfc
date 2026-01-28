@@ -169,7 +169,6 @@ public final class SelectorParser {
                 types = List.of(type);
             }else {
                 types = DataRegistries.ENTITY_TYPE.getTag(type);
-                if(types == null) types = List.of();
             }
             for(var it : types) {
                 if(DataRegistries.ENTITY_TYPE.getElement(it).isEmpty()) throwError(reader, SELECTOR_INVALID_ENTITY, "Unsupported entity type: " + it);
@@ -198,17 +197,13 @@ public final class SelectorParser {
             }
             data.gamemodes.add(new NegatableData<>(gamemode, negated));
         });
-        registerSelectorOption("sort", (reader, data) -> {
-            data.sort = reader.readSelectorSort();
-        });
+        registerSelectorOption("sort", (reader, data) -> data.sort = reader.readSelectorSort());
         registerSelectorOption("name", (reader, data) -> {
             var negated = reader.skipIfNext('!');
             var name = reader.readString();
             data.names.add(new NegatableData<>(name, negated));
         });
-        registerSelectorOption("limit", (reader, data) -> {
-            data.limit = reader.readInt();
-        });
+        registerSelectorOption("limit", (reader, data) -> data.limit = reader.readInt());
         registerSelectorOption("level", (reader, data) -> {
             data.level = reader.readIntRange();
             if((data.level.minimum() != null && data.level.minimum() < 0) || (data.level.maximum() != null && data.level.maximum() < 0)) {

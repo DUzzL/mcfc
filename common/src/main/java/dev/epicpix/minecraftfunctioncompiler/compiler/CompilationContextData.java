@@ -5,14 +5,15 @@ import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
+import org.jspecify.annotations.Nullable;
 
 public record CompilationContextData(
         LocationData<CommandSourceStack> commandSourceStack,
-        LocationData<? extends Entity> currentEntity,
-        LocationData<World> currentWorld,
-        LocationData<Vec3> currentPosition,
-        LocationData<Vec2> currentRotation,
-        LocationAnchor currentAnchor,
+        @Nullable LocationData<? extends Entity> currentEntity,
+        @Nullable LocationData<World> currentWorld,
+        @Nullable LocationData<Vec3> currentPosition,
+        @Nullable LocationData<Vec2> currentRotation,
+        @Nullable LocationAnchor currentAnchor,
         LabelData contextEndLabel
 ) {
 

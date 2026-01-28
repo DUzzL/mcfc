@@ -4,10 +4,11 @@ import dev.epicpix.minecraftfunctioncompiler.data.NbtDataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument;
 import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPath;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
-public interface TextContent {
+public sealed interface TextContent permits TextContent.KeybindText, TextContent.LiteralText, TextContent.NbtText, TextContent.ScoreText, TextContent.SelectorText, TextContent.TranslatableText {
 
     record LiteralText(String value) implements TextContent {
         public boolean isCompilationSupported() {
@@ -18,7 +19,7 @@ public interface TextContent {
         }
     }
 
-    record TranslatableText(String key, String fallback, List<Object> args) implements TextContent {
+    record TranslatableText(String key, @Nullable String fallback, List<Object> args) implements TextContent {
         public boolean isCompilationSupported() {
             for(var arg : args) {
                 if(arg instanceof Text text && (!text.isCompilationSupported() || !text.isConstant())) return false;
@@ -51,7 +52,7 @@ public interface TextContent {
         }
     }
 
-    record SelectorText(SelectorArgument selector, Text separator) implements TextContent {
+    record SelectorText(SelectorArgument selector, @Nullable Text separator) implements TextContent {
         public static final Text DEFAULT_SEPARATOR = new Text(List.of(), new TextStyle(0xaaaaaa, null, null, null, null, null, null, null, null, null, null), new LiteralText(", "));
 
         public boolean isCompilationSupported() {
@@ -62,7 +63,7 @@ public interface TextContent {
         }
     }
 
-    record NbtText(NbtPath path, Text separator, NbtDataLocation source) implements TextContent {
+    record NbtText(NbtPath path, @Nullable Text separator, NbtDataLocation source) implements TextContent {
         public boolean isCompilationSupported() {
             return false;
         }

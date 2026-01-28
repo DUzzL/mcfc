@@ -3,10 +3,10 @@ package dev.epicpix.minecraftfunctioncompiler.data.nbt;
 import java.util.List;
 import java.util.Map;
 
-public interface NbtValue {
+public sealed interface NbtValue permits NbtValue.ArrayKind, NbtValue.ByteLiteral, NbtValue.Compound, NbtValue.DoubleLiteral, NbtValue.FloatLiteral, NbtValue.IntegerLiteral, NbtValue.LongLiteral, NbtValue.ShortLiteral, NbtValue.StringLiteral {
 
-    interface ArrayKind extends NbtValue {}
-    interface TypedArray extends ArrayKind {}
+    sealed interface ArrayKind extends NbtValue permits TypedArray, Array {}
+    sealed interface TypedArray extends ArrayKind permits ByteArray, IntegerArray, LongArray {}
 
     record Array(List<NbtValue> values) implements ArrayKind {}
     record ByteArray(byte[] values) implements TypedArray {}

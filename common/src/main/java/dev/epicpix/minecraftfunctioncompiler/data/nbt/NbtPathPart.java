@@ -1,6 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.data.nbt;
 
-public interface NbtPathPart {
+public sealed interface NbtPathPart permits NbtPathPart.ArrayIndexCompound, NbtPathPart.ArrayIndexInteger, NbtPathPart.CompoundCheck, NbtPathPart.Named {
 
     record ArrayIndexInteger(int index) implements NbtPathPart {
     }

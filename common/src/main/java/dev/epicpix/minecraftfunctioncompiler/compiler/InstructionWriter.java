@@ -7,6 +7,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class InstructionWriter {
 
@@ -26,7 +27,7 @@ public class InstructionWriter {
         for(int i = 0; i < instructions.size(); i++) {
             var instr = instructions.get(i);
             if(instr.type() == InstructionTypes.LABEL) {
-                if(instr.get(0).equals(label)) {
+                if(Objects.equals(instr.get(0), label)) {
                     return i;
                 }
             }

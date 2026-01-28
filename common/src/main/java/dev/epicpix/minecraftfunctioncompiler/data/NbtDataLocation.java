@@ -1,6 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.data;
 
-public interface NbtDataLocation {
+public sealed interface NbtDataLocation permits NbtDataLocation.Block, NbtDataLocation.Entity, NbtDataLocation.Storage {
 
     record Block(WorldCoordinates position) implements NbtDataLocation {}
     record Entity(SelectorArgument selector) implements NbtDataLocation {}

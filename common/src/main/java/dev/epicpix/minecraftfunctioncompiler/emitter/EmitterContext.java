@@ -13,6 +13,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
@@ -24,11 +25,11 @@ public final class EmitterContext {
     private final CodeWriter codeWriter;
     private final Set<DataLocation> compiledFunctions;
     private final Map<String, BytecodeValue> staticArguments;
-    private final Map<String, BytecodeRegister> macroLocations;
+    private final @Nullable Map<String, BytecodeRegister> macroLocations;
     private final List<Instruction> instructions;
 
     private final Int2ObjectMap<BytecodeValue> transforms = new Int2ObjectOpenHashMap<>();
-    private final Int2ObjectMap<BytecodeLabel> labelMappings = new Int2ObjectOpenHashMap<>();
+    private final Int2ObjectMap<@Nullable BytecodeLabel> labelMappings = new Int2ObjectOpenHashMap<>();
 
     private int currentInstructionIndex = 0;
 
@@ -38,7 +39,7 @@ public final class EmitterContext {
         CodeWriter codeWriter,
         Set<DataLocation> compiledFunctions,
         Map<String, BytecodeValue> staticArguments,
-        Map<String, BytecodeRegister> macroLocations,
+        @Nullable Map<String, BytecodeRegister> macroLocations,
 
         List<Instruction> instructions
     ) {
@@ -77,7 +78,8 @@ public final class EmitterContext {
         return compiledFunctions;
     }
 
-    public BytecodeRegister getMacro(String macro) {
+    public @Nullable BytecodeRegister getMacro(String macro) {
+        if(macroLocations == null) return null;
         return macroLocations.get(macro);
     }
 
@@ -86,7 +88,7 @@ public final class EmitterContext {
     }
 
     public BytecodeLabel mapLabel(int instructionIndexField) {
-        return mapLabel(instruction().<LabelData>get(instructionIndexField));
+        return mapLabel(Objects.requireNonNull(instruction().<LabelData>get(instructionIndexField)));
     }
 
     public BytecodeLabel mapLabel(LabelData label) {
@@ -104,7 +106,7 @@ public final class EmitterContext {
     }
 
     public BytecodeValue load(int instructionIndexField) {
-        var location = instruction().<LocationData<?>>get(instructionIndexField);
+        var location = Objects.requireNonNull(instruction().<LocationData<?>>get(instructionIndexField));
         if(location.local() != null) {
             if(!transforms.containsKey((int)location.local())) {
                 throw new DiagnosticException(Diagnostic.emitterError(EMITTER_LOAD_LOCATION_NOT_STORED, this.location, "Cannot load from location: " + location + ", nothing is stored in that location"));
@@ -124,7 +126,7 @@ public final class EmitterContext {
     }
 
     public void store(int instructionFieldIndex, BytecodeValue value) {
-        var location = instruction().<LocationData<?>>get(instructionFieldIndex);
+        var location = Objects.requireNonNull(instruction().<LocationData<?>>get(instructionFieldIndex));
         if(location.local() != null) {
             var transform = transforms.get((int)location.local());
             if(transform instanceof BytecodeRegister reg) {
@@ -156,7 +158,7 @@ public final class EmitterContext {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         EmitterContext that = (EmitterContext) o;
         return currentInstructionIndex == that.currentInstructionIndex && Objects.equals(fieldStorage, that.fieldStorage) && Objects.equals(codeWriter, that.codeWriter) && Objects.equals(compiledFunctions, that.compiledFunctions) && Objects.equals(transforms, that.transforms) && Objects.equals(macroLocations, that.macroLocations) && Objects.equals(instructions, that.instructions);

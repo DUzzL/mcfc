@@ -16,6 +16,7 @@ import net.minecraft.nbt.CompoundTag;
 import org.objectweb.asm.Type;
 
 import java.util.List;
+import java.util.Objects;
 
 import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callThreadLocal_get;
 import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callThreadLocal_set;
@@ -32,7 +33,7 @@ public final class Emitter {
         EmitterInstructions.registerEmitterInstruction(context -> {
             var codeWriter = context.codeWriter();
             if(context.instruction().type() == InstructionTypes2.CALL_FUNCTIONS) {
-                var functions = context.instruction().<List<DataLocation>>get("functions");
+                var functions = Objects.requireNonNull(context.instruction().<List<DataLocation>>get("functions"));
                 if(!functions.isEmpty()) {
                     var post = codeWriter.createLabel();
                     for(var func : functions) {
@@ -62,7 +63,7 @@ public final class Emitter {
                 return true;
             }
             if(context.instruction().type() == InstructionTypes2.CALL_FUNCTIONS_WITH_RESULT) {
-                var functions = context.instruction().<List<DataLocation>>get("functions");
+                var functions = Objects.requireNonNull(context.instruction().<List<DataLocation>>get("functions"));
                 if(functions.isEmpty()) {
                     context.store("result", new BytecodeValue.LongValue(1L << 32));
                 }else {

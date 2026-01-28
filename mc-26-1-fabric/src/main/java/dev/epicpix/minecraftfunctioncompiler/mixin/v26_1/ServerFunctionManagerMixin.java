@@ -9,6 +9,7 @@ import net.minecraft.commands.functions.CommandFunction;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerFunctionLibrary;
 import net.minecraft.server.ServerFunctionManager;
+import org.jspecify.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -23,7 +24,7 @@ import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.AUTO_SWITCH_
 public class ServerFunctionManagerMixin implements FunctionCompilationStarter {
 
     @Shadow public ServerFunctionLibrary library;
-    @Unique private FunctionClassLoader classLoader;
+    @Unique @Nullable private FunctionClassLoader classLoader;
     @Shadow @Final public MinecraftServer server;
 
     @Inject(method = "postReload", at = @At("TAIL"))

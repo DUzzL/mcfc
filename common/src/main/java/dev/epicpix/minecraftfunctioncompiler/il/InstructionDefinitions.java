@@ -3,7 +3,7 @@ package dev.epicpix.minecraftfunctioncompiler.il;
 import dev.epicpix.annotations.InstructionSourceClass;
 import dev.epicpix.minecraftfunctioncompiler.data.*;
 import dev.epicpix.minecraftfunctioncompiler.data.locations.*;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 

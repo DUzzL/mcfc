@@ -1,11 +1,12 @@
 package dev.epicpix.minecraftfunctioncompiler.data;
 
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
+import org.jspecify.annotations.Nullable;
 
 public record ScoreHolderArgument(
         boolean all,
-        MacroTemplate<String> name,
-        SelectorArgument selector,
+        @Nullable MacroTemplate<String> name,
+        @Nullable SelectorArgument selector,
         boolean single
 ) {
 

@@ -1,5 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler;
 
+import org.jspecify.annotations.Nullable;
+
 public enum MinecraftVersion {
     MC_26_1("26.1"),
     ;
@@ -13,6 +15,7 @@ public enum MinecraftVersion {
         return name;
     }
 
+    @Nullable
     private static MinecraftVersion currentVersion;
 
     public static MinecraftVersion getByName(String ver) {
@@ -30,7 +33,8 @@ public enum MinecraftVersion {
         }
     }
 
-    public static boolean isCurrentVersionInRange(MinecraftVersion min, MinecraftVersion max) {
+    public static boolean isCurrentVersionInRange(@Nullable MinecraftVersion min, @Nullable MinecraftVersion max) {
+        var currentVersion = getCurrentVersion();
         if(min != null) {
             if(currentVersion.ordinal() < min.ordinal()) {
                 return false;
@@ -43,6 +47,7 @@ public enum MinecraftVersion {
     }
 
     public static MinecraftVersion getCurrentVersion() {
+        if(currentVersion == null) throw new RuntimeException("Current minecraft version is null");
         return currentVersion;
     }
 }

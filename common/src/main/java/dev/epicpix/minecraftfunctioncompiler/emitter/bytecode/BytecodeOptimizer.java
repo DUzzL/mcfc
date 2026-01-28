@@ -1,10 +1,13 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter.bytecode;
 
+import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import org.jspecify.annotations.Nullable;
+import org.objectweb.asm.Type;
 
 import java.util.*;
 
@@ -21,9 +24,9 @@ public class BytecodeOptimizer {
         countRegisterRead(registerUseCount, value, null);
     }
 
-    private static void countRegisterRead(Int2ObjectMap<RegisterTracker> registerUseCount, BytecodeValue value, BytecodeValue by) {
-        if(value instanceof BytecodeRegister reg) {
-            var tracker = registerUseCount.computeIfAbsent(reg.reg(), x -> new RegisterTracker());
+    private static void countRegisterRead(Int2ObjectMap<RegisterTracker> registerUseCount, BytecodeValue value, @Nullable BytecodeValue by) {
+        if(value instanceof BytecodeRegister(int reg)) {
+            var tracker = registerUseCount.computeIfAbsent(reg, _ -> new RegisterTracker());
             if(by != null) {
                 tracker.readWith.add(by);
             }
@@ -32,19 +35,19 @@ public class BytecodeOptimizer {
     }
 
     private static void countRegisterWrite(Int2ObjectMap<RegisterTracker> registerUseCount, BytecodeValue value, boolean requiresEvaluation) {
-        if(value instanceof BytecodeRegister reg) {
-            var tracker = registerUseCount.computeIfAbsent(reg.reg(), x -> new RegisterTracker());
+        if(value instanceof BytecodeRegister(int reg)) {
+            var tracker = registerUseCount.computeIfAbsent(reg, _ -> new RegisterTracker());
             tracker.write++;
             tracker.requiresEvaluation |= requiresEvaluation;
         }
     }
 
-    private static BytecodeValue remapValue(Int2ObjectMap<BytecodeValue> registerDefinitionTracker, BytecodeValue value) {
-        if(value instanceof BytecodeRegister reg) {
-            BytecodeValue prevReg = reg;
+    private static BytecodeValue remapValue(Int2ObjectMap<@Nullable BytecodeValue> registerDefinitionTracker, BytecodeValue value) {
+        if(value instanceof BytecodeRegister baseReg) {
+            BytecodeValue prevReg = baseReg;
             while(true) {
-                if(prevReg instanceof BytecodeRegister pReg) {
-                    var nreg = registerDefinitionTracker.get(pReg.reg());
+                if(prevReg instanceof BytecodeRegister(int reg)) {
+                    var nreg = registerDefinitionTracker.get(reg);
                     if(nreg == null || nreg == prevReg) {
                         return prevReg;
                     }
@@ -63,52 +66,61 @@ public class BytecodeOptimizer {
         var registerUseCount = new Int2ObjectOpenHashMap<RegisterTracker>();
         var registerDefinitionTracker = new Int2ObjectOpenHashMap<BytecodeValue>();
         for(BytecodeInstruction instruction : instructions) {
-            if(instruction instanceof BytecodeInstruction.RegisterValue v) {
-                countRegisterWrite(registerUseCount, v.result(), false);
-                countRegisterRead(registerUseCount, v.source(), v.result());
-                registerDefinitionTracker.put(v.result().reg(), v.source());
-            }else if(instruction instanceof BytecodeInstruction.RegisterValueValue v) {
-                countRegisterWrite(registerUseCount, v.result(), false);
-                countRegisterRead(registerUseCount, v.sourceA(), v.result());
-                countRegisterRead(registerUseCount, v.sourceB(), v.result());
-                registerDefinitionTracker.remove(v.result().reg());
-            }else if(instruction instanceof BytecodeInstruction.CreateArray v) {
-                countRegisterWrite(registerUseCount, v.result(), false);
-                countRegisterRead(registerUseCount, v.length(), v.result());
-                registerDefinitionTracker.remove(v.result().reg());
-            }else if(instruction instanceof BytecodeInstruction.SetArrayValue v) {
-                countRegisterRead(registerUseCount, v.array());
-                countRegisterRead(registerUseCount, v.value());
-                countRegisterRead(registerUseCount, v.index());
-            }else if(instruction instanceof BytecodeInstruction.InstanceCheckJump v) {
-                countRegisterRead(registerUseCount, v.a());
-            }else if(instruction instanceof BytecodeInstruction.ConditionalJump v) {
-                countRegisterRead(registerUseCount, v.a());
-                countRegisterRead(registerUseCount, v.b());
-            }else if(instruction instanceof BytecodeInstruction.CallTarget v) {
-                countRegisterWrite(registerUseCount, v.result(), true);
-                for(var arg : v.arguments()) {
-                    countRegisterRead(registerUseCount, arg, v.result());
+            switch(instruction) {
+                case BytecodeInstruction.RegisterValue v -> {
+                    countRegisterWrite(registerUseCount, v.result(), false);
+                    countRegisterRead(registerUseCount, v.source(), v.result());
+                    registerDefinitionTracker.put(v.result().reg(), v.source());
                 }
-                registerDefinitionTracker.remove(v.result().reg());
-            }else if(instruction instanceof BytecodeInstruction.New v) {
-                countRegisterWrite(registerUseCount, v.result(), true);
-                for(var arg : v.arguments()) {
-                    countRegisterRead(registerUseCount, arg, v.result());
+                case BytecodeInstruction.RegisterValueValue v -> {
+                    countRegisterWrite(registerUseCount, v.result(), false);
+                    countRegisterRead(registerUseCount, v.sourceA(), v.result());
+                    countRegisterRead(registerUseCount, v.sourceB(), v.result());
+                    registerDefinitionTracker.remove(v.result().reg());
                 }
-                registerDefinitionTracker.remove(v.result().reg());
-            }else if(instruction instanceof BytecodeInstruction.Cast v) {
-                countRegisterWrite(registerUseCount, v.result(), false);
-                countRegisterRead(registerUseCount, v.source(), v.result());
-                registerDefinitionTracker.remove(v.result().reg());
-            }else if(instruction instanceof BytecodeInstruction.StringConcat v) {
-                countRegisterWrite(registerUseCount, v.result(), false);
-                for(var arg : v.values()) {
-                    countRegisterRead(registerUseCount, arg, v.result());
+                case BytecodeInstruction.CreateArray v -> {
+                    countRegisterWrite(registerUseCount, v.result(), false);
+                    countRegisterRead(registerUseCount, v.length(), v.result());
+                    registerDefinitionTracker.remove(v.result().reg());
                 }
-                registerDefinitionTracker.remove(v.result().reg());
-            }else if(instruction instanceof BytecodeInstruction.Return v) {
-                countRegisterRead(registerUseCount, v.value());
+                case BytecodeInstruction.SetArrayValue(BytecodeValue array, BytecodeValue index, BytecodeValue value) -> {
+                    countRegisterRead(registerUseCount, array);
+                    countRegisterRead(registerUseCount, value);
+                    countRegisterRead(registerUseCount, index);
+                }
+                case BytecodeInstruction.InstanceCheckJump v -> countRegisterRead(registerUseCount, v.a());
+                case BytecodeInstruction.ConditionalJump v -> {
+                    countRegisterRead(registerUseCount, v.a());
+                    countRegisterRead(registerUseCount, v.b());
+                }
+                case BytecodeInstruction.CallTarget v -> {
+                    countRegisterWrite(registerUseCount, v.result(), true);
+                    for(var arg : v.arguments()) {
+                        countRegisterRead(registerUseCount, arg, v.result());
+                    }
+                    registerDefinitionTracker.remove(v.result().reg());
+                }
+                case BytecodeInstruction.New v -> {
+                    countRegisterWrite(registerUseCount, v.result(), true);
+                    for(var arg : v.arguments()) {
+                        countRegisterRead(registerUseCount, arg, v.result());
+                    }
+                    registerDefinitionTracker.remove(v.result().reg());
+                }
+                case BytecodeInstruction.Cast v -> {
+                    countRegisterWrite(registerUseCount, v.result(), false);
+                    countRegisterRead(registerUseCount, v.source(), v.result());
+                    registerDefinitionTracker.remove(v.result().reg());
+                }
+                case BytecodeInstruction.StringConcat(BytecodeRegister result, List<BytecodeValue> values) -> {
+                    countRegisterWrite(registerUseCount, result, false);
+                    for(var arg : values) {
+                        countRegisterRead(registerUseCount, arg, result);
+                    }
+                    registerDefinitionTracker.remove(result.reg());
+                }
+                case BytecodeInstruction.Return(BytecodeValue value) -> countRegisterRead(registerUseCount, value);
+                case BytecodeInstruction.Jump _, BytecodeInstruction.Label _, BytecodeInstruction.ReturnVoid _ -> {}
             }
         }
 
@@ -133,8 +145,8 @@ public class BytecodeOptimizer {
             var tracker = registerUseCount.get(reg);
             tracker.requiresEvaluation = true;
             for(var read : tracker.readWith) {
-                if(read instanceof BytecodeRegister mark) {
-                    markEvaluationStack.push(mark.reg());
+                if(read instanceof BytecodeRegister(int readReg)) {
+                    markEvaluationStack.push(readReg);
                 }
             }
         }
@@ -142,51 +154,44 @@ public class BytecodeOptimizer {
         ArrayList<BytecodeInstruction> newInstructions = new ArrayList<>();
 
         for(var instruction : instructions) {
-            if(instruction instanceof BytecodeInstruction.RegisterValue v) {
-                if(registerDefinitionTracker.containsKey(v.result().reg())) {
-                    continue;
+            switch(instruction) {
+                case BytecodeInstruction.RegisterValue(InstructionRVType type, BytecodeRegister result, BytecodeValue source) -> {
+                    if(registerDefinitionTracker.containsKey(result.reg())) {
+                        continue;
+                    }
+                    newInstructions.add(new BytecodeInstruction.RegisterValue(type, result, remapValue(registerDefinitionTracker, source)));
                 }
-                newInstructions.add(new BytecodeInstruction.RegisterValue(v.type(), v.result(), remapValue(registerDefinitionTracker, v.source())));
-            }else if(instruction instanceof BytecodeInstruction.RegisterValueValue v) {
-                newInstructions.add(new BytecodeInstruction.RegisterValueValue(v.type(), v.result(), remapValue(registerDefinitionTracker, v.sourceA()), remapValue(registerDefinitionTracker, v.sourceB())));
-            }else if(instruction instanceof BytecodeInstruction.CreateArray v) {
-                newInstructions.add(new BytecodeInstruction.CreateArray(v.result(), remapValue(registerDefinitionTracker, v.length()), v.contentType()));
-            }else if(instruction instanceof BytecodeInstruction.SetArrayValue v) {
-                newInstructions.add(new BytecodeInstruction.SetArrayValue(remapValue(registerDefinitionTracker, v.array()), remapValue(registerDefinitionTracker, v.index()), remapValue(registerDefinitionTracker, v.value())));
-            }else if(instruction instanceof BytecodeInstruction.InstanceCheckJump v) {
-                newInstructions.add(new BytecodeInstruction.InstanceCheckJump(v.ifIsInstance(), remapValue(registerDefinitionTracker, v.a()), v.type(), v.label()));
-            }else if(instruction instanceof BytecodeInstruction.ConditionalJump v) {
-                newInstructions.add(new BytecodeInstruction.ConditionalJump(v.condition(), remapValue(registerDefinitionTracker, v.a()), remapValue(registerDefinitionTracker, v.b()), v.label()));
-            }else if(instruction instanceof BytecodeInstruction.Jump v) {
-                newInstructions.add(v);
-            }else if(instruction instanceof BytecodeInstruction.Label v) {
-                newInstructions.add(v);
-            }else if(instruction instanceof BytecodeInstruction.CallTarget v) {
-                ArrayList<BytecodeValue> args = new ArrayList<>();
-                for(var arg : v.arguments()) {
-                    args.add(remapValue(registerDefinitionTracker, arg));
+                case BytecodeInstruction.RegisterValueValue(InstructionRVVType type, BytecodeRegister result, BytecodeValue sourceA, BytecodeValue sourceB) -> newInstructions.add(new BytecodeInstruction.RegisterValueValue(type, result, remapValue(registerDefinitionTracker, sourceA), remapValue(registerDefinitionTracker, sourceB)));
+                case BytecodeInstruction.CreateArray(BytecodeRegister result, BytecodeValue length, Type contentType) -> newInstructions.add(new BytecodeInstruction.CreateArray(result, remapValue(registerDefinitionTracker, length), contentType));
+                case BytecodeInstruction.SetArrayValue(BytecodeValue array, BytecodeValue index, BytecodeValue value) -> newInstructions.add(new BytecodeInstruction.SetArrayValue(remapValue(registerDefinitionTracker, array), remapValue(registerDefinitionTracker, index), remapValue(registerDefinitionTracker, value)));
+                case BytecodeInstruction.InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, Type type, BytecodeLabel label) -> newInstructions.add(new BytecodeInstruction.InstanceCheckJump(ifIsInstance, remapValue(registerDefinitionTracker, a), type, label));
+                case BytecodeInstruction.ConditionalJump(JumpCondition condition, BytecodeValue a, BytecodeValue b, BytecodeLabel label) -> newInstructions.add(new BytecodeInstruction.ConditionalJump(condition, remapValue(registerDefinitionTracker, a), remapValue(registerDefinitionTracker, b), label));
+                case BytecodeInstruction.Jump v -> newInstructions.add(v);
+                case BytecodeInstruction.Label v -> newInstructions.add(v);
+                case BytecodeInstruction.CallTarget(BytecodeRegister result, InstructionTarget target, List<BytecodeValue> arguments) -> {
+                    ArrayList<BytecodeValue> args = new ArrayList<>();
+                    for(var arg : arguments) {
+                        args.add(remapValue(registerDefinitionTracker, arg));
+                    }
+                    newInstructions.add(new BytecodeInstruction.CallTarget(result, target, args));
                 }
-                newInstructions.add(new BytecodeInstruction.CallTarget(v.result(), v.target(), args));
-            }else if(instruction instanceof BytecodeInstruction.New v) {
-                ArrayList<BytecodeValue> args = new ArrayList<>();
-                for(var arg : v.arguments()) {
-                    args.add(remapValue(registerDefinitionTracker, arg));
+                case BytecodeInstruction.New(BytecodeRegister result, InstructionTarget target, List<BytecodeValue> arguments) -> {
+                    ArrayList<BytecodeValue> args = new ArrayList<>();
+                    for(var arg : arguments) {
+                        args.add(remapValue(registerDefinitionTracker, arg));
+                    }
+                    newInstructions.add(new BytecodeInstruction.New(result, target, args));
                 }
-                newInstructions.add(new BytecodeInstruction.New(v.result(), v.target(), args));
-            }else if(instruction instanceof BytecodeInstruction.Cast v) {
-                newInstructions.add(new BytecodeInstruction.Cast(v.result(), remapValue(registerDefinitionTracker, v.source()), v.type()));
-            }else if(instruction instanceof BytecodeInstruction.StringConcat v) {
-                ArrayList<BytecodeValue> values = new ArrayList<>();
-                for(var arg : v.values()) {
-                    values.add(remapValue(registerDefinitionTracker, arg));
+                case BytecodeInstruction.Cast(BytecodeRegister result, BytecodeValue source, Type type) -> newInstructions.add(new BytecodeInstruction.Cast(result, remapValue(registerDefinitionTracker, source), type));
+                case BytecodeInstruction.StringConcat(BytecodeRegister result, List<BytecodeValue> values) -> {
+                    ArrayList<BytecodeValue> remappedValues = new ArrayList<>();
+                    for(var arg : values) {
+                        remappedValues.add(remapValue(registerDefinitionTracker, arg));
+                    }
+                    newInstructions.add(new BytecodeInstruction.StringConcat(result, remappedValues));
                 }
-                newInstructions.add(new BytecodeInstruction.StringConcat(v.result(), values));
-            }else if(instruction instanceof BytecodeInstruction.Return v) {
-                newInstructions.add(new BytecodeInstruction.Return(remapValue(registerDefinitionTracker, v.value())));
-            }else if(instruction instanceof BytecodeInstruction.ReturnVoid v) {
-                newInstructions.add(v);
-            }else {
-                throw new RuntimeException("Cannot remap instruction " + instruction);
+                case BytecodeInstruction.Return(BytecodeValue value) -> newInstructions.add(new BytecodeInstruction.Return(remapValue(registerDefinitionTracker, value)));
+                case BytecodeInstruction.ReturnVoid v -> newInstructions.add(v);
             }
         }
 
@@ -214,19 +219,29 @@ public class BytecodeOptimizer {
 
         for(int i = 0; i < instructions.size(); i++) {
             var instruction = instructions.get(i);
-            if(instruction instanceof BytecodeInstruction.Jump v) {
-                if(i != 0 && instructions.get(i - 1) instanceof BytecodeInstruction.Label label) {
-                    instantJumps.put(label.label(), v.label());
+            switch(instruction) {
+                case BytecodeInstruction.Jump(BytecodeLabel label) -> {
+                    if(i != 0 && instructions.get(i - 1) instanceof BytecodeInstruction.Label(
+                        BytecodeLabel prevLabel
+                    )) {
+                        instantJumps.put(prevLabel, label);
+                    }
+                    preLabelUseCount.put(label, preLabelUseCount.getOrDefault(label, 0) + 1);
                 }
-                preLabelUseCount.put(v.label(), preLabelUseCount.getOrDefault(v.label(), 0) + 1);
-            }else if(instruction instanceof BytecodeInstruction.ConditionalJump v) {
-                preLabelUseCount.put(v.label(), preLabelUseCount.getOrDefault(v.label(), 0) + 1);
-            }else if(instruction instanceof BytecodeInstruction.InstanceCheckJump v) {
-                preLabelUseCount.put(v.label(), preLabelUseCount.getOrDefault(v.label(), 0) + 1);
-            }else if(instruction instanceof BytecodeInstruction.Label v) {
-                if(i != 0 && instructions.get(i - 1) instanceof BytecodeInstruction.Label label) {
-                    instantJumps.put(label.label(), v.label());
+                case BytecodeInstruction.ConditionalJump v -> preLabelUseCount.put(v.label(), preLabelUseCount.getOrDefault(v.label(), 0) + 1);
+                case BytecodeInstruction.InstanceCheckJump v -> preLabelUseCount.put(v.label(), preLabelUseCount.getOrDefault(v.label(), 0) + 1);
+                case BytecodeInstruction.Label(BytecodeLabel label) -> {
+                    if(i != 0 && instructions.get(i - 1) instanceof BytecodeInstruction.Label(
+                        BytecodeLabel prevLabel
+                    )) {
+                        instantJumps.put(prevLabel, label);
+                    }
                 }
+                case BytecodeInstruction.CallTarget _, BytecodeInstruction.Cast _, BytecodeInstruction.CreateArray _,
+                     BytecodeInstruction.New _, BytecodeInstruction.RegisterValue _,
+                     BytecodeInstruction.RegisterValueValue _, BytecodeInstruction.Return _,
+                     BytecodeInstruction.ReturnVoid _, BytecodeInstruction.SetArrayValue _,
+                     BytecodeInstruction.StringConcat _ -> {}
             }
         }
         var labelUseCount = new Object2IntOpenHashMap<BytecodeLabel>();
@@ -238,28 +253,38 @@ public class BytecodeOptimizer {
         var index = -1;
         for(var instruction : instructions) {
             index++;
-            if(instruction instanceof BytecodeInstruction.Jump v) {
-                var label = getLabel(instantJumps, v.label());
-                newInstructions.add(new BytecodeInstruction.Jump(label));
-                continue;
-            }else if(instruction instanceof BytecodeInstruction.ConditionalJump v) {
-                var label = getLabel(instantJumps, v.label());
-                newInstructions.add(new BytecodeInstruction.ConditionalJump(v.condition(), v.a(), v.b(), label));
-                continue;
-            }else if(instruction instanceof BytecodeInstruction.InstanceCheckJump v) {
-                var label = getLabel(instantJumps, v.label());
-                newInstructions.add(new BytecodeInstruction.InstanceCheckJump(v.ifIsInstance(), v.a(), v.type(), label));
-                continue;
-            }else if(instruction instanceof BytecodeInstruction.Label v) {
-                var nextInstruction = instructions.get(index + 1);
-                if(nextInstruction instanceof BytecodeInstruction.Label) {
+            switch(instruction) {
+                case BytecodeInstruction.Jump(BytecodeLabel label) -> {
+                    var mappedLabel = getLabel(instantJumps, label);
+                    newInstructions.add(new BytecodeInstruction.Jump(mappedLabel));
                     continue;
                 }
+                case BytecodeInstruction.ConditionalJump(JumpCondition condition, BytecodeValue a1, BytecodeValue b, BytecodeLabel label) -> {
+                    var mappedLabel = getLabel(instantJumps, label);
+                    newInstructions.add(new BytecodeInstruction.ConditionalJump(condition, a1, b, mappedLabel));
+                    continue;
+                }
+                case BytecodeInstruction.InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, Type type, BytecodeLabel label) -> {
+                    var mappedLabel = getLabel(instantJumps, label);
+                    newInstructions.add(new BytecodeInstruction.InstanceCheckJump(ifIsInstance, a, type, mappedLabel));
+                    continue;
+                }
+                case BytecodeInstruction.Label(BytecodeLabel label) -> {
+                    var nextInstruction = instructions.get(index + 1);
+                    if(nextInstruction instanceof BytecodeInstruction.Label) {
+                        continue;
+                    }
 
-                var label = getLabel(instantJumps, v.label());
-                if(labelUseCount.getOrDefault(label, 0) == 0) {
-                    continue;
+                    var mappedLabel = getLabel(instantJumps, label);
+                    if(labelUseCount.getOrDefault(mappedLabel, 0) == 0) {
+                        continue;
+                    }
                 }
+                case BytecodeInstruction.CallTarget _, BytecodeInstruction.Cast _, BytecodeInstruction.CreateArray _,
+                     BytecodeInstruction.New _, BytecodeInstruction.RegisterValue _,
+                     BytecodeInstruction.RegisterValueValue _, BytecodeInstruction.Return _,
+                     BytecodeInstruction.ReturnVoid _, BytecodeInstruction.SetArrayValue _,
+                     BytecodeInstruction.StringConcat _ -> {}
             }
 
             newInstructions.add(instruction);

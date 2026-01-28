@@ -5,7 +5,7 @@ import org.objectweb.asm.Type;
 
 import java.util.List;
 
-public interface BytecodeInstruction {
+public sealed interface BytecodeInstruction permits BytecodeInstruction.CallTarget, BytecodeInstruction.Cast, BytecodeInstruction.ConditionalJump, BytecodeInstruction.CreateArray, BytecodeInstruction.InstanceCheckJump, BytecodeInstruction.Jump, BytecodeInstruction.Label, BytecodeInstruction.New, BytecodeInstruction.RegisterValue, BytecodeInstruction.RegisterValueValue, BytecodeInstruction.Return, BytecodeInstruction.ReturnVoid, BytecodeInstruction.SetArrayValue, BytecodeInstruction.StringConcat {
     int cost();
 
     record RegisterValue(InstructionRVType type, BytecodeRegister result, BytecodeValue source) implements BytecodeInstruction {

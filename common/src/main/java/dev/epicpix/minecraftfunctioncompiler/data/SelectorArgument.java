@@ -2,44 +2,45 @@ package dev.epicpix.minecraftfunctioncompiler.data;
 
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 public record SelectorArgument(
-    UUID entityUuid,
-    String playerName,
-    boolean self,
-    Integer limit,
-    NegatableData<List<DataLocation>> entityTypes,
-    boolean requireAlive,
-    boolean requirePlayer,
-    List<NegatableData<String>> names,
-    Boolean hasTags,
-    List<NegatableData<MacroTemplate<String>>> tags,
-    Boolean hasTeam,
-    List<NegatableData<String>> teams,
-    Map<String, IntRangeArgument> scores,
-    List<NegatableData<Gamemode>> gamemodes,
-    DoubleRangeArgument distance,
-    IntRangeArgument level,
-    SelectorSort sort,
-    FloatRangeArgument yaw,
-    FloatRangeArgument pitch,
-    boolean worldLimited,
-    Double x,
-    Double y,
-    Double z,
-    Double dx,
-    Double dy,
-    Double dz,
-    Map<DataLocation, SelectorAdvancementCheck> advancements,
-    List<NegatableData<DataLocation>> predicates,
-    List<NegatableData<NbtValue.Compound>> nbts
+        @Nullable UUID entityUuid,
+        @Nullable String playerName,
+        boolean self,
+        @Nullable Integer limit,
+        @Nullable NegatableData<List<DataLocation>> entityTypes,
+        boolean requireAlive,
+        boolean requirePlayer,
+        List<NegatableData<String>> names,
+        @Nullable Boolean hasTags,
+        List<NegatableData<MacroTemplate<String>>> tags,
+        @Nullable Boolean hasTeam,
+        List<NegatableData<String>> teams,
+        Map<String, IntRangeArgument> scores,
+        List<NegatableData<Gamemode>> gamemodes,
+        @Nullable DoubleRangeArgument distance,
+        @Nullable IntRangeArgument level,
+        @Nullable SelectorSort sort,
+        @Nullable FloatRangeArgument yaw,
+        @Nullable FloatRangeArgument pitch,
+        boolean worldLimited,
+        @Nullable Double x,
+        @Nullable Double y,
+        @Nullable Double z,
+        @Nullable Double dx,
+        @Nullable Double dy,
+        @Nullable Double dz,
+        @Nullable Map<DataLocation, SelectorAdvancementCheck> advancements,
+        List<NegatableData<DataLocation>> predicates,
+        List<NegatableData<NbtValue.Compound>> nbts
 ) {
 
-    private SelectorArgument(UUID entityUuid, String playerName, boolean self) {
+    private SelectorArgument(@Nullable UUID entityUuid, @Nullable String playerName, boolean self) {
         this(
                 entityUuid,
                 playerName,

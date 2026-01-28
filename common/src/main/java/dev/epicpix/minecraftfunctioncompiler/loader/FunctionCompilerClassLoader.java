@@ -16,6 +16,7 @@ import dev.epicpix.minecraftfunctioncompiler.reporter.CodeGenerationMetrics;
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCountsData;
 import dev.epicpix.minecraftfunctioncompiler.reporter.TimingData;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +49,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     private final DiagnosticCollector diagnostics = new DiagnosticCollector();
 
     private State state = State.NOTHING_LOADED;
-    private MethodHandle resultField;
+    private @Nullable MethodHandle resultField;
 
     public enum State {
         FAILED,
@@ -115,6 +116,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         return sourceFiles.size();
     }
 
+    @Nullable
     private Thread backgroundThread;
 
     protected boolean compileInBackground(Runnable run) {
@@ -135,6 +137,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         return true;
     }
 
+    @Nullable
     private HashMap<DataLocation, Class<?>> loadFunctions(CompilationParams params, HashMap<DataLocation, List<String>> functionSources, HashMap<DataLocation, List<Instruction>> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions, int[] totalClassFileSize) {
         var loadedFunctions = new HashMap<DataLocation, Class<?>>();
         var compiledFunctionSet = new HashSet<>(compiledFunctions.keySet());
@@ -410,7 +413,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         handles.put(key, handle);
     }
 
-    public long runFunction(TIdentifier location, TCommandSourceStack stack, TCompoundTag compound) {
+    public long runFunction(TIdentifier location, TCommandSourceStack stack, @Nullable TCompoundTag compound) {
         try {
             return (long) handles.get(location).invoke(stack, compound);
         } catch (Throwable e) {
@@ -424,6 +427,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     public void storeResult(long value) {
         if(isUseReady()) {
             try {
+                assert resultField != null;
                 resultField.invoke(value);
             } catch(Throwable e) {
                 LOGGER.error("Failed to store result value: {}", value, e);

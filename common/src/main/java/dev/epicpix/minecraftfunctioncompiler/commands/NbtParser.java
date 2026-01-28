@@ -66,8 +66,8 @@ public final class NbtParser {
         ArrayList<NbtValue> valueList = new ArrayList<>();
         while(reader.peek() != ']') {
             var value = readNbtValue(reader);
-            if(!valueList.isEmpty() && value.getClass() != valueList.get(0).getClass()) {
-                throw createError(reader, NBT_MISMATCHED_TYPE, "Expected " + valueList.get(0).getClass().getSimpleName() + " nbt value, but got " + value.getClass().getSimpleName());
+            if(!valueList.isEmpty() && value.getClass() != valueList.getFirst().getClass()) {
+                throw createError(reader, NBT_MISMATCHED_TYPE, "Expected " + valueList.getFirst().getClass().getSimpleName() + " nbt value, but got " + value.getClass().getSimpleName());
             }else {
                 valueList.add(value);
             }
@@ -97,8 +97,8 @@ public final class NbtParser {
                 ArrayList<Byte> byteList = new ArrayList<>();
                 while(reader.peek() != ']') {
                     var value = readNbtValue(reader);
-                    if(value instanceof NbtValue.ByteLiteral literal) {
-                        byteList.add(literal.value());
+                    if(value instanceof NbtValue.ByteLiteral(byte bValue)) {
+                        byteList.add(bValue);
                     }else {
                         throw createError(reader, NBT_MISMATCHED_TYPE, "Expected byte nbt value, but got " + value.getClass().getSimpleName());
                     }
@@ -119,8 +119,8 @@ public final class NbtParser {
                 IntList intList = new IntArrayList();
                 while(reader.peek() != ']') {
                     var value = readNbtValue(reader);
-                    if(value instanceof NbtValue.IntegerLiteral literal) {
-                        intList.add(literal.value());
+                    if(value instanceof NbtValue.IntegerLiteral(int iValue)) {
+                        intList.add(iValue);
                     }else {
                         throw createError(reader, NBT_MISMATCHED_TYPE, "Expected int nbt value, but got " + value.getClass().getSimpleName());
                     }
@@ -141,8 +141,8 @@ public final class NbtParser {
                 LongList longList = new LongArrayList();
                 while(reader.peek() != ']') {
                     var value = readNbtValue(reader);
-                    if(value instanceof NbtValue.LongLiteral literal) {
-                        longList.add(literal.value());
+                    if(value instanceof NbtValue.LongLiteral(long lValue)) {
+                        longList.add(lValue);
                     }else {
                         throw createError(reader, NBT_MISMATCHED_TYPE, "Expected long nbt value, but got " + value.getClass().getSimpleName());
                     }
