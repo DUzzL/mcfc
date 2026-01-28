@@ -9,7 +9,6 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2;
-import dev.epicpix.minecraftfunctioncompiler.profiler.Profiler;
 import dev.epicpix.minecraftfunctioncompiler.v26_1.CompiledCommandResultStore;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
@@ -54,13 +53,11 @@ public final class Emitter {
                             callThreadLocal_set(codeWriter, mctxtl, new BytecodeValue.NullValue());
                             var functionManager = context.fieldStorage().loadServerFunctionManager(codeWriter);
                             var function = context.fieldStorage().loadFunction(codeWriter, func);
-                            codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "enterOverhead", void.class, String.class), new BytecodeValue.StringValue(func.toString()));
                             if(context.instruction().get("arguments") != null) {
                                 callExtensionFunctions_executeFunction(codeWriter, functionManager, function, commandSourceStack, codeWriter.castType(context.load("arguments"), CompoundTag.class.describeConstable().orElseThrow()));
                             }else {
                                 callServerFunctionManager_execute(codeWriter, functionManager, function, commandSourceStack);
                             }
-                            codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "exit", void.class));
                             callThreadLocal_set(codeWriter, mctxtl, mctx);
                         }
                     }
@@ -92,13 +89,11 @@ public final class Emitter {
                             commandSourceStack = callCommandSourceStack_withCallback(codeWriter, commandSourceStack, store);
                             var functionManager = context.fieldStorage().loadServerFunctionManager(codeWriter);
                             var function = context.fieldStorage().loadFunction(codeWriter, func);
-                            codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "enterOverhead", void.class, String.class), new BytecodeValue.StringValue(func.toString()));
                             if(context.instruction().get("arguments") != null) {
                                 callExtensionFunctions_executeFunction(codeWriter, functionManager, function, commandSourceStack, codeWriter.castType(context.load("arguments"), CompoundTag.class.describeConstable().orElseThrow()));
                             }else {
                                 callServerFunctionManager_execute(codeWriter, functionManager, function, commandSourceStack);
                             }
-                            codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "exit", void.class));
                             callThreadLocal_set(codeWriter, mctxtl, mctx);
                             returnValue = codeWriter.writeTarget(RUN_RESULT_FIELD_READ_TARGET);
                         }

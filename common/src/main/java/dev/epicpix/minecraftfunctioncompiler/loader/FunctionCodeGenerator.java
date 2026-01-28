@@ -29,7 +29,6 @@ import dev.epicpix.minecraftfunctioncompiler.il.Instructions2;
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
 import dev.epicpix.minecraftfunctioncompiler.il.optimizer.LengauerTarjan;
 import dev.epicpix.minecraftfunctioncompiler.il.optimizer.Optimizer;
-import dev.epicpix.minecraftfunctioncompiler.profiler.Profiler;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -251,7 +250,6 @@ public class FunctionCodeGenerator {
             }
 
             var entryBytecode = BytecodeOptimizer.optimizeInstructions(entryWriter.getInstructions());
-            if(macroInstructions.isEmpty()) entryBytecode = addProfilerInstructions(entryBytecode, entryWriter, funcId);
             lowLevelFunctions.put(className.displayName() + "#run", entryBytecode);
             gen.addFunction("run", entryBytecode, MethodTypeDesc.of(ConstantDescs.CD_long, params.commandSourceStackType(), params.codeFieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND)));
 
@@ -275,7 +273,6 @@ public class FunctionCodeGenerator {
 
 
                 var macroedBytecode = BytecodeOptimizer.optimizeInstructions(writer.getInstructions());
-                macroedBytecode = addProfilerInstructions(macroedBytecode, writer, funcId);
                 lowLevelFunctions.put(className.displayName() + "#runInstanced", macroedBytecode);
                 List<ClassDesc> funcParams = new ArrayList<>();
                 funcParams.add(params.commandSourceStackType());
@@ -285,19 +282,6 @@ public class FunctionCodeGenerator {
                 gen.addFunction("runInstanced", macroedBytecode, MethodTypeDesc.of(ConstantDescs.CD_long, funcParams));
             }
         });
-    }
-
-    private static List<BytecodeInstruction> addProfilerInstructions(List<BytecodeInstruction> instructions, CodeWriter cw, DataLocation function) {
-        var newInstructions = new ArrayList<>(instructions);
-        newInstructions.addFirst(new BytecodeInstruction.CallTarget(cw.createRegister(), InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "enterCompiled", void.class, String.class), List.of(new BytecodeValue.StringValue(function.toString()))));
-        for(int i = 1; i<newInstructions.size(); i++) {
-            var instruction = newInstructions.get(i);
-            if(instruction instanceof BytecodeInstruction.Return) {
-                newInstructions.add(i, new BytecodeInstruction.CallTarget(cw.createRegister(), InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "exit", void.class), List.of()));
-                i++;
-            }
-        }
-        return newInstructions;
     }
 
 }
