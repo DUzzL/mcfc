@@ -75,9 +75,9 @@ public class SimpleFunctionCompiler {
                 Instruction.printInstructions(compRes.getValue(), instructionsText::add);
             }
             var llFunctions = new HashMap<String, List<BytecodeInstruction>>();
-            var classGenerators = new ArrayList<ClassGenerator>();
+            var classBytes = new ArrayList<byte[]>();
             for(var key : optimizedHighLevel.keySet()) {
-                classGenerators.add(FunctionCodeGenerator.generateFunctionClass(
+                classBytes.add(FunctionCodeGenerator.generateFunctionClass(
                     params,
                     key,
                     optimizedHighLevel.get(key),
@@ -85,7 +85,7 @@ public class SimpleFunctionCompiler {
                     llFunctions
                 ));
             }
-            classGenerators.add(params.codeFieldStorage().generate(llFunctions));
+            classBytes.add(params.codeFieldStorage().generate(llFunctions));
             for(var f : llFunctions.entrySet()) {
                 var instructionsJson = jsonData(results, "function_low_level_instructions_json", f.getKey(), JsonArray::new);
                 var instructionsText = jsonData(results, "function_low_level_instructions_txt", f.getKey(), JsonArray::new);
@@ -106,10 +106,8 @@ public class SimpleFunctionCompiler {
                 jsonData(results, "errors", diagnostic.location(), () -> eObj);
             }
             Files.createDirectories(generatedPath);
-            for(var cg : classGenerators) {
-                var bytes = cg.finish();
-                Files.write(generatedPath.resolve(cg.getClassName().replace('/', '.') + ".class"), bytes);
-                results.getAsJsonArray("class_files").add(cg.getClassName().replace('/', '.'));
+            for(var _ : classBytes) {
+                throw new UnsupportedOperationException();
             }
             return results;
         }catch(Exception e) {

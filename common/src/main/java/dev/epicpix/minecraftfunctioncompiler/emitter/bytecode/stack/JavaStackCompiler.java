@@ -9,22 +9,35 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.jspecify.annotations.Nullable;
-import org.objectweb.asm.*;
 
-import java.util.*;
+import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
+import java.lang.classfile.TypeKind;
+import java.lang.constant.ClassDesc;
+import java.lang.constant.ConstantDesc;
+import java.lang.constant.ConstantDescs;
+import java.lang.constant.DirectMethodHandleDesc;
+import java.lang.constant.DynamicCallSiteDesc;
+import java.lang.constant.MethodHandleDesc;
+import java.lang.constant.MethodTypeDesc;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Stack;
 
 public class JavaStackCompiler {
 
-    private final MethodVisitor mv;
+    private final CodeBuilder cb;
     private final List<StackInstruction> instructions;
     private final IntArrayList toTraverse;
     private final IntSet traversed;
-    private final Int2ObjectOpenHashMap<Stack<Type>> instructionTypeStackMap;
-    private final HashMap<BytecodeLabel, Stack<Type>> labelTypeStackMap;
+    private final Int2ObjectOpenHashMap<Stack<ClassDesc>> instructionTypeStackMap;
+    private final HashMap<BytecodeLabel, Stack<ClassDesc>> labelTypeStackMap;
     private final HashMap<BytecodeLabel, Label> labelMap;
 
-    private JavaStackCompiler(MethodVisitor mv, List<StackInstruction> instructions) {
-        this.mv = mv;
+    private JavaStackCompiler(CodeBuilder cb, List<StackInstruction> instructions) {
+        this.cb = cb;
         this.instructions = instructions;
         this.toTraverse = new IntArrayList();
         this.traversed = new IntOpenHashSet();
@@ -33,37 +46,21 @@ public class JavaStackCompiler {
         this.labelMap = new HashMap<>();
     }
 
-    private static int getFunctionTargetOpcode(InstructionTarget.FunctionTarget target) {
-        if(target.isStatic()) return Opcodes.INVOKESTATIC;
-        if(target.isInterface()) return Opcodes.INVOKEINTERFACE;
-        if(target.isSpecial()) return Opcodes.INVOKESPECIAL;
-        return Opcodes.INVOKEVIRTUAL;
+    private static boolean isIntegerLike(ClassDesc t) {
+        return t == ConstantDescs.CD_boolean || t == ConstantDescs.CD_byte || t == ConstantDescs.CD_char || t == ConstantDescs.CD_short || t == ConstantDescs.CD_int;
     }
 
-    private static int getFieldTargetOpcode(InstructionTarget.FieldTarget target) {
-        if(target.isStatic()) {
-            if(target.isWrite()) return Opcodes.PUTSTATIC;
-            return Opcodes.GETSTATIC;
-        }
-        if(target.isWrite()) return Opcodes.PUTFIELD;
-        return Opcodes.GETFIELD;
-    }
-
-    private static boolean isIntegerLike(Type t) {
-        return t == Type.BOOLEAN_TYPE || t == Type.BYTE_TYPE || t == Type.CHAR_TYPE || t == Type.SHORT_TYPE || t == Type.INT_TYPE;
-    }
-
-    private boolean traverseInstruction(int index, Stack<Type> currentTypeStack) {
+    private boolean traverseInstruction(int index, Stack<ClassDesc> currentTypeStack) {
         var instr = instructions.get(index);
         switch(instr) {
-            case StackInstruction.Load(BytecodeValue value, Type type) -> {
+            case StackInstruction.Load(BytecodeValue value, ClassDesc type) -> {
                 switch(value) {
-                    case BytecodeValue.NullValue _ -> currentTypeStack.push(Type.getType(Object.class));
-                    case BytecodeValue.IntegerValue _ -> currentTypeStack.push(Type.INT_TYPE);
-                    case BytecodeValue.LongValue _ -> currentTypeStack.push(Type.LONG_TYPE);
-                    case BytecodeValue.FloatValue _ -> currentTypeStack.push(Type.FLOAT_TYPE);
-                    case BytecodeValue.DoubleValue _ -> currentTypeStack.push(Type.DOUBLE_TYPE);
-                    case BytecodeValue.StringValue _ -> currentTypeStack.push(Type.getType(String.class));
+                    case BytecodeValue.NullValue _ -> currentTypeStack.push(ConstantDescs.CD_Object);
+                    case BytecodeValue.IntegerValue _ -> currentTypeStack.push(ConstantDescs.CD_int);
+                    case BytecodeValue.LongValue _ -> currentTypeStack.push(ConstantDescs.CD_long);
+                    case BytecodeValue.FloatValue _ -> currentTypeStack.push(ConstantDescs.CD_float);
+                    case BytecodeValue.DoubleValue _ -> currentTypeStack.push(ConstantDescs.CD_double);
+                    case BytecodeValue.StringValue _ -> currentTypeStack.push(ConstantDescs.CD_String);
                     case BytecodeValue.Parameter _, BytecodeRegister _ -> currentTypeStack.push(type);
                     case null, default -> throw new IllegalArgumentException("Unknown value: " + value);
                 }
@@ -75,37 +72,36 @@ public class JavaStackCompiler {
             }
             case StackInstruction.Call(InstructionTarget target) -> {
                 if(target instanceof InstructionTarget.FunctionTarget f) {
-                    var argCount = Type.getArgumentTypes(f.descriptor()).length + (f.isStatic() ? 0 : 1);
+                    var argCount = f.descriptor().parameterCount() + (f.isStatic() ? 0 : 1);
                     for(int i = 0; i < argCount; i++) {
                         currentTypeStack.pop();
                     }
-                    var returnType = Type.getReturnType(f.descriptor());
-                    if(returnType != Type.VOID_TYPE) currentTypeStack.push(returnType);
+                    var returnType = f.descriptor().returnType();
+                    if(returnType != ConstantDescs.CD_void) currentTypeStack.push(returnType);
                     return true;
                 }else if(target instanceof InstructionTarget.FieldTarget f) {
                     if(!f.isStatic()) currentTypeStack.pop();
                     if(f.isWrite()) currentTypeStack.pop();
-                    else currentTypeStack.push(Type.getType(f.descriptor()));
+                    else currentTypeStack.push(f.descriptor());
                     return true;
                 }else {
                     throw new IllegalArgumentException("Unknown target: " + target);
                 }
             }
-            case StackInstruction.New(Type type) -> {
+            case StackInstruction.New(ClassDesc type) -> {
                 currentTypeStack.push(type);
                 return true;
             }
-            case StackInstruction.NewArray(Type type) -> {
+            case StackInstruction.NewArray(ClassDesc type) -> {
                 currentTypeStack.pop();
-                var arrayType = Type.getType("[" + type.getDescriptor());
-                currentTypeStack.push(arrayType);
+                currentTypeStack.push(type.arrayType());
                 return true;
             }
             case StackInstruction.ArrayStore _ -> {
                 currentTypeStack.pop();
                 currentTypeStack.pop();
                 var array = currentTypeStack.pop();
-                if(array.getSort() != Type.ARRAY) throw new IllegalArgumentException("Cannot store in " + array);
+                if(!array.isArray()) throw new IllegalArgumentException("Cannot store in " + array);
                 return true;
             }
             case StackInstruction.ReturnValue _ -> {
@@ -156,61 +152,61 @@ public class JavaStackCompiler {
                     }
                 }
 
-                currentTypeStack.push(Type.getType(String.class));
+                currentTypeStack.push(ConstantDescs.CD_String);
                 return true;
             }
-            case StackInstruction.Cast(Type type) -> {
+            case StackInstruction.Cast(ClassDesc type) -> {
                 var op = currentTypeStack.pop();
-                if((op.getSort() != Type.OBJECT && op.getSort() != Type.ARRAY && type.getSort() != Type.OBJECT && type.getSort() != Type.ARRAY) && ((isIntegerLike(op) && isIntegerLike(type)) || op.getSort() == type.getSort())) {
+                if((!op.isClassOrInterface() && !op.isArray() && !type.isClassOrInterface() && !type.isArray()) && ((isIntegerLike(op) && isIntegerLike(type)) || TypeKind.from(op) == TypeKind.from(type))) {
                     currentTypeStack.push(op);
                     return true;
                 }
                 if(isIntegerLike(op)) {
-                    if(type == Type.LONG_TYPE) {
-                        currentTypeStack.push(Type.LONG_TYPE);
+                    if(type == ConstantDescs.CD_long) {
+                        currentTypeStack.push(ConstantDescs.CD_long);
                         return true;
-                    }else if(type == Type.FLOAT_TYPE) {
-                        currentTypeStack.push(Type.FLOAT_TYPE);
+                    }else if(type == ConstantDescs.CD_float) {
+                        currentTypeStack.push(ConstantDescs.CD_float);
                         return true;
-                    }else if(type == Type.DOUBLE_TYPE) {
-                        currentTypeStack.push(Type.DOUBLE_TYPE);
-                        return true;
-                    }
-                }else if(op == Type.LONG_TYPE) {
-                    if(type == Type.INT_TYPE) {
-                        currentTypeStack.push(Type.INT_TYPE);
-                        return true;
-                    }else if(type == Type.FLOAT_TYPE) {
-                        currentTypeStack.push(Type.FLOAT_TYPE);
-                        return true;
-                    }else if(type == Type.DOUBLE_TYPE) {
-                        currentTypeStack.push(Type.DOUBLE_TYPE);
+                    }else if(type == ConstantDescs.CD_double) {
+                        currentTypeStack.push(ConstantDescs.CD_double);
                         return true;
                     }
-                }else if(op == Type.FLOAT_TYPE) {
-                    if(type == Type.INT_TYPE) {
-                        currentTypeStack.push(Type.INT_TYPE);
+                }else if(op == ConstantDescs.CD_long) {
+                    if(type == ConstantDescs.CD_int) {
+                        currentTypeStack.push(ConstantDescs.CD_int);
                         return true;
-                    }else if(type == Type.LONG_TYPE) {
-                        currentTypeStack.push(Type.LONG_TYPE);
+                    }else if(type == ConstantDescs.CD_float) {
+                        currentTypeStack.push(ConstantDescs.CD_float);
                         return true;
-                    }else if(type == Type.DOUBLE_TYPE) {
-                        currentTypeStack.push(Type.DOUBLE_TYPE);
+                    }else if(type == ConstantDescs.CD_double) {
+                        currentTypeStack.push(ConstantDescs.CD_double);
                         return true;
                     }
-                }else if(op == Type.DOUBLE_TYPE) {
-                    if(type == Type.INT_TYPE) {
-                        currentTypeStack.push(Type.INT_TYPE);
+                }else if(op == ConstantDescs.CD_float) {
+                    if(type == ConstantDescs.CD_int) {
+                        currentTypeStack.push(ConstantDescs.CD_int);
                         return true;
-                    }else if(type == Type.LONG_TYPE) {
-                        currentTypeStack.push(Type.LONG_TYPE);
+                    }else if(type == ConstantDescs.CD_long) {
+                        currentTypeStack.push(ConstantDescs.CD_long);
                         return true;
-                    }else if(type == Type.FLOAT_TYPE) {
-                        currentTypeStack.push(Type.FLOAT_TYPE);
+                    }else if(type == ConstantDescs.CD_double) {
+                        currentTypeStack.push(ConstantDescs.CD_double);
+                        return true;
+                    }
+                }else if(op == ConstantDescs.CD_double) {
+                    if(type == ConstantDescs.CD_int) {
+                        currentTypeStack.push(ConstantDescs.CD_int);
+                        return true;
+                    }else if(type == ConstantDescs.CD_long) {
+                        currentTypeStack.push(ConstantDescs.CD_long);
+                        return true;
+                    }else if(type == ConstantDescs.CD_float) {
+                        currentTypeStack.push(ConstantDescs.CD_float);
                         return true;
                     }
                 }
-                if(op.getSort() != Type.OBJECT && op.getSort() != Type.ARRAY)
+                if(!op.isClassOrInterface() && !op.isArray())
                     throw new IllegalArgumentException("Cannot cast " + op + " to " + type);
                 currentTypeStack.push(type);
                 return true;
@@ -244,7 +240,7 @@ public class JavaStackCompiler {
                 switch(jumpType) {
                     case IF_EQUAL_ZERO, IF_NOT_EQUAL_ZERO, IF_LESS_THAN_ZERO, IF_LESS_EQUAL_ZERO, IF_GREATER_THAN_ZERO,
                          IF_GREATER_EQUAL_ZERO -> {
-                        if(a != Type.LONG_TYPE && a != Type.FLOAT_TYPE && a != Type.DOUBLE_TYPE && !isIntegerLike(a)) {
+                        if(a != ConstantDescs.CD_long && a != ConstantDescs.CD_float && a != ConstantDescs.CD_double && !isIntegerLike(a)) {
                             throw new IllegalArgumentException("Cannot compare " + a + " and 0");
                         }
                         return true;
@@ -254,18 +250,18 @@ public class JavaStackCompiler {
                 switch(jumpType) {
                     case IF_EQUAL, IF_NOT_EQUAL -> {
                         if(isIntegerLike(a) && isIntegerLike(b)) return true;
-                        if(a == Type.LONG_TYPE && b == Type.LONG_TYPE) return true;
-                        if(a == Type.FLOAT_TYPE && b == Type.FLOAT_TYPE) return true;
-                        if(a == Type.DOUBLE_TYPE && b == Type.DOUBLE_TYPE) return true;
-                        if((a.getSort() == Type.OBJECT || a.getSort() == Type.ARRAY) && (b.getSort() == Type.OBJECT || b.getSort() == Type.ARRAY))
-                            return true;
+
+                        if(a == ConstantDescs.CD_long && b == ConstantDescs.CD_long) return true;
+                        if(a == ConstantDescs.CD_float && b == ConstantDescs.CD_float) return true;
+                        if(a == ConstantDescs.CD_double && b == ConstantDescs.CD_double) return true;
+                        if((a.isClassOrInterface() || a.isArray()) && (b.isClassOrInterface() || b.isArray())) return true;
                         throw new IllegalArgumentException("Cannot compare " + a + " and " + b);
                     }
                     case IF_LESS_THAN, IF_LESS_EQUAL, IF_GREATER_THAN, IF_GREATER_EQUAL -> {
                         if(isIntegerLike(a) && isIntegerLike(b)) return true;
-                        if(a == Type.LONG_TYPE && b == Type.LONG_TYPE) return true;
-                        if(a == Type.FLOAT_TYPE && b == Type.FLOAT_TYPE) return true;
-                        if(a == Type.DOUBLE_TYPE && b == Type.DOUBLE_TYPE) return true;
+                        if(a == ConstantDescs.CD_long && b == ConstantDescs.CD_long) return true;
+                        if(a == ConstantDescs.CD_float && b == ConstantDescs.CD_float) return true;
+                        if(a == ConstantDescs.CD_double && b == ConstantDescs.CD_double) return true;
                         throw new IllegalArgumentException("Cannot compare " + a + " and " + b);
                     }
                     default -> throw new IllegalArgumentException("Unknown jump type: " + jumpType);
@@ -297,7 +293,7 @@ public class JavaStackCompiler {
                 }
             }
             case StackInstruction.Label(BytecodeLabel label) -> {
-                var stackClone = new Stack<Type>();
+                var stackClone = new Stack<ClassDesc>();
                 stackClone.addAll(currentTypeStack);
                 labelTypeStackMap.put(label, stackClone);
                 return true;
@@ -306,129 +302,116 @@ public class JavaStackCompiler {
         }
     }
 
-    private static Type get(Stack<Type> currentTypeStack, int index) {
+    private static ClassDesc get(Stack<ClassDesc> currentTypeStack, int index) {
         if(index < 0) return currentTypeStack.get(currentTypeStack.size() + index);
         else return currentTypeStack.get(index);
     }
 
-    private void writeInstruction(int index, Stack<Type> currentTypeStack) {
+    private void writeInstruction(int index, Stack<ClassDesc> currentTypeStack) {
         var instr = instructions.get(index);
         switch(instr) {
-            case StackInstruction.Load(BytecodeValue bValue, Type loadType) -> {
+            case StackInstruction.Load(BytecodeValue bValue, ClassDesc loadType) -> {
                 switch(bValue) {
-                    case BytecodeValue.NullValue _ -> mv.visitInsn(Opcodes.ACONST_NULL);
-                    case BytecodeValue.IntegerValue(int val) -> {
-                        if(val >= -1 && val <= 5) {
-                            mv.visitInsn(Opcodes.ICONST_0 + val);
-                        }else if(val >= Byte.MIN_VALUE && val <= Byte.MAX_VALUE) {
-                            mv.visitIntInsn(Opcodes.BIPUSH, val);
-                        }else if(val >= Short.MIN_VALUE && val <= Short.MAX_VALUE) {
-                            mv.visitIntInsn(Opcodes.SIPUSH, val);
-                        }else {
-                            mv.visitLdcInsn(val);
-                        }
-                    }
-                    case BytecodeValue.LongValue(long value) -> {
-                        if(value == 0L || value == 1L) {
-                            mv.visitInsn(Opcodes.LCONST_0 + (int) value);
-                        }else {
-                            mv.visitLdcInsn(value);
-                        }
-                    }
-                    case BytecodeValue.FloatValue(float value) -> {
-                        if(value == 0F || value == 1F || value == 2F) {
-                            mv.visitInsn(Opcodes.FCONST_0 + (int) value);
-                        }else {
-                            mv.visitLdcInsn(value);
-                        }
-                    }
-                    case BytecodeValue.DoubleValue(double value) -> {
-                        if(value == 0D || value == 1D) {
-                            mv.visitInsn(Opcodes.DCONST_0 + (int) value);
-                        }else {
-                            mv.visitLdcInsn(value);
-                        }
-                    }
-                    case BytecodeValue.StringValue(String value) -> mv.visitLdcInsn(value);
-                    case BytecodeValue.Parameter va -> mv.visitVarInsn(loadType.getOpcode(Opcodes.ILOAD), va.index());
-                    case BytecodeRegister(int reg) -> mv.visitVarInsn(loadType.getOpcode(Opcodes.ILOAD), reg);
-                    case null, default -> throw new IllegalArgumentException("Unknown value: " + bValue);
+                    case BytecodeValue.NullValue _ -> cb.aconst_null();
+                    case BytecodeValue.IntegerValue(int val) -> cb.loadConstant(val);
+                    case BytecodeValue.LongValue(long value) -> cb.loadConstant(value);
+                    case BytecodeValue.FloatValue(float value) -> cb.loadConstant(value);
+                    case BytecodeValue.DoubleValue(double value) -> cb.loadConstant(value);
+                    case BytecodeValue.StringValue(String value) -> cb.loadConstant(value);
+                    case BytecodeValue.Parameter va -> cb.loadLocal(TypeKind.from(loadType), va.index());
+                    case BytecodeRegister(int reg) -> cb.loadLocal(TypeKind.from(loadType), reg);
+                    default -> throw new IllegalArgumentException("Unknown value: " + bValue);
                 }
             }
             case StackInstruction.Store(BytecodeRegister register) -> {
                 var type = get(currentTypeStack, -1);
-                mv.visitVarInsn(type.getOpcode(Opcodes.ISTORE), register.reg());
+                cb.storeLocal(TypeKind.from(type), register.reg());
             }
             case StackInstruction.Call(InstructionTarget target) -> {
                 switch(target) {
-                    case InstructionTarget.FunctionTarget f -> mv.visitMethodInsn(getFunctionTargetOpcode(f), f.className(), f.name(), f.descriptor(), f.isInterface());
-                    case InstructionTarget.FieldTarget f -> mv.visitFieldInsn(getFieldTargetOpcode(f), f.className(), f.name(), f.descriptor());
+                    case InstructionTarget.FunctionTarget f -> {
+                        if(f.isStatic()) cb.invokestatic(f.classType(), f.name(), f.descriptor(), f.isInterface());
+                        else if(f.isInterface()) cb.invokeinterface(f.classType(), f.name(), f.descriptor());
+                        else if(f.isSpecial()) cb.invokespecial(f.classType(), f.name(), f.descriptor(), false);
+                        else cb.invokevirtual(f.classType(), f.name(), f.descriptor());
+                    }
+                    case InstructionTarget.FieldTarget f -> {
+                        if(f.isStatic()) {
+                            if(f.isWrite()) cb.putstatic(f.classType(), f.name(), f.classType());
+                            else cb.getstatic(f.classType(), f.name(), f.classType());
+                        }else if(f.isWrite()) cb.putfield(f.classType(), f.name(), f.classType());
+                        else cb.getfield(f.classType(), f.name(), f.classType());
+                    }
                 }
             }
-            case StackInstruction.New(Type type) -> mv.visitTypeInsn(Opcodes.NEW, type.getInternalName());
-            case StackInstruction.NewArray(Type type) -> {
-                if(type == Type.BOOLEAN_TYPE) {
-                    mv.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_BOOLEAN);
-                }else if(type == Type.BYTE_TYPE) {
-                    mv.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_BYTE);
-                }else if(type == Type.CHAR_TYPE) {
-                    mv.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_CHAR);
-                }else if(type == Type.INT_TYPE) {
-                    mv.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_INT);
-                }else if(type == Type.LONG_TYPE) {
-                    mv.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_LONG);
-                }else if(type == Type.DOUBLE_TYPE) {
-                    mv.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_DOUBLE);
-                }else if(type == Type.FLOAT_TYPE) {
-                    mv.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_FLOAT);
-                }else if(type == Type.SHORT_TYPE) {
-                    mv.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_SHORT);
-                }else {
-                    mv.visitTypeInsn(Opcodes.ANEWARRAY, type.getInternalName());
-                }
-            }
+            case StackInstruction.New(ClassDesc type) -> cb.new_(type);
+            case StackInstruction.NewArray(ClassDesc type) -> cb.newarray(TypeKind.from(type));
             case StackInstruction.ArrayStore _ -> {
                 var array = get(currentTypeStack, -3);
-                if(array.getSort() != Type.ARRAY) {
+                if(!array.isArray()) {
                     throw new IllegalArgumentException("Cannot store in " + array);
                 }
-                mv.visitInsn(array.getElementType().getOpcode(Opcodes.IASTORE));
+                cb.arrayStore(TypeKind.from(array.componentType()));
             }
             case StackInstruction.ReturnValue _ -> {
                 var type = get(currentTypeStack, -1);
-                mv.visitInsn(type.getOpcode(Opcodes.IRETURN));
+                cb.return_(TypeKind.from(type));
             }
-            case StackInstruction.Return _ -> mv.visitInsn(Opcodes.RETURN);
+            case StackInstruction.Return _ -> cb.return_();
             case StackInstruction.Pop _ -> {
                 var popped = get(currentTypeStack, -1);
-                if(popped == Type.LONG_TYPE || popped == Type.DOUBLE_TYPE) {
-                    mv.visitInsn(Opcodes.POP2);
+                if(popped == ConstantDescs.CD_long || popped == ConstantDescs.CD_double) {
+                    cb.pop2();
                 }else {
-                    mv.visitInsn(Opcodes.POP);
+                    cb.pop();
                 }
             }
             case StackInstruction.Evaluate(StackEvaluationType evaluationType) -> {
                 if(evaluationType == StackEvaluationType.ADD) {
                     var a = get(currentTypeStack, -1);
-                    mv.visitInsn(a.getOpcode(Opcodes.IADD));
+                    if(a == ConstantDescs.CD_int) cb.iadd();
+                    else if(a == ConstantDescs.CD_long) cb.ladd();
+                    else if(a == ConstantDescs.CD_float) cb.fadd();
+                    else if(a == ConstantDescs.CD_double) cb.dadd();
+                    else throw new IllegalArgumentException("invalid operation on type: " + a);
                 }else if(evaluationType == StackEvaluationType.SUB) {
                     var a = get(currentTypeStack, -1);
-                    mv.visitInsn(a.getOpcode(Opcodes.ISUB));
+                    if(a == ConstantDescs.CD_int) cb.isub();
+                    else if(a == ConstantDescs.CD_long) cb.lsub();
+                    else if(a == ConstantDescs.CD_float) cb.fsub();
+                    else if(a == ConstantDescs.CD_double) cb.dsub();
+                    else throw new IllegalArgumentException("invalid operation on type: " + a);
                 }else if(evaluationType == StackEvaluationType.MUL) {
                     var a = get(currentTypeStack, -1);
-                    mv.visitInsn(a.getOpcode(Opcodes.IMUL));
+                    if(a == ConstantDescs.CD_int) cb.imul();
+                    else if(a == ConstantDescs.CD_long) cb.lmul();
+                    else if(a == ConstantDescs.CD_float) cb.fmul();
+                    else if(a == ConstantDescs.CD_double) cb.dmul();
+                    else throw new IllegalArgumentException("invalid operation on type: " + a);
                 }else if(evaluationType == StackEvaluationType.DIV) {
                     var a = get(currentTypeStack, -1);
-                    mv.visitInsn(a.getOpcode(Opcodes.IDIV));
+                    if(a == ConstantDescs.CD_int) cb.idiv();
+                    else if(a == ConstantDescs.CD_long) cb.ldiv();
+                    else if(a == ConstantDescs.CD_float) cb.fdiv();
+                    else if(a == ConstantDescs.CD_double) cb.ddiv();
+                    else throw new IllegalArgumentException("invalid operation on type: " + a);
                 }else if(evaluationType == StackEvaluationType.MOD) {
                     var a = get(currentTypeStack, -1);
-                    mv.visitInsn(a.getOpcode(Opcodes.IREM));
+                    if(a == ConstantDescs.CD_int) cb.irem();
+                    else if(a == ConstantDescs.CD_long) cb.lrem();
+                    else if(a == ConstantDescs.CD_float) cb.frem();
+                    else if(a == ConstantDescs.CD_double) cb.drem();
+                    else throw new IllegalArgumentException("invalid operation on type: " + a);
                 }else if(evaluationType == StackEvaluationType.SHL) {
                     var a = get(currentTypeStack, -2);
-                    mv.visitInsn(a.getOpcode(Opcodes.ISHL));
+                    if(a == ConstantDescs.CD_int) cb.ishl();
+                    else if(a == ConstantDescs.CD_long) cb.lshl();
+                    else throw new IllegalArgumentException("invalid operation on type: " + a);
                 }else if(evaluationType == StackEvaluationType.SHR) {
                     var a = get(currentTypeStack, -2);
-                    mv.visitInsn(a.getOpcode(Opcodes.ISHR));
+                    if(a == ConstantDescs.CD_int) cb.ishr();
+                    else if(a == ConstantDescs.CD_long) cb.lshr();
+                    else throw new IllegalArgumentException("invalid operation on type: " + a);
                 }else {
                     throw new IllegalArgumentException("Unknown evaluation type: " + evaluationType);
                 }
@@ -450,174 +433,181 @@ public class JavaStackCompiler {
                         }
                     }
                 }
-                Object[] res = new Object[1 + additionalArguments.size()];
+                ConstantDesc[] res = new ConstantDesc[1 + additionalArguments.size()];
                 res[0] = result.toString();
                 for(int i = 0; i < additionalArguments.size(); i++) {
                     res[i + 1] = additionalArguments.get(i);
                 }
-                var handle = new Handle(Opcodes.H_INVOKESTATIC, "java/lang/invoke/StringConcatFactory", "makeConcatWithConstants", "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite;", false);
-                mv.visitInvokeDynamicInsn("makeConcatWithConstants", "(" + "Ljava/lang/String;".repeat(dynamicCount) + ")Ljava/lang/String;", handle, res);
+                ClassDesc[] paramsDescs = new ClassDesc[dynamicCount];
+                Arrays.fill(paramsDescs, ConstantDescs.CD_String);
+                var handle = MethodHandleDesc.ofMethod(DirectMethodHandleDesc.Kind.STATIC, ClassDesc.of("java/lang/invoke/StringConcatFactory"), "makeConcatWithConstants", MethodTypeDesc.of(ConstantDescs.CD_CallSite, ConstantDescs.CD_MethodHandles_Lookup, ConstantDescs.CD_String, ConstantDescs.CD_MethodType, ConstantDescs.CD_String, ConstantDescs.CD_Object.arrayType()));
+                var invocationType = MethodTypeDesc.of(ConstantDescs.CD_String, paramsDescs);
+                cb.invokedynamic(DynamicCallSiteDesc.of(handle, "makeConcatWithConstants", invocationType, res));
             }
-            case StackInstruction.Cast(Type type) -> {
+            case StackInstruction.Cast(ClassDesc type) -> {
                 var op = get(currentTypeStack, -1);
-                if((op.getSort() != Type.OBJECT && op.getSort() != Type.ARRAY && type.getSort() != Type.OBJECT && type.getSort() != Type.ARRAY) && ((isIntegerLike(op) && isIntegerLike(type)) || op.getSort() == type.getSort())) {
+                if((!op.isClassOrInterface() && !op.isArray() && !op.isClassOrInterface() && !op.isArray()) && ((isIntegerLike(op) && isIntegerLike(type)) || TypeKind.from(op) == TypeKind.from(type))) {
                     return;
                 }
                 if(isIntegerLike(op)) {
-                    if(type == Type.LONG_TYPE) {
-                        mv.visitInsn(Opcodes.I2L);
+                    if(type == ConstantDescs.CD_long) {
+                        cb.i2l();
                         return;
-                    }else if(type == Type.FLOAT_TYPE) {
-                        mv.visitInsn(Opcodes.I2F);
+                    }else if(type == ConstantDescs.CD_float) {
+                        cb.i2f();
                         return;
-                    }else if(type == Type.DOUBLE_TYPE) {
-                        mv.visitInsn(Opcodes.I2D);
-                        return;
-                    }
-                }else if(op == Type.LONG_TYPE) {
-                    if(type == Type.INT_TYPE) {
-                        mv.visitInsn(Opcodes.L2I);
-                        return;
-                    }else if(type == Type.FLOAT_TYPE) {
-                        mv.visitInsn(Opcodes.L2F);
-                        return;
-                    }else if(type == Type.DOUBLE_TYPE) {
-                        mv.visitInsn(Opcodes.L2D);
+                    }else if(type == ConstantDescs.CD_double) {
+                        cb.i2d();
                         return;
                     }
-                }else if(op == Type.FLOAT_TYPE) {
-                    if(type == Type.INT_TYPE) {
-                        mv.visitInsn(Opcodes.F2I);
+                }else if(op == ConstantDescs.CD_long) {
+                    if(type == ConstantDescs.CD_int) {
+                        cb.l2i();
                         return;
-                    }else if(type == Type.LONG_TYPE) {
-                        mv.visitInsn(Opcodes.F2L);
+                    }else if(type == ConstantDescs.CD_float) {
+                        cb.l2f();
                         return;
-                    }else if(type == Type.DOUBLE_TYPE) {
-                        mv.visitInsn(Opcodes.F2D);
+                    }else if(type == ConstantDescs.CD_double) {
+                        cb.l2d();
                         return;
                     }
-                }else if(op == Type.DOUBLE_TYPE) {
-                    if(type == Type.INT_TYPE) {
-                        mv.visitInsn(Opcodes.D2I);
+                }else if(op == ConstantDescs.CD_float) {
+                    if(type == ConstantDescs.CD_int) {
+                        cb.f2i();
                         return;
-                    }else if(type == Type.LONG_TYPE) {
-                        mv.visitInsn(Opcodes.D2L);
+                    }else if(type == ConstantDescs.CD_long) {
+                        cb.f2l();
                         return;
-                    }else if(type == Type.FLOAT_TYPE) {
-                        mv.visitInsn(Opcodes.D2F);
+                    }else if(type == ConstantDescs.CD_double) {
+                        cb.f2d();
+                        return;
+                    }
+                }else if(op == ConstantDescs.CD_double) {
+                    if(type == ConstantDescs.CD_int) {
+                        cb.d2i();
+                        return;
+                    }else if(type == ConstantDescs.CD_long) {
+                        cb.d2l();
+                        return;
+                    }else if(type == ConstantDescs.CD_float) {
+                        cb.d2f();
                         return;
                     }
                 }
-                if(op.getSort() != Type.OBJECT && op.getSort() != Type.ARRAY) {
+                if(!op.isClassOrInterface() && !op.isArray()) {
                     throw new IllegalArgumentException("Cannot cast " + op + " to " + type);
                 }
-                mv.visitTypeInsn(Opcodes.CHECKCAST, type.getInternalName());
+                cb.checkcast(type);
             }
             case StackInstruction.Jump(StackJumpType jumpType, BytecodeLabel label) -> {
                 if(jumpType == StackJumpType.GOTO) {
-                    mv.visitJumpInsn(Opcodes.GOTO, labelMap.get(label));
+                    cb.goto_(labelMap.get(label));
                     return;
                 }
-                if(jumpType == StackJumpType.IF_NULL || jumpType == StackJumpType.IF_NOT_NULL) {
-                    mv.visitJumpInsn(jumpType == StackJumpType.IF_NULL ? Opcodes.IFNULL : Opcodes.IFNONNULL, labelMap.get(label));
+                if(jumpType == StackJumpType.IF_NULL) {
+                    cb.ifnull(labelMap.get(label));
+                    return;
+                }
+                if(jumpType == StackJumpType.IF_NOT_NULL) {
+                    cb.ifnonnull(labelMap.get(label));
                     return;
                 }
                 var a = get(currentTypeStack, -1);
                 switch(jumpType) {
                     case IF_EQUAL_ZERO -> {
-                        if(a == Type.LONG_TYPE) {
-                            mv.visitInsn(Opcodes.LCONST_0);
-                            mv.visitInsn(Opcodes.LCMP);
-                        }else if(a == Type.FLOAT_TYPE) {
-                            mv.visitInsn(Opcodes.FCONST_0);
-                            mv.visitInsn(Opcodes.FCMPL);
-                        }else if(a == Type.DOUBLE_TYPE) {
-                            mv.visitInsn(Opcodes.DCONST_0);
-                            mv.visitInsn(Opcodes.DCMPL);
+                        if(a == ConstantDescs.CD_long) {
+                            cb.loadConstant(0L);
+                            cb.lcmp();
+                        }else if(a == ConstantDescs.CD_float) {
+                            cb.loadConstant(0F);
+                            cb.fcmpl();
+                        }else if(a == ConstantDescs.CD_double) {
+                            cb.loadConstant(0D);
+                            cb.dcmpl();
                         }else if(!isIntegerLike(a)) {
                             throw new IllegalArgumentException("Cannot compare " + a + " and 0");
                         }
-                        mv.visitJumpInsn(Opcodes.IFEQ, labelMap.get(label));
+                        cb.ifeq(labelMap.get(label));
                         return;
                     }
                     case IF_NOT_EQUAL_ZERO -> {
-                        if(a == Type.LONG_TYPE) {
-                            mv.visitInsn(Opcodes.LCONST_0);
-                            mv.visitInsn(Opcodes.LCMP);
-                        }else if(a == Type.FLOAT_TYPE) {
-                            mv.visitInsn(Opcodes.FCONST_0);
-                            mv.visitInsn(Opcodes.FCMPL);
-                        }else if(a == Type.DOUBLE_TYPE) {
-                            mv.visitInsn(Opcodes.DCONST_0);
-                            mv.visitInsn(Opcodes.DCMPL);
+                        if(a == ConstantDescs.CD_long) {
+                            cb.loadConstant(0L);
+                            cb.lcmp();
+                        }else if(a == ConstantDescs.CD_float) {
+                            cb.loadConstant(0F);
+                            cb.fcmpl();
+                        }else if(a == ConstantDescs.CD_double) {
+                            cb.loadConstant(0D);
+                            cb.dcmpl();
                         }else if(!isIntegerLike(a)) {
                             throw new IllegalArgumentException("Cannot compare " + a + " and 0");
                         }
-                        mv.visitJumpInsn(Opcodes.IFNE, labelMap.get(label));
+                        cb.ifne(labelMap.get(label));
                         return;
                     }
                     case IF_LESS_THAN_ZERO -> {
-                        if(a == Type.LONG_TYPE) {
-                            mv.visitInsn(Opcodes.LCONST_0);
-                            mv.visitInsn(Opcodes.LCMP);
-                        }else if(a == Type.FLOAT_TYPE) {
-                            mv.visitInsn(Opcodes.FCONST_0);
-                            mv.visitInsn(Opcodes.FCMPL);
-                        }else if(a == Type.DOUBLE_TYPE) {
-                            mv.visitInsn(Opcodes.DCONST_0);
-                            mv.visitInsn(Opcodes.DCMPL);
+                        if(a == ConstantDescs.CD_long) {
+                            cb.loadConstant(0L);
+                            cb.lcmp();
+                        }else if(a == ConstantDescs.CD_float) {
+                            cb.loadConstant(0F);
+                            cb.fcmpl();
+                        }else if(a == ConstantDescs.CD_double) {
+                            cb.loadConstant(0D);
+                            cb.dcmpl();
                         }else if(!isIntegerLike(a)) {
                             throw new IllegalArgumentException("Cannot compare " + a + " and 0");
                         }
-                        mv.visitJumpInsn(Opcodes.IFLT, labelMap.get(label));
+                        cb.iflt(labelMap.get(label));
                         return;
                     }
                     case IF_LESS_EQUAL_ZERO -> {
-                        if(a == Type.LONG_TYPE) {
-                            mv.visitInsn(Opcodes.LCONST_0);
-                            mv.visitInsn(Opcodes.LCMP);
-                        }else if(a == Type.FLOAT_TYPE) {
-                            mv.visitInsn(Opcodes.FCONST_0);
-                            mv.visitInsn(Opcodes.FCMPL);
-                        }else if(a == Type.DOUBLE_TYPE) {
-                            mv.visitInsn(Opcodes.DCONST_0);
-                            mv.visitInsn(Opcodes.DCMPL);
+                        if(a == ConstantDescs.CD_long) {
+                            cb.loadConstant(0L);
+                            cb.lcmp();
+                        }else if(a == ConstantDescs.CD_float) {
+                            cb.loadConstant(0F);
+                            cb.fcmpl();
+                        }else if(a == ConstantDescs.CD_double) {
+                            cb.loadConstant(0D);
+                            cb.dcmpl();
                         }else if(!isIntegerLike(a)) {
                             throw new IllegalArgumentException("Cannot compare " + a + " and 0");
                         }
-                        mv.visitJumpInsn(Opcodes.IFLE, labelMap.get(label));
+                        cb.ifle(labelMap.get(label));
                         return;
                     }
                     case IF_GREATER_THAN_ZERO -> {
-                        if(a == Type.LONG_TYPE) {
-                            mv.visitInsn(Opcodes.LCONST_0);
-                            mv.visitInsn(Opcodes.LCMP);
-                        }else if(a == Type.FLOAT_TYPE) {
-                            mv.visitInsn(Opcodes.FCONST_0);
-                            mv.visitInsn(Opcodes.FCMPG);
-                        }else if(a == Type.DOUBLE_TYPE) {
-                            mv.visitInsn(Opcodes.DCONST_0);
-                            mv.visitInsn(Opcodes.DCMPG);
+                        if(a == ConstantDescs.CD_long) {
+                            cb.loadConstant(0L);
+                            cb.lcmp();
+                        }else if(a == ConstantDescs.CD_float) {
+                            cb.loadConstant(0F);
+                            cb.fcmpg();
+                        }else if(a == ConstantDescs.CD_double) {
+                            cb.loadConstant(0D);
+                            cb.dcmpg();
                         }else if(!isIntegerLike(a)) {
                             throw new IllegalArgumentException("Cannot compare " + a + " and 0");
                         }
-                        mv.visitJumpInsn(Opcodes.IFGT, labelMap.get(label));
+                        cb.ifgt(labelMap.get(label));
                         return;
                     }
                     case IF_GREATER_EQUAL_ZERO -> {
-                        if(a == Type.LONG_TYPE) {
-                            mv.visitInsn(Opcodes.LCONST_0);
-                            mv.visitInsn(Opcodes.LCMP);
-                        }else if(a == Type.FLOAT_TYPE) {
-                            mv.visitInsn(Opcodes.FCONST_0);
-                            mv.visitInsn(Opcodes.FCMPG);
-                        }else if(a == Type.DOUBLE_TYPE) {
-                            mv.visitInsn(Opcodes.DCONST_0);
-                            mv.visitInsn(Opcodes.DCMPG);
+                        if(a == ConstantDescs.CD_long) {
+                            cb.loadConstant(0L);
+                            cb.lcmp();
+                        }else if(a == ConstantDescs.CD_float) {
+                            cb.loadConstant(0F);
+                            cb.fcmpg();
+                        }else if(a == ConstantDescs.CD_double) {
+                            cb.loadConstant(0D);
+                            cb.dcmpg();
                         }else if(!isIntegerLike(a)) {
                             throw new IllegalArgumentException("Cannot compare " + a + " and 0");
                         }
-                        mv.visitJumpInsn(Opcodes.IFGE, labelMap.get(label));
+                        cb.ifge(labelMap.get(label));
                         return;
                     }
                 }
@@ -625,140 +615,140 @@ public class JavaStackCompiler {
                 switch(jumpType) {
                     case IF_EQUAL -> {
                         if(isIntegerLike(a) && isIntegerLike(b)) {
-                            mv.visitJumpInsn(Opcodes.IF_ICMPEQ, labelMap.get(label));
+                            cb.if_icmpeq(labelMap.get(label));
                             return;
                         }
-                        if(a == Type.LONG_TYPE && b == Type.LONG_TYPE) {
-                            mv.visitInsn(Opcodes.LCMP);
-                            mv.visitJumpInsn(Opcodes.IFEQ, labelMap.get(label));
+                        if(a == ConstantDescs.CD_long && b == ConstantDescs.CD_long) {
+                            cb.lcmp();
+                            cb.ifeq(labelMap.get(label));
                             return;
                         }
-                        if(a == Type.FLOAT_TYPE && b == Type.FLOAT_TYPE) {
-                            mv.visitInsn(Opcodes.FCMPL);
-                            mv.visitJumpInsn(Opcodes.IFEQ, labelMap.get(label));
+                        if(a == ConstantDescs.CD_float && b == ConstantDescs.CD_float) {
+                            cb.fcmpl();
+                            cb.ifeq(labelMap.get(label));
                             return;
                         }
-                        if(a == Type.DOUBLE_TYPE && b == Type.DOUBLE_TYPE) {
-                            mv.visitInsn(Opcodes.DCMPL);
-                            mv.visitJumpInsn(Opcodes.IFEQ, labelMap.get(label));
+                        if(a == ConstantDescs.CD_double && b == ConstantDescs.CD_double) {
+                            cb.dcmpl();
+                            cb.ifeq(labelMap.get(label));
                             return;
                         }
-                        if((a.getSort() == Type.OBJECT || a.getSort() == Type.ARRAY) && (b.getSort() == Type.OBJECT || b.getSort() == Type.ARRAY)) {
-                            mv.visitJumpInsn(Opcodes.IF_ACMPEQ, labelMap.get(label));
+                        if((a.isClassOrInterface() || a.isArray()) && (b.isClassOrInterface() || b.isArray())) {
+                            cb.if_acmpeq(labelMap.get(label));
                             return;
                         }
                         throw new IllegalArgumentException("Cannot compare " + a + " and " + b);
                     }
                     case IF_NOT_EQUAL -> {
                         if(isIntegerLike(a) && isIntegerLike(b)) {
-                            mv.visitJumpInsn(Opcodes.IF_ICMPNE, labelMap.get(label));
+                            cb.if_icmpne(labelMap.get(label));
                             return;
                         }
-                        if(a == Type.LONG_TYPE && b == Type.LONG_TYPE) {
-                            mv.visitInsn(Opcodes.LCMP);
-                            mv.visitJumpInsn(Opcodes.IFNE, labelMap.get(label));
+                        if(a == ConstantDescs.CD_long && b == ConstantDescs.CD_long) {
+                            cb.lcmp();
+                            cb.ifne(labelMap.get(label));
                             return;
                         }
-                        if(a == Type.FLOAT_TYPE && b == Type.FLOAT_TYPE) {
-                            mv.visitInsn(Opcodes.FCMPL);
-                            mv.visitJumpInsn(Opcodes.IFNE, labelMap.get(label));
+                        if(a == ConstantDescs.CD_float && b == ConstantDescs.CD_float) {
+                            cb.fcmpl();
+                            cb.ifne(labelMap.get(label));
                             return;
                         }
-                        if(a == Type.DOUBLE_TYPE && b == Type.DOUBLE_TYPE) {
-                            mv.visitInsn(Opcodes.DCMPL);
-                            mv.visitJumpInsn(Opcodes.IFNE, labelMap.get(label));
+                        if(a == ConstantDescs.CD_double && b == ConstantDescs.CD_double) {
+                            cb.dcmpl();
+                            cb.ifne(labelMap.get(label));
                             return;
                         }
-                        if((a.getSort() == Type.OBJECT || a.getSort() == Type.ARRAY) && (b.getSort() == Type.OBJECT || b.getSort() == Type.ARRAY)) {
-                            mv.visitJumpInsn(Opcodes.IF_ACMPNE, labelMap.get(label));
+                        if((a.isClassOrInterface() || a.isArray()) && (b.isClassOrInterface() || b.isArray())) {
+                            cb.if_acmpne(labelMap.get(label));
                             return;
                         }
                         throw new IllegalArgumentException("Cannot compare " + a + " and " + b);
                     }
                     case IF_LESS_THAN -> {
                         if(isIntegerLike(a) && isIntegerLike(b)) {
-                            mv.visitJumpInsn(Opcodes.IF_ICMPLT, labelMap.get(label));
+                            cb.if_icmplt(labelMap.get(label));
                             return;
                         }
-                        if(a == Type.LONG_TYPE && b == Type.LONG_TYPE) {
-                            mv.visitInsn(Opcodes.LCMP);
-                            mv.visitJumpInsn(Opcodes.IFLT, labelMap.get(label));
+                        if(a == ConstantDescs.CD_long && b == ConstantDescs.CD_long) {
+                            cb.lcmp();
+                            cb.iflt(labelMap.get(label));
                             return;
                         }
-                        if(a == Type.FLOAT_TYPE && b == Type.FLOAT_TYPE) {
-                            mv.visitInsn(Opcodes.FCMPL);
-                            mv.visitJumpInsn(Opcodes.IFLT, labelMap.get(label));
+                        if(a == ConstantDescs.CD_float && b == ConstantDescs.CD_float) {
+                            cb.fcmpl();
+                            cb.iflt(labelMap.get(label));
                             return;
                         }
-                        if(a == Type.DOUBLE_TYPE && b == Type.DOUBLE_TYPE) {
-                            mv.visitInsn(Opcodes.DCMPL);
-                            mv.visitJumpInsn(Opcodes.IFLT, labelMap.get(label));
+                        if(a == ConstantDescs.CD_double && b == ConstantDescs.CD_double) {
+                            cb.dcmpl();
+                            cb.iflt(labelMap.get(label));
                             return;
                         }
                         throw new IllegalArgumentException("Cannot compare " + a + " and " + b);
                     }
                     case IF_LESS_EQUAL -> {
                         if(isIntegerLike(a) && isIntegerLike(b)) {
-                            mv.visitJumpInsn(Opcodes.IF_ICMPLE, labelMap.get(label));
+                            cb.if_icmple(labelMap.get(label));
                             return;
                         }
-                        if(a == Type.LONG_TYPE && b == Type.LONG_TYPE) {
-                            mv.visitInsn(Opcodes.LCMP);
-                            mv.visitJumpInsn(Opcodes.IFLE, labelMap.get(label));
+                        if(a == ConstantDescs.CD_long && b == ConstantDescs.CD_long) {
+                            cb.lcmp();
+                            cb.ifle(labelMap.get(label));
                             return;
                         }
-                        if(a == Type.FLOAT_TYPE && b == Type.FLOAT_TYPE) {
-                            mv.visitInsn(Opcodes.FCMPL);
-                            mv.visitJumpInsn(Opcodes.IFLE, labelMap.get(label));
+                        if(a == ConstantDescs.CD_float && b == ConstantDescs.CD_float) {
+                            cb.fcmpl();
+                            cb.ifle(labelMap.get(label));
                             return;
                         }
-                        if(a == Type.DOUBLE_TYPE && b == Type.DOUBLE_TYPE) {
-                            mv.visitInsn(Opcodes.DCMPL);
-                            mv.visitJumpInsn(Opcodes.IFLE, labelMap.get(label));
+                        if(a == ConstantDescs.CD_double && b == ConstantDescs.CD_double) {
+                            cb.dcmpl();
+                            cb.ifle(labelMap.get(label));
                             return;
                         }
                         throw new IllegalArgumentException("Cannot compare " + a + " and " + b);
                     }
                     case IF_GREATER_THAN -> {
                         if(isIntegerLike(a) && isIntegerLike(b)) {
-                            mv.visitJumpInsn(Opcodes.IF_ICMPGT, labelMap.get(label));
+                            cb.if_icmpgt(labelMap.get(label));
                             return;
                         }
-                        if(a == Type.LONG_TYPE && b == Type.LONG_TYPE) {
-                            mv.visitInsn(Opcodes.LCMP);
-                            mv.visitJumpInsn(Opcodes.IFGT, labelMap.get(label));
+                        if(a == ConstantDescs.CD_long && b == ConstantDescs.CD_long) {
+                            cb.lcmp();
+                            cb.ifgt(labelMap.get(label));
                             return;
                         }
-                        if(a == Type.FLOAT_TYPE && b == Type.FLOAT_TYPE) {
-                            mv.visitInsn(Opcodes.FCMPG);
-                            mv.visitJumpInsn(Opcodes.IFGT, labelMap.get(label));
+                        if(a == ConstantDescs.CD_float && b == ConstantDescs.CD_float) {
+                            cb.fcmpg();
+                            cb.ifgt(labelMap.get(label));
                             return;
                         }
-                        if(a == Type.DOUBLE_TYPE && b == Type.DOUBLE_TYPE) {
-                            mv.visitInsn(Opcodes.DCMPG);
-                            mv.visitJumpInsn(Opcodes.IFGT, labelMap.get(label));
+                        if(a == ConstantDescs.CD_double && b == ConstantDescs.CD_double) {
+                            cb.dcmpg();
+                            cb.ifgt(labelMap.get(label));
                             return;
                         }
                         throw new IllegalArgumentException("Cannot compare " + a + " and " + b);
                     }
                     case IF_GREATER_EQUAL -> {
                         if(isIntegerLike(a) && isIntegerLike(b)) {
-                            mv.visitJumpInsn(Opcodes.IF_ICMPGE, labelMap.get(label));
+                            cb.if_icmpge(labelMap.get(label));
                             return;
                         }
-                        if(a == Type.LONG_TYPE && b == Type.LONG_TYPE) {
-                            mv.visitInsn(Opcodes.LCMP);
-                            mv.visitJumpInsn(Opcodes.IFGE, labelMap.get(label));
+                        if(a == ConstantDescs.CD_long && b == ConstantDescs.CD_long) {
+                            cb.lcmp();
+                            cb.ifge(labelMap.get(label));
                             return;
                         }
-                        if(a == Type.FLOAT_TYPE && b == Type.FLOAT_TYPE) {
-                            mv.visitInsn(Opcodes.FCMPG);
-                            mv.visitJumpInsn(Opcodes.IFGE, labelMap.get(label));
+                        if(a == ConstantDescs.CD_float && b == ConstantDescs.CD_float) {
+                            cb.fcmpg();
+                            cb.ifge(labelMap.get(label));
                             return;
                         }
-                        if(a == Type.DOUBLE_TYPE && b == Type.DOUBLE_TYPE) {
-                            mv.visitInsn(Opcodes.DCMPG);
-                            mv.visitJumpInsn(Opcodes.IFGE, labelMap.get(label));
+                        if(a == ConstantDescs.CD_double && b == ConstantDescs.CD_double) {
+                            cb.dcmpg();
+                            cb.ifge(labelMap.get(label));
                             return;
                         }
                         throw new IllegalArgumentException("Cannot compare " + a + " and " + b);
@@ -766,34 +756,33 @@ public class JavaStackCompiler {
                     default -> throw new IllegalArgumentException("Unknown jump type: " + jumpType);
                 }
             }
-            case StackInstruction.JumpTyped(StackJumpType jumpType, Type type, BytecodeLabel label) -> {
+            case StackInstruction.JumpTyped(StackJumpType jumpType, ClassDesc type, BytecodeLabel label) -> {
                 switch(jumpType) {
                     case IF_INSTANCEOF -> {
-                        mv.visitTypeInsn(Opcodes.INSTANCEOF, type.getInternalName());
-                        mv.visitJumpInsn(Opcodes.IFNE, labelMap.get(label));
+                        cb.instanceOf(type);
+                        cb.ifne(labelMap.get(label));
                     }
                     case IF_NOT_INSTANCEOF -> {
-                        mv.visitTypeInsn(Opcodes.INSTANCEOF, type.getInternalName());
-                        mv.visitJumpInsn(Opcodes.IFEQ, labelMap.get(label));
+                        cb.instanceOf(type);
+                        cb.ifeq(labelMap.get(label));
                     }
                     default -> throw new IllegalArgumentException("Unknown jump type: " + jumpType);
                 }
             }
-            case StackInstruction.Label(BytecodeLabel label) -> mv.visitLabel(labelMap.get(label));
+            case StackInstruction.Label(BytecodeLabel label) -> cb.labelBinding(labelMap.get(label));
             case StackCompiler.InlineEvalStore _ -> throw new IllegalArgumentException("Unknown instruction: " + instr);
         }
     }
 
-    public static void compile(MethodVisitor mv, List<StackInstruction> instructions) {
-        mv.visitCode();
-        JavaStackCompiler state = new JavaStackCompiler(mv, instructions);
+    public static void compile(CodeBuilder cb, List<StackInstruction> instructions) {
+        JavaStackCompiler state = new JavaStackCompiler(cb, instructions);
         for(var instr : instructions) {
             if(instr instanceof StackInstruction.Label(BytecodeLabel label)) {
-                state.labelMap.put(label, new Label());
+                state.labelMap.put(label, cb.newLabel());
             }
         }
         state.toTraverse.push(0);
-        var currentStack = new Stack<Type>();
+        var currentStack = new Stack<ClassDesc>();
         changeTraversal: while(!state.toTraverse.isEmpty()) {
             var traverse = state.toTraverse.popInt();
             var initialInstr = instructions.get(traverse);
@@ -808,7 +797,7 @@ public class JavaStackCompiler {
                 if(!state.traversed.add(traverse)) {
                     continue changeTraversal;
                 }
-                var copiedStack = new Stack<Type>();
+                var copiedStack = new Stack<ClassDesc>();
                 copiedStack.addAll(currentStack);
                 state.instructionTypeStackMap.put(traverse, copiedStack);
                 var shouldContinue = state.traverseInstruction(traverse, currentStack);
@@ -823,7 +812,6 @@ public class JavaStackCompiler {
                 state.writeInstruction(i, state.instructionTypeStackMap.get(i));
             }
         }
-        mv.visitMaxs(0, 0);
     }
 
 }

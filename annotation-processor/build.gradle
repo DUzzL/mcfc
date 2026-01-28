@@ -1,9 +1,9 @@
 plugins {
-    kotlin("jvm") version "2.3.0"
+    id 'org.jetbrains.kotlin.jvm' version '2.3.0'
 }
 
 group = "dev.epicpix"
-version = project.properties["mod_version"]!!
+version = project.mod_version
 
 repositories {
     mavenCentral()

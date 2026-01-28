@@ -9,21 +9,28 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeOptimizer;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 import dev.epicpix.minecraftfunctioncompiler.loader.ClassGenerator;
-import org.objectweb.asm.Type;
 
-import java.util.*;
+import java.lang.constant.ClassDesc;
+import java.lang.constant.ConstantDescs;
+import java.lang.constant.MethodTypeDesc;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.UUID;
 
-import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.*;
+import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DATA_CLASS;
+import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.EMIT_SERVER_FUNCTION_MANAGER_NAME;
+import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.RUN_RESULT_FIELD;
 
 public final class CodeFieldStorage {
 
-    public final Type serverFunctionManagerType;
-    public final Type minecraftServerType;
+    public final ClassDesc serverFunctionManagerType;
+    public final ClassDesc minecraftServerType;
     private final CodeFieldStorageStorageMap map;
 
     public CodeFieldStorage(
-            Type serverFunctionManagerType,
-            Type minecraftServerType,
+            ClassDesc serverFunctionManagerType,
+            ClassDesc minecraftServerType,
             CodeFieldStorageMap map
     ) {
         this.serverFunctionManagerType = serverFunctionManagerType;
@@ -142,29 +149,27 @@ public final class CodeFieldStorage {
         return new BytecodeValue.Parameter(0, minecraftServerType);
     }
 
-    public ClassGenerator generate(HashMap<String, List<BytecodeInstruction>> lowLevelInstructions) {
-        var classGenerator = ClassGenerator.createClassGenerator(DATA_CLASS, true);
+    public byte[] generate(HashMap<String, List<BytecodeInstruction>> lowLevelInstructions) {
+        return ClassGenerator.createClassGenerator(DATA_CLASS, true, classGenerator -> {
+            var cw = new CodeWriter();
 
-        var cw = new CodeWriter();
+            cw.setDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerType, new BytecodeValue.Parameter(1, serverFunctionManagerType));
 
-        cw.setDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerType, new BytecodeValue.Parameter(1, serverFunctionManagerType));
+            HashSet<CodeFieldStorageMapKind<?>> written = new HashSet<>();
+            for(var kind : CodeFieldStorageMapKind.values()) {
+                cw = writeFromStorage(written, cw, classGenerator, kind);
+            }
 
-        HashSet<CodeFieldStorageMapKind<?>> written = new HashSet<>();
-        for(var kind : CodeFieldStorageMapKind.values()) {
-            cw = writeFromStorage(written, cw, classGenerator, kind);
-        }
+            cw.returnVoid();
 
-        cw.returnVoid();
+            var instructions = BytecodeOptimizer.optimizeInstructions(cw.getInstructions());
+            lowLevelInstructions.put(DATA_CLASS.displayName() + "#load", instructions);
 
-        var instructions = BytecodeOptimizer.optimizeInstructions(cw.getInstructions());
-        lowLevelInstructions.put(DATA_CLASS.replace('/', '.') + "#load", instructions);
+            classGenerator.addFunction("load", instructions, MethodTypeDesc.of(ConstantDescs.CD_void, minecraftServerType, serverFunctionManagerType));
 
-        classGenerator.addFunction("load", instructions, Type.VOID_TYPE, minecraftServerType, serverFunctionManagerType);
-
-        classGenerator.addFinalField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerType);
-        classGenerator.addField(RUN_RESULT_FIELD, Type.LONG_TYPE, 0L);
-
-        return classGenerator;
+            classGenerator.addFinalField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerType);
+            classGenerator.addField(RUN_RESULT_FIELD, ConstantDescs.CD_long, 0L);
+        });
     }
 
 }

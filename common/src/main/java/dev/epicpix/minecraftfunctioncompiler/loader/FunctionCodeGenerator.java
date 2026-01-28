@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.loader;
 
-import dev.epicpix.minecraftfunctioncompiler.commands.*;
+import dev.epicpix.minecraftfunctioncompiler.commands.CommandParser;
+import dev.epicpix.minecraftfunctioncompiler.commands.IArgumentLookup;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroType;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidator;
@@ -13,22 +14,42 @@ import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticResult;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
-import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.*;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeInstruction;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeOptimizer;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter;
-import dev.epicpix.minecraftfunctioncompiler.il.*;
+import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
+import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
+import dev.epicpix.minecraftfunctioncompiler.il.Instructions;
+import dev.epicpix.minecraftfunctioncompiler.il.Instructions2;
+import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
 import dev.epicpix.minecraftfunctioncompiler.il.optimizer.LengauerTarjan;
 import dev.epicpix.minecraftfunctioncompiler.il.optimizer.Optimizer;
 import dev.epicpix.minecraftfunctioncompiler.profiler.Profiler;
 import org.jspecify.annotations.Nullable;
-import org.objectweb.asm.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.lang.constant.ClassDesc;
+import java.lang.constant.ConstantDescs;
+import java.lang.constant.MethodTypeDesc;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.UNSPECIFIED_COMMAND_ERROR;
-import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.*;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callDouble_parseDouble;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callFloat_parseFloat;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callInteger_parseInt;
 
 public class FunctionCodeGenerator {
 
@@ -142,7 +163,7 @@ public class FunctionCodeGenerator {
 
     private record MacroInput(String source, MacroType<?> type) {}
 
-    private static void writeMacroInstanceCreation(NbtTagBytecodeStringGenerator nbtStringGenerator, String className, BytecodeLabel errorLabel, EmitterContext context, List<Instruction> macroInstructions, List<MacroInput> macroInputs, Type commandSourceStackType) {
+    private static void writeMacroInstanceCreation(NbtTagBytecodeStringGenerator nbtStringGenerator, ClassDesc className, BytecodeLabel errorLabel, EmitterContext context, List<Instruction> macroInstructions, List<MacroInput> macroInputs, ClassDesc commandSourceStackType) {
         context.codeWriter().conditionalJump(JumpCondition.EQ, context.getStatic("FunctionCompound"), new BytecodeValue.NullValue(), errorLabel);
 
         HashMap<String, HashSet<MacroValidator>> generatedValidators = new HashMap<>();
@@ -164,7 +185,8 @@ public class FunctionCodeGenerator {
             }
         }
 
-        StringBuilder macroArgs = new StringBuilder();
+        List<ClassDesc> targetArgs = new ArrayList<>();
+        targetArgs.add(commandSourceStackType);
         List<BytecodeValue> arguments = new ArrayList<>();
         arguments.add(context.getStatic("CommandSourceStack"));
         for(var macro : macroInputs) {
@@ -178,14 +200,14 @@ public class FunctionCodeGenerator {
             }else if(macro.type == MacroType.DOUBLE_MACRO_TYPE) {
                 arguments.add(callDouble_parseDouble(context.codeWriter(), arg));
             }
-            macroArgs.append(macro.type.getType().getDescriptor());
+            targetArgs.add(macro.type.getType().describeConstable().orElseThrow());
         }
 
-        var target = new InstructionTarget.FunctionTarget(className, "runInstanced",  "(" + commandSourceStackType.getDescriptor() + macroArgs + ")J", true, false, false, true);
+        var target = new InstructionTarget.FunctionTarget(className, "runInstanced",  MethodTypeDesc.of(ConstantDescs.CD_long, targetArgs), true, false, false, true);
         context.codeWriter().returnValue(context.codeWriter().writeTarget(target, arguments));
     }
 
-    public static ClassGenerator generateFunctionClass(CompilationParams params, DataLocation funcId, List<Instruction> instructions, Set<DataLocation> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions) {
+    public static byte[] generateFunctionClass(CompilationParams params, DataLocation funcId, List<Instruction> instructions, Set<DataLocation> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions) {
         var macroInstructions = Instruction.findTyped(instructions, InstructionTypes.LOAD_MACRO);
         var macroInputs = new ArrayList<MacroInput>();
         for(var macroInstr : macroInstructions) {
@@ -199,73 +221,70 @@ public class FunctionCodeGenerator {
             }
         }
 
-        var className = ("mcfc/function/" + funcId.namespace() + "/" + funcId.path()).replace('.', '$');
+        var className = ClassDesc.ofInternalName(("mcfc/function/" + funcId.namespace() + "/" + funcId.path()).replace('.', '$'));
 
-        var gen = ClassGenerator.createClassGenerator(className);
+        return ClassGenerator.createClassGenerator(className, gen -> {
+            var entryWriter = new CodeWriter();
+            var staticCommandSourceStack = entryWriter.createRegister();
+            entryWriter.setValue(staticCommandSourceStack, new BytecodeValue.Parameter(0, params.commandSourceStackType()));
+            var staticFunctionCompound = entryWriter.createRegister();
+            entryWriter.setValue(staticFunctionCompound, new BytecodeValue.Parameter(1, params.codeFieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND)));
+            Map<String, BytecodeValue> staticArguments = Map.of("CommandSourceStack", staticCommandSourceStack, "FunctionCompound", staticFunctionCompound);
+            EmitterContext entryContext;
+            if(macroInstructions.isEmpty()) {
+                entryContext = new EmitterContext(funcId, params.codeFieldStorage(), entryWriter, compiledFunctions, new HashMap<>(staticArguments), null, instructions);
+                entryContext.emitForEach();
+                entryWriter.returnValue(new BytecodeValue.LongValue(0x2L << 32));
+            }else {
+                var returnValue = entryWriter.createRegister();
+                var instr = List.of(Instructions2.callFunctionsWithResult(LocationData.ofLocal(-3), List.of(funcId), LocationData.ofLocal(-1), LocationData.ofLocal(-2)));
+                entryContext = new EmitterContext(funcId, params.codeFieldStorage(), entryWriter, Collections.emptySet(), new HashMap<>(staticArguments), null, instr);
+                entryContext.setTransform(-1, staticCommandSourceStack);
+                entryContext.setTransform(-2, staticFunctionCompound);
+                entryContext.setTransform(-3, returnValue);
 
-
-        var entryWriter = new CodeWriter();
-        var staticCommandSourceStack = entryWriter.createRegister();
-        entryWriter.setValue(staticCommandSourceStack, new BytecodeValue.Parameter(0, params.commandSourceStackType()));
-        var staticFunctionCompound = entryWriter.createRegister();
-        entryWriter.setValue(staticFunctionCompound, new BytecodeValue.Parameter(1, params.codeFieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND)));
-        Map<String, BytecodeValue> staticArguments = Map.of("CommandSourceStack", staticCommandSourceStack, "FunctionCompound", staticFunctionCompound);
-        EmitterContext entryContext;
-        if(macroInstructions.isEmpty()) {
-            entryContext = new EmitterContext(funcId, params.codeFieldStorage(), entryWriter, compiledFunctions, new HashMap<>(staticArguments), null, instructions);
-            entryContext.emitForEach();
-            entryWriter.returnValue(new BytecodeValue.LongValue(0x2L << 32));
-        }else {
-            var returnValue = entryWriter.createRegister();
-            var instr = List.of(Instructions2.callFunctionsWithResult(LocationData.ofLocal(-3), List.of(funcId), LocationData.ofLocal(-1), LocationData.ofLocal(-2)));
-            entryContext = new EmitterContext(funcId, params.codeFieldStorage(), entryWriter, Collections.emptySet(), new HashMap<>(staticArguments), null, instr);
-            entryContext.setTransform(-1, staticCommandSourceStack);
-            entryContext.setTransform(-2, staticFunctionCompound);
-            entryContext.setTransform(-3, returnValue);
-
-            var errorLabel = entryWriter.createLabel();
-            writeMacroInstanceCreation(params.stringGenerator(), className, errorLabel, entryContext, macroInstructions, macroInputs, params.commandSourceStackType());
-            entryWriter.label(errorLabel);
-            entryContext.emitForEach();
-            entryWriter.returnValue(returnValue);
-        }
-
-        var entryBytecode = BytecodeOptimizer.optimizeInstructions(entryWriter.getInstructions());
-        if(macroInstructions.isEmpty()) entryBytecode = addProfilerInstructions(entryBytecode, entryWriter, funcId);
-        lowLevelFunctions.put(className.replace('/', '.') + "#run", entryBytecode);
-        gen.addFunction("run", entryBytecode, Type.LONG_TYPE, params.commandSourceStackType(), params.codeFieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND));
-
-
-        if(!macroInstructions.isEmpty()) {
-            var writer = new CodeWriter();
-
-            var staticCommandSourceStack2 = writer.createRegister();
-            writer.setValue(staticCommandSourceStack2, new BytecodeValue.Parameter(0, params.commandSourceStackType()));
-            HashMap<String, BytecodeRegister> macroLocations = new HashMap<>();
-            int i = 1;
-            for(var macro : macroInputs) {
-                var macroRegister = writer.createRegister();
-                macroLocations.put(macro.source, macroRegister);
-                writer.setValue(macroRegister, new BytecodeValue.Parameter(i, macro.type.getType()));
-                i++;
+                var errorLabel = entryWriter.createLabel();
+                writeMacroInstanceCreation(params.stringGenerator(), className, errorLabel, entryContext, macroInstructions, macroInputs, params.commandSourceStackType());
+                entryWriter.label(errorLabel);
+                entryContext.emitForEach();
+                entryWriter.returnValue(returnValue);
             }
-            new EmitterContext(funcId, params.codeFieldStorage(), writer, compiledFunctions, new HashMap<>(Map.of("CommandSourceStack", staticCommandSourceStack2)), macroLocations, instructions).emitForEach();
 
-            writer.returnValue(new BytecodeValue.LongValue(0x2L << 32));
+            var entryBytecode = BytecodeOptimizer.optimizeInstructions(entryWriter.getInstructions());
+            if(macroInstructions.isEmpty()) entryBytecode = addProfilerInstructions(entryBytecode, entryWriter, funcId);
+            lowLevelFunctions.put(className.displayName() + "#run", entryBytecode);
+            gen.addFunction("run", entryBytecode, MethodTypeDesc.of(ConstantDescs.CD_long, params.commandSourceStackType(), params.codeFieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND)));
 
 
-            var macroedBytecode = BytecodeOptimizer.optimizeInstructions(writer.getInstructions());
-            macroedBytecode = addProfilerInstructions(macroedBytecode, writer, funcId);
-            lowLevelFunctions.put(className.replace('/', '.') + "#runInstanced", macroedBytecode);
-            var funcParams = new Type[1 + macroInputs.size()];
-            funcParams[0] = params.commandSourceStackType();
-            for(int j = 1; j<funcParams.length; j++) {
-                funcParams[j] = macroInputs.get(j - 1).type.getType();
+            if(!macroInstructions.isEmpty()) {
+                var writer = new CodeWriter();
+
+                var staticCommandSourceStack2 = writer.createRegister();
+                writer.setValue(staticCommandSourceStack2, new BytecodeValue.Parameter(0, params.commandSourceStackType()));
+                HashMap<String, BytecodeRegister> macroLocations = new HashMap<>();
+                int i = 1;
+                for(var macro : macroInputs) {
+                    var macroRegister = writer.createRegister();
+                    macroLocations.put(macro.source, macroRegister);
+                    writer.setValue(macroRegister, new BytecodeValue.Parameter(i, macro.type.getType().describeConstable().orElseThrow()));
+                    i++;
+                }
+                new EmitterContext(funcId, params.codeFieldStorage(), writer, compiledFunctions, new HashMap<>(Map.of("CommandSourceStack", staticCommandSourceStack2)), macroLocations, instructions).emitForEach();
+
+                writer.returnValue(new BytecodeValue.LongValue(0x2L << 32));
+
+
+                var macroedBytecode = BytecodeOptimizer.optimizeInstructions(writer.getInstructions());
+                macroedBytecode = addProfilerInstructions(macroedBytecode, writer, funcId);
+                lowLevelFunctions.put(className.displayName() + "#runInstanced", macroedBytecode);
+                List<ClassDesc> funcParams = new ArrayList<>();
+                funcParams.add(params.commandSourceStackType());
+                for(MacroInput macroInput : macroInputs) {
+                    funcParams.add(macroInput.type.getType().describeConstable().orElseThrow());
+                }
+                gen.addFunction("runInstanced", macroedBytecode, MethodTypeDesc.of(ConstantDescs.CD_long, funcParams));
             }
-            gen.addFunction("runInstanced", macroedBytecode, Type.LONG_TYPE, funcParams);
-        }
-
-        return gen;
+        });
     }
 
     private static List<BytecodeInstruction> addProfilerInstructions(List<BytecodeInstruction> instructions, CodeWriter cw, DataLocation function) {

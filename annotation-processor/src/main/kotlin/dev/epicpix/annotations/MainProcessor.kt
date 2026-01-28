@@ -100,6 +100,42 @@ fun javaToMinecraftGenericType(type: String, generics: List<String> = emptyList(
     }
 }
 
+fun boxClassName(targetClass: String): String {
+    if(targetClass == "java/lang/Void") return "ConstantDescs.CD_Void"
+    if(targetClass == "java/lang/Boolean") return "ConstantDescs.CD_Boolean"
+    if(targetClass == "java/lang/Byte") return "ConstantDescs.CD_Byte"
+    if(targetClass == "java/lang/Character") return "ConstantDescs.CD_Character"
+    if(targetClass == "java/lang/Short") return "ConstantDescs.CD_Short"
+    if(targetClass == "java/lang/Integer") return "ConstantDescs.CD_Integer"
+    if(targetClass == "java/lang/Long") return "ConstantDescs.CD_Long"
+    if(targetClass == "java/lang/Float") return "ConstantDescs.CD_Float"
+    if(targetClass == "java/lang/Double") return "ConstantDescs.CD_Double"
+    if(targetClass == "java/lang/Object") return "ConstantDescs.CD_Object"
+    if(targetClass == "java/lang/String") return "ConstantDescs.CD_String"
+    return "ClassDesc.ofInternalName(\"$targetClass\")"
+}
+
+fun boxMethodDescriptor(returnType: Type, arguments: Array<Type>): String {
+    val parameters = mutableListOf<String>()
+    parameters.add(boxDescriptor(returnType.descriptor))
+    parameters.addAll(arguments.map { boxDescriptor(it.descriptor) })
+    return "MethodTypeDesc.of(${parameters.joinToString()})"
+}
+
+fun boxDescriptor(descriptor: String): String {
+    if(descriptor == "V") return "ConstantDescs.CD_void"
+    if(descriptor == "Z") return "ConstantDescs.CD_boolean"
+    if(descriptor == "B") return "ConstantDescs.CD_byte"
+    if(descriptor == "C") return "ConstantDescs.CD_char"
+    if(descriptor == "S") return "ConstantDescs.CD_short"
+    if(descriptor == "I") return "ConstantDescs.CD_int"
+    if(descriptor == "J") return "ConstantDescs.CD_long"
+    if(descriptor == "F") return "ConstantDescs.CD_float"
+    if(descriptor == "D") return "ConstantDescs.CD_double"
+    if(descriptor.startsWith("L")) return boxClassName(descriptor.substring(1, descriptor.length - 1))
+    return "ClassDesc.ofDescriptor(\"$descriptor\")"
+}
+
 var PACKAGE_MINECRAFT_VERSION: String? = null
 
 class MainProcessor(
@@ -277,7 +313,7 @@ class MainProcessor(
 
                 val callDetails = content.split("@").getOrElse(1) { "" }
                 val noReorder = callDetails.contains("N")
-                val target = "new dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget.FunctionTarget(\"$className\", \"$methodName\", \"${methodDescriptor.descriptor}\", ${methodInfo.isStatic}, ${classInfo.isInterface}, ${methodName == "<init>"}, ${noReorder})"
+                val target = "new InstructionTarget.FunctionTarget(${boxClassName(className)}, \"$methodName\", ${boxMethodDescriptor(methodDescriptor.returnType, methodDescriptor.argumentTypes)}, ${methodInfo.isStatic}, ${classInfo.isInterface}, ${methodName == "<init>"}, ${noReorder})"
                 val args = mutableListOf<String>()
                 if(!methodInfo.isStatic) args.add("self")
                 for(arg in methodDescriptor.argumentTypes.indices) {
@@ -307,7 +343,7 @@ class MainProcessor(
                 if(callDetails != null) {
                     val isStatic = fieldInfo.isStatic
                     if(callDetails.contains("R")) {
-                        val target = "new dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget.FieldTarget(\"$className\", \"$fieldName\", \"$fieldDescriptor\", ${isStatic}, false)"
+                        val target = "new InstructionTarget.FieldTarget(${boxClassName(className)}, \"$fieldName\", ${boxDescriptor(fieldDescriptor)}, ${isStatic}, false)"
                         if(isStatic) {
                             mapExtensions.appendText("    public static dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister load$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter) { return codeWriter.writeTarget(TARGETS[${getTarget(target, targets)}]); }\n")
                         } else {
@@ -318,7 +354,7 @@ class MainProcessor(
                         if(fieldInfo.isFinal) {
                             throw IllegalArgumentException("Cannot generate a field write definition for $className:$fieldName:$fieldDescriptor because it is final")
                         }
-                        val target = "new dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget.FieldTarget(\"$className\", \"$fieldName\", \"$fieldDescriptor\", ${isStatic}, true)"
+                        val target = "new dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget.FieldTarget(${boxClassName(className)}, \"$fieldName\", ${boxDescriptor(fieldDescriptor)}, ${isStatic}, true)"
                         if(isStatic) {
                             mapExtensions.appendText("    public static void store$k(dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter codeWriter, dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue value) { codeWriter.writeTarget(TARGETS[${getTarget(target, targets)}], value); }\n")
                         } else {
@@ -338,6 +374,9 @@ class MainProcessor(
         val resultName = resultClass.substring(resultClass.lastIndexOf('.') + 1)
         val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")
         map.appendText("package $resultPackage;\n")
+        map.appendText("import java.lang.constant.ClassDesc;\n")
+        map.appendText("import java.lang.constant.ConstantDescs;\n")
+        map.appendText("import java.lang.constant.MethodTypeDesc;\n")
         map.appendText("import static ${resultPackage}.EmitterTargets.TARGETS;\n")
         map.appendText("public class $resultName {\n")
         map.appendText("    public static void registerInstructionEmitters() {\n")
@@ -382,8 +421,12 @@ class MainProcessor(
 
         val mapTargets = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, "EmitterTargets", "java")
         mapTargets.appendText("package $resultPackage;\n")
+        mapTargets.appendText("import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;\n")
+        mapTargets.appendText("import java.lang.constant.ClassDesc;\n")
+        mapTargets.appendText("import java.lang.constant.ConstantDescs;\n")
+        mapTargets.appendText("import java.lang.constant.MethodTypeDesc;\n")
         mapTargets.appendText("public class EmitterTargets {\n")
-        mapTargets.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget[] TARGETS = {\n")
+        mapTargets.appendText("    public static final InstructionTarget[] TARGETS = {\n")
         for(targetIndex in targets.indices) {
             val target = targets[targetIndex]
             if(targetIndex != targets.size - 1) {

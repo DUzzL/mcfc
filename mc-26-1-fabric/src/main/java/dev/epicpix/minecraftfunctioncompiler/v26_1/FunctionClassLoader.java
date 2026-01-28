@@ -15,7 +15,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerFunctionManager;
-import org.objectweb.asm.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,7 +68,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<MinecraftSe
 
     public static CompilationParams createCompilationParams() {
         return new CompilationParams(
-            new CodeFieldStorage(Type.getType(ServerFunctionManager.class), Type.getType(MinecraftServer.class), CodeFieldStorageMapImpl.INSTANCE),
+            new CodeFieldStorage(ServerFunctionManager.class.describeConstable().orElseThrow(), MinecraftServer.class.describeConstable().orElseThrow(), CodeFieldStorageMapImpl.INSTANCE),
             (emitter, key, errorLabel) -> {
                 var cw = emitter.codeWriter();
                 var tag = callCompoundTag_get(cw, emitter.getStatic("FunctionCompound"), new BytecodeValue.StringValue(key));
@@ -78,7 +77,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<MinecraftSe
                 }
                 return callTag_stringify(cw, tag);
             },
-            Type.getType(CommandSourceStack.class)
+            CommandSourceStack.class.describeConstable().orElseThrow()
         );
     }
 }

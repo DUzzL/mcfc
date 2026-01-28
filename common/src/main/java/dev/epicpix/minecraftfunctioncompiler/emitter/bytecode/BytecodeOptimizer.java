@@ -7,8 +7,8 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.jspecify.annotations.Nullable;
-import org.objectweb.asm.Type;
 
+import java.lang.constant.ClassDesc;
 import java.util.*;
 
 public class BytecodeOptimizer {
@@ -162,9 +162,9 @@ public class BytecodeOptimizer {
                     newInstructions.add(new BytecodeInstruction.RegisterValue(type, result, remapValue(registerDefinitionTracker, source)));
                 }
                 case BytecodeInstruction.RegisterValueValue(InstructionRVVType type, BytecodeRegister result, BytecodeValue sourceA, BytecodeValue sourceB) -> newInstructions.add(new BytecodeInstruction.RegisterValueValue(type, result, remapValue(registerDefinitionTracker, sourceA), remapValue(registerDefinitionTracker, sourceB)));
-                case BytecodeInstruction.CreateArray(BytecodeRegister result, BytecodeValue length, Type contentType) -> newInstructions.add(new BytecodeInstruction.CreateArray(result, remapValue(registerDefinitionTracker, length), contentType));
+                case BytecodeInstruction.CreateArray(BytecodeRegister result, BytecodeValue length, ClassDesc contentType) -> newInstructions.add(new BytecodeInstruction.CreateArray(result, remapValue(registerDefinitionTracker, length), contentType));
                 case BytecodeInstruction.SetArrayValue(BytecodeValue array, BytecodeValue index, BytecodeValue value) -> newInstructions.add(new BytecodeInstruction.SetArrayValue(remapValue(registerDefinitionTracker, array), remapValue(registerDefinitionTracker, index), remapValue(registerDefinitionTracker, value)));
-                case BytecodeInstruction.InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, Type type, BytecodeLabel label) -> newInstructions.add(new BytecodeInstruction.InstanceCheckJump(ifIsInstance, remapValue(registerDefinitionTracker, a), type, label));
+                case BytecodeInstruction.InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, ClassDesc type, BytecodeLabel label) -> newInstructions.add(new BytecodeInstruction.InstanceCheckJump(ifIsInstance, remapValue(registerDefinitionTracker, a), type, label));
                 case BytecodeInstruction.ConditionalJump(JumpCondition condition, BytecodeValue a, BytecodeValue b, BytecodeLabel label) -> newInstructions.add(new BytecodeInstruction.ConditionalJump(condition, remapValue(registerDefinitionTracker, a), remapValue(registerDefinitionTracker, b), label));
                 case BytecodeInstruction.Jump v -> newInstructions.add(v);
                 case BytecodeInstruction.Label v -> newInstructions.add(v);
@@ -182,7 +182,7 @@ public class BytecodeOptimizer {
                     }
                     newInstructions.add(new BytecodeInstruction.New(result, target, args));
                 }
-                case BytecodeInstruction.Cast(BytecodeRegister result, BytecodeValue source, Type type) -> newInstructions.add(new BytecodeInstruction.Cast(result, remapValue(registerDefinitionTracker, source), type));
+                case BytecodeInstruction.Cast(BytecodeRegister result, BytecodeValue source, ClassDesc type) -> newInstructions.add(new BytecodeInstruction.Cast(result, remapValue(registerDefinitionTracker, source), type));
                 case BytecodeInstruction.StringConcat(BytecodeRegister result, List<BytecodeValue> values) -> {
                     ArrayList<BytecodeValue> remappedValues = new ArrayList<>();
                     for(var arg : values) {
@@ -264,7 +264,7 @@ public class BytecodeOptimizer {
                     newInstructions.add(new BytecodeInstruction.ConditionalJump(condition, a1, b, mappedLabel));
                     continue;
                 }
-                case BytecodeInstruction.InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, Type type, BytecodeLabel label) -> {
+                case BytecodeInstruction.InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, ClassDesc type, BytecodeLabel label) -> {
                     var mappedLabel = getLabel(instantJumps, label);
                     newInstructions.add(new BytecodeInstruction.InstanceCheckJump(ifIsInstance, a, type, mappedLabel));
                     continue;

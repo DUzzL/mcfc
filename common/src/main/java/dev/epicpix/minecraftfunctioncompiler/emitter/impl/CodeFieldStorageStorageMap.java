@@ -1,8 +1,8 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter.impl;
 
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
-import org.objectweb.asm.Type;
 
+import java.lang.constant.ClassDesc;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,8 +21,8 @@ public final class CodeFieldStorageStorageMap {
         return (CodeFieldStorageMapValue<T>) map.get(key);
     }
 
-    public <T> Type getValueType(CodeFieldStorageMapKind<T> key) {
-        return getValue(key).type();
+    public <T> ClassDesc getValueType(CodeFieldStorageMapKind<T> key) {
+        return getValue(key).type().describeConstable().orElseThrow();
     }
 
     public <T> BytecodeValue writeCode(CodeFieldStorageMapKind<T> key, CodeFieldStorage fieldStorage, CodeWriter writer, T value) {
@@ -31,7 +31,7 @@ public final class CodeFieldStorageStorageMap {
 
     @SuppressWarnings("unchecked")
     public <T> ArrayList<T> getStorage(CodeFieldStorageMapKind<T> key) {
-        return (ArrayList<T>) storageMap.computeIfAbsent(key, k -> new ArrayList<>());
+        return (ArrayList<T>) storageMap.computeIfAbsent(key, _ -> new ArrayList<>());
     }
 
     public <T> int checkIndex(CodeFieldStorageMapKind<T> key, T value) {

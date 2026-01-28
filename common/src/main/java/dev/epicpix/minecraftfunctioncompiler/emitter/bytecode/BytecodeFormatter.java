@@ -3,8 +3,9 @@ package dev.epicpix.minecraftfunctioncompiler.emitter.bytecode;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
-import org.objectweb.asm.Type;
 
+import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,14 +18,14 @@ public class BytecodeFormatter {
     private static String formatTarget(InstructionTarget instructionTarget, List<BytecodeValue> args) {
         if(instructionTarget instanceof InstructionTarget.FieldTarget target) {
             if(target.isStatic()) {
-                return target.className().replace('/', '.') + "." + target.name();
+                return target.classType().displayName() + "." + target.name();
             }else {
                 return formatValue(args.getFirst()) + "." + target.name();
             }
         }else if(instructionTarget instanceof InstructionTarget.FunctionTarget target) {
             if(target.isStatic()) {
                 var callArgs = args.stream().map(BytecodeFormatter::formatValue).collect(Collectors.joining(", "));
-                return target.className().replace('/', '.') + "." + target.name() + "(" + callArgs + ")";
+                return target.classType().displayName() + "." + target.name() + "(" + callArgs + ")";
             }else {
                 var callArgs = args.stream().skip(1).map(BytecodeFormatter::formatValue).collect(Collectors.joining(", "));
                 return formatValue(args.getFirst()) + "." + target.name() + "(" + callArgs + ")";
@@ -34,8 +35,8 @@ public class BytecodeFormatter {
         }
     }
 
-    private static String formatType(Type type) {
-        return type.getClassName();
+    private static String formatType(ClassDesc type) {
+        return type.displayName();
     }
 
     private static String formatValue(BytecodeValue bytecodeValue) {
@@ -46,7 +47,7 @@ public class BytecodeFormatter {
             case BytecodeValue.FloatValue(float value) -> value + "F";
             case BytecodeValue.DoubleValue(double value) -> value + "D";
             case BytecodeValue.StringValue(String value) -> "\"" + value.replace("\\", "\\\\").replace("\n", "\\n").replace("\"", "\\\"") + "\"";
-            case BytecodeValue.Parameter(int index, Type type) -> "parameter<" + index + "," + formatType(type) + ">";
+            case BytecodeValue.Parameter(int index, ClassDesc type) -> "parameter<" + index + "," + formatType(type) + ">";
             case BytecodeRegister(int reg) -> "r" + reg;
         };
     }
@@ -67,9 +68,9 @@ public class BytecodeFormatter {
                     case SHL -> formatValue(result) + " = " + formatValue(sourceA) + " << " + formatValue(sourceB);
                     case SHR -> formatValue(result) + " = " + formatValue(sourceA) + " >> " + formatValue(sourceB);
                 };
-            case BytecodeInstruction.CreateArray(BytecodeRegister result, BytecodeValue length, Type contentType) -> formatValue(result) + " = new " + formatType(contentType) + "[" + formatValue(length) + "]";
+            case BytecodeInstruction.CreateArray(BytecodeRegister result, BytecodeValue length, ClassDesc contentType) -> formatValue(result) + " = new " + formatType(contentType) + "[" + formatValue(length) + "]";
             case BytecodeInstruction.SetArrayValue(BytecodeValue array, BytecodeValue index, BytecodeValue value) -> formatValue(array) + "[" + formatValue(index) + "]" + " = " + formatValue(value);
-            case BytecodeInstruction.InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, Type type, BytecodeLabel label) -> formatLabel(label) + " <- " + formatValue(a) + (ifIsInstance ? " " : " !") + "instanceof " + formatType(type);
+            case BytecodeInstruction.InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, ClassDesc type, BytecodeLabel label) -> formatLabel(label) + " <- " + formatValue(a) + (ifIsInstance ? " " : " !") + "instanceof " + formatType(type);
             case BytecodeInstruction.ConditionalJump(JumpCondition condition, BytecodeValue a, BytecodeValue b, BytecodeLabel label) ->
                 formatLabel(label) + " <- " + formatValue(a) + " " + switch(condition) {
                     case EQ -> "==";
@@ -97,12 +98,12 @@ public class BytecodeFormatter {
             case BytecodeInstruction.New(BytecodeRegister result, InstructionTarget target, List<BytecodeValue> arguments) -> {
                 if(target instanceof InstructionTarget.FunctionTarget functionTarget && !functionTarget.isStatic() && functionTarget.isSpecial() && functionTarget.name().equals("<init>")) {
                     var callArgs = arguments.stream().map(BytecodeFormatter::formatValue).collect(Collectors.joining(", "));
-                    yield formatValue(result) + " = new " + functionTarget.className().replace('/', '.') + "(" + callArgs + ")";
+                    yield formatValue(result) + " = new " + functionTarget.classType().displayName() + "(" + callArgs + ")";
                 }else {
                     throw new IllegalArgumentException("Unknown target: " + target);
                 }
             }
-            case BytecodeInstruction.Cast(BytecodeRegister result, BytecodeValue source, Type type) -> formatValue(result) + " = (" + formatType(type) + ") " + formatValue(source);
+            case BytecodeInstruction.Cast(BytecodeRegister result, BytecodeValue source, ClassDesc type) -> formatValue(result) + " = (" + formatType(type) + ") " + formatValue(source);
             case BytecodeInstruction.StringConcat(BytecodeRegister result, List<BytecodeValue> values) -> {
                 var strValues = values.stream().map(BytecodeFormatter::formatValue).collect(Collectors.joining(" ++ "));
                 yield formatValue(result) + " = ++ " + strValues;
@@ -136,10 +137,10 @@ public class BytecodeFormatter {
                 v.addProperty("type", "string");
                 v.addProperty("value", value);
             }
-            case BytecodeValue.Parameter(int index, Type type) -> {
+            case BytecodeValue.Parameter(int index, ClassDesc type) -> {
                 v.addProperty("type", "parameter");
                 v.addProperty("index", index);
-                v.addProperty("descriptor", type.getDescriptor());
+                v.addProperty("descriptor", type.descriptorString());
             }
             case BytecodeRegister(int reg) -> {
                 v.addProperty("type", "register");
@@ -173,9 +174,9 @@ public class BytecodeFormatter {
                 instruction.add("source_b", valueToJson(sourceB));
                 instruction.add("result", valueToJson(result));
             }
-            case BytecodeInstruction.CreateArray(BytecodeRegister result, BytecodeValue length, Type contentType) -> {
+            case BytecodeInstruction.CreateArray(BytecodeRegister result, BytecodeValue length, ClassDesc contentType) -> {
                 instruction.addProperty("type", "new_array");
-                instruction.addProperty("class", contentType.getDescriptor());
+                instruction.addProperty("class", contentType.descriptorString());
                 instruction.add("length", valueToJson(length));
                 instruction.add("result", valueToJson(result));
             }
@@ -185,11 +186,11 @@ public class BytecodeFormatter {
                 instruction.add("index", valueToJson(index));
                 instruction.add("value", valueToJson(value));
             }
-            case BytecodeInstruction.InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, Type type, BytecodeLabel label) -> {
+            case BytecodeInstruction.InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, ClassDesc type, BytecodeLabel label) -> {
                 instruction.addProperty("type", "instance_check_jump");
                 instruction.addProperty("label", label.id());
                 instruction.addProperty("is", ifIsInstance);
-                instruction.addProperty("class", type.getDescriptor());
+                instruction.addProperty("class", type.descriptorString());
                 instruction.add("value", valueToJson(a));
             }
             case BytecodeInstruction.ConditionalJump(JumpCondition condition, BytecodeValue a, BytecodeValue b, BytecodeLabel label) -> {
@@ -216,13 +217,11 @@ public class BytecodeFormatter {
             }
             case BytecodeInstruction.CallTarget(BytecodeRegister result, InstructionTarget target, List<BytecodeValue> arguments) -> {
                 instruction.addProperty("type", "call_target");
-                if(target instanceof InstructionTarget.FieldTarget(
-                    String className, String name, String descriptor, boolean isStatic, boolean isWrite
-                )) {
+                if(target instanceof InstructionTarget.FieldTarget(ClassDesc className, String name, ClassDesc descriptor, boolean isStatic, boolean isWrite)) {
                     instruction.addProperty("target_type", "field");
-                    instruction.addProperty("class", className);
+                    instruction.addProperty("class", className.displayName());
                     instruction.addProperty("name", name);
-                    instruction.addProperty("descriptor", descriptor);
+                    instruction.addProperty("descriptor", descriptor.descriptorString());
                     instruction.addProperty("is_static", isStatic);
                     instruction.addProperty("is_write", isWrite);
                     var args = new JsonArray();
@@ -231,11 +230,11 @@ public class BytecodeFormatter {
                     }
                     instruction.add("args", args);
                     instruction.add("result", valueToJson(result));
-                }else if(target instanceof InstructionTarget.FunctionTarget(String className, String name, String descriptor, boolean isStatic, boolean isInterface, boolean isSpecial, boolean noReordering)) {
+                }else if(target instanceof InstructionTarget.FunctionTarget(ClassDesc className, String name, MethodTypeDesc descriptor, boolean isStatic, boolean isInterface, boolean isSpecial, boolean noReordering)) {
                     instruction.addProperty("target_type", "method");
-                    instruction.addProperty("class", className);
+                    instruction.addProperty("class", className.displayName());
                     instruction.addProperty("name", name);
-                    instruction.addProperty("descriptor", descriptor);
+                    instruction.addProperty("descriptor", descriptor.descriptorString());
                     instruction.addProperty("is_static", isStatic);
                     instruction.addProperty("is_interface", isInterface);
                     instruction.addProperty("is_special", isSpecial);
@@ -253,8 +252,8 @@ public class BytecodeFormatter {
             case BytecodeInstruction.New(BytecodeRegister result, InstructionTarget target, List<BytecodeValue> arguments) -> {
                 instruction.addProperty("type", "new_object");
                 if(target instanceof InstructionTarget.FunctionTarget functionTarget && !functionTarget.isStatic() && functionTarget.isSpecial() && functionTarget.name().equals("<init>")) {
-                    instruction.addProperty("class", functionTarget.className());
-                    instruction.addProperty("descriptor", functionTarget.descriptor());
+                    instruction.addProperty("class", functionTarget.classType().displayName());
+                    instruction.addProperty("descriptor", functionTarget.descriptor().descriptorString());
                     instruction.addProperty("no_reordering", functionTarget.noReordering());
                     var args = new JsonArray();
                     for(var arg : arguments) {
@@ -266,9 +265,9 @@ public class BytecodeFormatter {
                     throw new IllegalArgumentException("Unknown target: " + target);
                 }
             }
-            case BytecodeInstruction.Cast(BytecodeRegister result, BytecodeValue source, Type type) -> {
+            case BytecodeInstruction.Cast(BytecodeRegister result, BytecodeValue source, ClassDesc type) -> {
                 instruction.addProperty("type", "cast");
-                instruction.addProperty("class", type.getDescriptor());
+                instruction.addProperty("class", type.descriptorString());
                 instruction.add("source", valueToJson(source));
                 instruction.add("result", valueToJson(result));
             }

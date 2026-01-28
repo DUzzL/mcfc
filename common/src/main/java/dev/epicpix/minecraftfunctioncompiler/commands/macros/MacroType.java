@@ -1,24 +1,23 @@
 package dev.epicpix.minecraftfunctioncompiler.commands.macros;
 
 import org.jspecify.annotations.Nullable;
-import org.objectweb.asm.Type;
 
 import java.util.Objects;
 
 public final class MacroType<T> {
 
-    private final Type type;
+    private final Class<T> type;
 
-    private MacroType(Type type) {
+    private MacroType(Class<T> type) {
         this.type = type;
     }
 
-    public static final MacroType<String> STRING_MACRO_TYPE = new MacroType<>(Type.getType(String.class));
-    public static final MacroType<Integer> INT_MACRO_TYPE = new MacroType<>(Type.getType(int.class));
-    public static final MacroType<Float> FLOAT_MACRO_TYPE = new MacroType<>(Type.getType(float.class));
-    public static final MacroType<Double> DOUBLE_MACRO_TYPE = new MacroType<>(Type.getType(double.class));
+    public static final MacroType<String> STRING_MACRO_TYPE = new MacroType<>(String.class);
+    public static final MacroType<Integer> INT_MACRO_TYPE = new MacroType<>(int.class);
+    public static final MacroType<Float> FLOAT_MACRO_TYPE = new MacroType<>(float.class);
+    public static final MacroType<Double> DOUBLE_MACRO_TYPE = new MacroType<>(double.class);
 
-    public Type getType() {
+    public Class<T> getType() {
         return type;
     }
 

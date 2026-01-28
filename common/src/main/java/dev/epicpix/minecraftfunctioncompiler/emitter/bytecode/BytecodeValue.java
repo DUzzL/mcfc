@@ -1,6 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter.bytecode;
 
-import org.objectweb.asm.Type;
+import java.lang.constant.ClassDesc;
 
 public sealed interface BytecodeValue permits BytecodeRegister, BytecodeValue.DoubleValue, BytecodeValue.FloatValue, BytecodeValue.IntegerValue, BytecodeValue.LongValue, BytecodeValue.NullValue, BytecodeValue.Parameter, BytecodeValue.StringValue {
     int cost();
@@ -46,7 +46,7 @@ public sealed interface BytecodeValue permits BytecodeRegister, BytecodeValue.Do
         }
     }
 
-    record Parameter(int index, Type type) implements BytecodeValue {
+    record Parameter(int index, ClassDesc type) implements BytecodeValue {
         public int cost() {
             return 3;
         }

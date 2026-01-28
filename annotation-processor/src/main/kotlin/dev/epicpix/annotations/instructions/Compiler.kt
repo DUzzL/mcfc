@@ -453,7 +453,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 val checkStatic = expression.name != "<init>"
                 val matches = getClassAccessibleMethods(instance.className).filter { it.isStatic == checkStatic && it.name == expression.name && Type.getArgumentCount(it.descriptor) == paramTypes.size && Type.getArgumentTypes(it.descriptor).mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }
                 if(matches.size < 1) {
-                    throw IllegalArgumentException("Failed to find function <${instance.className}>.${expression.name}(${paramTypes.joinToString()}): ${checkStatic} ${getClassAccessibleMethods(instance.className)}")
+                    throw IllegalArgumentException("Failed to find function <${instance.className}>.${expression.name}(${paramTypes.joinToString()}): $checkStatic ${getClassAccessibleMethods(instance.className)}")
                 }
                 if(matches.size > 1) {
                     throw IllegalArgumentException("Found too many functions matching <${instance.className}>.${expression.name}(${paramTypes.joinToString()}): $matches")
@@ -475,7 +475,8 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             for(arg in expression.arguments) {
                 allArguments.add(writeExpression(writerData.copyLocalTypes(), arg, output, uniqId))
             }
-            val functionTarget = "new dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget.FunctionTarget(\"$className\", \"$methodName\", \"$methodDescriptor\", ${def.isStatic}, ${classOwner.isInterface}, ${expression.name == "<init>"}, false)"
+            val parsedDescriptor = Type.getMethodType(methodDescriptor)
+            val functionTarget = "new InstructionTarget.FunctionTarget(${boxClassName(className)}, \"$methodName\", ${boxMethodDescriptor(parsedDescriptor.returnType, parsedDescriptor.argumentTypes)}, ${def.isStatic}, ${classOwner.isInterface}, ${expression.name == "<init>"}, false)"
             var index = writerData.targets.indexOf(functionTarget)
             if(index == -1) {
                 index = writerData.targets.size
@@ -490,7 +491,8 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             if(expression.name == "cast") {
                 val expr = writeExpression(writerData, expression.arguments[0], output, uniqId)
                 val className = ((expression.arguments[1] as ParsedTokenExpressionTyped).type as ParsedTokenExpressionTypeComplex).typeName
-                return writeNextRegister(uniqId, output, "cw.castType($expr, org.objectweb.asm.Type.getType($className.class))")
+                val foundClass = loadClassInfo(className).checkPublic()
+                return writeNextRegister(uniqId, output, "cw.castType($expr, ${boxClassName(foundClass.name)})")
             }
             if(expression.name == "map_advancement") {
                 val source = expression.arguments[0] as ParsedTokenValueAccessor
@@ -584,11 +586,11 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             }
             if(expression.name == "to_double") {
                 val expr = writeExpression(writerData, expression.arguments[0], output, uniqId)
-                return writeNextRegister(uniqId, output, "cw.castType($expr, org.objectweb.asm.Type.DOUBLE_TYPE)")
+                return writeNextRegister(uniqId, output, "cw.castType($expr, ${boxDescriptor("D")})")
             }
             if(expression.name == "to_float") {
                 val expr = writeExpression(writerData, expression.arguments[0], output, uniqId)
-                return writeNextRegister(uniqId, output, "cw.castType($expr, org.objectweb.asm.Type.FLOAT_TYPE)")
+                return writeNextRegister(uniqId, output, "cw.castType($expr, ${boxDescriptor("F")})")
             }
             if(expression.name == "to_integer") {
                 val exprType = evaluateExpressionType(writerData, expression.arguments[0])
@@ -596,7 +598,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                     return writeExpression(writerData, expression.arguments[0], output, uniqId)
                 }
                 val expr = writeExpression(writerData, expression.arguments[0], output, uniqId)
-                return writeNextRegister(uniqId, output, "cw.castType($expr, org.objectweb.asm.Type.INT_TYPE)")
+                return writeNextRegister(uniqId, output, "cw.castType($expr, ${boxDescriptor("I")})")
             }
             if(expression.name == "compile_eval") {
                 val compileExprType = evaluateExpressionType(writerData, expression.arguments[0])
@@ -664,7 +666,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
         if(instance is ParsedTokenInstanceValue) {
             allArguments.add(writeExpression(writerData.copyLocalTypes(), instance.expression, output, uniqId))
         }
-        val fieldTarget = "new dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget.FieldTarget(\"$className\", \"$fieldName\", \"$fieldDescriptor\", ${fieldMatch.isStatic}, false)"
+        val fieldTarget = "new InstructionTarget.FieldTarget(${boxClassName(className)}, \"$fieldName\", ${boxDescriptor(fieldDescriptor)}, ${fieldMatch.isStatic}, false)"
         var index = writerData.targets.indexOf(fieldTarget)
         if(index == -1) {
             index = writerData.targets.size
@@ -991,7 +993,7 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                 val className = ((el.arguments[1] as ParsedTokenExpressionTyped).type as ParsedTokenExpressionTypeComplex).typeName
                 val scopeAccessor = el.arguments[2] as ParsedTokenValueAccessor
                 writerData.markGet(scopeAccessor)
-                output.appendText("cw.instanceCheckJump(false, ${expr}, org.objectweb.asm.Type.getType(${className}.class), context.mapLabel(${writerData.getParamIndex(scopeAccessor)}));\n")
+                output.appendText("cw.instanceCheckJump(false, ${expr}, ${boxClassName(className)}, context.mapLabel(${writerData.getParamIndex(scopeAccessor)}));\n")
             }else if(el.name == "_jumpIfEqual") {
                 val exprA = writeExpression(writerData, el.arguments[0], output, uniqId)
                 val exprB = writeExpression(writerData, el.arguments[1], output, uniqId)
@@ -1042,7 +1044,7 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                 val sourceType = evaluateExpressionType(writerData, el.arguments[0])
                 if(sourceType == ParsedTokenExpressionSimpleType.INTEGER) {
                     val expr = writeExpression(writerData, el.arguments[0], output, uniqId)
-                    output.appendText("cw.returnValue(cw.castType($expr, org.objectweb.asm.Type.LONG_TYPE));\n")
+                    output.appendText("cw.returnValue(cw.castType($expr, ${boxDescriptor("J")}));\n")
                     return ReturnTypeResult.BREAK
                 }else {
                     throw IllegalArgumentException("Invalid return type: $sourceType")

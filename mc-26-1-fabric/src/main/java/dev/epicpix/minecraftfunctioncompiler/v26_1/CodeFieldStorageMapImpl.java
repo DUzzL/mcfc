@@ -5,25 +5,76 @@ import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
 import dev.epicpix.minecraftfunctioncompiler.data.text.TextContent;
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
-import dev.epicpix.minecraftfunctioncompiler.emitter.impl.*;
+import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
+import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMap;
+import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
+import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapValue;
+import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.commands.functions.CommandFunction;
 import net.minecraft.core.Holder;
-import net.minecraft.nbt.*;
-import net.minecraft.network.chat.*;
+import net.minecraft.nbt.ByteArrayTag;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.IntArrayTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.LongArrayTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import org.jspecify.annotations.Nullable;
-import org.objectweb.asm.Type;
 
+import java.lang.constant.ConstantDescs;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.*;
-import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.*;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callMap_get;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callOptional_get;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.loadBoolean_FALSE;
+import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.loadBoolean_TRUE;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callByteTag_valueOf;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callCollectionTag_addTag;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callComponent_keybind;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callComponent_literal;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callComponent_translatableArguments;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callComponent_translatableEmpty;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callComponent_translatableFallbackArguments;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callComponent_translatableFallbackEmpty;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callCompoundTag_put;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callDoubleTag_valueOf;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callFloatTag_valueOf;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callHolderLookupProvider_get;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callHolder_value;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callIdentifier_fromNamespaceAndPath;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callIntTag_valueOf;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callInteger_valueOf;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callLongTag_valueOf;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callMinecraftServer_getAdvancements;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callMinecraftServer_reloadableRegistries;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callMutableComponent_append;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callMutableComponent_withStyle;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callObjectiveCriteria_byName;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callRegistry_get;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callRegistry_getValue;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callReloadableServerRegistriesHolder_lookup;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callResourceKey_create;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callServerAdvancementManager_get;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callShortTag_valueOf;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callStringTag_valueOf;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callTextColor_fromRgb;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.loadBuiltInRegistries_ATTRIBUTE;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.loadBuiltInRegistries_ENTITY_TYPE;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.loadBuiltInRegistries_MOB_EFFECT;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.loadRegistries_PREDICATE;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.loadServerFunctionLibrary_functions;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.loadServerFunctionManager_library;
 
 public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
     public static final CodeFieldStorageMap INSTANCE = new CodeFieldStorageMapImpl().addDefaults();
@@ -36,36 +87,36 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
     private static final InstructionTarget LONG_ARRAY_TAG_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(LongArrayTag.class, long[].class);
 
     CodeFieldStorageMapImpl() {
-        set(CodeFieldStorageMapKind.ADVANCEMENT, new CodeFieldStorageMapValue<>(Type.getType(AdvancementHolder.class), (cf, cw, value) -> {
+        set(CodeFieldStorageMapKind.ADVANCEMENT, new CodeFieldStorageMapValue<>(AdvancementHolder.class, (cf, cw, value) -> {
             return callServerAdvancementManager_get(cw, callMinecraftServer_getAdvancements(cw, cf.getGeneratorMinecraftServer()), cf.loadIdentifier(cw, value));
         }));
-        set(CodeFieldStorageMapKind.ATTRIBUTE, new CodeFieldStorageMapValue<>(Type.getType(Holder.class), (cf, cw, value) -> {
-            return cw.castType(callOptional_get(cw, callRegistry_get(cw, loadBuiltInRegistries_ATTRIBUTE(cw), cf.loadIdentifier(cw, value))), Type.getType(Holder.class));
+        set(CodeFieldStorageMapKind.ATTRIBUTE, new CodeFieldStorageMapValue<>(Holder.class, (cf, cw, value) -> {
+            return cw.castType(callOptional_get(cw, callRegistry_get(cw, loadBuiltInRegistries_ATTRIBUTE(cw), cf.loadIdentifier(cw, value))), Holder.class.describeConstable().orElseThrow());
         }));
-        set(CodeFieldStorageMapKind.EFFECT, new CodeFieldStorageMapValue<>(Type.getType(Holder.class), (cf, cw, value) -> {
-            return cw.castType(callOptional_get(cw, callRegistry_get(cw, loadBuiltInRegistries_MOB_EFFECT(cw), cf.loadIdentifier(cw, value))), Type.getType(Holder.class));
+        set(CodeFieldStorageMapKind.EFFECT, new CodeFieldStorageMapValue<>(Holder.class, (cf, cw, value) -> {
+            return cw.castType(callOptional_get(cw, callRegistry_get(cw, loadBuiltInRegistries_MOB_EFFECT(cw), cf.loadIdentifier(cw, value))), Holder.class.describeConstable().orElseThrow());
         }));
-        set(CodeFieldStorageMapKind.ENTITY_TYPE, new CodeFieldStorageMapValue<>(Type.getType(EntityType.class), (cf, cw, value) -> {
-            return cw.castType(callRegistry_getValue(cw, loadBuiltInRegistries_ENTITY_TYPE(cw), cf.loadIdentifier(cw, value)), Type.getType(EntityType.class));
+        set(CodeFieldStorageMapKind.ENTITY_TYPE, new CodeFieldStorageMapValue<>(EntityType.class, (cf, cw, value) -> {
+            return cw.castType(callRegistry_getValue(cw, loadBuiltInRegistries_ENTITY_TYPE(cw), cf.loadIdentifier(cw, value)), EntityType.class.describeConstable().orElseThrow());
         }));
-        set(CodeFieldStorageMapKind.FUNCTION, new CodeFieldStorageMapValue<>(Type.getType(CommandFunction.class), (cf, cw, value) -> {
+        set(CodeFieldStorageMapKind.FUNCTION, new CodeFieldStorageMapValue<>(CommandFunction.class, (cf, cw, value) -> {
             var functions = loadServerFunctionLibrary_functions(cw, loadServerFunctionManager_library(cw, cf.loadServerFunctionManager(cw)));
-            return cw.castType(callMap_get(cw, functions, cf.loadIdentifier(cw, value)), Type.getType(CommandFunction.class));
+            return cw.castType(callMap_get(cw, functions, cf.loadIdentifier(cw, value)), CommandFunction.class.describeConstable().orElseThrow());
         }));
-        set(CodeFieldStorageMapKind.NBT_COMPOUND, new CodeFieldStorageMapValue<>(Type.getType(CompoundTag.class), (cf, cw, value) -> writeNbtValue(value, cw)));
-        set(CodeFieldStorageMapKind.NBT_VALUE, new CodeFieldStorageMapValue<>(Type.getType(Tag.class), (cf, cw, value) -> writeNbtValue(value, cw)));
-        set(CodeFieldStorageMapKind.PREDICATE, new CodeFieldStorageMapValue<>(Type.getType(LootItemCondition.class), (cf, cw, value) -> {
+        set(CodeFieldStorageMapKind.NBT_COMPOUND, new CodeFieldStorageMapValue<>(CompoundTag.class, (cf, cw, value) -> writeNbtValue(value, cw)));
+        set(CodeFieldStorageMapKind.NBT_VALUE, new CodeFieldStorageMapValue<>(Tag.class, (cf, cw, value) -> writeNbtValue(value, cw)));
+        set(CodeFieldStorageMapKind.PREDICATE, new CodeFieldStorageMapValue<>(LootItemCondition.class, (cf, cw, value) -> {
             var resourceKey = callResourceKey_create(cw, loadRegistries_PREDICATE(cw), cf.loadIdentifier(cw, value));
-            return cw.castType(callHolder_value(cw, callOptional_get(cw, callHolderLookupProvider_get(cw, callReloadableServerRegistriesHolder_lookup(cw, callMinecraftServer_reloadableRegistries(cw, cf.getGeneratorMinecraftServer())), resourceKey))), Type.getType(LootItemCondition.class));
+            return cw.castType(callHolder_value(cw, callOptional_get(cw, callHolderLookupProvider_get(cw, callReloadableServerRegistriesHolder_lookup(cw, callMinecraftServer_reloadableRegistries(cw, cf.getGeneratorMinecraftServer())), resourceKey))), LootItemCondition.class.describeConstable().orElseThrow());
         }));
-        set(CodeFieldStorageMapKind.RESOURCE_LOCATION, new CodeFieldStorageMapValue<>(Type.getType(Identifier.class), (cf, cw, value) -> {
+        set(CodeFieldStorageMapKind.RESOURCE_LOCATION, new CodeFieldStorageMapValue<>(Identifier.class, (cf, cw, value) -> {
             return callIdentifier_fromNamespaceAndPath(cw, new BytecodeValue.StringValue(value.namespace()), new BytecodeValue.StringValue(value.path()));
         }));
-        set(CodeFieldStorageMapKind.SCOREBOARD_CRITERION, new CodeFieldStorageMapValue<>(Type.getType(ObjectiveCriteria.class), (cf, cw, value) -> {
-            return cw.castType(callOptional_get(cw, callObjectiveCriteria_byName(cw, new BytecodeValue.StringValue(value))), Type.getType(ObjectiveCriteria.class));
+        set(CodeFieldStorageMapKind.SCOREBOARD_CRITERION, new CodeFieldStorageMapValue<>(ObjectiveCriteria.class, (cf, cw, value) -> {
+            return cw.castType(callOptional_get(cw, callObjectiveCriteria_byName(cw, new BytecodeValue.StringValue(value))), ObjectiveCriteria.class.describeConstable().orElseThrow());
         }));
-        set(CodeFieldStorageMapKind.TEXT, new CodeFieldStorageMapValue<>(Type.getType(Component.class), (cf, cw, value) -> writeTextValue(value, cw, cf)));
-        set(CodeFieldStorageMapKind.TEXT_STYLE, new CodeFieldStorageMapValue<>(Type.getType(Style.class), (cf, cw, value) -> {
+        set(CodeFieldStorageMapKind.TEXT, new CodeFieldStorageMapValue<>(Component.class, (cf, cw, value) -> writeTextValue(value, cw, cf)));
+        set(CodeFieldStorageMapKind.TEXT_STYLE, new CodeFieldStorageMapValue<>(Style.class, (cf, cw, value) -> {
             ArrayList<BytecodeValue> args = new ArrayList<>();
             if(value.color() != null) {
                 args.add(callTextColor_fromRgb(cw, new BytecodeValue.IntegerValue(value.color())));
@@ -120,7 +171,7 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
                 yield listTag;
             }
             case NbtValue.ByteArray(byte[] values) -> {
-                var byteArray = cw.newArray(new BytecodeValue.IntegerValue(values.length), Type.getType(byte.class));
+                var byteArray = cw.newArray(new BytecodeValue.IntegerValue(values.length), ConstantDescs.CD_byte);
                 for(int i = 0; i < values.length; i++) {
                     cw.setArrayValue(byteArray, new BytecodeValue.IntegerValue(i), new BytecodeValue.IntegerValue(values[i]));
                 }
@@ -137,7 +188,7 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
             case NbtValue.DoubleLiteral(double value) -> callDoubleTag_valueOf(cw, new BytecodeValue.DoubleValue(value));
             case NbtValue.FloatLiteral(float value) -> callFloatTag_valueOf(cw, new BytecodeValue.FloatValue(value));
             case NbtValue.IntegerArray(int[] values) -> {
-                var intArray = cw.newArray(new BytecodeValue.IntegerValue(values.length), Type.getType(int.class));
+                var intArray = cw.newArray(new BytecodeValue.IntegerValue(values.length), ConstantDescs.CD_int);
                 for(int i = 0; i < values.length; i++) {
                     cw.setArrayValue(intArray, new BytecodeValue.IntegerValue(i), new BytecodeValue.IntegerValue(values[i]));
                 }
@@ -145,7 +196,7 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
             }
             case NbtValue.IntegerLiteral(int value) -> callIntTag_valueOf(cw, new BytecodeValue.IntegerValue(value));
             case NbtValue.LongArray(long[] values) -> {
-                var longArray = cw.newArray(new BytecodeValue.IntegerValue(values.length), Type.getType(long.class));
+                var longArray = cw.newArray(new BytecodeValue.IntegerValue(values.length), ConstantDescs.CD_long);
                 for(int i = 0; i < values.length; i++) {
                     cw.setArrayValue(longArray, new BytecodeValue.IntegerValue(i), new BytecodeValue.LongValue(values[i]));
                 }
@@ -171,7 +222,7 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
                         textComponent = callComponent_translatableFallbackEmpty(cw, new BytecodeValue.StringValue(key), new BytecodeValue.StringValue(fallback));
                     }
                 }else {
-                    var array = cw.newArray(new BytecodeValue.IntegerValue(values.size()), Type.getType(Object.class));
+                    var array = cw.newArray(new BytecodeValue.IntegerValue(values.size()), ConstantDescs.CD_Object);
                     for(int i = 0; i < values.size(); i++) {
                         BytecodeValue writeValue;
                         if(values.get(i) instanceof String str) {

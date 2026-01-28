@@ -1,8 +1,8 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter.bytecode;
 
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
-import org.objectweb.asm.Type;
 
+import java.lang.constant.ClassDesc;
 import java.util.List;
 
 public sealed interface BytecodeInstruction permits BytecodeInstruction.CallTarget, BytecodeInstruction.Cast, BytecodeInstruction.ConditionalJump, BytecodeInstruction.CreateArray, BytecodeInstruction.InstanceCheckJump, BytecodeInstruction.Jump, BytecodeInstruction.Label, BytecodeInstruction.New, BytecodeInstruction.RegisterValue, BytecodeInstruction.RegisterValueValue, BytecodeInstruction.Return, BytecodeInstruction.ReturnVoid, BytecodeInstruction.SetArrayValue, BytecodeInstruction.StringConcat {
@@ -20,7 +20,7 @@ public sealed interface BytecodeInstruction permits BytecodeInstruction.CallTarg
         }
     }
 
-    record CreateArray(BytecodeRegister result, BytecodeValue length, Type contentType) implements BytecodeInstruction {
+    record CreateArray(BytecodeRegister result, BytecodeValue length, ClassDesc contentType) implements BytecodeInstruction {
         public int cost() {
             return 2 + result().cost() + length.cost();
         }
@@ -32,7 +32,7 @@ public sealed interface BytecodeInstruction permits BytecodeInstruction.CallTarg
         }
     }
 
-    record InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, Type type, BytecodeLabel label) implements BytecodeInstruction {
+    record InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, ClassDesc type, BytecodeLabel label) implements BytecodeInstruction {
         public int cost() {
             return 3 + a.cost();
         }
@@ -68,7 +68,7 @@ public sealed interface BytecodeInstruction permits BytecodeInstruction.CallTarg
         }
     }
 
-    record Cast(BytecodeRegister result, BytecodeValue source, Type type) implements BytecodeInstruction {
+    record Cast(BytecodeRegister result, BytecodeValue source, ClassDesc type) implements BytecodeInstruction {
         public int cost() {
             return 3 + result().cost() + source.cost();
         }

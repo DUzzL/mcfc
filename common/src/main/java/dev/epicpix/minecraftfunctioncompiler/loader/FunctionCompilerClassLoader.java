@@ -73,9 +73,10 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     protected abstract void setHandle(DataLocation key, MethodHandle handle);
 
     public void registerFunction(Class<?> clazz, DataLocation key, CompilationParams params) {
+        var lookup = MethodHandles.lookup();
         try {
-            setHandle(key, MethodHandles.lookup().findStatic(clazz, "run", MethodType.methodType(long.class, Class.forName(params.commandSourceStackType().getClassName()), Class.forName(params.codeFieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND).getClassName()))));
-        } catch(NoSuchMethodException | IllegalAccessException | ClassNotFoundException e) {
+            setHandle(key, lookup.findStatic(clazz, "run", MethodType.methodType(long.class, params.commandSourceStackType().resolveConstantDesc(lookup), params.codeFieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND).resolveConstantDesc(lookup))));
+        } catch(ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }
     }
@@ -378,18 +379,19 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     }
 
     private Class<?> defineFunction(CompilationParams params, DataLocation funcId, List<Instruction> instructions, Set<DataLocation> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions, int[] totalClassFileSize) {
-        var gen = FunctionCodeGenerator.generateFunctionClass(params, funcId, instructions, compiledFunctions, lowLevelFunctions);
+        var bytes = FunctionCodeGenerator.generateFunctionClass(params, funcId, instructions, compiledFunctions, lowLevelFunctions);
 
-        byte[] bytes = gen.finish();
         totalClassFileSize[0] += bytes.length;
-        return defineClass(gen.getClassName().replace('/', '.'), bytes);
+        var name = ("mcfc/function/" + funcId.namespace() + "/" + funcId.path()).replace('.', '$').replace('/', '.');
+        return defineClass(name, bytes);
     }
 
     private Class<?> loadData(CodeFieldStorage fieldStorage, Object serverFunctionManager, HashMap<String, List<BytecodeInstruction>> lowLevelInstructions, int[] totalClassFileSize) throws Throwable {
-        var dataClassBytes = fieldStorage.generate(lowLevelInstructions).finish();
+        var dataClassBytes = fieldStorage.generate(lowLevelInstructions);
         totalClassFileSize[1] += dataClassBytes.length;
-        var defined = defineClass(DATA_CLASS.replace('/', '.'), dataClassBytes);
-        defined.getDeclaredMethod("load", Class.forName(fieldStorage.minecraftServerType.getClassName()), Class.forName(fieldStorage.serverFunctionManagerType.getClassName())).invoke(null, minecraftServer, serverFunctionManager);
+        var defined = defineClass(DATA_CLASS.displayName(), dataClassBytes);
+        var lookup = MethodHandles.lookup();
+        defined.getDeclaredMethod("load", fieldStorage.minecraftServerType.resolveConstantDesc(lookup), fieldStorage.serverFunctionManagerType.resolveConstantDesc(lookup)).invoke(null, minecraftServer, serverFunctionManager);
         return defined;
     }
 

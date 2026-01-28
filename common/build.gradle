@@ -17,7 +17,6 @@ repositories {
 
 dependencies {
     implementation(project(":annotation-processor"))
-    implementation("org.ow2.asm:asm:9.5")
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("org.slf4j:slf4j-api:2.0.1")
     implementation("it.unimi.dsi:fastutil:8.5.9")

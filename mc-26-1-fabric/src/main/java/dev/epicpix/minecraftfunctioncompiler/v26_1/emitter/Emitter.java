@@ -1,7 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.v26_1.emitter;
 
 import dev.epicpix.minecraftfunctioncompiler.CommonConstants;
-import dev.epicpix.minecraftfunctioncompiler.data.*;
+import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructions;
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister;
@@ -13,21 +13,26 @@ import dev.epicpix.minecraftfunctioncompiler.profiler.Profiler;
 import dev.epicpix.minecraftfunctioncompiler.v26_1.CompiledCommandResultStore;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
-import org.objectweb.asm.Type;
 
+import java.lang.constant.ClassDesc;
+import java.lang.constant.ConstantDescs;
+import java.lang.constant.MethodTypeDesc;
 import java.util.List;
 import java.util.Objects;
 
 import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callThreadLocal_get;
 import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callThreadLocal_set;
-import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.*;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callCommandSourceStack_withCallback;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callExtensionFunctions_executeFunction;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.callServerFunctionManager_execute;
+import static dev.epicpix.minecraftfunctioncompiler.v26_1.emitter.MappedUsageDefinitionsExtensions.loadCommands_CURRENT_EXECUTION_CONTEXT;
 
 public final class Emitter {
     private Emitter() {}
 
     private static final InstructionTarget COMMAND_RESULT_STORE_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(CompiledCommandResultStore.class);
-    private static final InstructionTarget RUN_RESULT_FIELD_READ_TARGET = new InstructionTarget.FieldTarget(CommonConstants.DATA_CLASS, CommonConstants.RUN_RESULT_FIELD, "J", true, false);
-    private static final InstructionTarget RUN_RESULT_FIELD_WRITE_TARGET = new InstructionTarget.FieldTarget(CommonConstants.DATA_CLASS, CommonConstants.RUN_RESULT_FIELD, "J", true, true);
+    private static final InstructionTarget RUN_RESULT_FIELD_READ_TARGET = new InstructionTarget.FieldTarget(CommonConstants.DATA_CLASS, CommonConstants.RUN_RESULT_FIELD, ConstantDescs.CD_long, true, false);
+    private static final InstructionTarget RUN_RESULT_FIELD_WRITE_TARGET = new InstructionTarget.FieldTarget(CommonConstants.DATA_CLASS, CommonConstants.RUN_RESULT_FIELD, ConstantDescs.CD_long, true, true);
 
     public static void registerInstructionEmitters() {
         EmitterInstructions.registerEmitterInstruction(context -> {
@@ -39,8 +44,9 @@ public final class Emitter {
                     for(var func : functions) {
                         var commandSourceStack = context.load("stack");
                         if(context.compiledFunctions().contains(func)) {
-                            var nbtArgs = context.instruction().get("arguments") != null ? codeWriter.castType(context.load("arguments"), Type.getType(CompoundTag.class)) : new BytecodeValue.NullValue();
-                            var target = new InstructionTarget.FunctionTarget(("mcfc/function/" + func.namespace() + "/" + func.path()).replace('.', '$'), "run", "(" + CommandSourceStack.class.descriptorString() + context.fieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND).getDescriptor() + ")J", true, false, false, true);
+                            var nbtArgs = context.instruction().get("arguments") != null ? codeWriter.castType(context.load("arguments"), CompoundTag.class.describeConstable().orElseThrow()) : new BytecodeValue.NullValue();
+                            var className = ("mcfc/function/" + func.namespace() + "/" + func.path()).replace('.', '$');
+                            var target = new InstructionTarget.FunctionTarget(ClassDesc.ofInternalName(className), "run", MethodTypeDesc.of(ConstantDescs.CD_long, CommandSourceStack.class.describeConstable().orElseThrow(), context.fieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND)), true, false, false, true);
                             codeWriter.writeTarget(target, commandSourceStack, nbtArgs);
                         }else {
                             var mctxtl = loadCommands_CURRENT_EXECUTION_CONTEXT(codeWriter);
@@ -50,7 +56,7 @@ public final class Emitter {
                             var function = context.fieldStorage().loadFunction(codeWriter, func);
                             codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "enterOverhead", void.class, String.class), new BytecodeValue.StringValue(func.toString()));
                             if(context.instruction().get("arguments") != null) {
-                                callExtensionFunctions_executeFunction(codeWriter, functionManager, function, commandSourceStack, codeWriter.castType(context.load("arguments"), Type.getType(CompoundTag.class)));
+                                callExtensionFunctions_executeFunction(codeWriter, functionManager, function, commandSourceStack, codeWriter.castType(context.load("arguments"), CompoundTag.class.describeConstable().orElseThrow()));
                             }else {
                                 callServerFunctionManager_execute(codeWriter, functionManager, function, commandSourceStack);
                             }
@@ -74,8 +80,9 @@ public final class Emitter {
                         var commandSourceStack = context.load("stack");
                         BytecodeRegister returnValue;
                         if(context.compiledFunctions().contains(func)) {
-                            var nbtArgs = context.instruction().get("arguments") != null ? codeWriter.castType(context.load("arguments"), Type.getType(CompoundTag.class)) : new BytecodeValue.NullValue();
-                            var target = new InstructionTarget.FunctionTarget(("mcfc/function/" + func.namespace() + "/" + func.path()).replace('.', '$'), "run", "(" + CommandSourceStack.class.descriptorString() + context.fieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND).getDescriptor() + ")J", true, false, false, true);
+                            var nbtArgs = context.instruction().get("arguments") != null ? codeWriter.castType(context.load("arguments"), CompoundTag.class.describeConstable().orElseThrow()) : new BytecodeValue.NullValue();
+                            var className = ("mcfc/function/" + func.namespace() + "/" + func.path()).replace('.', '$');
+                            var target = new InstructionTarget.FunctionTarget(ClassDesc.ofInternalName(className), "run", MethodTypeDesc.of(ConstantDescs.CD_long, CommandSourceStack.class.describeConstable().orElseThrow(), context.fieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND)), true, false, false, true);
                             returnValue = codeWriter.writeTarget(target, commandSourceStack, nbtArgs);
                         }else {
                             var mctxtl = loadCommands_CURRENT_EXECUTION_CONTEXT(codeWriter);
@@ -87,7 +94,7 @@ public final class Emitter {
                             var function = context.fieldStorage().loadFunction(codeWriter, func);
                             codeWriter.writeTarget(InstructionTarget.FunctionTarget.staticFunction(Profiler.class, "enterOverhead", void.class, String.class), new BytecodeValue.StringValue(func.toString()));
                             if(context.instruction().get("arguments") != null) {
-                                callExtensionFunctions_executeFunction(codeWriter, functionManager, function, commandSourceStack, codeWriter.castType(context.load("arguments"), Type.getType(CompoundTag.class)));
+                                callExtensionFunctions_executeFunction(codeWriter, functionManager, function, commandSourceStack, codeWriter.castType(context.load("arguments"), CompoundTag.class.describeConstable().orElseThrow()));
                             }else {
                                 callServerFunctionManager_execute(codeWriter, functionManager, function, commandSourceStack);
                             }
@@ -99,7 +106,7 @@ public final class Emitter {
                         context.store("result", returnValue);
                         if(i + 1 != functions.size()) {
                             var shiftedResult = codeWriter.shiftRight(context.load("result"), new BytecodeValue.IntegerValue(32));
-                            var shiftedIntResult = codeWriter.castType(shiftedResult, Type.INT_TYPE);
+                            var shiftedIntResult = codeWriter.castType(shiftedResult, ConstantDescs.CD_int);
                             codeWriter.conditionalJump(JumpCondition.NE, shiftedIntResult, new BytecodeValue.IntegerValue(2), post);
                         }
                     }

@@ -1,10 +1,18 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter.impl;
 
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
-import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.*;
-import org.objectweb.asm.Type;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeInstruction;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.InstructionRVType;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.InstructionRVVType;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition;
 
-import java.util.*;
+import java.lang.constant.ClassDesc;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DATA_CLASS;
 
@@ -49,21 +57,21 @@ public final class CodeWriter {
         return newObjectCreate(target, List.of());
     }
 
-    public BytecodeRegister getDataField(String name, Type type) {
-        return writeTarget(new InstructionTarget.FieldTarget(DATA_CLASS, name, type.getDescriptor(), true, false));
+    public BytecodeRegister getDataField(String name, ClassDesc type) {
+        return writeTarget(new InstructionTarget.FieldTarget(DATA_CLASS, name, type, true, false));
     }
 
-    public void setDataField(String name, Type type, BytecodeValue value) {
-        writeTarget(new InstructionTarget.FieldTarget(DATA_CLASS, name, type.getDescriptor(), true, true), value);
+    public void setDataField(String name, ClassDesc type, BytecodeValue value) {
+        writeTarget(new InstructionTarget.FieldTarget(DATA_CLASS, name, type, true, true), value);
     }
 
-    public BytecodeRegister castType(BytecodeValue value, Type type) {
+    public BytecodeRegister castType(BytecodeValue value, ClassDesc type) {
         var resultRegister = createRegister();
         instructions.add(new BytecodeInstruction.Cast(resultRegister, value, type));
         return resultRegister;
     }
 
-    public void instanceCheckJump(boolean ifIsInstance, BytecodeValue value, Type type, BytecodeLabel label) {
+    public void instanceCheckJump(boolean ifIsInstance, BytecodeValue value, ClassDesc type, BytecodeLabel label) {
         instructions.add(new BytecodeInstruction.InstanceCheckJump(ifIsInstance, value, type, label));
     }
 
@@ -145,7 +153,7 @@ public final class CodeWriter {
         return resultRegister;
     }
 
-    public BytecodeRegister newArray(BytecodeValue length, Type contentType) {
+    public BytecodeRegister newArray(BytecodeValue length, ClassDesc contentType) {
         var resultRegister = createRegister();
         instructions.add(new BytecodeInstruction.CreateArray(resultRegister, length, contentType));
         return resultRegister;

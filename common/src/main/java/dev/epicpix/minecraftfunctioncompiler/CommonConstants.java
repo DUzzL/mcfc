@@ -1,5 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler;
 
+import java.lang.constant.ClassDesc;
+
 public final class CommonConstants {
     private CommonConstants() {}
 
@@ -13,7 +15,7 @@ public final class CommonConstants {
     public static final boolean BLOCKING_COMPILATION = false;
     public static final boolean ENABLE_REPORTING = false;
     public static final boolean INCLUDE_SIMPLE_COMPILER = false;
-    public static final String DATA_CLASS = "mcfc/function/data";
+    public static final ClassDesc DATA_CLASS = ClassDesc.ofInternalName("mcfc/function/data");
 
     public static final String EMIT_SERVER_FUNCTION_MANAGER_NAME = "_ServerFunctionManager";
     public static final String RUN_RESULT_FIELD = "_FunctionResult";

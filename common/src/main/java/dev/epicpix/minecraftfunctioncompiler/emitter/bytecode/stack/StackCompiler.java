@@ -1,41 +1,56 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.stack;
 
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
-import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.*;
-import it.unimi.dsi.fastutil.ints.*;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeInstruction;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.InstructionRVType;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.InstructionRVVType;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.jspecify.annotations.Nullable;
-import org.objectweb.asm.Type;
 
-import java.util.*;
+import java.lang.constant.ClassDesc;
+import java.lang.constant.ConstantDescs;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 public class StackCompiler {
 
-    private static Type getValueType(BytecodeValue value, Int2ObjectMap<Type> registerTypeMap) {
+    private static ClassDesc getValueType(BytecodeValue value, Int2ObjectMap<ClassDesc> registerTypeMap) {
         return switch(value) {
-            case BytecodeValue.NullValue _ -> Type.getType(Object.class);
-            case BytecodeValue.IntegerValue _ -> Type.INT_TYPE;
-            case BytecodeValue.LongValue _ -> Type.LONG_TYPE;
-            case BytecodeValue.FloatValue _ -> Type.FLOAT_TYPE;
-            case BytecodeValue.DoubleValue _ -> Type.DOUBLE_TYPE;
-            case BytecodeValue.StringValue _ -> Type.getType(String.class);
+            case BytecodeValue.NullValue _ -> ConstantDescs.CD_Object;
+            case BytecodeValue.IntegerValue _ -> ConstantDescs.CD_int;
+            case BytecodeValue.LongValue _ -> ConstantDescs.CD_long;
+            case BytecodeValue.FloatValue _ -> ConstantDescs.CD_float;
+            case BytecodeValue.DoubleValue _ -> ConstantDescs.CD_double;
+            case BytecodeValue.StringValue _ -> ConstantDescs.CD_String;
             case BytecodeValue.Parameter parameter -> parameter.type();
             case BytecodeRegister(int reg) -> registerTypeMap.get(reg);
             case null -> throw new IllegalArgumentException("Unknown value: " + value);
         };
     }
 
-    private static StackInstruction loadValue(BytecodeValue value, Int2ObjectMap<Type> registerTypeMap) {
+    private static StackInstruction loadValue(BytecodeValue value, Int2ObjectMap<ClassDesc> registerTypeMap) {
         return new StackInstruction.Load(value, getValueType(value, registerTypeMap));
     }
 
-    private static StackInstruction storeValue(BytecodeRegister value, Type type, Int2ObjectMap<Type> registerTypeMap) {
+    private static StackInstruction storeValue(BytecodeRegister value, ClassDesc type, Int2ObjectMap<ClassDesc> registerTypeMap) {
         registerTypeMap.put(value.reg(), type);
         return new StackInstruction.Store(value);
     }
 
     public static List<StackInstruction> compileInstructions(List<BytecodeInstruction> instructions) {
         ArrayList<StackInstruction> results = new ArrayList<>();
-        var registerTypeMap = new Int2ObjectOpenHashMap<Type>();
+        var registerTypeMap = new Int2ObjectOpenHashMap<ClassDesc>();
         for(var instr : instructions) {
             switch(instr) {
                 case BytecodeInstruction.RegisterValue(InstructionRVType type, BytecodeRegister result, BytecodeValue source) -> {
@@ -70,10 +85,10 @@ public class StackCompiler {
                     }
                     results.add(storeValue(result, sourceType, registerTypeMap));
                 }
-                case BytecodeInstruction.CreateArray(BytecodeRegister result, BytecodeValue length, Type contentType) -> {
+                case BytecodeInstruction.CreateArray(BytecodeRegister result, BytecodeValue length, ClassDesc contentType) -> {
                     results.add(loadValue(length, registerTypeMap));
                     results.add(new StackInstruction.NewArray(contentType));
-                    results.add(storeValue(result, Type.getType("[" + contentType.getDescriptor()), registerTypeMap));
+                    results.add(storeValue(result, contentType.arrayType(), registerTypeMap));
                 }
                 case BytecodeInstruction.SetArrayValue(BytecodeValue array, BytecodeValue index, BytecodeValue value1) -> {
                     results.add(loadValue(array, registerTypeMap));
@@ -81,7 +96,7 @@ public class StackCompiler {
                     results.add(loadValue(value1, registerTypeMap));
                     results.add(new StackInstruction.ArrayStore());
                 }
-                case BytecodeInstruction.InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, Type type, BytecodeLabel label) -> {
+                case BytecodeInstruction.InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, ClassDesc type, BytecodeLabel label) -> {
                     results.add(loadValue(a, registerTypeMap));
                     results.add(new StackInstruction.JumpTyped(ifIsInstance ? StackJumpType.IF_INSTANCEOF : StackJumpType.IF_NOT_INSTANCEOF, type, label));
                 }
@@ -124,8 +139,8 @@ public class StackCompiler {
                             results.add(loadValue(arg, registerTypeMap));
                         }
                         results.add(new StackInstruction.Call(f));
-                        var returnType = Type.getReturnType(f.descriptor());
-                        if(returnType != Type.VOID_TYPE) {
+                        var returnType = f.descriptor().returnType();
+                        if(returnType != ConstantDescs.CD_void) {
                             results.add(storeValue(result, returnType, registerTypeMap));
                         }
                     }else if(target instanceof InstructionTarget.FieldTarget f) {
@@ -134,21 +149,21 @@ public class StackCompiler {
                         }
                         results.add(new StackInstruction.Call(f));
                         if(!f.isWrite()) {
-                            results.add(storeValue(result, Type.getType(f.descriptor()), registerTypeMap));
+                            results.add(storeValue(result, f.descriptor(), registerTypeMap));
                         }
                     }
                 }
                 case BytecodeInstruction.New(BytecodeRegister result, InstructionTarget target, List<BytecodeValue> arguments) -> {
                     var f = (InstructionTarget.FunctionTarget) target;
-                    results.add(new StackInstruction.New(Type.getType("L" + f.className() + ";")));
-                    results.add(storeValue(result, Type.getType("L" + f.className() + ";"), registerTypeMap));
+                    results.add(new StackInstruction.New(f.classType()));
+                    results.add(storeValue(result, f.classType(), registerTypeMap));
                     results.add(loadValue(result, registerTypeMap));
                     for(var arg : arguments) {
                         results.add(loadValue(arg, registerTypeMap));
                     }
                     results.add(new StackInstruction.Call(f));
                 }
-                case BytecodeInstruction.Cast(BytecodeRegister result, BytecodeValue source, Type type) -> {
+                case BytecodeInstruction.Cast(BytecodeRegister result, BytecodeValue source, ClassDesc type) -> {
                     results.add(loadValue(source, registerTypeMap));
                     results.add(new StackInstruction.Cast(type));
                     results.add(storeValue(result, type, registerTypeMap));
@@ -164,7 +179,7 @@ public class StackCompiler {
                             isConstant = false;
                             staticStrings.add(null);
                             var valueType = getValueType(value, registerTypeMap);
-                            onlyStrings &= valueType.equals(Type.getType(String.class));
+                            onlyStrings &= valueType.equals(ConstantDescs.CD_String);
                             results.add(loadValue(value, registerTypeMap));
                         }
                     }
@@ -173,9 +188,9 @@ public class StackCompiler {
                             results.add(new StackInstruction.EvaluateString(staticStrings.toArray(new @Nullable String[0])));
                         }
                     }else {
-                        results.add(new StackInstruction.Load(new BytecodeValue.StringValue(String.join("", staticStrings)), Type.getType(String.class)));
+                        results.add(new StackInstruction.Load(new BytecodeValue.StringValue(String.join("", staticStrings)), ConstantDescs.CD_String));
                     }
-                    results.add(storeValue(result, Type.getType(String.class), registerTypeMap));
+                    results.add(storeValue(result, ConstantDescs.CD_String, registerTypeMap));
                 }
                 case BytecodeInstruction.Return(BytecodeValue value) -> {
                     results.add(loadValue(value, registerTypeMap));
@@ -320,7 +335,7 @@ public class StackCompiler {
         return fixRegisterOffsets(output, registerTypeMap);
     }
 
-    private static List<StackInstruction> fixRegisterOffsets(List<StackInstruction> instrs, Int2ObjectMap<@Nullable Type> registerTypeMap) {
+    private static List<StackInstruction> fixRegisterOffsets(List<StackInstruction> instrs, Int2ObjectMap<@Nullable ClassDesc> registerTypeMap) {
         var params = new ArrayList<BytecodeValue.Parameter>();
         var usedRegisters = new IntOpenHashSet();
         for(var i : instrs) {
@@ -342,7 +357,7 @@ public class StackCompiler {
             mappedRegisters.put(reg, regIndex);
             var t = registerTypeMap.get(reg);
             if(t != null) {
-                if(t.getSort() == Type.LONG || t.getSort() == Type.DOUBLE) {
+                if(t == ConstantDescs.CD_long || t == ConstantDescs.CD_double) {
                     regIndex++;
                 }
             }
@@ -351,7 +366,7 @@ public class StackCompiler {
         ArrayList<StackInstruction> output = new ArrayList<>(instrs);
         for(int i = 0; i<instrs.size(); i++) {
             var instr = instrs.get(i);
-            if(instr instanceof StackInstruction.Load(BytecodeValue value, Type type) && value instanceof BytecodeRegister(int reg)) {
+            if(instr instanceof StackInstruction.Load(BytecodeValue value, ClassDesc type) && value instanceof BytecodeRegister(int reg)) {
                 output.set(i, new StackInstruction.Load(new BytecodeRegister(mappedRegisters.get(reg)), type));
             }else if(instr instanceof StackInstruction.Store(BytecodeRegister register)) {
                 output.set(i, new StackInstruction.Store(new BytecodeRegister(mappedRegisters.get(register.reg()))));
@@ -399,9 +414,9 @@ public class StackCompiler {
                     stackDepth++;
                 }else if(instr instanceof StackInstruction.Call(InstructionTarget target)) {
                     if(target instanceof InstructionTarget.FunctionTarget f) {
-                        var fdesc = Type.getType(f.descriptor());
-                        int consumed = fdesc.getArgumentTypes().length + (f.isStatic() ? 0 : 1);
-                        int returned = fdesc.getReturnType() == Type.VOID_TYPE ? 0 : 1;
+                        var fdesc = f.descriptor();
+                        int consumed = fdesc.parameterCount() + (f.isStatic() ? 0 : 1);
+                        int returned = fdesc.returnType() == ConstantDescs.CD_void ? 0 : 1;
                         stackDepth += returned - consumed;
                     }else if(target instanceof InstructionTarget.FieldTarget f) {
                         if(!f.isStatic()) stackDepth--;
