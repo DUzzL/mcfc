@@ -1,5 +1,5 @@
 #emitter_noobf_file("dev.epicpix.minecraftfunctioncompiler.emitter.impl.EmitterBaseOptions")
-#emitter_obf_file("dev.epicpix.minecraftfunctioncompiler._VERSION_.emitter.Emitter2")
+#emitter_obf_file("dev.epicpix.minecraftfunctioncompiler.mod.emitter.Emitter2")
 #enum_file("dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes")
 #generator_file("dev.epicpix.minecraftfunctioncompiler.il.Instructions")
 #definitions("common,minecraft")
@@ -250,7 +250,7 @@
 
 ##PURE
 @GET_ENTITIES_INSIDE(<net.minecraft.server.level.ServerLevel> [ctx:world], double [ctx:min_x], double [ctx:min_y], double [ctx:min_z], double [ctx:max_x], double [ctx:max_y], double [ctx:max_z], int [ctx:limit]) -> <java.util.List<net.minecraft.world.entity.Entity> >
-  = <dev.epicpix.minecraftfunctioncompiler._VERSION_.ExtensionFunctions>.getEntitiesInside([ctx:world], [ctx:min_x], [ctx:min_y], [ctx:min_z], [ctx:max_x], [ctx:max_y], [ctx:max_z], [ctx:limit]);
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getEntitiesInside([ctx:world], [ctx:min_x], [ctx:min_y], [ctx:min_z], [ctx:max_x], [ctx:max_y], [ctx:max_z], [ctx:limit]);
 
 ##PURE
 @GET_PLAYER(<net.minecraft.server.players.PlayerList> [static:PlayerList], <java.lang.String> [ctx:name]) -> <net.minecraft.server.level.ServerPlayer> = [static:PlayerList].getPlayerByName([ctx:name]);
@@ -317,7 +317,7 @@
 
 ##PURE
 @SCORE_DATA_NO_AUTO_CREATE(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [ctx:name]) -> <net.minecraft.world.scores.ScoreAccess>
-  = <dev.epicpix.minecraftfunctioncompiler._VERSION_.ExtensionFunctions>.getScore([static:Scoreboard], <net.minecraft.world.scores.ScoreHolder>.forNameOnly([ctx:name]), [ctx:objective]);
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getScore([static:Scoreboard], <net.minecraft.world.scores.ScoreHolder>.forNameOnly([ctx:name]), [ctx:objective]);
 
 
 ##PURE
@@ -444,7 +444,7 @@
 
 ##PURE
 @APPLY_LOCAL_POSITION_WORLD(<net.minecraft.world.phys.Vec3> [ctx:from_position], <net.minecraft.world.phys.Vec2> [ctx:from_rotation], double [ctx:y_offset], <dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates> [instr:position]) -> <net.minecraft.world.phys.Vec3> {
-  return <dev.epicpix.minecraftfunctioncompiler._VERSION_.ExtensionFunctions>.calculateLocalCoordinates(
+  return <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.calculateLocalCoordinates(
     [ctx:from_rotation].x,
     [ctx:from_rotation].y,
     [ctx:from_position].x,
@@ -552,11 +552,11 @@
 @CREATE_INT_TAG(int [ctx:value]) -> <net.minecraft.nbt.Tag> = <net.minecraft.nbt.IntTag>.valueOf([ctx:value]);
 
 @SORT_LIST_ENTITY_NEAREST(<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
-  <dev.epicpix.minecraftfunctioncompiler._VERSION_.ExtensionFunctions>.sortEntitiesClosest([ctx:position], [ctx:list]);
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.sortEntitiesClosest([ctx:position], [ctx:list]);
 }
 
 @SORT_LIST_ENTITY_FURTHEST(<net.minecraft.world.phys.Vec3> [ctx:position], <java.util.List> [ctx:list]) {
-  <dev.epicpix.minecraftfunctioncompiler._VERSION_.ExtensionFunctions>.sortEntitiesFurthest([ctx:position], [ctx:list]);
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.sortEntitiesFurthest([ctx:position], [ctx:list]);
 }
 
 ##PURE
@@ -603,7 +603,7 @@
 }
 
 @FORMAT_ENTITY_TEXT_LIST(<java.util.List<net.minecraft.world.entity.Entity> > [ctx:entities], <net.minecraft.network.chat.Component> [ctx:separator]) -> <net.minecraft.network.chat.MutableComponent>
-  = <dev.epicpix.minecraftfunctioncompiler._VERSION_.ExtensionFunctions>.formatEntityTextList([ctx:entities], [ctx:separator]);
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.formatEntityTextList([ctx:entities], [ctx:separator]);
 
 @SEND_SYSTEM_MESSAGE(<net.minecraft.server.level.ServerPlayer> [ctx:player], <net.minecraft.network.chat.Component> [ctx:text]) {
   [ctx:player].sendSystemMessage([ctx:text], false);

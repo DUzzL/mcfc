@@ -1,0 +1,50 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '2.3.0'
+    id 'com.google.devtools.ksp' version "2.3.4"
+}
+
+group = "dev.epicpix"
+version = project.mod_version
+
+apply plugin: 'com.google.devtools.ksp'
+
+repositories {
+    mavenCentral()
+    maven { url = uri("https://maven.fabricmc.net/") }
+    maven { url = uri("https://libraries.minecraft.net/") }
+    maven { url = uri("https://jitpack.io") }
+}
+
+dependencies {
+    implementation(project(":annotation-processor"))
+    implementation(project(":common"))
+    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("org.slf4j:slf4j-api:2.0.1")
+    implementation("it.unimi.dsi:fastutil:8.5.9")
+    api("org.jspecify:jspecify:1.0.0")
+    ksp project(":annotation-processor")
+}
+
+project.ext.isJarTask = false
+
+gradle.taskGraph.whenReady { taskExecutionGraph ->
+    ksp {
+        arg("isJarTask", taskExecutionGraph.hasTask(':jar').toString())
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = "UTF-8"
+    it.targetCompatibility = "25"
+    it.sourceCompatibility = "25"
+}
+
+ksp {
+    arg("data_dir", file("../data/").absolutePath)
+    arg("definitions", "common-test")
+    arg("version", project.mod_version)
+}
+
+kotlin {
+    jvmToolchain(25)
+}

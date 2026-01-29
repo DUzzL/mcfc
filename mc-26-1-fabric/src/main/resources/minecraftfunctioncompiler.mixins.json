@@ -1,7 +1,7 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "dev.epicpix.minecraftfunctioncompiler.mixin.v26_1",
+  "package": "dev.epicpix.minecraftfunctioncompiler.mod.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [
     "CallFunctionMixin",

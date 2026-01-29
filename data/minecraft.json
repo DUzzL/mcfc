@@ -1,5 +1,5 @@
 {
-  "definition_file": "dev.epicpix.minecraftfunctioncompiler._VERSION_.emitter.MappedUsageDefinitionsExtensions",
+  "definition_file": "dev.epicpix.minecraftfunctioncompiler.mod.emitter.MappedUsageDefinitionsExtensions",
 
   "definitions_functions": {
     "CommandSourceStack_withCallback": "net/minecraft/commands/CommandSourceStack:withCallback(Lnet/minecraft/commands/CommandResultCallback;)Lnet/minecraft/commands/CommandSourceStack;",
@@ -15,7 +15,7 @@
     "StringTag_valueOf": "net/minecraft/nbt/StringTag:valueOf(Ljava/lang/String;)Lnet/minecraft/nbt/StringTag;",
 
     "CompoundTag_get": "net/minecraft/nbt/CompoundTag:get(Ljava/lang/String;)Lnet/minecraft/nbt/Tag;",
-    "Tag_stringify": "dev/epicpix/minecraftfunctioncompiler/_VERSION_/ExtensionFunctions:stringifyTag(Lnet/minecraft/nbt/Tag;)Ljava/lang/String;",
+    "Tag_stringify": "dev/epicpix/minecraftfunctioncompiler/mod/ExtensionFunctions:stringifyTag(Lnet/minecraft/nbt/Tag;)Ljava/lang/String;",
 
     "ObjectiveCriteria_byName": "net/minecraft/world/scores/criteria/ObjectiveCriteria:byName(Ljava/lang/String;)Ljava/util/Optional;",
 
@@ -34,7 +34,7 @@
 
     "ServerFunctionManager_execute": "net/minecraft/server/ServerFunctionManager:execute(Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;)V",
 
-    "ExtensionFunctions_executeFunction": "dev/epicpix/minecraftfunctioncompiler/_VERSION_/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@N",
+    "ExtensionFunctions_executeFunction": "dev/epicpix/minecraftfunctioncompiler/mod/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@N",
 
     "Identifier_fromNamespaceAndPath": "net/minecraft/resources/Identifier:fromNamespaceAndPath(Ljava/lang/String;Ljava/lang/String;)Lnet/minecraft/resources/Identifier;",
 

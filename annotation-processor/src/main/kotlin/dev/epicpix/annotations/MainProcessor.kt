@@ -172,8 +172,7 @@ class MainProcessor(
         generateInstructionData(resolver)
         val targets = mutableListOf<String>()
         val file = parseCode(loadDataFile("data.instructions"))
-        val emitterClass = (if(options["definitions"] == "common") file.fileInfo["emitter_noobf_file"]!! else file.fileInfo["emitter_obf_file"]!!).replace("_VERSION_", PACKAGE_MINECRAFT_VERSION
-            ?: "common")
+        val emitterClass = if(options["definitions"] == "common") file.fileInfo["emitter_noobf_file"]!! else file.fileInfo["emitter_obf_file"]!!
         val emitterPackage = emitterClass.substring(0, emitterClass.lastIndexOf('.'))
         val emitterTargetsClass = "$emitterPackage.EmitterTargets"
         if(definitions != null) {
@@ -269,7 +268,7 @@ class MainProcessor(
     }
 
     fun generateFunctionMapping(data: Map<String, JsonElement>, majorVer: Int, minorVer: Int, emitterTargetsClass: String, targets: MutableList<String>) {
-        val resultClass = data["definition_file"]!!.asString.replace("_VERSION_", PACKAGE_MINECRAFT_VERSION ?: "common")
+        val resultClass = data["definition_file"]!!.asString
         val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
         val resultName = resultClass.substring(resultClass.lastIndexOf('.') + 1)
         val mapExtensions = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")
@@ -302,9 +301,7 @@ class MainProcessor(
         data["definitions_functions"]?.asJsonObject?.asMap()?.forEach { (k, v) ->
             val content = getForCurrentVersion(v)
             if(content != null) {
-                val fullDescriptor = content.split("@")[0].replace(Regex.fromLiteral("_VERSION_")) {
-                    PACKAGE_MINECRAFT_VERSION ?: throw IllegalArgumentException("Tried to use _VERSION_ in common env")
-                }
+                val fullDescriptor = content.split("@")[0]
                 val className = fullDescriptor.split(":")[0]
                 val methodDescriptor = Type.getMethodType("(" + fullDescriptor.split("(")[1])
                 val methodName = fullDescriptor.split(":")[1].split("(")[0]
@@ -330,10 +327,7 @@ class MainProcessor(
         data["definitions_fields"]?.asJsonObject?.asMap()?.forEach { (k, v) ->
             val content = getForCurrentVersion(v)
             if(content != null) {
-                val fullDescriptor = content.split("@")[0].replace(Regex.fromLiteral("_VERSION_")) {
-                    PACKAGE_MINECRAFT_VERSION
-                        ?: throw IllegalArgumentException("Tried to use _VERSION_ in a common env")
-                }
+                val fullDescriptor = content.split("@")[0]
                 val className = fullDescriptor.split(":")[0]
                 val fieldName = fullDescriptor.split(":")[1]
                 val fieldDescriptor = fullDescriptor.split(":")[2]
@@ -368,8 +362,7 @@ class MainProcessor(
     }
 
     fun generateInstructionData(file: ParsedFile, common: Boolean, majorVer: Int, minorVer: Int, targets: MutableList<String>) {
-        val resultClass = (if(common) file.fileInfo["emitter_noobf_file"]!! else file.fileInfo["emitter_obf_file"]!!).replace("_VERSION_", PACKAGE_MINECRAFT_VERSION
-            ?: "common")
+        val resultClass = if(common) file.fileInfo["emitter_noobf_file"]!! else file.fileInfo["emitter_obf_file"]!!
         val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
         val resultName = resultClass.substring(resultClass.lastIndexOf('.') + 1)
         val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")

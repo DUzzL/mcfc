@@ -9,7 +9,7 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "dev.epicpix.minecraftfunctioncompiler.test.FunctionCompilerTestMain"
+      "dev.epicpix.minecraftfunctioncompiler.mod.test.FunctionCompilerTestMain"
     ]
   },
   "mixins": [

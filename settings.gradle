@@ -17,4 +17,5 @@ plugins {
 
 include 'annotation-processor'
 include 'mc-26-1-fabric'
+include 'common-test'
 include 'common'

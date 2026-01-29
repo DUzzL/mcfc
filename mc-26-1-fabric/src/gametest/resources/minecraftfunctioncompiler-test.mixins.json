@@ -1,7 +1,7 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "dev.epicpix.minecraftfunctioncompiler.test.mixin",
+  "package": "dev.epicpix.minecraftfunctioncompiler.mod.test.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [
     "FabricGameTestModInitializerMixin"
