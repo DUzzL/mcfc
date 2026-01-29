@@ -208,7 +208,7 @@ class MainProcessor(
     }
 
     fun generateCommandsData() {
-        val data = parseCommandsData(loadDataFile("data.commands"))
+        val data = parseCommandsData(loadDataFile("vanilla.commands"))
         val (cmdStr, cmdTypes) = generateCommandsDataReader(data)
         run {
             val resultPackage = "dev.epicpix.minecraftfunctioncompiler.commands"

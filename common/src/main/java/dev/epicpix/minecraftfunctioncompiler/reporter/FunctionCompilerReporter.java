@@ -55,6 +55,7 @@ public final class FunctionCompilerReporter {
     private static String minecraftVersionType = null;
     @Nullable
     private static MinecraftEnvironment minecraftEnvironment = null;
+    private static boolean isTesting = false;
 
     public static void setMinecraftVersion(String version, String versionType, MinecraftEnvironment environment) {
         if(minecraftVersionName != null) throw new RuntimeException("Tried to set minecraft version twice");
@@ -62,6 +63,10 @@ public final class FunctionCompilerReporter {
         minecraftVersionName = version;
         minecraftVersionType = versionType;
         minecraftEnvironment = environment;
+    }
+
+    public static void markTestEnvironment() {
+        isTesting = true;
     }
 
     private static final ArrayList<JsonObject> reportQueue = new ArrayList<>();
@@ -84,6 +89,7 @@ public final class FunctionCompilerReporter {
         JsonObject sendData = new JsonObject();
         sendData.addProperty("is_dev", isDevelopmentEnvironment || "development".equals(versionCommit));
         sendData.addProperty("is_ide", isDevelopmentEnvironment);
+        sendData.addProperty("is_test", isTesting);
         sendData.addProperty("version_commit", versionCommit);
         sendData.addProperty("version", versionName);
         sendData.add("minecraft", minecraftData);
@@ -91,7 +97,7 @@ public final class FunctionCompilerReporter {
         sendData.addProperty("run_uuid", runUuid.toString());
         sendData.addProperty("timestamp", System.currentTimeMillis());
         sendData.addProperty("report_type", type);
-        sendData.addProperty("report_version", "v10");
+        sendData.addProperty("report_version", "v11");
         sendData.add("data", data);
 
         reportQueue.add(sendData);

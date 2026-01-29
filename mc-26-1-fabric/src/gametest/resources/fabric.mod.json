@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "minecraftfunctioncompiler-test",
+  "version": "0.0.0",
+  "name": "Function Compiler Test",
+  "icon": "assets/minecraftfunctioncompiler/icon.png",
+  "authors": [ "EpicPix" ],
+  "license": "LGPL-3.0-only",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "dev.epicpix.minecraftfunctioncompiler.test.FunctionCompilerTestMain"
+    ]
+  },
+  "mixins": [
+    "minecraftfunctioncompiler-test.mixins.json"
+  ]
+}

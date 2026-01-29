@@ -8,6 +8,18 @@ repositories {
 
 apply plugin: 'com.google.devtools.ksp'
 
+if(project.hasProperty("fabric_api_version")) {
+    fabricApi {
+        configureTests {
+            createSourceSet = true
+            modId = "minecraftfunctioncompiler-test"
+            enableGameTests = true
+            enableClientGameTests = false
+            eula = true
+        }
+    }
+}
+
 dependencies {
     implementation(project(":annotation-processor"))
     implementation(project(":common"))
@@ -15,6 +27,10 @@ dependencies {
 
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    if(project.hasProperty("fabric_api_version")) {
+        gametestImplementation fabricApi.module("fabric-gametest-api-v1", project.property("fabric_api_version"))
+        gametestImplementation fabricApi.module("fabric-registry-sync-v0", project.property("fabric_api_version"))
+    }
 }
 
 project.ext.isJarTask = false

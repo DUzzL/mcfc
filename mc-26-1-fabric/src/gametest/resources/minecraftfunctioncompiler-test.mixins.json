@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.epicpix.minecraftfunctioncompiler.test.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [
+    "FabricGameTestModInitializerMixin"
+  ],
+  "server": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
