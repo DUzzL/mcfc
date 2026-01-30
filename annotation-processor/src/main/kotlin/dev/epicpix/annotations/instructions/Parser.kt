@@ -1,5 +1,7 @@
 package dev.epicpix.annotations.instructions
 
+import dev.epicpix.annotations.MinecraftVersion
+import dev.epicpix.annotations.displayToInternalClassName
 import java.util.concurrent.atomic.AtomicBoolean
 
 interface ParsedToken
@@ -27,11 +29,25 @@ data class ParsedTokenValueAccessor(val scope: ParsedTokenValueAccessorScope, va
         return result
     }
 }
-data class ParsedTokenInstructionDefinition(val instructionFlags: List<String>, val name: String, val params: List<Pair<ParsedTokenValueAccessor, ParsedTokenExpressionType>>, val code: List<ParsedTokenStatement>, val versionRange: Pair<String?, String?>?, var usesObf: Boolean = false) : ParsedToken
+data class ParsedTokenInstructionDefinition(val instructionFlags: List<String>, val name: String, val params: List<Pair<ParsedTokenValueAccessor, ParsedTokenExpressionType>>, val code: List<ParsedTokenStatement>, val versionRange: Pair<MinecraftVersion?, MinecraftVersion?>?, var usesObf: Boolean = false) : ParsedToken
 
 
 interface ParsedTokenInstanceType
-data class ParsedTokenInstanceStatic(val className: String) : ParsedTokenInstanceType
+@ConsistentCopyVisibility
+data class ParsedTokenInstanceStatic private constructor(val displayName: String) : ParsedTokenInstanceType {
+    companion object {
+        fun fromInternalName(internalName: String): ParsedTokenInstanceStatic {
+            return ParsedTokenInstanceStatic(internalName.replace('/', '.').replace('$', '.'))
+        }
+
+        fun fromDisplayName(displayName: String): ParsedTokenInstanceStatic {
+            return ParsedTokenInstanceStatic(displayName)
+        }
+    }
+
+    val className: String
+        get() = displayToInternalClassName(displayName) ?: throw IllegalArgumentException("Class '$displayName' does not exist")
+}
 data class ParsedTokenInstanceValue(val expression: ParsedTokenExpression) : ParsedTokenInstanceType
 
 data class ParsedTokenStatementIf(val expression: ParsedTokenExpression, val code: List<ParsedTokenStatement>, val elseCode: List<ParsedTokenStatement>?) : ParsedTokenStatement
@@ -53,7 +69,30 @@ enum class ParsedTokenValueAccessorScope {
 }
 
 interface ParsedTokenExpressionType
-data class ParsedTokenExpressionTypeComplex(val typeName: String, val generics: List<ParsedTokenExpressionTypeComplex>) : ParsedTokenExpressionType
+@ConsistentCopyVisibility
+data class ParsedTokenExpressionTypeComplex private constructor(val displayName: String, val generics: List<ParsedTokenExpressionTypeComplex>) : ParsedTokenExpressionType {
+    companion object {
+        fun fromInternalName(internalName: String): ParsedTokenExpressionTypeComplex {
+            return fromInternalName(internalName.replace('/', '.').replace('$', '.'), listOf())
+        }
+
+        fun fromInternalName(internalName: String, generics: List<ParsedTokenExpressionTypeComplex>): ParsedTokenExpressionTypeComplex {
+            return ParsedTokenExpressionTypeComplex(internalName.replace('/', '.').replace('$', '.'), generics)
+        }
+
+        fun fromDisplayName(displayName: String): ParsedTokenExpressionTypeComplex {
+            return fromDisplayName(displayName, listOf())
+        }
+
+        fun fromDisplayName(displayName: String, generics: List<ParsedTokenExpressionTypeComplex>): ParsedTokenExpressionTypeComplex {
+            return ParsedTokenExpressionTypeComplex(displayName, generics)
+        }
+    }
+
+    val typeName: String
+        get() = displayToInternalClassName(displayName) ?: throw IllegalArgumentException("Class '$displayName' does not exist")
+}
+
 data class ParsedTokenExpressionTypeGeneric(val generic: ParsedTokenGenericData, val lowerBound: ParsedTokenExpressionTypeComplex) : ParsedTokenExpressionType
 
 data class ParsedTokenGenericData(val name: String, val allowExtends: Boolean)
@@ -73,7 +112,7 @@ private fun parseExpressionTypeWord(iter: ListIterator<LexToken>, complexTypeOpe
             if(iter.tryNextTokenType(LexTokenSimpleType.OPEN_ANGLE_BRACKET)) {
                 val generic = parseExpressionTypeWord(iter, true) as ParsedTokenExpressionTypeComplex
                 iter.expectTokenType(LexTokenSimpleType.CLOSE_ANGLE_BRACKET)
-                return ParsedTokenExpressionTypeComplex(t, listOf(generic))
+                return ParsedTokenExpressionTypeComplex.fromDisplayName(t, listOf(generic))
             }
             if(iter.tryNextTokenType(LexTokenSimpleType.DOT)) {
                 t += "."
@@ -81,7 +120,7 @@ private fun parseExpressionTypeWord(iter: ListIterator<LexToken>, complexTypeOpe
                 t += iter.expectToken<LexTokenWord>().word
             }
         }
-        return ParsedTokenExpressionTypeComplex(t, emptyList())
+        return ParsedTokenExpressionTypeComplex.fromDisplayName(t, emptyList())
     }
     val word = iter.expectToken<LexTokenWord>()
     return when(word.word) {
@@ -101,7 +140,7 @@ private fun parseExpressionTypeWord(iter: ListIterator<LexToken>, complexTypeOpe
                 if(iter.tryNextTokenType(LexTokenSimpleType.OPEN_ANGLE_BRACKET)) {
                     val generic = parseExpressionTypeWord(iter, true) as ParsedTokenExpressionTypeComplex
                     iter.expectTokenType(LexTokenSimpleType.CLOSE_ANGLE_BRACKET)
-                    return ParsedTokenExpressionTypeGeneric(ParsedTokenGenericData(name.word, allowExtends), ParsedTokenExpressionTypeComplex(lowerBound, listOf(generic)))
+                    return ParsedTokenExpressionTypeGeneric(ParsedTokenGenericData(name.word, allowExtends), ParsedTokenExpressionTypeComplex.fromDisplayName(lowerBound, listOf(generic)))
                 }
                 if(iter.tryNextTokenType(LexTokenSimpleType.DOT)) {
                     lowerBound += "."
@@ -109,13 +148,13 @@ private fun parseExpressionTypeWord(iter: ListIterator<LexToken>, complexTypeOpe
                     lowerBound += iter.expectToken<LexTokenWord>().word
                 }
             }
-            return ParsedTokenExpressionTypeGeneric(ParsedTokenGenericData(name.word, allowExtends), ParsedTokenExpressionTypeComplex(lowerBound, emptyList()))
+            return ParsedTokenExpressionTypeGeneric(ParsedTokenGenericData(name.word, allowExtends), ParsedTokenExpressionTypeComplex.fromDisplayName(lowerBound))
         }
         "number" -> {
             iter.expectTokenType(LexTokenSimpleType.OPEN_ANGLE_BRACKET)
             val name = iter.expectToken<LexTokenWord>()
             iter.expectTokenType(LexTokenSimpleType.CLOSE_ANGLE_BRACKET)
-            return ParsedTokenExpressionTypeGeneric(ParsedTokenGenericData(name.word, false), ParsedTokenExpressionTypeComplex("java.lang.Number", emptyList()))
+            return ParsedTokenExpressionTypeGeneric(ParsedTokenGenericData(name.word, false), ParsedTokenExpressionTypeComplex.fromInternalName("java/lang/Number"))
         }
         else -> throw IllegalArgumentException("Unknown expression type: ${word.word}")
     }
@@ -141,7 +180,7 @@ private fun parseFunctionDefinitionParams(iter: ListIterator<LexToken>, usesObf:
         iter.previous()
         val type = parseExpressionTypeWord(iter)
         if(type is ParsedTokenExpressionTypeComplex) {
-            if(type.typeName.startsWith("net.minecraft")) {
+            if(type.displayName.startsWith("net.minecraft")) {
                 usesObf.set(true)
             }
         }
@@ -285,7 +324,7 @@ private fun parseExpressionLowerBase(iter: ListIterator<LexToken>, valueDefiniti
         return ParsedTokenExpressionBoolean(true)
     }
     iter.tryNextTokenType(LexTokenSimpleType.KW_NEW) {
-        val instanceOf = ParsedTokenInstanceStatic((parseExpressionTypeWord(iter) as ParsedTokenExpressionTypeComplex).typeName)
+        val instanceOf = ParsedTokenInstanceStatic.fromDisplayName((parseExpressionTypeWord(iter) as ParsedTokenExpressionTypeComplex).displayName)
         iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
         val params = parseFunctionCallParams(iter, valueDefinitions, usesObf)
         iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
@@ -299,7 +338,7 @@ private fun parseExpressionLowerBase(iter: ListIterator<LexToken>, valueDefiniti
         iter.previous()
         val type = parseExpressionTypeWord(iter)
         if(iter.tryNextTokenType(LexTokenSimpleType.DOT)) {
-            val classOf = ParsedTokenInstanceStatic((type as ParsedTokenExpressionTypeComplex).typeName)
+            val classOf = ParsedTokenInstanceStatic.fromDisplayName((type as ParsedTokenExpressionTypeComplex).displayName)
             val name = iter.expectToken<LexTokenWord>()
             if(iter.tryNextTokenType(LexTokenSimpleType.OPEN_PAREN)) {
                 val params = parseFunctionCallParams(iter, valueDefinitions, usesObf)
@@ -442,7 +481,7 @@ private fun parseCode(iter: ListIterator<LexToken>, valueDefinitions: List<Parse
     return res
 }
 
-private fun parseVersionNumber(iter: ListIterator<LexToken>): String {
+private fun parseVersionNumber(iter: ListIterator<LexToken>): MinecraftVersion {
     val res = StringBuilder()
     while(iter.hasNext()) {
         val token = iter.next()
@@ -455,7 +494,7 @@ private fun parseVersionNumber(iter: ListIterator<LexToken>): String {
             break
         }
     }
-    return res.toString()
+    return MinecraftVersion.parse(res.toString())
 }
 
 fun parseTokens(iter: ListIterator<LexToken>): ParsedFile {
@@ -498,7 +537,7 @@ fun parseTokens(iter: ListIterator<LexToken>): ParsedFile {
             if(iter.tryNextTokenType(LexTokenSimpleType.ARROW)) {
                 val type = parseExpressionTypeWord(iter)
                 if(type is ParsedTokenExpressionTypeComplex) {
-                    if(type.typeName.startsWith("net.minecraft")) {
+                    if(type.displayName.startsWith("net.minecraft")) {
                         usesObf.set(true)
                     }
                 }

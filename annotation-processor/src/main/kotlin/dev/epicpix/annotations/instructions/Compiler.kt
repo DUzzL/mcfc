@@ -1,9 +1,11 @@
 package dev.epicpix.annotations.instructions
 
 import dev.epicpix.annotations.*
-import org.objectweb.asm.Type
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
+import java.lang.constant.ClassDesc
+import java.lang.constant.ConstantDescs
+import java.lang.constant.MethodTypeDesc
 import java.util.concurrent.atomic.AtomicInteger
 
 data class AccessorStatistics(val accessor: ParsedTokenValueAccessor, var gets: Boolean = false, var sets: Boolean = false)
@@ -15,8 +17,7 @@ data class WriterData(
     val file: ParsedFile,
     val params: List<Pair<ParsedTokenValueAccessor, ParsedTokenExpressionType>>,
     val paramStatistics: List<AccessorStatistics> = params.map { AccessorStatistics(it.first) },
-    val majorVersion: Int,
-    val minorVersion: Int,
+    val minecraftVersion: MinecraftVersion?,
 
     val targets: MutableList<String>,
 ) {
@@ -46,11 +47,11 @@ data class WriterData(
     fun markSet(accessor: ParsedTokenValueAccessor) {
         paramStatistics.find { it.accessor == accessor }?.sets = true
     }
-    fun isAboveVersion(major: Int, minor: Int): Boolean {
-        return majorVersion > major || (majorVersion == major && minorVersion > minor)
+    fun isAboveVersion(version: MinecraftVersion): Boolean {
+        return minecraftVersion !== null && minecraftVersion > version
     }
-    fun isBelowVersion(major: Int, minor: Int): Boolean {
-        return majorVersion < major || (majorVersion == major && minorVersion < minor)
+    fun isBelowVersion(version: MinecraftVersion): Boolean {
+        return minecraftVersion !== null && minecraftVersion < version
     }
 }
 
@@ -95,46 +96,34 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
                 return (expression.arguments[1] as ParsedTokenExpressionTyped).type as ParsedTokenExpressionTypeComplex
             }
             if(expression.name == "map_advancement") {
-                return if(writerData.isAboveVersion(20, 1)) {
-                    ParsedTokenExpressionTypeComplex("net.minecraft.advancements.AdvancementHolder", emptyList())
-                }else {
-                    ParsedTokenExpressionTypeComplex("net.minecraft.advancements.Advancement", emptyList())
-                }
+                return ParsedTokenExpressionTypeComplex.fromInternalName("net/minecraft/advancements/AdvancementHolder")
             }
             if(expression.name == "map_attribute") {
-                return if(writerData.isAboveVersion(20, 4)) {
-                    ParsedTokenExpressionTypeComplex("net.minecraft.core.Holder", emptyList())
-                }else {
-                    ParsedTokenExpressionTypeComplex("net.minecraft.world.entity.ai.attributes.Attribute", emptyList())
-                }
+                return ParsedTokenExpressionTypeComplex.fromInternalName("net/minecraft/core/Holder")
             }
             if(expression.name == "map_mob_effect") {
-                return if(writerData.isAboveVersion(20, 4)) {
-                    ParsedTokenExpressionTypeComplex("net.minecraft.core.Holder", emptyList())
-                }else {
-                    ParsedTokenExpressionTypeComplex("net.minecraft.world.effect.MobEffect", emptyList())
-                }
+                return ParsedTokenExpressionTypeComplex.fromInternalName("net/minecraft/core/Holder")
             }
             if(expression.name == "map_resource_location") {
-                return ParsedTokenExpressionTypeComplex("net.minecraft.resources.Identifier", emptyList())
+                return ParsedTokenExpressionTypeComplex.fromInternalName("net/minecraft/resources/Identifier")
             }
             if(expression.name == "map_nbt_value") {
-                return ParsedTokenExpressionTypeComplex("net.minecraft.nbt.Tag", emptyList())
+                return ParsedTokenExpressionTypeComplex.fromInternalName("net/minecraft/nbt/Tag")
             }
             if(expression.name == "map_scoreboard_criterion") {
-                return ParsedTokenExpressionTypeComplex("net.minecraft.world.scores.criteria.ObjectiveCriteria", emptyList())
+                return ParsedTokenExpressionTypeComplex.fromInternalName("net/minecraft/world/scores/criteria/ObjectiveCriteria")
             }
             if(expression.name == "map_text") {
-                return ParsedTokenExpressionTypeComplex("net.minecraft.network.chat.Component", emptyList())
+                return ParsedTokenExpressionTypeComplex.fromInternalName("net/minecraft/network/chat/Component")
             }
             if(expression.name == "map_text_style") {
-                return ParsedTokenExpressionTypeComplex("net.minecraft.network.chat.Style", emptyList())
+                return ParsedTokenExpressionTypeComplex.fromInternalName("net/minecraft/network/chat/Style")
             }
             if(expression.name == "map_predicate") {
-                return ParsedTokenExpressionTypeComplex("net.minecraft.world.level.storage.loot.predicates.LootItemCondition", emptyList())
+                return ParsedTokenExpressionTypeComplex.fromInternalName("net/minecraft/world/level/storage/loot/predicates/LootItemCondition")
             }
             if(expression.name == "map_entity_type") {
-                return ParsedTokenExpressionTypeComplex("net.minecraft.world.entity.EntityType", emptyList())
+                return ParsedTokenExpressionTypeComplex.fromInternalName("net/minecraft/world/entity/EntityType")
             }
             if(expression.name == "to_double") {
                 return ParsedTokenExpressionSimpleType.DOUBLE
@@ -151,33 +140,33 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             if(expression.name == "compile_or") {
                 val typeA = evaluateExpressionType(writerData, expression.arguments[1])
                 val typeB = evaluateExpressionType(writerData, expression.arguments[2])
-                if(typeA != typeB) throw IllegalStateException("compile_or invalid types: ${typeA} | ${typeB}")
+                if(typeA != typeB) throw IllegalStateException("compile_or invalid types: $typeA != $typeB")
                 return typeA
             }
             if(expression.name == "_loadMacro") {
-                return ParsedTokenExpressionTypeComplex("java.lang.Object", emptyList())
+                return ParsedTokenExpressionTypeComplex.fromInternalName("java/lang/Object")
             }
         }
         val paramTypes = expression.arguments.map { evaluateExpressionType(writerData, it) }
         val instance = expression.instance
         val functionMatches = if(instance is ParsedTokenInstanceValue) {
-            val instanceType = evaluateExpressionType(writerData, instance.expression).let { if(it is ParsedTokenExpressionTypeGeneric && it.lowerBound.typeName != "java.lang.Number") ParsedTokenExpressionTypeComplex(it.lowerBound.typeName, emptyList()) else it }
+            val instanceType = evaluateExpressionType(writerData, instance.expression).let { if(it is ParsedTokenExpressionTypeGeneric && it.lowerBound.typeName != "java/lang/Number") ParsedTokenExpressionTypeComplex.fromInternalName(it.lowerBound.typeName) else it }
             if(instanceType !is ParsedTokenExpressionTypeComplex) {
                 throw IllegalArgumentException("Cannot run functions on a primitive type: $instanceType")
             }
-            val matches = getClassAccessibleMethods(instanceType.typeName).filter { !it.isStatic && it.name == expression.name && Type.getArgumentCount(it.descriptor) == paramTypes.size && Type.getArgumentTypes(it.descriptor).mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }.toMutableList()
+            val matches = getClassAccessibleMethods(instanceType.typeName).filter { !it.isStatic && it.name == expression.name && it.descriptor.parameterCount() == paramTypes.size && it.descriptor.parameterList().mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }.toMutableList()
             if(matches.size < 1) {
                 throw IllegalArgumentException("Failed to find function [${instanceType.typeName}].${expression.name}(${paramTypes.joinToString()})")
             }
             if(matches.size > 1) {
-                val closest = matches.map { it to checkClassDistance(it.owner.replace('/', '.').replace('$', '.'), instanceType.typeName) }.reduce { a, b -> if(a.second == null || a.second!! > b.second!!) b else a }
+                val closest = matches.map { it to checkClassDistance(it.owner, instanceType.typeName) }.reduce { a, b -> if(a.second == null || a.second!! > b.second!!) b else a }
                 matches.clear()
                 matches.add(closest.first)
             }
             matches
         }else if(instance is ParsedTokenInstanceStatic) {
             val checkStatic = expression.name != "<init>"
-            val matches = getClassAccessibleMethods(instance.className).filter { it.isStatic == checkStatic && it.name == expression.name && Type.getArgumentCount(it.descriptor) == paramTypes.size && Type.getArgumentTypes(it.descriptor).mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }
+            val matches = getClassAccessibleMethods(instance.className).filter { it.isStatic == checkStatic && it.name == expression.name && it.descriptor.parameterCount() == paramTypes.size && it.descriptor.parameterList().mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }
             if(matches.size < 1) {
                 throw IllegalArgumentException("Failed to find function <${instance.className}>.${expression.name}(${paramTypes.joinToString()})")
             }
@@ -188,29 +177,29 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
         }else {
             throw IllegalArgumentException("Cannot run function on unknown instance: $instance | ${expression.name}")
         }
-        val def = Type.getMethodType(functionMatches[0].descriptor).returnType
-        if(def == Type.BOOLEAN_TYPE) {
+        val def = functionMatches[0].descriptor.returnType()
+        if(def == ConstantDescs.CD_boolean) {
             return ParsedTokenExpressionSimpleType.BOOLEAN
         }
-        if(def == Type.INT_TYPE) {
+        if(def == ConstantDescs.CD_int) {
             return ParsedTokenExpressionSimpleType.INTEGER
         }
-        if(def == Type.FLOAT_TYPE) {
+        if(def == ConstantDescs.CD_float) {
             return ParsedTokenExpressionSimpleType.FLOAT
         }
-        if(def == Type.DOUBLE_TYPE) {
+        if(def == ConstantDescs.CD_double) {
             return ParsedTokenExpressionSimpleType.DOUBLE
         }
-        if(def.sort == Type.OBJECT) {
-            return ParsedTokenExpressionTypeComplex(def.className.replace('$', '.'), emptyList())
+        if(def.isClassOrInterface) {
+            return ParsedTokenExpressionTypeComplex.fromInternalName(def.descriptorString().let { it.substring(1, it.length - 1) })
         }
         if(expression.name == "<init>") {
-            if(functionMatches[0].owner == "java/lang/Object" && functionMatches[0].name == "<init>" && functionMatches[0].descriptor == "()V") {
-                return ParsedTokenExpressionTypeComplex((instance as ParsedTokenInstanceStatic).className.replace('/', '.').replace('$', '.'), emptyList())
+            if(functionMatches[0].owner == "java/lang/Object" && functionMatches[0].name == "<init>" && functionMatches[0].descriptor == MethodTypeDesc.of(ConstantDescs.CD_void)) {
+                return ParsedTokenExpressionTypeComplex.fromInternalName((instance as ParsedTokenInstanceStatic).className)
             }
-            return ParsedTokenExpressionTypeComplex(functionMatches[0].owner.replace('/', '.').replace('$', '.'), emptyList())
+            return ParsedTokenExpressionTypeComplex.fromInternalName(functionMatches[0].owner)
         }
-        throw IllegalArgumentException(def.descriptor)
+        throw IllegalArgumentException(def.descriptorString())
     }else if(expression is ParsedTokenExpressionField) {
         val instance = expression.instance
         val fieldMatch = if(instance is ParsedTokenInstanceValue) {
@@ -232,23 +221,23 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
         }else {
             throw IllegalArgumentException("Cannot access field on unknown instance: $instance")
         }
-        val def = Type.getType(fieldMatch.descriptor)
-        if(def == Type.BOOLEAN_TYPE) {
+        val def = ClassDesc.ofDescriptor(fieldMatch.descriptor)
+        if(def == ConstantDescs.CD_boolean) {
             return ParsedTokenExpressionSimpleType.BOOLEAN
         }
-        if(def == Type.INT_TYPE) {
+        if(def == ConstantDescs.CD_int) {
             return ParsedTokenExpressionSimpleType.INTEGER
         }
-        if(def == Type.FLOAT_TYPE) {
+        if(def == ConstantDescs.CD_float) {
             return ParsedTokenExpressionSimpleType.FLOAT
         }
-        if(def == Type.DOUBLE_TYPE) {
+        if(def == ConstantDescs.CD_double) {
             return ParsedTokenExpressionSimpleType.DOUBLE
         }
-        if(def.sort == Type.OBJECT) {
-            return ParsedTokenExpressionTypeComplex(def.className.replace('$', '.'), emptyList())
+        if(def.isClassOrInterface) {
+            return ParsedTokenExpressionTypeComplex.fromInternalName(def.descriptorString().let { it.substring(1, it.length - 1) })
         }
-        TODO(def.descriptor)
+        TODO(def.descriptorString())
     }
     TODO("$expression")
 }
@@ -268,7 +257,7 @@ private fun ParsedTokenExpressionType.isNumber(): Boolean {
         ParsedTokenExpressionSimpleType.LONG -> true
         ParsedTokenExpressionSimpleType.FLOAT -> true
         ParsedTokenExpressionSimpleType.DOUBLE -> true
-        else -> (this is ParsedTokenExpressionTypeGeneric && this.lowerBound.typeName == "java.lang.Number") || (this is ParsedTokenExpressionTypeComplex && this.typeName == "java.lang.Number")
+        else -> (this is ParsedTokenExpressionTypeGeneric && this.lowerBound.typeName == "java/lang/Number") || (this is ParsedTokenExpressionTypeComplex && this.typeName == "java/lang/Number")
     }
 }
 
@@ -282,14 +271,14 @@ private fun ParsedTokenExpressionType.getClassName(): String? {
 
 private fun ParsedTokenExpressionType.getGenericClassName(): String {
     return when(this) {
-        ParsedTokenExpressionSimpleType.NULL -> "java.lang.Object"
-        ParsedTokenExpressionSimpleType.BOOLEAN -> "java.lang.Boolean"
-        ParsedTokenExpressionSimpleType.INTEGER -> "java.lang.Integer"
-        ParsedTokenExpressionSimpleType.LONG -> "java.lang.Long"
-        ParsedTokenExpressionSimpleType.FLOAT -> "java.lang.Float"
-        ParsedTokenExpressionSimpleType.DOUBLE -> "java.lang.Double"
-        ParsedTokenExpressionSimpleType.OBJECT -> "java.lang.Object"
-        ParsedTokenExpressionSimpleType.NUMBER -> "java.lang.Number"
+        ParsedTokenExpressionSimpleType.NULL -> "java/lang/Object"
+        ParsedTokenExpressionSimpleType.BOOLEAN -> "java/lang/Boolean"
+        ParsedTokenExpressionSimpleType.INTEGER -> "java/lang/Integer"
+        ParsedTokenExpressionSimpleType.LONG -> "java/lang/Long"
+        ParsedTokenExpressionSimpleType.FLOAT -> "java/lang/Float"
+        ParsedTokenExpressionSimpleType.DOUBLE -> "java/lang/Double"
+        ParsedTokenExpressionSimpleType.OBJECT -> "java/lang/Object"
+        ParsedTokenExpressionSimpleType.NUMBER -> "java/lang/Number"
         is ParsedTokenExpressionTypeGeneric -> this.lowerBound.typeName
         is ParsedTokenExpressionTypeComplex -> this.typeName
         else -> throw IllegalArgumentException("Cannot get generic class name for $this")
@@ -300,23 +289,23 @@ private fun isExpressionSimpleType(writerData: WriterData, expression: ParsedTok
     return evaluateExpressionType(writerData, expression) == type
 }
 
-private fun doesArgumentTypeMatch(matchType: ParsedTokenExpressionType, expectedType: Type): Boolean {
-    if(expectedType == Type.BOOLEAN_TYPE) {
+private fun doesArgumentTypeMatch(matchType: ParsedTokenExpressionType, expectedType: ClassDesc): Boolean {
+    if(expectedType == ConstantDescs.CD_boolean) {
         return matchType == ParsedTokenExpressionSimpleType.BOOLEAN
-    }else if(expectedType == Type.INT_TYPE) {
+    }else if(expectedType == ConstantDescs.CD_int) {
         return matchType == ParsedTokenExpressionSimpleType.INTEGER
-    }else if(expectedType == Type.LONG_TYPE) {
+    }else if(expectedType == ConstantDescs.CD_long) {
         return matchType == ParsedTokenExpressionSimpleType.LONG
-    }else if(expectedType == Type.FLOAT_TYPE) {
+    }else if(expectedType == ConstantDescs.CD_float) {
         return matchType == ParsedTokenExpressionSimpleType.FLOAT
-    }else if(expectedType == Type.DOUBLE_TYPE) {
+    }else if(expectedType == ConstantDescs.CD_double) {
         return matchType == ParsedTokenExpressionSimpleType.DOUBLE
-    }else if(expectedType.sort == Type.OBJECT) {
-        return doesTypeMatch(matchType, ParsedTokenExpressionTypeComplex(expectedType.className.replace('$', '.'), emptyList()))
-    }else if(expectedType.sort == Type.ARRAY) {
+    }else if(expectedType.isClassOrInterface) {
+        return doesTypeMatch(matchType, ParsedTokenExpressionTypeComplex.fromInternalName(expectedType.descriptorString().let { it.substring(1, it.length - 1) }))
+    }else if(expectedType.isArray) {
         return false
     }else {
-        TODO(expectedType.descriptor)
+        TODO(expectedType.descriptorString())
     }
 }
 
@@ -371,9 +360,9 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 return writeNextRegister(uniqId, output, "new dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue.IntegerValue(context.instruction().<Boolean>get(${writerData.getParamIndex(expression)}) ? 1 : 0)")
             }else if(type == ParsedTokenExpressionSimpleType.DOUBLE) {
                 return writeNextRegister(uniqId, output, "new dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue.DoubleValue(context.instruction().<Double>get(${writerData.getParamIndex(expression)}))")
-            }else if(type is ParsedTokenExpressionTypeComplex && type.typeName == "java.lang.String") {
+            }else if(type is ParsedTokenExpressionTypeComplex && type.typeName == "java/lang/String") {
                 return writeNextRegister(uniqId, output, "new dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue.StringValue(context.instruction().<String>get(${writerData.getParamIndex(expression)}))")
-            }else if(type is ParsedTokenExpressionTypeComplex && type.typeName == "java.util.UUID") {
+            }else if(type is ParsedTokenExpressionTypeComplex && type.typeName == "java/util/UUID") {
                 return writeNextRegister(uniqId, output, "context.fieldStorage().loadUUID(cw, context.instruction().<java.util.UUID>get(${writerData.getParamIndex(expression)}))")
             }else {
                 throw IllegalStateException("Invalid accessor type for instruction scope: $type")
@@ -435,23 +424,23 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             val paramTypes = expression.arguments.map { evaluateExpressionType(writerData, it) }
             val instance = expression.instance
             val functionMatches = if(instance is ParsedTokenInstanceValue) {
-                val instanceType = evaluateExpressionType(writerData, instance.expression).let { if(it is ParsedTokenExpressionTypeGeneric && it.lowerBound.typeName != "java.lang.Number") ParsedTokenExpressionTypeComplex(it.lowerBound.typeName, emptyList()) else it }
+                val instanceType = evaluateExpressionType(writerData, instance.expression).let { if(it is ParsedTokenExpressionTypeGeneric && it.lowerBound.typeName != "java/lang/Number") ParsedTokenExpressionTypeComplex.fromInternalName(it.lowerBound.typeName) else it }
                 if(instanceType !is ParsedTokenExpressionTypeComplex) {
                     throw IllegalArgumentException("Cannot run functions on a primitive type: $instanceType")
                 }
-                val matches = getClassAccessibleMethods(instanceType.typeName).filter { !it.isStatic && it.name == expression.name && Type.getArgumentCount(it.descriptor) == paramTypes.size && Type.getArgumentTypes(it.descriptor).mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }.toMutableList()
+                val matches = getClassAccessibleMethods(instanceType.typeName).filter { !it.isStatic && it.name == expression.name && it.descriptor.parameterCount() == paramTypes.size && it.descriptor.parameterList().mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }.toMutableList()
                 if(matches.size < 1) {
                     throw IllegalArgumentException("Failed to find function [${instanceType.typeName}].${expression.name}(${paramTypes.joinToString()})")
                 }
                 if(matches.size > 1) {
-                    val closest = matches.map { it to checkClassDistance(it.owner.replace('/', '.').replace('$', '.'), instanceType.typeName) }.reduce { a, b -> if(a.second == null || a.second!! > b.second!!) b else a }
+                    val closest = matches.map { it to checkClassDistance(it.owner, instanceType.typeName) }.reduce { a, b -> if(a.second == null || a.second!! > b.second!!) b else a }
                     matches.clear()
                     matches.add(closest.first)
                 }
                 matches
             }else if(instance is ParsedTokenInstanceStatic) {
                 val checkStatic = expression.name != "<init>"
-                val matches = getClassAccessibleMethods(instance.className).filter { it.isStatic == checkStatic && it.name == expression.name && Type.getArgumentCount(it.descriptor) == paramTypes.size && Type.getArgumentTypes(it.descriptor).mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }
+                val matches = getClassAccessibleMethods(instance.className).filter { it.isStatic == checkStatic && it.name == expression.name && it.descriptor.parameterCount() == paramTypes.size && it.descriptor.parameterList().mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }
                 if(matches.size < 1) {
                     throw IllegalArgumentException("Failed to find function <${instance.className}>.${expression.name}(${paramTypes.joinToString()}): $checkStatic ${getClassAccessibleMethods(instance.className)}")
                 }
@@ -462,8 +451,8 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             }else {
                 throw IllegalArgumentException("Cannot run function on unknown instance: $instance")
             }
-            val def = functionMatches[0].run { if(owner == "java/lang/Object" && name == "<init>" && descriptor == "()V") ClassMethodInfo((instance as ParsedTokenInstanceStatic).className.replace('.', '/'), "<init>", "()V", isPublic = true, isStatic = false) else this }.checkPublic()
-            val classOwner = loadClassInfo(def.owner.replace('/', '.').replace('$', '.'))
+            val def = functionMatches[0].run { if(owner == "java/lang/Object" && name == "<init>" && descriptor == MethodTypeDesc.of(ConstantDescs.CD_void)) ClassMethodInfo((instance as ParsedTokenInstanceStatic).className, "<init>", MethodTypeDesc.of(ConstantDescs.CD_void), isPublic = true, isStatic = false) else this }.checkPublic()
+            val classOwner = loadClassInfo(def.owner)
             val className = def.owner
             val methodName = def.name
             val methodDescriptor = def.descriptor
@@ -475,8 +464,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
             for(arg in expression.arguments) {
                 allArguments.add(writeExpression(writerData.copyLocalTypes(), arg, output, uniqId))
             }
-            val parsedDescriptor = Type.getMethodType(methodDescriptor)
-            val functionTarget = "new InstructionTarget.FunctionTarget(${boxClassName(className)}, \"$methodName\", ${boxMethodDescriptor(parsedDescriptor.returnType, parsedDescriptor.argumentTypes)}, ${def.isStatic}, ${classOwner.isInterface}, ${expression.name == "<init>"}, false)"
+            val functionTarget = "new InstructionTarget.FunctionTarget(${boxClassName(className)}, \"$methodName\", ${boxMethodDescriptor(methodDescriptor)}, ${def.isStatic}, ${classOwner.isInterface}, ${expression.name == "<init>"}, false)"
             var index = writerData.targets.indexOf(functionTarget)
             if(index == -1) {
                 index = writerData.targets.size
@@ -498,7 +486,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 val source = expression.arguments[0] as ParsedTokenValueAccessor
                 if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
                     val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
-                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.DataLocation") {
+                    if(sourceType.typeName == "dev/epicpix/minecraftfunctioncompiler/data/DataLocation") {
                         return writeNextRegister(uniqId, output, "context.fieldStorage().loadAdvancement(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.DataLocation>get(${writerData.getParamIndex(source)}))")
                     }
                 }
@@ -507,7 +495,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 val source = expression.arguments[0] as ParsedTokenValueAccessor
                 if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
                     val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
-                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.DataLocation") {
+                    if(sourceType.typeName == "dev/epicpix/minecraftfunctioncompiler/data/DataLocation") {
                         return writeNextRegister(uniqId, output, "context.fieldStorage().loadAttribute(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.DataLocation>get(${writerData.getParamIndex(source)}))")
                     }
                 }
@@ -516,7 +504,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 val source = expression.arguments[0] as ParsedTokenValueAccessor
                 if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
                     val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
-                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.DataLocation") {
+                    if(sourceType.typeName == "dev/epicpix/minecraftfunctioncompiler/data/DataLocation") {
                         return writeNextRegister(uniqId, output, "context.fieldStorage().loadEffect(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.DataLocation>get(${writerData.getParamIndex(source)}))")
                     }
                 }
@@ -525,7 +513,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 val source = expression.arguments[0] as ParsedTokenValueAccessor
                 if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
                     val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
-                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.DataLocation") {
+                    if(sourceType.typeName == "dev/epicpix/minecraftfunctioncompiler/data/DataLocation") {
                         return writeNextRegister(uniqId, output, "context.fieldStorage().loadIdentifier(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.DataLocation>get(${writerData.getParamIndex(source)}))")
                     }
                 }
@@ -534,7 +522,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 val source = expression.arguments[0] as ParsedTokenValueAccessor
                 if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
                     val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
-                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue") {
+                    if(sourceType.typeName == "dev/epicpix/minecraftfunctioncompiler/data/nbt/NbtValue") {
                         return writeNextRegister(uniqId, output, "context.fieldStorage().loadNbtValue(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue>get(${writerData.getParamIndex(source)}))")
                     }
                 }
@@ -543,7 +531,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 val source = expression.arguments[0] as ParsedTokenValueAccessor
                 if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
                     val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
-                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCriterionData") {
+                    if(sourceType.typeName == "dev/epicpix/minecraftfunctioncompiler/data/ScoreboardCriterionData") {
                         return writeNextRegister(uniqId, output, "context.fieldStorage().loadScoreboardCriterion(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCriterionData>get(${writerData.getParamIndex(source)}).name())")
                     }
                 }
@@ -552,7 +540,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 val source = expression.arguments[0] as ParsedTokenValueAccessor
                 if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
                     val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
-                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.text.Text") {
+                    if(sourceType.typeName == "dev/epicpix/minecraftfunctioncompiler/data/text/Text") {
                         return writeNextRegister(uniqId, output, "context.fieldStorage().loadText(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.text.Text>get(${writerData.getParamIndex(source)}))")
                     }
                 }
@@ -561,7 +549,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 val source = expression.arguments[0] as ParsedTokenValueAccessor
                 if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
                     val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
-                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.text.TextStyle") {
+                    if(sourceType.typeName == "dev/epicpix/minecraftfunctioncompiler/data/text/TextStyle") {
                         return writeNextRegister(uniqId, output, "context.fieldStorage().loadTextStyle(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.text.TextStyle>get(${writerData.getParamIndex(source)}))")
                     }
                 }
@@ -570,7 +558,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 val source = expression.arguments[0] as ParsedTokenValueAccessor
                 if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
                     val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
-                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.DataLocation") {
+                    if(sourceType.typeName == "dev/epicpix/minecraftfunctioncompiler/data/DataLocation") {
                         return writeNextRegister(uniqId, output, "context.fieldStorage().loadPredicate(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.DataLocation>get(${writerData.getParamIndex(source)}))")
                     }
                 }
@@ -579,7 +567,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 val source = expression.arguments[0] as ParsedTokenValueAccessor
                 if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
                     val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
-                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.data.DataLocation") {
+                    if(sourceType.typeName == "dev/epicpix/minecraftfunctioncompiler/data/DataLocation") {
                         return writeNextRegister(uniqId, output, "context.fieldStorage().loadEntityType(cw, context.instruction().<dev.epicpix.minecraftfunctioncompiler.data.DataLocation>get(${writerData.getParamIndex(source)}))")
                     }
                 }
@@ -631,7 +619,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 val source = expression.arguments[0] as ParsedTokenValueAccessor
                 if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
                     val sourceType = writerData.getAccessorType(source) as ParsedTokenExpressionTypeComplex
-                    if(sourceType.typeName == "dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate") {
+                    if(sourceType.typeName == "dev/epicpix/minecraftfunctioncompiler/commands/macros/MacroTemplate") {
                         return writeNextRegister(uniqId, output, "context.instruction().<dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate>get(${writerData.getParamIndex(source)}).writeBytecode(context)")
                     }
                 }
@@ -710,7 +698,7 @@ data class CompileTimeExpressionComparison(val comparison: CompileTimeExpression
 data class CompileTimeExpressionAccessor(val accessor: ParsedTokenValueAccessor) : CompileTimeExpression {
     override fun toCompileString(writerData: WriterData): String {
         val index = writerData.getParamIndex(accessor)
-        return "context.instruction().<${writerData.getAccessorType(accessor).getGenericClassName()}>get($index)"
+        return "context.instruction().<${writerData.getAccessorType(accessor).getGenericClassName().replace('/', '.').replace('$', '.')}>get($index)"
     }
 }
 data class CompileTimeExpressionField(val instance: CompileTimeExpression?, val field: ClassFieldInfo) : CompileTimeExpression {
@@ -804,23 +792,23 @@ private fun createCompileExpression(writerData: WriterData, expression: ParsedTo
             val paramTypes = expression.arguments.map { evaluateExpressionType(writerData, it) }
             val instance = expression.instance
             val functionMatches = if(instance is ParsedTokenInstanceValue) {
-                val instanceType = evaluateExpressionType(writerData, instance.expression).let { if(it is ParsedTokenExpressionTypeGeneric && it.lowerBound.typeName != "java.lang.Number") ParsedTokenExpressionTypeComplex(it.lowerBound.typeName, emptyList()) else it }
+                val instanceType = evaluateExpressionType(writerData, instance.expression).let { if(it is ParsedTokenExpressionTypeGeneric && it.lowerBound.typeName != "java/lang/Number") ParsedTokenExpressionTypeComplex.fromInternalName(it.lowerBound.typeName) else it }
                 if(instanceType !is ParsedTokenExpressionTypeComplex) {
                     throw IllegalArgumentException("Cannot run functions on a primitive type: $instanceType")
                 }
-                val matches = getClassAccessibleMethods(instanceType.typeName).filter { !it.isStatic && it.name == expression.name && Type.getArgumentCount(it.descriptor) == paramTypes.size && Type.getArgumentTypes(it.descriptor).mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }.toMutableList()
+                val matches = getClassAccessibleMethods(instanceType.typeName).filter { !it.isStatic && it.name == expression.name && it.descriptor.parameterCount() == paramTypes.size && it.descriptor.parameterList().mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }.toMutableList()
                 if(matches.size < 1) {
                     throw IllegalArgumentException("Failed to find function [${instanceType.typeName}].${expression.name}(${paramTypes.joinToString()})")
                 }
                 if(matches.size > 1) {
-                    val closest = matches.map { it to checkClassDistance(it.owner.replace('/', '.').replace('$', '.'), instanceType.typeName) }.reduce { a, b -> if(a.second == null || a.second!! > b.second!!) b else a }
+                    val closest = matches.map { it to checkClassDistance(it.owner, instanceType.typeName) }.reduce { a, b -> if(a.second == null || a.second!! > b.second!!) b else a }
                     matches.clear()
                     matches.add(closest.first)
                 }
                 matches
             }else if(instance is ParsedTokenInstanceStatic) {
                 val checkStatic = expression.name != "<init>"
-                val matches = getClassAccessibleMethods(instance.className).filter { it.isStatic == checkStatic && it.name == expression.name && Type.getArgumentCount(it.descriptor) == paramTypes.size && Type.getArgumentTypes(it.descriptor).mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }
+                val matches = getClassAccessibleMethods(instance.className).filter { it.isStatic == checkStatic && it.name == expression.name && it.descriptor.parameterCount() == paramTypes.size && it.descriptor.parameterList().mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }
                 if(matches.size < 1) {
                     throw IllegalArgumentException("Failed to find function <${instance.className}>.${expression.name}(${paramTypes.joinToString()}): $checkStatic ${getClassAccessibleMethods(instance.className)}")
                 }
@@ -967,7 +955,7 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
             }else {
                 val comparisonReg = writeNextRegister(uniqId, output, comparisonExpression.toCompileString(writerData))
                 val entries = el.matches.entries.toList()
-                val casePrefix = if(comparisonType is ParsedTokenExpressionTypeComplex) "${comparisonType.typeName}." else ""
+                val casePrefix = if(comparisonType is ParsedTokenExpressionTypeComplex) "${comparisonType.displayName}." else ""
                 for(i in entries.indices) {
                     val (case, code) = entries[i]
                     output.appendText("if(java.util.Objects.equals($comparisonReg, $casePrefix$case)) {\n")
@@ -1077,7 +1065,7 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
             if(type is ParsedTokenExpressionTypeComplex) {
                 val expressionType = evaluateExpressionType(writerData, el.expression)
                 if(expressionType != ParsedTokenExpressionSimpleType.NULL) {
-                    val expressionClasses = getClassLowerBounds((expressionType as ParsedTokenExpressionTypeComplex).typeName.replace('/', '.'))
+                    val expressionClasses = getClassLowerBounds((expressionType as ParsedTokenExpressionTypeComplex).typeName)
                     if(!expressionClasses.contains(type.typeName)) {
                         throw IllegalArgumentException("Invalid assign, wrong type: $expressionType, expected $type")
                     }
@@ -1114,8 +1102,8 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
     return ReturnTypeResult.CONTINUE
 }
 
-fun generateCode(definition: ParsedTokenInstructionDefinition, file: ParsedFile, output: OutputStream, majorVersion: Int, minorVersion: Int, targets: MutableList<String>): Pair<List<AccessorStatistics>, Boolean> {
-    val writerData = WriterData(file = file, params = definition.params, majorVersion = majorVersion, minorVersion = minorVersion, targets = targets)
+fun generateCode(definition: ParsedTokenInstructionDefinition, file: ParsedFile, output: OutputStream, minecraftVersion: MinecraftVersion?, targets: MutableList<String>): Pair<List<AccessorStatistics>, Boolean> {
+    val writerData = WriterData(file = file, params = definition.params, minecraftVersion = minecraftVersion, targets = targets)
     var writeNormalReturn = true
     if(definition.code.isNotEmpty()) {
         try {
@@ -1126,6 +1114,8 @@ fun generateCode(definition: ParsedTokenInstructionDefinition, file: ParsedFile,
             }
             writeNormalReturn = returnKind != ReturnTypeResult.RETURN
         }catch(e: Exception) {
+            throw RuntimeException("Failed to write code for instruction definition ${definition.name}", e)
+        }catch(e: Error) {
             throw RuntimeException("Failed to write code for instruction definition ${definition.name}", e)
         }
     }

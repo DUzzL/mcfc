@@ -48,8 +48,7 @@ ksp {
     project.afterEvaluate {
         arg("jars", project.configurations.runtimeClasspath.incoming.files.join(File.pathSeparator))
     }
-    arg("minecraft_version", project.minecraft_version.split("-")[0])
-    arg("accesswidener", file("src/main/resources/minecraftfunctioncompiler.accesswidener").absolutePath)
+    arg("minecraft_version", project.minecraft_version)
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -85,15 +84,12 @@ processResources {
     }
 }
 
-compileJava {
-    dependsOn(':common:kspKotlin')
-}
-
 jar {
     from project(':common').sourceSets.main.output
-    from("LICENSE") {
-        rename { "${it}_${project.archivesBaseName}"}
+    from("../LICENSE") {
+        rename { "${it}_${project.archives_base_name}"}
     }
+    exclude "dev/epicpix/minecraftfunctioncompiler/data/locations/**"
 }
 
 kotlin {

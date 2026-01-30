@@ -4,9 +4,13 @@ import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
-import org.objectweb.asm.*
+import com.google.devtools.ksp.symbol.KSType
+import java.lang.classfile.ClassFile
+import java.lang.constant.MethodTypeDesc
+import java.lang.reflect.AccessFlag
 import java.lang.reflect.Modifier
 import java.util.jar.JarFile
+import kotlin.jvm.optionals.getOrNull
 
 data class ClassFieldInfo(
     val owner: String,
@@ -20,7 +24,7 @@ data class ClassFieldInfo(
 data class ClassMethodInfo(
     val owner: String,
     val name: String,
-    val descriptor: String,
+    val descriptor: MethodTypeDesc,
     val isPublic: Boolean,
     val isStatic: Boolean,
 )
@@ -40,7 +44,7 @@ private val loadedClasses = mutableMapOf<String, ClassInfo>()
 
 typealias JarInfo = Pair<List<JarFile>, Map<String, Int>>
 private var privateJarInfo: JarInfo? = null
-private var privateResolver: Resolver? = null
+private lateinit var privateResolver: Resolver
 
 fun setJarInfo(jarInfo: JarInfo) {
     privateJarInfo = jarInfo
@@ -50,8 +54,8 @@ fun setResolver(resolver: Resolver) {
     privateResolver = resolver
 }
 
-private fun fixKotlinDesc(from: String): String {
-    return when(from) {
+private fun fixKotlinDesc(type: KSType): String {
+    return when(val from = type.declaration.qualifiedName!!.asString()) {
         "kotlin.Double" -> "D"
         "kotlin.Float" -> "F"
         "kotlin.Boolean" -> "Z"
@@ -67,32 +71,53 @@ private fun fixKotlinDesc(from: String): String {
     }
 }
 
+fun displayToInternalClassName(className: String): String? {
+    if(className.contains("/")) throw RuntimeException("Expected display class name, but got '$className'")
+    loadedClasses[className]?.also {
+        if(it.name.contains(".")) throw IllegalStateException("Loaded class name is not stored as internal name: ${it.name}")
+        return it.name
+    }
+    val found = privateJarInfo?.second?.entries?.find { (k, _) -> k.replace('/', '.').replace('$', '.') == "$className.class" }
+    if(found != null) {
+        return found.key.substring(0, found.key.length - 6)
+    }
+    runCatching {
+        val clz = Class.forName(className)
+        return clz.descriptorString().let { it.substring(1, it.length - 1) }
+    }
+
+    return privateResolver.getClassDeclarationByName(privateResolver.getKSNameFromString(className))?.qualifiedName?.asString()?.replace('.', '/')
+}
+
 fun loadClassInfo(className: String): ClassInfo {
+    if(className.contains(".")) throw RuntimeException("Expected internal class name, but got '$className'")
+    val className = className.replace('/', '.').replace('$', '.')
     loadedClasses[className]?.also { return it }
     val found = privateJarInfo?.second?.entries?.find { (k, _) -> k.replace('/', '.').replace('$', '.') == "$className.class" }
     if(found == null) {
         runCatching {
             val clz = Class.forName(className)
+            val clzName = clz.descriptorString().run { substring(1, length - 1) }
             loadedClasses[className] = ClassInfo(
-                name = clz.descriptorString().run { substring(1, length - 1) },
+                name = clzName,
                 superClass = clz.superclass?.descriptorString()?.run { substring(1, length - 1) },
                 interfaces = clz.interfaces.map { it.descriptorString().run { substring(1, length - 1) } },
                 fields = clz.declaredFields.map { f ->
-                    ClassFieldInfo(owner = clz.descriptorString().run { substring(1, length - 1) }, name = f.name, descriptor = f.type.descriptorString(), isPublic = Modifier.isPublic(f.modifiers), isStatic = Modifier.isStatic(f.modifiers), isFinal = Modifier.isFinal(f.modifiers))
+                    ClassFieldInfo(owner = clzName, name = f.name, descriptor = f.type.descriptorString(), isPublic = Modifier.isPublic(f.modifiers), isStatic = Modifier.isStatic(f.modifiers), isFinal = Modifier.isFinal(f.modifiers))
                 },
                 methods = clz.declaredMethods.map { f ->
                     ClassMethodInfo(
-                        owner = clz.descriptorString().run { substring(1, length - 1) },
+                        owner = clzName,
                         name = f.name,
-                        descriptor = "(${f.parameters.joinToString("") { p -> p.type.descriptorString() }})${f.returnType.descriptorString()}",
+                        descriptor = MethodTypeDesc.ofDescriptor("(${f.parameters.joinToString("") { p -> p.type.descriptorString() }})${f.returnType.descriptorString()}"),
                         isPublic = Modifier.isPublic(f.modifiers),
                         isStatic = Modifier.isStatic(f.modifiers),
                     )
                 } + clz.declaredConstructors.map { f ->
                     ClassMethodInfo(
-                        owner = clz.descriptorString().run { substring(1, length - 1) },
+                        owner = clzName,
                         name = "<init>",
-                        descriptor = "(${f.parameters.joinToString("") { p -> p.type.descriptorString() }})V",
+                        descriptor = MethodTypeDesc.ofDescriptor("(${f.parameters.joinToString("") { p -> p.type.descriptorString() }})V"),
                         isPublic = Modifier.isPublic(f.modifiers),
                         isStatic = false,
                     )
@@ -102,19 +127,19 @@ fun loadClassInfo(className: String): ClassInfo {
                 isEnum = clz.isEnum,
             )
         }.getOrElse {
-            val classDecl = privateResolver!!.getClassDeclarationByName(privateResolver!!.getKSNameFromString(className))
+            val classDecl = privateResolver.getClassDeclarationByName(privateResolver.getKSNameFromString(className))
                 ?: throw IllegalArgumentException("Class not found: $className", it)
-            val enumEntries = classDecl.declarations.filter { it is KSClassDeclaration && it.classKind == ClassKind.ENUM_ENTRY }.map { it as KSClassDeclaration }.toList()
-            val methods = classDecl.declarations.filter { it is KSFunctionDeclaration }.map { it as KSFunctionDeclaration }.toList()
+            val enumEntries = classDecl.declarations.filterIsInstance<KSClassDeclaration>().filter { decl -> decl.classKind == ClassKind.ENUM_ENTRY }.toList()
+            val methods = classDecl.declarations.filterIsInstance<KSFunctionDeclaration>().toList()
             loadedClasses[className] = ClassInfo(
-                name = classDecl.qualifiedName!!.asString(),
-                superClass = "java.lang.Object",
+                name = classDecl.qualifiedName!!.asString().replace('.', '/'),
+                superClass = "java/lang/Object",
                 interfaces = listOf(),
                 fields = enumEntries.map { f ->
                     ClassFieldInfo(
                         owner = classDecl.qualifiedName!!.asString().replace('.', '/'),
                         name = f.simpleName.asString(),
-                        descriptor = fixKotlinDesc(className),
+                        descriptor = "L${className.replace('.', '/')};",
                         isPublic = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.PUBLIC),
                         isStatic = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.JAVA_STATIC),
                         isFinal = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.FINAL),
@@ -124,7 +149,7 @@ fun loadClassInfo(className: String): ClassInfo {
                     ClassMethodInfo(
                         owner = classDecl.qualifiedName!!.asString().replace('.', '/'),
                         name = f.simpleName.asString(),
-                        descriptor = "(${f.parameters.joinToString("") { p -> fixKotlinDesc(p.type.resolve().declaration.qualifiedName!!.asString()) }})${fixKotlinDesc(f.returnType!!.resolve().declaration.qualifiedName!!.asString())}",
+                        descriptor = MethodTypeDesc.ofDescriptor("(${f.parameters.joinToString("") { p -> fixKotlinDesc(p.type.resolve()) }})${fixKotlinDesc(f.returnType!!.resolve())}"),
                         isPublic = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.PUBLIC),
                         isStatic = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.JAVA_STATIC),
                     )
@@ -138,64 +163,45 @@ fun loadClassInfo(className: String): ClassInfo {
     }else {
         val jar = privateJarInfo!!.first[found.value]
         val foundEntry = jar.getInputStream(jar.getJarEntry(found.key))
-        val classReader = ClassReader(foundEntry)
-
-        var outName: String? = null
-        var superClass: String? = null
-        var interfaces: List<String>? = null
-        val fields = mutableListOf<ClassFieldInfo>()
-        val methods = mutableListOf<ClassMethodInfo>()
-        var isPublic: Boolean? = null
-        var isInterface: Boolean? = null
-        var isEnum: Boolean? = null
-
-        val classVisitor = object : ClassVisitor(Opcodes.ASM9) {
-            override fun visit(version: Int, access: Int, inName: String, signature: String?, inSuperName: String?, inInterfaces: Array<String>) {
-                outName = inName
-                superClass = inSuperName
-                interfaces = inInterfaces.toList()
-                isPublic = Modifier.isPublic(access)
-                isInterface = Modifier.isInterface(access)
-                isEnum = (access and 0x4000) != 0
-                super.visit(version, access, inName, signature, inSuperName, inInterfaces)
-            }
-
-            override fun visitField(access: Int, name: String, descriptor: String, signature: String?, value: Any?): FieldVisitor? {
-                fields.add(ClassFieldInfo(
-                    owner = outName!!,
-                    name = name,
-                    descriptor = descriptor,
-                    isPublic = Modifier.isPublic(access),
-                    isStatic = Modifier.isStatic(access),
-                    isFinal = Modifier.isFinal(access),
-                ))
-                return super.visitField(access, name, descriptor, signature, value)
-            }
-
-            override fun visitMethod(access: Int, name: String, descriptor: String, signature: String?, exceptions: Array<String?>?): MethodVisitor? {
-                methods.add(ClassMethodInfo(
-                    owner = outName!!,
-                    name = name,
-                    descriptor = descriptor,
-                    isPublic = Modifier.isPublic(access),
-                    isStatic = Modifier.isStatic(access),
-                ))
-                return super.visitMethod(access, name, descriptor, signature, exceptions)
-            }
-        }
-        classReader.accept(classVisitor, ClassReader.SKIP_CODE or ClassReader.SKIP_DEBUG or ClassReader.SKIP_FRAMES)
+        val cf = ClassFile.of().parse(foundEntry.readAllBytes())
         foundEntry.close()
-        loadedClasses[className] = ClassInfo(
-            name = outName!!,
+        val name = cf.thisClass().asInternalName()
+        val isPublic = cf.flags().has(AccessFlag.PUBLIC)
+        val isInterface = cf.flags().has(AccessFlag.INTERFACE)
+        val isEnum = cf.flags().has(AccessFlag.ENUM)
+        val superClass = cf.superclass().getOrNull()?.asInternalName()
+        val interfaces = cf.interfaces().map { it.asInternalName() }.toList()
+        val fields = cf.fields().map {
+            ClassFieldInfo(
+                owner = name,
+                name = it.fieldName().stringValue(),
+                descriptor = it.fieldType().stringValue(),
+                isPublic = it.flags().has(AccessFlag.PUBLIC),
+                isStatic = it.flags().has(AccessFlag.STATIC),
+                isFinal = it.flags().has(AccessFlag.FINAL),
+            )
+        }.toList()
+        val methods = cf.methods().map {
+            ClassMethodInfo(
+                owner = name,
+                name = it.methodName().stringValue(),
+                descriptor = it.methodTypeSymbol(),
+                isPublic = it.flags().has(AccessFlag.PUBLIC),
+                isStatic = it.flags().has(AccessFlag.STATIC),
+            )
+        }.toList()
+        val ci = ClassInfo(
+            name = name,
             superClass = superClass,
-            interfaces = interfaces!!,
+            interfaces = interfaces,
             fields = fields,
             methods = methods,
-            isPublic = isPublic!!,
-            isInterface = isInterface!!,
-            isEnum = isEnum!!,
+            isPublic = isPublic,
+            isInterface = isInterface,
+            isEnum = isEnum,
         )
-        return loadedClasses[className]!!
+        loadedClasses[className] = ci
+        return ci
     }
 }
 
@@ -210,7 +216,7 @@ fun ClassFieldInfo.checkPublic(): ClassFieldInfo {
     if(!isPublic) {
         throw IllegalAccessError("Tried to access field $owner:$name:$descriptor, while it is not public")
     }
-    if(!loadClassInfo(owner.replace('/', '.').replace('$', '.')).isPublic) {
+    if(!loadClassInfo(owner).isPublic) {
         throw IllegalAccessError("Tried to access field $owner:$name:$descriptor, while the class is not public")
     }
     return this
@@ -220,7 +226,7 @@ fun ClassMethodInfo.checkPublic(): ClassMethodInfo {
     if(!isPublic) {
         throw IllegalAccessError("Tried to access method $owner:$name$descriptor, while it is not public")
     }
-    if(!loadClassInfo(owner.replace('/', '.').replace('$', '.')).isPublic) {
+    if(!loadClassInfo(owner).isPublic) {
         throw IllegalAccessError("Tried to access method $owner:$name$descriptor, while the class is not public")
     }
     return this
@@ -229,8 +235,8 @@ fun ClassMethodInfo.checkPublic(): ClassMethodInfo {
 fun getClassAccessibleFields(className: String): Set<ClassFieldInfo> {
     val result = mutableSetOf<ClassFieldInfo>()
     val clz = loadClassInfo(className)
-    clz.superClass?.also { result.addAll(getClassAccessibleFields(it.replace('/', '.').replace('$', '.')).filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } }) }
-    clz.interfaces.forEach { result.addAll(getClassAccessibleFields(it.replace('/', '.').replace('$', '.')).filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } }) }
+    clz.superClass?.also { result.addAll(getClassAccessibleFields(it).filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } }) }
+    clz.interfaces.forEach { result.addAll(getClassAccessibleFields(it).filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } }) }
     result.addAll(clz.fields.filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } })
     return result
 }
@@ -238,8 +244,8 @@ fun getClassAccessibleFields(className: String): Set<ClassFieldInfo> {
 fun getClassAccessibleMethods(className: String): Set<ClassMethodInfo> {
     val result = mutableSetOf<ClassMethodInfo>()
     val clz = loadClassInfo(className)
-    clz.superClass?.also { result.addAll(getClassAccessibleMethods(it.replace('/', '.').replace('$', '.')).filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } }) }
-    clz.interfaces.forEach { result.addAll(getClassAccessibleMethods(it.replace('/', '.').replace('$', '.')).filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } }) }
+    clz.superClass?.also { result.addAll(getClassAccessibleMethods(it).filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } }) }
+    clz.interfaces.forEach { result.addAll(getClassAccessibleMethods(it).filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } }) }
     result.addAll(clz.methods.filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } })
     return result
 }
@@ -247,16 +253,16 @@ fun getClassAccessibleMethods(className: String): Set<ClassMethodInfo> {
 fun checkClassDistance(from: String, to: String, currentDepth: Int = 0): Int? {
     if(from == to) return currentDepth
     val fromInfo = loadClassInfo(from)
-    if(fromInfo.superClass != null) checkClassDistance(fromInfo.superClass.replace('/', '.').replace('$', '.'), to, currentDepth + 1)?.let { return it }
-    for(face in fromInfo.interfaces) checkClassDistance(face.replace('/', '.').replace('$', '.'), to, currentDepth + 1)?.let { return it }
+    if(fromInfo.superClass != null) checkClassDistance(fromInfo.superClass, to, currentDepth + 1)?.let { return it }
+    for(face in fromInfo.interfaces) checkClassDistance(face, to, currentDepth + 1)?.let { return it }
     return null
 }
 
 fun getClassLowerBounds(className: String): Set<String> {
     val result = mutableSetOf<String>()
     val clz = loadClassInfo(className)
-    result.add(clz.name.replace('/', '.').replace('$', '.'))
-    clz.superClass?.also { result.addAll(getClassLowerBounds(it.replace('/', '.').replace('$', '.'))) }
-    clz.interfaces.forEach { result.addAll(getClassLowerBounds(it.replace('/', '.').replace('$', '.'))) }
+    result.add(clz.name)
+    clz.superClass?.also { result.addAll(getClassLowerBounds(it)) }
+    clz.interfaces.forEach { result.addAll(getClassLowerBounds(it)) }
     return result
 }
