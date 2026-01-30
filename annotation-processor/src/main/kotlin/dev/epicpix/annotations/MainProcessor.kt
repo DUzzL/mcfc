@@ -65,39 +65,10 @@ fun kotlinToJavaType(type: String, genericUsage: Boolean, generics: List<String>
 }
 
 fun javaToMinecraftGenericType(type: String, generics: List<String> = emptyList()): String {
-    if(type.startsWith("net.minecraft.")) {
-        return when(type) {
-            "net.minecraft.world.entity.Entity" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Entity"
-            "net.minecraft.world.entity.LivingEntity" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.LivingEntity"
-            "net.minecraft.server.level.ServerPlayer" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Player"
-            "net.minecraft.world.scores.Objective" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Objective"
-            "net.minecraft.world.scores.ScoreAccess" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Score"
-            "net.minecraft.world.phys.Vec3" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Vec3"
-            "net.minecraft.world.phys.Vec2" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Vec2"
-            "net.minecraft.server.level.ServerLevel" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.World"
-            "net.minecraft.world.entity.ai.attributes.AttributeInstance" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.AttributeInstance"
-            "net.minecraft.nbt.CompoundTag" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.NbtCompound"
-            "net.minecraft.nbt.Tag" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.NbtTag"
-            "net.minecraft.world.scores.criteria.ObjectiveCriteria" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.ScoreboardCriterion"
-            "net.minecraft.network.chat.Component" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.TextComponent"
-            "net.minecraft.world.scores.Team" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.Team"
-            "net.minecraft.world.level.GameType" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.GameType"
-            "net.minecraft.nbt.ListTag" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.NbtList"
-            "net.minecraft.commands.CommandSourceStack" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.CommandSourceStack"
-            "net.minecraft.advancements.AdvancementProgress" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.AdvancementProgress"
-            "net.minecraft.advancements.CriterionProgress" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.CriterionProgress"
-            "net.minecraft.server.PlayerAdvancements" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.PlayerAdvancements"
-            "net.minecraft.world.entity.Targeting" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.TargetingEntity"
-            "net.minecraft.world.entity.TraceableEntity" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.TraceableEntity"
-            "net.minecraft.world.Difficulty" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.DifficultyValue"
-            "net.minecraft.world.entity.EntityType" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.EntityTypeValue"
-            "net.minecraft.world.item.ItemStack" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.ItemStack"
-            "net.minecraft.network.chat.Style" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.TextComponentStyle"
-            "net.minecraft.network.chat.MutableComponent" -> "dev.epicpix.minecraftfunctioncompiler.data.locations.TextComponentMutable"
-            else -> throw IllegalArgumentException("Unknown minecraft class: $type")
-        }
+    return if(type.startsWith("net.minecraft.")) {
+        "dev.epicpix.minecraftfunctioncompiler.il.locations.T${type.split(".").last()}"
     } else {
-        return kotlinToJavaType(type, true, generics)
+        kotlinToJavaType(type, true, generics)
     }
 }
 
@@ -144,6 +115,9 @@ class MainProcessor(
     private var invoked = false
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
+        if(options["definitions"] == "minecraft") {
+            throw RuntimeException(options.toString())
+        }
         if(invoked) return emptyList()
         invoked = true
         dataDir = options["data_dir"]!!
@@ -413,163 +387,163 @@ class MainProcessor(
         mapTargets.appendText("    };\n")
         mapTargets.appendText("}\n")
 
-        if(common) {
-            val generatorClass = file.fileInfo["generator_file"]!!
-            val generatorResultPackage = generatorClass.substring(0, generatorClass.lastIndexOf('.'))
-            val generatorResultClass = generatorClass.substring(generatorClass.lastIndexOf('.') + 1)
-            val enumClass = file.fileInfo["enum_file"]!!
-            val enumResultPackage = enumClass.substring(0, enumClass.lastIndexOf('.'))
-            val enumResultClass = enumClass.substring(enumClass.lastIndexOf('.') + 1)
+        if(!common) return
 
-            val impl = codeGenerator.createNewFile(Dependencies.ALL_FILES, generatorResultPackage, generatorResultClass, "java")
-            impl.appendText("package $generatorResultPackage;\n")
-            impl.appendText("import java.util.*;\n")
-            impl.appendText("public final class $generatorResultClass {\n")
+        val generatorClass = file.fileInfo["generator_file"]!!
+        val generatorResultPackage = generatorClass.substring(0, generatorClass.lastIndexOf('.'))
+        val generatorResultClass = generatorClass.substring(generatorClass.lastIndexOf('.') + 1)
+        val enumClass = file.fileInfo["enum_file"]!!
+        val enumResultPackage = enumClass.substring(0, enumClass.lastIndexOf('.'))
+        val enumResultClass = enumClass.substring(enumClass.lastIndexOf('.') + 1)
 
-            val types = codeGenerator.createNewFile(Dependencies.ALL_FILES, enumResultPackage, enumResultClass, "java")
-            types.appendText("package $enumResultPackage;\n")
-            types.appendText("public class $enumResultClass {\n")
-            val instructionType = "dev.epicpix.minecraftfunctioncompiler.il.Instruction"
+        val impl = codeGenerator.createNewFile(Dependencies.ALL_FILES, generatorResultPackage, generatorResultClass, "java")
+        impl.appendText("package $generatorResultPackage;\n")
+        impl.appendText("import java.util.*;\n")
+        impl.appendText("public final class $generatorResultClass {\n")
 
-            val writtenDefinitions = mutableListOf<String>()
-            file.definitions.forEach {
-                val named = it.name.uppercase()
-                if(writtenDefinitions.contains(named)) {
-                    return@forEach
+        val types = codeGenerator.createNewFile(Dependencies.ALL_FILES, enumResultPackage, enumResultClass, "java")
+        types.appendText("package $enumResultPackage;\n")
+        types.appendText("public class $enumResultClass {\n")
+        val instructionType = "dev.epicpix.minecraftfunctioncompiler.il.Instruction"
+
+        val writtenDefinitions = mutableListOf<String>()
+        file.definitions.forEach {
+            val named = it.name.uppercase()
+            if(writtenDefinitions.contains(named)) {
+                return@forEach
+            }
+            writtenDefinitions.add(named)
+            val argNames = mutableListOf<String>()
+            for((accessor, _) in it.params) {
+                when(accessor.scope) {
+                    ParsedTokenValueAccessorScope.RETURN -> argNames.add(accessor.name)
+                    ParsedTokenValueAccessorScope.CONTEXT -> argNames.add(accessor.name)
+                    ParsedTokenValueAccessorScope.INSTRUCTION -> argNames.add(accessor.name)
+                    ParsedTokenValueAccessorScope.LOCAL -> continue
+                    ParsedTokenValueAccessorScope.STATIC -> continue
                 }
-                writtenDefinitions.add(named)
-                val argNames = mutableListOf<String>()
-                for((accessor, _) in it.params) {
-                    when(accessor.scope) {
-                        ParsedTokenValueAccessorScope.RETURN -> argNames.add(accessor.name)
-                        ParsedTokenValueAccessorScope.CONTEXT -> argNames.add(accessor.name)
-                        ParsedTokenValueAccessorScope.INSTRUCTION -> argNames.add(accessor.name)
-                        ParsedTokenValueAccessorScope.LOCAL -> continue
-                        ParsedTokenValueAccessorScope.STATIC -> continue
-                    }
-                }
-                types.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.il.InstructionType $named = new dev.epicpix.minecraftfunctioncompiler.il.InstructionType(\"$named\", new String[] {${argNames.joinToString { "\"$it\"" }}}${if(it.instructionFlags.isEmpty()) "" else ", ${it.instructionFlags.joinToString(" | ") { "dev.epicpix.minecraftfunctioncompiler.il.InstructionType.$it" }}"});\n")
-                if(named.startsWith("STATIC_")) {
-                    return@forEach
-                }
-                val generics = StringBuilder()
-                if(it.params.any { it.second is ParsedTokenExpressionTypeGeneric }) {
-                    generics.append(" <")
-                    val definedNames = mutableSetOf<String>()
-                    for(i in it.params.indices) {
-                        val (_, type) = it.params[i]
-                        if(type is ParsedTokenExpressionTypeGeneric) {
-                            if(!definedNames.add(type.generic.name)) continue
-                            if(generics.length != 2) {
-                                generics.append(", ")
-                            }
-                            generics.append("${type.generic.name} extends ${javaToMinecraftGenericType(type.lowerBound.displayName, type.lowerBound.generics.map { javaToMinecraftGenericType(it.displayName) })}")
-                        }
-                    }
-                    generics.append(">")
-                }
-                impl.appendText("public static$generics $instructionType ${named.snakeToLowerCamelCase()}(")
+            }
+            types.appendText("    public static final dev.epicpix.minecraftfunctioncompiler.il.InstructionType $named = new dev.epicpix.minecraftfunctioncompiler.il.InstructionType(\"$named\", new String[] {${argNames.joinToString { "\"$it\"" }}}${if(it.instructionFlags.isEmpty()) "" else ", ${it.instructionFlags.joinToString(" | ") { "dev.epicpix.minecraftfunctioncompiler.il.InstructionType.$it" }}"});\n")
+            if(named.startsWith("STATIC_")) {
+                return@forEach
+            }
+            val generics = StringBuilder()
+            if(it.params.any { it.second is ParsedTokenExpressionTypeGeneric }) {
+                generics.append(" <")
+                val definedNames = mutableSetOf<String>()
                 for(i in it.params.indices) {
-                    val (param, type) = it.params[i]
-                    val typeName = when(param.scope) {
-                        ParsedTokenValueAccessorScope.CONTEXT, ParsedTokenValueAccessorScope.RETURN -> {
-                            if(type == ParsedTokenExpressionSimpleType.LABEL) {
-                                "dev.epicpix.minecraftfunctioncompiler.il.LabelData"
-                            } else {
-                                "dev.epicpix.minecraftfunctioncompiler.il.LocationData<${
-                                    when(type) {
-                                        ParsedTokenExpressionSimpleType.INTEGER -> "Integer"
-                                        ParsedTokenExpressionSimpleType.BOOLEAN -> "Boolean"
-                                        ParsedTokenExpressionSimpleType.DOUBLE -> "Double"
-                                        ParsedTokenExpressionSimpleType.FLOAT -> "Float"
-                                        ParsedTokenExpressionSimpleType.LONG -> "Long"
-                                        is ParsedTokenExpressionTypeComplex -> {
-                                            if(param.scope == ParsedTokenValueAccessorScope.RETURN) {
-                                                javaToMinecraftGenericType(type.displayName, type.generics.map { javaToMinecraftGenericType(it.displayName) })
-                                            } else {
-                                                "? extends ${javaToMinecraftGenericType(type.displayName, type.generics.map { javaToMinecraftGenericType(it.displayName) })}"
-                                            }
+                    val (_, type) = it.params[i]
+                    if(type is ParsedTokenExpressionTypeGeneric) {
+                        if(!definedNames.add(type.generic.name)) continue
+                        if(generics.length != 2) {
+                            generics.append(", ")
+                        }
+                        generics.append("${type.generic.name} extends ${javaToMinecraftGenericType(type.lowerBound.displayName, type.lowerBound.generics.map { javaToMinecraftGenericType(it.displayName) })}")
+                    }
+                }
+                generics.append(">")
+            }
+            impl.appendText("public static$generics $instructionType ${named.snakeToLowerCamelCase()}(")
+            for(i in it.params.indices) {
+                val (param, type) = it.params[i]
+                val typeName = when(param.scope) {
+                    ParsedTokenValueAccessorScope.CONTEXT, ParsedTokenValueAccessorScope.RETURN -> {
+                        if(type == ParsedTokenExpressionSimpleType.LABEL) {
+                            "dev.epicpix.minecraftfunctioncompiler.il.LabelData"
+                        } else {
+                            "dev.epicpix.minecraftfunctioncompiler.il.LocationData<${
+                                when(type) {
+                                    ParsedTokenExpressionSimpleType.INTEGER -> "Integer"
+                                    ParsedTokenExpressionSimpleType.BOOLEAN -> "Boolean"
+                                    ParsedTokenExpressionSimpleType.DOUBLE -> "Double"
+                                    ParsedTokenExpressionSimpleType.FLOAT -> "Float"
+                                    ParsedTokenExpressionSimpleType.LONG -> "Long"
+                                    is ParsedTokenExpressionTypeComplex -> {
+                                        if(param.scope == ParsedTokenValueAccessorScope.RETURN) {
+                                            javaToMinecraftGenericType(type.displayName, type.generics.map { javaToMinecraftGenericType(it.displayName) })
+                                        } else {
+                                            "? extends ${javaToMinecraftGenericType(type.displayName, type.generics.map { javaToMinecraftGenericType(it.displayName) })}"
                                         }
-                                        is ParsedTokenExpressionTypeGeneric -> (if(type.generic.allowExtends) "? extends " else "") + type.generic.name
-                                        else -> TODO("Unknown type: $type")
                                     }
-                                }>"
-                            }
-                        }
-
-                        ParsedTokenValueAccessorScope.INSTRUCTION -> {
-                            when(type) {
-                                ParsedTokenExpressionSimpleType.INTEGER -> "int"
-                                ParsedTokenExpressionSimpleType.BOOLEAN -> "boolean"
-                                ParsedTokenExpressionSimpleType.DOUBLE -> "double"
-                                ParsedTokenExpressionSimpleType.FLOAT -> "float"
-                                ParsedTokenExpressionSimpleType.LONG -> "long"
-                                is ParsedTokenExpressionTypeComplex -> kotlinToJavaType(type.displayName, false, type.generics.map { javaToMinecraftGenericType(it.displayName) })
-                                else -> TODO("$type")
-                            }
-                        }
-
-                        ParsedTokenValueAccessorScope.LOCAL -> continue
-                        ParsedTokenValueAccessorScope.STATIC -> continue
-                    }
-
-                    impl.appendText("$typeName ${param.name.snakeToLowerCamelCase()}")
-                    if(i < it.params.size - 1) {
-                        impl.appendText(", ")
-                    }
-                }
-                impl.appendText(") {")
-                impl.appendText("return new $instructionType($enumClass.$named, new Object[] {${it.params.filter { it.first.scope == ParsedTokenValueAccessorScope.INSTRUCTION || it.first.scope == ParsedTokenValueAccessorScope.CONTEXT || it.first.scope == ParsedTokenValueAccessorScope.RETURN }.joinToString { "${it.first.name.snakeToLowerCamelCase()}" }}}); }\n")
-            }
-
-            val defs = mutableListOf<DefinitionPriorityTree>()
-            file.definitions.filter { def -> def.name.startsWith("static_") }.forEach {
-                defs.add(DefinitionPriorityTree(it))
-            }
-            defs.forEach { tree ->
-                val it = tree.def
-                val staticParams = it.params.filter { (param, _) -> param.scope == ParsedTokenValueAccessorScope.STATIC && param.name != "CommandSourceStack" }
-                for(param in staticParams) {
-                    val checkName = "static${param.first.name}".toUpperSnakeCase()
-                    if(it.name.uppercase() != checkName) {
-                        tree.backwardConnections.add(defs.find { treeDef -> treeDef.def.name.uppercase() == checkName }
-                            ?: throw NullPointerException("Definition with name '$checkName' not found"))
-                    }
-                }
-            }
-            val instructionEnumType = "dev.epicpix.minecraftfunctioncompiler.il.InstructionType"
-            impl.appendText("\n    public static List<$instructionType> addStaticRequirements(List<$instructionType> instructions) {\n")
-            impl.appendText("        HashSet<$instructionEnumType> requirementInstructions = new HashSet<>();\n")
-            impl.appendText("        for(var instruction : instructions) addStaticRequirementsInternal(instruction, requirementInstructions);\n")
-            impl.appendText("        ArrayList<Instruction> resultInstructions = new ArrayList<>(instructions);\n")
-            val defPriorities = defs.map { it.def to it.length() }.sortedByDescending { it.second }
-            for((def, _) in defPriorities) {
-                impl.appendText("        if(requirementInstructions.contains($enumClass.${def.name.uppercase()})) resultInstructions.add(0, new $instructionType($enumClass.${def.name.uppercase()}, new Object[0]));\n")
-            }
-            impl.appendText("        return resultInstructions;\n")
-            impl.appendText("    }\n")
-            impl.appendText("    private static void addStaticRequirementsInternal($instructionType instruction, HashSet<$instructionEnumType> mutableSet) {\n")
-            file.definitions.forEach {
-                val staticParams = it.params.filter { (param, _) -> param.scope == ParsedTokenValueAccessorScope.STATIC && param.name != "CommandSourceStack" && it.name.uppercase() != "static${param.name}".toUpperSnakeCase() }
-                if(staticParams.isNotEmpty()) {
-                    impl.appendText("        if(instruction.type() == $enumClass.${it.name.uppercase()}) {\n")
-                    for(param in staticParams) {
-                        val paramName = "static${param.first.name}".toUpperSnakeCase()
-                        val reqs = defs.find { it.def.name.uppercase() == paramName }!!.getAll()
-                        for(req in reqs) {
-                            impl.appendText("            mutableSet.add($enumClass.${req.def.name.uppercase()});\n")
+                                    is ParsedTokenExpressionTypeGeneric -> (if(type.generic.allowExtends) "? extends " else "") + type.generic.name
+                                    else -> TODO("Unknown type: $type")
+                                }
+                            }>"
                         }
                     }
-                    impl.appendText("        }\n")
+
+                    ParsedTokenValueAccessorScope.INSTRUCTION -> {
+                        when(type) {
+                            ParsedTokenExpressionSimpleType.INTEGER -> "int"
+                            ParsedTokenExpressionSimpleType.BOOLEAN -> "boolean"
+                            ParsedTokenExpressionSimpleType.DOUBLE -> "double"
+                            ParsedTokenExpressionSimpleType.FLOAT -> "float"
+                            ParsedTokenExpressionSimpleType.LONG -> "long"
+                            is ParsedTokenExpressionTypeComplex -> kotlinToJavaType(type.displayName, false, type.generics.map { javaToMinecraftGenericType(it.displayName) })
+                            else -> TODO("$type")
+                        }
+                    }
+
+                    ParsedTokenValueAccessorScope.LOCAL -> continue
+                    ParsedTokenValueAccessorScope.STATIC -> continue
+                }
+
+                impl.appendText("$typeName ${param.name.snakeToLowerCamelCase()}")
+                if(i < it.params.size - 1) {
+                    impl.appendText(", ")
                 }
             }
-            impl.appendText("    }\n")
-
-            impl.appendText("}\n")
-            impl.close()
-            types.appendText("}\n")
-            types.close()
+            impl.appendText(") {")
+            impl.appendText("return new $instructionType($enumClass.$named, new Object[] {${it.params.filter { it.first.scope == ParsedTokenValueAccessorScope.INSTRUCTION || it.first.scope == ParsedTokenValueAccessorScope.CONTEXT || it.first.scope == ParsedTokenValueAccessorScope.RETURN }.joinToString { "${it.first.name.snakeToLowerCamelCase()}" }}}); }\n")
         }
+
+        val defs = mutableListOf<DefinitionPriorityTree>()
+        file.definitions.filter { def -> def.name.startsWith("static_") }.forEach {
+            defs.add(DefinitionPriorityTree(it))
+        }
+        defs.forEach { tree ->
+            val it = tree.def
+            val staticParams = it.params.filter { (param, _) -> param.scope == ParsedTokenValueAccessorScope.STATIC && param.name != "CommandSourceStack" }
+            for(param in staticParams) {
+                val checkName = "static${param.first.name}".toUpperSnakeCase()
+                if(it.name.uppercase() != checkName) {
+                    tree.backwardConnections.add(defs.find { treeDef -> treeDef.def.name.uppercase() == checkName }
+                        ?: throw NullPointerException("Definition with name '$checkName' not found"))
+                }
+            }
+        }
+        val instructionEnumType = "dev.epicpix.minecraftfunctioncompiler.il.InstructionType"
+        impl.appendText("\n    public static List<$instructionType> addStaticRequirements(List<$instructionType> instructions) {\n")
+        impl.appendText("        HashSet<$instructionEnumType> requirementInstructions = new HashSet<>();\n")
+        impl.appendText("        for(var instruction : instructions) addStaticRequirementsInternal(instruction, requirementInstructions);\n")
+        impl.appendText("        ArrayList<Instruction> resultInstructions = new ArrayList<>(instructions);\n")
+        val defPriorities = defs.map { it.def to it.length() }.sortedByDescending { it.second }
+        for((def, _) in defPriorities) {
+            impl.appendText("        if(requirementInstructions.contains($enumClass.${def.name.uppercase()})) resultInstructions.add(0, new $instructionType($enumClass.${def.name.uppercase()}, new Object[0]));\n")
+        }
+        impl.appendText("        return resultInstructions;\n")
+        impl.appendText("    }\n")
+        impl.appendText("    private static void addStaticRequirementsInternal($instructionType instruction, HashSet<$instructionEnumType> mutableSet) {\n")
+        file.definitions.forEach {
+            val staticParams = it.params.filter { (param, _) -> param.scope == ParsedTokenValueAccessorScope.STATIC && param.name != "CommandSourceStack" && it.name.uppercase() != "static${param.name}".toUpperSnakeCase() }
+            if(staticParams.isNotEmpty()) {
+                impl.appendText("        if(instruction.type() == $enumClass.${it.name.uppercase()}) {\n")
+                for(param in staticParams) {
+                    val paramName = "static${param.first.name}".toUpperSnakeCase()
+                    val reqs = defs.find { it.def.name.uppercase() == paramName }!!.getAll()
+                    for(req in reqs) {
+                        impl.appendText("            mutableSet.add($enumClass.${req.def.name.uppercase()});\n")
+                    }
+                }
+                impl.appendText("        }\n")
+            }
+        }
+        impl.appendText("    }\n")
+
+        impl.appendText("}\n")
+        impl.close()
+        types.appendText("}\n")
+        types.close()
     }
 
     @OptIn(KspExperimental::class)

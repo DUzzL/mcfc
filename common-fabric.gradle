@@ -89,7 +89,7 @@ jar {
     from("../LICENSE") {
         rename { "${it}_${project.archives_base_name}"}
     }
-    exclude "dev/epicpix/minecraftfunctioncompiler/data/locations/**"
+    exclude "dev/epicpix/minecraftfunctioncompiler/il/locations/**"
 }
 
 kotlin {

@@ -1,6 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.compiler;
 
-import dev.epicpix.minecraftfunctioncompiler.data.locations.Objective;
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TObjective;
 
-public record ScoreAccessor(LocationData<Objective> objective, LocationData<String> scoreHolder) {}
+public record ScoreAccessor(LocationData<TObjective> objective, LocationData<String> scoreHolder) {}

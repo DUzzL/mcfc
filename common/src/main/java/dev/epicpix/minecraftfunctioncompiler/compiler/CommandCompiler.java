@@ -80,24 +80,6 @@ import dev.epicpix.minecraftfunctioncompiler.data.ScoreboardOperation;
 import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument;
 import dev.epicpix.minecraftfunctioncompiler.data.SwizzleArgument;
 import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.CommandSourceStack;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.DifficultyValue;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.Entity;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.GameType;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.LivingEntity;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.NbtCompound;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.NbtList;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.NbtTag;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.Player;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.ScoreboardCriterion;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.TargetingEntity;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.TextComponent;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.TextComponentMutable;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.TextComponentStyle;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.TraceableEntity;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.Vec2;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.Vec3;
-import dev.epicpix.minecraftfunctioncompiler.data.locations.World;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPath;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPathPart;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue;
@@ -113,6 +95,24 @@ import dev.epicpix.minecraftfunctioncompiler.il.Instructions;
 import dev.epicpix.minecraftfunctioncompiler.il.Instructions2;
 import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TCommandSourceStack;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TComponent;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TCompoundTag;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TDifficulty;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TEntity;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TGameType;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TListTag;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TLivingEntity;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TMutableComponent;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TObjectiveCriteria;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TServerLevel;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TServerPlayer;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TStyle;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TTag;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TTargeting;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TTraceableEntity;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TVec2;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TVec3;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import org.jspecify.annotations.Nullable;
 
@@ -146,7 +146,7 @@ public final class CommandCompiler {
         switch(inputCommand) {
             case CommandDataModifySetValue(NbtDataLocation destination, NbtPath path, NbtValue setValue) -> {
                 if(destination instanceof NbtDataLocation.Storage(DataLocation storage)) {
-                    var storageLocal = context.<NbtCompound>createLocal();
+                    var storageLocal = context.<TCompoundTag>createLocal();
                     var setCountLocal = context.<Integer>createLocal();
 
                     context.writeInstruction(Instructions.getNbtStorage(storageLocal, storage));
@@ -159,8 +159,8 @@ public final class CommandCompiler {
                         var value = getNbtPathValue(context, storageLocal, parts.subList(0, parts.size() - 1), true, innerContext.data().contextEndLabel());
 
                         var last = parts.getLast();
-                        var tagLocal = context.<NbtTag>createLocal();
-                        var tagCopiedLocal = context.<NbtTag>createLocal();
+                        var tagLocal = context.<TTag>createLocal();
+                        var tagCopiedLocal = context.<TTag>createLocal();
                         innerContext.writeInstruction(Instructions.loadNbtValue(tagLocal, setValue));
                         innerContext.writeInstruction(Instructions.cloneNbtValue(tagCopiedLocal, tagLocal));
                         assignNbtValue(context, value, last, tagCopiedLocal, setCountLocal, innerContext.data().contextEndLabel());
@@ -173,14 +173,14 @@ public final class CommandCompiler {
                 }
             }
             case CommandDifficultySet(Difficulty difficulty) -> {
-                var difficultyLocation = context.<DifficultyValue>createLocal();
+                var difficultyLocation = context.<TDifficulty>createLocal();
                 context.writeInstruction(Instructions.mapDifficulty(difficultyLocation, difficulty));
                 context.writeInstruction(Instructions.setDifficulty(difficultyLocation));
             }
             case CommandExecuteAlign(SwizzleArgument swizzle, CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext)) {
                     try(var pos = context.getPosition()) {
-                        var newPosition = context.<Vec3>createLocal();
+                        var newPosition = context.<TVec3>createLocal();
                         pos.writeInstruction(Instructions.alignPosition(newPosition, pos.content(), swizzle));
                         try(var ignored = context.enterWithoutValue(pos.data().withCurrentPosition(newPosition))) {
                             compile(context, fContext.content(), command, result);
@@ -207,9 +207,9 @@ public final class CommandCompiler {
             case CommandExecuteAt(SelectorArgument targets, CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext)) {
                     try(var selector = context.forSelector(targets, result)) {
-                        var world = context.<World>createLocal();
-                        var position = context.<Vec3>createLocal();
-                        var rotation = context.<Vec2>createLocal();
+                        var world = context.<TServerLevel>createLocal();
+                        var position = context.<TVec3>createLocal();
+                        var rotation = context.<TVec2>createLocal();
                         selector.writeInstruction(Instructions.getEntityWorld(world, selector.content()));
                         selector.writeInstruction(Instructions.getEntityPosition(position, selector.content()));
                         selector.writeInstruction(Instructions.getEntityRotation(rotation, selector.content()));
@@ -229,7 +229,7 @@ public final class CommandCompiler {
             case CommandExecuteIfFunction(List<DataLocation> functions, CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext)) {
                     var current = context.current();
-                    var stack = context.<CommandSourceStack>createLocal();
+                    var stack = context.<TCommandSourceStack>createLocal();
                     context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
                     var returnValue = context.<Long>createLocal();
                     context.writeInstruction(Instructions2.callFunctionsWithResult(returnValue, functions, stack, null));
@@ -270,9 +270,9 @@ public final class CommandCompiler {
             case CommandExecuteOnOrigin(CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext)) {
                     try(var currentEntity = context.getCurrentEntity()) {
-                        var traceableEntity = context.<TraceableEntity>createLocal();
+                        var traceableEntity = context.<TTraceableEntity>createLocal();
                         currentEntity.writeInstruction(Instructions.tryAsTraceableEntity(traceableEntity, currentEntity.content(), currentEntity.endLabel()));
-                        var origin = context.<Entity>createLocal();
+                        var origin = context.<TEntity>createLocal();
                         currentEntity.writeInstruction(Instructions.getEntityOrigin(origin, traceableEntity));
                         currentEntity.writeInstruction(Instructions.ifNullJump(origin, currentEntity.endLabel()));
                         try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(origin))) {
@@ -284,9 +284,9 @@ public final class CommandCompiler {
             case CommandExecuteOnTarget(CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext)) {
                     try(var currentEntity = context.getCurrentEntity()) {
-                        var targetingEntity = context.<TargetingEntity>createLocal();
+                        var targetingEntity = context.<TTargeting>createLocal();
                         currentEntity.writeInstruction(Instructions.tryAsTargetingEntity(targetingEntity, currentEntity.content(), currentEntity.endLabel()));
-                        var target = context.<LivingEntity>createLocal();
+                        var target = context.<TLivingEntity>createLocal();
                         currentEntity.writeInstruction(Instructions.getEntityTarget(target, targetingEntity));
                         currentEntity.writeInstruction(Instructions.ifNullJump(target, currentEntity.endLabel()));
                         try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(target))) {
@@ -298,7 +298,7 @@ public final class CommandCompiler {
             case CommandExecuteOnVehicle(CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext)) {
                     try(var currentEntity = context.getCurrentEntity()) {
-                        var vehicle = context.<Entity>createLocal();
+                        var vehicle = context.<TEntity>createLocal();
                         currentEntity.writeInstruction(Instructions.getEntityVehicle(vehicle, currentEntity.content()));
                         currentEntity.writeInstruction(Instructions.ifNullJump(vehicle, currentEntity.endLabel()));
                         try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(vehicle))) {
@@ -310,7 +310,7 @@ public final class CommandCompiler {
             case CommandExecutePositionedAs(SelectorArgument targetsArg, CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext)) {
                     try(var targets = context.forSelector(targetsArg, result)) {
-                        var position = context.<Vec3>createLocal();
+                        var position = context.<TVec3>createLocal();
                         targets.writeInstruction(Instructions.getEntityPosition(position, targets.content()));
                         try(var ignored = context.enterWithoutValue(targets.data().withCurrentPosition(position))) {
                             compile(context, fContext.content(), command, result);
@@ -330,7 +330,7 @@ public final class CommandCompiler {
             case CommandExecuteRotatedAs(SelectorArgument targetsArg, CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext)) {
                     try(var targets = context.forSelector(targetsArg, result)) {
-                        var rotation = context.<Vec2>createLocal();
+                        var rotation = context.<TVec2>createLocal();
                         targets.writeInstruction(Instructions.getEntityRotation(rotation, targets.content()));
                         try(var ignored = context.enterWithoutValue(targets.data().withCurrentRotation(rotation))) {
                             compile(context, fContext.content(), command, result);
@@ -374,7 +374,7 @@ public final class CommandCompiler {
                     localResult.checkImplemented(command);
                     var localResultValue = storeLocation == ResultStoreLocationType.SUCCESS ? localResult.getSuccess() : localResult.getResult();
 
-                    var storageLocal = context.<NbtCompound>createLocal();
+                    var storageLocal = context.<TCompoundTag>createLocal();
                     var setCountLocal = context.<Integer>createLocal();
 
                     context.writeInstruction(Instructions.getNbtStorage(storageLocal, storage));
@@ -386,7 +386,7 @@ public final class CommandCompiler {
                         var value = getNbtPathValue(context, storageLocal, parts.subList(0, parts.size() - 1), true, innerContext.endLabel());
 
                         var last = parts.getLast();
-                        var tagLocal = context.<NbtTag>createLocal();
+                        var tagLocal = context.<TTag>createLocal();
                         if(storeType == ResultStoreType.INT) {
                             if(scale == 1.0d) {
                                 innerContext.writeInstruction(Instructions.createIntTag(tagLocal, localResultValue));
@@ -447,7 +447,7 @@ public final class CommandCompiler {
             case CommandExecuteUnlessFunction(List<DataLocation> functions, CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext)) {
                     var current = context.current();
-                    var stack = context.<CommandSourceStack>createLocal();
+                    var stack = context.<TCommandSourceStack>createLocal();
                     context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
                     var returnValue = context.<Long>createLocal();
                     context.writeInstruction(Instructions2.callFunctionsWithResult(returnValue, functions, stack, null));
@@ -497,42 +497,42 @@ public final class CommandCompiler {
             }
             case CommandExperienceAdd(SelectorArgument targetsArg, MacroTemplate<Integer> amount) -> {
                 try(var targets = context.forSelector(targetsArg, result)) {
-                    var playerLocation = context.<Player>createLocal();
+                    var playerLocation = context.<TServerPlayer>createLocal();
                     targets.writeInstruction(Instructions.tryAsPlayer(playerLocation, targets.content(), targets.data().contextEndLabel()));
                     targets.writeInstruction(Instructions.addExperiencePoints(playerLocation, context.getResolvedIntegerMacro(amount)));
                 }
             }
             case CommandExperienceAddPoints(SelectorArgument targetsArg, MacroTemplate<Integer> amount) -> {
                 try(var targets = context.forSelector(targetsArg, result)) {
-                    var playerLocation = context.<Player>createLocal();
+                    var playerLocation = context.<TServerPlayer>createLocal();
                     targets.writeInstruction(Instructions.tryAsPlayer(playerLocation, targets.content(), targets.data().contextEndLabel()));
                     targets.writeInstruction(Instructions.addExperiencePoints(playerLocation, context.getResolvedIntegerMacro(amount)));
                 }
             }
             case CommandExperienceAddLevels(SelectorArgument targetsArg, MacroTemplate<Integer> amount) -> {
                 try(var targets = context.forSelector(targetsArg, result)) {
-                    var playerLocation = context.<Player>createLocal();
+                    var playerLocation = context.<TServerPlayer>createLocal();
                     targets.writeInstruction(Instructions.tryAsPlayer(playerLocation, targets.content(), targets.data().contextEndLabel()));
                     targets.writeInstruction(Instructions.addExperienceLevels(playerLocation, context.getResolvedIntegerMacro(amount)));
                 }
             }
             case CommandExperienceSet(SelectorArgument targets1, MacroTemplate<Integer> amount) -> {
                 try(var targets = context.forSelector(targets1, result)) {
-                    var playerLocation = context.<Player>createLocal();
+                    var playerLocation = context.<TServerPlayer>createLocal();
                     targets.writeInstruction(Instructions.tryAsPlayer(playerLocation, targets.content(), targets.data().contextEndLabel()));
                     targets.writeInstruction(Instructions.setExperiencePoints(playerLocation, context.getResolvedIntegerMacro(amount)));
                 }
             }
             case CommandExperienceSetPoints(SelectorArgument targetsArg, MacroTemplate<Integer> amount) -> {
                 try(var targets = context.forSelector(targetsArg, result)) {
-                    var playerLocation = context.<Player>createLocal();
+                    var playerLocation = context.<TServerPlayer>createLocal();
                     targets.writeInstruction(Instructions.tryAsPlayer(playerLocation, targets.content(), targets.data().contextEndLabel()));
                     targets.writeInstruction(Instructions.setExperiencePoints(playerLocation, context.getResolvedIntegerMacro(amount)));
                 }
             }
             case CommandExperienceSetLevels(SelectorArgument targetsArg, MacroTemplate<Integer> amount) -> {
                 try(var targets = context.forSelector(targetsArg, result)) {
-                    var playerLocation = context.<Player>createLocal();
+                    var playerLocation = context.<TServerPlayer>createLocal();
                     targets.writeInstruction(Instructions.tryAsPlayer(playerLocation, targets.content(), targets.data().contextEndLabel()));
                     targets.writeInstruction(Instructions.setExperienceLevels(playerLocation, context.getResolvedIntegerMacro(amount)));
                 }
@@ -540,16 +540,16 @@ public final class CommandCompiler {
             case CommandFunction(List<DataLocation> functions) -> {
                 result.markImplemented();
                 var current = context.current();
-                var stack = context.<CommandSourceStack>createLocal();
+                var stack = context.<TCommandSourceStack>createLocal();
                 context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
                 callFunctionsAndProvideResult(context, result, functions, stack, null);
             }
             case CommandFunctionArgs(List<DataLocation> functions, NbtValue.Compound argumentsArg) -> {
                 result.markImplemented();
                 var current = context.current();
-                var arguments = context.<NbtCompound>createLocal();
+                var arguments = context.<TCompoundTag>createLocal();
                 context.writeInstruction(Instructions.loadNbtValue(arguments.forceCast(), argumentsArg));
-                var stack = context.<CommandSourceStack>createLocal();
+                var stack = context.<TCommandSourceStack>createLocal();
                 context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
                 callFunctionsAndProvideResult(context, result, functions, stack, arguments);
             }
@@ -557,11 +557,11 @@ public final class CommandCompiler {
                 result.markImplemented();
                 var current = context.current();
                 forLocatedBaseNbtData(context, result, argumentsArg, arguments -> {
-                    var clonedArguments = context.<NbtTag>createLocal();
-                    var validArguments = context.<NbtCompound>createLocal();
+                    var clonedArguments = context.<TTag>createLocal();
+                    var validArguments = context.<TCompoundTag>createLocal();
                     context.writeInstruction(Instructions.cloneNbtValue(clonedArguments, arguments));
                     context.writeInstruction(Instructions.tryAsNbtCompound(validArguments, clonedArguments, result.markAndGetErrorLabel()));
-                    var stack = context.<CommandSourceStack>createLocal();
+                    var stack = context.<TCommandSourceStack>createLocal();
                     context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
                     callFunctionsAndProvideResult(context, result, functions, stack, validArguments);
                 });
@@ -573,20 +573,20 @@ public final class CommandCompiler {
                     var parts = path.parts();
                     var value = getNbtPathValue(context, storageLocal, parts, false, result.markAndGetErrorLabel());
                     context.writeInstruction(Instructions.ifNullJump(value, result.markAndGetErrorLabel()));
-                    var clonedTag = context.<NbtTag>createLocal();
+                    var clonedTag = context.<TTag>createLocal();
                     context.writeInstruction(Instructions.cloneNbtValue(clonedTag, value));
-                    var compoundTag = context.<NbtCompound>createLocal();
+                    var compoundTag = context.<TCompoundTag>createLocal();
                     context.writeInstruction(Instructions.tryAsNbtCompound(compoundTag, clonedTag, result.markAndGetErrorLabel()));
-                    var stack = context.<CommandSourceStack>createLocal();
+                    var stack = context.<TCommandSourceStack>createLocal();
                     context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
                     callFunctionsAndProvideResult(context, result, functions, stack, compoundTag);
                 });
             }
             case CommandGamemode(Gamemode gamemode, SelectorArgument targets) -> {
                 try(var selector = context.forSelector(targets, result)) {
-                    var playerLocation = context.<Player>createLocal();
+                    var playerLocation = context.<TServerPlayer>createLocal();
                     selector.writeInstruction(Instructions.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
-                    var mappedGamemode = context.<GameType>createLocal();
+                    var mappedGamemode = context.<TGameType>createLocal();
                     selector.writeInstruction(Instructions.mapGamemode(mappedGamemode, gamemode));
                     selector.writeInstruction(Instructions.setGamemode(playerLocation, mappedGamemode));
                 }
@@ -627,9 +627,9 @@ public final class CommandCompiler {
             }
             case CommandScoreboardPlayersEnable(ScoreAccessorArgument targets1) -> {
                 try(var objective = context.getObjective(targets1.objective(), result)) {
-                    var criterion = context.<ScoreboardCriterion>createLocal();
+                    var criterion = context.<TObjectiveCriteria>createLocal();
                     objective.writeInstruction(Instructions.getObjectiveCriterion(criterion, objective.content()));
-                    var mappedCriterion = context.<ScoreboardCriterion>createLocal();
+                    var mappedCriterion = context.<TObjectiveCriteria>createLocal();
                     objective.writeInstruction(Instructions.mapObjectiveCriterion(mappedCriterion, DataRegistries.SCOREBOARD_CRITERIA.get("trigger").orElseThrow()));
                     objective.writeInstruction(Instructions.ifObjectCompareJump(ObjectComparisonType.NOT_IDENTITY_EQUAL, criterion, mappedCriterion, objective.data().contextEndLabel()));
                     try(var name = context.forScoreHolder(targets1.scoreHolder(), result)) {
@@ -794,7 +794,7 @@ public final class CommandCompiler {
             }
             case CommandTitleActionbar(SelectorArgument playersArg, Text text) -> {
                 try(var players = context.forSelector(playersArg, result)) {
-                    var playerLocation = context.<Player>createLocal();
+                    var playerLocation = context.<TServerPlayer>createLocal();
                     players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
                     var textLocation = loadText(context, text);
                     players.writeInstruction(Instructions.sendActionbar(playerLocation, textLocation));
@@ -802,21 +802,21 @@ public final class CommandCompiler {
             }
             case CommandTitleClear(SelectorArgument playersArg) -> {
                 try(var players = context.forSelector(playersArg, result)) {
-                    var playerLocation = context.<Player>createLocal();
+                    var playerLocation = context.<TServerPlayer>createLocal();
                     players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
                     players.writeInstruction(Instructions.sendTitlesClear(playerLocation));
                 }
             }
             case CommandTitleReset(SelectorArgument playersArg) -> {
                 try(var players = context.forSelector(playersArg, result)) {
-                    var playerLocation = context.<Player>createLocal();
+                    var playerLocation = context.<TServerPlayer>createLocal();
                     players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
                     players.writeInstruction(Instructions.sendTitlesReset(playerLocation));
                 }
             }
             case CommandTitleSubtitle(SelectorArgument playersArg, Text text) -> {
                 try(var players = context.forSelector(playersArg, result)) {
-                    var playerLocation = context.<Player>createLocal();
+                    var playerLocation = context.<TServerPlayer>createLocal();
                     players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
                     var textLocation = loadText(context, text);
                     players.writeInstruction(Instructions.sendSubtitle(playerLocation, textLocation));
@@ -824,14 +824,14 @@ public final class CommandCompiler {
             }
             case CommandTitleTimes(SelectorArgument playersArg, int fadeIn, int stay, int fadeOut) -> {
                 try(var players = context.forSelector(playersArg, result)) {
-                    var playerLocation = context.<Player>createLocal();
+                    var playerLocation = context.<TServerPlayer>createLocal();
                     players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
                     players.writeInstruction(Instructions.sendTitlesTimes(playerLocation, LocationData.ofInteger(fadeIn), LocationData.ofInteger(stay), LocationData.ofInteger(fadeOut)));
                 }
             }
             case CommandTitleTitle(SelectorArgument playersArg, Text text) -> {
                 try(var players = context.forSelector(playersArg, result)) {
-                    var playerLocation = context.<Player>createLocal();
+                    var playerLocation = context.<TServerPlayer>createLocal();
                     players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
                     var textLocation = loadText(context, text);
                     players.writeInstruction(Instructions.sendTitle(playerLocation, textLocation));
@@ -839,7 +839,7 @@ public final class CommandCompiler {
             }
             case CommandTellraw(SelectorArgument playersArg, Text text) -> {
                 try(var players = context.forSelector(playersArg, result)) {
-                    var playerLocation = context.<Player>createLocal();
+                    var playerLocation = context.<TServerPlayer>createLocal();
                     players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
                     var textLocation = loadText(context, text);
                     players.writeInstruction(Instructions.sendSystemMessage(playerLocation, textLocation));
@@ -854,7 +854,7 @@ public final class CommandCompiler {
         }
     }
 
-    private static void callFunctionsAndProvideResult(CompilationContext context, ResultContext resultContext, List<DataLocation> functions, LocationData<? extends CommandSourceStack> stack, @Nullable LocationData<? extends NbtCompound> arguments) {
+    private static void callFunctionsAndProvideResult(CompilationContext context, ResultContext resultContext, List<DataLocation> functions, LocationData<? extends TCommandSourceStack> stack, @Nullable LocationData<? extends TCompoundTag> arguments) {
         if(resultContext.generatingResult() || resultContext.generatingSuccess()) {
             var resultValue = context.<Long>createLocal();
             context.writeInstruction(Instructions2.callFunctionsWithResult(resultValue, functions, stack, arguments));
@@ -870,24 +870,24 @@ public final class CommandCompiler {
         }
     }
 
-    private static void forLocatedBaseNbtData(CompilationContext context, ResultContext resultContext, NbtDataLocation input, Consumer<LocationData<? extends NbtTag>> consumer) {
+    private static void forLocatedBaseNbtData(CompilationContext context, ResultContext resultContext, NbtDataLocation input, Consumer<LocationData<? extends TTag>> consumer) {
         switch(input) {
             case NbtDataLocation.Block _ -> throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_NBT_SOURCE_ACCESS, context.getSource(), "Accessing block nbt is not implemented yet"));
             case NbtDataLocation.Entity _ -> throw new RuntimeException("entity nbt not implemented");
             case NbtDataLocation.Storage(DataLocation storage) -> {
-                var nbtLocal = context.<NbtCompound>createLocal();
+                var nbtLocal = context.<TCompoundTag>createLocal();
                 context.writeInstruction(Instructions.getNbtStorage(nbtLocal, storage));
                 consumer.accept(nbtLocal);
             }
         }
     }
 
-    private static LocationData<? extends NbtTag> getNbtPathValue(CompilationContext context, LocationData<? extends NbtTag> source, List<NbtPathPart> parts, boolean tryCreate, LabelData failLabel) {
+    private static LocationData<? extends TTag> getNbtPathValue(CompilationContext context, LocationData<? extends TTag> source, List<NbtPathPart> parts, boolean tryCreate, LabelData failLabel) {
         for(var part : parts) {
             if(part instanceof NbtPathPart.Named(String name)) {
-                var compound = context.<NbtCompound>createLocal();
+                var compound = context.<TCompoundTag>createLocal();
                 context.writeInstruction(Instructions.tryAsNbtCompound(compound, source, failLabel));
-                var storage = context.<NbtTag>createLocal();
+                var storage = context.<TTag>createLocal();
                 if(tryCreate) {
                     context.writeInstruction(Instructions.getNbtFromCompoundOrCreate(storage, compound, LocationData.ofString(name)));
                 }else {
@@ -896,7 +896,7 @@ public final class CommandCompiler {
                 source = storage;
             }else if(part instanceof NbtPathPart.ArrayIndexInteger indexed) {
                 var listAccess = accessNbtList(context, source, indexed, failLabel);
-                var storage = context.<NbtTag>createLocal();
+                var storage = context.<TTag>createLocal();
                 context.writeInstruction(Instructions.getNbtFromList(storage, listAccess.list, listAccess.index));
                 source = storage;
             }else {
@@ -906,9 +906,9 @@ public final class CommandCompiler {
         return source;
     }
 
-    private static void assignNbtValue(CompilationContext context, LocationData<? extends NbtTag> source, NbtPathPart accessor, LocationData<? extends NbtTag> value, @Nullable LocationData<Integer> modifiedCount, LabelData failLabel) {
+    private static void assignNbtValue(CompilationContext context, LocationData<? extends TTag> source, NbtPathPart accessor, LocationData<? extends TTag> value, @Nullable LocationData<Integer> modifiedCount, LabelData failLabel) {
         if(accessor instanceof NbtPathPart.Named(String name)) {
-            var valueCompound = context.<NbtCompound>createLocal();
+            var valueCompound = context.<TCompoundTag>createLocal();
             context.writeInstruction(Instructions.tryAsNbtCompound(valueCompound, source, failLabel));
             context.writeInstruction(Instructions.setNbtInCompound(valueCompound, LocationData.ofString(name), value));
         }else if(accessor instanceof NbtPathPart.ArrayIndexInteger indexed) {
@@ -920,8 +920,8 @@ public final class CommandCompiler {
         if(modifiedCount != null) context.writeInstruction(Instructions.valueAdd(modifiedCount, modifiedCount, LocationData.ofInteger(1)));
     }
 
-    private static NbtListAccessResult accessNbtList(CompilationContext context, LocationData<? extends NbtTag> source, NbtPathPart.ArrayIndexInteger indexed, LabelData failLabel) {
-        var list = context.<NbtList>createLocal();
+    private static NbtListAccessResult accessNbtList(CompilationContext context, LocationData<? extends TTag> source, NbtPathPart.ArrayIndexInteger indexed, LabelData failLabel) {
+        var list = context.<TListTag>createLocal();
         context.writeInstruction(Instructions.tryAsNbtList(list, source, failLabel));
         var length = context.<Integer>createLocal();
         context.writeInstruction(Instructions.getListLength(length, list));
@@ -938,25 +938,25 @@ public final class CommandCompiler {
         return new NbtListAccessResult(list, index);
     }
 
-    private record NbtListAccessResult(LocationData<NbtList> list, LocationData<Integer> index) {}
+    private record NbtListAccessResult(LocationData<TListTag> list, LocationData<Integer> index) {}
 
-    private static LocationData<? extends TextComponent> loadText(CompilationContext context, Text text) {
+    private static LocationData<? extends TComponent> loadText(CompilationContext context, Text text) {
         if(!text.isCompilationSupported()) {
             throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_TEXT, context.getSource(), "Compiling " + text + " is not implemented yet"));
         }
 
         if(text.isConstant()) {
-            var textLocation = context.<TextComponent>createLocal();
+            var textLocation = context.<TComponent>createLocal();
             context.writeInstruction(Instructions.loadText(textLocation, text));
             return textLocation;
         }else {
             if(text.content() instanceof TextContent.SelectorText(SelectorArgument selector, Text separator)) {
                 var selectorResult = context.getSelectorList(selector, null);
                 var loadedSeparator = loadText(context, separator != null ? separator : TextContent.SelectorText.DEFAULT_SEPARATOR);
-                var textLocation = context.<TextComponentMutable>createLocal();
+                var textLocation = context.<TMutableComponent>createLocal();
                 context.writeInstruction(Instructions.formatEntityTextList(textLocation, selectorResult, loadedSeparator));
                 if(!text.style().isEmpty()) {
-                    var style = context.<TextComponentStyle>createLocal();
+                    var style = context.<TStyle>createLocal();
                     context.writeInstruction(Instructions.loadTextStyle(style, text.style()));
                     context.writeInstruction(Instructions.setTextStyle(textLocation, style));
                 }
