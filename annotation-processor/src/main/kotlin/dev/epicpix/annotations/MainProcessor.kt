@@ -115,9 +115,6 @@ class MainProcessor(
     private var invoked = false
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
-        if(options["definitions"] == "minecraft") {
-            throw RuntimeException(options.toString())
-        }
         if(invoked) return emptyList()
         invoked = true
         dataDir = options["data_dir"]!!
