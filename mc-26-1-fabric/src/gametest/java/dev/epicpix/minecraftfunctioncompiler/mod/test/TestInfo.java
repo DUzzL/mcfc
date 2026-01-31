@@ -27,6 +27,7 @@ public record TestInfo(Identifier key, int maxTicks) {
 
     public Consumer<GameTestHelper> runner() {
         return helper -> {
+            McfcTestHelper.setupRun(helper);
             System.out.println("Run " + helper.getLevel().getGameTime() + " " + key);
             helper.succeed();
         };
