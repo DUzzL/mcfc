@@ -10,25 +10,7 @@ interface ParsedTokenExpression : ParsedToken
 
 data class ParsedFile(val headers: Map<String, String>, val definitions: List<ParsedTokenInstructionDefinition>)
 
-data class ParsedTokenValueAccessor(val scope: ParsedTokenValueAccessorScope, val name: String) : ParsedTokenExpression {
-    override fun equals(other: Any?): Boolean {
-        if(this === other) return true
-        if(javaClass != other?.javaClass) return false
-
-        other as ParsedTokenValueAccessor
-
-        if(scope != other.scope) return false
-        if(name != other.name) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = scope.hashCode()
-        result = 31 * result + name.hashCode()
-        return result
-    }
-}
+data class ParsedTokenValueAccessor(val mut: Boolean?, val scope: ParsedTokenValueAccessorScope, val name: String) : ParsedTokenExpression
 data class ParsedTokenInstructionDefinition(val instructionFlags: List<String>, val name: String, val params: List<Pair<ParsedTokenValueAccessor, ParsedTokenExpressionType>>, val code: List<ParsedTokenStatement>, val versionRange: Pair<MinecraftVersion?, MinecraftVersion?>?, var usesObf: Boolean = false) : ParsedToken
 
 
@@ -174,10 +156,13 @@ private fun parseExpressionAccessorScopeWord(iter: ListIterator<LexToken>): Pars
 private fun parseFunctionDefinitionParams(iter: ListIterator<LexToken>, usesObf: AtomicBoolean): MutableList<Pair<ParsedTokenValueAccessor, ParsedTokenExpressionType>> {
     val res = mutableListOf<Pair<ParsedTokenValueAccessor, ParsedTokenExpressionType>>()
     while(true) {
-        if(iter.tryNextToken<LexTokenWord>() == null && !iter.tryNextTokenType(LexTokenSimpleType.OPEN_ANGLE_BRACKET)) {
-            break
+        val mut = iter.tryNextTokenType(LexTokenSimpleType.KW_MUT)
+        if(!mut) {
+            if(iter.tryNextToken<LexTokenWord>() == null && !iter.tryNextTokenType(LexTokenSimpleType.OPEN_ANGLE_BRACKET)) {
+                break
+            }
+            iter.previous()
         }
-        iter.previous()
         val type = parseExpressionTypeWord(iter)
         if(type is ParsedTokenExpressionTypeComplex) {
             if(type.displayName.startsWith("net.minecraft")) {
@@ -189,7 +174,7 @@ private fun parseFunctionDefinitionParams(iter: ListIterator<LexToken>, usesObf:
         iter.expectTokenType(LexTokenSimpleType.COLON)
         val name = iter.expectToken<LexTokenWord>()
         iter.expectTokenType(LexTokenSimpleType.CLOSE_BRACKET)
-        res.add(ParsedTokenValueAccessor(scope, name.word) to type)
+        res.add(ParsedTokenValueAccessor(mut, scope, name.word) to type)
         if(!iter.tryNextTokenType(LexTokenSimpleType.COMMA)) {
             break
         }
@@ -376,7 +361,7 @@ private fun parseValueAccessor(iter: ListIterator<LexToken>, valueDefinitions: L
         }
     }
     if(scope == ParsedTokenValueAccessorScope.LOCAL) {
-        return ParsedTokenValueAccessor(scope, name.word);
+        return ParsedTokenValueAccessor(null, scope, name.word);
     }
     throw IllegalArgumentException("Undefined value accessor: [$scope:${name.word}]")
 }
@@ -549,7 +534,7 @@ fun parseTokens(iter: ListIterator<LexToken>): ParsedFile {
                         break
                     }
                 }
-                params.add(firstNonStatic, ParsedTokenValueAccessor(ParsedTokenValueAccessorScope.RETURN, "result") to type)
+                params.add(firstNonStatic, ParsedTokenValueAccessor(true, ParsedTokenValueAccessorScope.RETURN, "result") to type)
             }
             val code = if(iter.tryNextTokenType(LexTokenSimpleType.ASSIGN)) {
                 val expression = parseExpression(iter, params.map { it.first }, usesObf)

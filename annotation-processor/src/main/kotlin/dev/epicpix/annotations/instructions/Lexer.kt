@@ -48,6 +48,7 @@ enum class LexTokenSimpleType : LexToken {
     KW_TRUE,
     KW_NEW,
     KW_RETURN,
+    KW_MUT,
 }
 
 fun lexTokens(code: String): List<LexToken> {
@@ -169,6 +170,7 @@ fun lexTokens(code: String): List<LexToken> {
                 "true" -> LexTokenSimpleType.KW_TRUE
                 "new" -> LexTokenSimpleType.KW_NEW
                 "return" -> LexTokenSimpleType.KW_RETURN
+                "mut" -> LexTokenSimpleType.KW_MUT
                 else -> LexTokenWord(res)
             }
         }

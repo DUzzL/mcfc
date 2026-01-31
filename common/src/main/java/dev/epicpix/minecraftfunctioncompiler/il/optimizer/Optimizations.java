@@ -144,7 +144,7 @@ public final class Optimizations {
     private static void removeDuplicateChecks(OptimizationPass pass) {
         if(pass.thisInstruction().type() == InstructionTypes.IF_NULL_JUMP) {
             var compareData = pass.thisInstruction().get("local");
-            var reassignmentInstrs = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes.ASSIGN, List.of(Pair.of("result", compareData)));
+            var reassignmentInstrs = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes.DUP, List.of(Pair.of("result", compareData)));
             if(reassignmentInstrs.isEmpty()) {
                 var labelData = pass.thisInstruction().get("label");
                 var delInstrs = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes.IF_NULL_JUMP, List.of(Pair.of("local", compareData), Pair.of("label", labelData)));
@@ -229,7 +229,7 @@ public final class Optimizations {
 
             var indexLoc = Objects.requireNonNull(pass.getInstruction(getInstr).get("index"));
 
-            var indexDefInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes.ASSIGN, List.of(Pair.of("result", indexLoc), Pair.of("src", LocationData.ofInteger(0))));
+            var indexDefInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes.DUP, List.of(Pair.of("result", indexLoc), Pair.of("src", LocationData.ofInteger(0))));
             if(indexDefInstr == null) return;
 
             var adderInstr = pass.findSingleInstruction(0, pass.context().getInstructionCount(), false, InstructionTypes.VALUE_ADD, List.of(Pair.of("result", indexLoc), Pair.of("a", indexLoc), Pair.of("b", LocationData.ofInteger(1))));
@@ -247,7 +247,7 @@ public final class Optimizations {
             }
 
 
-            pass.replaceInstruction(getInstr, Instructions.assign(pass.getInstruction(getInstr).get("result"), pass.getInstruction(addInstr).get("element")));
+            pass.replaceInstruction(getInstr, Instructions.dup(pass.getInstruction(getInstr).get("result"), pass.getInstruction(addInstr).get("element")));
             pass.removeInstruction(jumpInstr);
             pass.removeInstruction(adderInstr);
             pass.removeInstruction(condInstr);
@@ -268,7 +268,7 @@ public final class Optimizations {
                 pass.addInstruction(addInstr - 1, r);
             }
         }else {
-            pass.replaceInstruction(getInstr, Instructions.assign(pass.getInstruction(getInstr).get("result"), pass.getInstruction(addInstr).get("element")));
+            pass.replaceInstruction(getInstr, Instructions.dup(pass.getInstruction(getInstr).get("result"), pass.getInstruction(addInstr).get("element")));
             pass.removeInstruction(condInstr);
             pass.removeInstruction(listLengthInstr);
             pass.removeInstruction(addInstr);

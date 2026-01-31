@@ -150,7 +150,7 @@ public final class CommandCompiler {
                     var setCountLocal = context.<Integer>createLocal();
 
                     context.writeInstruction(Instructions.getNbtStorage(storageLocal, storage));
-                    context.writeInstruction(Instructions.assign(setCountLocal, LocationData.ofInteger(0)));
+                    context.writeInstruction(Instructions.dup(setCountLocal, LocationData.ofInteger(0)));
 
                     var parts = path.parts();
 
@@ -378,7 +378,7 @@ public final class CommandCompiler {
                     var setCountLocal = context.<Integer>createLocal();
 
                     context.writeInstruction(Instructions.getNbtStorage(storageLocal, storage));
-                    context.writeInstruction(Instructions.assign(setCountLocal, LocationData.ofInteger(0)));
+                    context.writeInstruction(Instructions.dup(setCountLocal, LocationData.ofInteger(0)));
 
                     var parts = path.parts();
 
@@ -929,9 +929,9 @@ public final class CommandCompiler {
         var index = context.<Integer>createLocal();
 
         if(indexed.index() >= 0) {
-            context.writeInstruction(Instructions.assign(index, LocationData.ofInteger(indexed.index())));
+            context.writeInstruction(Instructions.dup(index, LocationData.ofInteger(indexed.index())));
         }else {
-            context.writeInstruction(Instructions.assign(index, length));
+            context.writeInstruction(Instructions.dup(index, length));
             context.writeInstruction(Instructions.valueSub(index, index, LocationData.ofInteger(-indexed.index())));
         }
 

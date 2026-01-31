@@ -42,8 +42,8 @@ public final class ResultContext implements AutoCloseable {
     public static ResultContext create(CompilationContext context, LabelData at, boolean generateSuccess, boolean generateResult) {
         var success = generateSuccess ? context.<Integer>createLocal() : null;
         var result = generateResult ? context.<Integer>createLocal() : null;
-        if(success != null) context.instructionWriter.addInstructionBefore(Instructions.assign(success, LocationData.ofInteger(1)), at);
-        if(result != null) context.instructionWriter.addInstructionBefore(Instructions.assign(result, LocationData.ofInteger(0)), at);
+        if(success != null) context.instructionWriter.addInstructionBefore(Instructions.dup(success, LocationData.ofInteger(1)), at);
+        if(result != null) context.instructionWriter.addInstructionBefore(Instructions.dup(result, LocationData.ofInteger(0)), at);
         var endErrorLabel = context.instructionWriter.createDeferredLabel();
         var startErrorLabel = context.instructionWriter.createDeferredLabel();
         return new ResultContext(context, success, result, startErrorLabel, endErrorLabel, false);
@@ -93,8 +93,8 @@ public final class ResultContext implements AutoCloseable {
             if(result != null || success != null) {
                 context.writeInstruction(Instructions.jump(endErrorLabel));
                 context.writeInstruction(Instructions.label(errorLabel));
-                if(result != null) context.writeInstruction(Instructions.assign(result, LocationData.ofInteger(0)));
-                if(success != null) context.writeInstruction(Instructions.assign(success, LocationData.ofInteger(0)));
+                if(result != null) context.writeInstruction(Instructions.dup(result, LocationData.ofInteger(0)));
+                if(success != null) context.writeInstruction(Instructions.dup(success, LocationData.ofInteger(0)));
                 context.writeInstruction(Instructions.label(endErrorLabel));
             }else {
                 context.writeInstruction(Instructions.label(errorLabel));

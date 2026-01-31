@@ -27,6 +27,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.locations.TEntityType;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TGameType;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TObjective;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TScoreAccess;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TScoreHolder;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TServerLevel;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TServerPlayer;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TTeam;
@@ -204,20 +205,20 @@ public class CompilationContext {
             var rotationData = getRotation();
 
             var offset = this.<Double>createLocal();
-            rotationData.writeInstruction(Instructions.assign(offset, LocationData.ofDouble(0.0)));
+            rotationData.writeInstruction(Instructions.dup(offset, LocationData.ofDouble(0.0)));
             var position = this.<TVec3>createLocal();
             if(rotationData.data().currentAnchor() == LocationAnchor.EYES) {
                 var skipCode = instructionWriter.createLabelBefore(rotationData.endLabel());
                 var reassignedOffset = this.<Double>createLocal();
                 instructionWriter.addInstructionBefore(Instructions.ifNullJump(entityData.content(), skipCode), skipCode);
                 instructionWriter.addInstructionBefore(Instructions.getEyeHeight(reassignedOffset, entityData.content()), skipCode);
-                instructionWriter.addInstructionBefore(Instructions.assign(offset, reassignedOffset), skipCode);
+                instructionWriter.addInstructionBefore(Instructions.dup(offset, reassignedOffset), skipCode);
             }else if(rotationData.data().currentAnchor() == null) {
                 var skipCode = instructionWriter.createLabelBefore(rotationData.endLabel());
                 var reassignedOffset = this.<Double>createLocal();
                 instructionWriter.addInstructionBefore(Instructions.ifNullJump(entityData.content(), skipCode), skipCode);
                 instructionWriter.addInstructionBefore(Instructions.getAnchorOffset(reassignedOffset, rotationData.data().commandSourceStack(), entityData.content()), skipCode);
-                instructionWriter.addInstructionBefore(Instructions.assign(offset, reassignedOffset), skipCode);
+                instructionWriter.addInstructionBefore(Instructions.dup(offset, reassignedOffset), skipCode);
             }
             rotationData.writeInstruction(Instructions.applyLocalPositionWorld(position, positionData.content(), rotationData.content(), offset, pos));
             return enterWithValue(rotationData.data(), position, entityData.stackCount() + positionData.stackCount() + rotationData.stackCount() + 1);
@@ -313,7 +314,7 @@ public class CompilationContext {
             data.writeInstruction(instructionWriter, Instructions.getListLength(listLength, entities));
 
             var index = this.<Integer>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.assign(index, LocationData.ofInteger(0)));
+            data.writeInstruction(instructionWriter, Instructions.dup(index, LocationData.ofInteger(0)));
             var iterEntityStart = data.writeLabel(instructionWriter);
             data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, listLength, iterWorldStart));
             var entityObj = this.createLocal();
@@ -333,7 +334,7 @@ public class CompilationContext {
             data.writeInstruction(instructionWriter, Instructions.getListLength(listLength, entities));
 
             var index = this.<Integer>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.assign(index, LocationData.ofInteger(0)));
+            data.writeInstruction(instructionWriter, Instructions.dup(index, LocationData.ofInteger(0)));
             var iterStart = data.writeLabel(instructionWriter);
             data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, listLength, data.contextEndLabel()));
             var entityObj = this.createLocal();
@@ -366,7 +367,7 @@ public class CompilationContext {
         var index = this.<Integer>createLocal();
         var length = this.<Integer>createLocal();
         var playerList = this.<List<? extends TServerPlayer>>createLocal();
-        data.writeInstruction(instructionWriter, Instructions.assign(index, LocationData.ofInteger(0)));
+        data.writeInstruction(instructionWriter, Instructions.dup(index, LocationData.ofInteger(0)));
         data.writeInstruction(instructionWriter, Instructions.getPlayers(playerList));
         data.writeInstruction(instructionWriter, Instructions.getListLength(length, playerList));
 
@@ -430,7 +431,7 @@ public class CompilationContext {
         }
     }
 
-    public CompilationData<LocationData<String>> forEachScoreHolder(boolean single, ResultContext resultContext) {
+    public CompilationData<LocationData<? extends TScoreHolder>> forEachScoreHolder(boolean single, ResultContext resultContext) {
         var data = current();
         var scoreHolders = this.<List<? extends String>>createLocal();
         data.writeInstruction(instructionWriter, Instructions.getScoreboardHolders(scoreHolders));
@@ -439,20 +440,24 @@ public class CompilationContext {
         data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, listLength, LocationData.ofInteger(0), resultContext.markAndGetErrorLabel()));
         if(single) {
             var scoreHolderObj = this.createLocal();
-            var scoreHolder = this.<String>createLocal();
+            var scoreHolderStr = this.<String>createLocal();
             data.writeInstruction(instructionWriter, Instructions.getListElement(scoreHolderObj, scoreHolders, LocationData.ofInteger(0)));
-            data.writeInstruction(instructionWriter, Instructions.assumeString(scoreHolder, scoreHolderObj));
+            data.writeInstruction(instructionWriter, Instructions.assumeString(scoreHolderStr, scoreHolderObj));
+            var scoreHolder = this.<TScoreHolder>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.namedScoreHolder(scoreHolder, scoreHolderStr));
             var codeLocation = data.writeLabel(instructionWriter);
             return enterWithValue(data.withContextLabel(codeLocation), scoreHolder);
         }else {
             var index = this.<Integer>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.assign(index, LocationData.ofInteger(0)));
+            data.writeInstruction(instructionWriter, Instructions.dup(index, LocationData.ofInteger(0)));
             var iterStart = data.writeLabel(instructionWriter);
             data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, listLength, data.contextEndLabel()));
             var scoreHolderObj = this.createLocal();
-            var scoreHolder = this.<String>createLocal();
+            var scoreHolderStr = this.<String>createLocal();
             data.writeInstruction(instructionWriter, Instructions.getListElement(scoreHolderObj, scoreHolders, index));
-            data.writeInstruction(instructionWriter, Instructions.assumeString(scoreHolder, scoreHolderObj));
+            data.writeInstruction(instructionWriter, Instructions.assumeString(scoreHolderStr, scoreHolderObj));
+            var scoreHolder = this.<TScoreHolder>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.namedScoreHolder(scoreHolder, scoreHolderStr));
             var codeLocation = data.writeLabel(instructionWriter);
             data.writeInstruction(instructionWriter, Instructions.valueAdd(index, index, LocationData.ofInteger(1)));
             data.writeInstruction(instructionWriter, Instructions.jump(iterStart));
@@ -460,19 +465,19 @@ public class CompilationContext {
         }
     }
 
-    public CompilationData<LocationData<String>> forScoreHolder(ScoreHolderArgument holder, ResultContext resultContext) {
+    public CompilationData<LocationData<? extends TScoreHolder>> forScoreHolder(ScoreHolderArgument holder, ResultContext resultContext) {
         if(holder.all()) {
             return forEachScoreHolder(holder.single(), resultContext);
         }else if(holder.name() != null) {
             var macro = getResolvedStringMacro(holder.name());
-            return new CompilationData<>(this, current(), macro, 0);
+            var scoreHolder = this.<TScoreHolder>createLocal();
+            writeInstruction(Instructions.namedScoreHolder(scoreHolder, macro));
+            return new CompilationData<>(this, current(), scoreHolder, 0);
         }else if(holder.selector() != null) {
             var selector = holder.single() ? holder.selector().limit(1) : holder.selector();
             var selectorData = forSelector(selector, resultContext);
-            var name = this.<String>createLocal();
-            selectorData.writeInstruction(Instructions.getScoreboardName(name, selectorData.content()));
             var codeLocation = instructionWriter.createLabelBefore(selectorData.data().contextEndLabel());
-            return enterWithValue(selectorData.data().withContextLabel(codeLocation), name, selectorData.stackCount() + 1);
+            return enterWithValue(selectorData.data().withContextLabel(codeLocation), selectorData.content(), selectorData.stackCount() + 1);
         }
         throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNREACHABLE_CODE, source, "Unreachable code reached"));
     }
@@ -599,7 +604,7 @@ public class CompilationContext {
                 return enterWithValue(data.withContextLabel(codeLocation), entity);
             }else {
                 var index = this.<Integer>createLocal();
-                data.writeInstruction(instructionWriter, Instructions.assign(index, LocationData.ofInteger(0)));
+                data.writeInstruction(instructionWriter, Instructions.dup(index, LocationData.ofInteger(0)));
                 var iterStart = data.writeLabel(instructionWriter);
                 data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, length, data.contextEndLabel()));
                 data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, LocationData.ofInteger(selector.limit()), data.contextEndLabel()));
@@ -615,7 +620,7 @@ public class CompilationContext {
             }
         }else {
             var index = this.<Integer>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.assign(index, LocationData.ofInteger(0)));
+            data.writeInstruction(instructionWriter, Instructions.dup(index, LocationData.ofInteger(0)));
             var iterStart = data.writeLabel(instructionWriter);
             data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, length, data.contextEndLabel()));
             var entityObj = this.createLocal();
@@ -817,8 +822,7 @@ public class CompilationContext {
         if(!selector.scores().isEmpty()) {
             for(var entry : selector.scores().entrySet()) {
                 var objectiveData = getObjective(entry.getKey(), resultContext);
-                var nameData = getScoreboardName(entityData.content());
-                var scoreData = getScoreData(new ScoreAccessor(objectiveData.content(), nameData), data.contextEndLabel(), false);
+                var scoreData = getScoreData(new ScoreAccessor(objectiveData.content(), entityData.content()), data.contextEndLabel(), false);
                 data = current();
 
                 var scoreValue = this.<Integer>createLocal();
@@ -861,7 +865,7 @@ public class CompilationContext {
         var length = this.<Integer>createLocal();
         instructionWriter.addInstructionBefore(Instructions.getListLength(length, forkingContext.getForkContextList()), forkingContext.getForkExecLabel());
         var index = this.<Integer>createLocal();
-        instructionWriter.addInstructionBefore(Instructions.assign(index, LocationData.ofInteger(0)), forkingContext.getForkExecLabel());
+        instructionWriter.addInstructionBefore(Instructions.dup(index, LocationData.ofInteger(0)), forkingContext.getForkExecLabel());
         var iterStart = instructionWriter.createLabelBefore(forkingContext.getForkExecLabel());
         instructionWriter.addInstructionBefore(Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, length, forkingContext.getForkExecLabel()), forkingContext.getForkExecLabel());
         var commandStackObj = this.createLocal();
