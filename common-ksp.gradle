@@ -14,7 +14,11 @@ gradle.taskGraph.whenReady { taskExecutionGraph ->
 }
 
 ksp {
-    arg("definitions", project.ext.definitions)
+    if(project.name.startsWith("mc-")) {
+        arg("project", "minecraft")
+    }else {
+        arg("project", project.name)
+    }
     arg("data_dir", file("../data/").absolutePath)
     project.afterEvaluate {
         arg("jars", project.configurations.runtimeClasspath.incoming.files.join(File.pathSeparator))

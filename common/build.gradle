@@ -22,7 +22,6 @@ dependencies {
     api("org.jspecify:jspecify:1.0.0")
 }
 
-project.ext.definitions = "common"
 apply from: "../common-ksp.gradle"
 
 tasks.withType(JavaCompile).configureEach {

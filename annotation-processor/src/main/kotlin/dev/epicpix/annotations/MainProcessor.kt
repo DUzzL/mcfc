@@ -75,21 +75,32 @@ class MainProcessor(
             setJarInfo(jarFiles to jarFileMappings)
         }
         setResolver(resolver)
-        val definitions = loadJson(options.definitions)
-        logger.info("Running KSP for ${options.definitions} - ${options.sourceSet}")
+        logger.info("Running KSP for ${options.project} - ${options.sourceSet}")
         if(options.sourceSet == "main") {
             generateInstructionData(resolver)
             val targets = mutableListOf<String>()
             val file = parseCode(loadDataFile("data.instructions"))
-            val emitterClass = if(options.definitions == "common") file.headers["emitter_common_file"]!! else file.headers["emitter_minecraft_file"]!!
-            val emitterPackage = emitterClass.substring(0, emitterClass.lastIndexOf('.'))
-            if(definitions["definition_file"] != null) {
-                generateFunctionMapping(definitions, options.minecraftVersion, "$emitterPackage.EmitterTargets", targets)
+
+            if(options.project == "common" || options.project == "minecraft") {
+                val emitterClass = file.headers["emitter_${options.project}_file"]!!
+                val emitterPackage = emitterClass.substring(0, emitterClass.lastIndexOf('.'))
+                val definitions = loadJson(options.project)
+                if(definitions["definition_file"] != null) {
+                    generateFunctionMapping(definitions, options.minecraftVersion, "$emitterPackage.EmitterTargets", targets)
+                }
             }
-            generateInstructionData(file, options.definitions == "common", options.minecraftVersion, targets)
-            if(options.definitions == "common") {
-                generateConstantsData()
-                generateCommandsData()
+
+            when(options.project) {
+                "common" -> {
+                    generateInstructionData(file, true, options.minecraftVersion, targets)
+                    generateConstantsData()
+                    generateCommandsData()
+                }
+                "common-test" -> {
+                }
+                "minecraft" -> {
+                    generateInstructionData(file, false, options.minecraftVersion, targets)
+                }
             }
         }
         return listOf()

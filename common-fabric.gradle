@@ -32,7 +32,6 @@ dependencies {
     }
 }
 
-project.ext.definitions = "minecraft"
 apply from: "../common-ksp.gradle"
 
 tasks.withType(JavaCompile).configureEach {
