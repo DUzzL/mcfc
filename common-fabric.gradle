@@ -21,9 +21,7 @@ if(project.hasProperty("fabric_api_version")) {
 }
 
 dependencies {
-    implementation(project(":annotation-processor"))
     implementation(project(":common"))
-    ksp project(":annotation-processor")
 
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     implementation "net.fabricmc:fabric-loader:${project.loader_version}"
@@ -34,28 +32,8 @@ dependencies {
     }
 }
 
-project.ext.isJarTask = false
-
-gradle.taskGraph.whenReady { taskExecutionGraph ->
-    ksp {
-        arg("isJarTask", taskExecutionGraph.hasTask(':jar').toString())
-    }
-}
-
-ksp {
-    arg("definitions", "minecraft")
-    arg("data_dir", file("../data/").absolutePath)
-    project.afterEvaluate {
-        arg("jars", project.configurations.runtimeClasspath.incoming.files.join(File.pathSeparator))
-    }
-    arg("minecraft_version", project.minecraft_version)
-    println()
-}
-
-tasks.matching { it.class.name.contains("KspAATask") }.configureEach { task ->
-    def sourceSetName = task.name.replaceFirst(/^ksp/, "").replaceFirst(/Kotlin$/, "").replaceFirst(/^[A-Z]/) { it.toLowerCase() }
-    task.kspConfig.processorOptions["source_set"] = sourceSetName ?: "main"
-}
+project.ext.definitions = "minecraft"
+apply from: "../common-ksp.gradle"
 
 tasks.withType(JavaCompile).configureEach {
     it.options.encoding = "UTF-8"

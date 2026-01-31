@@ -47,84 +47,22 @@ fun loadDataFile(file: String): String {
     return Files.readString(File(dataDir, file).toPath())
 }
 
-fun kotlinToJavaType(type: String, genericUsage: Boolean, generics: List<String> = emptyList()): String {
-    val genericsString = if(generics.isEmpty()) "" else "<${generics.joinToString(", ") { "? extends $it" }}>"
-    return when(type) {
-        "kotlin.Boolean" -> if(!genericUsage) "boolean" else "Boolean"
-        "kotlin.Double" -> if(!genericUsage) "double" else "Double"
-        "kotlin.Float" -> if(!genericUsage) "float" else "Float"
-        "kotlin.Int" -> if(!genericUsage) "int" else "Integer"
-        "kotlin.Long" -> if(!genericUsage) "long" else "Long"
-        "kotlin.String" -> "String"
-        "kotlin.collections.List" -> if(!genericUsage) "List" else "List${if(generics.isEmpty()) "<?>" else ""}"
-        "kotlin.collections.MutableList" -> if(!genericUsage) "List" else "List${if(generics.isEmpty()) "<?>" else ""}"
-        "kotlin.collections.Map" -> "Map"
-        "java.util.List" -> if(!genericUsage) "List" else "List${if(generics.isEmpty()) "<?>" else ""}"
-        else -> if(type.startsWith("kotlin.")) throw UnsupportedOperationException("Unknown kotlin type: $type") else type
-    } + genericsString
-}
-
-fun javaToMinecraftGenericType(type: String, generics: List<String> = emptyList()): String {
-    return if(type.startsWith("net.minecraft.")) {
-        "dev.epicpix.minecraftfunctioncompiler.il.locations.T${type.split(".").last()}"
-    } else {
-        kotlinToJavaType(type, true, generics)
-    }
-}
-
-fun boxClassName(targetClass: String): String {
-    if(targetClass == "java/lang/Void") return "ConstantDescs.CD_Void"
-    if(targetClass == "java/lang/Boolean") return "ConstantDescs.CD_Boolean"
-    if(targetClass == "java/lang/Byte") return "ConstantDescs.CD_Byte"
-    if(targetClass == "java/lang/Character") return "ConstantDescs.CD_Character"
-    if(targetClass == "java/lang/Short") return "ConstantDescs.CD_Short"
-    if(targetClass == "java/lang/Integer") return "ConstantDescs.CD_Integer"
-    if(targetClass == "java/lang/Long") return "ConstantDescs.CD_Long"
-    if(targetClass == "java/lang/Float") return "ConstantDescs.CD_Float"
-    if(targetClass == "java/lang/Double") return "ConstantDescs.CD_Double"
-    if(targetClass == "java/lang/Object") return "ConstantDescs.CD_Object"
-    if(targetClass == "java/lang/String") return "ConstantDescs.CD_String"
-    return "ClassDesc.ofInternalName(\"$targetClass\")"
-}
-
-fun boxMethodDescriptor(methodType: MethodTypeDesc): String {
-    val parameters = mutableListOf<String>()
-    parameters.add(boxDescriptor(methodType.returnType().descriptorString()))
-    parameters.addAll(methodType.parameterList().map { boxDescriptor(it.descriptorString()) })
-    return "MethodTypeDesc.of(${parameters.joinToString()})"
-}
-
-fun boxDescriptor(descriptor: String): String {
-    if(descriptor == "V") return "ConstantDescs.CD_void"
-    if(descriptor == "Z") return "ConstantDescs.CD_boolean"
-    if(descriptor == "B") return "ConstantDescs.CD_byte"
-    if(descriptor == "C") return "ConstantDescs.CD_char"
-    if(descriptor == "S") return "ConstantDescs.CD_short"
-    if(descriptor == "I") return "ConstantDescs.CD_int"
-    if(descriptor == "J") return "ConstantDescs.CD_long"
-    if(descriptor == "F") return "ConstantDescs.CD_float"
-    if(descriptor == "D") return "ConstantDescs.CD_double"
-    if(descriptor.startsWith("L")) return boxClassName(descriptor.substring(1, descriptor.length - 1))
-    return "ClassDesc.ofDescriptor(\"$descriptor\")"
-}
-
 class MainProcessor(
     private val codeGenerator: CodeGenerator,
     private val logger: KSPLogger,
-    private val options: Map<String, String>
+    private val options: ProcessorOptions,
 ) : SymbolProcessor {
     private var invoked = false
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
         if(invoked) return emptyList()
         invoked = true
-        dataDir = options["data_dir"]!!
+        dataDir = options.dataDir
 
         val jarFiles = mutableListOf<JarFile>()
         val jarFileMappings = mutableMapOf<String, Int>()
-        if(options["jars"] != null) {
-            val jars = options["jars"]!!.split(File.pathSeparator)
-            for(jarName in jars) {
+        if(options.jars != null) {
+            for(jarName in options.jars) {
                 val jar = JarFile(File(jarName))
                 val index = jarFiles.size
                 jarFiles.add(jar)
@@ -137,22 +75,19 @@ class MainProcessor(
             setJarInfo(jarFiles to jarFileMappings)
         }
         setResolver(resolver)
-        val definitions = options["definitions"]?.let { loadJson(it) }
-        logger.info("Running KSP for ${options["definitions"]} - ${options["source_set"]}")
-        if(options["source_set"] == "main") {
+        val definitions = loadJson(options.definitions)
+        logger.info("Running KSP for ${options.definitions} - ${options.sourceSet}")
+        if(options.sourceSet == "main") {
             generateInstructionData(resolver)
             val targets = mutableListOf<String>()
             val file = parseCode(loadDataFile("data.instructions"))
-            val emitterClass = if(options["definitions"] == "common") file.headers["emitter_common_file"]!! else file.headers["emitter_minecraft_file"]!!
+            val emitterClass = if(options.definitions == "common") file.headers["emitter_common_file"]!! else file.headers["emitter_minecraft_file"]!!
             val emitterPackage = emitterClass.substring(0, emitterClass.lastIndexOf('.'))
-            if(definitions != null) {
-                val minecraftVersion = options["minecraft_version"]?.let { MinecraftVersion.parse(it) }
-                if(definitions["definition_file"] != null) {
-                    generateFunctionMapping(definitions, minecraftVersion, "$emitterPackage.EmitterTargets", targets)
-                }
-                generateInstructionData(file, options["definitions"] == "common", minecraftVersion, targets)
+            if(definitions["definition_file"] != null) {
+                generateFunctionMapping(definitions, options.minecraftVersion, "$emitterPackage.EmitterTargets", targets)
             }
-            if(options["definitions"] == "common") {
+            generateInstructionData(file, options.definitions == "common", options.minecraftVersion, targets)
+            if(options.definitions == "common") {
                 generateConstantsData()
                 generateCommandsData()
             }
@@ -167,9 +102,9 @@ class MainProcessor(
         map.appendText("package $resultPackage;\n")
         map.appendText("public final class $resultName {\n")
         map.appendText("    private $resultName() {}\n")
-        map.appendText("    public static final boolean isDevelopmentEnvironment = ${options["isJarTask"] != "true"};\n")
-        map.appendText("    public static final String versionCommit = \"${options["commit"] ?: "development"}\";\n")
-        map.appendText("    public static final String versionName = \"${options["version"] ?: error("Version option not specified")}\";\n")
+        map.appendText("    public static final boolean isDevelopmentEnvironment = ${!options.isJarTask};\n")
+        map.appendText("    public static final String versionCommit = \"${options.commit}\";\n")
+        map.appendText("    public static final String versionName = \"${options.version}\";\n")
         map.appendText("}\n")
         map.close()
     }
@@ -618,6 +553,6 @@ class MainProcessorProvider : SymbolProcessorProvider {
     override fun create(
         environment: SymbolProcessorEnvironment
     ): SymbolProcessor {
-        return MainProcessor(environment.codeGenerator, environment.logger, environment.options)
+        return MainProcessor(environment.codeGenerator, environment.logger, ProcessorOptions.fromMap(environment.options))
     }
 }

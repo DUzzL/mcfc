@@ -16,40 +16,19 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":annotation-processor"))
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("org.slf4j:slf4j-api:2.0.1")
     implementation("it.unimi.dsi:fastutil:8.5.9")
     api("org.jspecify:jspecify:1.0.0")
-    ksp project(":annotation-processor")
 }
 
-project.ext.isJarTask = false
-
-gradle.taskGraph.whenReady { taskExecutionGraph ->
-    ksp {
-        arg("isJarTask", taskExecutionGraph.hasTask(':jar').toString())
-    }
-}
+project.ext.definitions = "common"
+apply from: "../common-ksp.gradle"
 
 tasks.withType(JavaCompile).configureEach {
     it.options.encoding = "UTF-8"
     it.targetCompatibility = "25"
     it.sourceCompatibility = "25"
-}
-
-tasks.matching { it.class.name.contains("KspAATask") }.configureEach { task ->
-    def sourceSetName = task.name.replaceFirst(/^ksp/, "").replaceFirst(/Kotlin$/, "").replaceFirst(/^[A-Z]/) { it.toLowerCase() }
-    task.kspConfig.processorOptions["source_set"] = sourceSetName ?: "main"
-}
-
-ksp {
-    arg("data_dir", file("../data/").absolutePath)
-    arg("definitions", "common")
-    arg("version", project.mod_version)
-    if("true" == System.getenv("CI")) {
-        arg("commit", System.getenv("CI_COMMIT_SHA"))
-    }
 }
 
 kotlin {

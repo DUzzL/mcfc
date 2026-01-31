@@ -1,0 +1,36 @@
+apply plugin: 'com.google.devtools.ksp'
+
+dependencies {
+    implementation(project(":annotation-processor"))
+    ksp project(":annotation-processor")
+}
+
+project.ext.isJarTask = false
+
+gradle.taskGraph.whenReady { taskExecutionGraph ->
+    ksp {
+        arg("isJarTask", taskExecutionGraph.hasTask(':jar').toString())
+    }
+}
+
+ksp {
+    arg("definitions", project.ext.definitions)
+    arg("data_dir", file("../data/").absolutePath)
+    project.afterEvaluate {
+        arg("jars", project.configurations.runtimeClasspath.incoming.files.join(File.pathSeparator))
+    }
+    if(project.hasProperty("minecraft_version")) {
+        arg("minecraft_version", project.minecraft_version)
+    }
+    arg("version", project.mod_version)
+    if("true" == System.getenv("CI")) {
+        arg("commit", System.getenv("CI_COMMIT_SHA"))
+    }else {
+        arg("commit", "development")
+    }
+}
+
+tasks.matching { it.class.name.contains("KspAATask") }.configureEach { task ->
+    def sourceSetName = task.name.replaceFirst(/^ksp/, "").replaceFirst(/Kotlin$/, "").replaceFirst(/^[A-Z]/) { it.toLowerCase() }
+    task.kspConfig.processorOptions["source_set"] = sourceSetName ?: "main"
+}
