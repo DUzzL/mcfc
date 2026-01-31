@@ -8,7 +8,7 @@ interface ParsedToken
 interface ParsedTokenStatement : ParsedToken
 interface ParsedTokenExpression : ParsedToken
 
-data class ParsedFile(val fileInfo: Map<String, String>, val definitions: List<ParsedTokenInstructionDefinition>)
+data class ParsedFile(val headers: Map<String, String>, val definitions: List<ParsedTokenInstructionDefinition>)
 
 data class ParsedTokenValueAccessor(val scope: ParsedTokenValueAccessorScope, val name: String) : ParsedTokenExpression {
     override fun equals(other: Any?): Boolean {

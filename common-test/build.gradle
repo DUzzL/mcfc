@@ -33,6 +33,11 @@ gradle.taskGraph.whenReady { taskExecutionGraph ->
     }
 }
 
+tasks.matching { it.class.name.contains("KspAATask") }.configureEach { task ->
+    def sourceSetName = task.name.replaceFirst(/^ksp/, "").replaceFirst(/Kotlin$/, "").replaceFirst(/^[A-Z]/) { it.toLowerCase() }
+    task.kspConfig.processorOptions["source_set"] = sourceSetName ?: "main"
+}
+
 tasks.withType(JavaCompile).configureEach {
     it.options.encoding = "UTF-8"
     it.targetCompatibility = "25"

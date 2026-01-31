@@ -110,6 +110,7 @@ fun boxDescriptor(descriptor: String): String {
 
 class MainProcessor(
     private val codeGenerator: CodeGenerator,
+    private val logger: KSPLogger,
     private val options: Map<String, String>
 ) : SymbolProcessor {
     private var invoked = false
@@ -137,21 +138,24 @@ class MainProcessor(
         }
         setResolver(resolver)
         val definitions = options["definitions"]?.let { loadJson(it) }
-        generateInstructionData(resolver)
-        val targets = mutableListOf<String>()
-        val file = parseCode(loadDataFile("data.instructions"))
-        val emitterClass = if(options["definitions"] == "common") file.fileInfo["emitter_common_file"]!! else file.fileInfo["emitter_minecraft_file"]!!
-        val emitterPackage = emitterClass.substring(0, emitterClass.lastIndexOf('.'))
-        if(definitions != null) {
-            val minecraftVersion = options["minecraft_version"]?.let { MinecraftVersion.parse(it) }
-            if(definitions["definition_file"] != null) {
-                generateFunctionMapping(definitions, minecraftVersion, "$emitterPackage.EmitterTargets", targets)
+        logger.info("Running KSP for ${options["definitions"]} - ${options["source_set"]}")
+        if(options["source_set"] == "main") {
+            generateInstructionData(resolver)
+            val targets = mutableListOf<String>()
+            val file = parseCode(loadDataFile("data.instructions"))
+            val emitterClass = if(options["definitions"] == "common") file.headers["emitter_common_file"]!! else file.headers["emitter_minecraft_file"]!!
+            val emitterPackage = emitterClass.substring(0, emitterClass.lastIndexOf('.'))
+            if(definitions != null) {
+                val minecraftVersion = options["minecraft_version"]?.let { MinecraftVersion.parse(it) }
+                if(definitions["definition_file"] != null) {
+                    generateFunctionMapping(definitions, minecraftVersion, "$emitterPackage.EmitterTargets", targets)
+                }
+                generateInstructionData(file, options["definitions"] == "common", minecraftVersion, targets)
             }
-            generateInstructionData(file, options["definitions"] == "common", minecraftVersion, targets)
-        }
-        if(options["definitions"] == "common") {
-            generateConstantsData()
-            generateCommandsData()
+            if(options["definitions"] == "common") {
+                generateConstantsData()
+                generateCommandsData()
+            }
         }
         return listOf()
     }
@@ -319,7 +323,7 @@ class MainProcessor(
     }
 
     fun generateInstructionData(file: ParsedFile, common: Boolean, minecraftVersion: MinecraftVersion?, targets: MutableList<String>) {
-        val resultClass = if(common) file.fileInfo["emitter_common_file"]!! else file.fileInfo["emitter_minecraft_file"]!!
+        val resultClass = if(common) file.headers["emitter_common_file"]!! else file.headers["emitter_minecraft_file"]!!
         val resultPackage = resultClass.substring(0, resultClass.lastIndexOf('.'))
         val resultName = resultClass.substring(resultClass.lastIndexOf('.') + 1)
         val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, resultName, "java")
@@ -346,7 +350,7 @@ class MainProcessor(
                     }
                 }
                 if(matchesVersion) {
-                    map.appendText("            if(type == ${file.fileInfo["enum_file"]}.${it.name.uppercase()}) {\n")
+                    map.appendText("            if(type == ${file.headers["enum_file"]}.${it.name.uppercase()}) {\n")
                     val output = ByteArrayOutputStream()
                     val codeGenResult = generateCode(it, file, output, minecraftVersion, targets)
                     info[it.name] = codeGenResult.first
@@ -386,10 +390,10 @@ class MainProcessor(
 
         if(!common) return
 
-        val generatorClass = file.fileInfo["generator_file"]!!
+        val generatorClass = file.headers["generator_file"]!!
         val generatorResultPackage = generatorClass.substring(0, generatorClass.lastIndexOf('.'))
         val generatorResultClass = generatorClass.substring(generatorClass.lastIndexOf('.') + 1)
-        val enumClass = file.fileInfo["enum_file"]!!
+        val enumClass = file.headers["enum_file"]!!
         val enumResultPackage = enumClass.substring(0, enumClass.lastIndexOf('.'))
         val enumResultClass = enumClass.substring(enumClass.lastIndexOf('.') + 1)
 
@@ -614,6 +618,6 @@ class MainProcessorProvider : SymbolProcessorProvider {
     override fun create(
         environment: SymbolProcessorEnvironment
     ): SymbolProcessor {
-        return MainProcessor(environment.codeGenerator, environment.options)
+        return MainProcessor(environment.codeGenerator, environment.logger, environment.options)
     }
 }

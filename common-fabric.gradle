@@ -49,6 +49,12 @@ ksp {
         arg("jars", project.configurations.runtimeClasspath.incoming.files.join(File.pathSeparator))
     }
     arg("minecraft_version", project.minecraft_version)
+    println()
+}
+
+tasks.matching { it.class.name.contains("KspAATask") }.configureEach { task ->
+    def sourceSetName = task.name.replaceFirst(/^ksp/, "").replaceFirst(/Kotlin$/, "").replaceFirst(/^[A-Z]/) { it.toLowerCase() }
+    task.kspConfig.processorOptions["source_set"] = sourceSetName ?: "main"
 }
 
 tasks.withType(JavaCompile).configureEach {
