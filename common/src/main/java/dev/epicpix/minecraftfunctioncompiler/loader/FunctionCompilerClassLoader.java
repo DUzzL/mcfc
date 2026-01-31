@@ -411,7 +411,8 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     private Class<?> loadData(CodeFieldStorage fieldStorage, Object serverFunctionManager, HashMap<String, List<BytecodeInstruction>> lowLevelInstructions, int[] totalClassFileSize) throws Throwable {
         var dataClassBytes = fieldStorage.generate(lowLevelInstructions);
         totalClassFileSize[1] += dataClassBytes.length;
-        var defined = defineClass(DATA_CLASS.displayName(), dataClassBytes);
+        var desc = DATA_CLASS.descriptorString();
+        var defined = defineClass(desc.substring(1, desc.length() - 1).replace('/', '.'), dataClassBytes);
         var lookup = MethodHandles.lookup();
         defined.getDeclaredMethod("load", fieldStorage.minecraftServerType.resolveConstantDesc(lookup), fieldStorage.serverFunctionManagerType.resolveConstantDesc(lookup)).invoke(null, minecraftServer, serverFunctionManager);
         return defined;

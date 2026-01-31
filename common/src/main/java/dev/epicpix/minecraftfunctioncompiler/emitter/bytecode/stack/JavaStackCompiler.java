@@ -336,11 +336,10 @@ public class JavaStackCompiler {
                         else cb.invokevirtual(f.classType(), f.name(), f.descriptor());
                     }
                     case InstructionTarget.FieldTarget f -> {
-                        if(f.isStatic()) {
-                            if(f.isWrite()) cb.putstatic(f.classType(), f.name(), f.classType());
-                            else cb.getstatic(f.classType(), f.name(), f.classType());
-                        }else if(f.isWrite()) cb.putfield(f.classType(), f.name(), f.classType());
-                        else cb.getfield(f.classType(), f.name(), f.classType());
+                        if(f.isStatic() && f.isWrite()) cb.putstatic(f.classType(), f.name(), f.descriptor());
+                        else if(f.isStatic()) cb.getstatic(f.classType(), f.name(), f.descriptor());
+                        else if(f.isWrite()) cb.putfield(f.classType(), f.name(), f.descriptor());
+                        else cb.getfield(f.classType(), f.name(), f.descriptor());
                     }
                 }
             }

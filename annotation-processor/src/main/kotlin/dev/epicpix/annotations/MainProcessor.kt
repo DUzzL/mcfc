@@ -13,6 +13,7 @@ import com.google.gson.JsonObject
 import dev.epicpix.annotations.commands.generateCommandsDataReader
 import dev.epicpix.annotations.commands.parseCommandsData
 import dev.epicpix.annotations.instructions.*
+import dev.epicpix.annotations.tests.generateTests
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.OutputStream
@@ -97,6 +98,7 @@ class MainProcessor(
                     generateCommandsData()
                 }
                 "common-test" -> {
+                    generateTests(codeGenerator, options.tests!!)
                 }
                 "minecraft" -> {
                     generateInstructionData(file, false, options.minecraftVersion, targets)

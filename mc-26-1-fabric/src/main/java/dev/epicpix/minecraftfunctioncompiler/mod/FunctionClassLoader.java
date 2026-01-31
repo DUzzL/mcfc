@@ -9,6 +9,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
 import dev.epicpix.minecraftfunctioncompiler.loader.CompilationParams;
 import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
+import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
@@ -35,7 +36,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<MinecraftSe
 
     public void loadFunctions(ServerFunctionManager serverFunctionManager, boolean autoEnable, Runnable onComplete) {
         if(totalFunctionCount() == 0) return;
-        if(!BLOCKING_COMPILATION) {
+        if(!BLOCKING_COMPILATION && !FunctionCompilerReporter.isTestEnvironment()) {
             if(compileInBackground(() -> loadFunctions(serverFunctionManager, autoEnable, onComplete))) return;
         }
         try {
@@ -46,6 +47,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<MinecraftSe
         LOGGER.info("Starting compilation");
         resetHandles();
         var lookup = new IArgumentLookup() {
+            @Override
             public List<DataLocation> lookupFunctions(TaggableLocation functions) {
                 if(functions.isTag()) {
                     var tags = DataRegistries.FUNCTION_TAGS.get(functions.location());
@@ -62,6 +64,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<MinecraftSe
         onComplete.run();
     }
 
+    @Override
     public void setHandle(DataLocation key, MethodHandle handle) {
         setHandle(Identifier.fromNamespaceAndPath(key.namespace(), key.path()), handle);
     }

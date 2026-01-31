@@ -1,3 +1,3 @@
 package dev.epicpix.minecraftfunctioncompiler.test;
 
-public class Empty {}
+public record TestServerState() {}

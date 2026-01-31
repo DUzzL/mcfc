@@ -69,12 +69,17 @@ public final class FunctionCompilerReporter {
         isTesting = true;
     }
 
+    public static boolean isTestEnvironment() {
+        return isTesting;
+    }
+
     private static final ArrayList<JsonObject> reportQueue = new ArrayList<>();
 
     @SuppressWarnings("ConstantValue")
     public static void reportRawData(String type, JsonElement data) {
         if(!ENABLE_REPORTING || dataReportingStatus != ReportingStatus.ENABLED) return;
         if(minecraftVersionName == null || minecraftVersionType == null || minecraftEnvironment == null) return;
+        if(isTestEnvironment()) return;
 
         var minecraftData = new JsonObject();
         minecraftData.addProperty("name", minecraftVersionName);

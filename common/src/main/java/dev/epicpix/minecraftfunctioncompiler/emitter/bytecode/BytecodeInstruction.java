@@ -9,84 +9,98 @@ public sealed interface BytecodeInstruction permits BytecodeInstruction.CallTarg
     int cost();
 
     record RegisterValue(InstructionRVType type, BytecodeRegister result, BytecodeValue source) implements BytecodeInstruction {
+        @Override
         public int cost() {
             return source.cost() + result().cost();
         }
     }
 
     record RegisterValueValue(InstructionRVVType type, BytecodeRegister result, BytecodeValue sourceA, BytecodeValue sourceB) implements BytecodeInstruction {
+        @Override
         public int cost() {
             return 1 + sourceA.cost() + sourceB.cost() + result().cost();
         }
     }
 
     record CreateArray(BytecodeRegister result, BytecodeValue length, ClassDesc contentType) implements BytecodeInstruction {
+        @Override
         public int cost() {
             return 2 + result().cost() + length.cost();
         }
     }
 
     record SetArrayValue(BytecodeValue array, BytecodeValue index, BytecodeValue value) implements BytecodeInstruction {
+        @Override
         public int cost() {
             return 1 + array.cost() + index.cost() + value.cost();
         }
     }
 
     record InstanceCheckJump(boolean ifIsInstance, BytecodeValue a, ClassDesc type, BytecodeLabel label) implements BytecodeInstruction {
+        @Override
         public int cost() {
             return 3 + a.cost();
         }
     }
 
     record ConditionalJump(JumpCondition condition, BytecodeValue a, BytecodeValue b, BytecodeLabel label) implements BytecodeInstruction {
+        @Override
         public int cost() {
             return 3 + a.cost() + b.cost();
         }
     }
 
     record Jump(BytecodeLabel label) implements BytecodeInstruction {
+        @Override
         public int cost() {
             return 3;
         }
     }
 
     record Label(BytecodeLabel label) implements BytecodeInstruction {
+        @Override
         public int cost() {
             return 0;
         }
     }
 
     record CallTarget(BytecodeRegister result, InstructionTarget target, List<BytecodeValue> arguments) implements BytecodeInstruction {
+        @Override
         public int cost() {
             return 3 + result().cost() + arguments.stream().mapToInt(BytecodeValue::cost).sum();
         }
     }
 
     record New(BytecodeRegister result, InstructionTarget target, List<BytecodeValue> arguments) implements BytecodeInstruction {
+        @Override
         public int cost() {
             return 7 + result().cost() + arguments.stream().mapToInt(BytecodeValue::cost).sum();
         }
     }
 
     record Cast(BytecodeRegister result, BytecodeValue source, ClassDesc type) implements BytecodeInstruction {
+        @Override
         public int cost() {
             return 3 + result().cost() + source.cost();
         }
     }
 
     record StringConcat(BytecodeRegister result, List<BytecodeValue> values) implements BytecodeInstruction {
+        @Override
         public int cost() {
             return 3 + result().cost() + values.stream().mapToInt(BytecodeValue::cost).sum();
         }
     }
 
     record Return(BytecodeValue value) implements BytecodeInstruction {
+        @Override
         public int cost() {
             return 1 + value.cost();
         }
     }
 
     record ReturnVoid() implements BytecodeInstruction {
+        @Override
         public int cost() {
             return 1;
         }

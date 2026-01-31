@@ -16,7 +16,9 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -76,13 +78,23 @@ public class TestPack extends Pack {
 
         @Override
         public void listResources(PackType type, String namespace, String directory, ResourceOutput output) {
-            LOGGER.info("listResources {} {} {}", type, namespace, directory);
+            if(type == PackType.SERVER_DATA && namespace.equals("mcfc-test")) {
+                if(directory.equals("function")) {
+                    output.accept(Identifier.fromNamespaceAndPath(namespace, "function/test.mcfunction"), () -> {
+                        var t = "\n";
+                        return new ByteArrayInputStream(t.getBytes(StandardCharsets.UTF_8));
+                    });
+                }
+            }
         }
 
         @Override
         public Set<String> getNamespaces(PackType type) {
-            LOGGER.info("getNamespaces {}", type);
-            return Set.of();
+            if(type == PackType.SERVER_DATA) {
+                return Set.of("mcfc-test");
+            }else {
+                return Set.of();
+            }
         }
 
         @Override

@@ -25,7 +25,7 @@ data class ProcessorOptions(
                 isJarTask = map["isJarTask"]!! == "true",
                 commit = map["commit"]!!,
                 version = map["version"]!!,
-                tests = map["tests"]?.let { File(it).walkTopDown().toList().map { it.absolutePath }.filter { it.endsWith(".mcfunctiontest") }.map { TestInfo(it.replaceFirst(map["tests"]!!, ""), File(it)) } },
+                tests = map["tests"]?.let { File(it).walkTopDown().toList().map { it.absolutePath }.filter { it.endsWith(".mctest") }.map { TestInfo(it.replaceFirst(map["tests"]!!, "").replaceFirst(".mctest", ""), File(it)) } },
             )
         }
     }
