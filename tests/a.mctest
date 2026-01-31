@@ -1,0 +1,4 @@
+@pre
+@function run
+say hello
+@post

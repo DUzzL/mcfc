@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.mod.test;
 
+import dev.epicpix.minecraftfunctioncompiler.test.CompiledTest;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
@@ -13,11 +14,11 @@ import net.minecraft.resources.ResourceKey;
 
 import java.util.function.Consumer;
 
-public record TestInfo(Identifier key, int maxTicks) {
+public record TestInfo(CompiledTest compiledTest) {
 
     private TestData<Holder<TestEnvironmentDefinition<?>>> testData(Registry<TestEnvironmentDefinition<?>> envReg) {
         return new TestData<>(
-            envReg.getOrThrow(ResourceKey.create(Registries.TEST_ENVIRONMENT, key)),
+            envReg.getOrThrow(ResourceKey.create(Registries.TEST_ENVIRONMENT, identifier())),
             Identifier.withDefaultNamespace("empty"),
             1,
             1,
@@ -27,14 +28,18 @@ public record TestInfo(Identifier key, int maxTicks) {
 
     public Consumer<GameTestHelper> runner() {
         return helper -> {
-            McfcTestHelper.setupRun(helper, key);
+            McfcTestHelper.setupRun(helper, compiledTest);
             var functions = helper.getLevel().getServer().getFunctions();
-            functions.execute(functions.get(Identifier.fromNamespaceAndPath("mcfc-test", "test")).orElseThrow(), helper.getLevel().getServer().createCommandSourceStack());
+            functions.execute(functions.get(Identifier.fromNamespaceAndPath("mcfc-test", "run")).orElseThrow(), helper.getLevel().getServer().createCommandSourceStack());
             helper.succeed();
         };
     }
 
     public GameTestInstance instantiate(Registry<TestEnvironmentDefinition<?>> envReg) {
-        return new FunctionGameTestInstance(ResourceKey.create(Registries.TEST_FUNCTION, key), testData(envReg));
+        return new FunctionGameTestInstance(ResourceKey.create(Registries.TEST_FUNCTION, identifier()), testData(envReg));
+    }
+
+    public Identifier identifier() {
+        return Identifier.fromNamespaceAndPath(compiledTest.id().namespace(), compiledTest.id().path());
     }
 }

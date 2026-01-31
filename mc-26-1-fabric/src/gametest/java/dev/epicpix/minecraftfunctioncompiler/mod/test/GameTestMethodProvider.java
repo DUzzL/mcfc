@@ -1,6 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.mod.test;
 
-import net.minecraft.resources.Identifier;
+import dev.epicpix.minecraftfunctioncompiler.test.tests.Tests;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,11 +22,9 @@ public class GameTestMethodProvider {
     private static List<TestInfo> discoverTests() {
         LOGGER.info("Discovering tests");
         ArrayList<TestInfo> tests = new ArrayList<>();
-        tests.add(new TestInfo(Identifier.fromNamespaceAndPath("minecraftfunctioncompiler", "test1"), 1));
-        tests.add(new TestInfo(Identifier.fromNamespaceAndPath("minecraftfunctioncompiler", "test2"), 1));
-        tests.add(new TestInfo(Identifier.fromNamespaceAndPath("minecraftfunctioncompiler", "test3"), 1));
-        tests.add(new TestInfo(Identifier.fromNamespaceAndPath("minecraftfunctioncompiler", "test4"), 1));
-        tests.add(new TestInfo(Identifier.fromNamespaceAndPath("minecraftfunctioncompiler", "test5"), 1));
+        for(var test : Tests.TESTS) {
+            tests.add(new TestInfo(test));
+        }
         return tests;
     }
 }

@@ -13,13 +13,11 @@ import net.minecraft.server.packs.repository.PackSource;
 import net.minecraft.server.packs.resources.IoSupplier;
 import net.minecraft.world.flag.FeatureFlagSet;
 import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -56,8 +54,6 @@ public class TestPack extends Pack {
 
     static class TestPackResources implements PackResources {
 
-        private static final Logger LOGGER = LoggerFactory.getLogger(TestPackResources.class);
-
         private final TestPack pack;
 
         TestPackResources(TestPack pack) {
@@ -66,32 +62,34 @@ public class TestPack extends Pack {
 
         @Override
         public @Nullable IoSupplier<InputStream> getRootResource(String... path) {
-            LOGGER.info("getRootResource {}", Arrays.toString(path));
             return null;
         }
 
         @Override
         public @Nullable IoSupplier<InputStream> getResource(PackType type, Identifier location) {
-            LOGGER.info("getResource {} {}", type, location);
             return null;
         }
 
         @Override
         public void listResources(PackType type, String namespace, String directory, ResourceOutput output) {
-            if(type == PackType.SERVER_DATA && namespace.equals("mcfc-test")) {
-                if(directory.equals("function")) {
-                    output.accept(Identifier.fromNamespaceAndPath(namespace, "function/test.mcfunction"), () -> {
-                        var t = "\n";
-                        return new ByteArrayInputStream(t.getBytes(StandardCharsets.UTF_8));
-                    });
+            if(type == PackType.SERVER_DATA && McfcTestHelper.currentTest != null) {
+                var startCheck = directory + "/";
+                for(var file : McfcTestHelper.currentTest.files()) {
+                    if(file.location().namespace().equals(namespace) && file.location().path().startsWith(startCheck)) {
+                        output.accept(Identifier.fromNamespaceAndPath(namespace, file.location().path()), () -> new ByteArrayInputStream(file.content().getBytes(StandardCharsets.UTF_8)));
+                    }
                 }
             }
         }
 
         @Override
         public Set<String> getNamespaces(PackType type) {
-            if(type == PackType.SERVER_DATA) {
-                return Set.of("mcfc-test");
+            if(type == PackType.SERVER_DATA && McfcTestHelper.currentTest != null) {
+                var namespaces = new HashSet<String>();
+                for(var file : McfcTestHelper.currentTest.files()) {
+                    namespaces.add(file.location().namespace());
+                }
+                return namespaces;
             }else {
                 return Set.of();
             }

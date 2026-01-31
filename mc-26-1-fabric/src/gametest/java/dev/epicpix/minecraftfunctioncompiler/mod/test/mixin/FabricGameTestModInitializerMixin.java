@@ -19,10 +19,10 @@ import java.util.List;
 public class FabricGameTestModInitializerMixin {
 
     @Inject(method = "registerDynamicEntries", at = @At(value = "INVOKE", target = "Lnet/fabricmc/fabric/impl/gametest/TestAnnotationLocator;getTestMethods()Ljava/util/List;"))
-    private static void registerDynamicEntries(List<RegistryLoadTask<?>> loadTasks, CallbackInfo ci, @Local(name = "testInstances") Registry<GameTestInstance> testInstances, @Local(name = "testEnvironmentDefinitionRegistry") Registry<TestEnvironmentDefinition<?>> envReg) {
+    private static void registerDynamicEntries(List<RegistryLoadTask<?>> loadTasks, CallbackInfo ci, @Local(name = "testInstances") Registry<GameTestInstance> testInstances, @Local(name = "testEnvironmentDefinitionRegistry") Registry<TestEnvironmentDefinition<?>> testEnvironments) {
         for(var provided : GameTestMethodProvider.getTests()) {
-            Registry.register(envReg, provided.key(), new TestEnvironmentDefinition.AllOf());
-            Registry.register(testInstances, provided.key(), provided.instantiate(envReg));
+            Registry.register(testEnvironments, provided.identifier(), new TestEnvironmentDefinition.AllOf());
+            Registry.register(testInstances, provided.identifier(), provided.instantiate(testEnvironments));
         }
     }
 

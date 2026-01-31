@@ -11,7 +11,7 @@ public class FunctionCompilerTestMain implements ModInitializer {
         FunctionCompilerReporter.markTestEnvironment();
 
         for(var provided : GameTestMethodProvider.getTests()) {
-            Registry.register(BuiltInRegistries.TEST_FUNCTION, provided.key(), provided.runner());
+            Registry.register(BuiltInRegistries.TEST_FUNCTION, provided.identifier(), provided.runner());
         }
 
     }
