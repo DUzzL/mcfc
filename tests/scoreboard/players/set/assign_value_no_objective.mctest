@@ -1,0 +1,2 @@
+@function run
+scoreboard players set abc test 1

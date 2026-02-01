@@ -8,6 +8,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 public class FunctionCompilerTestMain implements ModInitializer {
     @Override
     public void onInitialize() {
+        System.setProperty("fabric-api.gametest.filter", "mcfc-test:*");
         FunctionCompilerReporter.markTestEnvironment();
 
         for(var provided : GameTestMethodProvider.getTests()) {

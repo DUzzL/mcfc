@@ -2,8 +2,8 @@ package dev.epicpix.annotations.tests
 
 data class ParsedTest(
     val test: TestInfo,
-    val preContext: PreTestContext?,
-    val postContext: PostTestContext?,
+    val setupContext: SetupTestContext?,
+    val validateContext: ValidateTestContext?,
     val filesContext: List<FileTestContext>,
 )
 
@@ -19,20 +19,44 @@ abstract class TestContext<out T> {
     abstract fun addLine(line: String)
 }
 
-interface ControlInstruction {
+interface SetupInstruction {
     companion object {
-        fun parse(line: String): ControlInstruction {
-            TODO("no control instructions available")
+        fun parse(line: String): SetupInstruction {
+            val parts = line.split(" ")
+            if(parts[0] == "objective") {
+                if(parts[1] == "create") {
+                    return CreateScoreboardInstruction(parts[2], parts[3])
+                }
+            }
+            throw IllegalArgumentException("invalid setup instruction: $line")
         }
     }
 }
 
-class PreTestContext : TestContext<ControlInstruction>() {
-    override fun addLine(line: String) = addParsed(ControlInstruction.parse(line))
+interface ValidateInstruction {
+    companion object {
+        fun parse(line: String): ValidateInstruction {
+            val parts = line.split(" ")
+            if(parts[0] == "score") {
+                if(parts[3] == "is") {
+                    return CheckScoreInstruction(parts[2], parts[1], parts[4].toInt())
+                }
+            }
+            throw IllegalArgumentException("invalid validation instruction: $line")
+        }
+    }
 }
 
-class PostTestContext : TestContext<ControlInstruction>() {
-    override fun addLine(line: String) = addParsed(ControlInstruction.parse(line))
+data class CreateScoreboardInstruction(val name: String, val criterion: String) : SetupInstruction
+
+data class CheckScoreInstruction(val objective: String, val holder: String, val value: Int) : ValidateInstruction
+
+class SetupTestContext : TestContext<SetupInstruction>() {
+    override fun addLine(line: String) = addParsed(SetupInstruction.parse(line))
+}
+
+class ValidateTestContext : TestContext<ValidateInstruction>() {
+    override fun addLine(line: String) = addParsed(ValidateInstruction.parse(line))
 }
 
 class FileTestContext(val fileLocation: String) : TestContext<String>() {
@@ -50,12 +74,12 @@ fun parseTest(test: TestInfo): ParsedTest {
 
         if(line.startsWith("@")) {
             val parts = line.substring(1).split(" ")
-            if(parts[0] == "pre") {
-                val context = PreTestContext()
+            if(parts[0] == "setup") {
+                val context = SetupTestContext()
                 currentContext = context
                 contexts.add(context)
-            }else if(parts[0] == "post") {
-                val context = PostTestContext()
+            }else if(parts[0] == "validate") {
+                val context = ValidateTestContext()
                 currentContext = context
                 contexts.add(context)
             }else if(parts[0] == "function") {
@@ -79,5 +103,5 @@ fun parseTest(test: TestInfo): ParsedTest {
             currentContext.addLine(line)
         }
     }
-    return ParsedTest(test, contexts.filterIsInstance<PreTestContext>().firstOrNull(), contexts.filterIsInstance<PostTestContext>().firstOrNull(), contexts.filterIsInstance<FileTestContext>())
+    return ParsedTest(test, contexts.filterIsInstance<SetupTestContext>().firstOrNull(), contexts.filterIsInstance<ValidateTestContext>().firstOrNull(), contexts.filterIsInstance<FileTestContext>())
 }

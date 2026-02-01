@@ -1,0 +1,8 @@
+@setup
+objective create test dummy
+
+@function run
+scoreboard players set abc test 1
+
+@validate
+score abc test is 1

@@ -26,7 +26,7 @@ fun generateTests(codeGenerator: CodeGenerator, tests: List<TestInfo>) {
             for(file in parsed.filesContext) {
                 val location = file.fileLocation.split(":", limit = 2)
                 val content = file.getParsed().joinToString("\n").replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\t", "\\t").replace("\r", "\\r")
-                if(tests.size == ++index) {
+                if(parsed.filesContext.size == ++index) {
                     map.appendText("    new dev.epicpix.minecraftfunctioncompiler.test.TestFile(new dev.epicpix.minecraftfunctioncompiler.data.DataLocation(\"${location[0]}\", \"${location[1]}\"), \"$content\")\n")
                 }else {
                     map.appendText("    new dev.epicpix.minecraftfunctioncompiler.test.TestFile(new dev.epicpix.minecraftfunctioncompiler.data.DataLocation(\"${location[0]}\", \"${location[1]}\"), \"$content\"),\n")
@@ -42,6 +42,28 @@ fun generateTests(codeGenerator: CodeGenerator, tests: List<TestInfo>) {
             map.appendText("    @Override\n")
             map.appendText("    public java.util.List<dev.epicpix.minecraftfunctioncompiler.test.TestFile> files() {\n")
             map.appendText("        return FILES;\n")
+            map.appendText("    }\n")
+            map.appendText("\n")
+            map.appendText("    @Override\n")
+            map.appendText("    public void setup(dev.epicpix.minecraftfunctioncompiler.test.TestSetup setup) {\n")
+            if(parsed.setupContext != null) {
+                for(element in parsed.setupContext.getParsed()) {
+                    if(element is CreateScoreboardInstruction) {
+                        map.appendText("        setup.createObjective(\"${element.name}\", \"${element.criterion}\");\n")
+                    }
+                }
+            }
+            map.appendText("    }\n")
+            map.appendText("\n")
+            map.appendText("    @Override\n")
+            map.appendText("    public void validate(dev.epicpix.minecraftfunctioncompiler.test.state.ServerState state, dev.epicpix.minecraftfunctioncompiler.test.ExceptionThrow thrower) {\n")
+            if(parsed.validateContext != null) {
+                for(element in parsed.validateContext.getParsed()) {
+                    if(element is CheckScoreInstruction) {
+                        map.appendText("        state.assertObjectiveExists(thrower, \"${element.objective}\").assertScoreSet(thrower, \"${element.holder}\", ${element.value});\n")
+                    }
+                }
+            }
             map.appendText("    }\n")
             map.appendText("}\n")
         }
