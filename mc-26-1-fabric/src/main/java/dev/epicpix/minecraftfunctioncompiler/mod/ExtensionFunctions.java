@@ -1,8 +1,10 @@
 package dev.epicpix.minecraftfunctioncompiler.mod;
 
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.logging.LogUtils;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.advancements.AdvancementNode;
+import net.minecraft.advancements.CriterionProgress;
 import net.minecraft.commands.CommandResultCallback;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -11,6 +13,7 @@ import net.minecraft.commands.execution.ExecutionContext;
 import net.minecraft.commands.functions.CommandFunction;
 import net.minecraft.commands.functions.InstantiatedFunction;
 import net.minecraft.core.SectionPos;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.ByteArrayTag;
 import net.minecraft.nbt.ByteTag;
 import net.minecraft.nbt.CompoundTag;
@@ -21,13 +24,16 @@ import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.LongArrayTag;
 import net.minecraft.nbt.LongTag;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.ShortTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.StringTagVisitor;
 import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.TagParser;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerFunctionManager;
 import net.minecraft.server.ServerScoreboard;
@@ -38,9 +44,15 @@ import net.minecraft.util.Util;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerScores;
+import net.minecraft.world.scores.ReadOnlyScoreInfo;
 import net.minecraft.world.scores.ScoreAccess;
 import net.minecraft.world.scores.ScoreHolder;
 import org.jspecify.annotations.Nullable;
@@ -54,6 +66,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 // Used in bytecode instructions, to not insert too much code at once
@@ -406,6 +419,70 @@ public class ExtensionFunctions {
             collectParents(parent, result);
             result.add(parent.holder());
         }
+    }
+
+    // Selector advancement checks
+
+    public static boolean isAdvancementDone(MinecraftServer server, ServerPlayer player, String id) {
+        AdvancementHolder holder = server.getAdvancements().get(Identifier.parse(id));
+        if (holder == null) return false;
+        return player.getAdvancements().getOrStartProgress(holder).isDone();
+    }
+
+    public static boolean isAdvancementCriterionDone(MinecraftServer server, ServerPlayer player, String id, String criterion) {
+        AdvancementHolder holder = server.getAdvancements().get(Identifier.parse(id));
+        if (holder == null) return false;
+        CriterionProgress progress = player.getAdvancements().getOrStartProgress(holder).getCriterion(criterion);
+        return progress != null && progress.isDone();
+    }
+
+    // Selector predicate check
+
+    public static boolean testEntityPredicate(MinecraftServer server, Entity entity, String predicateId) {
+        var lookup = server.reloadableRegistries().lookup().lookup(Registries.PREDICATE);
+        if (lookup.isEmpty()) return false;
+        var holder = lookup.get().get(ResourceKey.create(Registries.PREDICATE, Identifier.parse(predicateId)));
+        if (holder.isEmpty()) return false;
+        LootItemCondition condition = holder.get().value();
+        ServerLevel level = (ServerLevel) entity.level();
+        LootParams params = new LootParams.Builder(level)
+                .withParameter(LootContextParams.THIS_ENTITY, entity)
+                .withParameter(LootContextParams.ORIGIN, entity.position())
+                .create(LootContextParamSets.SELECTOR);
+        LootContext ctx = new LootContext.Builder(params).create(Optional.empty());
+        return condition.test(ctx);
+    }
+
+    // Selector NBT check
+
+    public static boolean matchesEntityNbt(Entity entity, String snbt) {
+        CompoundTag pattern;
+        try {
+            pattern = TagParser.parseCompoundFully(snbt);
+        } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
+            return false;
+        }
+        try (var reporter = new net.minecraft.util.ProblemReporter.ScopedCollector(entity.problemPath(), LOGGER)) {
+            var output = net.minecraft.world.level.storage.TagValueOutput.createWithContext(reporter, entity.registryAccess());
+            entity.saveWithoutId(output);
+            CompoundTag entityTag = output.buildResult();
+            return NbtUtils.compareNbt(pattern, entityTag, true);
+        }
+    }
+
+    // Text building
+
+    public static MutableComponent createTranslatableComponent(String key, List<Component> args) {
+        return Component.translatable(key, args.toArray());
+    }
+
+    public static Component getScoreText(MinecraftServer server, Entity entity, String objective) {
+        ServerScoreboard scoreboard = server.getScoreboard();
+        Objective obj = scoreboard.getObjective(objective);
+        if (obj == null) return Component.empty();
+        ReadOnlyScoreInfo info = scoreboard.getPlayerScoreInfo(entity, obj);
+        if (info == null) return Component.empty();
+        return info.formatValue(obj.numberFormatOrDefault(net.minecraft.network.chat.numbers.StyledFormat.NO_STYLE));
     }
 
 }

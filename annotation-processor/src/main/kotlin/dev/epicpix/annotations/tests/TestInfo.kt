@@ -7,6 +7,6 @@ data class TestInfo(
     val file: File,
 ) {
     fun javaFileName(): String {
-        return "Test_${id.replace(File.separatorChar, '_')}"
+        return "Test_${id.replace('/', '_')}"
     }
 }
