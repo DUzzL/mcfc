@@ -671,3 +671,34 @@
 @CHECK_ENTITY_INTERSECTION(<net.minecraft.world.entity.Entity> [ctx:entity], double [ctx:min_x], double [ctx:min_y], double [ctx:min_z], double [ctx:max_x], double [ctx:max_y], double [ctx:max_z], label [ctx:fail_label]) {
   _jumpIfEqual([ctx:entity].getBoundingBox().intersects([ctx:min_x], [ctx:min_y], [ctx:min_z], [ctx:max_x], [ctx:max_y], [ctx:max_z]), false, [ctx:fail_label]);
 }
+
+##CONDITIONAL_JUMP
+@CHECK_ADVANCEMENT_DONE(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:id], boolean [instr:expected], label [ctx:fail_label]) {
+  _jumpIfNotEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.isAdvancementDone([static:MinecraftServer], [ctx:player], [instr:id]), [instr:expected], [ctx:fail_label]);
+}
+
+##CONDITIONAL_JUMP
+@CHECK_ADVANCEMENT_CRITERION_DONE(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:id], <java.lang.String> [instr:criterion], boolean [instr:expected], label [ctx:fail_label]) {
+  _jumpIfNotEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.isAdvancementCriterionDone([static:MinecraftServer], [ctx:player], [instr:id], [instr:criterion]), [instr:expected], [ctx:fail_label]);
+}
+
+##CONDITIONAL_JUMP
+@CHECK_ENTITY_PREDICATE(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:predicate_id], boolean [instr:expected], label [ctx:fail_label]) {
+  _jumpIfNotEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.testEntityPredicate([static:MinecraftServer], [ctx:entity], [instr:predicate_id]), [instr:expected], [ctx:fail_label]);
+}
+
+##CONDITIONAL_JUMP
+@CHECK_ENTITY_NBT(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.nbt.Tag> [ctx:pattern], boolean [instr:expected], label [ctx:fail_label]) {
+  _jumpIfNotEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.matchesEntityNbt([ctx:entity], cast([ctx:pattern], <net.minecraft.nbt.CompoundTag>)), [instr:expected], [ctx:fail_label]);
+}
+
+##PURE
+@CREATE_TRANSLATABLE_COMPONENT(<java.lang.String> [instr:key], <java.util.List> [ctx:args]) -> <net.minecraft.network.chat.MutableComponent>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.createTranslatableComponent([instr:key], [ctx:args]);
+
+##PURE
+@LOAD_SCORE_TEXT(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.util.List> [ctx:entities], <java.lang.String> [instr:objective]) -> <net.minecraft.network.chat.Component>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getScoreText([static:MinecraftServer], [ctx:entities], [instr:objective]);
+
+##PURE
+@COPY_TEXT(<net.minecraft.network.chat.Component> [ctx:text]) -> <net.minecraft.network.chat.MutableComponent> = [ctx:text].copy();

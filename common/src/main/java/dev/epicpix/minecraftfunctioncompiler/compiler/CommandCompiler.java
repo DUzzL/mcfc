@@ -1051,18 +1051,50 @@ public final class CommandCompiler {
                 var loadedSeparator = loadText(context, separator != null ? separator : TextContent.SelectorText.DEFAULT_SEPARATOR);
                 var textLocation = context.<TMutableComponent>createLocal();
                 context.writeInstruction(Instructions.formatEntityTextList(textLocation, selectorResult, loadedSeparator));
-                if(!text.style().isEmpty()) {
-                    var style = context.<TStyle>createLocal();
-                    context.writeInstruction(Instructions.loadTextStyle(style, text.style()));
-                    context.writeInstruction(Instructions.setTextStyle(textLocation, style));
-                }
-                for(var sibling : text.siblings()) {
-                    var otherText = loadText(context, sibling);
-                    context.writeInstruction(Instructions.appendText(textLocation, otherText));
-                }
+                applyStyleAndSiblings(context, text, textLocation);
                 return textLocation;
             }
+            if(text.content() instanceof TextContent.TranslatableText(String key, String fallback, List<Object> args)) {
+                var argsList = context.<List<? extends TComponent>>createLocal();
+                context.writeInstruction(Instructions.createMutableList(argsList));
+                for(var arg : args) {
+                    if(arg instanceof Text argText) {
+                        var loadedArg = loadText(context, argText);
+                        context.writeInstruction(Instructions.addListElement(argsList, loadedArg));
+                    }
+                }
+                var textLocation = context.<TMutableComponent>createLocal();
+                context.writeInstruction(Instructions.createTranslatableComponent(textLocation, LocationData.ofString(key), argsList));
+                applyStyleAndSiblings(context, text, textLocation);
+                return textLocation;
+            }
+            if(text.content() instanceof TextContent.ScoreText(ScoreHolderArgument scoreHolder, String objective)) {
+                if(scoreHolder.selector() != null) {
+                    var selectorResult = context.getSelectorList(scoreHolder.selector(), null);
+                    var textLocation = context.<TComponent>createLocal();
+                    context.writeInstruction(Instructions.loadScoreText(textLocation, selectorResult, LocationData.ofString(objective)));
+                    if(!text.style().isEmpty() || !text.siblings().isEmpty()) {
+                        var mutableText = context.<TMutableComponent>createLocal();
+                        context.writeInstruction(Instructions.copyText(mutableText, textLocation));
+                        applyStyleAndSiblings(context, text, mutableText);
+                        return mutableText;
+                    }
+                    return textLocation;
+                }
+            }
             throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNREACHABLE_CODE, context.getSource(), "Unreachable code, tried to compile unknown non-constant text: " + text));
+        }
+    }
+
+    private static void applyStyleAndSiblings(CompilationContext context, Text text, LocationData<TMutableComponent> textLocation) {
+        if(!text.style().isEmpty()) {
+            var style = context.<TStyle>createLocal();
+            context.writeInstruction(Instructions.loadTextStyle(style, text.style()));
+            context.writeInstruction(Instructions.setTextStyle(textLocation, style));
+        }
+        for(var sibling : text.siblings()) {
+            var otherText = loadText(context, sibling);
+            context.writeInstruction(Instructions.appendText(textLocation, otherText));
         }
     }
 

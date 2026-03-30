@@ -24,6 +24,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TCommandSourceStack;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TEntity;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TEntityType;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TTag;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TGameType;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TObjective;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TScoreAccess;
@@ -767,7 +768,18 @@ public class CompilationContext {
             if(!possible) {
                 data.writeInstruction(instructionWriter, Instructions.jump(data.contextEndLabel()));
             }else {
-                throw new RuntimeException("advancements are not supported");
+                var playerLocal = this.<TServerPlayer>createLocal();
+                data.writeInstruction(instructionWriter, Instructions.tryAsPlayer(playerLocal, entityData.content(), data.contextEndLabel()));
+                for(var check : selector.advancements().entrySet()) {
+                    var advId = check.getKey().toString();
+                    if(check.getValue() instanceof SelectorAdvancementCheck.AdvancementCompleted(boolean done)) {
+                        data.writeInstruction(instructionWriter, Instructions.checkAdvancementDone(playerLocal, LocationData.ofString(advId), LocationData.ofBoolean(done), data.contextEndLabel()));
+                    }else if(check.getValue() instanceof SelectorAdvancementCheck.CriteriaCompleted(Map<String, Boolean> criteria)) {
+                        for(var criterion : criteria.entrySet()) {
+                            data.writeInstruction(instructionWriter, Instructions.checkAdvancementCriterionDone(playerLocal, LocationData.ofString(advId), LocationData.ofString(criterion.getKey()), LocationData.ofBoolean(criterion.getValue()), data.contextEndLabel()));
+                        }
+                    }
+                }
             }
         }
         if(selector.yaw() != null || selector.pitch() != null) {
@@ -831,10 +843,16 @@ public class CompilationContext {
             }
         }
         if(!selector.predicates().isEmpty()) {
-            throw new RuntimeException("predicates are not implemented");
+            for(var predicate : selector.predicates()) {
+                data.writeInstruction(instructionWriter, Instructions.checkEntityPredicate(entityData.content(), LocationData.ofString(predicate.data().toString()), LocationData.ofBoolean(!predicate.negated()), data.contextEndLabel()));
+            }
         }
         if(!selector.nbts().isEmpty()) {
-            throw new RuntimeException("entity nbt not implemented");
+            for(var nbt : selector.nbts()) {
+                var nbtPattern = this.<TTag>createLocal();
+                data.writeInstruction(instructionWriter, Instructions.loadNbtValue(nbtPattern, nbt.data()));
+                data.writeInstruction(instructionWriter, Instructions.checkEntityNbt(entityData.content(), nbtPattern, LocationData.ofBoolean(!nbt.negated()), data.contextEndLabel()));
+            }
         }
         stackCount += stack.size() - stackStart;
         return enterWithValue(data, entityData.content(), stackCount + 1);

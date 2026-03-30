@@ -455,13 +455,7 @@ public class ExtensionFunctions {
 
     // Selector NBT check
 
-    public static boolean matchesEntityNbt(Entity entity, String snbt) {
-        CompoundTag pattern;
-        try {
-            pattern = TagParser.parseCompoundFully(snbt);
-        } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
-            return false;
-        }
+    public static boolean matchesEntityNbt(Entity entity, CompoundTag pattern) {
         try (var reporter = new net.minecraft.util.ProblemReporter.ScopedCollector(entity.problemPath(), LOGGER)) {
             var output = net.minecraft.world.level.storage.TagValueOutput.createWithContext(reporter, entity.registryAccess());
             entity.saveWithoutId(output);
@@ -476,7 +470,9 @@ public class ExtensionFunctions {
         return Component.translatable(key, args.toArray());
     }
 
-    public static Component getScoreText(MinecraftServer server, Entity entity, String objective) {
+    public static Component getScoreText(MinecraftServer server, List<Entity> entities, String objective) {
+        if (entities.isEmpty()) return Component.empty();
+        Entity entity = entities.getFirst();
         ServerScoreboard scoreboard = server.getScoreboard();
         Objective obj = scoreboard.getObjective(objective);
         if (obj == null) return Component.empty();

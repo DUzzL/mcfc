@@ -22,7 +22,7 @@ public sealed interface TextContent permits TextContent.KeybindText, TextContent
     record TranslatableText(String key, @Nullable String fallback, List<Object> args) implements TextContent {
         public boolean isCompilationSupported() {
             for(var arg : args) {
-                if(arg instanceof Text text && (!text.isCompilationSupported() || !text.isConstant())) return false;
+                if(arg instanceof Text text && !text.isCompilationSupported()) return false;
             }
             return true;
         }
@@ -45,7 +45,7 @@ public sealed interface TextContent permits TextContent.KeybindText, TextContent
 
     record ScoreText(ScoreHolderArgument scoreHolder, String objective) implements TextContent {
         public boolean isCompilationSupported() {
-            return false;
+            return true;
         }
         public boolean isConstant() {
             return false;
