@@ -343,19 +343,19 @@
 }
 
 @SET_WEATHER_STATIC(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], int [ctx:clear_weather_time], int [ctx:rain_time], boolean [instr:raining], boolean [instr:thundering]) {
-  [static:MinecraftServer].overworld().setWeatherParameters([ctx:clear_weather_time], [ctx:rain_time], [instr:raining], [instr:thundering]);
+  [static:MinecraftServer].setWeatherParameters([ctx:clear_weather_time], [ctx:rain_time], [instr:raining], [instr:thundering]);
 }
 
 @SET_WEATHER_DYNAMIC(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <dev.epicpix.minecraftfunctioncompiler.emitter.types.SetRandomizedWeatherData> [instr:option]) {
   compile_match([instr:option]) {
     CLEAR {
-      [static:MinecraftServer].overworld().setWeatherParameters(<net.minecraft.server.level.ServerLevel>.RAIN_DELAY.sample([static:MinecraftServer].overworld().getRandom()), 0, false, false);
+      [static:MinecraftServer].setWeatherParameters(<net.minecraft.server.level.ServerLevel>.RAIN_DELAY.sample([static:MinecraftServer].overworld().getRandom()), 0, false, false);
     }
     RAIN {
-      [static:MinecraftServer].overworld().setWeatherParameters(0, <net.minecraft.server.level.ServerLevel>.RAIN_DURATION.sample([static:MinecraftServer].overworld().getRandom()), true, false);
+      [static:MinecraftServer].setWeatherParameters(0, <net.minecraft.server.level.ServerLevel>.RAIN_DURATION.sample([static:MinecraftServer].overworld().getRandom()), true, false);
     }
     THUNDER {
-      [static:MinecraftServer].overworld().setWeatherParameters(0, <net.minecraft.server.level.ServerLevel>.THUNDER_DURATION.sample([static:MinecraftServer].overworld().getRandom()), true, true);
+      [static:MinecraftServer].setWeatherParameters(0, <net.minecraft.server.level.ServerLevel>.THUNDER_DURATION.sample([static:MinecraftServer].overworld().getRandom()), true, true);
     }
   }
 }
