@@ -131,7 +131,6 @@ import org.jspecify.annotations.Nullable;
 import java.util.List;
 import java.util.function.Consumer;
 
-import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_COMPILE_UNREACHABLE_CODE;
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_COMPILE_UNSUPPORTED_NBT_ACCESS;
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_COMPILE_UNSUPPORTED_NBT_MODIFY_ACCESS;
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_COMPILE_UNSUPPORTED_NBT_SOURCE_ACCESS;
@@ -1088,7 +1087,14 @@ public final class CommandCompiler {
                     return textLocation;
                 }
             }
-            throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNREACHABLE_CODE, context.getSource(), "Unreachable code, tried to compile unknown non-constant text: " + text));
+            if(text.content().isConstant()) {
+                var innerText = new Text(List.of(), text.style(), text.content());
+                var textLocation = context.<TMutableComponent>createLocal();
+                context.writeInstruction(Instructions.copyText(textLocation, loadText(context, innerText)));
+                applyStyleAndSiblings(context, text, textLocation);
+                return textLocation;
+            }
+            throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_TEXT, context.getSource(), "Compiling " + text + " is not implemented yet"));
         }
     }
 
