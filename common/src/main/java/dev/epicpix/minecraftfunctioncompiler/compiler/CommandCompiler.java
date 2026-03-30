@@ -969,7 +969,13 @@ public final class CommandCompiler {
     private static void forLocatedBaseNbtData(CompilationContext context, ResultContext resultContext, NbtDataLocation input, Consumer<LocationData<? extends TTag>> consumer) {
         switch(input) {
             case NbtDataLocation.Block _ -> throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_NBT_SOURCE_ACCESS, context.getSource(), "Accessing block nbt is not implemented yet"));
-            case NbtDataLocation.Entity _ -> throw new RuntimeException("entity nbt not implemented");
+            case NbtDataLocation.Entity(SelectorArgument selector) -> {
+                try(var entityData = context.forSelector(selector, resultContext)) {
+                    var nbtLocal = context.<TCompoundTag>createLocal();
+                    entityData.writeInstruction(Instructions.getEntityNbt(nbtLocal, entityData.content()));
+                    consumer.accept(nbtLocal);
+                }
+            }
             case NbtDataLocation.Storage(DataLocation storage) -> {
                 var nbtLocal = context.<TCompoundTag>createLocal();
                 context.writeInstruction(Instructions.getNbtStorage(nbtLocal, storage));

@@ -455,6 +455,14 @@ public class ExtensionFunctions {
 
     // Selector NBT check
 
+    public static CompoundTag getEntityNbt(Entity entity) {
+        try (var reporter = new net.minecraft.util.ProblemReporter.ScopedCollector(entity.problemPath(), LOGGER)) {
+            var output = net.minecraft.world.level.storage.TagValueOutput.createWithContext(reporter, entity.registryAccess());
+            entity.saveWithoutId(output);
+            return output.buildResult();
+        }
+    }
+
     public static boolean matchesEntityNbt(Entity entity, CompoundTag pattern) {
         try (var reporter = new net.minecraft.util.ProblemReporter.ScopedCollector(entity.problemPath(), LOGGER)) {
             var output = net.minecraft.world.level.storage.TagValueOutput.createWithContext(reporter, entity.registryAccess());

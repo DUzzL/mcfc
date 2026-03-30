@@ -77,6 +77,8 @@ public class FunctionCodeGenerator {
 
     public static HashMap<DataLocation, List<CommandParams>> parseFunctions(HashMap<DataLocation, List<String>> functionSources, IArgumentLookup lookup, DiagnosticCollector diagnostics) {
         HashMap<DataLocation, List<CommandParams>> definedFunctions = new HashMap<>();
+        HashMap<String, HashMap<String, Integer>> parseFailures = new HashMap<>();
+        int totalFailures = 0;
         nextFunction: for(var entry : functionSources.entrySet()) {
             var key = entry.getKey();
             var values = entry.getValue();
@@ -94,21 +96,51 @@ public class FunctionCodeGenerator {
                     if(res.isError()) {
                         var diag = res.getError();
                         assert diag != null;
-                        LOGGER.warn("Unable to parse function {} / {}", key, diag.message());
                         diagnostics.addDiagnostic(diag);
+                        totalFailures++;
+                        parseFailures
+                            .computeIfAbsent(diag.message(), k -> new HashMap<>())
+                            .merge(key.namespace(), 1, Integer::sum);
                         continue nextFunction;
                     }
                     parsed.add(Objects.requireNonNull(res.getResult()));
                 }
                 definedFunctions.put(key, parsed);
             } catch (DiagnosticException e) {
-                LOGGER.warn("Unable to parse function {} / {} / {}", key, e.getMessage(), currentCommand);
                 diagnostics.addDiagnostic(e.toDiagnostic());
+                totalFailures++;
+                parseFailures
+                    .computeIfAbsent(e.getMessage(), k -> new HashMap<>())
+                    .merge(key.namespace(), 1, Integer::sum);
             } catch (Throwable e) {
                 LOGGER.error("Unable to parse function {}", key, e);
                 assert currentCommand != null;
                 diagnostics.addDiagnostic(Diagnostic.parseError(UNSPECIFIED_COMMAND_ERROR, key, currentCommand, e.getMessage(), e));
+                totalFailures++;
             }
+        }
+        if(totalFailures > 0) {
+            var summary = new StringBuilder();
+            summary.append("Unable to parse ").append(totalFailures).append(" function(s). Reasons:");
+            var sortedEntries = new ArrayList<>(parseFailures.entrySet());
+            sortedEntries.sort((a, b) -> {
+                int countA = a.getValue().values().stream().mapToInt(Integer::intValue).sum();
+                int countB = b.getValue().values().stream().mapToInt(Integer::intValue).sum();
+                return Integer.compare(countB, countA);
+            });
+            for(var reasonEntry : sortedEntries) {
+                int reasonTotal = reasonEntry.getValue().values().stream().mapToInt(Integer::intValue).sum();
+                summary.append("\n  ").append(reasonEntry.getKey()).append(": ").append(reasonTotal).append(" function(s)");
+                var namespaces = new ArrayList<>(reasonEntry.getValue().entrySet());
+                namespaces.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
+                summary.append(" (");
+                for(int i = 0; i < namespaces.size(); i++) {
+                    if(i > 0) summary.append(", ");
+                    summary.append(namespaces.get(i).getKey()).append(": ").append(namespaces.get(i).getValue());
+                }
+                summary.append(")");
+            }
+            LOGGER.warn("{}", summary);
         }
         return definedFunctions;
     }
