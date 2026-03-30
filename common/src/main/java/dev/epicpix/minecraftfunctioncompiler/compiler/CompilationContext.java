@@ -773,10 +773,10 @@ public class CompilationContext {
                 for(var check : selector.advancements().entrySet()) {
                     var advId = check.getKey().toString();
                     if(check.getValue() instanceof SelectorAdvancementCheck.AdvancementCompleted(boolean done)) {
-                        data.writeInstruction(instructionWriter, Instructions.checkAdvancementDone(playerLocal, LocationData.ofString(advId), LocationData.ofBoolean(done), data.contextEndLabel()));
+                        data.writeInstruction(instructionWriter, Instructions.checkAdvancementDone(playerLocal, advId, done, data.contextEndLabel()));
                     }else if(check.getValue() instanceof SelectorAdvancementCheck.CriteriaCompleted(Map<String, Boolean> criteria)) {
                         for(var criterion : criteria.entrySet()) {
-                            data.writeInstruction(instructionWriter, Instructions.checkAdvancementCriterionDone(playerLocal, LocationData.ofString(advId), LocationData.ofString(criterion.getKey()), LocationData.ofBoolean(criterion.getValue()), data.contextEndLabel()));
+                            data.writeInstruction(instructionWriter, Instructions.checkAdvancementCriterionDone(playerLocal, advId, criterion.getKey(), criterion.getValue(), data.contextEndLabel()));
                         }
                     }
                 }
@@ -844,14 +844,14 @@ public class CompilationContext {
         }
         if(!selector.predicates().isEmpty()) {
             for(var predicate : selector.predicates()) {
-                data.writeInstruction(instructionWriter, Instructions.checkEntityPredicate(entityData.content(), LocationData.ofString(predicate.data().toString()), LocationData.ofBoolean(!predicate.negated()), data.contextEndLabel()));
+                data.writeInstruction(instructionWriter, Instructions.checkEntityPredicate(entityData.content(), predicate.data().toString(), !predicate.negated(), data.contextEndLabel()));
             }
         }
         if(!selector.nbts().isEmpty()) {
             for(var nbt : selector.nbts()) {
                 var nbtPattern = this.<TTag>createLocal();
                 data.writeInstruction(instructionWriter, Instructions.loadNbtValue(nbtPattern, nbt.data()));
-                data.writeInstruction(instructionWriter, Instructions.checkEntityNbt(entityData.content(), nbtPattern, LocationData.ofBoolean(!nbt.negated()), data.contextEndLabel()));
+                data.writeInstruction(instructionWriter, Instructions.checkEntityNbt(entityData.content(), nbtPattern, !nbt.negated(), data.contextEndLabel()));
             }
         }
         stackCount += stack.size() - stackStart;

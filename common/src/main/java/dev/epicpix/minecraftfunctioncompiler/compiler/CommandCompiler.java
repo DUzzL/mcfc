@@ -1064,7 +1064,7 @@ public final class CommandCompiler {
                     }
                 }
                 var textLocation = context.<TMutableComponent>createLocal();
-                context.writeInstruction(Instructions.createTranslatableComponent(textLocation, LocationData.ofString(key), argsList));
+                context.writeInstruction(Instructions.createTranslatableComponent(textLocation, key, argsList));
                 applyStyleAndSiblings(context, text, textLocation);
                 return textLocation;
             }
@@ -1072,7 +1072,7 @@ public final class CommandCompiler {
                 if(scoreHolder.selector() != null) {
                     var selectorResult = context.getSelectorList(scoreHolder.selector(), null);
                     var textLocation = context.<TComponent>createLocal();
-                    context.writeInstruction(Instructions.loadScoreText(textLocation, selectorResult, LocationData.ofString(objective)));
+                    context.writeInstruction(Instructions.loadScoreText(textLocation, selectorResult, objective));
                     if(!text.style().isEmpty() || !text.siblings().isEmpty()) {
                         var mutableText = context.<TMutableComponent>createLocal();
                         context.writeInstruction(Instructions.copyText(mutableText, textLocation));
