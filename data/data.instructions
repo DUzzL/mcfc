@@ -228,6 +228,38 @@
 @GET_STACK_WORLD(<net.minecraft.commands.CommandSourceStack> [ctx:stack]) -> <net.minecraft.server.level.ServerLevel> = [ctx:stack].getLevel();
 
 
+@GRANT_ADVANCEMENT_ONLY(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [ctx:id]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.grantAdvancementOnly([static:MinecraftServer], [ctx:player], [ctx:id]);
+}
+
+@GRANT_ADVANCEMENT_ONLY_CRITERION(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [ctx:id], <java.lang.String> [ctx:criterion]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.grantAdvancementCriterion([static:MinecraftServer], [ctx:player], [ctx:id], [ctx:criterion]);
+}
+
+@REVOKE_ADVANCEMENT_ONLY(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [ctx:id]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.revokeAdvancementOnly([static:MinecraftServer], [ctx:player], [ctx:id]);
+}
+
+@REVOKE_ADVANCEMENT_ONLY_CRITERION(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [ctx:id], <java.lang.String> [ctx:criterion]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.revokeAdvancementCriterion([static:MinecraftServer], [ctx:player], [ctx:id], [ctx:criterion]);
+}
+
+@GRANT_ADVANCEMENT_EVERYTHING(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.grantAdvancementEverything([static:MinecraftServer], [ctx:player]);
+}
+
+@REVOKE_ADVANCEMENT_EVERYTHING(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.revokeAdvancementEverything([static:MinecraftServer], [ctx:player]);
+}
+
+@GRANT_ADVANCEMENT_TREE(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [ctx:id], <java.lang.String> [ctx:mode]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.grantAdvancementTree([static:MinecraftServer], [ctx:player], [ctx:id], [ctx:mode]);
+}
+
+@REVOKE_ADVANCEMENT_TREE(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [ctx:id], <java.lang.String> [ctx:mode]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.revokeAdvancementTree([static:MinecraftServer], [ctx:player], [ctx:id], [ctx:mode]);
+}
+
 @ADD_ENTITY_TAG(mut <net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [ctx:tag]) {
   [ctx:entity].addTag([ctx:tag]);
 }

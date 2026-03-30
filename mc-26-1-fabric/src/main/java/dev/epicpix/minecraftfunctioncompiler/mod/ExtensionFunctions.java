@@ -1,6 +1,8 @@
 package dev.epicpix.minecraftfunctioncompiler.mod;
 
 import com.mojang.logging.LogUtils;
+import net.minecraft.advancements.AdvancementHolder;
+import net.minecraft.advancements.AdvancementNode;
 import net.minecraft.commands.CommandResultCallback;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -25,9 +27,12 @@ import net.minecraft.nbt.StringTagVisitor;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerFunctionManager;
 import net.minecraft.server.ServerScoreboard;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 import net.minecraft.util.profiling.Profiler;
@@ -283,6 +288,123 @@ public class ExtensionFunctions {
             }
 
             return result;
+        }
+    }
+
+    // Advancement commands
+
+    public static int grantAdvancementOnly(MinecraftServer server, ServerPlayer player, String id) {
+        AdvancementHolder holder = server.getAdvancements().get(Identifier.parse(id));
+        if (holder == null) return 0;
+        int count = 0;
+        for (String criterion : holder.value().criteria().keySet()) {
+            if (player.getAdvancements().award(holder, criterion)) count++;
+        }
+        return count;
+    }
+
+    public static int grantAdvancementCriterion(MinecraftServer server, ServerPlayer player, String id, String criterion) {
+        AdvancementHolder holder = server.getAdvancements().get(Identifier.parse(id));
+        if (holder == null) return 0;
+        return player.getAdvancements().award(holder, criterion) ? 1 : 0;
+    }
+
+    public static int revokeAdvancementOnly(MinecraftServer server, ServerPlayer player, String id) {
+        AdvancementHolder holder = server.getAdvancements().get(Identifier.parse(id));
+        if (holder == null) return 0;
+        int count = 0;
+        for (String criterion : holder.value().criteria().keySet()) {
+            if (player.getAdvancements().revoke(holder, criterion)) count++;
+        }
+        return count;
+    }
+
+    public static int revokeAdvancementCriterion(MinecraftServer server, ServerPlayer player, String id, String criterion) {
+        AdvancementHolder holder = server.getAdvancements().get(Identifier.parse(id));
+        if (holder == null) return 0;
+        return player.getAdvancements().revoke(holder, criterion) ? 1 : 0;
+    }
+
+    public static int grantAdvancementEverything(MinecraftServer server, ServerPlayer player) {
+        int count = 0;
+        for (AdvancementHolder holder : server.getAdvancements().getAllAdvancements()) {
+            for (String criterion : holder.value().criteria().keySet()) {
+                if (player.getAdvancements().award(holder, criterion)) count++;
+            }
+        }
+        return count;
+    }
+
+    public static int revokeAdvancementEverything(MinecraftServer server, ServerPlayer player) {
+        int count = 0;
+        for (AdvancementHolder holder : server.getAdvancements().getAllAdvancements()) {
+            for (String criterion : holder.value().criteria().keySet()) {
+                if (player.getAdvancements().revoke(holder, criterion)) count++;
+            }
+        }
+        return count;
+    }
+
+    public static int grantAdvancementTree(MinecraftServer server, ServerPlayer player, String id, String mode) {
+        AdvancementHolder holder = server.getAdvancements().get(Identifier.parse(id));
+        if (holder == null) return 0;
+        AdvancementNode node = server.getAdvancements().tree().get(holder);
+        if (node == null) return 0;
+        int count = 0;
+        for (AdvancementHolder adv : collectTreeAdvancements(node, mode)) {
+            for (String criterion : adv.value().criteria().keySet()) {
+                if (player.getAdvancements().award(adv, criterion)) count++;
+            }
+        }
+        return count;
+    }
+
+    public static int revokeAdvancementTree(MinecraftServer server, ServerPlayer player, String id, String mode) {
+        AdvancementHolder holder = server.getAdvancements().get(Identifier.parse(id));
+        if (holder == null) return 0;
+        AdvancementNode node = server.getAdvancements().tree().get(holder);
+        if (node == null) return 0;
+        int count = 0;
+        for (AdvancementHolder adv : collectTreeAdvancements(node, mode)) {
+            for (String criterion : adv.value().criteria().keySet()) {
+                if (player.getAdvancements().revoke(adv, criterion)) count++;
+            }
+        }
+        return count;
+    }
+
+    private static List<AdvancementHolder> collectTreeAdvancements(AdvancementNode node, String mode) {
+        List<AdvancementHolder> result = new ArrayList<>();
+        switch (mode) {
+            case "from" -> {
+                result.add(node.holder());
+                collectChildren(node, result);
+            }
+            case "until" -> {
+                collectParents(node, result);
+                result.add(node.holder());
+            }
+            case "through" -> {
+                collectParents(node, result);
+                result.add(node.holder());
+                collectChildren(node, result);
+            }
+        }
+        return result;
+    }
+
+    private static void collectChildren(AdvancementNode node, List<AdvancementHolder> result) {
+        for (AdvancementNode child : node.children()) {
+            result.add(child.holder());
+            collectChildren(child, result);
+        }
+    }
+
+    private static void collectParents(AdvancementNode node, List<AdvancementHolder> result) {
+        AdvancementNode parent = node.parent();
+        if (parent != null) {
+            collectParents(parent, result);
+            result.add(parent.holder());
         }
     }
 

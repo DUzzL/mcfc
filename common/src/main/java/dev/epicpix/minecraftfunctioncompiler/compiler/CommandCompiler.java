@@ -1,6 +1,18 @@
 package dev.epicpix.minecraftfunctioncompiler.compiler;
 
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementGrantEverything;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementGrantFrom;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementGrantOnly;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementGrantOnlyCriterion;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementGrantThrough;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementGrantUntil;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementRevokeEverything;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementRevokeFrom;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementRevokeOnly;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementRevokeOnlyCriterion;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementRevokeThrough;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementRevokeUntil;
 import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandDataModifySetValue;
 import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandDifficultySet;
 import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteAlign;
@@ -851,6 +863,90 @@ public final class CommandCompiler {
             case CommandWeatherRain _ -> context.writeInstruction(Instructions.setWeatherDynamic(SetRandomizedWeatherData.RAIN));
             case CommandWeatherThunderTimed(int duration) -> context.writeInstruction(Instructions.setWeatherStatic(LocationData.ofInteger(0), LocationData.ofInteger(duration), true, true));
             case CommandWeatherThunder _ -> context.writeInstruction(Instructions.setWeatherDynamic(SetRandomizedWeatherData.THUNDER));
+            case CommandAdvancementGrantOnly(SelectorArgument targets, DataLocation advancement) -> {
+                try(var players = context.forSelector(targets, result)) {
+                    var playerLocation = context.<TServerPlayer>createLocal();
+                    players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
+                    players.writeInstruction(Instructions.grantAdvancementOnly(playerLocation, LocationData.ofString(advancement.toString())));
+                }
+            }
+            case CommandAdvancementGrantOnlyCriterion(SelectorArgument targets, DataLocation advancement, String criterion) -> {
+                try(var players = context.forSelector(targets, result)) {
+                    var playerLocation = context.<TServerPlayer>createLocal();
+                    players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
+                    players.writeInstruction(Instructions.grantAdvancementOnlyCriterion(playerLocation, LocationData.ofString(advancement.toString()), LocationData.ofString(criterion)));
+                }
+            }
+            case CommandAdvancementRevokeOnly(SelectorArgument targets, DataLocation advancement) -> {
+                try(var players = context.forSelector(targets, result)) {
+                    var playerLocation = context.<TServerPlayer>createLocal();
+                    players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
+                    players.writeInstruction(Instructions.revokeAdvancementOnly(playerLocation, LocationData.ofString(advancement.toString())));
+                }
+            }
+            case CommandAdvancementRevokeOnlyCriterion(SelectorArgument targets, DataLocation advancement, String criterion) -> {
+                try(var players = context.forSelector(targets, result)) {
+                    var playerLocation = context.<TServerPlayer>createLocal();
+                    players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
+                    players.writeInstruction(Instructions.revokeAdvancementOnlyCriterion(playerLocation, LocationData.ofString(advancement.toString()), LocationData.ofString(criterion)));
+                }
+            }
+            case CommandAdvancementGrantEverything(SelectorArgument targets) -> {
+                try(var players = context.forSelector(targets, result)) {
+                    var playerLocation = context.<TServerPlayer>createLocal();
+                    players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
+                    players.writeInstruction(Instructions.grantAdvancementEverything(playerLocation));
+                }
+            }
+            case CommandAdvancementRevokeEverything(SelectorArgument targets) -> {
+                try(var players = context.forSelector(targets, result)) {
+                    var playerLocation = context.<TServerPlayer>createLocal();
+                    players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
+                    players.writeInstruction(Instructions.revokeAdvancementEverything(playerLocation));
+                }
+            }
+            case CommandAdvancementGrantFrom(SelectorArgument targets, DataLocation advancement) -> {
+                try(var players = context.forSelector(targets, result)) {
+                    var playerLocation = context.<TServerPlayer>createLocal();
+                    players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
+                    players.writeInstruction(Instructions.grantAdvancementTree(playerLocation, LocationData.ofString(advancement.toString()), LocationData.ofString("from")));
+                }
+            }
+            case CommandAdvancementGrantThrough(SelectorArgument targets, DataLocation advancement) -> {
+                try(var players = context.forSelector(targets, result)) {
+                    var playerLocation = context.<TServerPlayer>createLocal();
+                    players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
+                    players.writeInstruction(Instructions.grantAdvancementTree(playerLocation, LocationData.ofString(advancement.toString()), LocationData.ofString("through")));
+                }
+            }
+            case CommandAdvancementGrantUntil(SelectorArgument targets, DataLocation advancement) -> {
+                try(var players = context.forSelector(targets, result)) {
+                    var playerLocation = context.<TServerPlayer>createLocal();
+                    players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
+                    players.writeInstruction(Instructions.grantAdvancementTree(playerLocation, LocationData.ofString(advancement.toString()), LocationData.ofString("until")));
+                }
+            }
+            case CommandAdvancementRevokeFrom(SelectorArgument targets, DataLocation advancement) -> {
+                try(var players = context.forSelector(targets, result)) {
+                    var playerLocation = context.<TServerPlayer>createLocal();
+                    players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
+                    players.writeInstruction(Instructions.revokeAdvancementTree(playerLocation, LocationData.ofString(advancement.toString()), LocationData.ofString("from")));
+                }
+            }
+            case CommandAdvancementRevokeThrough(SelectorArgument targets, DataLocation advancement) -> {
+                try(var players = context.forSelector(targets, result)) {
+                    var playerLocation = context.<TServerPlayer>createLocal();
+                    players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
+                    players.writeInstruction(Instructions.revokeAdvancementTree(playerLocation, LocationData.ofString(advancement.toString()), LocationData.ofString("through")));
+                }
+            }
+            case CommandAdvancementRevokeUntil(SelectorArgument targets, DataLocation advancement) -> {
+                try(var players = context.forSelector(targets, result)) {
+                    var playerLocation = context.<TServerPlayer>createLocal();
+                    players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
+                    players.writeInstruction(Instructions.revokeAdvancementTree(playerLocation, LocationData.ofString(advancement.toString()), LocationData.ofString("until")));
+                }
+            }
         }
     }
 

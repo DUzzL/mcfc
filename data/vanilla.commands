@@ -1,3 +1,16 @@
+ADVANCEMENT_GRANT_EVERYTHING/advancement grant <targets:entity_selector[players]> everything
+ADVANCEMENT_GRANT_ONLY/advancement grant <targets:entity_selector[players]> only <advancement:resource_location>
+ADVANCEMENT_GRANT_ONLY_CRITERION/advancement grant <targets:entity_selector[players]> only <advancement:resource_location> <criterion:word>
+ADVANCEMENT_REVOKE_EVERYTHING/advancement revoke <targets:entity_selector[players]> everything
+ADVANCEMENT_REVOKE_ONLY/advancement revoke <targets:entity_selector[players]> only <advancement:resource_location>
+ADVANCEMENT_REVOKE_ONLY_CRITERION/advancement revoke <targets:entity_selector[players]> only <advancement:resource_location> <criterion:word>
+ADVANCEMENT_GRANT_FROM/advancement grant <targets:entity_selector[players]> from <advancement:resource_location>
+ADVANCEMENT_GRANT_THROUGH/advancement grant <targets:entity_selector[players]> through <advancement:resource_location>
+ADVANCEMENT_GRANT_UNTIL/advancement grant <targets:entity_selector[players]> until <advancement:resource_location>
+ADVANCEMENT_REVOKE_FROM/advancement revoke <targets:entity_selector[players]> from <advancement:resource_location>
+ADVANCEMENT_REVOKE_THROUGH/advancement revoke <targets:entity_selector[players]> through <advancement:resource_location>
+ADVANCEMENT_REVOKE_UNTIL/advancement revoke <targets:entity_selector[players]> until <advancement:resource_location>
+
 DATA_MODIFY_SET_VALUE/data modify <destination:nbt_data_location> <path:nbt_path> set value <value:nbt_value>
 
 DIFFICULTY_SET/difficulty <difficulty:difficulty>
