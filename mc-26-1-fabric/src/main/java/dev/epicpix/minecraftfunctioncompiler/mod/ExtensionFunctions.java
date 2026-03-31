@@ -582,10 +582,10 @@ public class ExtensionFunctions {
         summonEntityNbt(server, world, entityType, pos, new CompoundTag());
     }
 
-    public static void summonEntityNbt(MinecraftServer server, ServerLevel world, String entityType, net.minecraft.world.phys.Vec3 pos, CompoundTag nbt) {
+    public static void summonEntityNbt(MinecraftServer server, ServerLevel world, String entityType, Vec3 pos, CompoundTag nbt) {
         nbt.putString("id", entityType);
-        Entity entity = net.minecraft.world.entity.EntityType.loadEntityRecursive(nbt, world, e -> {
-            e.moveTo(pos.x, pos.y, pos.z, e.getYRot(), e.getXRot());
+        Entity entity = net.minecraft.world.entity.EntityType.loadEntityRecursive(nbt, world, net.minecraft.world.entity.EntitySpawnReason.COMMAND, e -> {
+            e.snapTo(pos.x, pos.y, pos.z, e.getYRot(), e.getXRot());
             return e;
         });
         if (entity != null) {
@@ -599,19 +599,19 @@ public class ExtensionFunctions {
     // Time
 
     public static void setDayTime(MinecraftServer server, int time) {
-        for (ServerLevel level : server.getAllLevels()) {
-            level.setDayTime(time);
-        }
+        server.getCommands().performPrefixedCommand(
+                server.createCommandSourceStack(), "time set " + time
+        );
     }
 
     public static void addDayTime(MinecraftServer server, int time) {
-        for (ServerLevel level : server.getAllLevels()) {
-            level.setDayTime(level.getDayTime() + time);
-        }
+        server.getCommands().performPrefixedCommand(
+                server.createCommandSourceStack(), "time add " + time
+        );
     }
 
     public static int queryDayTime(MinecraftServer server) {
-        return (int)(server.overworld().getDayTime() % 24000L);
+        return (int)(server.overworld().getGameTime() % 24000L);
     }
 
     public static int queryGameTime(MinecraftServer server) {
@@ -619,56 +619,37 @@ public class ExtensionFunctions {
     }
 
     public static int queryDay(MinecraftServer server) {
-        return (int)(server.overworld().getDayTime() / 24000L);
+        return (int)(server.overworld().getGameTime() / 24000L);
     }
 
     // Schedule
 
     public static void scheduleFunction(MinecraftServer server, String function, int time, boolean append) {
-        var id = Identifier.parse(function);
-        var timer = server.overworld().getBlockTicks();
-        long gameTime = server.overworld().getGameTime();
-        var timers = server.getWorldData().overworldData().getScheduledEvents();
-        if (!append) {
-            timers.remove(id.toString());
-        }
-        timers.schedule(id.toString(), gameTime + time, new net.minecraft.world.level.timers.FunctionTagCallback(id));
+        String cmd = "schedule function " + function + " " + time + "t" + (append ? " append" : " replace");
+        server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), cmd);
     }
 
     public static void scheduleClear(MinecraftServer server, String function) {
-        var id = Identifier.parse(function);
-        server.getWorldData().overworldData().getScheduledEvents().remove(id.toString());
+        server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "schedule clear " + function);
     }
 
     // Gamerule
 
     public static void setGamerule(MinecraftServer server, String rule, String value) {
-        var rules = server.getGameRules();
-        rules.visitGameRuleTypes(new net.minecraft.world.level.GameRules.GameRuleTypeVisitor() {
-            @Override
-            public <T extends net.minecraft.world.level.GameRules.Value<T>> void visit(net.minecraft.world.level.GameRules.Key<T> key, net.minecraft.world.level.GameRules.Type<T> type) {
-                if (key.getId().equals(rule)) {
-                    var val = rules.getRule(key);
-                    val.deserialize(value);
-                    val.onChanged(server);
-                }
-            }
-        });
+        server.getCommands().performPrefixedCommand(
+                server.createCommandSourceStack(), "gamerule " + rule + " " + value
+        );
     }
 
     public static int queryGamerule(MinecraftServer server, String rule) {
-        var rules = server.getGameRules();
+        var gameRules = server.overworld().getGameRules();
         int[] result = {0};
-        rules.visitGameRuleTypes(new net.minecraft.world.level.GameRules.GameRuleTypeVisitor() {
+        gameRules.visitGameRuleTypes(new net.minecraft.world.level.gamerules.GameRuleTypeVisitor() {
             @Override
-            public <T extends net.minecraft.world.level.GameRules.Value<T>> void visit(net.minecraft.world.level.GameRules.Key<T> key, net.minecraft.world.level.GameRules.Type<T> type) {
-                if (key.getId().equals(rule)) {
-                    var val = rules.getRule(key);
-                    if (val instanceof net.minecraft.world.level.GameRules.IntegerValue intVal) {
-                        result[0] = intVal.get();
-                    } else if (val instanceof net.minecraft.world.level.GameRules.BooleanValue boolVal) {
-                        result[0] = boolVal.get() ? 1 : 0;
-                    }
+            public <T> void visit(net.minecraft.world.level.gamerules.GameRule<T> gameRule) {
+                if (gameRule.id().equals(rule)) {
+                    T val = gameRules.get(gameRule);
+                    result[0] = gameRule.getCommandResult(val);
                 }
             }
         });
