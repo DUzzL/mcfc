@@ -86,3 +86,36 @@ WEATHER_RAIN_TIMED/weather rain <duration:time[minimum=1]>
 WEATHER_RAIN/weather rain
 WEATHER_THUNDER_TIMED/weather thunder <duration:time[minimum=1]>
 WEATHER_THUNDER/weather thunder
+
+GIVE/give <targets:entity_selector[players]> <item:greedy_string>
+
+PLAYSOUND_MIN_VOLUME/playsound <sound:resource_location> <source:word> <targets:entity_selector[players]> <pos:vec3> <volume:double> <pitch:double> <min_volume:double>
+PLAYSOUND_PITCH/playsound <sound:resource_location> <source:word> <targets:entity_selector[players]> <pos:vec3> <volume:double> <pitch:double>
+PLAYSOUND_VOLUME/playsound <sound:resource_location> <source:word> <targets:entity_selector[players]> <pos:vec3> <volume:double>
+PLAYSOUND_POS/playsound <sound:resource_location> <source:word> <targets:entity_selector[players]> <pos:vec3>
+PLAYSOUND/playsound <sound:resource_location> <source:word> <targets:entity_selector[players]>
+
+SUMMON_POS_NBT/summon <entity:resource_location> <pos:vec3> <nbt:nbt_compound>
+SUMMON_POS/summon <entity:resource_location> <pos:vec3>
+SUMMON/summon <entity:resource_location>
+
+TIME_SET_DAY/time set day
+TIME_SET_NIGHT/time set night
+TIME_SET_NOON/time set noon
+TIME_SET_MIDNIGHT/time set midnight
+TIME_SET_VALUE/time set <value:time>
+TIME_ADD/time add <value:time>
+TIME_QUERY_DAYTIME/time query daytime
+TIME_QUERY_GAMETIME/time query gametime
+TIME_QUERY_DAY/time query day
+
+SCHEDULE_FUNCTION_APPEND/schedule function <function:resource_location> <time:time> append
+SCHEDULE_FUNCTION_REPLACE/schedule function <function:resource_location> <time:time> replace
+SCHEDULE_FUNCTION/schedule function <function:resource_location> <time:time>
+SCHEDULE_CLEAR/schedule clear <function:resource_location>
+
+GAMERULE_SET/gamerule <rule:word> <value:greedy_string>
+GAMERULE_QUERY/gamerule <rule:word>
+
+DATAPACK_ENABLE/datapack enable <name:greedy_string>
+DATAPACK_DISABLE/datapack disable <name:greedy_string>

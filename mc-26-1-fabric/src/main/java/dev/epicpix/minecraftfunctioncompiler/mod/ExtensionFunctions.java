@@ -489,4 +489,212 @@ public class ExtensionFunctions {
         return info.formatValue(obj.numberFormatOrDefault(net.minecraft.network.chat.numbers.StyledFormat.NO_STYLE));
     }
 
+    // Give
+
+    public static void giveItems(MinecraftServer server, ServerPlayer player, String itemString) {
+        String itemPart;
+        int count = 1;
+
+        int bracketDepth = 0;
+        int lastSpaceOutside = -1;
+        for (int i = 0; i < itemString.length(); i++) {
+            char c = itemString.charAt(i);
+            if (c == '[' || c == '{') bracketDepth++;
+            else if (c == ']' || c == '}') bracketDepth--;
+            else if (c == ' ' && bracketDepth == 0) lastSpaceOutside = i;
+        }
+
+        if (lastSpaceOutside > 0) {
+            String tail = itemString.substring(lastSpaceOutside + 1);
+            int parsed = parseInt(tail, Integer.MIN_VALUE);
+            if (parsed != Integer.MIN_VALUE) {
+                count = parsed;
+                itemPart = itemString.substring(0, lastSpaceOutside);
+            } else {
+                itemPart = itemString;
+            }
+        } else {
+            itemPart = itemString;
+        }
+
+        String itemId = itemPart.contains("[") ? itemPart.substring(0, itemPart.indexOf('[')) : itemPart;
+        var itemOptional = server.registryAccess().lookupOrThrow(Registries.ITEM)
+            .get(ResourceKey.create(Registries.ITEM, Identifier.parse(itemId)));
+        if (itemOptional.isEmpty()) return;
+
+        int remaining = count;
+        var item = itemOptional.get();
+        int maxStackSize = item.value().getDefaultMaxStackSize();
+        while (remaining > 0) {
+            int stackSize = Math.min(remaining, maxStackSize);
+            var stack = new net.minecraft.world.item.ItemStack(item, stackSize);
+            if (!player.getInventory().add(stack)) {
+                player.drop(stack, false);
+            }
+            remaining -= stackSize;
+        }
+    }
+
+    private static int parseInt(String s, int defaultValue) {
+        int result = 0;
+        boolean negative = false;
+        int i = 0;
+        if (s.isEmpty()) return defaultValue;
+        if (s.charAt(0) == '-') { negative = true; i = 1; }
+        if (i >= s.length()) return defaultValue;
+        for (; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c < '0' || c > '9') return defaultValue;
+            result = result * 10 + (c - '0');
+        }
+        return negative ? -result : result;
+    }
+
+    // Playsound
+
+    public static void playSound(ServerPlayer player, String sound, String source, net.minecraft.world.phys.Vec3 pos, double volume, double pitch, double minVolume) {
+        var soundEvent = net.minecraft.sounds.SoundEvent.createVariableRangeEvent(Identifier.parse(sound));
+        var soundSource = net.minecraft.sounds.SoundSource.valueOf(source.toUpperCase(java.util.Locale.ROOT));
+        float dist = Math.max((float) volume, 1.0f) * 16.0f;
+        double dx = pos.x - player.getX();
+        double dy = pos.y - player.getY();
+        double dz = pos.z - player.getZ();
+        double distSq = dx * dx + dy * dy + dz * dz;
+        if (distSq > dist * dist) {
+            if (minVolume <= 0.0) return;
+            double d = Math.sqrt(distSq);
+            double nx = player.getX() + dx / d * 2.0;
+            double ny = player.getY() + dy / d * 2.0;
+            double nz = player.getZ() + dz / d * 2.0;
+            player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
+                net.minecraft.core.Holder.direct(soundEvent), soundSource, nx, ny, nz, (float) minVolume, (float) pitch, player.level().getRandom().nextLong()
+            ));
+        } else {
+            player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
+                net.minecraft.core.Holder.direct(soundEvent), soundSource, pos.x, pos.y, pos.z, (float) volume, (float) pitch, player.level().getRandom().nextLong()
+            ));
+        }
+    }
+
+    // Summon
+
+    public static void summonEntity(MinecraftServer server, ServerLevel world, String entityType, net.minecraft.world.phys.Vec3 pos) {
+        summonEntityNbt(server, world, entityType, pos, new CompoundTag());
+    }
+
+    public static void summonEntityNbt(MinecraftServer server, ServerLevel world, String entityType, net.minecraft.world.phys.Vec3 pos, CompoundTag nbt) {
+        nbt.putString("id", entityType);
+        Entity entity = net.minecraft.world.entity.EntityType.loadEntityRecursive(nbt, world, e -> {
+            e.moveTo(pos.x, pos.y, pos.z, e.getYRot(), e.getXRot());
+            return e;
+        });
+        if (entity != null) {
+            if (entity instanceof net.minecraft.world.entity.Mob mob) {
+                mob.finalizeSpawn(world, world.getCurrentDifficultyAt(entity.blockPosition()), net.minecraft.world.entity.EntitySpawnReason.COMMAND, null);
+            }
+            world.tryAddFreshEntityWithPassengers(entity);
+        }
+    }
+
+    // Time
+
+    public static void setDayTime(MinecraftServer server, int time) {
+        for (ServerLevel level : server.getAllLevels()) {
+            level.setDayTime(time);
+        }
+    }
+
+    public static void addDayTime(MinecraftServer server, int time) {
+        for (ServerLevel level : server.getAllLevels()) {
+            level.setDayTime(level.getDayTime() + time);
+        }
+    }
+
+    public static int queryDayTime(MinecraftServer server) {
+        return (int)(server.overworld().getDayTime() % 24000L);
+    }
+
+    public static int queryGameTime(MinecraftServer server) {
+        return (int)(server.overworld().getGameTime() % 2147483647L);
+    }
+
+    public static int queryDay(MinecraftServer server) {
+        return (int)(server.overworld().getDayTime() / 24000L);
+    }
+
+    // Schedule
+
+    public static void scheduleFunction(MinecraftServer server, String function, int time, boolean append) {
+        var id = Identifier.parse(function);
+        var timer = server.overworld().getBlockTicks();
+        long gameTime = server.overworld().getGameTime();
+        var timers = server.getWorldData().overworldData().getScheduledEvents();
+        if (!append) {
+            timers.remove(id.toString());
+        }
+        timers.schedule(id.toString(), gameTime + time, new net.minecraft.world.level.timers.FunctionTagCallback(id));
+    }
+
+    public static void scheduleClear(MinecraftServer server, String function) {
+        var id = Identifier.parse(function);
+        server.getWorldData().overworldData().getScheduledEvents().remove(id.toString());
+    }
+
+    // Gamerule
+
+    public static void setGamerule(MinecraftServer server, String rule, String value) {
+        var rules = server.getGameRules();
+        rules.visitGameRuleTypes(new net.minecraft.world.level.GameRules.GameRuleTypeVisitor() {
+            @Override
+            public <T extends net.minecraft.world.level.GameRules.Value<T>> void visit(net.minecraft.world.level.GameRules.Key<T> key, net.minecraft.world.level.GameRules.Type<T> type) {
+                if (key.getId().equals(rule)) {
+                    var val = rules.getRule(key);
+                    val.deserialize(value);
+                    val.onChanged(server);
+                }
+            }
+        });
+    }
+
+    public static int queryGamerule(MinecraftServer server, String rule) {
+        var rules = server.getGameRules();
+        int[] result = {0};
+        rules.visitGameRuleTypes(new net.minecraft.world.level.GameRules.GameRuleTypeVisitor() {
+            @Override
+            public <T extends net.minecraft.world.level.GameRules.Value<T>> void visit(net.minecraft.world.level.GameRules.Key<T> key, net.minecraft.world.level.GameRules.Type<T> type) {
+                if (key.getId().equals(rule)) {
+                    var val = rules.getRule(key);
+                    if (val instanceof net.minecraft.world.level.GameRules.IntegerValue intVal) {
+                        result[0] = intVal.get();
+                    } else if (val instanceof net.minecraft.world.level.GameRules.BooleanValue boolVal) {
+                        result[0] = boolVal.get() ? 1 : 0;
+                    }
+                }
+            }
+        });
+        return result[0];
+    }
+
+    // Datapack
+
+    public static void enableDatapack(MinecraftServer server, String name) {
+        var repo = server.getPackRepository();
+        var pack = repo.getPack(name);
+        if (pack != null && !repo.getSelectedPacks().contains(pack)) {
+            var selected = new java.util.ArrayList<>(repo.getSelectedIds());
+            selected.add(name);
+            server.reloadResources(selected);
+        }
+    }
+
+    public static void disableDatapack(MinecraftServer server, String name) {
+        var repo = server.getPackRepository();
+        var pack = repo.getPack(name);
+        if (pack != null && repo.getSelectedPacks().contains(pack)) {
+            var selected = new java.util.ArrayList<>(repo.getSelectedIds());
+            selected.remove(name);
+            server.reloadResources(selected);
+        }
+    }
+
 }

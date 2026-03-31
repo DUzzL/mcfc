@@ -706,3 +706,70 @@
 
 ##PURE
 @COPY_TEXT(<net.minecraft.network.chat.Component> [ctx:text]) -> <net.minecraft.network.chat.MutableComponent> = [ctx:text].copy();
+
+// give
+@GIVE_ITEMS(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:item_string]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.giveItems([static:MinecraftServer], [ctx:player], [instr:item_string]);
+}
+
+// playsound
+@PLAY_SOUND(<net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:sound], <java.lang.String> [instr:source], <net.minecraft.world.phys.Vec3> [ctx:pos], double [ctx:volume], double [ctx:pitch], double [ctx:min_volume]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.playSound([ctx:player], [instr:sound], [instr:source], [ctx:pos], [ctx:volume], [ctx:pitch], [ctx:min_volume]);
+}
+
+// summon
+@SUMMON_ENTITY(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:entity_type], <net.minecraft.world.phys.Vec3> [ctx:pos]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.summonEntity([static:MinecraftServer], [ctx:world], [instr:entity_type], [ctx:pos]);
+}
+
+@SUMMON_ENTITY_NBT(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:entity_type], <net.minecraft.world.phys.Vec3> [ctx:pos], <net.minecraft.nbt.CompoundTag> [ctx:nbt]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.summonEntityNbt([static:MinecraftServer], [ctx:world], [instr:entity_type], [ctx:pos], [ctx:nbt]);
+}
+
+// time
+@SET_DAY_TIME(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], int [ctx:time]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setDayTime([static:MinecraftServer], [ctx:time]);
+}
+
+@ADD_DAY_TIME(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], int [ctx:time]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.addDayTime([static:MinecraftServer], [ctx:time]);
+}
+
+##PURE
+@QUERY_DAY_TIME(<net.minecraft.server.MinecraftServer> [static:MinecraftServer]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.queryDayTime([static:MinecraftServer]);
+
+##PURE
+@QUERY_GAME_TIME(<net.minecraft.server.MinecraftServer> [static:MinecraftServer]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.queryGameTime([static:MinecraftServer]);
+
+##PURE
+@QUERY_DAY(<net.minecraft.server.MinecraftServer> [static:MinecraftServer]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.queryDay([static:MinecraftServer]);
+
+// schedule
+@SCHEDULE_FUNCTION(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:function], int [ctx:time], boolean [instr:append]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.scheduleFunction([static:MinecraftServer], [instr:function], [ctx:time], [instr:append]);
+}
+
+@SCHEDULE_CLEAR_FUNCTION(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:function]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.scheduleClear([static:MinecraftServer], [instr:function]);
+}
+
+// gamerule
+@SET_GAMERULE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:rule], <java.lang.String> [instr:value]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setGamerule([static:MinecraftServer], [instr:rule], [instr:value]);
+}
+
+##PURE
+@QUERY_GAMERULE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:rule]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.queryGamerule([static:MinecraftServer], [instr:rule]);
+
+// datapack
+@ENABLE_DATAPACK(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:name]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.enableDatapack([static:MinecraftServer], [instr:name]);
+}
+
+@DISABLE_DATAPACK(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:name]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.disableDatapack([static:MinecraftServer], [instr:name]);
+}

@@ -76,6 +76,32 @@ import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandWeatherRain;
 import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandWeatherRainTimed;
 import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandWeatherThunder;
 import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandWeatherThunderTimed;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandGive;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandPlaysound;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandPlaysoundPos;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandPlaysoundVolume;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandPlaysoundPitch;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandPlaysoundMinVolume;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandSummon;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandSummonPos;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandSummonPosNbt;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTimeSetDay;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTimeSetNight;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTimeSetNoon;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTimeSetMidnight;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTimeSetValue;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTimeAdd;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTimeQueryDaytime;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTimeQueryGametime;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTimeQueryDay;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandScheduleFunction;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandScheduleFunctionAppend;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandScheduleFunctionReplace;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandScheduleClear;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandGameruleSet;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandGameruleQuery;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandDatapackEnable;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandDatapackDisable;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.Difficulty;
 import dev.epicpix.minecraftfunctioncompiler.data.Gamemode;
@@ -862,6 +888,129 @@ public final class CommandCompiler {
             case CommandWeatherRain _ -> context.writeInstruction(Instructions.setWeatherDynamic(SetRandomizedWeatherData.RAIN));
             case CommandWeatherThunderTimed(int duration) -> context.writeInstruction(Instructions.setWeatherStatic(LocationData.ofInteger(0), LocationData.ofInteger(duration), true, true));
             case CommandWeatherThunder _ -> context.writeInstruction(Instructions.setWeatherDynamic(SetRandomizedWeatherData.THUNDER));
+            // give
+            case CommandGive(SelectorArgument targets, String item) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    var playerLocation = context.<TServerPlayer>createLocal();
+                    selector.writeInstruction(Instructions.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
+                    selector.writeInstruction(Instructions.giveItems(playerLocation, LocationData.ofString(item)));
+                }
+            }
+            // playsound
+            case CommandPlaysoundMinVolume(DataLocation sound, String source, SelectorArgument targets, WorldCoordinates pos, double volume, double pitch, double minVolume) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    var playerLocation = context.<TServerPlayer>createLocal();
+                    selector.writeInstruction(Instructions.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
+                    try(var position = context.applyPosition(pos)) {
+                        selector.writeInstruction(Instructions.playSound(playerLocation, LocationData.ofString(sound.toString()), LocationData.ofString(source), position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(pitch), LocationData.ofDouble(minVolume)));
+                    }
+                }
+            }
+            case CommandPlaysoundPitch(DataLocation sound, String source, SelectorArgument targets, WorldCoordinates pos, double volume, double pitch) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    var playerLocation = context.<TServerPlayer>createLocal();
+                    selector.writeInstruction(Instructions.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
+                    try(var position = context.applyPosition(pos)) {
+                        selector.writeInstruction(Instructions.playSound(playerLocation, LocationData.ofString(sound.toString()), LocationData.ofString(source), position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(pitch), LocationData.ofDouble(0.0)));
+                    }
+                }
+            }
+            case CommandPlaysoundVolume(DataLocation sound, String source, SelectorArgument targets, WorldCoordinates pos, double volume) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    var playerLocation = context.<TServerPlayer>createLocal();
+                    selector.writeInstruction(Instructions.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
+                    try(var position = context.applyPosition(pos)) {
+                        selector.writeInstruction(Instructions.playSound(playerLocation, LocationData.ofString(sound.toString()), LocationData.ofString(source), position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
+                    }
+                }
+            }
+            case CommandPlaysoundPos(DataLocation sound, String source, SelectorArgument targets, WorldCoordinates pos) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    var playerLocation = context.<TServerPlayer>createLocal();
+                    selector.writeInstruction(Instructions.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
+                    try(var position = context.applyPosition(pos)) {
+                        selector.writeInstruction(Instructions.playSound(playerLocation, LocationData.ofString(sound.toString()), LocationData.ofString(source), position.content(), LocationData.ofDouble(1.0), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
+                    }
+                }
+            }
+            case CommandPlaysound(DataLocation sound, String source, SelectorArgument targets) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    var playerLocation = context.<TServerPlayer>createLocal();
+                    selector.writeInstruction(Instructions.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
+                    try(var position = context.getPosition()) {
+                        selector.writeInstruction(Instructions.playSound(playerLocation, LocationData.ofString(sound.toString()), LocationData.ofString(source), position.content(), LocationData.ofDouble(1.0), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
+                    }
+                }
+            }
+            // summon
+            case CommandSummonPosNbt(DataLocation entity, WorldCoordinates pos, NbtValue.Compound nbt) -> {
+                try(var world = context.getWorld()) {
+                    try(var position = context.applyPosition(pos)) {
+                        var nbtLocal = context.<TCompoundTag>createLocal();
+                        context.writeInstruction(Instructions.loadNbtValue(nbtLocal.forceCast(), nbt));
+                        context.writeInstruction(Instructions.summonEntityNbt(world.content(), LocationData.ofString(entity.toString()), position.content(), nbtLocal));
+                    }
+                }
+            }
+            case CommandSummonPos(DataLocation entity, WorldCoordinates pos) -> {
+                try(var world = context.getWorld()) {
+                    try(var position = context.applyPosition(pos)) {
+                        context.writeInstruction(Instructions.summonEntity(world.content(), LocationData.ofString(entity.toString()), position.content()));
+                    }
+                }
+            }
+            case CommandSummon(DataLocation entity) -> {
+                try(var world = context.getWorld()) {
+                    try(var position = context.getPosition()) {
+                        context.writeInstruction(Instructions.summonEntity(world.content(), LocationData.ofString(entity.toString()), position.content()));
+                    }
+                }
+            }
+            // time
+            case CommandTimeSetDay _ -> context.writeInstruction(Instructions.setDayTime(LocationData.ofInteger(1000)));
+            case CommandTimeSetNoon _ -> context.writeInstruction(Instructions.setDayTime(LocationData.ofInteger(6000)));
+            case CommandTimeSetNight _ -> context.writeInstruction(Instructions.setDayTime(LocationData.ofInteger(13000)));
+            case CommandTimeSetMidnight _ -> context.writeInstruction(Instructions.setDayTime(LocationData.ofInteger(18000)));
+            case CommandTimeSetValue(int value) -> context.writeInstruction(Instructions.setDayTime(LocationData.ofInteger(value)));
+            case CommandTimeAdd(int value) -> context.writeInstruction(Instructions.addDayTime(LocationData.ofInteger(value)));
+            case CommandTimeQueryDaytime _ -> {
+                if(result.generatingResult()) {
+                    var val = context.<Integer>createLocal();
+                    context.writeInstruction(Instructions.queryDayTime(val));
+                    result.updateResultValue(val);
+                }
+            }
+            case CommandTimeQueryGametime _ -> {
+                if(result.generatingResult()) {
+                    var val = context.<Integer>createLocal();
+                    context.writeInstruction(Instructions.queryGameTime(val));
+                    result.updateResultValue(val);
+                }
+            }
+            case CommandTimeQueryDay _ -> {
+                if(result.generatingResult()) {
+                    var val = context.<Integer>createLocal();
+                    context.writeInstruction(Instructions.queryDay(val));
+                    result.updateResultValue(val);
+                }
+            }
+            // schedule
+            case CommandScheduleFunctionAppend(DataLocation function, int time) -> context.writeInstruction(Instructions.scheduleFunction(LocationData.ofString(function.toString()), LocationData.ofInteger(time), true));
+            case CommandScheduleFunctionReplace(DataLocation function, int time) -> context.writeInstruction(Instructions.scheduleFunction(LocationData.ofString(function.toString()), LocationData.ofInteger(time), false));
+            case CommandScheduleFunction(DataLocation function, int time) -> context.writeInstruction(Instructions.scheduleFunction(LocationData.ofString(function.toString()), LocationData.ofInteger(time), false));
+            case CommandScheduleClear(DataLocation function) -> context.writeInstruction(Instructions.scheduleClearFunction(LocationData.ofString(function.toString())));
+            // gamerule
+            case CommandGameruleSet(String rule, String value) -> context.writeInstruction(Instructions.setGamerule(LocationData.ofString(rule), LocationData.ofString(value)));
+            case CommandGameruleQuery(String rule) -> {
+                if(result.generatingResult()) {
+                    var val = context.<Integer>createLocal();
+                    context.writeInstruction(Instructions.queryGamerule(val, LocationData.ofString(rule)));
+                    result.updateResultValue(val);
+                }
+            }
+            // datapack
+            case CommandDatapackEnable(String name) -> context.writeInstruction(Instructions.enableDatapack(LocationData.ofString(name)));
+            case CommandDatapackDisable(String name) -> context.writeInstruction(Instructions.disableDatapack(LocationData.ofString(name)));
             case CommandAdvancementGrantOnly(SelectorArgument targets, DataLocation advancement) -> {
                 try(var players = context.forSelector(targets, result)) {
                     var playerLocation = context.<TServerPlayer>createLocal();
