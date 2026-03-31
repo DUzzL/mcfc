@@ -773,3 +773,8 @@
 @DISABLE_DATAPACK(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:name]) {
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.disableDatapack([static:MinecraftServer], [instr:name]);
 }
+
+// vanilla fallback for partial compilation
+@EXECUTE_VANILLA_COMMAND(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <java.lang.String> [instr:command]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.executeVanillaCommand([ctx:stack], [instr:command]);
+}

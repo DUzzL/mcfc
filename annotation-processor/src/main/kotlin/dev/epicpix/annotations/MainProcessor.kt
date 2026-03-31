@@ -155,6 +155,7 @@ class MainProcessor(
             val map = codeGenerator.createNewFile(Dependencies.ALL_FILES, "dev.epicpix.minecraftfunctioncompiler.commands.params", "CommandParams", "java")
             map.appendText("package dev.epicpix.minecraftfunctioncompiler.commands.params;\n")
             map.appendText("public sealed interface CommandParams permits\n")
+            names.add("dev.epicpix.minecraftfunctioncompiler.commands.params.CommandFallbackVanilla")
             var i = 0
             for(name in names) {
                 if(++i == names.size) {

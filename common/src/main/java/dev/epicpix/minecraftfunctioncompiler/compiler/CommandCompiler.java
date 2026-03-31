@@ -102,6 +102,7 @@ import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandGameruleSet;
 import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandGameruleQuery;
 import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandDatapackEnable;
 import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandDatapackDisable;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandFallbackVanilla;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.Difficulty;
 import dev.epicpix.minecraftfunctioncompiler.data.Gamemode;
@@ -1011,6 +1012,13 @@ public final class CommandCompiler {
             // datapack
             case CommandDatapackEnable(String name) -> context.writeInstruction(Instructions.enableDatapack(name));
             case CommandDatapackDisable(String name) -> context.writeInstruction(Instructions.disableDatapack(name));
+            // vanilla fallback for partial compilation
+            case CommandFallbackVanilla(String rawCommand) -> {
+                var current = context.current();
+                var stack = context.<TCommandSourceStack>createLocal();
+                context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
+                context.writeInstruction(Instructions.executeVanillaCommand(stack, rawCommand));
+            }
             case CommandAdvancementGrantOnly(SelectorArgument targets, DataLocation advancement) -> {
                 try(var players = context.forSelector(targets, result)) {
                     var playerLocation = context.<TServerPlayer>createLocal();

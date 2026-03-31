@@ -6,6 +6,7 @@ import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroType;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroValidator;
 import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandParams;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandFallbackVanilla;
 import dev.epicpix.minecraftfunctioncompiler.compiler.CommandCompiler;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
@@ -79,49 +80,36 @@ public class FunctionCodeGenerator {
         HashMap<DataLocation, List<CommandParams>> definedFunctions = new HashMap<>();
         HashMap<String, HashMap<String, Integer>> parseFailures = new HashMap<>();
         int totalFailures = 0;
-        nextFunction: for(var entry : functionSources.entrySet()) {
+        for(var entry : functionSources.entrySet()) {
             var key = entry.getKey();
             var values = entry.getValue();
-            String currentCommand = null;
-            try {
-                ArrayList<CommandParams> parsed = new ArrayList<>();
-                for(String value : values) {
-                    currentCommand = value;
-                    DiagnosticResult<CommandParams> res;
-                    if(currentCommand.startsWith("$")) {
-                        res = CommandParser.parseCommand(currentCommand.substring(1), key, true, lookup);
-                    }else {
-                        res = CommandParser.parseCommand(currentCommand, key, false, lookup);
-                    }
-                    if(res.isError()) {
-                        var diag = res.getError();
-                        assert diag != null;
-                        diagnostics.addDiagnostic(diag);
-                        totalFailures++;
-                        parseFailures
-                            .computeIfAbsent(diag.message(), k -> new HashMap<>())
-                            .merge(key.namespace(), 1, Integer::sum);
-                        continue nextFunction;
-                    }
+            ArrayList<CommandParams> parsed = new ArrayList<>();
+            for(String value : values) {
+                DiagnosticResult<CommandParams> res;
+                if(value.startsWith("$")) {
+                    res = CommandParser.parseCommand(value.substring(1), key, true, lookup);
+                }else {
+                    res = CommandParser.parseCommand(value, key, false, lookup);
+                }
+                if(res.isError()) {
+                    var diag = res.getError();
+                    assert diag != null;
+                    diagnostics.addDiagnostic(diag);
+                    String rawCommand = value.startsWith("$") ? value.substring(1) : value;
+                    parsed.add(new CommandFallbackVanilla(rawCommand));
+                    totalFailures++;
+                    parseFailures
+                        .computeIfAbsent(diag.message(), k -> new HashMap<>())
+                        .merge(key.namespace(), 1, Integer::sum);
+                }else {
                     parsed.add(Objects.requireNonNull(res.getResult()));
                 }
-                definedFunctions.put(key, parsed);
-            } catch (DiagnosticException e) {
-                diagnostics.addDiagnostic(e.toDiagnostic());
-                totalFailures++;
-                parseFailures
-                    .computeIfAbsent(e.getMessage(), k -> new HashMap<>())
-                    .merge(key.namespace(), 1, Integer::sum);
-            } catch (Throwable e) {
-                LOGGER.error("Unable to parse function {}", key, e);
-                assert currentCommand != null;
-                diagnostics.addDiagnostic(Diagnostic.parseError(UNSPECIFIED_COMMAND_ERROR, key, currentCommand, e.getMessage(), e));
-                totalFailures++;
             }
+            definedFunctions.put(key, parsed);
         }
         if(totalFailures > 0) {
             var summary = new StringBuilder();
-            summary.append("Unable to parse ").append(totalFailures).append(" function(s). Reasons:");
+            summary.append("Partially compiled ").append(totalFailures).append(" command(s) with vanilla fallback. Reasons:");
             var sortedEntries = new ArrayList<>(parseFailures.entrySet());
             sortedEntries.sort((a, b) -> {
                 int countA = a.getValue().values().stream().mapToInt(Integer::intValue).sum();
@@ -130,7 +118,7 @@ public class FunctionCodeGenerator {
             });
             for(var reasonEntry : sortedEntries) {
                 int reasonTotal = reasonEntry.getValue().values().stream().mapToInt(Integer::intValue).sum();
-                summary.append("\n  ").append(reasonEntry.getKey()).append(": ").append(reasonTotal).append(" function(s)");
+                summary.append("\n  ").append(reasonEntry.getKey()).append(": ").append(reasonTotal).append(" command(s)");
                 var namespaces = new ArrayList<>(reasonEntry.getValue().entrySet());
                 namespaces.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
                 summary.append(" (");

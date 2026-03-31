@@ -678,4 +678,10 @@ public class ExtensionFunctions {
         }
     }
 
+    // Vanilla fallback for partial compilation
+
+    public static void executeVanillaCommand(CommandSourceStack stack, String command) {
+        stack.getServer().getCommands().performPrefixedCommand(stack, command);
+    }
+
 }
