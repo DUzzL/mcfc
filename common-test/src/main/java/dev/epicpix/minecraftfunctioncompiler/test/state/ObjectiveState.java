@@ -9,7 +9,7 @@ public record ObjectiveState(String name, Object2IntOpenHashMap<String> values) 
     }
 
     public void assertScoreNotExists(ExceptionThrow thrower, String holder) {
-        if(!values.containsKey(holder)) thrower.accept(String.format("Objective '%s' has score '%s' when it was not supposed to", name, holder));
+        if(values.containsKey(holder)) thrower.accept(String.format("Objective '%s' has score '%s' when it was not supposed to", name, holder));
     }
 
     public void assertScoreSet(ExceptionThrow thrower, String holder, int value) {

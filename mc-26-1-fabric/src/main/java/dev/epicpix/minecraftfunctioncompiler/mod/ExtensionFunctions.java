@@ -291,13 +291,13 @@ public class ExtensionFunctions {
             return entities.getFirst().getDisplayName().copy();
         }else {
             MutableComponent result = Component.empty();
-            boolean first = false;
+            boolean first = true;
 
             for(var entity : entities) {
                 if(!first) result.append(separator);
 
                 result.append(entity.getDisplayName());
-                first = true;
+                first = false;
             }
 
             return result;

@@ -310,7 +310,7 @@ public class CompilationContext {
             data.writeInstruction(instructionWriter, Instructions.iteratorNext(worldObj, worldIter));
             data.writeInstruction(instructionWriter, Instructions.assumeWorld(world, worldObj));
             var entities = this.<List<? extends TEntity>>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.getEntitiesInside(entities, inWorld, box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ, LocationData.ofInteger(limit)));
+            data.writeInstruction(instructionWriter, Instructions.getEntitiesInside(entities, world, box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ, LocationData.ofInteger(limit)));
             var listLength = this.<Integer>createLocal();
             data.writeInstruction(instructionWriter, Instructions.getListLength(listLength, entities));
 
