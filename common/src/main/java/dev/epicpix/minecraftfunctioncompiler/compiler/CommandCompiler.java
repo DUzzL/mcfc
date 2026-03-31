@@ -893,7 +893,7 @@ public final class CommandCompiler {
                 try(var selector = context.forSelector(targets, result)) {
                     var playerLocation = context.<TServerPlayer>createLocal();
                     selector.writeInstruction(Instructions.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
-                    selector.writeInstruction(Instructions.giveItems(playerLocation, LocationData.ofString(item)));
+                    selector.writeInstruction(Instructions.giveItems(playerLocation, item));
                 }
             }
             // playsound
@@ -902,7 +902,7 @@ public final class CommandCompiler {
                     var playerLocation = context.<TServerPlayer>createLocal();
                     selector.writeInstruction(Instructions.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
                     try(var position = context.applyPosition(pos)) {
-                        selector.writeInstruction(Instructions.playSound(playerLocation, LocationData.ofString(sound.toString()), LocationData.ofString(source), position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(pitch), LocationData.ofDouble(minVolume)));
+                        selector.writeInstruction(Instructions.playSound(playerLocation, sound.toString(), source, position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(pitch), LocationData.ofDouble(minVolume)));
                     }
                 }
             }
@@ -911,7 +911,7 @@ public final class CommandCompiler {
                     var playerLocation = context.<TServerPlayer>createLocal();
                     selector.writeInstruction(Instructions.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
                     try(var position = context.applyPosition(pos)) {
-                        selector.writeInstruction(Instructions.playSound(playerLocation, LocationData.ofString(sound.toString()), LocationData.ofString(source), position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(pitch), LocationData.ofDouble(0.0)));
+                        selector.writeInstruction(Instructions.playSound(playerLocation, sound.toString(), source, position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(pitch), LocationData.ofDouble(0.0)));
                     }
                 }
             }
@@ -920,7 +920,7 @@ public final class CommandCompiler {
                     var playerLocation = context.<TServerPlayer>createLocal();
                     selector.writeInstruction(Instructions.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
                     try(var position = context.applyPosition(pos)) {
-                        selector.writeInstruction(Instructions.playSound(playerLocation, LocationData.ofString(sound.toString()), LocationData.ofString(source), position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
+                        selector.writeInstruction(Instructions.playSound(playerLocation, sound.toString(), source, position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
                     }
                 }
             }
@@ -929,7 +929,7 @@ public final class CommandCompiler {
                     var playerLocation = context.<TServerPlayer>createLocal();
                     selector.writeInstruction(Instructions.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
                     try(var position = context.applyPosition(pos)) {
-                        selector.writeInstruction(Instructions.playSound(playerLocation, LocationData.ofString(sound.toString()), LocationData.ofString(source), position.content(), LocationData.ofDouble(1.0), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
+                        selector.writeInstruction(Instructions.playSound(playerLocation, sound.toString(), source, position.content(), LocationData.ofDouble(1.0), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
                     }
                 }
             }
@@ -938,7 +938,7 @@ public final class CommandCompiler {
                     var playerLocation = context.<TServerPlayer>createLocal();
                     selector.writeInstruction(Instructions.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
                     try(var position = context.getPosition()) {
-                        selector.writeInstruction(Instructions.playSound(playerLocation, LocationData.ofString(sound.toString()), LocationData.ofString(source), position.content(), LocationData.ofDouble(1.0), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
+                        selector.writeInstruction(Instructions.playSound(playerLocation, sound.toString(), source, position.content(), LocationData.ofDouble(1.0), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
                     }
                 }
             }
@@ -948,21 +948,21 @@ public final class CommandCompiler {
                     try(var position = context.applyPosition(pos)) {
                         var nbtLocal = context.<TCompoundTag>createLocal();
                         context.writeInstruction(Instructions.loadNbtValue(nbtLocal.forceCast(), nbt));
-                        context.writeInstruction(Instructions.summonEntityNbt(world.content(), LocationData.ofString(entity.toString()), position.content(), nbtLocal));
+                        context.writeInstruction(Instructions.summonEntityNbt(world.content(), entity.toString(), position.content(), nbtLocal));
                     }
                 }
             }
             case CommandSummonPos(DataLocation entity, WorldCoordinates pos) -> {
                 try(var world = context.getWorld()) {
                     try(var position = context.applyPosition(pos)) {
-                        context.writeInstruction(Instructions.summonEntity(world.content(), LocationData.ofString(entity.toString()), position.content()));
+                        context.writeInstruction(Instructions.summonEntity(world.content(), entity.toString(), position.content()));
                     }
                 }
             }
             case CommandSummon(DataLocation entity) -> {
                 try(var world = context.getWorld()) {
                     try(var position = context.getPosition()) {
-                        context.writeInstruction(Instructions.summonEntity(world.content(), LocationData.ofString(entity.toString()), position.content()));
+                        context.writeInstruction(Instructions.summonEntity(world.content(), entity.toString(), position.content()));
                     }
                 }
             }
@@ -995,22 +995,22 @@ public final class CommandCompiler {
                 }
             }
             // schedule
-            case CommandScheduleFunctionAppend(DataLocation function, int time) -> context.writeInstruction(Instructions.scheduleFunction(LocationData.ofString(function.toString()), LocationData.ofInteger(time), true));
-            case CommandScheduleFunctionReplace(DataLocation function, int time) -> context.writeInstruction(Instructions.scheduleFunction(LocationData.ofString(function.toString()), LocationData.ofInteger(time), false));
-            case CommandScheduleFunction(DataLocation function, int time) -> context.writeInstruction(Instructions.scheduleFunction(LocationData.ofString(function.toString()), LocationData.ofInteger(time), false));
-            case CommandScheduleClear(DataLocation function) -> context.writeInstruction(Instructions.scheduleClearFunction(LocationData.ofString(function.toString())));
+            case CommandScheduleFunctionAppend(DataLocation function, int time) -> context.writeInstruction(Instructions.scheduleFunction(function.toString(), LocationData.ofInteger(time), true));
+            case CommandScheduleFunctionReplace(DataLocation function, int time) -> context.writeInstruction(Instructions.scheduleFunction(function.toString(), LocationData.ofInteger(time), false));
+            case CommandScheduleFunction(DataLocation function, int time) -> context.writeInstruction(Instructions.scheduleFunction(function.toString(), LocationData.ofInteger(time), false));
+            case CommandScheduleClear(DataLocation function) -> context.writeInstruction(Instructions.scheduleClearFunction(function.toString()));
             // gamerule
-            case CommandGameruleSet(String rule, String value) -> context.writeInstruction(Instructions.setGamerule(LocationData.ofString(rule), LocationData.ofString(value)));
+            case CommandGameruleSet(String rule, String value) -> context.writeInstruction(Instructions.setGamerule(rule, value));
             case CommandGameruleQuery(String rule) -> {
                 if(result.generatingResult()) {
                     var val = context.<Integer>createLocal();
-                    context.writeInstruction(Instructions.queryGamerule(val, LocationData.ofString(rule)));
+                    context.writeInstruction(Instructions.queryGamerule(val, rule));
                     result.updateResultValue(val);
                 }
             }
             // datapack
-            case CommandDatapackEnable(String name) -> context.writeInstruction(Instructions.enableDatapack(LocationData.ofString(name)));
-            case CommandDatapackDisable(String name) -> context.writeInstruction(Instructions.disableDatapack(LocationData.ofString(name)));
+            case CommandDatapackEnable(String name) -> context.writeInstruction(Instructions.enableDatapack(name));
+            case CommandDatapackDisable(String name) -> context.writeInstruction(Instructions.disableDatapack(name));
             case CommandAdvancementGrantOnly(SelectorArgument targets, DataLocation advancement) -> {
                 try(var players = context.forSelector(targets, result)) {
                     var playerLocation = context.<TServerPlayer>createLocal();
