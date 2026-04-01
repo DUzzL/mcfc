@@ -341,6 +341,10 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 builder.append("    var a$argumentIndex = reader.readWord();\n")
                 newTypedArguments.add(data.argName!! to "java.lang.String")
             }
+            "slot" -> {
+                builder.append("    var a$argumentIndex = reader.readUntilSpace();\n")
+                newTypedArguments.add(data.argName!! to "java.lang.String")
+            }
             "block_predicate" -> {
                 builder.append("    var a$argumentIndex = reader.readBlockPredicate();\n")
                 newTypedArguments.add(data.argName!! to "java.lang.String")

@@ -1081,6 +1081,10 @@ public final class CommandCompiler {
                 emitVanillaFallback(context, "scoreboard objectives add " + objective + " " + criteria + " " + displayName);
             case CommandScoreboardPlayersDisplayName(ScoreHolderArgument targets, String objective) ->
                 emitVanillaFallback(context, "scoreboard players display name " + targets + " " + objective);
+            case CommandScoreboardPlayersDisplayNameText(ScoreHolderArgument targets, String objective, Text displayName) ->
+                emitVanillaFallback(context, "scoreboard players display name " + targets + " " + objective + " " + nbtValueToString(new NbtValue.StringLiteral(displayName.toString())));
+            case CommandScoreboardPlayersDisplayNameGreedy(ScoreHolderArgument targets, String objective, String displayName) ->
+                emitVanillaFallback(context, "scoreboard players display name " + targets + " " + objective + " " + displayName);
             case CommandScoreboardPlayersDisplayNameClear(ScoreHolderArgument targets) ->
                 emitVanillaFallback(context, "scoreboard players display name " + targets);
             case CommandScoreboardObjectivesSetdisplay(String slot, String objective) ->
@@ -1149,6 +1153,24 @@ public final class CommandCompiler {
                 emitVanillaFallback(context, "execute if items block " + worldCoordsToString(pos) + " " + slot + " " + predicate + " run " + getRawCommand(command));
             case CommandExecuteUnlessItemsBlock(WorldCoordinates pos, String slot, String predicate, CommandParams command) ->
                 emitVanillaFallback(context, "execute unless items block " + worldCoordsToString(pos) + " " + slot + " " + predicate + " run " + getRawCommand(command));
+
+            // execute if/unless items standalone — для execute store result ... if items ...
+            case CommandExecuteIfItemsEntityOnly(SelectorArgument targets, String slot, String predicate) -> {
+                result.markImplemented();
+                emitVanillaFallback(context, "execute if items entity " + targets + " " + slot + " " + predicate);
+            }
+            case CommandExecuteUnlessItemsEntityOnly(SelectorArgument targets, String slot, String predicate) -> {
+                result.markImplemented();
+                emitVanillaFallback(context, "execute unless items entity " + targets + " " + slot + " " + predicate);
+            }
+            case CommandExecuteIfItemsBlockOnly(WorldCoordinates pos, String slot, String predicate) -> {
+                result.markImplemented();
+                emitVanillaFallback(context, "execute if items block " + worldCoordsToString(pos) + " " + slot + " " + predicate);
+            }
+            case CommandExecuteUnlessItemsBlockOnly(WorldCoordinates pos, String slot, String predicate) -> {
+                result.markImplemented();
+                emitVanillaFallback(context, "execute unless items block " + worldCoordsToString(pos) + " " + slot + " " + predicate);
+            }
 
             // execute store entity — vanilla fallback (entity NBT store сложный)
             case CommandExecuteStoreEntity(ResultStoreLocationType storeLocation, SelectorArgument target, NbtPath path, ResultStoreType storeType, double scale, CommandParams command) ->
