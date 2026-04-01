@@ -1012,6 +1012,295 @@ public final class CommandCompiler {
             // datapack
             case CommandDatapackEnable(String name) -> context.writeInstruction(Instructions.enableDatapack(name));
             case CommandDatapackDisable(String name) -> context.writeInstruction(Instructions.disableDatapack(name));
+
+            // scoreboard objectives
+            case CommandScoreboardObjectivesRemove(String objective) ->
+                context.writeInstruction(Instructions.removeObjective(objective));
+            case CommandScoreboardObjectivesAdd(String objective, String criteria) ->
+                context.writeInstruction(Instructions.addObjective(objective, criteria));
+            case CommandScoreboardObjectivesAddDisplay(String objective, String criteria, Text display) -> {
+                var displayLocal = context.<TComponent>createLocal();
+                context.writeInstruction(Instructions.loadText(displayLocal, display));
+                context.writeInstruction(Instructions.addObjectiveDisplay(objective, criteria, displayLocal));
+            }
+            case CommandScoreboardObjectivesSetdisplayClear(String slot) ->
+                emitVanillaFallback(context, "scoreboard objectives setdisplay " + slot);
+            case CommandScoreboardObjectivesSetdisplay(String slot, String objective) ->
+                emitVanillaFallback(context, "scoreboard objectives setdisplay " + slot + " " + objective);
+            case CommandScoreboardPlayersDisplayNumberformatBlank(ScoreAccessorArgument targets) ->
+                emitVanillaFallback(context, "scoreboard players display numberformat " + targets + " blank");
+            case CommandScoreboardPlayersDisplayNumberformatStyled(ScoreAccessorArgument targets, NbtValue.Compound style) ->
+                emitVanillaFallback(context, "scoreboard players display numberformat " + targets + " styled " + nbtValueToString(style));
+            case CommandScoreboardPlayersDisplayNumberformatFixed(ScoreAccessorArgument targets, Text text) ->
+                emitVanillaFallback(context, "scoreboard players display numberformat " + targets + " fixed " + nbtValueToString(new NbtValue.StringLiteral(text.toString())));
+
+            // execute in <dimension>
+            case CommandExecuteIn(DataLocation dimension, CommandParams command) -> {
+                try(var fContext = context.withForkingContext(forkingContext)) {
+                    var worldLocal = context.<TServerLevel>createLocal();
+                    context.writeInstruction(Instructions.getDimensionLevel(worldLocal, dimension.toString()));
+                    context.writeInstruction(Instructions.ifNullJump(worldLocal, context.current().contextEndLabel()));
+                    try(var ignored = context.enterWithoutValue(context.current().withCurrentWorld(worldLocal))) {
+                        compile(context, fContext.content(), command, result);
+                    }
+                }
+            }
+
+            // execute if/unless block
+            case CommandExecuteIfBlock(WorldCoordinates pos, String block, CommandParams command) -> {
+                try(var fContext = context.withForkingContext(forkingContext)) {
+                    var current = context.current();
+                    var worldLocal = current.currentWorld();
+                    if(worldLocal == null) {
+                        var w = context.<TServerLevel>createLocal();
+                        context.writeInstruction(Instructions.getStackWorld(w, current.commandSourceStack()));
+                        worldLocal = w;
+                    }
+                    try(var posData = context.applyPosition(pos)) {
+                        var cond = context.<Boolean>createLocal();
+                        posData.writeInstruction(Instructions.checkBlock(cond, worldLocal, posData.content(), block));
+                        posData.writeInstruction(Instructions.ifFalseJump(cond, posData.data().contextEndLabel()));
+                        compile(context, fContext.content(), command, result);
+                    }
+                }
+            }
+            case CommandExecuteUnlessBlock(WorldCoordinates pos, String block, CommandParams command) -> {
+                try(var fContext = context.withForkingContext(forkingContext)) {
+                    var current = context.current();
+                    var worldLocal = current.currentWorld();
+                    if(worldLocal == null) {
+                        var w = context.<TServerLevel>createLocal();
+                        context.writeInstruction(Instructions.getStackWorld(w, current.commandSourceStack()));
+                        worldLocal = w;
+                    }
+                    try(var posData = context.applyPosition(pos)) {
+                        var cond = context.<Boolean>createLocal();
+                        posData.writeInstruction(Instructions.checkBlock(cond, worldLocal, posData.content(), block));
+                        posData.writeInstruction(Instructions.ifNotNullJump(cond, posData.data().contextEndLabel()));
+                        compile(context, fContext.content(), command, result);
+                    }
+                }
+            }
+
+            // execute if/unless items — vanilla fallback (нужен ItemPredicateArgument который сложно парсить)
+            case CommandExecuteIfItemsEntity(SelectorArgument targets, String slot, String predicate, CommandParams command) ->
+                emitVanillaFallback(context, "execute if items entity " + targets + " " + slot + " " + predicate + " run " + getRawCommand(command));
+            case CommandExecuteUnlessItemsEntity(SelectorArgument targets, String slot, String predicate, CommandParams command) ->
+                emitVanillaFallback(context, "execute unless items entity " + targets + " " + slot + " " + predicate + " run " + getRawCommand(command));
+            case CommandExecuteIfItemsBlock(WorldCoordinates pos, String slot, String predicate, CommandParams command) ->
+                emitVanillaFallback(context, "execute if items block " + worldCoordsToString(pos) + " " + slot + " " + predicate + " run " + getRawCommand(command));
+            case CommandExecuteUnlessItemsBlock(WorldCoordinates pos, String slot, String predicate, CommandParams command) ->
+                emitVanillaFallback(context, "execute unless items block " + worldCoordsToString(pos) + " " + slot + " " + predicate + " run " + getRawCommand(command));
+
+            // execute store entity — vanilla fallback (entity NBT store сложный)
+            case CommandExecuteStoreEntity(ResultStoreLocationType storeLocation, SelectorArgument target, NbtPath path, ResultStoreType storeType, double scale, CommandParams command) ->
+                emitVanillaFallback(context, "execute store " + storeLocation.name().toLowerCase() + " entity " + target + " " + nbtPathToString(path) + " " + storeType.name().toLowerCase() + " " + scale + " run " + getRawCommand(command));
+
+            // execute on leasher / attacker / controller / owner / passengers
+            case CommandExecuteOnLeasher(CommandParams command) -> {
+                try(var fContext = context.withForkingContext(forkingContext)) {
+                    try(var currentEntity = context.getCurrentEntity()) {
+                        var holder = context.<TEntity>createLocal();
+                        currentEntity.writeInstruction(Instructions.getEntityLeashHolder(holder, currentEntity.content()));
+                        currentEntity.writeInstruction(Instructions.ifNullJump(holder, currentEntity.endLabel()));
+                        try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(holder))) {
+                            compile(context, fContext.content(), command, result);
+                        }
+                    }
+                }
+            }
+            case CommandExecuteOnAttacker(CommandParams command) -> {
+                try(var fContext = context.withForkingContext(forkingContext)) {
+                    try(var currentEntity = context.getCurrentEntity()) {
+                        var attacker = context.<TEntity>createLocal();
+                        currentEntity.writeInstruction(Instructions.getEntityLastAttacker(attacker, currentEntity.content()));
+                        currentEntity.writeInstruction(Instructions.ifNullJump(attacker, currentEntity.endLabel()));
+                        try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(attacker))) {
+                            compile(context, fContext.content(), command, result);
+                        }
+                    }
+                }
+            }
+            case CommandExecuteOnController(CommandParams command) -> {
+                try(var fContext = context.withForkingContext(forkingContext)) {
+                    try(var currentEntity = context.getCurrentEntity()) {
+                        var controller = context.<TEntity>createLocal();
+                        currentEntity.writeInstruction(Instructions.getEntityController(controller, currentEntity.content()));
+                        currentEntity.writeInstruction(Instructions.ifNullJump(controller, currentEntity.endLabel()));
+                        try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(controller))) {
+                            compile(context, fContext.content(), command, result);
+                        }
+                    }
+                }
+            }
+            case CommandExecuteOnOwner(CommandParams command) -> {
+                try(var fContext = context.withForkingContext(forkingContext)) {
+                    try(var currentEntity = context.getCurrentEntity()) {
+                        var owner = context.<TEntity>createLocal();
+                        currentEntity.writeInstruction(Instructions.getEntityOwner(owner, currentEntity.content()));
+                        currentEntity.writeInstruction(Instructions.ifNullJump(owner, currentEntity.endLabel()));
+                        try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(owner))) {
+                            compile(context, fContext.content(), command, result);
+                        }
+                    }
+                }
+            }
+            case CommandExecuteOnPassengers(CommandParams command) -> {
+                try(var fContext = context.withForkingContext(forkingContext)) {
+                    try(var currentEntity = context.getCurrentEntity()) {
+                        var passengerList = context.<List<? extends TEntity>>createLocal();
+                        currentEntity.writeInstruction(Instructions.getEntityPassengers(passengerList, currentEntity.content()));
+                        var length = context.<Integer>createLocal();
+                        currentEntity.writeInstruction(Instructions.getListLength(length, passengerList));
+                        var index = context.<Integer>createLocal();
+                        currentEntity.writeInstruction(Instructions.dup(index, LocationData.ofInteger(0)));
+                        var iterStart = currentEntity.data().writeLabel(context.instructionWriter);
+                        currentEntity.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, length, currentEntity.endLabel()));
+                        var passengerObj = context.createLocal();
+                        var passenger = context.<TEntity>createLocal();
+                        currentEntity.writeInstruction(Instructions.getListElement(passengerObj, passengerList, index));
+                        currentEntity.writeInstruction(Instructions.assumeEntity(passenger, passengerObj));
+                        var codeLocation = currentEntity.data().writeLabel(context.instructionWriter);
+                        currentEntity.writeInstruction(Instructions.valueAdd(index, index, LocationData.ofInteger(1)));
+                        currentEntity.writeInstruction(Instructions.jump(iterStart));
+                        try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(passenger).withContextLabel(codeLocation))) {
+                            compile(context, fContext.content(), command, result);
+                        }
+                    }
+                }
+            }
+
+            // data merge
+            case CommandDataMergeStorage(DataLocation target, NbtValue.Compound nbt) -> {
+                var nbtLocal = context.<TCompoundTag>createLocal();
+                context.writeInstruction(Instructions.loadNbtValue(nbtLocal.forceCast(), nbt));
+                context.writeInstruction(Instructions.mergeNbtStorage(target, nbtLocal));
+            }
+            case CommandDataMergeEntity(SelectorArgument target, NbtValue.Compound nbt) ->
+                emitVanillaFallback(context, "data merge entity " + target + " " + nbtValueToString(nbt));
+
+            // data remove
+            case CommandDataRemoveStorage(DataLocation target, NbtPath path) ->
+                emitVanillaFallback(context, "data remove storage " + target + " " + nbtPathToString(path));
+            case CommandDataRemoveEntity(SelectorArgument target, NbtPath path) ->
+                emitVanillaFallback(context, "data remove entity " + target + " " + nbtPathToString(path));
+
+            // data modify prepend/append/insert value
+            case CommandDataModifyPrependValue(NbtDataLocation destination, NbtPath path, NbtValue setValue) -> {
+                if(destination instanceof NbtDataLocation.Storage(DataLocation storage)) {
+                    compileDataModifyListOpValue(context, storage, path, setValue, true);
+                } else {
+                    emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " prepend value " + nbtValueToString(setValue));
+                }
+            }
+            case CommandDataModifyAppendValue(NbtDataLocation destination, NbtPath path, NbtValue setValue) -> {
+                if(destination instanceof NbtDataLocation.Storage(DataLocation storage)) {
+                    compileDataModifyListOpValue(context, storage, path, setValue, false);
+                } else {
+                    emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " append value " + nbtValueToString(setValue));
+                }
+            }
+            case CommandDataModifyInsertValue(NbtDataLocation destination, NbtPath path, int index, NbtValue setValue) -> {
+                if(destination instanceof NbtDataLocation.Storage(DataLocation storage)) {
+                    var storageLocal = context.<TCompoundTag>createLocal();
+                    context.writeInstruction(Instructions.getNbtStorage(storageLocal, storage));
+                    var parts = path.parts();
+                    var codeLocation = context.current().writeLabel(context.instructionWriter);
+                    try(var innerContext = context.enterWithoutValue(context.current().withContextLabel(codeLocation))) {
+                        var listContainer = getNbtPathValue(context, storageLocal, parts.subList(0, parts.size() - 1), false, innerContext.data().contextEndLabel());
+                        var listTag = context.<TListTag>createLocal();
+                        innerContext.writeInstruction(Instructions.tryAsNbtList(listTag, listContainer, innerContext.data().contextEndLabel()));
+                        var tagLocal = context.<TTag>createLocal();
+                        var tagCopied = context.<TTag>createLocal();
+                        innerContext.writeInstruction(Instructions.loadNbtValue(tagLocal, setValue));
+                        innerContext.writeInstruction(Instructions.cloneNbtValue(tagCopied, tagLocal));
+                        innerContext.writeInstruction(Instructions.nbtListInsert(listTag, LocationData.ofInteger(index), tagCopied, innerContext.data().contextEndLabel()));
+                    }
+                    context.writeInstruction(Instructions.setNbtStorage(storage, storageLocal));
+                } else {
+                    emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " insert " + index + " value " + nbtValueToString(setValue));
+                }
+            }
+
+            // data modify set/prepend/append from — vanilla fallback (runtime value копирование)
+            case CommandDataModifySetFrom(NbtDataLocation destination, NbtPath path, NbtDataLocation source) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " set from " + nbtDataLocationToString(source));
+            case CommandDataModifySetFromPath(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " set from " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath));
+            case CommandDataModifyPrependFrom(NbtDataLocation destination, NbtPath path, NbtDataLocation source) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " prepend from " + nbtDataLocationToString(source));
+            case CommandDataModifyPrependFromPath(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " prepend from " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath));
+            case CommandDataModifyAppendFrom(NbtDataLocation destination, NbtPath path, NbtDataLocation source) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " append from " + nbtDataLocationToString(source));
+            case CommandDataModifyAppendFromPath(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " append from " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath));
+
+            // data get — vanilla fallback
+            case CommandDataGet(NbtDataLocation source) ->
+                emitVanillaFallback(context, "data get " + nbtDataLocationToString(source));
+            case CommandDataGetPath(NbtDataLocation source, NbtPath path) ->
+                emitVanillaFallback(context, "data get " + nbtDataLocationToString(source) + " " + nbtPathToString(path));
+            case CommandDataGetPathScale(NbtDataLocation source, NbtPath path, double scale) ->
+                emitVanillaFallback(context, "data get " + nbtDataLocationToString(source) + " " + nbtPathToString(path) + " " + scale);
+
+            // loot — vanilla fallback
+            case CommandLootReplaceEntityLoot(SelectorArgument target, String slot, DataLocation loot) ->
+                emitVanillaFallback(context, "loot replace entity " + target + " " + slot + " loot " + loot);
+            case CommandLootReplaceEntityKill(SelectorArgument target, String slot, SelectorArgument kill) ->
+                emitVanillaFallback(context, "loot replace entity " + target + " " + slot + " kill " + kill);
+            case CommandLootReplaceBlockLoot(WorldCoordinates pos, String slot, DataLocation loot) ->
+                emitVanillaFallback(context, "loot replace block " + worldCoordsToString(pos) + " " + slot + " loot " + loot);
+            case CommandLootReplaceBlockKill(WorldCoordinates pos, String slot, SelectorArgument kill) ->
+                emitVanillaFallback(context, "loot replace block " + worldCoordsToString(pos) + " " + slot + " kill " + kill);
+            case CommandLootInsertLoot(WorldCoordinates pos, DataLocation loot) ->
+                emitVanillaFallback(context, "loot insert " + worldCoordsToString(pos) + " loot " + loot);
+            case CommandLootInsertKill(WorldCoordinates pos, SelectorArgument kill) ->
+                emitVanillaFallback(context, "loot insert " + worldCoordsToString(pos) + " kill " + kill);
+            case CommandLootGiveLoot(SelectorArgument players, DataLocation loot) ->
+                emitVanillaFallback(context, "loot give " + players + " loot " + loot);
+            case CommandLootGiveKill(SelectorArgument players, SelectorArgument kill) ->
+                emitVanillaFallback(context, "loot give " + players + " kill " + kill);
+            case CommandLootSpawnLoot(WorldCoordinates pos, DataLocation loot) ->
+                emitVanillaFallback(context, "loot spawn " + worldCoordsToString(pos) + " loot " + loot);
+            case CommandLootSpawnKill(WorldCoordinates pos, SelectorArgument kill) ->
+                emitVanillaFallback(context, "loot spawn " + worldCoordsToString(pos) + " kill " + kill);
+
+            // item modify — vanilla fallback
+            case CommandItemModifyEntity(SelectorArgument targets, String slot, DataLocation modifier) ->
+                emitVanillaFallback(context, "item modify entity " + targets + " " + slot + " " + modifier);
+            case CommandItemModifyBlock(WorldCoordinates pos, String slot, DataLocation modifier) ->
+                emitVanillaFallback(context, "item modify block " + worldCoordsToString(pos) + " " + slot + " " + modifier);
+
+            // effect — vanilla fallback
+            case CommandEffectGive(SelectorArgument targets, DataLocation effect) ->
+                emitVanillaFallback(context, "effect give " + targets + " " + effect);
+            case CommandEffectGiveSeconds(SelectorArgument targets, DataLocation effect, int seconds) ->
+                emitVanillaFallback(context, "effect give " + targets + " " + effect + " " + seconds);
+            case CommandEffectGiveSecondsAmplifier(SelectorArgument targets, DataLocation effect, int seconds, int amplifier) ->
+                emitVanillaFallback(context, "effect give " + targets + " " + effect + " " + seconds + " " + amplifier);
+            case CommandEffectGiveSecondsAmplifierHide(SelectorArgument targets, DataLocation effect, int seconds, int amplifier, boolean hide) ->
+                emitVanillaFallback(context, "effect give " + targets + " " + effect + " " + seconds + " " + amplifier + " " + hide);
+            case CommandEffectClear() ->
+                emitVanillaFallback(context, "effect clear");
+            case CommandEffectClearTargets(SelectorArgument targets) ->
+                emitVanillaFallback(context, "effect clear " + targets);
+            case CommandEffectClearTargetsEffect(SelectorArgument targets, DataLocation effect) ->
+                emitVanillaFallback(context, "effect clear " + targets + " " + effect);
+
+            // time query namespaced (minecraft:day, minecraft:daytime, etc.)
+            case CommandTimeQueryNamespaced(DataLocation query) -> {
+                result.markImplemented();
+                var val = context.<Integer>createLocal();
+                context.writeInstruction(switch(query.path()) {
+                    case "day" -> Instructions.queryDay(val);
+                    case "daytime" -> Instructions.queryDayTime(val);
+                    case "gametime" -> Instructions.queryGameTime(val);
+                    default -> Instructions.queryDayTime(val);
+                });
+                result.updateResultValue(val);
+            }
+
             // vanilla fallback for partial compilation
             case CommandFallbackVanilla(String rawCommand) -> {
                 var current = context.current();
@@ -1265,6 +1554,130 @@ public final class CommandCompiler {
             var otherText = loadText(context, sibling);
             context.writeInstruction(Instructions.appendText(textLocation, otherText));
         }
+    }
+
+    // Извлечь raw строку из CommandParams (только для CommandFallbackVanilla — остальные ≈ unreachable в if/unless items контексте)
+    private static String getRawCommand(CommandParams cmd) {
+        if(cmd instanceof CommandFallbackVanilla(String raw)) return raw;
+        return "true"; // safe no-op
+    }
+
+    // Вспомогательный метод — vanilla fallback через executeVanillaCommand с текущим стеком
+    private static void emitVanillaFallback(CompilationContext context, String command) {
+        var current = context.current();
+        var stack = context.<TCommandSourceStack>createLocal();
+        context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
+        context.writeInstruction(Instructions.executeVanillaCommand(stack, command));
+    }
+
+    // Реконструкция строки nbt_path для vanilla fallback
+    private static String nbtPathToString(NbtPath path) {
+        var sb = new StringBuilder();
+        boolean first = true;
+        for(var part : path.parts()) {
+            switch(part) {
+                case NbtPathPart.Named(String name) -> {
+                    if(!first) sb.append('.');
+                    if(name.contains(".") || name.contains(" ") || name.contains(":")) {
+                        sb.append('"').append(name.replace("\\", "\\\\").replace("\"", "\\\"")).append('"');
+                    } else {
+                        sb.append(name);
+                    }
+                }
+                case NbtPathPart.ArrayIndexInteger(int idx) -> sb.append('[').append(idx).append(']');
+                case NbtPathPart.ArrayIndexCompound(NbtValue.Compound compound) -> sb.append('[').append(nbtValueToString(compound)).append(']');
+                case NbtPathPart.CompoundCheck(NbtValue.Compound compound) -> sb.append(nbtValueToString(compound));
+            }
+            if(part instanceof NbtPathPart.Named) first = false;
+        }
+        return sb.toString();
+    }
+
+    private static String nbtValueToString(NbtValue value) {
+        return switch(value) {
+            case NbtValue.Compound(var entries) -> {
+                var sb = new StringBuilder("{");
+                var iter = entries.entrySet().iterator();
+                while(iter.hasNext()) {
+                    var e = iter.next();
+                    sb.append(e.getKey()).append(':').append(nbtValueToString(e.getValue()));
+                    if(iter.hasNext()) sb.append(',');
+                }
+                yield sb.append('}').toString();
+            }
+            case NbtValue.Array(var values) -> {
+                var sb = new StringBuilder("[");
+                for(int i = 0; i < values.size(); i++) {
+                    if(i > 0) sb.append(',');
+                    sb.append(nbtValueToString(values.get(i)));
+                }
+                yield sb.append(']').toString();
+            }
+            case NbtValue.ByteArray(var bytes) -> {
+                var sb = new StringBuilder("[B;");
+                for(int i = 0; i < bytes.length; i++) { if(i > 0) sb.append(','); sb.append(bytes[i]).append('b'); }
+                yield sb.append(']').toString();
+            }
+            case NbtValue.IntegerArray(var ints) -> {
+                var sb = new StringBuilder("[I;");
+                for(int i = 0; i < ints.length; i++) { if(i > 0) sb.append(','); sb.append(ints[i]); }
+                yield sb.append(']').toString();
+            }
+            case NbtValue.LongArray(var longs) -> {
+                var sb = new StringBuilder("[L;");
+                for(int i = 0; i < longs.length; i++) { if(i > 0) sb.append(','); sb.append(longs[i]).append('l'); }
+                yield sb.append(']').toString();
+            }
+            case NbtValue.ByteLiteral(byte v) -> v + "b";
+            case NbtValue.ShortLiteral(short v) -> v + "s";
+            case NbtValue.IntegerLiteral(int v) -> String.valueOf(v);
+            case NbtValue.LongLiteral(long v) -> v + "l";
+            case NbtValue.FloatLiteral(float v) -> v + "f";
+            case NbtValue.DoubleLiteral(double v) -> v + "d";
+            case NbtValue.StringLiteral(String v) -> '"' + v.replace("\\", "\\\\").replace("\"", "\\\"") + '"';
+        };
+    }
+
+    private static String nbtDataLocationToString(NbtDataLocation loc) {
+        return switch(loc) {
+            case NbtDataLocation.Storage(DataLocation storage) -> "storage " + storage;
+            case NbtDataLocation.Entity(SelectorArgument selector) -> "entity " + selector;
+            case NbtDataLocation.Block(WorldCoordinates pos) -> "block " + worldCoordsToString(pos);
+        };
+    }
+
+    private static String worldCoordsToString(WorldCoordinates pos) {
+        return coordToStr(pos.x(), pos.isXRelative()) + " "
+             + coordToStr(pos.y(), pos.isYRelative()) + " "
+             + coordToStr(pos.z(), pos.isZRelative());
+    }
+
+    private static String coordToStr(double v, boolean relative) {
+        if(relative) return v == 0.0 ? "~" : "~" + v;
+        return String.valueOf(v);
+    }
+
+    // data modify prepend/append для storage — нативная реализация
+    private static void compileDataModifyListOpValue(CompilationContext context, DataLocation storage, NbtPath path, NbtValue setValue, boolean prepend) {
+        var storageLocal = context.<TCompoundTag>createLocal();
+        context.writeInstruction(Instructions.getNbtStorage(storageLocal, storage));
+        var parts = path.parts();
+        var codeLocation = context.current().writeLabel(context.instructionWriter);
+        try(var innerContext = context.enterWithoutValue(context.current().withContextLabel(codeLocation))) {
+            var listContainer = getNbtPathValue(context, storageLocal, parts.subList(0, parts.size() - 1), false, innerContext.data().contextEndLabel());
+            var listTag = context.<TListTag>createLocal();
+            innerContext.writeInstruction(Instructions.tryAsNbtList(listTag, listContainer, innerContext.data().contextEndLabel()));
+            var tagLocal = context.<TTag>createLocal();
+            var tagCopied = context.<TTag>createLocal();
+            innerContext.writeInstruction(Instructions.loadNbtValue(tagLocal, setValue));
+            innerContext.writeInstruction(Instructions.cloneNbtValue(tagCopied, tagLocal));
+            if(prepend) {
+                innerContext.writeInstruction(Instructions.nbtListPrepend(listTag, tagCopied, innerContext.data().contextEndLabel()));
+            } else {
+                innerContext.writeInstruction(Instructions.nbtListAppend(listTag, tagCopied, innerContext.data().contextEndLabel()));
+            }
+        }
+        context.writeInstruction(Instructions.setNbtStorage(storage, storageLocal));
     }
 
 }

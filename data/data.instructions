@@ -778,3 +778,76 @@
 @EXECUTE_VANILLA_COMMAND(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <java.lang.String> [instr:command]) {
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.executeVanillaCommand([ctx:stack], [instr:command]);
 }
+
+// scoreboard objectives
+@REMOVE_OBJECTIVE(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [instr:objective]) {
+  [local:obj] = [static:Scoreboard].getObjective([instr:objective]);
+  if([local:obj] != null) {
+    [static:Scoreboard].removeObjective([local:obj]);
+  }
+}
+
+@ADD_OBJECTIVE(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [instr:objective], <java.lang.String> [instr:criteria]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.addObjective([static:Scoreboard], [instr:objective], [instr:criteria], null);
+}
+
+@ADD_OBJECTIVE_DISPLAY(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [instr:objective], <java.lang.String> [instr:criteria], <net.minecraft.network.chat.Component> [ctx:display]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.addObjective([static:Scoreboard], [instr:objective], [instr:criteria], [ctx:display]);
+}
+
+// scoreboard setdisplay / numberformat — vanilla fallback через executeVanillaCommand
+// (нет смысла реализовывать нативно — вызывается крайне редко)
+
+// data merge storage
+@MERGE_NBT_STORAGE(mut <net.minecraft.world.level.storage.CommandStorage> [static:CommandStorage], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:storage_name], <net.minecraft.nbt.CompoundTag> [ctx:patch]) {
+  [local:current] = [static:CommandStorage].get(map_resource_location([instr:storage_name]));
+  [local:current].merge([ctx:patch]);
+  [static:CommandStorage].set(map_resource_location([instr:storage_name]), [local:current]);
+}
+
+// NBT list prepend / append (используют CollectionTag.addTag)
+##CONDITIONAL_JUMP
+@NBT_LIST_PREPEND(mut <net.minecraft.nbt.ListTag> [ctx:list], <net.minecraft.nbt.Tag> [ctx:value], label [ctx:fail_label]) {
+  _jumpIfEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.nbtListPrepend([ctx:list], [ctx:value]), false, [ctx:fail_label]);
+}
+
+##CONDITIONAL_JUMP
+@NBT_LIST_APPEND(mut <net.minecraft.nbt.ListTag> [ctx:list], <net.minecraft.nbt.Tag> [ctx:value], label [ctx:fail_label]) {
+  _jumpIfEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.nbtListAppend([ctx:list], [ctx:value]), false, [ctx:fail_label]);
+}
+
+##CONDITIONAL_JUMP
+@NBT_LIST_INSERT(mut <net.minecraft.nbt.ListTag> [ctx:list], int [ctx:index], <net.minecraft.nbt.Tag> [ctx:value], label [ctx:fail_label]) {
+  _jumpIfEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.nbtListInsert([ctx:list], [ctx:index], [ctx:value]), false, [ctx:fail_label]);
+}
+
+// execute in <dimension>
+##PURE
+@GET_DIMENSION_LEVEL(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:dimension]) -> <net.minecraft.server.level.ServerLevel>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getDimensionLevel([static:MinecraftServer], [instr:dimension]);
+
+// execute if block / block tag check
+##PURE
+@CHECK_BLOCK(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:position], <java.lang.String> [instr:block]) -> boolean
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.checkBlock([ctx:world], [ctx:position], [instr:block]);
+
+// execute on leasher / attacker / controller / owner
+##PURE
+@GET_ENTITY_LEASH_HOLDER(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.world.entity.Entity>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getEntityLeashHolder([ctx:entity]);
+
+##PURE
+@GET_ENTITY_LAST_ATTACKER(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.world.entity.Entity>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getEntityLastAttacker([ctx:entity]);
+
+##PURE
+@GET_ENTITY_CONTROLLER(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.world.entity.Entity>
+  = [ctx:entity].getControllingPassenger();
+
+##PURE
+@GET_ENTITY_OWNER(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.world.entity.Entity>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getEntityOwner([ctx:entity]);
+
+##PURE
+@GET_ENTITY_PASSENGERS(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <java.util.List<net.minecraft.world.entity.Entity> >
+  = [ctx:entity].getPassengers();

@@ -119,3 +119,67 @@ GAMERULE_QUERY/gamerule <rule:word>
 
 DATAPACK_ENABLE/datapack enable <name:greedy_string>
 DATAPACK_DISABLE/datapack disable <name:greedy_string>
+
+SCOREBOARD_OBJECTIVES_ADD/scoreboard objectives add <objective:word> <criteria:word>
+SCOREBOARD_OBJECTIVES_ADD_DISPLAY/scoreboard objectives add <objective:word> <criteria:word> <display_name:text>
+SCOREBOARD_OBJECTIVES_REMOVE/scoreboard objectives remove <objective:word>
+SCOREBOARD_OBJECTIVES_SETDISPLAY_CLEAR/scoreboard objectives setdisplay <slot:word>
+SCOREBOARD_OBJECTIVES_SETDISPLAY/scoreboard objectives setdisplay <slot:word> <objective:word>
+SCOREBOARD_PLAYERS_DISPLAY_NUMBERFORMAT_BLANK/scoreboard players display numberformat <targets:score_accessor> blank
+SCOREBOARD_PLAYERS_DISPLAY_NUMBERFORMAT_STYLED/scoreboard players display numberformat <targets:score_accessor> styled <style:nbt_compound>
+SCOREBOARD_PLAYERS_DISPLAY_NUMBERFORMAT_FIXED/scoreboard players display numberformat <targets:score_accessor> fixed <value:text>
+
+DATA_MERGE_ENTITY/data merge entity <target:entity_selector[single]> <nbt:nbt_compound>
+DATA_MERGE_STORAGE/data merge storage <target:resource_location> <nbt:nbt_compound>
+DATA_REMOVE_ENTITY/data remove entity <target:entity_selector[single]> <path:nbt_path>
+DATA_REMOVE_STORAGE/data remove storage <target:resource_location> <path:nbt_path>
+DATA_MODIFY_PREPEND_VALUE/data modify <destination:nbt_data_location> <path:nbt_path> prepend value <value:nbt_value>
+DATA_MODIFY_APPEND_VALUE/data modify <destination:nbt_data_location> <path:nbt_path> append value <value:nbt_value>
+DATA_MODIFY_INSERT_VALUE/data modify <destination:nbt_data_location> <path:nbt_path> insert <index:int> value <value:nbt_value>
+DATA_MODIFY_SET_FROM/data modify <destination:nbt_data_location> <path:nbt_path> set from <source:nbt_data_location>
+DATA_MODIFY_SET_FROM_PATH/data modify <destination:nbt_data_location> <path:nbt_path> set from <source:nbt_data_location> <source_path:nbt_path>
+DATA_MODIFY_PREPEND_FROM/data modify <destination:nbt_data_location> <path:nbt_path> prepend from <source:nbt_data_location>
+DATA_MODIFY_PREPEND_FROM_PATH/data modify <destination:nbt_data_location> <path:nbt_path> prepend from <source:nbt_data_location> <source_path:nbt_path>
+DATA_MODIFY_APPEND_FROM/data modify <destination:nbt_data_location> <path:nbt_path> append from <source:nbt_data_location>
+DATA_MODIFY_APPEND_FROM_PATH/data modify <destination:nbt_data_location> <path:nbt_path> append from <source:nbt_data_location> <source_path:nbt_path>
+DATA_GET/data get <source:nbt_data_location>
+DATA_GET_PATH/data get <source:nbt_data_location> <path:nbt_path>
+DATA_GET_PATH_SCALE/data get <source:nbt_data_location> <path:nbt_path> <scale:double>
+
+EXECUTE_IN/execute in <dimension:resource_location> <command:command[root=execute]>
+EXECUTE_IF_BLOCK/execute if block <pos:vec3> <block:word> <command:command[root=execute]>
+EXECUTE_UNLESS_BLOCK/execute unless block <pos:vec3> <block:word> <command:command[root=execute]>
+EXECUTE_IF_ITEMS_ENTITY/execute if items entity <targets:entity_selector> <slot:word> <item_predicate:word> <command:command[root=execute]>
+EXECUTE_UNLESS_ITEMS_ENTITY/execute unless items entity <targets:entity_selector> <slot:word> <item_predicate:word> <command:command[root=execute]>
+EXECUTE_IF_ITEMS_BLOCK/execute if items block <pos:vec3> <slot:word> <item_predicate:word> <command:command[root=execute]>
+EXECUTE_UNLESS_ITEMS_BLOCK/execute unless items block <pos:vec3> <slot:word> <item_predicate:word> <command:command[root=execute]>
+EXECUTE_STORE_ENTITY/execute store <store_location:result_store_location_type> entity <target:entity_selector[single]> <path:nbt_path> <store_type:result_store_type> <scale:double> <command:command[root=execute]>
+EXECUTE_ON_LEASHER/execute on leasher <command:command[root=execute]>
+EXECUTE_ON_ATTACKER/execute on attacker <command:command[root=execute]>
+EXECUTE_ON_CONTROLLER/execute on controller <command:command[root=execute]>
+EXECUTE_ON_OWNER/execute on owner <command:command[root=execute]>
+EXECUTE_ON_PASSENGERS/execute on passengers <command:command[root=execute]>
+
+LOOT_REPLACE_ENTITY_LOOT/loot replace entity <target:entity_selector[single]> <slot:word> loot <loot_table:resource_location>
+LOOT_REPLACE_ENTITY_KILL/loot replace entity <target:entity_selector[single]> <slot:word> kill <kill_target:entity_selector[single]>
+LOOT_REPLACE_BLOCK_LOOT/loot replace block <pos:vec3> <slot:word> loot <loot_table:resource_location>
+LOOT_REPLACE_BLOCK_KILL/loot replace block <pos:vec3> <slot:word> kill <kill_target:entity_selector[single]>
+LOOT_INSERT_LOOT/loot insert <pos:vec3> loot <loot_table:resource_location>
+LOOT_INSERT_KILL/loot insert <pos:vec3> kill <kill_target:entity_selector[single]>
+LOOT_GIVE_LOOT/loot give <players:entity_selector[players]> loot <loot_table:resource_location>
+LOOT_GIVE_KILL/loot give <players:entity_selector[players]> kill <kill_target:entity_selector[single]>
+LOOT_SPAWN_LOOT/loot spawn <pos:vec3> loot <loot_table:resource_location>
+LOOT_SPAWN_KILL/loot spawn <pos:vec3> kill <kill_target:entity_selector[single]>
+
+ITEM_MODIFY_ENTITY/item modify entity <targets:entity_selector> <slot:word> <modifier:resource_location>
+ITEM_MODIFY_BLOCK/item modify block <pos:vec3> <slot:word> <modifier:resource_location>
+
+EFFECT_GIVE/effect give <targets:entity_selector> <effect:resource_location>
+EFFECT_GIVE_SECONDS/effect give <targets:entity_selector> <effect:resource_location> <seconds:int>
+EFFECT_GIVE_SECONDS_AMPLIFIER/effect give <targets:entity_selector> <effect:resource_location> <seconds:int> <amplifier:int>
+EFFECT_GIVE_SECONDS_AMPLIFIER_HIDE/effect give <targets:entity_selector> <effect:resource_location> <seconds:int> <amplifier:int> <hide_particles:boolean>
+EFFECT_CLEAR/effect clear
+EFFECT_CLEAR_TARGETS/effect clear <targets:entity_selector>
+EFFECT_CLEAR_TARGETS_EFFECT/effect clear <targets:entity_selector> <effect:resource_location>
+
+TIME_QUERY_NAMESPACED/time query <query:resource_location>

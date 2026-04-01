@@ -684,4 +684,79 @@ public class ExtensionFunctions {
         stack.getServer().getCommands().performPrefixedCommand(stack, command);
     }
 
+    // Scoreboard objectives
+
+    public static void addObjective(net.minecraft.server.ServerScoreboard scoreboard, String name, String criteriaId, net.minecraft.network.chat.@Nullable Component displayName) {
+        if (scoreboard.getObjective(name) != null) return;
+        var criterion = net.minecraft.world.scores.criteria.ObjectiveCriteria.byName(criteriaId)
+            .orElse(net.minecraft.world.scores.criteria.ObjectiveCriteria.DUMMY);
+        var display = displayName != null ? displayName : net.minecraft.network.chat.Component.literal(name);
+        scoreboard.addObjective(name, criterion, display,
+            net.minecraft.world.scores.criteria.ObjectiveCriteria.RenderType.INTEGER, false, null);
+    }
+
+    // NBT list operations
+
+    public static boolean nbtListPrepend(ListTag list, Tag value) {
+        return list.addTag(0, value);
+    }
+
+    public static boolean nbtListAppend(ListTag list, Tag value) {
+        return list.addTag(list.size(), value);
+    }
+
+    public static boolean nbtListInsert(ListTag list, int index, Tag value) {
+        if (index < 0 || index > list.size()) return false;
+        return list.addTag(index, value);
+    }
+
+    // Dimension level
+
+    public static @Nullable net.minecraft.server.level.ServerLevel getDimensionLevel(MinecraftServer server, String dimension) {
+        var key = net.minecraft.resources.ResourceKey.create(
+            net.minecraft.core.registries.Registries.DIMENSION,
+            net.minecraft.resources.ResourceLocation.parse(dimension));
+        return server.getLevel(key);
+    }
+
+    // Block checking для execute if block
+
+    public static boolean checkBlock(net.minecraft.server.level.ServerLevel level, Vec3 position, String predicate) {
+        var blockPos = net.minecraft.core.BlockPos.containing(position);
+        var state = level.getBlockState(blockPos);
+        if (predicate.startsWith("#")) {
+            var tagKey = net.minecraft.tags.TagKey.create(
+                net.minecraft.core.registries.Registries.BLOCK,
+                net.minecraft.resources.ResourceLocation.parse(predicate.substring(1)));
+            return state.is(tagKey);
+        }
+        String blockId = predicate.contains("[") ? predicate.substring(0, predicate.indexOf('[')) : predicate;
+        var optBlock = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getOptional(
+            net.minecraft.resources.ResourceLocation.parse(blockId));
+        return optBlock.isPresent() && state.is(optBlock.get());
+    }
+
+    // Entity relations для execute on leasher / attacker / owner
+
+    public static @Nullable Entity getEntityLeashHolder(Entity entity) {
+        if (entity instanceof net.minecraft.world.entity.Mob mob) {
+            return mob.getLeashHolder();
+        }
+        return null;
+    }
+
+    public static @Nullable Entity getEntityLastAttacker(Entity entity) {
+        if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
+            return living.getLastHurtByMob();
+        }
+        return null;
+    }
+
+    public static @Nullable Entity getEntityOwner(Entity entity) {
+        if (entity instanceof net.minecraft.world.entity.OwnableEntity ownable) {
+            return ownable.getOwner();
+        }
+        return null;
+    }
+
 }
