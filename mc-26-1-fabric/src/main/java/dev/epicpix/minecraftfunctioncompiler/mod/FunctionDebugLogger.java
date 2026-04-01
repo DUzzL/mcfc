@@ -31,6 +31,12 @@ public final class FunctionDebugLogger {
         if (isVanilla) vanillaCalls.computeIfAbsent(key, k -> new AtomicLong()).incrementAndGet();
     }
 
+    // Вызывается только когда MCFC включён (isUseReady=true)
+    public static void recordCompiledCall(Identifier id) {
+        if (!enabled) return;
+        totalCalls.computeIfAbsent(id.toString(), k -> new AtomicLong()).incrementAndGet();
+    }
+
     public static void tick(long currentTick) {
         if (!enabled) return;
         if (currentTick - lastFlushTick >= FLUSH_INTERVAL) {
@@ -39,11 +45,21 @@ public final class FunctionDebugLogger {
         }
     }
 
+    private static volatile boolean mcfcWasOn = false;
+
+    public static void setMcfcState(boolean on) {
+        if (on) mcfcWasOn = true;
+    }
+
     public static void flushToFile() {
         if (totalCalls.isEmpty()) return;
 
         var sb = new StringBuilder();
         sb.append("=== MCFC Function Debug Log ===\n");
+        if (!mcfcWasOn) {
+            sb.append("WARNING: MCFC was OFF during this session! All calls show as vanilla.\n");
+            sb.append("Run /mcfc on, then /mcfc debug reset and /mcfc debug on again.\n\n");
+        }
         sb.append("Sorted by vanilla fallback calls (worst offenders first)\n\n");
         sb.append(String.format("%-70s %8s %8s%n", "Function", "Total", "Vanilla"));
         sb.append("-".repeat(90)).append("\n");
@@ -71,5 +87,6 @@ public final class FunctionDebugLogger {
     public static void reset() {
         totalCalls.clear();
         vanillaCalls.clear();
+        mcfcWasOn = false;
     }
 }
