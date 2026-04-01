@@ -714,7 +714,7 @@ public class ExtensionFunctions {
 
     public static net.minecraft.server.level.@Nullable ServerLevel getDimensionLevel(MinecraftServer server, String dimension) {
         for (var level : server.getAllLevels()) {
-            if (level.dimension().location().toString().equals(dimension)) {
+            if (level.dimension().identifier().toString().equals(dimension)) {
                 return level;
             }
         }
