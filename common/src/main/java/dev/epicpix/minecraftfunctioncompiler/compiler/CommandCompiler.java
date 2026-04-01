@@ -84,6 +84,7 @@ public final class CommandCompiler {
         switch(inputCommand) {
             case CommandDataModifySetValue(NbtDataLocation destination, NbtPath path, NbtValue setValue) -> {
                 if(destination instanceof NbtDataLocation.Storage(DataLocation storage)) {
+                    result.markImplemented();
                     var storageLocal = context.<TCompoundTag>createLocal();
                     var setCountLocal = context.<Integer>createLocal();
 
@@ -106,6 +107,7 @@ public final class CommandCompiler {
 
                     context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, setCountLocal, LocationData.ofInteger(0), context.current().contextEndLabel()));
                     context.writeInstruction(Instructions.setNbtStorage(storage, storageLocal));
+                    result.updateResultValue(setCountLocal);
                 }else {
                     throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_NBT_MODIFY_ACCESS, context.getSource(), "Modifying nbt in block/entity is not implemented yet"));
                 }
@@ -931,6 +933,58 @@ public final class CommandCompiler {
                 }
             }
 
+            // execute if/unless data (NBT check)
+            case CommandExecuteIfDataEntity(SelectorArgument target, NbtPath path, CommandParams command) -> {
+                try(var fContext = context.withForkingContext(forkingContext)) {
+                    try(var entityData = context.forSelector(target, result)) {
+                        var nbtLocal = context.<TCompoundTag>createLocal();
+                        entityData.writeInstruction(Instructions.getEntityNbt(nbtLocal, entityData.content()));
+                        var tagVal = getNbtPathValue(context, nbtLocal, path.parts(), false, entityData.data().contextEndLabel());
+                        entityData.writeInstruction(Instructions.ifNullJump(tagVal, entityData.data().contextEndLabel()));
+                        compile(context, fContext.content(), command, result);
+                    }
+                }
+            }
+            case CommandExecuteIfDataStorage(DataLocation target, NbtPath path, CommandParams command) -> {
+                try(var fContext = context.withForkingContext(forkingContext)) {
+                    var nbtLocal = context.<TCompoundTag>createLocal();
+                    context.writeInstruction(Instructions.getNbtStorage(nbtLocal, target));
+                    var tagVal = getNbtPathValue(context, nbtLocal, path.parts(), false, context.current().contextEndLabel());
+                    context.writeInstruction(Instructions.ifNullJump(tagVal, context.current().contextEndLabel()));
+                    compile(context, fContext.content(), command, result);
+                }
+            }
+            case CommandExecuteIfDataBlock(WorldCoordinates pos, NbtPath path, CommandParams command) ->
+                emitVanillaFallback(context, "execute if data block " + worldCoordsToString(pos) + " " + nbtPathToString(path) + " run " + getRawCommand(command));
+            case CommandExecuteUnlessDataEntity(SelectorArgument target, NbtPath path, CommandParams command) -> {
+                try(var fContext = context.withForkingContext(forkingContext)) {
+                    var contextLabel = context.current().contextEndLabel();
+                    try(var scope = context.enterLocalScope()) {
+                        try(var entityData = context.forSelector(target, result)) {
+                            var nbtLocal = context.<TCompoundTag>createLocal();
+                            entityData.writeInstruction(Instructions.getEntityNbt(nbtLocal, entityData.content()));
+                            var tagVal = getNbtPathValue(context, nbtLocal, path.parts(), false, scope.endLabel());
+                            entityData.writeInstruction(Instructions.ifNotNullJump(tagVal, contextLabel));
+                        }
+                    }
+                    compile(context, fContext.content(), command, result);
+                }
+            }
+            case CommandExecuteUnlessDataStorage(DataLocation target, NbtPath path, CommandParams command) -> {
+                try(var fContext = context.withForkingContext(forkingContext)) {
+                    var contextLabel = context.current().contextEndLabel();
+                    try(var scope = context.enterLocalScope()) {
+                        var nbtLocal = context.<TCompoundTag>createLocal();
+                        context.writeInstruction(Instructions.getNbtStorage(nbtLocal, target));
+                        var tagVal = getNbtPathValue(context, nbtLocal, path.parts(), false, scope.endLabel());
+                        context.writeInstruction(Instructions.ifNotNullJump(tagVal, contextLabel));
+                    }
+                    compile(context, fContext.content(), command, result);
+                }
+            }
+            case CommandExecuteUnlessDataBlock(WorldCoordinates pos, NbtPath path, CommandParams command) ->
+                emitVanillaFallback(context, "execute unless data block " + worldCoordsToString(pos) + " " + nbtPathToString(path) + " run " + getRawCommand(command));
+
             // execute if/unless blocks — vanilla fallback
             case CommandExecuteIfBlocks(WorldCoordinates start, WorldCoordinates end, WorldCoordinates destination, CommandParams command) ->
                 emitVanillaFallback(context, "execute if blocks " + worldCoordsToString(start) + " " + worldCoordsToString(end) + " " + worldCoordsToString(destination) + " all run " + getRawCommand(command));
@@ -1023,6 +1077,12 @@ public final class CommandCompiler {
                 context.writeInstruction(Instructions.loadText(displayLocal, display));
                 context.writeInstruction(Instructions.addObjectiveDisplay(objective, criteria.toString(), displayLocal));
             }
+            case CommandScoreboardObjectivesAddDisplayGreedy(String objective, DataLocation criteria, String displayName) ->
+                emitVanillaFallback(context, "scoreboard objectives add " + objective + " " + criteria + " " + displayName);
+            case CommandScoreboardPlayersDisplayName(ScoreHolderArgument targets, String objective) ->
+                emitVanillaFallback(context, "scoreboard players display name " + targets + " " + objective);
+            case CommandScoreboardPlayersDisplayNameClear(ScoreHolderArgument targets) ->
+                emitVanillaFallback(context, "scoreboard players display name " + targets);
             case CommandScoreboardObjectivesSetdisplay(String slot, String objective) ->
                 emitVanillaFallback(context, "scoreboard objectives setdisplay " + slot + " " + objective);
             case CommandScoreboardPlayersDisplayNumberformatBlank(ScoreHolderArgument targets, String objective) ->

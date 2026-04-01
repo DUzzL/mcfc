@@ -122,9 +122,12 @@ DATAPACK_DISABLE/datapack disable <name:greedy_string>
 
 SCOREBOARD_OBJECTIVES_ADD/scoreboard objectives add <objective:word> <criteria:resource_location>
 SCOREBOARD_OBJECTIVES_ADD_DISPLAY/scoreboard objectives add <objective:word> <criteria:resource_location> <display_name:text>
+SCOREBOARD_OBJECTIVES_ADD_DISPLAY_GREEDY/scoreboard objectives add <objective:word> <criteria:resource_location> <display_name:greedy_string>
 SCOREBOARD_OBJECTIVES_REMOVE/scoreboard objectives remove <objective:word>
 SCOREBOARD_OBJECTIVES_SETDISPLAY_CLEAR/scoreboard objectives setdisplay <slot:word>
 SCOREBOARD_OBJECTIVES_SETDISPLAY/scoreboard objectives setdisplay <slot:word> <objective:word>
+SCOREBOARD_PLAYERS_DISPLAY_NAME/scoreboard players display name <targets:score_holder> <objective:word>
+SCOREBOARD_PLAYERS_DISPLAY_NAME_CLEAR/scoreboard players display name <targets:score_holder>
 SCOREBOARD_PLAYERS_DISPLAY_NUMBERFORMAT_BLANK/scoreboard players display numberformat <targets:score_holder> <objective:word> blank
 SCOREBOARD_PLAYERS_DISPLAY_NUMBERFORMAT_STYLED/scoreboard players display numberformat <targets:score_holder> <objective:word> styled <style:greedy_string>
 SCOREBOARD_PLAYERS_DISPLAY_NUMBERFORMAT_FIXED/scoreboard players display numberformat <targets:score_holder> <objective:word> fixed <value:text>
@@ -282,3 +285,11 @@ ITEM_REPLACE_BLOCK_FROM_ENTITY/item replace block <pos:vec3> <slot:word> from en
 ITEM_REPLACE_BLOCK_FROM_ENTITY_SLOT/item replace block <pos:vec3> <slot:word> from entity <source:entity_selector[single]> <source_slot:word>
 ITEM_REPLACE_BLOCK_FROM_BLOCK/item replace block <pos:vec3> <slot:word> from block <source_pos:vec3>
 ITEM_REPLACE_BLOCK_FROM_BLOCK_SLOT/item replace block <pos:vec3> <slot:word> from block <source_pos:vec3> <source_slot:word>
+
+# execute if/unless data (проверка NBT)
+EXECUTE_IF_DATA_ENTITY/execute if data entity <target:entity_selector[single]> <path:nbt_path> <command:command[root=execute]>
+EXECUTE_IF_DATA_STORAGE/execute if data storage <target:resource_location> <path:nbt_path> <command:command[root=execute]>
+EXECUTE_IF_DATA_BLOCK/execute if data block <pos:vec3> <path:nbt_path> <command:command[root=execute]>
+EXECUTE_UNLESS_DATA_ENTITY/execute unless data entity <target:entity_selector[single]> <path:nbt_path> <command:command[root=execute]>
+EXECUTE_UNLESS_DATA_STORAGE/execute unless data storage <target:resource_location> <path:nbt_path> <command:command[root=execute]>
+EXECUTE_UNLESS_DATA_BLOCK/execute unless data block <pos:vec3> <path:nbt_path> <command:command[root=execute]>
