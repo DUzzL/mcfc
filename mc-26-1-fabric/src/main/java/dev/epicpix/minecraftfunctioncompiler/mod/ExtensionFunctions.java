@@ -712,11 +712,13 @@ public class ExtensionFunctions {
 
     // Dimension level
 
-    public static @Nullable net.minecraft.server.level.ServerLevel getDimensionLevel(MinecraftServer server, String dimension) {
-        var key = net.minecraft.resources.ResourceKey.create(
-            net.minecraft.core.registries.Registries.DIMENSION,
-            net.minecraft.resources.ResourceLocation.parse(dimension));
-        return server.getLevel(key);
+    public static net.minecraft.server.level.@Nullable ServerLevel getDimensionLevel(MinecraftServer server, String dimension) {
+        for (var level : server.getAllLevels()) {
+            if (level.dimension().location().toString().equals(dimension)) {
+                return level;
+            }
+        }
+        return null;
     }
 
     // Block checking для execute if block
@@ -725,14 +727,12 @@ public class ExtensionFunctions {
         var blockPos = net.minecraft.core.BlockPos.containing(position);
         var state = level.getBlockState(blockPos);
         if (predicate.startsWith("#")) {
-            var tagKey = net.minecraft.tags.TagKey.create(
-                net.minecraft.core.registries.Registries.BLOCK,
-                net.minecraft.resources.ResourceLocation.parse(predicate.substring(1)));
+            var id = Identifier.parse(predicate.substring(1));
+            var tagKey = net.minecraft.tags.TagKey.create(Registries.BLOCK, id);
             return state.is(tagKey);
         }
         String blockId = predicate.contains("[") ? predicate.substring(0, predicate.indexOf('[')) : predicate;
-        var optBlock = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getOptional(
-            net.minecraft.resources.ResourceLocation.parse(blockId));
+        var optBlock = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getOptional(Identifier.parse(blockId));
         return optBlock.isPresent() && state.is(optBlock.get());
     }
 
