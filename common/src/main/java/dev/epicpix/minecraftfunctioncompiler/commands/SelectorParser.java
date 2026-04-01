@@ -61,8 +61,8 @@ public final class SelectorParser {
         switch (selectorType) {
             case 'e' -> {
                 if(!allowEntities) throwError(reader, SELECTOR_EXPECTED_PLAYER_TARGETS, "Unable to use @e with a player-only selector");
-                if(!allowMultiple) throwError(reader, SELECTOR_EXPECTED_SINGULAR_TARGET, "Unable to use @e with a single-only selector");
                 data.requireAlive = true;
+                // @e с limit=1 допускается в single-only контексте - проверим после парсинга опций
             }
             case 's' -> {
                 data.self = true;
@@ -119,6 +119,11 @@ public final class SelectorParser {
             }else {
                 throwError(reader, SELECTOR_INVALID_SYNTAX, "Cannot parse selector, ran out of data, invalid value '" + reader.peek() + "', expected ']'");
             }
+        }
+
+        // @e допускается в single-only контексте если limit=1
+        if(!allowMultiple && selectorType == 'e' && (data.limit == null || data.limit != 1)) {
+            throwError(reader, SELECTOR_EXPECTED_SINGULAR_TARGET, "Unable to use @e with a single-only selector");
         }
 
         return data.build();

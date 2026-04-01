@@ -65,7 +65,7 @@ public sealed interface TextContent permits TextContent.KeybindText, TextContent
 
     record NbtText(NbtPath path, @Nullable Text separator, NbtDataLocation source) implements TextContent {
         public boolean isCompilationSupported() {
-            return false;
+            return source instanceof NbtDataLocation.Storage;
         }
         public boolean isConstant() {
             return false;

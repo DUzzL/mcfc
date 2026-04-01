@@ -905,11 +905,10 @@ public final class CommandCompiler {
             // gamerule
             case CommandGameruleSet(DataLocation rule, String value) -> context.writeInstruction(Instructions.setGamerule(rule.toString(), value));
             case CommandGameruleQuery(DataLocation rule) -> {
-                if(result.generatingResult()) {
-                    var val = context.<Integer>createLocal();
-                    context.writeInstruction(Instructions.queryGamerule(val, rule.toString()));
-                    result.updateResultValue(val);
-                }
+                result.markImplemented();
+                var val = context.<Integer>createLocal();
+                context.writeInstruction(Instructions.queryGamerule(val, rule.toString()));
+                result.updateResultValue(val);
             }
             // datapack
             case CommandDatapackEnable(String name) -> context.writeInstruction(Instructions.enableDatapack(name));
@@ -1482,24 +1481,36 @@ public final class CommandCompiler {
                 emitVanillaFallback(context, "particle " + name + " " + worldCoordsToString(pos) + " " + worldCoordsToString(delta) + " " + speed + " " + count + " " + viewers);
 
             // random — vanilla fallback
-            case CommandRandomValue(IntRangeArgument range) ->
+            case CommandRandomValue(IntRangeArgument range) -> {
+                result.markImplemented();
                 emitVanillaFallback(context, "random value " + rangeToString(range));
-            case CommandRandomRoll(IntRangeArgument range, DataLocation sequence) ->
+            }
+            case CommandRandomRoll(IntRangeArgument range, DataLocation sequence) -> {
+                result.markImplemented();
                 emitVanillaFallback(context, "random roll " + rangeToString(range) + " " + sequence);
+            }
             case CommandRandomReset(DataLocation sequence) ->
                 emitVanillaFallback(context, "random reset " + sequence);
             case CommandRandomResetAll() ->
                 emitVanillaFallback(context, "random reset *");
 
             // clear — vanilla fallback
-            case CommandClear() ->
+            case CommandClear() -> {
+                result.markImplemented();
                 emitVanillaFallback(context, "clear");
-            case CommandClearTargets(SelectorArgument targets) ->
+            }
+            case CommandClearTargets(SelectorArgument targets) -> {
+                result.markImplemented();
                 emitVanillaFallback(context, "clear " + targets);
-            case CommandClearTargetsItem(SelectorArgument targets, String item) ->
+            }
+            case CommandClearTargetsItem(SelectorArgument targets, String item) -> {
+                result.markImplemented();
                 emitVanillaFallback(context, "clear " + targets + " " + item);
-            case CommandClearTargetsItemMax(SelectorArgument targets, String item, int maxCount) ->
+            }
+            case CommandClearTargetsItemMax(SelectorArgument targets, String item, int maxCount) -> {
+                result.markImplemented();
                 emitVanillaFallback(context, "clear " + targets + " " + item + " " + maxCount);
+            }
 
             // recipe — vanilla fallback
             case CommandRecipeGive(SelectorArgument targets, DataLocation recipe) ->
@@ -1687,6 +1698,11 @@ public final class CommandCompiler {
                 var found = context.<TTag>createLocal();
                 context.writeInstruction(Instructions.findFirstNbtMatchingCompound(found, list, filterTag, failLabel));
                 source = found;
+            }else if(part instanceof NbtPathPart.CompoundCheck(NbtValue.Compound filter)) {
+                // фильтр — проверяем текущий compound совпадает с фильтром, не навигируем
+                var filterTag = context.<TCompoundTag>createLocal();
+                context.writeInstruction(Instructions.loadNbtValue(filterTag.forceCast(), filter));
+                context.writeInstruction(Instructions.checkNbtCompoundFilter(source, filterTag, failLabel));
             }else {
                 throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_NBT_ACCESS, context.getSource(), "Cannot get nbt path from " + part));
             }
@@ -1776,6 +1792,19 @@ public final class CommandCompiler {
                 if(scoreHolder.name() != null) {
                     var textLocation = context.<TComponent>createLocal();
                     context.writeInstruction(Instructions.loadScoreTextNamed(textLocation, scoreHolder.name().isStatic() ? scoreHolder.name().getStaticValue() : scoreHolder.name().toString(), objective));
+                    if(!text.style().isEmpty() || !text.siblings().isEmpty()) {
+                        var mutableText = context.<TMutableComponent>createLocal();
+                        context.writeInstruction(Instructions.copyText(mutableText, textLocation));
+                        applyStyleAndSiblings(context, text, mutableText);
+                        return mutableText;
+                    }
+                    return textLocation;
+                }
+            }
+            if(text.content() instanceof TextContent.NbtText(NbtPath path, Text separator, NbtDataLocation source)) {
+                if(source instanceof NbtDataLocation.Storage(DataLocation storage)) {
+                    var textLocation = context.<TComponent>createLocal();
+                    context.writeInstruction(Instructions.getNbtText(textLocation, storage, nbtPathToString(path)));
                     if(!text.style().isEmpty() || !text.siblings().isEmpty()) {
                         var mutableText = context.<TMutableComponent>createLocal();
                         context.writeInstruction(Instructions.copyText(mutableText, textLocation));

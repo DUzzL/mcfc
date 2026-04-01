@@ -706,6 +706,31 @@ public class ExtensionFunctions {
         return null;
     }
 
+    // CompoundCheck фильтр в NBT path
+    public static boolean matchesNbtFilter(Tag tag, CompoundTag filter) {
+        if (tag instanceof CompoundTag compound) {
+            return NbtUtils.compareNbt(filter, compound, true);
+        }
+        return false;
+    }
+
+    // NbtText — получить NBT из storage как Component
+    public static Component getNbtText(net.minecraft.world.level.storage.CommandStorage storage,
+            net.minecraft.resources.ResourceLocation storageId, String path) {
+        var compound = storage.get(storageId);
+        net.minecraft.nbt.Tag current = compound;
+        for (String part : path.split("\\.")) {
+            if (part.isEmpty()) continue;
+            if (current instanceof CompoundTag ct) {
+                current = ct.get(part);
+            } else {
+                return Component.empty();
+            }
+            if (current == null) return Component.empty();
+        }
+        return Component.literal(stringifyTag(current));
+    }
+
     // data get — конвертация NBT Tag в int с масштабом
 
     public static int nbtTagToInt(Tag tag, double scale) {

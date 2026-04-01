@@ -869,3 +869,14 @@
   if([local:result] == null) _jump([ctx:fail_label]);
   return [local:result];
 }
+
+// CompoundCheck фильтр — проверяет что текущий тег совпадает с фильтром
+##CONDITIONAL_JUMP
+@CHECK_NBT_COMPOUND_FILTER(<net.minecraft.nbt.Tag> [ctx:tag], <net.minecraft.nbt.CompoundTag> [ctx:filter], label [ctx:fail_label]) {
+  _jumpIfEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.matchesNbtFilter([ctx:tag], [ctx:filter]), false, [ctx:fail_label]);
+}
+
+// NbtText — получить NBT значение из storage как Component
+##PURE
+@GET_NBT_TEXT(<net.minecraft.world.level.storage.CommandStorage> [static:CommandStorage], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:storage], <java.lang.String> [instr:path]) -> <net.minecraft.network.chat.Component>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getNbtText([static:CommandStorage], map_resource_location([instr:storage]), [instr:path]);
