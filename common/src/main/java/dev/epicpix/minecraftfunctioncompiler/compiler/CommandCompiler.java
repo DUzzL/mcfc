@@ -913,7 +913,107 @@ public final class CommandCompiler {
             case CommandDatapackEnable(String name) -> context.writeInstruction(Instructions.enableDatapack(name));
             case CommandDatapackDisable(String name) -> context.writeInstruction(Instructions.disableDatapack(name));
 
-            // scoreboard objectives
+            // execute if/unless predicate
+            case CommandExecuteIfPredicate(DataLocation predicate, CommandParams command) -> {
+                try(var fContext = context.withForkingContext(forkingContext)) {
+                    try(var currentEntity = context.getCurrentEntity()) {
+                        currentEntity.writeInstruction(Instructions.checkEntityPredicate(currentEntity.content(), predicate.toString(), true, currentEntity.endLabel()));
+                        compile(context, fContext.content(), command, result);
+                    }
+                }
+            }
+            case CommandExecuteUnlessPredicate(DataLocation predicate, CommandParams command) -> {
+                try(var fContext = context.withForkingContext(forkingContext)) {
+                    try(var currentEntity = context.getCurrentEntity()) {
+                        currentEntity.writeInstruction(Instructions.checkEntityPredicate(currentEntity.content(), predicate.toString(), false, currentEntity.endLabel()));
+                        compile(context, fContext.content(), command, result);
+                    }
+                }
+            }
+
+            // execute if/unless blocks — vanilla fallback
+            case CommandExecuteIfBlocks(WorldCoordinates start, WorldCoordinates end, WorldCoordinates destination, CommandParams command) ->
+                emitVanillaFallback(context, "execute if blocks " + worldCoordsToString(start) + " " + worldCoordsToString(end) + " " + worldCoordsToString(destination) + " all run " + getRawCommand(command));
+            case CommandExecuteIfBlocksMasked(WorldCoordinates start, WorldCoordinates end, WorldCoordinates destination, CommandParams command) ->
+                emitVanillaFallback(context, "execute if blocks " + worldCoordsToString(start) + " " + worldCoordsToString(end) + " " + worldCoordsToString(destination) + " masked run " + getRawCommand(command));
+            case CommandExecuteUnlessBlocks(WorldCoordinates start, WorldCoordinates end, WorldCoordinates destination, CommandParams command) ->
+                emitVanillaFallback(context, "execute unless blocks " + worldCoordsToString(start) + " " + worldCoordsToString(end) + " " + worldCoordsToString(destination) + " all run " + getRawCommand(command));
+            case CommandExecuteUnlessBlocksMasked(WorldCoordinates start, WorldCoordinates end, WorldCoordinates destination, CommandParams command) ->
+                emitVanillaFallback(context, "execute unless blocks " + worldCoordsToString(start) + " " + worldCoordsToString(end) + " " + worldCoordsToString(destination) + " masked run " + getRawCommand(command));
+
+            // execute if/unless без sub-command (result/success context)
+            case CommandExecuteIfScoreRangeOnly(ScoreAccessorArgument target, IntRangeArgument range) -> {
+                result.markImplemented();
+                try(var scoreAccessor = context.forScoreAccessors(target.selectSingle(), result)) {
+                    try(var scoreData = context.getScoreData(scoreAccessor.content(), result.markAndGetErrorLabel(), false)) {
+                        var scoreValue = context.<Integer>createLocal();
+                        scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
+                        result.updateResultValue(scoreValue);
+                        context.jumpIfNotMatchesRange(scoreData.data(), scoreValue, range, result.markAndGetErrorLabel());
+                    }
+                }
+            }
+            case CommandExecuteUnlessScoreRangeOnly(ScoreAccessorArgument target, IntRangeArgument range) -> {
+                result.markImplemented();
+                try(var scope = context.enterLocalScope()) {
+                    var scopeResult = ResultContext.create(context, scope.endLabel());
+                    try(var scoreAccessor = context.forScoreAccessors(target.selectSingle(), scopeResult)) {
+                        try(var scoreData = context.getScoreData(scoreAccessor.content(), scopeResult.markAndGetErrorLabel(), false)) {
+                            var scoreValue = context.<Integer>createLocal();
+                            scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
+                            context.jumpIfMatchesRange(scoreData.data(), scoreValue, range, result.markAndGetErrorLabel());
+                        }
+                    }
+                    scopeResult.close();
+                }
+            }
+            case CommandExecuteIfEntityOnly(SelectorArgument entities) -> {
+                result.markImplemented();
+                try(var ignored = context.forSelector(entities.limit(1), result)) {}
+            }
+            case CommandExecuteUnlessEntityOnly(SelectorArgument entities) -> {
+                result.markImplemented();
+                var codeLocation = context.current().writeLabel(context.instructionWriter);
+                try(var ignored = context.enterWithoutValue(context.current().withContextLabel(codeLocation))) {
+                    try(var selector = context.forSelector(entities.limit(1), result)) {
+                        selector.writeInstruction(Instructions.jump(result.markAndGetErrorLabel()));
+                    }
+                }
+            }
+
+            // recipe give/take * wildcard
+            case CommandRecipeGiveAllStar(SelectorArgument targets, String star) ->
+                emitVanillaFallback(context, "recipe give " + targets + " *");
+            case CommandRecipeTakeAllStar(SelectorArgument targets, String star) ->
+                emitVanillaFallback(context, "recipe take " + targets + " *");
+
+            // execute summon / positioned over — vanilla fallback
+            case CommandExecuteSummon(DataLocation entity, CommandParams command) ->
+                emitVanillaFallback(context, "execute summon " + entity + " run " + getRawCommand(command));
+            case CommandExecutePositionedOver(String heightmap, CommandParams command) ->
+                emitVanillaFallback(context, "execute positioned over " + heightmap + " run " + getRawCommand(command));
+
+            // item replace — vanilla fallback
+            case CommandItemReplaceEntityWith(SelectorArgument targets, String slot, String item) ->
+                emitVanillaFallback(context, "item replace entity " + targets + " " + slot + " with " + item);
+            case CommandItemReplaceEntityFromEntity(SelectorArgument targets, String slot, SelectorArgument source) ->
+                emitVanillaFallback(context, "item replace entity " + targets + " " + slot + " from entity " + source);
+            case CommandItemReplaceEntityFromEntitySlot(SelectorArgument targets, String slot, SelectorArgument source, String sourceSlot) ->
+                emitVanillaFallback(context, "item replace entity " + targets + " " + slot + " from entity " + source + " " + sourceSlot);
+            case CommandItemReplaceBlockWith(WorldCoordinates pos, String slot, String item) ->
+                emitVanillaFallback(context, "item replace block " + worldCoordsToString(pos) + " " + slot + " with " + item);
+            case CommandItemReplaceBlockFromEntity(WorldCoordinates pos, String slot, SelectorArgument source) ->
+                emitVanillaFallback(context, "item replace block " + worldCoordsToString(pos) + " " + slot + " from entity " + source);
+            case CommandItemReplaceBlockFromEntitySlot(WorldCoordinates pos, String slot, SelectorArgument source, String sourceSlot) ->
+                emitVanillaFallback(context, "item replace block " + worldCoordsToString(pos) + " " + slot + " from entity " + source + " " + sourceSlot);
+            case CommandItemReplaceBlockFromBlock(WorldCoordinates pos, String slot, WorldCoordinates sourcePos) ->
+                emitVanillaFallback(context, "item replace block " + worldCoordsToString(pos) + " " + slot + " from block " + worldCoordsToString(sourcePos));
+            case CommandItemReplaceBlockFromBlockSlot(WorldCoordinates pos, String slot, WorldCoordinates sourcePos, String sourceSlot) ->
+                emitVanillaFallback(context, "item replace block " + worldCoordsToString(pos) + " " + slot + " from block " + worldCoordsToString(sourcePos) + " " + sourceSlot);
+
+            // scoreboard players display numberformat без sub-command (standalone)
+            case CommandScoreboardObjectivesSetdisplayClear(String slot) ->
+                emitVanillaFallback(context, "scoreboard objectives setdisplay " + slot);
             case CommandScoreboardObjectivesRemove(String objective) ->
                 context.writeInstruction(Instructions.removeObjective(objective));
             case CommandScoreboardObjectivesAdd(String objective, DataLocation criteria) ->
@@ -923,14 +1023,12 @@ public final class CommandCompiler {
                 context.writeInstruction(Instructions.loadText(displayLocal, display));
                 context.writeInstruction(Instructions.addObjectiveDisplay(objective, criteria.toString(), displayLocal));
             }
-            case CommandScoreboardObjectivesSetdisplayClear(String slot) ->
-                emitVanillaFallback(context, "scoreboard objectives setdisplay " + slot);
             case CommandScoreboardObjectivesSetdisplay(String slot, String objective) ->
                 emitVanillaFallback(context, "scoreboard objectives setdisplay " + slot + " " + objective);
             case CommandScoreboardPlayersDisplayNumberformatBlank(ScoreHolderArgument targets, String objective) ->
                 emitVanillaFallback(context, "scoreboard players display numberformat " + targets + " " + objective + " blank");
-            case CommandScoreboardPlayersDisplayNumberformatStyled(ScoreHolderArgument targets, String objective, NbtValue.Compound style) ->
-                emitVanillaFallback(context, "scoreboard players display numberformat " + targets + " " + objective + " styled " + nbtValueToString(style));
+            case CommandScoreboardPlayersDisplayNumberformatStyled(ScoreHolderArgument targets, String objective, String style) ->
+                emitVanillaFallback(context, "scoreboard players display numberformat " + targets + " " + objective + " styled " + style);
             case CommandScoreboardPlayersDisplayNumberformatFixed(ScoreHolderArgument targets, String objective, Text text) ->
                 emitVanillaFallback(context, "scoreboard players display numberformat " + targets + " " + objective + " fixed " + nbtValueToString(new NbtValue.StringLiteral(text.toString())));
 
@@ -1517,6 +1615,14 @@ public final class CommandCompiler {
                 var storage = context.<TTag>createLocal();
                 context.writeInstruction(Instructions.getNbtFromList(storage, listAccess.list, listAccess.index));
                 source = storage;
+            }else if(part instanceof NbtPathPart.ArrayIndexCompound(NbtValue.Compound filter)) {
+                var list = context.<TListTag>createLocal();
+                context.writeInstruction(Instructions.tryAsNbtList(list, source, failLabel));
+                var filterTag = context.<TCompoundTag>createLocal();
+                context.writeInstruction(Instructions.loadNbtValue(filterTag.forceCast(), filter));
+                var found = context.<TTag>createLocal();
+                context.writeInstruction(Instructions.findFirstNbtMatchingCompound(found, list, filterTag, failLabel));
+                source = found;
             }else {
                 throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_NBT_ACCESS, context.getSource(), "Cannot get nbt path from " + part));
             }
@@ -1595,6 +1701,17 @@ public final class CommandCompiler {
                     var selectorResult = context.getSelectorList(scoreHolder.selector(), null);
                     var textLocation = context.<TComponent>createLocal();
                     context.writeInstruction(Instructions.loadScoreText(textLocation, selectorResult, objective));
+                    if(!text.style().isEmpty() || !text.siblings().isEmpty()) {
+                        var mutableText = context.<TMutableComponent>createLocal();
+                        context.writeInstruction(Instructions.copyText(mutableText, textLocation));
+                        applyStyleAndSiblings(context, text, mutableText);
+                        return mutableText;
+                    }
+                    return textLocation;
+                }
+                if(scoreHolder.name() != null) {
+                    var textLocation = context.<TComponent>createLocal();
+                    context.writeInstruction(Instructions.loadScoreTextNamed(textLocation, scoreHolder.name().isStatic() ? scoreHolder.name().getStaticValue() : scoreHolder.name().toString(), objective));
                     if(!text.style().isEmpty() || !text.siblings().isEmpty()) {
                         var mutableText = context.<TMutableComponent>createLocal();
                         context.writeInstruction(Instructions.copyText(mutableText, textLocation));

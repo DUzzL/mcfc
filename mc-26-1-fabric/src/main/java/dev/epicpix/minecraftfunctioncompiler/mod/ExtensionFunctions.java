@@ -684,6 +684,28 @@ public class ExtensionFunctions {
         stack.getServer().getCommands().performPrefixedCommand(stack, command);
     }
 
+    // ScoreText с именованным score holder
+    public static Component getScoreTextNamed(MinecraftServer server, String holderName, String objective) {
+        var scoreboard = server.getScoreboard();
+        var obj = scoreboard.getObjective(objective);
+        if (obj == null) return Component.empty();
+        var holder = net.minecraft.world.scores.ScoreHolder.forNameOnly(holderName);
+        ReadOnlyScoreInfo info = scoreboard.getPlayerScoreInfo(holder, obj);
+        if (info == null) return Component.empty();
+        return info.formatValue(obj.numberFormatOrDefault(net.minecraft.network.chat.numbers.StyledFormat.NO_STYLE));
+    }
+
+    // Поиск первого NBT элемента в ListTag по compound-фильтру
+    public static @Nullable Tag findFirstNbtMatchingCompound(ListTag list, CompoundTag filter) {
+        for (int i = 0; i < list.size(); i++) {
+            Tag element = list.get(i);
+            if (element instanceof CompoundTag compound && NbtUtils.compareNbt(filter, compound, true)) {
+                return element;
+            }
+        }
+        return null;
+    }
+
     // data get — конвертация NBT Tag в int с масштабом
 
     public static int nbtTagToInt(Tag tag, double scale) {

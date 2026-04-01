@@ -856,3 +856,16 @@
 ##PURE
 @NBT_TAG_TO_INT(<net.minecraft.nbt.Tag> [ctx:tag], double [instr:scale]) -> int
   = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.nbtTagToInt([ctx:tag], [instr:scale]);
+
+// ScoreText с именованным score holder (не selector)
+##PURE
+@LOAD_SCORE_TEXT_NAMED(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:holder_name], <java.lang.String> [instr:objective]) -> <net.minecraft.network.chat.Component>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getScoreTextNamed([static:MinecraftServer], [instr:holder_name], [instr:objective]);
+
+// Поиск первого NBT элемента в списке по compound-фильтру (для ArrayIndexCompound NBT path)
+##CONDITIONAL_JUMP
+@FIND_FIRST_NBT_MATCHING_COMPOUND(<net.minecraft.nbt.ListTag> [ctx:list], <net.minecraft.nbt.CompoundTag> [ctx:filter], label [ctx:fail_label]) -> <net.minecraft.nbt.Tag> {
+  [local:result] = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.findFirstNbtMatchingCompound([ctx:list], [ctx:filter]);
+  if([local:result] == null) _jump([ctx:fail_label]);
+  return [local:result];
+}

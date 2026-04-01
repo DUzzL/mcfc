@@ -126,7 +126,7 @@ SCOREBOARD_OBJECTIVES_REMOVE/scoreboard objectives remove <objective:word>
 SCOREBOARD_OBJECTIVES_SETDISPLAY_CLEAR/scoreboard objectives setdisplay <slot:word>
 SCOREBOARD_OBJECTIVES_SETDISPLAY/scoreboard objectives setdisplay <slot:word> <objective:word>
 SCOREBOARD_PLAYERS_DISPLAY_NUMBERFORMAT_BLANK/scoreboard players display numberformat <targets:score_holder> <objective:word> blank
-SCOREBOARD_PLAYERS_DISPLAY_NUMBERFORMAT_STYLED/scoreboard players display numberformat <targets:score_holder> <objective:word> styled <style:nbt_compound>
+SCOREBOARD_PLAYERS_DISPLAY_NUMBERFORMAT_STYLED/scoreboard players display numberformat <targets:score_holder> <objective:word> styled <style:greedy_string>
 SCOREBOARD_PLAYERS_DISPLAY_NUMBERFORMAT_FIXED/scoreboard players display numberformat <targets:score_holder> <objective:word> fixed <value:text>
 
 DATA_MERGE_ENTITY/data merge entity <target:entity_selector[single]> <nbt:nbt_compound>
@@ -225,9 +225,9 @@ CLEAR_TARGETS_ITEM/clear <targets:entity_selector[players]> <item:block_predicat
 CLEAR_TARGETS_ITEM_MAX/clear <targets:entity_selector[players]> <item:block_predicate> <max_count:int>
 
 RECIPE_GIVE/recipe give <targets:entity_selector[players]> <recipe:resource_location>
-RECIPE_GIVE_ALL/recipe give <targets:entity_selector[players]> *
+RECIPE_GIVE_ALL_STAR/recipe give <targets:entity_selector[players]> <star:greedy_string>
 RECIPE_TAKE/recipe take <targets:entity_selector[players]> <recipe:resource_location>
-RECIPE_TAKE_ALL/recipe take <targets:entity_selector[players]> *
+RECIPE_TAKE_ALL_STAR/recipe take <targets:entity_selector[players]> <star:greedy_string>
 
 FILL/fill <from:vec3> <to:vec3> <block:block_predicate>
 FILL_REPLACE/fill <from:vec3> <to:vec3> <block:block_predicate> replace
@@ -252,7 +252,16 @@ LOOT_GIVE_MINE_MAINHAND/loot give <players:entity_selector[players]> mine <pos:v
 LOOT_GIVE_MINE_OFFHAND/loot give <players:entity_selector[players]> mine <pos:vec3> offhand
 
 # execute if дополнительные subcommands
-EXECUTE_IF_BIOME/execute if biome <pos:vec3> <biome:resource_location> <command:command[root=execute]>
+EXECUTE_IF_PREDICATE/execute if predicate <predicate:resource_location> <command:command[root=execute]>
+EXECUTE_UNLESS_PREDICATE/execute unless predicate <predicate:resource_location> <command:command[root=execute]>
+EXECUTE_IF_BLOCKS/execute if blocks <start:vec3> <end:vec3> <destination:vec3> all <command:command[root=execute]>
+EXECUTE_IF_BLOCKS_MASKED/execute if blocks <start:vec3> <end:vec3> <destination:vec3> masked <command:command[root=execute]>
+EXECUTE_UNLESS_BLOCKS/execute unless blocks <start:vec3> <end:vec3> <destination:vec3> all <command:command[root=execute]>
+EXECUTE_UNLESS_BLOCKS_MASKED/execute unless blocks <start:vec3> <end:vec3> <destination:vec3> masked <command:command[root=execute]>
+EXECUTE_IF_SCORE_RANGE_ONLY/execute if score <target:score_accessor> matches <range:int_range>
+EXECUTE_UNLESS_SCORE_RANGE_ONLY/execute unless score <target:score_accessor> matches <range:int_range>
+EXECUTE_IF_ENTITY_ONLY/execute if entity <entities:entity_selector>
+EXECUTE_UNLESS_ENTITY_ONLY/execute unless entity <entities:entity_selector>
 EXECUTE_UNLESS_BIOME/execute unless biome <pos:vec3> <biome:resource_location> <command:command[root=execute]>
 EXECUTE_IF_DIMENSION/execute if dimension <dimension:resource_location> <command:command[root=execute]>
 EXECUTE_UNLESS_DIMENSION/execute unless dimension <dimension:resource_location> <command:command[root=execute]>
@@ -261,3 +270,15 @@ EXECUTE_UNLESS_LOADED/execute unless loaded <pos:vec3> <command:command[root=exe
 
 # Одиночный селектор relaxed — @e[limit=1,sort=arbitrary] как single
 SELECTOR_SINGLE_RELAXED_NOTE/
+
+EXECUTE_SUMMON/execute summon <entity:resource_location> <command:command[root=execute]>
+EXECUTE_POSITIONED_OVER/execute positioned over <heightmap:word> <command:command[root=execute]>
+
+ITEM_REPLACE_ENTITY_WITH/item replace entity <targets:entity_selector> <slot:word> with <item:greedy_string>
+ITEM_REPLACE_ENTITY_FROM_ENTITY/item replace entity <targets:entity_selector> <slot:word> from entity <source:entity_selector[single]>
+ITEM_REPLACE_ENTITY_FROM_ENTITY_SLOT/item replace entity <targets:entity_selector> <slot:word> from entity <source:entity_selector[single]> <source_slot:word>
+ITEM_REPLACE_BLOCK_WITH/item replace block <pos:vec3> <slot:word> with <item:greedy_string>
+ITEM_REPLACE_BLOCK_FROM_ENTITY/item replace block <pos:vec3> <slot:word> from entity <source:entity_selector[single]>
+ITEM_REPLACE_BLOCK_FROM_ENTITY_SLOT/item replace block <pos:vec3> <slot:word> from entity <source:entity_selector[single]> <source_slot:word>
+ITEM_REPLACE_BLOCK_FROM_BLOCK/item replace block <pos:vec3> <slot:word> from block <source_pos:vec3>
+ITEM_REPLACE_BLOCK_FROM_BLOCK_SLOT/item replace block <pos:vec3> <slot:word> from block <source_pos:vec3> <source_slot:word>
