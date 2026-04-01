@@ -716,8 +716,8 @@ public class ExtensionFunctions {
 
     // NbtText — получить NBT из storage как Component
     public static Component getNbtText(net.minecraft.world.level.storage.CommandStorage storage,
-            net.minecraft.resources.ResourceLocation storageId, String path) {
-        var compound = storage.get(storageId);
+            String storageName, String path) {
+        var compound = storage.get(Identifier.parse(storageName));
         net.minecraft.nbt.Tag current = compound;
         for (String part : path.split("\\.")) {
             if (part.isEmpty()) continue;
