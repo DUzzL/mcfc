@@ -272,7 +272,6 @@ EXECUTE_IF_LOADED/execute if loaded <pos:vec3> <command:command[root=execute]>
 EXECUTE_UNLESS_LOADED/execute unless loaded <pos:vec3> <command:command[root=execute]>
 
 # Одиночный селектор relaxed — @e[limit=1,sort=arbitrary] как single
-SELECTOR_SINGLE_RELAXED_NOTE/
 
 EXECUTE_SUMMON/execute summon <entity:resource_location> <command:command[root=execute]>
 EXECUTE_POSITIONED_OVER/execute positioned over <heightmap:word> <command:command[root=execute]>
