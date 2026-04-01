@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.mod.mixin.server;
 
+import dev.epicpix.minecraftfunctioncompiler.mod.FunctionDebugLogger;
 import com.mojang.datafixers.DataFixer;
 import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
 import dev.epicpix.minecraftfunctioncompiler.reporter.MinecraftEnvironment;
@@ -24,10 +25,17 @@ import java.util.Optional;
 public abstract class MinecraftServerMixin {
 
     @Shadow public abstract String getServerModName();
+    @Shadow public abstract long getNextTickTime();
+    @Shadow public abstract int getTickCount();
 
     @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/thread/ReentrantBlockableEventLoop;<init>(Ljava/lang/String;Z)V", shift = At.Shift.AFTER))
     public void init(Thread serverThread, LevelStorageSource.LevelStorageAccess storageSource, PackRepository packRepository, WorldStem worldStem, Optional<GameRules> gameRules, Proxy proxy, DataFixer fixerUpper, Services services, LevelLoadListener levelLoadListener, boolean propagatesCrashes, CallbackInfo ci) {
         FunctionCompilerReporter.setMinecraftVersion(SharedConstants.getCurrentVersion().name(), getServerModName(), MinecraftEnvironment.SERVER);
+    }
+
+    @Inject(method = "tickServer", at = @At("HEAD"))
+    public void tickServer(CallbackInfo ci) {
+        FunctionDebugLogger.tick(getTickCount());
     }
 
 }

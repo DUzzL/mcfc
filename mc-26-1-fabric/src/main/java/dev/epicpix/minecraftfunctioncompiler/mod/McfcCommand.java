@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.mod;
 
+import dev.epicpix.minecraftfunctioncompiler.mod.FunctionDebugLogger;
 import com.mojang.brigadier.CommandDispatcher;
 import dev.epicpix.minecraftfunctioncompiler.CompileConstants;
 import dev.epicpix.minecraftfunctioncompiler.GlobalConfig;
@@ -140,6 +141,31 @@ public class McfcCommand {
             }
             return 1;
         }));
+        var debug = Commands.literal("debug");
+        debug.then(Commands.literal("on").executes(context -> {
+            FunctionDebugLogger.reset();
+            FunctionDebugLogger.enabled = true;
+            context.getSource().sendSuccess(() -> Component.literal("MCFC debug logging enabled, output: logs/mcfc-debug.log").withStyle(ChatFormatting.GREEN), true);
+            return 1;
+        }));
+        debug.then(Commands.literal("off").executes(context -> {
+            FunctionDebugLogger.enabled = false;
+            FunctionDebugLogger.flushToFile();
+            context.getSource().sendSuccess(() -> Component.literal("MCFC debug logging disabled, results saved to logs/mcfc-debug.log").withStyle(ChatFormatting.GREEN), true);
+            return 1;
+        }));
+        debug.then(Commands.literal("flush").executes(context -> {
+            FunctionDebugLogger.flushToFile();
+            context.getSource().sendSuccess(() -> Component.literal("Flushed to logs/mcfc-debug.log").withStyle(ChatFormatting.AQUA), false);
+            return 1;
+        }));
+        debug.then(Commands.literal("reset").executes(context -> {
+            FunctionDebugLogger.reset();
+            context.getSource().sendSuccess(() -> Component.literal("Debug stats reset").withStyle(ChatFormatting.AQUA), false);
+            return 1;
+        }));
+        base.then(debug);
+
         dispatcher.register(base);
     }
 }

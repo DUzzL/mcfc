@@ -18,6 +18,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import dev.epicpix.minecraftfunctioncompiler.mod.FunctionDebugLogger;
+
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.AUTO_SWITCH_FUNCTIONS;
 
 @Mixin(ServerFunctionManager.class)
@@ -44,10 +46,13 @@ public class ServerFunctionManagerMixin implements FunctionCompilationStarter {
     public void run(CommandFunction<CommandSourceStack> commandFunction, CommandSourceStack commandSourceStack, CallbackInfo ci) {
         if(classLoader != null && classLoader.isUseReady()) {
             if(classLoader.hasFunctionLoaded(commandFunction.id())) {
+                FunctionDebugLogger.recordCall(commandFunction.id(), false);
                 classLoader.runFunction(commandFunction.id(), commandSourceStack, null);
                 ci.cancel();
+                return;
             }
         }
+        FunctionDebugLogger.recordCall(commandFunction.id(), true);
     }
 
 }
