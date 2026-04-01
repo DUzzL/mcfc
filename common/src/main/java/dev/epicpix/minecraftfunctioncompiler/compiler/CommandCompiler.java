@@ -1001,11 +1001,11 @@ public final class CommandCompiler {
             case CommandScheduleFunction(DataLocation function, int time) -> context.writeInstruction(Instructions.scheduleFunction(function.toString(), LocationData.ofInteger(time), false));
             case CommandScheduleClear(DataLocation function) -> context.writeInstruction(Instructions.scheduleClearFunction(function.toString()));
             // gamerule
-            case CommandGameruleSet(String rule, String value) -> context.writeInstruction(Instructions.setGamerule(rule, value));
-            case CommandGameruleQuery(String rule) -> {
+            case CommandGameruleSet(DataLocation rule, String value) -> context.writeInstruction(Instructions.setGamerule(rule.toString(), value));
+            case CommandGameruleQuery(DataLocation rule) -> {
                 if(result.generatingResult()) {
                     var val = context.<Integer>createLocal();
-                    context.writeInstruction(Instructions.queryGamerule(val, rule));
+                    context.writeInstruction(Instructions.queryGamerule(val, rule.toString()));
                     result.updateResultValue(val);
                 }
             }
@@ -1236,13 +1236,39 @@ public final class CommandCompiler {
             case CommandDataModifyAppendFromPath(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
                 emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " append from " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath));
 
-            // data get — vanilla fallback
-            case CommandDataGet(NbtDataLocation source) ->
-                emitVanillaFallback(context, "data get " + nbtDataLocationToString(source));
-            case CommandDataGetPath(NbtDataLocation source, NbtPath path) ->
-                emitVanillaFallback(context, "data get " + nbtDataLocationToString(source) + " " + nbtPathToString(path));
-            case CommandDataGetPathScale(NbtDataLocation source, NbtPath path, double scale) ->
-                emitVanillaFallback(context, "data get " + nbtDataLocationToString(source) + " " + nbtPathToString(path) + " " + scale);
+            // data get — нативная реализация для entity (самый частый случай в датапаках)
+            case CommandDataGetPath(NbtDataLocation source, NbtPath path) -> {
+                if(source instanceof NbtDataLocation.Entity(SelectorArgument selector)) {
+                    result.markImplemented();
+                    try(var entityData = context.forSelector(selector, result)) {
+                        var nbtLocal = context.<TCompoundTag>createLocal();
+                        entityData.writeInstruction(Instructions.getEntityNbt(nbtLocal, entityData.content()));
+                        var tagVal = getNbtPathValue(context, nbtLocal, path.parts(), false, result.markAndGetErrorLabel());
+                        context.writeInstruction(Instructions.ifNullJump(tagVal, result.markAndGetErrorLabel()));
+                        var intVal = context.<Integer>createLocal();
+                        context.writeInstruction(Instructions.nbtTagToInt(intVal, tagVal, 1.0));
+                        result.updateResultValue(intVal);
+                    }
+                } else {
+                    emitVanillaFallback(context, "data get " + nbtDataLocationToString(source) + " " + nbtPathToString(path));
+                }
+            }
+            case CommandDataGetPathScale(NbtDataLocation source, NbtPath path, double scale) -> {
+                if(source instanceof NbtDataLocation.Entity(SelectorArgument selector)) {
+                    result.markImplemented();
+                    try(var entityData = context.forSelector(selector, result)) {
+                        var nbtLocal = context.<TCompoundTag>createLocal();
+                        entityData.writeInstruction(Instructions.getEntityNbt(nbtLocal, entityData.content()));
+                        var tagVal = getNbtPathValue(context, nbtLocal, path.parts(), false, result.markAndGetErrorLabel());
+                        context.writeInstruction(Instructions.ifNullJump(tagVal, result.markAndGetErrorLabel()));
+                        var intVal = context.<Integer>createLocal();
+                        context.writeInstruction(Instructions.nbtTagToInt(intVal, tagVal, scale));
+                        result.updateResultValue(intVal);
+                    }
+                } else {
+                    emitVanillaFallback(context, "data get " + nbtDataLocationToString(source) + " " + nbtPathToString(path) + " " + scale);
+                }
+            }
 
             // loot — vanilla fallback
             case CommandLootReplaceEntityLoot(SelectorArgument target, String slot, DataLocation loot) ->

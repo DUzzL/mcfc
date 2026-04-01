@@ -684,6 +684,24 @@ public class ExtensionFunctions {
         stack.getServer().getCommands().performPrefixedCommand(stack, command);
     }
 
+    // data get — конвертация NBT Tag в int с масштабом
+
+    public static int nbtTagToInt(Tag tag, double scale) {
+        if (tag instanceof net.minecraft.nbt.NumericTag numeric) {
+            return (int)(numeric.getAsDouble() * scale);
+        }
+        if (tag instanceof net.minecraft.nbt.CollectionTag<?> collection) {
+            return (int)(collection.size() * scale);
+        }
+        if (tag instanceof CompoundTag compound) {
+            return (int)(compound.size() * scale);
+        }
+        if (tag instanceof net.minecraft.nbt.StringTag str) {
+            return (int)(str.value().length() * scale);
+        }
+        return 0;
+    }
+
     // Scoreboard objectives
 
     public static void addObjective(net.minecraft.server.ServerScoreboard scoreboard, String name, String criteriaId, net.minecraft.network.chat.@Nullable Component displayName) {

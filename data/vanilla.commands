@@ -114,8 +114,8 @@ SCHEDULE_FUNCTION_REPLACE/schedule function <function:resource_location> <time:t
 SCHEDULE_FUNCTION/schedule function <function:resource_location> <time:time>
 SCHEDULE_CLEAR/schedule clear <function:resource_location>
 
-GAMERULE_SET/gamerule <rule:word> <value:greedy_string>
-GAMERULE_QUERY/gamerule <rule:word>
+GAMERULE_SET/gamerule <rule:resource_location> <value:greedy_string>
+GAMERULE_QUERY/gamerule <rule:resource_location>
 
 DATAPACK_ENABLE/datapack enable <name:greedy_string>
 DATAPACK_DISABLE/datapack disable <name:greedy_string>

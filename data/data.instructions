@@ -851,3 +851,8 @@
 ##PURE
 @GET_ENTITY_PASSENGERS(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <java.util.List<net.minecraft.world.entity.Entity> >
   = [ctx:entity].getPassengers();
+
+// data get entity/storage — конвертация Tag в число с масштабом
+##PURE
+@NBT_TAG_TO_INT(<net.minecraft.nbt.Tag> [ctx:tag], double [instr:scale]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.nbtTagToInt([ctx:tag], [instr:scale]);
