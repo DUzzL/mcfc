@@ -203,6 +203,21 @@ public class StringCommandReader {
         return command.substring(start, index);
     }
 
+    // Читает block predicate: #namespace:tag, namespace:block[states]{nbt}
+    // Обрабатывает вложенные [] и {} чтобы не обрезать block states
+    public String readBlockPredicate() {
+        int start = index;
+        int depth = 0;
+        while(canRead()) {
+            char c = peek();
+            if(c == '[' || c == '{') { depth++; skip(); }
+            else if(c == ']' || c == '}') { depth--; skip(); }
+            else if(c == ' ' && depth == 0) break;
+            else skip();
+        }
+        return command.substring(start, index);
+    }
+
     public MacroTemplate<String> readUntilSpaceWithTemplate(List<MacroValidator> validators) {
         if(!allowMacros) return MacroTemplate.fromStringLiteral(readUntilSpace());
         ArrayList<MacroTemplate.MacroPart> parts = new ArrayList<>();

@@ -1016,23 +1016,23 @@ public final class CommandCompiler {
             // scoreboard objectives
             case CommandScoreboardObjectivesRemove(String objective) ->
                 context.writeInstruction(Instructions.removeObjective(objective));
-            case CommandScoreboardObjectivesAdd(String objective, String criteria) ->
-                context.writeInstruction(Instructions.addObjective(objective, criteria));
-            case CommandScoreboardObjectivesAddDisplay(String objective, String criteria, Text display) -> {
+            case CommandScoreboardObjectivesAdd(String objective, DataLocation criteria) ->
+                context.writeInstruction(Instructions.addObjective(objective, criteria.toString()));
+            case CommandScoreboardObjectivesAddDisplay(String objective, DataLocation criteria, Text display) -> {
                 var displayLocal = context.<TComponent>createLocal();
                 context.writeInstruction(Instructions.loadText(displayLocal, display));
-                context.writeInstruction(Instructions.addObjectiveDisplay(objective, criteria, displayLocal));
+                context.writeInstruction(Instructions.addObjectiveDisplay(objective, criteria.toString(), displayLocal));
             }
             case CommandScoreboardObjectivesSetdisplayClear(String slot) ->
                 emitVanillaFallback(context, "scoreboard objectives setdisplay " + slot);
             case CommandScoreboardObjectivesSetdisplay(String slot, String objective) ->
                 emitVanillaFallback(context, "scoreboard objectives setdisplay " + slot + " " + objective);
-            case CommandScoreboardPlayersDisplayNumberformatBlank(ScoreAccessorArgument targets) ->
-                emitVanillaFallback(context, "scoreboard players display numberformat " + targets + " blank");
-            case CommandScoreboardPlayersDisplayNumberformatStyled(ScoreAccessorArgument targets, NbtValue.Compound style) ->
-                emitVanillaFallback(context, "scoreboard players display numberformat " + targets + " styled " + nbtValueToString(style));
-            case CommandScoreboardPlayersDisplayNumberformatFixed(ScoreAccessorArgument targets, Text text) ->
-                emitVanillaFallback(context, "scoreboard players display numberformat " + targets + " fixed " + nbtValueToString(new NbtValue.StringLiteral(text.toString())));
+            case CommandScoreboardPlayersDisplayNumberformatBlank(ScoreHolderArgument targets, String objective) ->
+                emitVanillaFallback(context, "scoreboard players display numberformat " + targets + " " + objective + " blank");
+            case CommandScoreboardPlayersDisplayNumberformatStyled(ScoreHolderArgument targets, String objective, NbtValue.Compound style) ->
+                emitVanillaFallback(context, "scoreboard players display numberformat " + targets + " " + objective + " styled " + nbtValueToString(style));
+            case CommandScoreboardPlayersDisplayNumberformatFixed(ScoreHolderArgument targets, String objective, Text text) ->
+                emitVanillaFallback(context, "scoreboard players display numberformat " + targets + " " + objective + " fixed " + nbtValueToString(new NbtValue.StringLiteral(text.toString())));
 
             // execute in <dimension>
             case CommandExecuteIn(DataLocation dimension, CommandParams command) -> {
@@ -1267,9 +1267,9 @@ public final class CommandCompiler {
                 emitVanillaFallback(context, "loot spawn " + worldCoordsToString(pos) + " kill " + kill);
 
             // item modify — vanilla fallback
-            case CommandItemModifyEntity(SelectorArgument targets, String slot, DataLocation modifier) ->
+            case CommandItemModifyEntity(SelectorArgument targets, String slot, String modifier) ->
                 emitVanillaFallback(context, "item modify entity " + targets + " " + slot + " " + modifier);
-            case CommandItemModifyBlock(WorldCoordinates pos, String slot, DataLocation modifier) ->
+            case CommandItemModifyBlock(WorldCoordinates pos, String slot, String modifier) ->
                 emitVanillaFallback(context, "item modify block " + worldCoordsToString(pos) + " " + slot + " " + modifier);
 
             // effect — vanilla fallback
@@ -1300,6 +1300,150 @@ public final class CommandCompiler {
                 });
                 result.updateResultValue(val);
             }
+
+            // tp — vanilla fallback
+            case CommandTpEntity(SelectorArgument destination) ->
+                emitVanillaFallback(context, "tp " + destination);
+            case CommandTpTargetsEntity(SelectorArgument targets, SelectorArgument destination) ->
+                emitVanillaFallback(context, "tp " + targets + " " + destination);
+            case CommandTpTargetsPos(SelectorArgument targets, WorldCoordinates pos) ->
+                emitVanillaFallback(context, "tp " + targets + " " + worldCoordsToString(pos));
+            case CommandTpTargetsPosRot(SelectorArgument targets, WorldCoordinates pos, RotationCoordinates rot) ->
+                emitVanillaFallback(context, "tp " + targets + " " + worldCoordsToString(pos) + " " + rot.yaw() + " " + rot.pitch());
+            case CommandTpPos(WorldCoordinates pos) ->
+                emitVanillaFallback(context, "tp " + worldCoordsToString(pos));
+
+            // team — vanilla fallback
+            case CommandTeamAdd(String team) ->
+                emitVanillaFallback(context, "team add " + team);
+            case CommandTeamAddDisplay(String team, Text display) ->
+                emitVanillaFallback(context, "team add " + team + " " + nbtValueToString(new NbtValue.StringLiteral(display.toString())));
+            case CommandTeamRemove(String team) ->
+                emitVanillaFallback(context, "team remove " + team);
+            case CommandTeamJoin(String team) ->
+                emitVanillaFallback(context, "team join " + team);
+            case CommandTeamJoinMembers(String team, ScoreHolderArgument members) ->
+                emitVanillaFallback(context, "team join " + team + " " + members);
+            case CommandTeamLeave(ScoreHolderArgument members) ->
+                emitVanillaFallback(context, "team leave " + members);
+            case CommandTeamList() ->
+                emitVanillaFallback(context, "team list");
+            case CommandTeamListTeam(String team) ->
+                emitVanillaFallback(context, "team list " + team);
+            case CommandTeamModify(String team, String option, String value) ->
+                emitVanillaFallback(context, "team modify " + team + " " + option + " " + value);
+            case CommandTeamEmpty(String team) ->
+                emitVanillaFallback(context, "team empty " + team);
+
+            // stopsound — vanilla fallback
+            case CommandStopsound(SelectorArgument targets) ->
+                emitVanillaFallback(context, "stopsound " + targets);
+            case CommandStopsoundSource(SelectorArgument targets, String source) ->
+                emitVanillaFallback(context, "stopsound " + targets + " " + source);
+            case CommandStopsoundSound(SelectorArgument targets, String source, DataLocation sound) ->
+                emitVanillaFallback(context, "stopsound " + targets + " " + source + " " + sound);
+
+            // setblock — vanilla fallback
+            case CommandSetblockReplace(WorldCoordinates pos, String block) ->
+                emitVanillaFallback(context, "setblock " + worldCoordsToString(pos) + " " + block);
+            case CommandSetblockKeep(WorldCoordinates pos, String block) ->
+                emitVanillaFallback(context, "setblock " + worldCoordsToString(pos) + " " + block + " keep");
+            case CommandSetblockDestroy(WorldCoordinates pos, String block) ->
+                emitVanillaFallback(context, "setblock " + worldCoordsToString(pos) + " " + block + " destroy");
+
+            // fill — vanilla fallback
+            case CommandFill(WorldCoordinates from, WorldCoordinates to, String block) ->
+                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block);
+            case CommandFillReplace(WorldCoordinates from, WorldCoordinates to, String block) ->
+                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block + " replace");
+            case CommandFillReplaceFilter(WorldCoordinates from, WorldCoordinates to, String block, String filter) ->
+                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block + " replace " + filter);
+            case CommandFillKeep(WorldCoordinates from, WorldCoordinates to, String block) ->
+                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block + " keep");
+            case CommandFillDestroy(WorldCoordinates from, WorldCoordinates to, String block) ->
+                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block + " destroy");
+            case CommandFillHollow(WorldCoordinates from, WorldCoordinates to, String block) ->
+                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block + " hollow");
+            case CommandFillOutline(WorldCoordinates from, WorldCoordinates to, String block) ->
+                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block + " outline");
+
+            // particle — vanilla fallback
+            case CommandParticle(DataLocation name, WorldCoordinates pos) ->
+                emitVanillaFallback(context, "particle " + name + " " + worldCoordsToString(pos));
+            case CommandParticleViewers(DataLocation name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count) ->
+                emitVanillaFallback(context, "particle " + name + " " + worldCoordsToString(pos) + " " + worldCoordsToString(delta) + " " + speed + " " + count);
+            case CommandParticleViewersParams(DataLocation name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count, SelectorArgument viewers) ->
+                emitVanillaFallback(context, "particle " + name + " " + worldCoordsToString(pos) + " " + worldCoordsToString(delta) + " " + speed + " " + count + " " + viewers);
+
+            // random — vanilla fallback
+            case CommandRandomValue(IntRangeArgument range) ->
+                emitVanillaFallback(context, "random value " + rangeToString(range));
+            case CommandRandomRoll(IntRangeArgument range, DataLocation sequence) ->
+                emitVanillaFallback(context, "random roll " + rangeToString(range) + " " + sequence);
+            case CommandRandomReset(DataLocation sequence) ->
+                emitVanillaFallback(context, "random reset " + sequence);
+            case CommandRandomResetAll() ->
+                emitVanillaFallback(context, "random reset *");
+
+            // clear — vanilla fallback
+            case CommandClear() ->
+                emitVanillaFallback(context, "clear");
+            case CommandClearTargets(SelectorArgument targets) ->
+                emitVanillaFallback(context, "clear " + targets);
+            case CommandClearTargetsItem(SelectorArgument targets, String item) ->
+                emitVanillaFallback(context, "clear " + targets + " " + item);
+            case CommandClearTargetsItemMax(SelectorArgument targets, String item, int maxCount) ->
+                emitVanillaFallback(context, "clear " + targets + " " + item + " " + maxCount);
+
+            // recipe — vanilla fallback
+            case CommandRecipeGive(SelectorArgument targets, DataLocation recipe) ->
+                emitVanillaFallback(context, "recipe give " + targets + " " + recipe);
+            case CommandRecipeGiveAll(SelectorArgument targets) ->
+                emitVanillaFallback(context, "recipe give " + targets + " *");
+            case CommandRecipeTake(SelectorArgument targets, DataLocation recipe) ->
+                emitVanillaFallback(context, "recipe take " + targets + " " + recipe);
+            case CommandRecipeTakeAll(SelectorArgument targets) ->
+                emitVanillaFallback(context, "recipe take " + targets + " *");
+
+            // loot дополнительные источники
+            case CommandLootSpawnFish(WorldCoordinates pos, DataLocation lootTable, WorldCoordinates pos2) ->
+                emitVanillaFallback(context, "loot spawn " + worldCoordsToString(pos) + " fish " + lootTable + " " + worldCoordsToString(pos2));
+            case CommandLootSpawnMine(WorldCoordinates pos, WorldCoordinates pos2, String tool) ->
+                emitVanillaFallback(context, "loot spawn " + worldCoordsToString(pos) + " mine " + worldCoordsToString(pos2) + " " + tool);
+            case CommandLootSpawnMineMainhand(WorldCoordinates pos, WorldCoordinates pos2) ->
+                emitVanillaFallback(context, "loot spawn " + worldCoordsToString(pos) + " mine " + worldCoordsToString(pos2) + " mainhand");
+            case CommandLootSpawnMineOffhand(WorldCoordinates pos, WorldCoordinates pos2) ->
+                emitVanillaFallback(context, "loot spawn " + worldCoordsToString(pos) + " mine " + worldCoordsToString(pos2) + " offhand");
+            case CommandLootInsertFish(WorldCoordinates pos, DataLocation lootTable, WorldCoordinates pos2) ->
+                emitVanillaFallback(context, "loot insert " + worldCoordsToString(pos) + " fish " + lootTable + " " + worldCoordsToString(pos2));
+            case CommandLootInsertMine(WorldCoordinates pos, WorldCoordinates pos2, String tool) ->
+                emitVanillaFallback(context, "loot insert " + worldCoordsToString(pos) + " mine " + worldCoordsToString(pos2) + " " + tool);
+            case CommandLootInsertMineMainhand(WorldCoordinates pos, WorldCoordinates pos2) ->
+                emitVanillaFallback(context, "loot insert " + worldCoordsToString(pos) + " mine " + worldCoordsToString(pos2) + " mainhand");
+            case CommandLootInsertMineOffhand(WorldCoordinates pos, WorldCoordinates pos2) ->
+                emitVanillaFallback(context, "loot insert " + worldCoordsToString(pos) + " mine " + worldCoordsToString(pos2) + " offhand");
+            case CommandLootGiveFish(SelectorArgument players, DataLocation lootTable, WorldCoordinates pos) ->
+                emitVanillaFallback(context, "loot give " + players + " fish " + lootTable + " " + worldCoordsToString(pos));
+            case CommandLootGiveMine(SelectorArgument players, WorldCoordinates pos, String tool) ->
+                emitVanillaFallback(context, "loot give " + players + " mine " + worldCoordsToString(pos) + " " + tool);
+            case CommandLootGiveMineMainhand(SelectorArgument players, WorldCoordinates pos) ->
+                emitVanillaFallback(context, "loot give " + players + " mine " + worldCoordsToString(pos) + " mainhand");
+            case CommandLootGiveMineOffhand(SelectorArgument players, WorldCoordinates pos) ->
+                emitVanillaFallback(context, "loot give " + players + " mine " + worldCoordsToString(pos) + " offhand");
+
+            // execute if biome / dimension / loaded — vanilla fallback
+            case CommandExecuteIfBiome(WorldCoordinates pos, DataLocation biome, CommandParams command) ->
+                emitVanillaFallback(context, "execute if biome " + worldCoordsToString(pos) + " " + biome + " run " + getRawCommand(command));
+            case CommandExecuteUnlessBiome(WorldCoordinates pos, DataLocation biome, CommandParams command) ->
+                emitVanillaFallback(context, "execute unless biome " + worldCoordsToString(pos) + " " + biome + " run " + getRawCommand(command));
+            case CommandExecuteIfDimension(DataLocation dimension, CommandParams command) ->
+                emitVanillaFallback(context, "execute if dimension " + dimension + " run " + getRawCommand(command));
+            case CommandExecuteUnlessDimension(DataLocation dimension, CommandParams command) ->
+                emitVanillaFallback(context, "execute unless dimension " + dimension + " run " + getRawCommand(command));
+            case CommandExecuteIfLoaded(WorldCoordinates pos, CommandParams command) ->
+                emitVanillaFallback(context, "execute if loaded " + worldCoordsToString(pos) + " run " + getRawCommand(command));
+            case CommandExecuteUnlessLoaded(WorldCoordinates pos, CommandParams command) ->
+                emitVanillaFallback(context, "execute unless loaded " + worldCoordsToString(pos) + " run " + getRawCommand(command));
 
             // vanilla fallback for partial compilation
             case CommandFallbackVanilla(String rawCommand) -> {
@@ -1655,6 +1799,15 @@ public final class CommandCompiler {
     private static String coordToStr(double v, boolean relative) {
         if(relative) return v == 0.0 ? "~" : "~" + v;
         return String.valueOf(v);
+    }
+
+    private static String rangeToString(IntRangeArgument range) {
+        if(range.minimum() != null && range.maximum() != null && range.minimum().equals(range.maximum())) {
+            return String.valueOf(range.minimum());
+        }
+        String min = range.minimum() != null ? String.valueOf(range.minimum()) : "";
+        String max = range.maximum() != null ? String.valueOf(range.maximum()) : "";
+        return min + ".." + max;
     }
 
     // data modify prepend/append для storage — нативная реализация

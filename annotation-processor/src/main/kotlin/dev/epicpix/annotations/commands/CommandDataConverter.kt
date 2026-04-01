@@ -330,6 +330,10 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 builder.append("    var a$argumentIndex = reader.readWord();\n")
                 newTypedArguments.add(data.argName!! to "java.lang.String")
             }
+            "block_predicate" -> {
+                builder.append("    var a$argumentIndex = reader.readBlockPredicate();\n")
+                newTypedArguments.add(data.argName!! to "java.lang.String")
+            }
             "vec3" -> {
                 builder.append("    var a$argumentIndex = reader.readVec3();\n")
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates")

@@ -120,14 +120,14 @@ GAMERULE_QUERY/gamerule <rule:word>
 DATAPACK_ENABLE/datapack enable <name:greedy_string>
 DATAPACK_DISABLE/datapack disable <name:greedy_string>
 
-SCOREBOARD_OBJECTIVES_ADD/scoreboard objectives add <objective:word> <criteria:word>
-SCOREBOARD_OBJECTIVES_ADD_DISPLAY/scoreboard objectives add <objective:word> <criteria:word> <display_name:text>
+SCOREBOARD_OBJECTIVES_ADD/scoreboard objectives add <objective:word> <criteria:resource_location>
+SCOREBOARD_OBJECTIVES_ADD_DISPLAY/scoreboard objectives add <objective:word> <criteria:resource_location> <display_name:text>
 SCOREBOARD_OBJECTIVES_REMOVE/scoreboard objectives remove <objective:word>
 SCOREBOARD_OBJECTIVES_SETDISPLAY_CLEAR/scoreboard objectives setdisplay <slot:word>
 SCOREBOARD_OBJECTIVES_SETDISPLAY/scoreboard objectives setdisplay <slot:word> <objective:word>
-SCOREBOARD_PLAYERS_DISPLAY_NUMBERFORMAT_BLANK/scoreboard players display numberformat <targets:score_accessor> blank
-SCOREBOARD_PLAYERS_DISPLAY_NUMBERFORMAT_STYLED/scoreboard players display numberformat <targets:score_accessor> styled <style:nbt_compound>
-SCOREBOARD_PLAYERS_DISPLAY_NUMBERFORMAT_FIXED/scoreboard players display numberformat <targets:score_accessor> fixed <value:text>
+SCOREBOARD_PLAYERS_DISPLAY_NUMBERFORMAT_BLANK/scoreboard players display numberformat <targets:score_holder> <objective:word> blank
+SCOREBOARD_PLAYERS_DISPLAY_NUMBERFORMAT_STYLED/scoreboard players display numberformat <targets:score_holder> <objective:word> styled <style:nbt_compound>
+SCOREBOARD_PLAYERS_DISPLAY_NUMBERFORMAT_FIXED/scoreboard players display numberformat <targets:score_holder> <objective:word> fixed <value:text>
 
 DATA_MERGE_ENTITY/data merge entity <target:entity_selector[single]> <nbt:nbt_compound>
 DATA_MERGE_STORAGE/data merge storage <target:resource_location> <nbt:nbt_compound>
@@ -147,12 +147,12 @@ DATA_GET_PATH/data get <source:nbt_data_location> <path:nbt_path>
 DATA_GET_PATH_SCALE/data get <source:nbt_data_location> <path:nbt_path> <scale:double>
 
 EXECUTE_IN/execute in <dimension:resource_location> <command:command[root=execute]>
-EXECUTE_IF_BLOCK/execute if block <pos:vec3> <block:word> <command:command[root=execute]>
-EXECUTE_UNLESS_BLOCK/execute unless block <pos:vec3> <block:word> <command:command[root=execute]>
-EXECUTE_IF_ITEMS_ENTITY/execute if items entity <targets:entity_selector> <slot:word> <item_predicate:word> <command:command[root=execute]>
-EXECUTE_UNLESS_ITEMS_ENTITY/execute unless items entity <targets:entity_selector> <slot:word> <item_predicate:word> <command:command[root=execute]>
-EXECUTE_IF_ITEMS_BLOCK/execute if items block <pos:vec3> <slot:word> <item_predicate:word> <command:command[root=execute]>
-EXECUTE_UNLESS_ITEMS_BLOCK/execute unless items block <pos:vec3> <slot:word> <item_predicate:word> <command:command[root=execute]>
+EXECUTE_IF_BLOCK/execute if block <pos:vec3> <block:block_predicate> <command:command[root=execute]>
+EXECUTE_UNLESS_BLOCK/execute unless block <pos:vec3> <block:block_predicate> <command:command[root=execute]>
+EXECUTE_IF_ITEMS_ENTITY/execute if items entity <targets:entity_selector> <slot:word> <item_predicate:block_predicate> <command:command[root=execute]>
+EXECUTE_UNLESS_ITEMS_ENTITY/execute unless items entity <targets:entity_selector> <slot:word> <item_predicate:block_predicate> <command:command[root=execute]>
+EXECUTE_IF_ITEMS_BLOCK/execute if items block <pos:vec3> <slot:word> <item_predicate:block_predicate> <command:command[root=execute]>
+EXECUTE_UNLESS_ITEMS_BLOCK/execute unless items block <pos:vec3> <slot:word> <item_predicate:block_predicate> <command:command[root=execute]>
 EXECUTE_STORE_ENTITY/execute store <store_location:result_store_location_type> entity <target:entity_selector[single]> <path:nbt_path> <store_type:result_store_type> <scale:double> <command:command[root=execute]>
 EXECUTE_ON_LEASHER/execute on leasher <command:command[root=execute]>
 EXECUTE_ON_ATTACKER/execute on attacker <command:command[root=execute]>
@@ -171,8 +171,8 @@ LOOT_GIVE_KILL/loot give <players:entity_selector[players]> kill <kill_target:en
 LOOT_SPAWN_LOOT/loot spawn <pos:vec3> loot <loot_table:resource_location>
 LOOT_SPAWN_KILL/loot spawn <pos:vec3> kill <kill_target:entity_selector[single]>
 
-ITEM_MODIFY_ENTITY/item modify entity <targets:entity_selector> <slot:word> <modifier:resource_location>
-ITEM_MODIFY_BLOCK/item modify block <pos:vec3> <slot:word> <modifier:resource_location>
+ITEM_MODIFY_ENTITY/item modify entity <targets:entity_selector> <slot:word> <modifier:greedy_string>
+ITEM_MODIFY_BLOCK/item modify block <pos:vec3> <slot:word> <modifier:greedy_string>
 
 EFFECT_GIVE/effect give <targets:entity_selector> <effect:resource_location>
 EFFECT_GIVE_SECONDS/effect give <targets:entity_selector> <effect:resource_location> <seconds:int>
@@ -183,3 +183,81 @@ EFFECT_CLEAR_TARGETS/effect clear <targets:entity_selector>
 EFFECT_CLEAR_TARGETS_EFFECT/effect clear <targets:entity_selector> <effect:resource_location>
 
 TIME_QUERY_NAMESPACED/time query <query:resource_location>
+
+# Команды которые парсятся и идут через vanilla fallback
+TP_ENTITY/tp <destination:entity_selector[single]>
+TP_TARGETS_ENTITY/tp <targets:entity_selector> <destination:entity_selector[single]>
+TP_TARGETS_POS/tp <targets:entity_selector> <pos:vec3>
+TP_TARGETS_POS_ROT/tp <targets:entity_selector> <pos:vec3> <rot:rotation>
+TP_POS/tp <pos:vec3>
+
+TEAM_ADD/team add <team:word>
+TEAM_ADD_DISPLAY/team add <team:word> <display:text>
+TEAM_REMOVE/team remove <team:word>
+TEAM_JOIN/team join <team:word>
+TEAM_JOIN_MEMBERS/team join <team:word> <members:score_holder>
+TEAM_LEAVE/team leave <members:score_holder>
+TEAM_LIST/team list
+TEAM_LIST_TEAM/team list <team:word>
+TEAM_MODIFY/team modify <team:word> <option:word> <value:greedy_string>
+TEAM_EMPTY/team empty <team:word>
+
+STOPSOUND/stopsound <targets:entity_selector[players]>
+STOPSOUND_SOURCE/stopsound <targets:entity_selector[players]> <source:word>
+STOPSOUND_SOUND/stopsound <targets:entity_selector[players]> <source:word> <sound:resource_location>
+
+SETBLOCK_REPLACE/setblock <pos:vec3> <block:block_predicate>
+SETBLOCK_KEEP/setblock <pos:vec3> <block:block_predicate> keep
+SETBLOCK_DESTROY/setblock <pos:vec3> <block:block_predicate> destroy
+
+PARTICLE/particle <name:resource_location> <pos:vec3>
+PARTICLE_VIEWERS/particle <name:resource_location> <pos:vec3> <delta:vec3> <speed:double> <count:int>
+PARTICLE_VIEWERS_PARAMS/particle <name:resource_location> <pos:vec3> <delta:vec3> <speed:double> <count:int> <viewers:entity_selector[players]>
+
+RANDOM_VALUE/random value <range:int_range>
+RANDOM_ROLL/random roll <range:int_range> <sequence:resource_location>
+RANDOM_RESET/random reset <sequence:resource_location>
+RANDOM_RESET_ALL/random reset *
+
+CLEAR/clear
+CLEAR_TARGETS/clear <targets:entity_selector[players]>
+CLEAR_TARGETS_ITEM/clear <targets:entity_selector[players]> <item:block_predicate>
+CLEAR_TARGETS_ITEM_MAX/clear <targets:entity_selector[players]> <item:block_predicate> <max_count:int>
+
+RECIPE_GIVE/recipe give <targets:entity_selector[players]> <recipe:resource_location>
+RECIPE_GIVE_ALL/recipe give <targets:entity_selector[players]> *
+RECIPE_TAKE/recipe take <targets:entity_selector[players]> <recipe:resource_location>
+RECIPE_TAKE_ALL/recipe take <targets:entity_selector[players]> *
+
+FILL/fill <from:vec3> <to:vec3> <block:block_predicate>
+FILL_REPLACE/fill <from:vec3> <to:vec3> <block:block_predicate> replace
+FILL_REPLACE_FILTER/fill <from:vec3> <to:vec3> <block:block_predicate> replace <filter:block_predicate>
+FILL_KEEP/fill <from:vec3> <to:vec3> <block:block_predicate> keep
+FILL_DESTROY/fill <from:vec3> <to:vec3> <block:block_predicate> destroy
+FILL_HOLLOW/fill <from:vec3> <to:vec3> <block:block_predicate> hollow
+FILL_OUTLINE/fill <from:vec3> <to:vec3> <block:block_predicate> outline
+
+# loot дополнительные источники
+LOOT_SPAWN_FISH/loot spawn <pos:vec3> fish <loot_table:resource_location> <pos2:vec3>
+LOOT_SPAWN_MINE/loot spawn <pos:vec3> mine <pos2:vec3> <tool:block_predicate>
+LOOT_SPAWN_MINE_MAINHAND/loot spawn <pos:vec3> mine <pos2:vec3> mainhand
+LOOT_SPAWN_MINE_OFFHAND/loot spawn <pos:vec3> mine <pos2:vec3> offhand
+LOOT_INSERT_FISH/loot insert <pos:vec3> fish <loot_table:resource_location> <pos2:vec3>
+LOOT_INSERT_MINE/loot insert <pos:vec3> mine <pos2:vec3> <tool:block_predicate>
+LOOT_INSERT_MINE_MAINHAND/loot insert <pos:vec3> mine <pos2:vec3> mainhand
+LOOT_INSERT_MINE_OFFHAND/loot insert <pos:vec3> mine <pos2:vec3> offhand
+LOOT_GIVE_FISH/loot give <players:entity_selector[players]> fish <loot_table:resource_location> <pos:vec3>
+LOOT_GIVE_MINE/loot give <players:entity_selector[players]> mine <pos:vec3> <tool:block_predicate>
+LOOT_GIVE_MINE_MAINHAND/loot give <players:entity_selector[players]> mine <pos:vec3> mainhand
+LOOT_GIVE_MINE_OFFHAND/loot give <players:entity_selector[players]> mine <pos:vec3> offhand
+
+# execute if дополнительные subcommands
+EXECUTE_IF_BIOME/execute if biome <pos:vec3> <biome:resource_location> <command:command[root=execute]>
+EXECUTE_UNLESS_BIOME/execute unless biome <pos:vec3> <biome:resource_location> <command:command[root=execute]>
+EXECUTE_IF_DIMENSION/execute if dimension <dimension:resource_location> <command:command[root=execute]>
+EXECUTE_UNLESS_DIMENSION/execute unless dimension <dimension:resource_location> <command:command[root=execute]>
+EXECUTE_IF_LOADED/execute if loaded <pos:vec3> <command:command[root=execute]>
+EXECUTE_UNLESS_LOADED/execute unless loaded <pos:vec3> <command:command[root=execute]>
+
+# Одиночный селектор relaxed — @e[limit=1,sort=arbitrary] как single
+SELECTOR_SINGLE_RELAXED_NOTE/
