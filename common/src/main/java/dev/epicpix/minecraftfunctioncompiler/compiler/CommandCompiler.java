@@ -1422,12 +1422,8 @@ public final class CommandCompiler {
             // recipe — vanilla fallback
             case CommandRecipeGive(SelectorArgument targets, DataLocation recipe) ->
                 emitVanillaFallback(context, "recipe give " + targets + " " + recipe);
-            case CommandRecipeGiveAll(SelectorArgument targets) ->
-                emitVanillaFallback(context, "recipe give " + targets + " *");
             case CommandRecipeTake(SelectorArgument targets, DataLocation recipe) ->
                 emitVanillaFallback(context, "recipe take " + targets + " " + recipe);
-            case CommandRecipeTakeAll(SelectorArgument targets) ->
-                emitVanillaFallback(context, "recipe take " + targets + " *");
 
             // loot дополнительные источники
             case CommandLootSpawnFish(WorldCoordinates pos, DataLocation lootTable, WorldCoordinates pos2) ->
