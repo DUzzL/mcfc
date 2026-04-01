@@ -1451,20 +1451,6 @@ public final class CommandCompiler {
             case CommandLootGiveMineOffhand(SelectorArgument players, WorldCoordinates pos) ->
                 emitVanillaFallback(context, "loot give " + players + " mine " + worldCoordsToString(pos) + " offhand");
 
-            // execute if biome / dimension / loaded — vanilla fallback
-            case CommandExecuteIfBiome(WorldCoordinates pos, DataLocation biome, CommandParams command) ->
-                emitVanillaFallback(context, "execute if biome " + worldCoordsToString(pos) + " " + biome + " run " + getRawCommand(command));
-            case CommandExecuteUnlessBiome(WorldCoordinates pos, DataLocation biome, CommandParams command) ->
-                emitVanillaFallback(context, "execute unless biome " + worldCoordsToString(pos) + " " + biome + " run " + getRawCommand(command));
-            case CommandExecuteIfDimension(DataLocation dimension, CommandParams command) ->
-                emitVanillaFallback(context, "execute if dimension " + dimension + " run " + getRawCommand(command));
-            case CommandExecuteUnlessDimension(DataLocation dimension, CommandParams command) ->
-                emitVanillaFallback(context, "execute unless dimension " + dimension + " run " + getRawCommand(command));
-            case CommandExecuteIfLoaded(WorldCoordinates pos, CommandParams command) ->
-                emitVanillaFallback(context, "execute if loaded " + worldCoordsToString(pos) + " run " + getRawCommand(command));
-            case CommandExecuteUnlessLoaded(WorldCoordinates pos, CommandParams command) ->
-                emitVanillaFallback(context, "execute unless loaded " + worldCoordsToString(pos) + " run " + getRawCommand(command));
-
             // vanilla fallback for partial compilation
             case CommandFallbackVanilla(String rawCommand) -> {
                 var current = context.current();
