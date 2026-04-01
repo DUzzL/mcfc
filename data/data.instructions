@@ -878,5 +878,5 @@
 
 // NbtText — получить NBT значение из storage как Component
 ##PURE
-@GET_NBT_TEXT(<net.minecraft.world.level.storage.CommandStorage> [static:CommandStorage], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:storage], <java.lang.String> [instr:path]) -> <net.minecraft.network.chat.Component>
-  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getNbtText([static:CommandStorage], [instr:storage].toString(), [instr:path]);
+@GET_NBT_TEXT(<net.minecraft.world.level.storage.CommandStorage> [static:CommandStorage], <java.lang.String> [instr:storage_name], <java.lang.String> [instr:path]) -> <net.minecraft.network.chat.Component>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getNbtText([static:CommandStorage], [instr:storage_name], [instr:path]);

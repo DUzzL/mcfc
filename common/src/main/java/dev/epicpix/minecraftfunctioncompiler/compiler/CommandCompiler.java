@@ -1804,7 +1804,7 @@ public final class CommandCompiler {
             if(text.content() instanceof TextContent.NbtText(NbtPath path, Text separator, NbtDataLocation source)) {
                 if(source instanceof NbtDataLocation.Storage(DataLocation storage)) {
                     var textLocation = context.<TComponent>createLocal();
-                    context.writeInstruction(Instructions.getNbtText(textLocation, storage, nbtPathToString(path)));
+                    context.writeInstruction(Instructions.getNbtText(textLocation, storage.toString(), nbtPathToString(path)));
                     if(!text.style().isEmpty() || !text.siblings().isEmpty()) {
                         var mutableText = context.<TMutableComponent>createLocal();
                         context.writeInstruction(Instructions.copyText(mutableText, textLocation));
