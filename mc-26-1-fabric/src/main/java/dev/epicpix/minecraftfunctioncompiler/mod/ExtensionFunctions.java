@@ -688,16 +688,16 @@ public class ExtensionFunctions {
 
     public static int nbtTagToInt(Tag tag, double scale) {
         if (tag instanceof net.minecraft.nbt.NumericTag numeric) {
-            return (int)(numeric.getAsDouble() * scale);
+            return (int)(numeric.doubleValue() * scale);
         }
-        if (tag instanceof net.minecraft.nbt.CollectionTag<?> collection) {
+        if (tag instanceof net.minecraft.nbt.CollectionTag collection) {
             return (int)(collection.size() * scale);
         }
         if (tag instanceof CompoundTag compound) {
             return (int)(compound.size() * scale);
         }
         if (tag instanceof net.minecraft.nbt.StringTag str) {
-            return (int)(str.value().length() * scale);
+            return (int)(str.asString().orElse("").length() * scale);
         }
         return 0;
     }

@@ -79,9 +79,20 @@ fun parseCommandsData(file: String): ParsedCommandData {
     val commandRedirects = mutableListOf<Pair<String, String>>()
     val commands = mutableListOf<Pair<String, String>>()
     val commandTree = mutableMapOf<String, ParsedCommandArgument>()
+
     for(line in file.lineSequence()) {
-        if(line.isBlank()) continue
+        val trimmedLine = line.trim()
+
+        if(trimmedLine.isBlank() || trimmedLine.startsWith("#") || trimmedLine.startsWith("//")) {
+            continue
+        }
+
         val slashPart = line.split("/", limit = 2)
+
+        if(slashPart.size < 2) {
+            throw IllegalStateException("Syntax error: missing '/' in command definition line: '$line'")
+        }
+
         if(slashPart[0] == "=DEFINE") {
             val aliasData = slashPart[1].split("/", limit = 2)
             commandRedirects.add(aliasData[0] to aliasData[1])
