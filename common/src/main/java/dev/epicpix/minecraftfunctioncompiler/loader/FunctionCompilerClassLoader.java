@@ -160,7 +160,6 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         return true;
     }
 
-    @Nullable
     private HashMap<DataLocation, Class<?>> loadFunctions(CompilationParams params, HashMap<DataLocation, List<String>> functionSources, HashMap<DataLocation, List<Instruction>> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions, int[] totalClassFileSize) {
         var loadedFunctions = new HashMap<DataLocation, Class<?>>();
         var compiledFunctionSet = new HashSet<>(compiledFunctions.keySet());
@@ -172,11 +171,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
                     diagnostics.addDiagnostic(de.toDiagnostic());
                 }
                 diagnostics.addDiagnostic(new Diagnostic(DiagnosticKind.LOAD_ERROR, FUNCTION_CLASS_LOAD_FAILED, "Failed to load function (" + key + ")", null, key, null, e));
-                LOGGER.error("Failed to load function ({}), skipping function compilation", key, e);
-                setState(State.FAILED);
-                FunctionCompilerReporter.reportExceptionWithCommands("define_function", e, functionSources.get(key));
-                FunctionCompilerReporter.sendReports();
-                return null;
+                LOGGER.error("Failed to load function ({}), skipping", key, e);
             }
         }
         return loadedFunctions;
