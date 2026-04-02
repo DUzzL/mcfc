@@ -793,6 +793,9 @@ public class JavaStackCompiler {
                 }
             }
             while(true) {
+                if(traverse >= instructions.size()) {
+                    continue changeTraversal;
+                }
                 if(!state.traversed.add(traverse)) {
                     continue changeTraversal;
                 }

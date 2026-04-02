@@ -58,6 +58,23 @@ public final class EmitterContext {
     }
 
     public void emitForEach() {
+        // Pre-populate transforms for all result locals across all instructions.
+        // The optimizer (mergePureData) can produce IR where a load of local<N> appears before
+        // its store in linear instruction order (because the dominator-based analysis proved the
+        // store always executes before the load at runtime, even if not linearly).
+        // Without pre-population, the emitter throws "Cannot load from location: local<N>".
+        // Pre-creating registers here lets the store fill them in when it arrives later.
+        for(var instr : instructions) {
+            if(instr.type().returnsValue()) {
+                var resultLocation = instr.<LocationData<?>>get(0);
+                if(resultLocation != null && resultLocation.local() != null) {
+                    int local = resultLocation.local();
+                    if(!transforms.containsKey(local)) {
+                        transforms.put(local, codeWriter.createRegister());
+                    }
+                }
+            }
+        }
         for(currentInstructionIndex = 0; currentInstructionIndex < instructions.size(); currentInstructionIndex++) {
             EmitterInstructions.emitInstruction(this);
         }
