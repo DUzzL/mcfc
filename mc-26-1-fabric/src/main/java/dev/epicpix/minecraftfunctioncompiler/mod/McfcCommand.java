@@ -145,7 +145,14 @@ public class McfcCommand {
         debug.then(Commands.literal("on").executes(context -> {
             FunctionDebugLogger.reset();
             FunctionDebugLogger.enabled = true;
-            context.getSource().sendSuccess(() -> Component.literal("MCFC debug logging enabled, output: logs/mcfc-debug.log").withStyle(ChatFormatting.GREEN), true);
+            var loader = FunctionCompilerMain.functionClassLoader;
+            boolean turnedOn = false;
+            if (loader != null && !loader.isUseReady()) {
+                loader.tryOn();
+                turnedOn = true;
+            }
+            String msg = "MCFC debug logging enabled → logs/mcfc-debug.log" + (turnedOn ? " (MCFC был выключен, включил автоматически)" : "");
+            context.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(msg).withStyle(ChatFormatting.GREEN), true);
             return 1;
         }));
         debug.then(Commands.literal("off").executes(context -> {
