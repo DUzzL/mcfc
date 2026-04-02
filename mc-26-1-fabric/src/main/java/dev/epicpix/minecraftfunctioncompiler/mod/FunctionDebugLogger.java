@@ -98,6 +98,7 @@ public final class FunctionDebugLogger {
         if (totalCalls.isEmpty()) return;
 
         var loader = FunctionCompilerMain.functionClassLoader;
+        var loaderState = loader != null ? loader.getState() : null;
         var statusMap = buildStatusMap();
 
         var rows = totalCalls.entrySet().stream()
@@ -110,12 +111,12 @@ public final class FunctionDebugLogger {
                 long vanilla = vanillaCalls.getOrDefault(id, new AtomicLong(0)).get();
 
                 CompileStatus status;
-                if (!mcfcWasOn) {
-                    status = CompileStatus.MCFC_OFF;
-                } else if (loader != null && loader.hasFunctionLoaded(Identifier.parse(id))) {
+                if (loader != null && loader.hasFunctionLoaded(Identifier.parse(id))) {
                     status = CompileStatus.COMPILED;
                 } else if (statusMap.containsKey(id)) {
                     status = statusMap.get(id);
+                } else if (!mcfcWasOn) {
+                    status = CompileStatus.MCFC_OFF;
                 } else {
                     status = CompileStatus.VANILLA_FALLBACK;
                 }
@@ -138,8 +139,18 @@ public final class FunctionDebugLogger {
         var sb = new StringBuilder();
         sb.append("=== MCFC Function Debug Log ===\n");
 
-        if (!mcfcWasOn) {
-            sb.append("WARNING: MCFC был OFF — сделай /mcfc on, потом /mcfc debug reset + /mcfc debug on\n\n");
+        if (loaderState == null) {
+            sb.append("WARNING: MCFC не загружен\n\n");
+        } else if (loaderState == dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader.State.PARSING
+                || loaderState == dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader.State.COMPILING
+                || loaderState == dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader.State.LOADING) {
+            sb.append("INFO: MCFC ещё компилирует (state=").append(loaderState).append(") — подожди и сделай /mcfc debug flush позже\n\n");
+        } else if (loaderState == dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader.State.FAILED) {
+            sb.append("ERROR: MCFC упал во время компиляции (state=FAILED)\n\n");
+        } else if (loaderState == dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader.State.EXECUTION_FAILED) {
+            sb.append("ERROR: MCFC упал во время выполнения (state=EXECUTION_FAILED)\n\n");
+        } else if (!mcfcWasOn) {
+            sb.append("WARNING: MCFC был в состоянии READY_OFF — дождись READY_ON и сделай /mcfc debug reset + /mcfc debug on\n\n");
         }
 
         sb.append(String.format("Summary: %d compiled | %d vanilla | %d errors | %d too_big | %d mcfc_off%n%n",
