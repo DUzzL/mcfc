@@ -1069,14 +1069,14 @@ public final class CommandCompiler {
                 emitVanillaFallback(context, "scoreboard objectives setdisplay " + slot);
             case CommandScoreboardObjectivesRemove(String objective) ->
                 context.writeInstruction(Instructions.removeObjective(objective));
-            case CommandScoreboardObjectivesAdd(String objective, DataLocation criteria) ->
-                context.writeInstruction(Instructions.addObjective(objective, criteria.toString()));
-            case CommandScoreboardObjectivesAddDisplay(String objective, DataLocation criteria, Text display) -> {
+            case CommandScoreboardObjectivesAdd(String objective, String criteria) ->
+                context.writeInstruction(Instructions.addObjective(objective, criteria));
+            case CommandScoreboardObjectivesAddDisplay(String objective, String criteria, Text display) -> {
                 var displayLocal = context.<TComponent>createLocal();
                 context.writeInstruction(Instructions.loadText(displayLocal, display));
-                context.writeInstruction(Instructions.addObjectiveDisplay(objective, criteria.toString(), displayLocal));
+                context.writeInstruction(Instructions.addObjectiveDisplay(objective, criteria, displayLocal));
             }
-            case CommandScoreboardObjectivesAddDisplayGreedy(String objective, DataLocation criteria, String displayName) ->
+            case CommandScoreboardObjectivesAddDisplayGreedy(String objective, String criteria, String displayName) ->
                 emitVanillaFallback(context, "scoreboard objectives add " + objective + " " + criteria + " " + displayName);
             case CommandScoreboardPlayersDisplayName(ScoreHolderArgument targets, String objective) ->
                 emitVanillaFallback(context, "scoreboard players display name " + targets + " " + objective);

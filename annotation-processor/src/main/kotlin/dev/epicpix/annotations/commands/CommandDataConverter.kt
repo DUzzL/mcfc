@@ -337,6 +337,10 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 data.kindOptions["maximum"]?.toInt()?.also { max -> builder.append("    if(a$argumentIndex > $max) ${returnError(catchBlock, argumentDPath, "\"Time value of \" + a$argumentIndex + \" ticks is above allowed value ($max ticks)\"")}\n") }
                 newTypedArguments.add(data.argName!! to "int")
             }
+            "objective_criteria" -> {
+                builder.append("    var a$argumentIndex = reader.readUntilSpace();\n")
+                newTypedArguments.add(data.argName!! to "java.lang.String")
+            }
             "word" -> {
                 builder.append("    var a$argumentIndex = reader.readWord();\n")
                 newTypedArguments.add(data.argName!! to "java.lang.String")

@@ -120,9 +120,9 @@ GAMERULE_QUERY/gamerule <rule:resource_location>
 DATAPACK_ENABLE/datapack enable <name:greedy_string>
 DATAPACK_DISABLE/datapack disable <name:greedy_string>
 
-SCOREBOARD_OBJECTIVES_ADD/scoreboard objectives add <objective:word> <criteria:resource_location>
-SCOREBOARD_OBJECTIVES_ADD_DISPLAY/scoreboard objectives add <objective:word> <criteria:resource_location> <display_name:text>
-SCOREBOARD_OBJECTIVES_ADD_DISPLAY_GREEDY/scoreboard objectives add <objective:word> <criteria:resource_location> <display_name:greedy_string>
+SCOREBOARD_OBJECTIVES_ADD/scoreboard objectives add <objective:word> <criteria:objective_criteria>
+SCOREBOARD_OBJECTIVES_ADD_DISPLAY/scoreboard objectives add <objective:word> <criteria:objective_criteria> <display_name:text>
+SCOREBOARD_OBJECTIVES_ADD_DISPLAY_GREEDY/scoreboard objectives add <objective:word> <criteria:objective_criteria> <display_name:greedy_string>
 SCOREBOARD_OBJECTIVES_REMOVE/scoreboard objectives remove <objective:word>
 SCOREBOARD_OBJECTIVES_SETDISPLAY_CLEAR/scoreboard objectives setdisplay <slot:slot>
 SCOREBOARD_OBJECTIVES_SETDISPLAY/scoreboard objectives setdisplay <slot:slot> <objective:word>
