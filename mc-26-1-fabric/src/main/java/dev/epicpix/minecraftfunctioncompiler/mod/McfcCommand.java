@@ -1,11 +1,9 @@
 package dev.epicpix.minecraftfunctioncompiler.mod;
 
-import dev.epicpix.minecraftfunctioncompiler.mod.FunctionDebugLogger;
 import com.mojang.brigadier.CommandDispatcher;
 import dev.epicpix.minecraftfunctioncompiler.CompileConstants;
 import dev.epicpix.minecraftfunctioncompiler.GlobalConfig;
 import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilationStarter;
-import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -18,41 +16,12 @@ import net.minecraft.network.chat.Style;
 import java.nio.file.Files;
 import java.util.Locale;
 
-import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.AUTO_SWITCH_FUNCTIONS;
 import static net.minecraft.server.commands.FunctionCommand.SUGGEST_FUNCTION;
 
 public class McfcCommand {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         var base = Commands.literal("mcfc").requires(Commands.hasPermission(Commands.LEVEL_ADMINS));
 
-        base.then(Commands.literal("on").executes(context -> {
-            var loader = FunctionCompilerMain.functionClassLoader;
-            if(loader == null) {
-                context.getSource().sendFailure(Component.literal("Function Compiler is not loaded"));
-                return 0;
-            }
-            if(loader.getState() == FunctionCompilerClassLoader.State.READY_OFF || loader.getState() == FunctionCompilerClassLoader.State.READY_ON || loader.getState() == FunctionCompilerClassLoader.State.EXECUTION_FAILED) {
-                loader.tryOn();
-                context.getSource().sendSuccess(() -> Component.literal("Turned on Function Compiler"), true);
-                return 1;
-            }else {
-                return 0;
-            }
-        }));
-        base.then(Commands.literal("off").executes(context -> {
-            var loader = FunctionCompilerMain.functionClassLoader;
-            if(loader == null) {
-                context.getSource().sendFailure(Component.literal("Function Compiler is not loaded"));
-                return 0;
-            }
-            if(loader.getState() == FunctionCompilerClassLoader.State.READY_OFF || loader.getState() == FunctionCompilerClassLoader.State.READY_ON || loader.getState() == FunctionCompilerClassLoader.State.EXECUTION_FAILED) {
-                loader.tryOff();
-                context.getSource().sendSuccess(() -> Component.literal("Turned off Function Compiler"), true);
-                return 1;
-            }else {
-                return 0;
-            }
-        }));
         base.then(Commands.literal("state").executes(context -> {
             var loader = FunctionCompilerMain.functionClassLoader;
             if(loader == null) {
@@ -65,6 +34,7 @@ public class McfcCommand {
             context.getSource().sendSuccess(() -> Component.literal("Total Function Count: ").withStyle(ChatFormatting.GREEN).append(Component.literal(Integer.toString(loader.totalFunctionCount())).withStyle(ChatFormatting.GOLD)), false);
             return loader.getState().ordinal();
         }));
+
         base.then(Commands.literal("show_diagnostics").executes(context -> {
             var loader = FunctionCompilerMain.functionClassLoader;
             if(loader == null) {
@@ -84,7 +54,7 @@ public class McfcCommand {
                 tooltip.append(Component.literal("\nSource: ").withStyle(ChatFormatting.GREEN));
                 if(diagnostic.source() != null) {
                     tooltip.append(Component.literal(diagnostic.source().toString()).withStyle(ChatFormatting.GOLD));
-                }else {
+                } else {
                     tooltip.append(Component.literal("Unknown").withStyle(ChatFormatting.RED));
                 }
                 tooltip.append(Component.literal("\nMessage: ").withStyle(ChatFormatting.GREEN));
@@ -97,6 +67,7 @@ public class McfcCommand {
             }
             return diagnostics.size();
         }));
+
         base.then(Commands.literal("is_compiled").then(Commands.argument("function", FunctionArgument.functions()).suggests(SUGGEST_FUNCTION).executes(context -> {
             var loader = FunctionCompilerMain.functionClassLoader;
             if(loader == null) {
@@ -106,11 +77,15 @@ public class McfcCommand {
             int res = 0;
             for(var func : FunctionArgument.getFunctions(context, "function")) {
                 boolean isCompiled = loader.hasFunctionLoaded(func.id());
-                context.getSource().sendSuccess(() -> Component.literal("Function ").withStyle(ChatFormatting.AQUA).append(Component.literal(func.id().toString()).withStyle(ChatFormatting.GOLD)).append(Component.literal(" is ").withStyle(ChatFormatting.AQUA).append(isCompiled ? Component.literal("compiled").withStyle(ChatFormatting.GREEN) : Component.literal("not compiled").withStyle(ChatFormatting.RED))), false);
+                context.getSource().sendSuccess(() -> Component.literal("Function ").withStyle(ChatFormatting.AQUA)
+                    .append(Component.literal(func.id().toString()).withStyle(ChatFormatting.GOLD))
+                    .append(Component.literal(" is ").withStyle(ChatFormatting.AQUA)
+                    .append(isCompiled ? Component.literal("compiled").withStyle(ChatFormatting.GREEN) : Component.literal("not compiled").withStyle(ChatFormatting.RED))), false);
                 if(isCompiled) res++;
             }
             return res;
         })));
+
         base.then(Commands.literal("recompile").executes(context -> {
             var loader = FunctionCompilerMain.functionClassLoader;
             if(loader == null) {
@@ -118,11 +93,12 @@ public class McfcCommand {
                 return 0;
             }
             context.getSource().sendSuccess(() -> Component.literal("Started function recompilation"), true);
-            ((FunctionCompilationStarter) context.getSource().getServer().getFunctions()).mcfc$loadFunctions(AUTO_SWITCH_FUNCTIONS, () -> {
+            ((FunctionCompilationStarter) context.getSource().getServer().getFunctions()).mcfc$loadFunctions(true, () -> {
                 context.getSource().sendSuccess(() -> Component.literal("Finished function recompilation"), true);
             });
             return 1;
         }));
+
         base.then(Commands.literal("reload_config").executes(context -> {
             var configFilePath = FabricLoader.getInstance().getConfigDir().resolve(GlobalConfig.DEFAULT_CONFIG_FILE);
             if(!Files.exists(configFilePath)) {
@@ -134,25 +110,19 @@ public class McfcCommand {
             var loadResult = GlobalConfig.loadConfig(configFilePath);
             if(loadResult == GlobalConfig.ConfigLoadResult.NOT_LOADED) {
                 context.getSource().sendFailure(Component.literal("Failed to load config file, check console for details"));
-            }else if(loadResult == GlobalConfig.ConfigLoadResult.LOADED_OLD) {
+            } else if(loadResult == GlobalConfig.ConfigLoadResult.LOADED_OLD) {
                 context.getSource().sendSuccess(() -> Component.literal("Loaded old mcfc config version successfully"), true);
-            }else if(loadResult == GlobalConfig.ConfigLoadResult.LOADED_NEWEST) {
+            } else if(loadResult == GlobalConfig.ConfigLoadResult.LOADED_NEWEST) {
                 context.getSource().sendSuccess(() -> Component.literal("Loaded mcfc config version successfully"), true);
             }
             return 1;
         }));
+
         var debug = Commands.literal("debug");
         debug.then(Commands.literal("on").executes(context -> {
             FunctionDebugLogger.reset();
             FunctionDebugLogger.enabled = true;
-            var loader = FunctionCompilerMain.functionClassLoader;
-            boolean turnedOn = false;
-            if (loader != null && !loader.isUseReady()) {
-                loader.tryOn();
-                turnedOn = true;
-            }
-            String msg = "MCFC debug logging enabled → logs/mcfc-debug.log" + (turnedOn ? " (MCFC был выключен, включил автоматически)" : "");
-            context.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(msg).withStyle(ChatFormatting.GREEN), true);
+            context.getSource().sendSuccess(() -> Component.literal("MCFC debug logging enabled → logs/mcfc-debug.log").withStyle(ChatFormatting.GREEN), true);
             return 1;
         }));
         debug.then(Commands.literal("off").executes(context -> {
