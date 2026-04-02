@@ -306,7 +306,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         var totalClassFileSize = new int[2];
         var loadableFunctions = new HashMap<DataLocation, List<Instruction>>();
         for(var entry : optimizedFunctions.entrySet()) {
-            if(entry.getValue().size() > 600) {
+            if(entry.getValue().size() > 5000) {
                 diagnostics.addDiagnostic(new Diagnostic(DiagnosticKind.LOAD_ERROR, FUNCTION_LOAD_TOO_BIG, "Function has too many instructions, ignoring", null, entry.getKey(), null, null));
                 LOGGER.warn("Function has too many instructions, ignoring: {}", entry.getKey());
             }else {
