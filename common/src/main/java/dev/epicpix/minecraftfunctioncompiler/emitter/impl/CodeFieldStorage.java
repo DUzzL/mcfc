@@ -74,6 +74,10 @@ public final class CodeFieldStorage {
     }
 
     public BytecodeRegister loadNbtValue(CodeWriter cw, NbtValue value) {
+        if(value instanceof NbtValue.Compound compound) {
+            map.writeValue(CodeFieldStorageMapKind.NBT_COMPOUND, compound);
+            return cw.getDataField(CodeFieldStorageMapKind.NBT_COMPOUND.generateName(map, compound), map.getValueType(CodeFieldStorageMapKind.NBT_COMPOUND));
+        }
         map.writeValue(CodeFieldStorageMapKind.NBT_VALUE, value);
         return cw.getDataField(CodeFieldStorageMapKind.NBT_VALUE.generateName(map, value), map.getValueType(CodeFieldStorageMapKind.NBT_VALUE));
     }
