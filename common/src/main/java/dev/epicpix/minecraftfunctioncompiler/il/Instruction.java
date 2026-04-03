@@ -66,7 +66,9 @@ public record Instruction(InstructionType type, @Nullable Object[] data) {
                 if(replacedData.isPresent()) {
                     replacedData.get()[d] = dst;
                 }else {
-                    replacedData = Optional.of(data.clone());
+                    var clone = data.clone();
+                    clone[d] = dst;
+                    replacedData = Optional.of(clone);
                 }
             }
         }
@@ -80,7 +82,9 @@ public record Instruction(InstructionType type, @Nullable Object[] data) {
                 if(replacedData.isPresent()) {
                     replacedData.get()[d] = dst;
                 }else {
-                    replacedData = Optional.of(data.clone());
+                    var clone = data.clone();
+                    clone[d] = dst;
+                    replacedData = Optional.of(clone);
                 }
             }
         }

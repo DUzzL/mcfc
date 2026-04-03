@@ -21,6 +21,7 @@ import net.minecraft.nbt.LongArrayTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FontDescription;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
@@ -79,7 +80,8 @@ import static dev.epicpix.minecraftfunctioncompiler.mod.emitter.MappedUsageDefin
 public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
     public static final CodeFieldStorageMap INSTANCE = new CodeFieldStorageMapImpl().addDefaults();
 
-    private static final InstructionTarget STYLE_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(Style.class, TextColor.class, Integer.class, Boolean.class, Boolean.class, Boolean.class, Boolean.class, Boolean.class, ClickEvent.class, HoverEvent.class, String.class, Identifier.class);
+    private static final InstructionTarget STYLE_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(Style.class, TextColor.class, Integer.class, Boolean.class, Boolean.class, Boolean.class, Boolean.class, Boolean.class, ClickEvent.class, HoverEvent.class, String.class, FontDescription.class);
+    private static final InstructionTarget FONT_DESCRIPTION_RESOURCE_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(FontDescription.Resource.class, Identifier.class);
     private static final InstructionTarget LIST_TAG_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(ListTag.class);
     private static final InstructionTarget BYTE_ARRAY_TAG_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(ByteArrayTag.class, byte[].class);
     private static final InstructionTarget COMPOUND_TAG_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(CompoundTag.class);
@@ -141,7 +143,7 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
                 args.add(new BytecodeValue.NullValue());
             }
             if(value.font() != null) {
-                args.add(cf.loadIdentifier(cw, value.font()));
+                args.add(cw.newObjectCreate(FONT_DESCRIPTION_RESOURCE_INIT_TARGET, cf.loadIdentifier(cw, value.font())));
             }else {
                 args.add(new BytecodeValue.NullValue());
             }
