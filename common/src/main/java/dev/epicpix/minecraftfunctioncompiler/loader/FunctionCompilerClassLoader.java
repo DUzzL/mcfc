@@ -178,7 +178,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     }
 
     private boolean loadHandles(HashMap<DataLocation, List<Instruction>> compiledFunctions, HashMap<DataLocation, Class<?>> loadedFunctions, CompilationParams params) {
-        for(var key : compiledFunctions.keySet()) {
+        for(var key : loadedFunctions.keySet()) {
             try {
                 registerFunction(loadedFunctions.get(key), key, params);
             }catch(Throwable e) {
