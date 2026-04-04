@@ -99,15 +99,17 @@ SUMMON_POS_NBT/summon <entity:resource_location> <pos:vec3> <nbt:nbt_compound>
 SUMMON_POS/summon <entity:resource_location> <pos:vec3>
 SUMMON/summon <entity:resource_location>
 
-TIME_SET_DAY/time set day
-TIME_SET_NIGHT/time set night
-TIME_SET_NOON/time set noon
-TIME_SET_MIDNIGHT/time set midnight
-TIME_SET_VALUE/time set <value:time>
-TIME_ADD/time add <value:time>
-TIME_QUERY_DAYTIME/time query daytime
+TIME_SET/time set <time:time>
+TIME_SET_TO_MARKER/time set <time_marker_id:greedy_string>
+TIME_ADD/time add <time:time>
+TIME_RATE/time rate <rate:float>
+TIME_PAUSE/time pause
+TIME_RESUME/time resume
+TIME_QUERY_TIME/time query time
+TIME_QUERY_TIMELINE_TICKS/time query <timeline_id:greedy_string>
+TIME_QUERY_TIMELINE_REPETITIONS/time query <timeline_id:greedy_string> repetition
 TIME_QUERY_GAMETIME/time query gametime
-TIME_QUERY_DAY/time query day
+TIME_OF/time of <command:command[root=time]
 
 SCHEDULE_FUNCTION_APPEND/schedule function <function:resource_location> <time:time> append
 SCHEDULE_FUNCTION_REPLACE/schedule function <function:resource_location> <time:time> replace

@@ -1,108 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.compiler;
 
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementGrantEverything;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementGrantFrom;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementGrantOnly;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementGrantOnlyCriterion;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementGrantThrough;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementGrantUntil;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementRevokeEverything;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementRevokeFrom;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementRevokeOnly;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementRevokeOnlyCriterion;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementRevokeThrough;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandAdvancementRevokeUntil;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandDataModifySetValue;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandDifficultySet;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteAlign;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteAnchored;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteAs;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteAt;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteIfEntity;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteIfFunction;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteIfScoreCompare;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteIfScoreRange;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteOnOrigin;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteOnTarget;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteOnVehicle;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecutePositionedAs;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecutePositionedPos;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteRotatedAs;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteRotatedRot;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteRun;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteStoreScore;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteStoreStorage;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteUnlessEntity;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteUnlessFunction;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteUnlessScoreCompare;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExecuteUnlessScoreRange;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExperienceAdd;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExperienceAddLevels;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExperienceAddPoints;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExperienceSet;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExperienceSetLevels;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandExperienceSetPoints;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandFunction;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandFunctionArgs;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandFunctionArgsNbt;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandFunctionArgsNbtPath;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandGamemode;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandKill;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandParams;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandReturnFail;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandReturnRun;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandReturnValue;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandScoreboardPlayersAdd;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandScoreboardPlayersEnable;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandScoreboardPlayersGet;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandScoreboardPlayersOperation;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandScoreboardPlayersRemove;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandScoreboardPlayersResetAll;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandScoreboardPlayersResetObjective;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandScoreboardPlayersSet;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTagAdd;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTagRemove;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTellraw;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTitleActionbar;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTitleClear;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTitleReset;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTitleSubtitle;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTitleTimes;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTitleTitle;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandWeatherClear;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandWeatherClearTimed;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandWeatherRain;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandWeatherRainTimed;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandWeatherThunder;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandWeatherThunderTimed;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandGive;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandPlaysound;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandPlaysoundPos;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandPlaysoundVolume;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandPlaysoundPitch;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandPlaysoundMinVolume;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandSummon;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandSummonPos;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandSummonPosNbt;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTimeSetDay;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTimeSetNight;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTimeSetNoon;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTimeSetMidnight;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTimeSetValue;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTimeAdd;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTimeQueryDaytime;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTimeQueryGametime;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandTimeQueryDay;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandScheduleFunction;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandScheduleFunctionAppend;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandScheduleFunctionReplace;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandScheduleClear;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandGameruleSet;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandGameruleQuery;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandDatapackEnable;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandDatapackDisable;
-import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandFallbackVanilla;
+import dev.epicpix.minecraftfunctioncompiler.commands.params.*;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.Difficulty;
 import dev.epicpix.minecraftfunctioncompiler.data.Gamemode;
@@ -968,31 +867,75 @@ public final class CommandCompiler {
                 }
             }
             // time
-            case CommandTimeSetDay _ -> context.writeInstruction(Instructions.setDayTime(LocationData.ofInteger(1000)));
-            case CommandTimeSetNoon _ -> context.writeInstruction(Instructions.setDayTime(LocationData.ofInteger(6000)));
-            case CommandTimeSetNight _ -> context.writeInstruction(Instructions.setDayTime(LocationData.ofInteger(13000)));
-            case CommandTimeSetMidnight _ -> context.writeInstruction(Instructions.setDayTime(LocationData.ofInteger(18000)));
-            case CommandTimeSetValue(int value) -> context.writeInstruction(Instructions.setDayTime(LocationData.ofInteger(value)));
-            case CommandTimeAdd(int value) -> context.writeInstruction(Instructions.addDayTime(LocationData.ofInteger(value)));
-            case CommandTimeQueryDaytime _ -> {
-                if(result.generatingResult()) {
-                    var val = context.<Integer>createLocal();
-                    context.writeInstruction(Instructions.queryDayTime(val));
-                    result.updateResultValue(val);
+            case CommandTimeSet(int time) -> {
+                try(var world = context.getWorld()) {
+                    context.writeInstruction(Instructions.setTime(world.content(), LocationData.ofInteger(time)));
+                }
+            }
+            case CommandTimeSetToMarker(String timeMarkerId) -> {
+                try(var world = context.getWorld()) {
+                    context.writeInstruction(Instructions.setTimeToMarker(world.content(), timeMarkerId));
+                }
+            }
+            case CommandTimeAdd(int time) -> {
+                try(var world = context.getWorld()) {
+                    context.writeInstruction(Instructions.addTime(world.content(), LocationData.ofInteger(time)));
+                }
+            }
+            case CommandTimeRate(float rate) -> {
+                try(var world = context.getWorld()) {
+                    context.writeInstruction(Instructions.setTimeRate(world.content(), LocationData.ofFloat(rate)));
+                }
+            }
+            case CommandTimePause _ -> {
+                try(var world = context.getWorld()) {
+                    context.writeInstruction(Instructions.setTimePaused(world.content(), true));
+                }
+            }
+            case CommandTimeResume _ -> {
+                try(var world = context.getWorld()) {
+                    context.writeInstruction(Instructions.setTimePaused(world.content(), false));
+                }
+            }
+            case CommandTimeQueryTime _ -> {
+                try(var world = context.getWorld()) {
+                    if (result.generatingResult()) {
+                        var val = context.<Integer>createLocal();
+                        context.writeInstruction(Instructions.queryTime(val, world.content()));
+                        result.updateResultValue(val);
+                    }
+                }
+            }
+            case CommandTimeQueryTimelineTicks(String timelineId) -> {
+                try(var world = context.getWorld()) {
+                    if (result.generatingResult()) {
+                        var val = context.<Integer>createLocal();
+                        context.writeInstruction(Instructions.queryTimelineTicks(val, world.content(), timelineId));
+                        result.updateResultValue(val);
+                    }
+                }
+            }
+            case CommandTimeQueryTimelineRepetitions(String timelineId) -> {
+                try(var world = context.getWorld()) {
+                    if (result.generatingResult()) {
+                        var val = context.<Integer>createLocal();
+                        context.writeInstruction(Instructions.queryTimelineRepetitions(val, world.content(), timelineId));
+                        result.updateResultValue(val);
+                    }
                 }
             }
             case CommandTimeQueryGametime _ -> {
-                if(result.generatingResult()) {
-                    var val = context.<Integer>createLocal();
-                    context.writeInstruction(Instructions.queryGameTime(val));
-                    result.updateResultValue(val);
+                try(var world = context.getWorld()) {
+                    if (result.generatingResult()) {
+                        var val = context.<Integer>createLocal();
+                        context.writeInstruction(Instructions.queryGameTime(val, world.content()));
+                        result.updateResultValue(val);
+                    }
                 }
             }
-            case CommandTimeQueryDay _ -> {
-                if(result.generatingResult()) {
-                    var val = context.<Integer>createLocal();
-                    context.writeInstruction(Instructions.queryDay(val));
-                    result.updateResultValue(val);
+            case CommandTimeOf(CommandParams command) -> {
+                try(var fContext = context.withForkingContext(forkingContext)) {
+                    compile(context, fContext.content(), command, result);
                 }
             }
             // schedule
