@@ -455,12 +455,24 @@ public class ExtensionFunctions {
 
     // Selector NBT check
 
-    // Per-tick NBT cache: Entity.saveWithoutId() is expensive (full DFU serialization
-    // including recipe book, advancements, etc.). Within a single tick many compiled
-    // functions check the same entity's NBT multiple times — cache the result.
+    // -------------------------------------------------------------------------
+    // Entity NBT matching — fast-path + per-tick cache
+    //
+    // Entity.saveWithoutId() is very expensive for players (full DFU pipeline:
+    // RecipeBook, inventory, advancements...). Two-tier strategy:
+    //   1. Fast-path: resolve common NBT keys directly via entity API —
+    //      zero serialization cost, covers the vast majority of datapack patterns.
+    //   2. Cache: if full serialization IS needed, cache the result so the same
+    //      entity is only serialized once per tick even across multiple functions.
+    //
+    // precomputeEntityNbtAsync() can be called by the async mod (or a pre-tick
+    // mixin) to warm the cache in parallel threads while entity state is stable.
+    // -------------------------------------------------------------------------
+
     private static final java.util.IdentityHashMap<Entity, CompoundTag> entityNbtTickCache = new java.util.IdentityHashMap<>();
     private static int entityNbtCacheTick = Integer.MIN_VALUE;
 
+    /** Full serialization, always accurate but expensive for players. */
     private static CompoundTag computeEntityNbt(Entity entity) {
         try (var reporter = new net.minecraft.util.ProblemReporter.ScopedCollector(entity.problemPath(), LOGGER)) {
             var output = net.minecraft.world.level.storage.TagValueOutput.createWithContext(reporter, entity.registryAccess());
@@ -469,6 +481,7 @@ public class ExtensionFunctions {
         }
     }
 
+    /** Returns cached NBT, computing it on first access within the current tick. */
     private static CompoundTag getCachedEntityNbt(Entity entity) {
         var server = entity.getServer();
         int currentTick = server != null ? server.getTickCount() : 0;
@@ -479,13 +492,138 @@ public class ExtensionFunctions {
         return entityNbtTickCache.computeIfAbsent(entity, ExtensionFunctions::computeEntityNbt);
     }
 
+    /**
+     * Try to evaluate an NBT pattern against an entity WITHOUT serialization.
+     * Returns {@code null} if the pattern contains keys not in the fast-path set
+     * (caller should fall back to full serialization).
+     *
+     * Supported keys: Tags, CustomName, CustomNameVisible, Health, MaxHealth,
+     * Air, MaxAir, Fire, FallDistance, OnGround, NoGravity, Invulnerable,
+     * Silent, Glowing.
+     */
+    private static @Nullable Boolean tryMatchEntityNbtFast(Entity entity, CompoundTag pattern) {
+        for (String key : pattern.keySet()) {
+            Boolean keyResult = matchSingleKey(entity, key, pattern.get(key));
+            if (keyResult == null) return null;   // unknown key — need full serialization
+            if (!keyResult) return Boolean.FALSE;  // known key, value didn't match
+        }
+        return Boolean.TRUE;
+    }
+
+    private static @Nullable Boolean matchSingleKey(Entity entity, String key, net.minecraft.nbt.Tag value) {
+        return switch (key) {
+            case "Tags" -> {
+                if (!(value instanceof ListTag tagList)) yield null;
+                var entityTags = entity.entityTags();
+                for (int i = 0; i < tagList.size(); i++) {
+                    var t = tagList.get(i);
+                    if (!(t instanceof StringTag st)) yield null;
+                    if (!entityTags.contains(st.asString().orElse(""))) yield Boolean.FALSE;
+                }
+                yield Boolean.TRUE;
+            }
+            case "CustomName" -> {
+                if (!(value instanceof StringTag expected)) yield null;
+                var customName = entity.getCustomName();
+                if (customName == null) yield Boolean.FALSE;
+                // Minecraft serializes CustomName as JSON — match that format
+                var actual = net.minecraft.network.chat.Component.Serializer.toJson(customName, entity.registryAccess());
+                yield Boolean.valueOf(actual.equals(expected.asString().orElse("")));
+            }
+            case "CustomNameVisible" -> {
+                if (!(value instanceof ByteTag expected)) yield null;
+                yield Boolean.valueOf(entity.isCustomNameVisible() == (expected.byteValue() != 0));
+            }
+            case "Health" -> {
+                if (!(entity instanceof net.minecraft.world.entity.LivingEntity living)) yield Boolean.FALSE;
+                if (!(value instanceof FloatTag expected)) yield null;
+                yield Boolean.valueOf(living.getHealth() == expected.floatValue());
+            }
+            case "MaxHealth" -> {
+                if (!(entity instanceof net.minecraft.world.entity.LivingEntity living)) yield Boolean.FALSE;
+                if (!(value instanceof FloatTag expected)) yield null;
+                yield Boolean.valueOf(living.getMaxHealth() == expected.floatValue());
+            }
+            case "Air" -> {
+                if (!(value instanceof ShortTag expected)) yield null;
+                yield Boolean.valueOf(entity.getAirSupply() == expected.shortValue());
+            }
+            case "MaxAir" -> {
+                if (!(value instanceof ShortTag expected)) yield null;
+                yield Boolean.valueOf(entity.getMaxAirSupply() == expected.shortValue());
+            }
+            case "Fire" -> {
+                if (!(value instanceof ShortTag expected)) yield null;
+                yield Boolean.valueOf(entity.getRemainingFireTicks() == expected.shortValue());
+            }
+            case "FallDistance" -> {
+                if (!(value instanceof FloatTag expected)) yield null;
+                yield Boolean.valueOf((float) entity.fallDistance == expected.floatValue());
+            }
+            case "OnGround" -> {
+                if (!(value instanceof ByteTag expected)) yield null;
+                yield Boolean.valueOf(entity.onGround() == (expected.byteValue() != 0));
+            }
+            case "NoGravity" -> {
+                if (!(value instanceof ByteTag expected)) yield null;
+                yield Boolean.valueOf(entity.isNoGravity() == (expected.byteValue() != 0));
+            }
+            case "Invulnerable" -> {
+                if (!(value instanceof ByteTag expected)) yield null;
+                yield Boolean.valueOf(entity.isInvulnerable() == (expected.byteValue() != 0));
+            }
+            case "Silent" -> {
+                if (!(value instanceof ByteTag expected)) yield null;
+                yield Boolean.valueOf(entity.isSilent() == (expected.byteValue() != 0));
+            }
+            case "Glowing" -> {
+                if (!(value instanceof ByteTag expected)) yield null;
+                yield Boolean.valueOf(entity.hasGlowingTag() == (expected.byteValue() != 0));
+            }
+            default -> null; // complex key — fall back to full serialization
+        };
+    }
+
     public static CompoundTag getEntityNbt(Entity entity) {
         return getCachedEntityNbt(entity);
     }
 
     public static boolean matchesEntityNbt(Entity entity, CompoundTag pattern) {
+        // Fast-path: avoid saveWithoutId() for patterns using only known keys
+        Boolean fast = tryMatchEntityNbtFast(entity, pattern);
+        if (fast != null) return fast;
+        // Fall back to full serialization (cached per tick)
         return NbtUtils.compareNbt(pattern, getCachedEntityNbt(entity), true);
     }
+
+    /**
+     * Pre-warm the entity NBT cache for a collection of entities in parallel.
+     * Call this from the async mod (or a pre-tick mixin) when entity state is
+     * stable (between ticks) to amortize serialization cost across CPU cores.
+     * NOT safe to call while entity state may be mutated concurrently.
+     */
+    public static void precomputeEntityNbtAsync(java.util.Collection<? extends Entity> entities, MinecraftServer server) {
+        int currentTick = server.getTickCount();
+        if (currentTick != entityNbtCacheTick) {
+            entityNbtTickCache.clear();
+            entityNbtCacheTick = currentTick;
+        }
+        var futures = new java.util.ArrayList<java.util.concurrent.CompletableFuture<Void>>(entities.size());
+        // Temp per-thread results to avoid ConcurrentModificationException on IdentityHashMap
+        var tempResults = new java.util.concurrent.ConcurrentHashMap<Entity, CompoundTag>(entities.size());
+        for (var entity : entities) {
+            if (!entityNbtTickCache.containsKey(entity)) {
+                futures.add(java.util.concurrent.CompletableFuture.runAsync(
+                    () -> tempResults.put(entity, computeEntityNbt(entity))
+                ));
+            }
+        }
+        if (!futures.isEmpty()) {
+            java.util.concurrent.CompletableFuture.allOf(futures.toArray(new java.util.concurrent.CompletableFuture[0])).join();
+            entityNbtTickCache.putAll(tempResults);
+        }
+    }
+
 
 
     // Text building
