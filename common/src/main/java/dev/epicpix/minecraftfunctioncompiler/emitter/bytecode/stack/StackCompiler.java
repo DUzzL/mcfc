@@ -114,11 +114,26 @@ public class StackCompiler {
                         continue;
                     }
                     if(other instanceof BytecodeValue.NullValue) {
-                        results.add(new StackInstruction.Jump(switch(condition) {
-                            case EQ -> StackJumpType.IF_NULL;
-                            case NE -> StackJumpType.IF_NOT_NULL;
-                            default -> throw new IllegalArgumentException("Invalid condition for comparison with null: " + condition);
-                        }, label));
+                        var aType = getValueType(a, registerTypeMap);
+                        // ifnull/ifnonnull require a reference type on the stack.
+                        // If 'a' is a primitive (can happen when the optimizer constant-folds
+                        // an object register into an integer value), fall back to zero comparison.
+                        if(aType == ConstantDescs.CD_int || aType == ConstantDescs.CD_long ||
+                           aType == ConstantDescs.CD_float || aType == ConstantDescs.CD_double ||
+                           aType == ConstantDescs.CD_boolean || aType == ConstantDescs.CD_byte ||
+                           aType == ConstantDescs.CD_short || aType == ConstantDescs.CD_char) {
+                            results.add(new StackInstruction.Jump(switch(condition) {
+                                case EQ -> StackJumpType.IF_EQUAL_ZERO;
+                                case NE -> StackJumpType.IF_NOT_EQUAL_ZERO;
+                                default -> throw new IllegalArgumentException("Invalid condition for primitive comparison with null: " + condition);
+                            }, label));
+                        } else {
+                            results.add(new StackInstruction.Jump(switch(condition) {
+                                case EQ -> StackJumpType.IF_NULL;
+                                case NE -> StackJumpType.IF_NOT_NULL;
+                                default -> throw new IllegalArgumentException("Invalid condition for comparison with null: " + condition);
+                            }, label));
+                        }
                         continue;
                     }
                     results.add(loadValue(other, registerTypeMap));

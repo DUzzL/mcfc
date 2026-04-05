@@ -599,15 +599,15 @@ public class ExtensionFunctions {
     // Time
 
     public static void setDayTime(MinecraftServer server, int time) {
-        server.getCommands().performPrefixedCommand(
-                server.createCommandSourceStack(), "time set " + time
-        );
+        for (var level : server.getAllLevels()) {
+            level.setDayTime(time);
+        }
     }
 
     public static void addDayTime(MinecraftServer server, int time) {
-        server.getCommands().performPrefixedCommand(
-                server.createCommandSourceStack(), "time add " + time
-        );
+        for (var level : server.getAllLevels()) {
+            level.setDayTime(level.getDayTime() + time);
+        }
     }
 
     public static int queryDayTime(MinecraftServer server) {
@@ -625,12 +625,16 @@ public class ExtensionFunctions {
     // Schedule
 
     public static void scheduleFunction(MinecraftServer server, String function, int time, boolean append) {
-        String cmd = "schedule function " + function + " " + time + "t" + (append ? " append" : " replace");
-        server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), cmd);
+        var timerQueue = server.getScheduledEvents();
+        long targetTime = server.overworld().getGameTime() + time;
+        if (!append) {
+            timerQueue.remove(function);
+        }
+        timerQueue.schedule(function, targetTime, new net.minecraft.world.level.timers.FunctionCallback(Identifier.parse(function)));
     }
 
     public static void scheduleClear(MinecraftServer server, String function) {
-        server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "schedule clear " + function);
+        server.getScheduledEvents().remove(function);
     }
 
     // Gamerule
