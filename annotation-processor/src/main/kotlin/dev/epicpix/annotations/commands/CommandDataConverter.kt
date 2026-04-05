@@ -215,6 +215,12 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 builder.append("    var a$argumentIndex = reader.readDifficulty();\n")
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.Difficulty")
             }
+            "float" -> {
+                builder.append("    var a$argumentIndex = reader.readFloat();\n")
+                data.kindOptions["minimum"]?.toFloat()?.also { min -> builder.append("    if(a$argumentIndex < $min) ${returnError(catchBlock, argumentDPath, "\"Float value of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }
+                data.kindOptions["maximum"]?.toFloat()?.also { max -> builder.append("    if(a$argumentIndex > $max) ${returnError(catchBlock, argumentDPath, "\"Float value of \" + a$argumentIndex + \" is above allowed value ($max)\"")}\n") }
+                newTypedArguments.add(data.argName!! to "float")
+            }
             "double" -> {
                 builder.append("    var a$argumentIndex = reader.readDouble();\n")
                 data.kindOptions["minimum"]?.toDouble()?.also { min -> builder.append("    if(a$argumentIndex < $min) ${returnError(catchBlock, argumentDPath, "\"Double value of \" + a$argumentIndex + \" is below allowed value ($min)\"")}\n") }

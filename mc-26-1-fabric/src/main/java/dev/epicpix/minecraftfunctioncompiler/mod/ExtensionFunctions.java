@@ -1,6 +1,5 @@
 package dev.epicpix.minecraftfunctioncompiler.mod;
 
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.logging.LogUtils;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.advancements.AdvancementNode;
@@ -12,6 +11,7 @@ import net.minecraft.commands.FunctionInstantiationException;
 import net.minecraft.commands.execution.ExecutionContext;
 import net.minecraft.commands.functions.CommandFunction;
 import net.minecraft.commands.functions.InstantiatedFunction;
+import net.minecraft.core.Holder;
 import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.ByteArrayTag;
@@ -29,7 +29,6 @@ import net.minecraft.nbt.ShortTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.StringTagVisitor;
 import net.minecraft.nbt.Tag;
-import net.minecraft.nbt.TagParser;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
@@ -37,12 +36,16 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerFunctionManager;
 import net.minecraft.server.ServerScoreboard;
+import net.minecraft.server.commands.TimeCommand;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.world.clock.ClockTimeMarkers;
+import net.minecraft.world.clock.ServerClockManager;
+import net.minecraft.world.clock.WorldClock;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootParams;
@@ -55,6 +58,7 @@ import net.minecraft.world.scores.PlayerScores;
 import net.minecraft.world.scores.ReadOnlyScoreInfo;
 import net.minecraft.world.scores.ScoreAccess;
 import net.minecraft.world.scores.ScoreHolder;
+import net.minecraft.world.timeline.Timeline;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -641,6 +645,7 @@ public class ExtensionFunctions {
 
     // Give
 
+    // TODO: ServerPlayer player -> Collection<ServerPlayer> players
     public static void giveItems(MinecraftServer server, ServerPlayer player, String itemString) {
         String itemPart;
         int count = 1;
@@ -702,6 +707,7 @@ public class ExtensionFunctions {
 
     // Playsound
 
+    // TODO: ServerPlayer player -> Collection<ServerPlayer> players
     public static void playSound(ServerPlayer player, String sound, String source, net.minecraft.world.phys.Vec3 pos, double volume, double pitch, double minVolume) {
         var soundEvent = net.minecraft.sounds.SoundEvent.createVariableRangeEvent(Identifier.parse(sound));
         var soundSource = net.minecraft.sounds.SoundSource.valueOf(source.toUpperCase(java.util.Locale.ROOT));
@@ -739,6 +745,7 @@ public class ExtensionFunctions {
             return e;
         });
         if (entity != null) {
+            // TODO: Add finalize boolean check
             if (entity instanceof net.minecraft.world.entity.Mob mob) {
                 mob.finalizeSpawn(world, world.getCurrentDifficultyAt(entity.blockPosition()), net.minecraft.world.entity.EntitySpawnReason.COMMAND, null);
             }
@@ -748,27 +755,69 @@ public class ExtensionFunctions {
 
     // Time
 
-    public static void setDayTime(MinecraftServer server, int time) {
-        // MC 26.1 removed ServerLevel.setDayTime()/getDayTime() - the time system
-        // now uses WORLD_CLOCK registry. Fall back to performPrefixedCommand.
-        // time set is called rarely so the feedback is not a significant spam issue.
-        server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "time set " + time);
+    public static void setTime(MinecraftServer server, ServerLevel world, int time) {
+        ServerClockManager clockManager = server.clockManager();
+        Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
+
+        clockManager.setTotalTicks(clock, time);
     }
 
-    public static void addDayTime(MinecraftServer server, int time) {
-        server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "time add " + time);
+    public static void setTimeToMarker(MinecraftServer server, ServerLevel world, String timeMarkerId) {
+        Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
+
+        server.clockManager().moveToTimeMarker(clock, ResourceKey.create(ClockTimeMarkers.ROOT_ID, Identifier.withDefaultNamespace(timeMarkerId)));
     }
 
-    public static int queryDayTime(MinecraftServer server) {
-        return (int)(server.overworld().getGameTime() % 24000L);
+    public static void addTime(MinecraftServer server, ServerLevel world, int time) {
+        Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
+
+        server.clockManager().addTicks(clock, time);
     }
 
-    public static int queryGameTime(MinecraftServer server) {
-        return (int)(server.overworld().getGameTime() % 2147483647L);
+    public static void setTimeRate(MinecraftServer server, ServerLevel world, float rate) {
+        Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
+
+        server.clockManager().setRate(clock, rate);
     }
 
-    public static int queryDay(MinecraftServer server) {
-        return (int)(server.overworld().getGameTime() / 24000L);
+    public static void setTimePaused(MinecraftServer server, ServerLevel world, boolean paused) {
+        Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
+
+        server.clockManager().setPaused(clock, paused);
+    }
+
+    public static int queryTime(MinecraftServer server, ServerLevel world) {
+        Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
+
+        long totalTicks = server.clockManager().getTotalTicks(clock);
+        return TimeCommand.wrapTime(totalTicks);
+    }
+
+    public static int queryTimelineTicks(MinecraftServer server, ServerLevel world, String timelineId) {
+        ServerClockManager clockManager = server.clockManager();
+        Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
+        Holder<Timeline> timeline = world.registryAccess().get(
+                ResourceKey.create(Registries.TIMELINE, Identifier.withDefaultNamespace(timelineId))
+        ).get();
+
+        long currentTicks = timeline.value().getCurrentTicks(clockManager);
+        return TimeCommand.wrapTime(currentTicks);
+    }
+
+    public static int queryTimelineRepetitions(MinecraftServer server, ServerLevel world, String timelineId) {
+        ServerClockManager clockManager = server.clockManager();
+        Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
+        Holder<Timeline> timeline = world.registryAccess().get(
+                ResourceKey.create(Registries.TIMELINE, Identifier.withDefaultNamespace(timelineId))
+        ).get();
+
+        long repetitions = timeline.value().getPeriodCount(clockManager);
+        return TimeCommand.wrapTime(repetitions);
+    }
+
+    public static int queryGameTime(MinecraftServer server, ServerLevel world) {
+        long gameTime = world.getGameTime();
+        return TimeCommand.wrapTime(gameTime);
     }
 
     // Schedule

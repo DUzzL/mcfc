@@ -870,31 +870,75 @@ public final class CommandCompiler {
                 }
             }
             // time
-            case CommandTimeSetDay _ -> context.writeInstruction(Instructions.setDayTime(LocationData.ofInteger(1000)));
-            case CommandTimeSetNoon _ -> context.writeInstruction(Instructions.setDayTime(LocationData.ofInteger(6000)));
-            case CommandTimeSetNight _ -> context.writeInstruction(Instructions.setDayTime(LocationData.ofInteger(13000)));
-            case CommandTimeSetMidnight _ -> context.writeInstruction(Instructions.setDayTime(LocationData.ofInteger(18000)));
-            case CommandTimeSetValue(int value) -> context.writeInstruction(Instructions.setDayTime(LocationData.ofInteger(value)));
-            case CommandTimeAdd(int value) -> context.writeInstruction(Instructions.addDayTime(LocationData.ofInteger(value)));
-            case CommandTimeQueryDaytime _ -> {
-                if(result.generatingResult()) {
-                    var val = context.<Integer>createLocal();
-                    context.writeInstruction(Instructions.queryDayTime(val));
-                    result.updateResultValue(val);
+            case CommandTimeSet(int time) -> {
+                try(var world = context.getWorld()) {
+                    context.writeInstruction(Instructions.setTime(world.content(), LocationData.ofInteger(time)));
+                }
+            }
+            case CommandTimeSetToMarker(String timeMarkerId) -> {
+                try(var world = context.getWorld()) {
+                    context.writeInstruction(Instructions.setTimeToMarker(world.content(), timeMarkerId));
+                }
+            }
+            case CommandTimeAdd(int time) -> {
+                try(var world = context.getWorld()) {
+                    context.writeInstruction(Instructions.addTime(world.content(), LocationData.ofInteger(time)));
+                }
+            }
+            case CommandTimeRate(float rate) -> {
+                try(var world = context.getWorld()) {
+                    context.writeInstruction(Instructions.setTimeRate(world.content(), LocationData.ofFloat(rate)));
+                }
+            }
+            case CommandTimePause _ -> {
+                try(var world = context.getWorld()) {
+                    context.writeInstruction(Instructions.setTimePaused(world.content(), true));
+                }
+            }
+            case CommandTimeResume _ -> {
+                try(var world = context.getWorld()) {
+                    context.writeInstruction(Instructions.setTimePaused(world.content(), false));
+                }
+            }
+            case CommandTimeQueryTime _ -> {
+                try(var world = context.getWorld()) {
+                    if (result.generatingResult()) {
+                        var val = context.<Integer>createLocal();
+                        context.writeInstruction(Instructions.queryTime(val, world.content()));
+                        result.updateResultValue(val);
+                    }
+                }
+            }
+            case CommandTimeQueryTimelineTicks(String timelineId) -> {
+                try(var world = context.getWorld()) {
+                    if (result.generatingResult()) {
+                        var val = context.<Integer>createLocal();
+                        context.writeInstruction(Instructions.queryTimelineTicks(val, world.content(), timelineId));
+                        result.updateResultValue(val);
+                    }
+                }
+            }
+            case CommandTimeQueryTimelineRepetitions(String timelineId) -> {
+                try(var world = context.getWorld()) {
+                    if (result.generatingResult()) {
+                        var val = context.<Integer>createLocal();
+                        context.writeInstruction(Instructions.queryTimelineRepetitions(val, world.content(), timelineId));
+                        result.updateResultValue(val);
+                    }
                 }
             }
             case CommandTimeQueryGametime _ -> {
-                if(result.generatingResult()) {
-                    var val = context.<Integer>createLocal();
-                    context.writeInstruction(Instructions.queryGameTime(val));
-                    result.updateResultValue(val);
+                try(var world = context.getWorld()) {
+                    if (result.generatingResult()) {
+                        var val = context.<Integer>createLocal();
+                        context.writeInstruction(Instructions.queryGameTime(val, world.content()));
+                        result.updateResultValue(val);
+                    }
                 }
             }
-            case CommandTimeQueryDay _ -> {
-                if(result.generatingResult()) {
-                    var val = context.<Integer>createLocal();
-                    context.writeInstruction(Instructions.queryDay(val));
-                    result.updateResultValue(val);
+            case CommandTimeOf(CommandParams command) -> {
+                try(var fContext = context.withForkingContext(forkingContext)) {
+                    compile(context, fContext.content(), command, result);
                 }
             }
             // schedule

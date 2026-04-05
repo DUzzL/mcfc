@@ -727,25 +727,41 @@
 }
 
 // time
-@SET_DAY_TIME(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], int [ctx:time]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setDayTime([static:MinecraftServer], [ctx:time]);
+@SET_TIME(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], int [ctx:time]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setTime([static:MinecraftServer], [ctx:world], [ctx:time]);
 }
 
-@ADD_DAY_TIME(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], int [ctx:time]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.addDayTime([static:MinecraftServer], [ctx:time]);
+@SET_TIME_TO_MARKER(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:time_marker_id]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setTimeToMarker([static:MinecraftServer], [ctx:world], [instr:time_marker_id]);
+}
+
+@ADD_TIME(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], int [ctx:time]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.addTime([static:MinecraftServer], [ctx:world], [ctx:time]);
+}
+
+@SET_TIME_RATE(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], float [ctx:rate]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setTimeRate([static:MinecraftServer], [ctx:world], [ctx:rate]);
+}
+
+@SET_TIME_PAUSED(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], boolean [instr:paused]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setTimePaused([static:MinecraftServer], [ctx:world], [instr:paused]);
 }
 
 ##PURE
-@QUERY_DAY_TIME(<net.minecraft.server.MinecraftServer> [static:MinecraftServer]) -> int
-  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.queryDayTime([static:MinecraftServer]);
+@QUERY_TIME(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.queryTime([static:MinecraftServer], [ctx:world]);
 
 ##PURE
-@QUERY_GAME_TIME(<net.minecraft.server.MinecraftServer> [static:MinecraftServer]) -> int
-  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.queryGameTime([static:MinecraftServer]);
+@QUERY_TIMELINE_TICKS(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:timeline_id]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.queryTimelineTicks([static:MinecraftServer], [ctx:world], [instr:timeline_id]);
 
 ##PURE
-@QUERY_DAY(<net.minecraft.server.MinecraftServer> [static:MinecraftServer]) -> int
-  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.queryDay([static:MinecraftServer]);
+@QUERY_TIMELINE_REPETITIONS(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:timeline_id]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.queryTimelineRepetitions([static:MinecraftServer], [ctx:world], [instr:timeline_id]);
+
+##PURE
+@QUERY_GAME_TIME(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.queryGameTime([static:MinecraftServer], [ctx:world]);
 
 // schedule
 @SCHEDULE_FUNCTION(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:function], int [ctx:time], boolean [instr:append]) {
