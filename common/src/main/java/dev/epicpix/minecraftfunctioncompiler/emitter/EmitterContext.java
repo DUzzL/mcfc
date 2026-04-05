@@ -14,6 +14,8 @@ import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -22,9 +24,9 @@ import java.util.Set;
 
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.EMITTER_INVALID_LOAD_LOCATION;
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.EMITTER_INVALID_STORE_LOCATION;
-import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.EMITTER_LOAD_LOCATION_NOT_STORED;
 
 public final class EmitterContext {
+    private static final Logger LOGGER = LoggerFactory.getLogger("minecraftfunctioncompiler");
     private final DataLocation location;
     private final CodeFieldStorage fieldStorage;
     private final CodeWriter codeWriter;
@@ -130,7 +132,11 @@ public final class EmitterContext {
         var location = Objects.requireNonNull(instruction().<LocationData<?>>get(instructionIndexField));
         if(location.local() != null) {
             if(!transforms.containsKey((int)location.local())) {
-                throw new DiagnosticException(Diagnostic.emitterError(EMITTER_LOAD_LOCATION_NOT_STORED, this.location, "Cannot load from location: " + location + ", nothing is stored in that location"));
+                // The store instruction for this local was eliminated by the optimizer as dead code,
+                // but the load instruction survived. This means the code path that would have written
+                // a non-null value is unreachable at runtime, so the value is effectively always null.
+                LOGGER.warn("Loading undefined local {} in {} — store was likely removed by optimizer, treating as null", location, this.location);
+                return new BytecodeValue.NullValue();
             }
             return transforms.get((int)location.local());
         }else if(location.object() instanceof String str) {
