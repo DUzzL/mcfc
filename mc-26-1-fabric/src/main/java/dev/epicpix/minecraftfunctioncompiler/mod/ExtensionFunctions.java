@@ -483,7 +483,7 @@ public class ExtensionFunctions {
 
     /** Returns cached NBT, computing it on first access within the current tick. */
     private static CompoundTag getCachedEntityNbt(Entity entity) {
-        var server = entity.getServer();
+        var server = entity.level() instanceof ServerLevel sl ? sl.getServer() : null;
         int currentTick = server != null ? server.getTickCount() : 0;
         if (currentTick != entityNbtCacheTick) {
             entityNbtTickCache.clear();
