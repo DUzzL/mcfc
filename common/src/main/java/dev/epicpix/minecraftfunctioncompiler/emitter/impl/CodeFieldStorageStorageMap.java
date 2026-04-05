@@ -30,15 +30,15 @@ public final class CodeFieldStorageStorageMap {
     }
 
     @SuppressWarnings("unchecked")
-    public <T> ArrayList<T> getStorage(CodeFieldStorageMapKind<T> key) {
+    public synchronized <T> ArrayList<T> getStorage(CodeFieldStorageMapKind<T> key) {
         return (ArrayList<T>) storageMap.computeIfAbsent(key, _ -> new ArrayList<>());
     }
 
-    public <T> int checkIndex(CodeFieldStorageMapKind<T> key, T value) {
+    public synchronized <T> int checkIndex(CodeFieldStorageMapKind<T> key, T value) {
         return getStorage(key).indexOf(value);
     }
 
-    public <T> void writeValue(CodeFieldStorageMapKind<T> key, T value) {
+    public synchronized <T> void writeValue(CodeFieldStorageMapKind<T> key, T value) {
         var storage = getStorage(key);
         if(!storage.contains(value)) {
             storage.add(value);
