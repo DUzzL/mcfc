@@ -1443,10 +1443,10 @@ public final class CommandCompiler {
                 try(var world = context.getWorld()) {
                     var val = context.<Integer>createLocal();
                     world.writeInstruction(switch(query.path()) {
-                        case "day" -> Instructions.queryDay(val, world.content());
-                        case "daytime" -> Instructions.queryDayTime(val, world.content());
+                        case "day" -> Instructions.queryTimelineRepetitions(val, world.content(), "day");
+                        case "daytime" -> Instructions.queryTimelineTicks(val, world.content(), "day");
                         case "gametime" -> Instructions.queryGameTime(val, world.content());
-                        default -> Instructions.queryDayTime(val, world.content());
+                        default -> Instructions.queryTimelineTicks(val, world.content(), "day");
                     });
                     result.updateResultValue(val);
                 }

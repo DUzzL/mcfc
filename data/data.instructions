@@ -763,14 +763,6 @@
 @QUERY_GAME_TIME(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world]) -> int
   = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.queryGameTime([static:MinecraftServer], [ctx:world]);
 
-##PURE
-@QUERY_DAY_TIME(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world]) -> int
-  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.queryDayTime([static:MinecraftServer], [ctx:world]);
-
-##PURE
-@QUERY_DAY(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world]) -> int
-  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.queryDay([static:MinecraftServer], [ctx:world]);
-
 // schedule
 @SCHEDULE_FUNCTION(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:function], int [ctx:time], boolean [instr:append]) {
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.scheduleFunction([static:MinecraftServer], [instr:function], [ctx:time], [instr:append]);
