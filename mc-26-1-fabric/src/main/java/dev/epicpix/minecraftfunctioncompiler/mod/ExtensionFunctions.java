@@ -455,7 +455,13 @@ public class ExtensionFunctions {
 
     // Selector NBT check
 
-    public static CompoundTag getEntityNbt(Entity entity) {
+    // Per-tick NBT cache: Entity.saveWithoutId() is expensive (full DFU serialization
+    // including recipe book, advancements, etc.). Within a single tick many compiled
+    // functions check the same entity's NBT multiple times — cache the result.
+    private static final java.util.IdentityHashMap<Entity, CompoundTag> entityNbtTickCache = new java.util.IdentityHashMap<>();
+    private static int entityNbtCacheTick = Integer.MIN_VALUE;
+
+    private static CompoundTag computeEntityNbt(Entity entity) {
         try (var reporter = new net.minecraft.util.ProblemReporter.ScopedCollector(entity.problemPath(), LOGGER)) {
             var output = net.minecraft.world.level.storage.TagValueOutput.createWithContext(reporter, entity.registryAccess());
             entity.saveWithoutId(output);
@@ -463,14 +469,24 @@ public class ExtensionFunctions {
         }
     }
 
-    public static boolean matchesEntityNbt(Entity entity, CompoundTag pattern) {
-        try (var reporter = new net.minecraft.util.ProblemReporter.ScopedCollector(entity.problemPath(), LOGGER)) {
-            var output = net.minecraft.world.level.storage.TagValueOutput.createWithContext(reporter, entity.registryAccess());
-            entity.saveWithoutId(output);
-            CompoundTag entityTag = output.buildResult();
-            return NbtUtils.compareNbt(pattern, entityTag, true);
+    private static CompoundTag getCachedEntityNbt(Entity entity) {
+        var server = entity.getServer();
+        int currentTick = server != null ? server.getTickCount() : 0;
+        if (currentTick != entityNbtCacheTick) {
+            entityNbtTickCache.clear();
+            entityNbtCacheTick = currentTick;
         }
+        return entityNbtTickCache.computeIfAbsent(entity, ExtensionFunctions::computeEntityNbt);
     }
+
+    public static CompoundTag getEntityNbt(Entity entity) {
+        return getCachedEntityNbt(entity);
+    }
+
+    public static boolean matchesEntityNbt(Entity entity, CompoundTag pattern) {
+        return NbtUtils.compareNbt(pattern, getCachedEntityNbt(entity), true);
+    }
+
 
     // Text building
 
