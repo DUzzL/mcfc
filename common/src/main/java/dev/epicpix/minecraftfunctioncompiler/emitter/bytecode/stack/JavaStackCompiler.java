@@ -240,7 +240,8 @@ public class JavaStackCompiler {
                 switch(jumpType) {
                     case IF_EQUAL_ZERO, IF_NOT_EQUAL_ZERO, IF_LESS_THAN_ZERO, IF_LESS_EQUAL_ZERO, IF_GREATER_THAN_ZERO,
                          IF_GREATER_EQUAL_ZERO -> {
-                        if(a != ConstantDescs.CD_long && a != ConstantDescs.CD_float && a != ConstantDescs.CD_double && !isIntegerLike(a)) {
+                        if(a != ConstantDescs.CD_long && a != ConstantDescs.CD_float && a != ConstantDescs.CD_double
+                                && !isIntegerLike(a) && !a.isClassOrInterface() && !a.isArray()) {
                             throw new IllegalArgumentException("Cannot compare " + a + " and 0");
                         }
                         return true;
@@ -523,6 +524,9 @@ public class JavaStackCompiler {
                         }else if(a == ConstantDescs.CD_double) {
                             cb.loadConstant(0D);
                             cb.dcmpl();
+                        }else if(a.isClassOrInterface() || a.isArray()) {
+                            cb.ifnull(labelMap.get(label));
+                            return;
                         }else if(!isIntegerLike(a)) {
                             throw new IllegalArgumentException("Cannot compare " + a + " and 0");
                         }
@@ -539,6 +543,9 @@ public class JavaStackCompiler {
                         }else if(a == ConstantDescs.CD_double) {
                             cb.loadConstant(0D);
                             cb.dcmpl();
+                        }else if(a.isClassOrInterface() || a.isArray()) {
+                            cb.ifnonnull(labelMap.get(label));
+                            return;
                         }else if(!isIntegerLike(a)) {
                             throw new IllegalArgumentException("Cannot compare " + a + " and 0");
                         }
@@ -555,6 +562,11 @@ public class JavaStackCompiler {
                         }else if(a == ConstantDescs.CD_double) {
                             cb.loadConstant(0D);
                             cb.dcmpl();
+                        }else if(a.isClassOrInterface() || a.isArray()) {
+                            // null is treated as 0 — "null < 0" is never true
+                            // pop and don't jump (discard the reference)
+                            cb.pop();
+                            return;
                         }else if(!isIntegerLike(a)) {
                             throw new IllegalArgumentException("Cannot compare " + a + " and 0");
                         }
@@ -571,6 +583,10 @@ public class JavaStackCompiler {
                         }else if(a == ConstantDescs.CD_double) {
                             cb.loadConstant(0D);
                             cb.dcmpl();
+                        }else if(a.isClassOrInterface() || a.isArray()) {
+                            // null treated as 0 — "null <= 0" is always true → ifnull covers it
+                            cb.ifnull(labelMap.get(label));
+                            return;
                         }else if(!isIntegerLike(a)) {
                             throw new IllegalArgumentException("Cannot compare " + a + " and 0");
                         }
@@ -587,6 +603,10 @@ public class JavaStackCompiler {
                         }else if(a == ConstantDescs.CD_double) {
                             cb.loadConstant(0D);
                             cb.dcmpg();
+                        }else if(a.isClassOrInterface() || a.isArray()) {
+                            // null treated as 0 — "null > 0" is never true
+                            cb.pop();
+                            return;
                         }else if(!isIntegerLike(a)) {
                             throw new IllegalArgumentException("Cannot compare " + a + " and 0");
                         }
@@ -603,6 +623,10 @@ public class JavaStackCompiler {
                         }else if(a == ConstantDescs.CD_double) {
                             cb.loadConstant(0D);
                             cb.dcmpg();
+                        }else if(a.isClassOrInterface() || a.isArray()) {
+                            // null treated as 0 — "null >= 0" is always true → ifnull covers it
+                            cb.ifnull(labelMap.get(label));
+                            return;
                         }else if(!isIntegerLike(a)) {
                             throw new IllegalArgumentException("Cannot compare " + a + " and 0");
                         }
