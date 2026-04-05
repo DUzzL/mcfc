@@ -523,12 +523,8 @@ public class ExtensionFunctions {
                 yield Boolean.TRUE;
             }
             case "CustomName" -> {
-                if (!(value instanceof StringTag expected)) yield null;
-                var customName = entity.getCustomName();
-                if (customName == null) yield Boolean.FALSE;
-                // Minecraft serializes CustomName as JSON — match that format
-                var actual = net.minecraft.network.chat.Component.Serializer.toJson(customName, entity.registryAccess());
-                yield Boolean.valueOf(actual.equals(expected.asString().orElse("")));
+                // Component.Serializer.toJson removed in MC 26.1 — fall back to full serialization
+                yield null;
             }
             case "CustomNameVisible" -> {
                 if (!(value instanceof ByteTag expected)) yield null;
@@ -753,15 +749,14 @@ public class ExtensionFunctions {
     // Time
 
     public static void setDayTime(MinecraftServer server, int time) {
-        for (var level : server.getAllLevels()) {
-            level.setDayTime(time);
-        }
+        // MC 26.1 removed ServerLevel.setDayTime()/getDayTime() - the time system
+        // now uses WORLD_CLOCK registry. Fall back to performPrefixedCommand.
+        // time set is called rarely so the feedback is not a significant spam issue.
+        server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "time set " + time);
     }
 
     public static void addDayTime(MinecraftServer server, int time) {
-        for (var level : server.getAllLevels()) {
-            level.setDayTime(level.getDayTime() + time);
-        }
+        server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "time add " + time);
     }
 
     public static int queryDayTime(MinecraftServer server) {
@@ -805,7 +800,7 @@ public class ExtensionFunctions {
         gameRules.visitGameRuleTypes(new net.minecraft.world.level.gamerules.GameRuleTypeVisitor() {
             @Override
             public <T> void visit(net.minecraft.world.level.gamerules.GameRule<T> gameRule) {
-                if (gameRule.id().equals(rule)) {
+                if (rule.equals(gameRule.id())) {
                     T val = gameRules.get(gameRule);
                     result[0] = gameRule.getCommandResult(val);
                 }
