@@ -63,6 +63,15 @@ private fun fixKotlinDesc(type: KSType): String {
         "kotlin.Int" -> "I"
         "kotlin.String" -> "Ljava/lang/String;"
         "kotlin.collections.MutableList" -> "Ljava/util/List;"
+        "kotlin.collections.MutableCollection" -> "Ljava/util/Collection;"
+        "kotlin.collections.MutableSet" -> "Ljava/util/Set;"
+        "kotlin.collections.MutableMap" -> "Ljava/util/Map;"
+        "kotlin.collections.List" -> "Ljava/util/List;"
+        "kotlin.collections.Collection" -> "Ljava/util/Collection;"
+        "kotlin.collections.Set" -> "Ljava/util/Set;"
+        "kotlin.collections.Map" -> "Ljava/util/Map;"
+        "kotlin.collections.Iterable" -> "Ljava/lang/Iterable;"
+        "kotlin.collections.MutableIterable" -> "Ljava/lang/Iterable;"
         "kotlin.Array" -> "[Ljava/lang/Object;"
         else -> {
             if(from.startsWith("kotlin.")) throw IllegalArgumentException("Unknown kotlin class: $from")

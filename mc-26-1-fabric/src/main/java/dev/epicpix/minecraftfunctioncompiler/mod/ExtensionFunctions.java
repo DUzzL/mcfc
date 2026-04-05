@@ -602,7 +602,7 @@ public class ExtensionFunctions {
      * stable (between ticks) to amortize serialization cost across CPU cores.
      * NOT safe to call while entity state may be mutated concurrently.
      */
-    public static void precomputeEntityNbtAsync(java.util.Collection<? extends Entity> entities, MinecraftServer server) {
+    public static void precomputeEntityNbtAsync(java.util.List<? extends Entity> entities, MinecraftServer server) {
         int currentTick = server.getTickCount();
         if (currentTick != entityNbtCacheTick) {
             entityNbtTickCache.clear();
