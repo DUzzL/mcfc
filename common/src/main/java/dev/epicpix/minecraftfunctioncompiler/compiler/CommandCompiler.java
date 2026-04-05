@@ -1440,14 +1440,16 @@ public final class CommandCompiler {
             // time query namespaced (minecraft:day, minecraft:daytime, etc.)
             case CommandTimeQueryNamespaced(DataLocation query) -> {
                 result.markImplemented();
-                var val = context.<Integer>createLocal();
-                context.writeInstruction(switch(query.path()) {
-                    case "day" -> Instructions.queryDay(val);
-                    case "daytime" -> Instructions.queryDayTime(val);
-                    case "gametime" -> Instructions.queryGameTime(val);
-                    default -> Instructions.queryDayTime(val);
-                });
-                result.updateResultValue(val);
+                try(var world = context.getWorld()) {
+                    var val = context.<Integer>createLocal();
+                    world.writeInstruction(switch(query.path()) {
+                        case "day" -> Instructions.queryDay(val, world.content());
+                        case "daytime" -> Instructions.queryDayTime(val, world.content());
+                        case "gametime" -> Instructions.queryGameTime(val, world.content());
+                        default -> Instructions.queryDayTime(val, world.content());
+                    });
+                    result.updateResultValue(val);
+                }
             }
 
             // tp — vanilla fallback

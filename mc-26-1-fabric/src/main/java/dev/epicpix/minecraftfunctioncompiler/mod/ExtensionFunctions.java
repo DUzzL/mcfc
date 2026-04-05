@@ -820,6 +820,18 @@ public class ExtensionFunctions {
         return TimeCommand.wrapTime(gameTime);
     }
 
+    public static int queryDayTime(MinecraftServer server, ServerLevel world) {
+        Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
+        long totalTicks = server.clockManager().getTotalTicks(clock);
+        return TimeCommand.wrapTime(totalTicks % 24000L);
+    }
+
+    public static int queryDay(MinecraftServer server, ServerLevel world) {
+        Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
+        long totalTicks = server.clockManager().getTotalTicks(clock);
+        return TimeCommand.wrapTime(totalTicks / 24000L);
+    }
+
     // Schedule
 
     public static void scheduleFunction(MinecraftServer server, String function, int time, boolean append) {
