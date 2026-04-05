@@ -134,46 +134,51 @@ public class FunctionCodeGenerator {
     }
 
     public static HashMap<DataLocation, List<Instruction>> compileFunctionsHighLevel(HashMap<DataLocation, List<CommandParams>> definedFunctions, DiagnosticCollector diagnostics, int @Nullable [] instructionCounts, boolean addReq) {
-        HashMap<DataLocation, List<Instruction>> compiledFunctions = new HashMap<>();
-        for(var func : definedFunctions.entrySet()) {
+        var compiledFunctions = new java.util.concurrent.ConcurrentHashMap<DataLocation, List<Instruction>>();
+        var counter = new java.util.concurrent.atomic.AtomicInteger(0);
+        definedFunctions.entrySet().parallelStream().forEach(func -> {
             var key = func.getKey();
             var value = func.getValue();
             try {
                 var compiled = CommandCompiler.compile(key, value);
-                if(instructionCounts != null) instructionCounts[0] += compiled.size();
+                if(instructionCounts != null) counter.addAndGet(compiled.size());
                 if(addReq) compiled = Instructions.addStaticRequirements(compiled);
                 compiledFunctions.put(key, compiled);
             }catch(DiagnosticException e) {
                 LOGGER.warn("Failed to compile function {} / {}", key, e.getMessage());
-                diagnostics.addDiagnostic(e.toDiagnostic());
+                diagnostics.addDiagnosticSafe(e.toDiagnostic());
             }catch(Throwable e) {
                 LOGGER.error("Failed to compile function {}", key, e);
-                diagnostics.addDiagnostic(Diagnostic.compileError(UNSPECIFIED_COMMAND_ERROR, key, e.getMessage(), e));
+                diagnostics.addDiagnosticSafe(Diagnostic.compileError(UNSPECIFIED_COMMAND_ERROR, key, e.getMessage(), e));
             }
-        }
-        return compiledFunctions;
+        });
+        if(instructionCounts != null) instructionCounts[0] = counter.get();
+        return new HashMap<>(compiledFunctions);
     }
 
     public static HashMap<DataLocation, List<Instruction>> optimizeFunctionsHighLevel(HashMap<DataLocation, List<Instruction>> compiled, DiagnosticCollector diagnostics, int @Nullable [] instructionCounts, boolean addReq) {
-        HashMap<DataLocation, List<Instruction>> compiledFunctions = new HashMap<>();
-        var tarjan = new LengauerTarjan();
-        for(var func : compiled.entrySet()) {
+        var compiledFunctions = new java.util.concurrent.ConcurrentHashMap<DataLocation, List<Instruction>>();
+        var counter = new java.util.concurrent.atomic.AtomicInteger(0);
+        compiled.entrySet().parallelStream().forEach(func -> {
+            // LengauerTarjan is stateful — create a new instance per thread
+            var tarjan = new LengauerTarjan();
             var key = func.getKey();
             var value = func.getValue();
             try {
                 var optimized = Optimizer.optimize(value, tarjan);
-                if(instructionCounts != null) instructionCounts[1] += optimized.size();
+                if(instructionCounts != null) counter.addAndGet(optimized.size());
                 if(addReq) optimized = Instructions.addStaticRequirements(optimized);
                 compiledFunctions.put(key, optimized);
             }catch(DiagnosticException e) {
                 LOGGER.warn("Failed to optimize function {} / {}", key, e.getMessage());
-                diagnostics.addDiagnostic(e.toDiagnostic());
+                diagnostics.addDiagnosticSafe(e.toDiagnostic());
             }catch(Throwable e) {
                 LOGGER.error("Failed to optimize function {}", key, e);
-                diagnostics.addDiagnostic(Diagnostic.compileError(UNSPECIFIED_COMMAND_ERROR, key, e.getMessage(), e));
+                diagnostics.addDiagnosticSafe(Diagnostic.compileError(UNSPECIFIED_COMMAND_ERROR, key, e.getMessage(), e));
             }
-        }
-        return compiledFunctions;
+        });
+        if(instructionCounts != null) instructionCounts[1] = counter.get();
+        return new HashMap<>(compiledFunctions);
     }
 
     public interface NbtTagBytecodeStringGenerator {
@@ -226,7 +231,7 @@ public class FunctionCodeGenerator {
         context.codeWriter().returnValue(context.codeWriter().writeTarget(target, arguments));
     }
 
-    public static byte[] generateFunctionClass(CompilationParams params, DataLocation funcId, List<Instruction> instructions, Set<DataLocation> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions) {
+    public static byte[] generateFunctionClass(CompilationParams params, DataLocation funcId, List<Instruction> instructions, Set<DataLocation> compiledFunctions, java.util.Map<String, List<BytecodeInstruction>> lowLevelFunctions) {
         var macroInstructions = Instruction.findTyped(instructions, InstructionTypes.LOAD_MACRO);
         var macroInputs = new ArrayList<MacroInput>();
         for(var macroInstr : macroInstructions) {

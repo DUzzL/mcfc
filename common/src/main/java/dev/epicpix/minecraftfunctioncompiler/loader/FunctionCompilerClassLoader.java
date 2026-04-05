@@ -160,19 +160,34 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         return true;
     }
 
-    private HashMap<DataLocation, Class<?>> loadFunctions(CompilationParams params, HashMap<DataLocation, List<String>> functionSources, HashMap<DataLocation, List<Instruction>> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions, int[] totalClassFileSize) {
-        var loadedFunctions = new HashMap<DataLocation, Class<?>>();
+    private HashMap<DataLocation, Class<?>> loadFunctions(CompilationParams params, HashMap<DataLocation, List<String>> functionSources, HashMap<DataLocation, List<Instruction>> compiledFunctions, java.util.concurrent.ConcurrentHashMap<String, List<BytecodeInstruction>> lowLevelFunctions, java.util.concurrent.atomic.AtomicInteger[] totalClassFileSize) {
         var compiledFunctionSet = new HashSet<>(compiledFunctions.keySet());
-        for(var key : compiledFunctions.keySet()) {
+
+        // Phase 1: generate bytecode in parallel — purely functional, no shared mutable state
+        // (lowLevelFunctions is ConcurrentHashMap, safe for concurrent writes)
+        var generatedBytes = new java.util.concurrent.ConcurrentHashMap<DataLocation, byte[]>();
+        compiledFunctions.entrySet().parallelStream().forEach(entry -> {
+            var key = entry.getKey();
             try {
-                loadedFunctions.put(key, defineFunction(params, key, compiledFunctions.get(key), compiledFunctionSet, lowLevelFunctions, totalClassFileSize));
-            }catch(Throwable e) {
+                var bytes = FunctionCodeGenerator.generateFunctionClass(params, key, entry.getValue(), compiledFunctionSet, lowLevelFunctions);
+                totalClassFileSize[0].addAndGet(bytes.length);
+                generatedBytes.put(key, bytes);
+            } catch(Throwable e) {
                 if(e instanceof DiagnosticException de) {
-                    diagnostics.addDiagnostic(de.toDiagnostic());
+                    diagnostics.addDiagnosticSafe(de.toDiagnostic());
+                } else {
+                    diagnostics.addDiagnosticSafe(new Diagnostic(DiagnosticKind.LOAD_ERROR, FUNCTION_CLASS_LOAD_FAILED, "Failed to load function (" + key + ")", null, key, null, e));
                 }
-                diagnostics.addDiagnostic(new Diagnostic(DiagnosticKind.LOAD_ERROR, FUNCTION_CLASS_LOAD_FAILED, "Failed to load function (" + key + ")", null, key, null, e));
                 LOGGER.error("Failed to load function ({}), skipping", key, e);
             }
+        });
+
+        // Phase 2: defineClass is synchronized inside ClassLoader — must be sequential
+        var loadedFunctions = new HashMap<DataLocation, Class<?>>();
+        for(var entry : generatedBytes.entrySet()) {
+            var key = entry.getKey();
+            var name = ("mcfc/function/" + key.namespace() + "/" + key.path()).replace('.', '$').replace('/', '.');
+            loadedFunctions.put(key, defineClass(name, entry.getValue()));
         }
         return loadedFunctions;
     }
@@ -296,9 +311,12 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         LOGGER.info("Loading functions");
 
         setState(State.LOADING);
-        HashMap<String, List<BytecodeInstruction>> lowLevelFunctions = new HashMap<>();
+        var lowLevelFunctions = new java.util.concurrent.ConcurrentHashMap<String, List<BytecodeInstruction>>();
         var startLoader = System.nanoTime();
-        var totalClassFileSize = new int[2];
+        var totalClassFileSize = new java.util.concurrent.atomic.AtomicInteger[]{
+            new java.util.concurrent.atomic.AtomicInteger(0),
+            new java.util.concurrent.atomic.AtomicInteger(0)
+        };
         var loadableFunctions = new HashMap<DataLocation, List<Instruction>>();
         for(var entry : optimizedFunctions.entrySet()) {
             if(entry.getValue().size() > 5000) {
@@ -380,8 +398,8 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
             highLevelInstructionCounts[0],
             highLevelInstructionCounts[1],
             lowLevelFunctions.values().stream().mapToInt(List::size).sum(),
-            totalClassFileSize[0],
-            totalClassFileSize[1]
+            totalClassFileSize[0].get(),
+            totalClassFileSize[1].get()
         );
         FunctionCompilerReporter.reportCompilationStatistics(functionCountsData, timingData, codeGenMetrics, diagnostics.getDiagnostics());
 
@@ -395,17 +413,10 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         }
     }
 
-    private Class<?> defineFunction(CompilationParams params, DataLocation funcId, List<Instruction> instructions, Set<DataLocation> compiledFunctions, HashMap<String, List<BytecodeInstruction>> lowLevelFunctions, int[] totalClassFileSize) {
-        var bytes = FunctionCodeGenerator.generateFunctionClass(params, funcId, instructions, compiledFunctions, lowLevelFunctions);
 
-        totalClassFileSize[0] += bytes.length;
-        var name = ("mcfc/function/" + funcId.namespace() + "/" + funcId.path()).replace('.', '$').replace('/', '.');
-        return defineClass(name, bytes);
-    }
-
-    private Class<?> loadData(CodeFieldStorage fieldStorage, Object serverFunctionManager, HashMap<String, List<BytecodeInstruction>> lowLevelInstructions, int[] totalClassFileSize) throws Throwable {
-        var dataClassBytes = fieldStorage.generate(lowLevelInstructions);
-        totalClassFileSize[1] += dataClassBytes.length;
+    private Class<?> loadData(CodeFieldStorage fieldStorage, Object serverFunctionManager, java.util.concurrent.ConcurrentHashMap<String, List<BytecodeInstruction>> lowLevelInstructions, java.util.concurrent.atomic.AtomicInteger[] totalClassFileSize) throws Throwable {
+        var dataClassBytes = fieldStorage.generate(new HashMap<>(lowLevelInstructions));
+        totalClassFileSize[1].addAndGet(dataClassBytes.length);
         var desc = DATA_CLASS.descriptorString();
         var defined = defineClass(desc.substring(1, desc.length() - 1).replace('/', '.'), dataClassBytes);
         var lookup = MethodHandles.lookup();
