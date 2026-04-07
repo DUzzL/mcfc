@@ -282,11 +282,18 @@ class MainProcessor(
         map.appendText("import java.lang.constant.MethodTypeDesc;\n")
         map.appendText("import static ${resultPackage}.EmitterTargets.TARGETS;\n")
         map.appendText("public class $resultName {\n")
-        map.appendText("    public static void registerInstructionEmitters() {\n")
-        map.appendText("        dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructions.registerEmitterInstruction((context) -> {\n")
-        map.appendText("            var cw = context.codeWriter();\n")
-        map.appendText("            var type = context.instruction().type();\n")
+
         val info = mutableMapOf<String, List<AccessorStatistics>>()
+        val enumFile = file.headers["enum_file"]!!
+
+        // Collect all matching definitions with their generated code
+        data class DefinitionChunkEntry(
+            val name: String,
+            val generatedCode: String,
+            val writeReturn: Boolean,
+            val stats: List<AccessorStatistics>,
+        )
+        val allEntries = mutableListOf<DefinitionChunkEntry>()
         file.definitions.forEach {
             if(it.usesObf != common) {
                 val matchesVersion = if(it.versionRange == null) true else {
@@ -299,18 +306,46 @@ class MainProcessor(
                     }
                 }
                 if(matchesVersion) {
-                    map.appendText("            if(type == ${file.headers["enum_file"]}.${it.name.uppercase()}) {\n")
                     val output = ByteArrayOutputStream()
                     val codeGenResult = generateCode(it, file, output, minecraftVersion, targets)
                     info[it.name] = codeGenResult.first
-                    map.appendText(output.toByteArray().decodeToString().trimEnd().prependIndent("                "))
-                    map.appendText("\n")
-                    if(codeGenResult.second) {
-                        map.appendText("                return true;\n")
-                    }
-                    map.appendText("            }\n")
+                    allEntries.add(DefinitionChunkEntry(
+                        name = it.name,
+                        generatedCode = output.toByteArray().decodeToString(),
+                        writeReturn = codeGenResult.second,
+                        stats = codeGenResult.first,
+                    ))
                 }
             }
+        }
+
+        // Split definitions into chunks to avoid JVM method size limit (64KB bytecode)
+        val maxChunkSize = 15
+        val chunks = allEntries.chunked(maxChunkSize)
+
+        // Generate a private static method for each chunk
+        for((chunkIndex, chunk) in chunks.withIndex()) {
+            map.appendText("    private static boolean emitChunk$chunkIndex(dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext context, dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter cw, dev.epicpix.minecraftfunctioncompiler.il.InstructionType type) {\n")
+            for(entry in chunk) {
+                map.appendText("        if(type == $enumFile.${entry.name.uppercase()}) {\n")
+                map.appendText(entry.generatedCode.trimEnd().prependIndent("            "))
+                map.appendText("\n")
+                if(entry.writeReturn) {
+                    map.appendText("            return true;\n")
+                }
+                map.appendText("        }\n")
+            }
+            map.appendText("        return false;\n")
+            map.appendText("    }\n")
+        }
+
+        // Generate the main registration method that delegates to chunk methods
+        map.appendText("    public static void registerInstructionEmitters() {\n")
+        map.appendText("        dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructions.registerEmitterInstruction((context) -> {\n")
+        map.appendText("            var cw = context.codeWriter();\n")
+        map.appendText("            var type = context.instruction().type();\n")
+        for(chunkIndex in chunks.indices) {
+            map.appendText("            if(emitChunk$chunkIndex(context, cw, type)) return true;\n")
         }
         map.appendText("            return false;\n")
         map.appendText("        });\n")
@@ -325,16 +360,24 @@ class MainProcessor(
         mapTargets.appendText("import java.lang.constant.ConstantDescs;\n")
         mapTargets.appendText("import java.lang.constant.MethodTypeDesc;\n")
         mapTargets.appendText("public class EmitterTargets {\n")
-        mapTargets.appendText("    public static final InstructionTarget[] TARGETS = {\n")
-        for(targetIndex in targets.indices) {
-            val target = targets[targetIndex]
-            if(targetIndex != targets.size - 1) {
-                mapTargets.appendText("        $target,\n")
-            } else {
-                mapTargets.appendText("        $target\n")
+        mapTargets.appendText("    public static final InstructionTarget[] TARGETS = new InstructionTarget[${targets.size}];\n")
+
+        // Split static initializer into chunk methods to avoid JVM method size limit
+        val targetChunkSize = 30
+        val targetChunks = targets.chunked(targetChunkSize)
+        for((chunkIdx, chunk) in targetChunks.withIndex()) {
+            val startIndex = chunkIdx * targetChunkSize
+            mapTargets.appendText("    private static void initTargets$chunkIdx() {\n")
+            for((i, target) in chunk.withIndex()) {
+                mapTargets.appendText("        TARGETS[${startIndex + i}] = $target;\n")
             }
+            mapTargets.appendText("    }\n")
         }
-        mapTargets.appendText("    };\n")
+        mapTargets.appendText("    static {\n")
+        for(chunkIdx in targetChunks.indices) {
+            mapTargets.appendText("        initTargets$chunkIdx();\n")
+        }
+        mapTargets.appendText("    }\n")
         mapTargets.appendText("}\n")
 
         if(!common) return
