@@ -317,15 +317,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
             new java.util.concurrent.atomic.AtomicInteger(0),
             new java.util.concurrent.atomic.AtomicInteger(0)
         };
-        var loadableFunctions = new HashMap<DataLocation, List<Instruction>>();
-        for(var entry : optimizedFunctions.entrySet()) {
-            if(entry.getValue().size() > 5000) {
-                diagnostics.addDiagnostic(new Diagnostic(DiagnosticKind.LOAD_ERROR, FUNCTION_LOAD_TOO_BIG, "Function has too many instructions, ignoring", null, entry.getKey(), null, null));
-                LOGGER.warn("Function has too many instructions, ignoring: {}", entry.getKey());
-            }else {
-                loadableFunctions.put(entry.getKey(), entry.getValue());
-            }
-        }
+        var loadableFunctions = new HashMap<DataLocation, List<Instruction>>(optimizedFunctions);
         var loadedFunctions = loadFunctions(params, functionSources, loadableFunctions, lowLevelFunctions, totalClassFileSize);
         if(loadedFunctions == null) return;
 

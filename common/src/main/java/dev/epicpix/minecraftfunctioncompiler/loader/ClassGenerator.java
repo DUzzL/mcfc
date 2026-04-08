@@ -35,8 +35,6 @@ public class ClassGenerator {
         return className;
     }
 
-    // TODO: all of the BytecodeInstructions get generated at once, instead of trying to split them into multiple functions when there's too much code in one function
-    // ^^^^ note that even after having functions split, the class might still be too big, so there would have to be a thing which splits instructions into different classes as well
     public void addFunction(String name, List<BytecodeInstruction> instructions, MethodTypeDesc methodType) {
         var stackInstructions = StackCompiler.compileInstructions(instructions);
         builder.withMethodBody(name, methodType, ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, codeBuilder -> {
