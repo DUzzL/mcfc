@@ -348,16 +348,29 @@ public class FunctionCodeGenerator {
     ) {
         var nbtType = params.codeFieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND);
 
-        // Extract the initialization prefix: instructions before the first LABEL.
-        // These initialize function-scope locals (e.g., commandStack from GET_COMMAND_STACK)
-        // from static arguments and must be replicated at the start of every non-first chunk
-        // so that each chunk can independently access the correct CommandSourceStack.
+        // Extract the initialization prefix: leading instructions that write to locals
+        // from static arguments only (no local reads, no label references).
+        // In practice this is just GET_COMMAND_STACK at position 0. These must be replicated
+        // at the start of every non-first chunk so each chunk independently accesses the CSS.
         int prefixEnd = 0;
+        outer:
         for(int idx = 0; idx < instructions.size(); idx++) {
-            if(instructions.get(idx).type() == InstructionTypes.LABEL) {
-                prefixEnd = idx;
-                break;
+            var instr = instructions.get(idx);
+            if(instr.data() != null) {
+                for(int j = 0; j < instr.data().length; j++) {
+                    var datum = instr.data()[j];
+                    if(datum instanceof LocationData<?> loc && loc.local() != null
+                            && !(j == 0 && instr.type().returnsValue())) {
+                        prefixEnd = idx;
+                        break outer;
+                    }
+                    if(datum instanceof LabelData) {
+                        prefixEnd = idx;
+                        break outer;
+                    }
+                }
             }
+            if(idx == instructions.size() - 1) prefixEnd = instructions.size();
         }
         var initPrefix = instructions.subList(0, prefixEnd);
 
@@ -442,23 +455,42 @@ public class FunctionCodeGenerator {
      * This avoids falsely blocking splits when the same slot is reused for independent values
      * (e.g., a result register written and read by every command independently).
      *
-     * Locals written in the "initialization prefix" (all instructions before the first LABEL) are
-     * excluded from the live-range analysis. These are function-scope context locals (e.g.,
-     * commandStack from GET_COMMAND_STACK) that are re-initialized at the start of every chunk via
+     * Locals written in the "initialization prefix" are excluded from the live-range analysis.
+     * The prefix consists of the leading instructions that write only to locals from static
+     * arguments (no local reads, no label references) — in practice just the GET_COMMAND_STACK
+     * instruction at position 0. These locals are re-initialized at the start of every chunk via
      * the chunk's own parameters, so they must not block split points across command boundaries.
      */
     private static List<Integer> findSafeInstructionSplitPoints(List<Instruction> instructions) {
         int n = instructions.size();
 
-        // Identify the initialization prefix: instructions before the first LABEL.
-        // Locals written here (e.g. commandStack) will be re-initialized in every chunk,
-        // so they must not contribute live-range spans that block all split points.
+        // Identify the initialization prefix: leading instructions that write to locals
+        // from static arguments only (no local reads, no label references).
+        // In practice this is just the GET_COMMAND_STACK instruction at position 0.
+        // These locals are re-initialized at the start of every chunk, so they must not
+        // contribute live-range spans that block split points across command boundaries.
         int prefixEnd = 0;
+        outer:
         for(int idx = 0; idx < n; idx++) {
-            if(instructions.get(idx).type() == InstructionTypes.LABEL) {
-                prefixEnd = idx;
-                break;
+            var instr = instructions.get(idx);
+            if(instr.data() != null) {
+                for(int j = 0; j < instr.data().length; j++) {
+                    var datum = instr.data()[j];
+                    // local read (not the result slot) → end of prefix
+                    if(datum instanceof LocationData<?> loc && loc.local() != null
+                            && !(j == 0 && instr.type().returnsValue())) {
+                        prefixEnd = idx;
+                        break outer;
+                    }
+                    // label reference → end of prefix
+                    if(datum instanceof LabelData) {
+                        prefixEnd = idx;
+                        break outer;
+                    }
+                }
             }
+            // If we never broke out, extend to next instruction
+            if(idx == n - 1) prefixEnd = n;
         }
         var prefixLocals = new HashSet<Integer>();
         for(int idx = 0; idx < prefixEnd; idx++) {
