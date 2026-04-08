@@ -412,19 +412,20 @@ public class FunctionCodeGenerator {
      * - No local written before the split is read after the split
      * - No label defined before the split is referenced after the split (and vice versa)
      *
-     * Uses O(n + k) memory via sweep line (k = number of distinct locals/labels),
-     * instead of O(n * k) from the old suffix-set-copy approach.
+     * Uses per-definition liveness for locals: if local slot L is written at positions
+     * w0 < w1 < w2 ..., then the live range of definition w_k is [w_k, max_read_before_w_{k+1}].
+     * This avoids falsely blocking splits when the same slot is reused for independent values
+     * (e.g., a result register written and read by every command independently).
      */
     private static List<Integer> findSafeInstructionSplitPoints(List<Instruction> instructions) {
         int n = instructions.size();
 
-        // For each local: track the range [first_write, last_read]
-        // A split at i is blocked if first_write < i AND last_read >= i
-        var localMinWrite = new HashMap<Integer, Integer>();
-        var localMaxRead = new HashMap<Integer, Integer>();
+        // For each local slot: collect all write positions (sorted)
+        var localWrites = new HashMap<Integer, List<Integer>>();
+        // For each local slot at each position: is this position a read?
+        var localReads = new HashMap<Integer, List<Integer>>();
 
         // For each label: track define position and reference range
-        // A split at i is blocked if the range [min(def,minRef), max(def,maxRef)] spans i
         var labelDefine = new HashMap<Integer, Integer>();
         var labelMinRef = new HashMap<Integer, Integer>();
         var labelMaxRef = new HashMap<Integer, Integer>();
@@ -436,9 +437,9 @@ public class FunctionCodeGenerator {
                     var datum = instr.data()[j];
                     if(datum instanceof LocationData<?> loc && loc.local() != null) {
                         if(j == 0 && instr.type().returnsValue()) {
-                            localMinWrite.merge(loc.local(), idx, Math::min);
+                            localWrites.computeIfAbsent(loc.local(), k -> new ArrayList<>()).add(idx);
                         } else {
-                            localMaxRead.merge(loc.local(), idx, Math::max);
+                            localReads.computeIfAbsent(loc.local(), k -> new ArrayList<>()).add(idx);
                         }
                     } else if(datum instanceof LabelData label) {
                         if(instr.type() == InstructionTypes.LABEL) {
@@ -452,16 +453,36 @@ public class FunctionCodeGenerator {
             }
         }
 
-        // Sweep line: for each range [start, end], mark delta[start+1]++ and delta[end+1]--
-        // A split at position i is safe when the cumulative sum is 0 (no active ranges crossing i)
+        // Delta array for sweep-line: delta[i]++ means a live range starts at i,
+        // delta[i]-- means one ends before i.
         int[] delta = new int[n + 2];
 
-        // Local ranges: [minWrite, maxRead]
-        for(var entry : localMinWrite.entrySet()) {
-            Integer maxRead = localMaxRead.get(entry.getKey());
-            if(maxRead != null && entry.getValue() < maxRead) {
-                delta[entry.getValue() + 1]++;
-                delta[maxRead + 1]--;
+        // Per-definition live ranges for locals.
+        // For definition at write position w_k in slot L:
+        //   - live range end = max read position of L that is < next write in L (or < n if last write)
+        // If no reads exist in that window, the definition is dead immediately (range [w_k, w_k]).
+        for(var entry : localWrites.entrySet()) {
+            int slot = entry.getKey();
+            var writes = entry.getValue(); // already in insertion order (ascending idx)
+            var reads = localReads.getOrDefault(slot, List.of());
+
+            for(int wi = 0; wi < writes.size(); wi++) {
+                int writePos = writes.get(wi);
+                int nextWritePos = (wi + 1 < writes.size()) ? writes.get(wi + 1) : n;
+
+                // Find max read position strictly between writePos and nextWritePos
+                int maxRead = writePos; // no reads → range is trivial [writePos, writePos]
+                for(int rp : reads) {
+                    if(rp > writePos && rp < nextWritePos) {
+                        maxRead = Math.max(maxRead, rp);
+                    }
+                }
+
+                if(writePos < maxRead) {
+                    delta[writePos + 1]++;
+                    delta[maxRead + 1]--;
+                }
+                // else: definition is dead before next write — no range to block
             }
         }
 
@@ -488,7 +509,7 @@ public class FunctionCodeGenerator {
             }
         }
 
-        // Sweep: split at position i is safe when no ranges cross it
+        // Sweep: split at position i is safe when no live ranges cross it
         var safePoints = new ArrayList<Integer>();
         int active = 0;
         for(int i = 1; i < n; i++) {

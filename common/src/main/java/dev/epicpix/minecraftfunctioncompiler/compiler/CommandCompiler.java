@@ -1358,6 +1358,40 @@ public final class CommandCompiler {
                 emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " append from " + nbtDataLocationToString(source));
             case CommandDataModifyAppendFromPath(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
                 emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " append from " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath));
+            case CommandDataModifyInsertFrom(NbtDataLocation destination, NbtPath path, int index, NbtDataLocation source) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " insert " + index + " from " + nbtDataLocationToString(source));
+            case CommandDataModifyInsertFromPath(NbtDataLocation destination, NbtPath path, int index, NbtDataLocation source, NbtPath sourcePath) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " insert " + index + " from " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath));
+            case CommandDataModifyMergeValue(NbtDataLocation destination, NbtPath path, NbtValue setValue) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " merge value " + nbtValueToString(setValue));
+            case CommandDataModifyMergeFrom(NbtDataLocation destination, NbtPath path, NbtDataLocation source) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " merge from " + nbtDataLocationToString(source));
+            case CommandDataModifyMergeFromPath(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " merge from " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath));
+            case CommandDataModifySetString(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " set string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath));
+            case CommandDataModifySetStringStart(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath, int start) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " set string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath) + " " + start);
+            case CommandDataModifySetStringRange(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath, int start, int end) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " set string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath) + " " + start + " " + end);
+            case CommandDataModifyAppendString(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " append string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath));
+            case CommandDataModifyAppendStringStart(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath, int start) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " append string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath) + " " + start);
+            case CommandDataModifyAppendStringRange(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath, int start, int end) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " append string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath) + " " + start + " " + end);
+            case CommandDataModifyPrependString(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " prepend string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath));
+            case CommandDataModifyPrependStringStart(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath, int start) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " prepend string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath) + " " + start);
+            case CommandDataModifyPrependStringRange(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath, int start, int end) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " prepend string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath) + " " + start + " " + end);
+            case CommandDataModifyInsertString(NbtDataLocation destination, NbtPath path, int index, NbtDataLocation source, NbtPath sourcePath) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " insert " + index + " string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath));
+            case CommandDataModifyInsertStringStart(NbtDataLocation destination, NbtPath path, int index, NbtDataLocation source, NbtPath sourcePath, int start) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " insert " + index + " string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath) + " " + start);
+            case CommandDataModifyInsertStringRange(NbtDataLocation destination, NbtPath path, int index, NbtDataLocation source, NbtPath sourcePath, int start, int end) ->
+                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " insert " + index + " string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath) + " " + start + " " + end);
 
             // data get — нативная реализация для entity (самый частый случай в датапаках)
             case CommandDataGetPath(NbtDataLocation source, NbtPath path) -> {
@@ -1461,6 +1495,18 @@ public final class CommandCompiler {
                 emitVanillaFallback(context, "tp " + targets + " " + worldCoordsToString(pos));
             case CommandTpTargetsPosRot(SelectorArgument targets, WorldCoordinates pos, RotationCoordinates rot) ->
                 emitVanillaFallback(context, "tp " + targets + " " + worldCoordsToString(pos) + " " + rot.yaw() + " " + rot.pitch());
+            case CommandTpTargetsPosFacingEntity(SelectorArgument targets, WorldCoordinates pos, SelectorArgument facingTarget) ->
+                emitVanillaFallback(context, "tp " + targets + " " + worldCoordsToString(pos) + " facing entity " + facingTarget);
+            case CommandTpTargetsPosFacingEntityAnchor(SelectorArgument targets, WorldCoordinates pos, SelectorArgument facingTarget, LocationAnchor anchor) ->
+                emitVanillaFallback(context, "tp " + targets + " " + worldCoordsToString(pos) + " facing entity " + facingTarget + " " + anchor.name().toLowerCase());
+            case CommandTpTargetsPosFacingPos(SelectorArgument targets, WorldCoordinates pos, WorldCoordinates facingPos) ->
+                emitVanillaFallback(context, "tp " + targets + " " + worldCoordsToString(pos) + " facing " + worldCoordsToString(facingPos));
+            case CommandTpPosFacingEntity(WorldCoordinates pos, SelectorArgument facingTarget) ->
+                emitVanillaFallback(context, "tp " + worldCoordsToString(pos) + " facing entity " + facingTarget);
+            case CommandTpPosFacingEntityAnchor(WorldCoordinates pos, SelectorArgument facingTarget, LocationAnchor anchor) ->
+                emitVanillaFallback(context, "tp " + worldCoordsToString(pos) + " facing entity " + facingTarget + " " + anchor.name().toLowerCase());
+            case CommandTpPosFacingPos(WorldCoordinates pos, WorldCoordinates facingPos) ->
+                emitVanillaFallback(context, "tp " + worldCoordsToString(pos) + " facing " + worldCoordsToString(facingPos));
             case CommandTpPos(WorldCoordinates pos) ->
                 emitVanillaFallback(context, "tp " + worldCoordsToString(pos));
 

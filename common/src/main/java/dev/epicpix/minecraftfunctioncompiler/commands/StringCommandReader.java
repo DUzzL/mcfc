@@ -198,7 +198,13 @@ public class StringCommandReader {
     public String readUntilSpace() {
         int start = index;
         while(canRead() && peek() != ' ') {
-            skip();
+            if(allowMacros && canRead(2) && peek(0) == '$' && peek(1) == '(') {
+                index += 2;
+                while(canRead() && peek() != ')') index++;
+                if(canRead()) index++;
+            } else {
+                skip();
+            }
         }
         return command.substring(start, index);
     }
@@ -303,8 +309,14 @@ public class StringCommandReader {
     public String readRemainder() {
         int start = index;
         while(canRead()) {
-            checkMacro(false);
-            skip();
+            if(allowMacros && canRead(2) && peek(0) == '$' && peek(1) == '(') {
+                index += 2;
+                while(canRead() && peek() != ')') index++;
+                if(canRead()) index++;
+            } else {
+                checkMacro(false);
+                skip();
+            }
         }
         return command.substring(start, index);
     }

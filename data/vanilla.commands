@@ -11,6 +11,23 @@ ADVANCEMENT_REVOKE_FROM/advancement revoke <targets:entity_selector[players]> fr
 ADVANCEMENT_REVOKE_THROUGH/advancement revoke <targets:entity_selector[players]> through <advancement:resource_location>
 ADVANCEMENT_REVOKE_UNTIL/advancement revoke <targets:entity_selector[players]> until <advancement:resource_location>
 
+DATA_MODIFY_MERGE_VALUE/data modify <destination:nbt_data_location> <path:nbt_path> merge value <value:nbt_value>
+DATA_MODIFY_MERGE_FROM/data modify <destination:nbt_data_location> <path:nbt_path> merge from <source:nbt_data_location>
+DATA_MODIFY_MERGE_FROM_PATH/data modify <destination:nbt_data_location> <path:nbt_path> merge from <source:nbt_data_location> <source_path:nbt_path>
+DATA_MODIFY_INSERT_FROM/data modify <destination:nbt_data_location> <path:nbt_path> insert <index:int> from <source:nbt_data_location>
+DATA_MODIFY_INSERT_FROM_PATH/data modify <destination:nbt_data_location> <path:nbt_path> insert <index:int> from <source:nbt_data_location> <source_path:nbt_path>
+DATA_MODIFY_SET_STRING/data modify <destination:nbt_data_location> <path:nbt_path> set string <source:nbt_data_location> <source_path:nbt_path>
+DATA_MODIFY_SET_STRING_START/data modify <destination:nbt_data_location> <path:nbt_path> set string <source:nbt_data_location> <source_path:nbt_path> <start:int>
+DATA_MODIFY_SET_STRING_RANGE/data modify <destination:nbt_data_location> <path:nbt_path> set string <source:nbt_data_location> <source_path:nbt_path> <start:int> <end:int>
+DATA_MODIFY_APPEND_STRING/data modify <destination:nbt_data_location> <path:nbt_path> append string <source:nbt_data_location> <source_path:nbt_path>
+DATA_MODIFY_APPEND_STRING_START/data modify <destination:nbt_data_location> <path:nbt_path> append string <source:nbt_data_location> <source_path:nbt_path> <start:int>
+DATA_MODIFY_APPEND_STRING_RANGE/data modify <destination:nbt_data_location> <path:nbt_path> append string <source:nbt_data_location> <source_path:nbt_path> <start:int> <end:int>
+DATA_MODIFY_PREPEND_STRING/data modify <destination:nbt_data_location> <path:nbt_path> prepend string <source:nbt_data_location> <source_path:nbt_path>
+DATA_MODIFY_PREPEND_STRING_START/data modify <destination:nbt_data_location> <path:nbt_path> prepend string <source:nbt_data_location> <source_path:nbt_path> <start:int>
+DATA_MODIFY_PREPEND_STRING_RANGE/data modify <destination:nbt_data_location> <path:nbt_path> prepend string <source:nbt_data_location> <source_path:nbt_path> <start:int> <end:int>
+DATA_MODIFY_INSERT_STRING/data modify <destination:nbt_data_location> <path:nbt_path> insert <index:int> string <source:nbt_data_location> <source_path:nbt_path>
+DATA_MODIFY_INSERT_STRING_START/data modify <destination:nbt_data_location> <path:nbt_path> insert <index:int> string <source:nbt_data_location> <source_path:nbt_path> <start:int>
+DATA_MODIFY_INSERT_STRING_RANGE/data modify <destination:nbt_data_location> <path:nbt_path> insert <index:int> string <source:nbt_data_location> <source_path:nbt_path> <start:int> <end:int>
 DATA_MODIFY_SET_VALUE/data modify <destination:nbt_data_location> <path:nbt_path> set value <value:nbt_value>
 
 DIFFICULTY_SET/difficulty <difficulty:difficulty>
@@ -194,6 +211,12 @@ TP_ENTITY/tp <destination:entity_selector[single]>
 TP_TARGETS_ENTITY/tp <targets:entity_selector> <destination:entity_selector[single]>
 TP_TARGETS_POS/tp <targets:entity_selector> <pos:vec3>
 TP_TARGETS_POS_ROT/tp <targets:entity_selector> <pos:vec3> <rot:rotation>
+TP_TARGETS_POS_FACING_ENTITY/tp <targets:entity_selector> <pos:vec3> facing entity <facing_target:entity_selector[single]>
+TP_TARGETS_POS_FACING_ENTITY_ANCHOR/tp <targets:entity_selector> <pos:vec3> facing entity <facing_target:entity_selector[single]> <anchor:location_anchor>
+TP_TARGETS_POS_FACING_POS/tp <targets:entity_selector> <pos:vec3> facing <facing_pos:vec3>
+TP_POS_FACING_ENTITY/tp <pos:vec3> facing entity <facing_target:entity_selector[single]>
+TP_POS_FACING_ENTITY_ANCHOR/tp <pos:vec3> facing entity <facing_target:entity_selector[single]> <anchor:location_anchor>
+TP_POS_FACING_POS/tp <pos:vec3> facing <facing_pos:vec3>
 TP_POS/tp <pos:vec3>
 
 TEAM_ADD/team add <team:word>
