@@ -348,6 +348,19 @@ public class FunctionCodeGenerator {
     ) {
         var nbtType = params.codeFieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND);
 
+        // Extract the initialization prefix: instructions before the first LABEL.
+        // These initialize function-scope locals (e.g., commandStack from GET_COMMAND_STACK)
+        // from static arguments and must be replicated at the start of every non-first chunk
+        // so that each chunk can independently access the correct CommandSourceStack.
+        int prefixEnd = 0;
+        for(int idx = 0; idx < instructions.size(); idx++) {
+            if(instructions.get(idx).type() == InstructionTypes.LABEL) {
+                prefixEnd = idx;
+                break;
+            }
+        }
+        var initPrefix = instructions.subList(0, prefixEnd);
+
         // Find safe split points in the instruction list
         var splitPoints = findSafeInstructionSplitPoints(instructions);
 
@@ -362,6 +375,18 @@ public class FunctionCodeGenerator {
         // Generate each chunk method
         for(int i = 0; i < chunks.size(); i++) {
             var chunkInstructions = chunks.get(i);
+            // Non-first chunks need the init prefix prepended so their function-scope locals
+            // (commandStack, etc.) are initialized from the chunk's own parameters.
+            List<Instruction> effectiveInstructions;
+            if(i == 0 || initPrefix.isEmpty()) {
+                effectiveInstructions = chunkInstructions;
+            } else {
+                var combined = new ArrayList<Instruction>(initPrefix.size() + chunkInstructions.size());
+                combined.addAll(initPrefix);
+                combined.addAll(chunkInstructions);
+                effectiveInstructions = combined;
+            }
+
             var writer = new CodeWriter();
             var css = writer.createRegister();
             writer.setValue(css, new BytecodeValue.Parameter(0, params.commandSourceStackType()));
@@ -369,7 +394,7 @@ public class FunctionCodeGenerator {
             writer.setValue(nbt, new BytecodeValue.Parameter(1, nbtType));
             Map<String, BytecodeValue> args = Map.of("CommandSourceStack", css, "FunctionCompound", nbt);
 
-            var context = new EmitterContext(funcId, params.codeFieldStorage(), writer, compiledFunctions, new HashMap<>(args), null, chunkInstructions);
+            var context = new EmitterContext(funcId, params.codeFieldStorage(), writer, compiledFunctions, new HashMap<>(args), null, effectiveInstructions);
             context.emitForEach();
             writer.returnValue(new BytecodeValue.LongValue(NO_RETURN_SENTINEL));
 
@@ -416,9 +441,35 @@ public class FunctionCodeGenerator {
      * w0 < w1 < w2 ..., then the live range of definition w_k is [w_k, max_read_before_w_{k+1}].
      * This avoids falsely blocking splits when the same slot is reused for independent values
      * (e.g., a result register written and read by every command independently).
+     *
+     * Locals written in the "initialization prefix" (all instructions before the first LABEL) are
+     * excluded from the live-range analysis. These are function-scope context locals (e.g.,
+     * commandStack from GET_COMMAND_STACK) that are re-initialized at the start of every chunk via
+     * the chunk's own parameters, so they must not block split points across command boundaries.
      */
     private static List<Integer> findSafeInstructionSplitPoints(List<Instruction> instructions) {
         int n = instructions.size();
+
+        // Identify the initialization prefix: instructions before the first LABEL.
+        // Locals written here (e.g. commandStack) will be re-initialized in every chunk,
+        // so they must not contribute live-range spans that block all split points.
+        int prefixEnd = 0;
+        for(int idx = 0; idx < n; idx++) {
+            if(instructions.get(idx).type() == InstructionTypes.LABEL) {
+                prefixEnd = idx;
+                break;
+            }
+        }
+        var prefixLocals = new HashSet<Integer>();
+        for(int idx = 0; idx < prefixEnd; idx++) {
+            var instr = instructions.get(idx);
+            if(instr.data() != null && instr.type().returnsValue()) {
+                var datum = instr.data()[0];
+                if(datum instanceof LocationData<?> loc && loc.local() != null) {
+                    prefixLocals.add(loc.local());
+                }
+            }
+        }
 
         // For each local slot: collect all write positions (sorted)
         var localWrites = new HashMap<Integer, List<Integer>>();
@@ -463,6 +514,8 @@ public class FunctionCodeGenerator {
         // If no reads exist in that window, the definition is dead immediately (range [w_k, w_k]).
         for(var entry : localWrites.entrySet()) {
             int slot = entry.getKey();
+            // Prefix locals are re-initialized in each chunk from chunk parameters; skip them.
+            if(prefixLocals.contains(slot)) continue;
             var writes = entry.getValue(); // already in insertion order (ascending idx)
             var reads = localReads.getOrDefault(slot, List.of());
 

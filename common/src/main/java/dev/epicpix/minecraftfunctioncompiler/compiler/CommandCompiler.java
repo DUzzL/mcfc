@@ -723,6 +723,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandTagAdd(SelectorArgument targets, String name) -> {
+                result.markImplemented();
                 try(var entity = context.forSelector(targets, result)) {
                     entity.writeInstruction(Instructions.addEntityTag(entity.content(), LocationData.ofString(name)));
                 }
@@ -901,6 +902,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandTimeQueryTime _ -> {
+                result.markImplemented();
                 try(var world = context.getWorld()) {
                     if (result.generatingResult()) {
                         var val = context.<Integer>createLocal();
@@ -910,6 +912,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandTimeQueryTimelineTicks(String timelineId) -> {
+                result.markImplemented();
                 try(var world = context.getWorld()) {
                     if (result.generatingResult()) {
                         var val = context.<Integer>createLocal();
@@ -919,6 +922,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandTimeQueryTimelineRepetitions(String timelineId) -> {
+                result.markImplemented();
                 try(var world = context.getWorld()) {
                     if (result.generatingResult()) {
                         var val = context.<Integer>createLocal();
@@ -928,6 +932,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandTimeQueryGametime _ -> {
+                result.markImplemented();
                 try(var world = context.getWorld()) {
                     if (result.generatingResult()) {
                         var val = context.<Integer>createLocal();
