@@ -263,7 +263,6 @@ public class FunctionCodeGenerator {
                 if(instructions.size() <= MAX_INSTRUCTIONS_PER_METHOD) {
                     generateSingleFunction(gen, params, funcId, compiledFunctions, instructions, lowLevelFunctions, className, nbtType, methodType);
                 } else {
-                    LOGGER.info("Function {} has {} instructions (limit {}), splitting into chunks", funcId, instructions.size(), MAX_INSTRUCTIONS_PER_METHOD);
                     generateSplitFunction(gen, params, funcId, compiledFunctions, instructions, lowLevelFunctions, className, methodType);
                 }
             } else {
@@ -378,18 +377,18 @@ public class FunctionCodeGenerator {
         var splitPoints = findSafeInstructionSplitPoints(instructions);
 
         // Target chunk size: keep each chunk under the per-method instruction limit
-        int totalInstructions = instructions.size();
         int targetChunkSize = MAX_INSTRUCTIONS_PER_METHOD;
 
         // Split into chunks at safe points
         var chunks = splitInstructionsIntoChunks(instructions, splitPoints, targetChunkSize);
-        LOGGER.info("Split function {} into {} chunks ({} instructions)", funcId, chunks.size(), totalInstructions);
 
-        // Generate each chunk method
-        for(int i = 0; i < chunks.size(); i++) {
+        // Generate bytecode for each chunk in parallel — EmitterContext and BytecodeOptimizer
+        // are fully stateless/thread-local, so this is safe. ClassBuilder (gen.addFunction) is
+        // NOT thread-safe, so results are collected first and added to gen sequentially.
+        @SuppressWarnings("unchecked")
+        List<BytecodeInstruction>[] chunkBytecodes = new List[chunks.size()];
+        java.util.stream.IntStream.range(0, chunks.size()).parallel().forEach(i -> {
             var chunkInstructions = chunks.get(i);
-            // Non-first chunks need the init prefix prepended so their function-scope locals
-            // (commandStack, etc.) are initialized from the chunk's own parameters.
             List<Instruction> effectiveInstructions;
             if(i == 0 || initPrefix.isEmpty()) {
                 effectiveInstructions = chunkInstructions;
@@ -411,9 +410,13 @@ public class FunctionCodeGenerator {
             context.emitForEach();
             writer.returnValue(new BytecodeValue.LongValue(NO_RETURN_SENTINEL));
 
-            var bytecode = BytecodeOptimizer.optimizeInstructions(writer.getInstructions());
-            lowLevelFunctions.put(className.displayName() + "#run$chunk" + i, bytecode);
-            gen.addFunction("run$chunk" + i, bytecode, methodType);
+            chunkBytecodes[i] = BytecodeOptimizer.optimizeInstructions(writer.getInstructions());
+        });
+
+        // Sequential pass: register in lowLevelFunctions and add to gen (ClassBuilder not thread-safe)
+        for(int i = 0; i < chunks.size(); i++) {
+            lowLevelFunctions.put(className.displayName() + "#run$chunk" + i, chunkBytecodes[i]);
+            gen.addFunction("run$chunk" + i, chunkBytecodes[i], methodType);
         }
 
         // Generate dispatch method that calls each chunk
