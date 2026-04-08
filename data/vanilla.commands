@@ -204,8 +204,6 @@ EFFECT_CLEAR/effect clear
 EFFECT_CLEAR_TARGETS/effect clear <targets:entity_selector>
 EFFECT_CLEAR_TARGETS_EFFECT/effect clear <targets:entity_selector> <effect:resource_location>
 
-TIME_QUERY_NAMESPACED/time query <query:resource_location>
-
 # Команды которые парсятся и идут через vanilla fallback
 TP_ENTITY/tp <destination:entity_selector[single]>
 TP_TARGETS_ENTITY/tp <targets:entity_selector> <destination:entity_selector[single]>
