@@ -233,9 +233,10 @@ public class FunctionCodeGenerator {
     }
 
     // JVM method bytecode limit is 65535 bytes.
-    // Each high-level Instruction generates ~80 bytes of bytecode on average.
-    // To stay under 65535 with margin, limit to ~600 high-level instructions per method.
-    private static final int MAX_INSTRUCTIONS_PER_METHOD = 600;
+    // Most instructions average ~15-20 bytes; only extreme config-style functions hit ~80+.
+    // Functions with 3455 instructions compile fine as single methods in practice.
+    // Set threshold high enough to avoid unnecessary splitting while catching truly oversized functions.
+    private static final int MAX_INSTRUCTIONS_PER_METHOD = 4000;
     private static final long NO_RETURN_SENTINEL = 0x2L << 32;
 
     public static byte[] generateFunctionClass(CompilationParams params, DataLocation funcId, List<Instruction> instructions, Set<DataLocation> compiledFunctions, java.util.Map<String, List<BytecodeInstruction>> lowLevelFunctions) {
@@ -410,107 +411,91 @@ public class FunctionCodeGenerator {
      * A split point between instruction[i-1] and instruction[i] is safe if:
      * - No local written before the split is read after the split
      * - No label defined before the split is referenced after the split (and vice versa)
+     *
+     * Uses O(n + k) memory via sweep line (k = number of distinct locals/labels),
+     * instead of O(n * k) from the old suffix-set-copy approach.
      */
     private static List<Integer> findSafeInstructionSplitPoints(List<Instruction> instructions) {
         int n = instructions.size();
 
-        // Pre-compute: for each instruction, which locals it reads and writes, which labels it defines/references
-        var instrWritesLocal = new ArrayList<Set<Integer>>();
-        var instrReadsLocal = new ArrayList<Set<Integer>>();
-        var instrDefinesLabel = new ArrayList<Set<Integer>>();
-        var instrReferencesLabel = new ArrayList<Set<Integer>>();
+        // For each local: track the range [first_write, last_read]
+        // A split at i is blocked if first_write < i AND last_read >= i
+        var localMinWrite = new HashMap<Integer, Integer>();
+        var localMaxRead = new HashMap<Integer, Integer>();
 
-        for(var instr : instructions) {
-            var writes = new HashSet<Integer>();
-            var reads = new HashSet<Integer>();
-            var defines = new HashSet<Integer>();
-            var references = new HashSet<Integer>();
+        // For each label: track define position and reference range
+        // A split at i is blocked if the range [min(def,minRef), max(def,maxRef)] spans i
+        var labelDefine = new HashMap<Integer, Integer>();
+        var labelMinRef = new HashMap<Integer, Integer>();
+        var labelMaxRef = new HashMap<Integer, Integer>();
 
+        for(int idx = 0; idx < n; idx++) {
+            var instr = instructions.get(idx);
             if(instr.data() != null) {
                 for(int j = 0; j < instr.data().length; j++) {
                     var datum = instr.data()[j];
                     if(datum instanceof LocationData<?> loc && loc.local() != null) {
-                        // First arg named "result" is a write, others are reads
                         if(j == 0 && instr.type().returnsValue()) {
-                            writes.add(loc.local());
+                            localMinWrite.merge(loc.local(), idx, Math::min);
                         } else {
-                            reads.add(loc.local());
+                            localMaxRead.merge(loc.local(), idx, Math::max);
                         }
                     } else if(datum instanceof LabelData label) {
                         if(instr.type() == InstructionTypes.LABEL) {
-                            defines.add(label.id());
+                            labelDefine.put(label.id(), idx);
                         } else {
-                            references.add(label.id());
+                            labelMinRef.merge(label.id(), idx, Math::min);
+                            labelMaxRef.merge(label.id(), idx, Math::max);
                         }
                     }
                 }
             }
-
-            instrWritesLocal.add(writes);
-            instrReadsLocal.add(reads);
-            instrDefinesLabel.add(defines);
-            instrReferencesLabel.add(references);
         }
 
-        // Compute suffix sets: for each position i, what locals are read in [i..n) and labels are referenced/defined in [i..n)
-        var suffixReads = new HashSet<Integer>();
-        var suffixRefs = new HashSet<Integer>();
-        var suffixDefs = new HashSet<Integer>();
-        var suffixReadAt = new ArrayList<Set<Integer>>(Collections.nCopies(n + 1, Set.of()));
-        var suffixRefAt = new ArrayList<Set<Integer>>(Collections.nCopies(n + 1, Set.of()));
-        var suffixDefAt = new ArrayList<Set<Integer>>(Collections.nCopies(n + 1, Set.of()));
+        // Sweep line: for each range [start, end], mark delta[start+1]++ and delta[end+1]--
+        // A split at position i is safe when the cumulative sum is 0 (no active ranges crossing i)
+        int[] delta = new int[n + 2];
 
-        for(int i = n - 1; i >= 0; i--) {
-            suffixReads.addAll(instrReadsLocal.get(i));
-            suffixRefs.addAll(instrReferencesLabel.get(i));
-            suffixDefs.addAll(instrDefinesLabel.get(i));
-            suffixReadAt.set(i, new HashSet<>(suffixReads));
-            suffixRefAt.set(i, new HashSet<>(suffixRefs));
-            suffixDefAt.set(i, new HashSet<>(suffixDefs));
+        // Local ranges: [minWrite, maxRead]
+        for(var entry : localMinWrite.entrySet()) {
+            Integer maxRead = localMaxRead.get(entry.getKey());
+            if(maxRead != null && entry.getValue() < maxRead) {
+                delta[entry.getValue() + 1]++;
+                delta[maxRead + 1]--;
+            }
         }
 
-        // Compute prefix sets incrementally
-        var prefixWrites = new HashSet<Integer>();
-        var prefixDefs = new HashSet<Integer>();
-        var prefixRefs = new HashSet<Integer>();
+        // Label ranges: [min(def, minRef), max(def, maxRef)]
+        var allLabelIds = new HashSet<Integer>();
+        allLabelIds.addAll(labelDefine.keySet());
+        allLabelIds.addAll(labelMinRef.keySet());
+        allLabelIds.addAll(labelMaxRef.keySet());
 
+        for(var labelId : allLabelIds) {
+            Integer defPos = labelDefine.get(labelId);
+            Integer minRef = labelMinRef.get(labelId);
+            Integer maxRef = labelMaxRef.get(labelId);
+
+            int rangeStart = Integer.MAX_VALUE;
+            int rangeEnd = Integer.MIN_VALUE;
+            if(defPos != null) { rangeStart = Math.min(rangeStart, defPos); rangeEnd = Math.max(rangeEnd, defPos); }
+            if(minRef != null) { rangeStart = Math.min(rangeStart, minRef); rangeEnd = Math.max(rangeEnd, minRef); }
+            if(maxRef != null) { rangeStart = Math.min(rangeStart, maxRef); rangeEnd = Math.max(rangeEnd, maxRef); }
+
+            if(rangeStart < rangeEnd) {
+                delta[rangeStart + 1]++;
+                delta[rangeEnd + 1]--;
+            }
+        }
+
+        // Sweep: split at position i is safe when no ranges cross it
         var safePoints = new ArrayList<Integer>();
+        int active = 0;
         for(int i = 1; i < n; i++) {
-            prefixWrites.addAll(instrWritesLocal.get(i - 1));
-            prefixDefs.addAll(instrDefinesLabel.get(i - 1));
-            prefixRefs.addAll(instrReferencesLabel.get(i - 1));
-
-            // Check: no local written in [0..i) is read in [i..n)
-            boolean localsCross = false;
-            for(var written : prefixWrites) {
-                if(suffixReadAt.get(i).contains(written)) {
-                    localsCross = true;
-                    break;
-                }
+            active += delta[i];
+            if(active == 0) {
+                safePoints.add(i);
             }
-            if(localsCross) continue;
-
-            // Check: no label defined in [0..i) is referenced in [i..n)
-            boolean labelsCrossForward = false;
-            for(var defined : prefixDefs) {
-                if(suffixRefAt.get(i).contains(defined)) {
-                    labelsCrossForward = true;
-                    break;
-                }
-            }
-            if(labelsCrossForward) continue;
-
-            // Check: no label referenced in [0..i) is defined in [i..n)
-            boolean labelsCrossBackward = false;
-            for(var referenced : prefixRefs) {
-                if(suffixDefAt.get(i).contains(referenced)) {
-                    labelsCrossBackward = true;
-                    break;
-                }
-            }
-            if(labelsCrossBackward) continue;
-
-            safePoints.add(i);
         }
 
         return safePoints;
