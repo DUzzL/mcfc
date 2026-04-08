@@ -121,16 +121,22 @@ public final class OptimizationPass {
 
     public void generateInstructionEdges(Int2ObjectMap<IntSet> forward, @Nullable Int2ObjectMap<IntSet> backward) {
         var labelLocations = new Int2IntOpenHashMap();
-        for(int i = 0; i<context.getInstructionCount(); i++) {
+        int n = context.getInstructionCount();
+        for(int i = 0; i < n; i++) {
             var instruction = getInstruction(i);
             if(instruction.type() == InstructionTypes.LABEL) {
                 labelLocations.put(Objects.requireNonNull(instruction.<LabelData>get(0)).id(), i);
             }
-            if(backward != null) backward.put(i, new IntLinkedOpenHashSet(2));
+            // Reuse existing set if present, otherwise create; clear in either case
+            if(backward != null) {
+                backward.computeIfAbsent(i, k -> new IntLinkedOpenHashSet(2)).clear();
+            }
         }
 
-        for(int i = 0; i<context.getInstructionCount(); i++) {
-            var set = new IntLinkedOpenHashSet(2);
+        for(int i = 0; i < n; i++) {
+            // Reuse the existing set for this index, or create a new one if not present
+            IntSet set = forward.computeIfAbsent(i, k -> new IntLinkedOpenHashSet(2));
+            set.clear();
             var instruction = getInstruction(i);
 
             if(instruction.type().isConditionJump() || instruction.type() == InstructionTypes.JUMP) {
@@ -142,11 +148,10 @@ public final class OptimizationPass {
                     }
                 }
             }
-            if(instruction.type() != InstructionTypes.JUMP && instruction.type() != InstructionTypes.RETURN_SUCCESS && instruction.type() != InstructionTypes.RETURN_FAIL && i != context.getInstructionCount() - 1) {
+            if(instruction.type() != InstructionTypes.JUMP && instruction.type() != InstructionTypes.RETURN_SUCCESS && instruction.type() != InstructionTypes.RETURN_FAIL && i != n - 1) {
                 set.add(i + 1);
                 if(backward != null) backward.get(i + 1).add(i);
             }
-            forward.put(i, set);
         }
     }
 
@@ -156,10 +161,9 @@ public final class OptimizationPass {
 
     public IntList findExecutedInstructionsUntil(int index) {
         if(shouldEvaluateNewInstructionPaths) {
-            var forward = new Int2ObjectOpenHashMap<IntSet>(context.getInstructionCount());
-            var backward = new Int2ObjectOpenHashMap<IntSet>(context.getInstructionCount());
-            generateInstructionEdges(forward, backward);
-            context.tarjan.updateData(forward, backward);
+            context.ensureCachedMapCapacity();
+            generateInstructionEdges(context.dominatorForward, context.dominatorBackward);
+            context.tarjan.updateData(context.dominatorForward, context.dominatorBackward);
             shouldEvaluateNewInstructionPaths = false;
         }
         return context.tarjan.getDominators(index);

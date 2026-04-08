@@ -2,9 +2,7 @@ package dev.epicpix.minecraftfunctioncompiler.il.optimizer;
 
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntSet;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,15 +25,15 @@ public class Optimizer {
 
     private static void removeDeadCodeQuick(OptimizationPass pass) {
         var instrCount = pass.context().getInstructionCount();
-        var forward = new Int2ObjectOpenHashMap<IntSet>(instrCount);
-        pass.generateInstructionEdges(forward, null);
+        pass.context().ensureCachedMapCapacity();
+        pass.generateInstructionEdges(pass.context().deadCodeForward, null);
         var stack = new IntArrayList(instrCount);
         var traversed = new boolean[instrCount];
         stack.push(0);
         while(!stack.isEmpty()) {
             var index = stack.popInt();
             traversed[index] = true;
-            for(var it = forward.get(index).intIterator(); it.hasNext(); ) {
+            for(var it = pass.context().deadCodeForward.get(index).intIterator(); it.hasNext(); ) {
                 var next = it.nextInt();
                 if(traversed[next]) continue;
                 stack.push(next);
