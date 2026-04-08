@@ -232,8 +232,10 @@ public class FunctionCodeGenerator {
         context.codeWriter().returnValue(context.codeWriter().writeTarget(target, arguments));
     }
 
-    // JVM method bytecode limit is 65535 bytes. Use a conservative threshold for cost estimation.
-    private static final int MAX_BYTECODE_COST = 50000;
+    // JVM method bytecode limit is 65535 bytes.
+    // Each high-level Instruction generates ~80 bytes of bytecode on average.
+    // To stay under 65535 with margin, limit to ~600 high-level instructions per method.
+    private static final int MAX_INSTRUCTIONS_PER_METHOD = 600;
     private static final long NO_RETURN_SENTINEL = 0x2L << 32;
 
     public static byte[] generateFunctionClass(CompilationParams params, DataLocation funcId, List<Instruction> instructions, Set<DataLocation> compiledFunctions, java.util.Map<String, List<BytecodeInstruction>> lowLevelFunctions) {
@@ -256,25 +258,11 @@ public class FunctionCodeGenerator {
 
         return ClassGenerator.createClassGenerator(className, gen -> {
             if(macroInstructions.isEmpty()) {
-                // Try generating as a single method first
-                var entryWriter = new CodeWriter();
-                var staticCommandSourceStack = entryWriter.createRegister();
-                entryWriter.setValue(staticCommandSourceStack, new BytecodeValue.Parameter(0, params.commandSourceStackType()));
-                var staticFunctionCompound = entryWriter.createRegister();
-                entryWriter.setValue(staticFunctionCompound, new BytecodeValue.Parameter(1, nbtType));
-                Map<String, BytecodeValue> staticArguments = Map.of("CommandSourceStack", staticCommandSourceStack, "FunctionCompound", staticFunctionCompound);
-                var entryContext = new EmitterContext(funcId, params.codeFieldStorage(), entryWriter, compiledFunctions, new HashMap<>(staticArguments), null, instructions);
-                entryContext.emitForEach();
-                entryWriter.returnValue(new BytecodeValue.LongValue(NO_RETURN_SENTINEL));
-
-                var entryBytecode = BytecodeOptimizer.optimizeInstructions(entryWriter.getInstructions());
-                int estimatedSize = estimateBytecodeSize(entryBytecode);
-
-                if(estimatedSize <= MAX_BYTECODE_COST) {
-                    lowLevelFunctions.put(className.displayName() + "#run", entryBytecode);
-                    gen.addFunction("run", entryBytecode, methodType);
+                // Check instruction count upfront to avoid expensive full bytecode generation for huge functions
+                if(instructions.size() <= MAX_INSTRUCTIONS_PER_METHOD) {
+                    generateSingleFunction(gen, params, funcId, compiledFunctions, instructions, lowLevelFunctions, className, nbtType, methodType);
                 } else {
-                    LOGGER.info("Function {} has estimated bytecode size {} (limit {}), splitting into chunks", funcId, estimatedSize, MAX_BYTECODE_COST);
+                    LOGGER.info("Function {} has {} instructions (limit {}), splitting into chunks", funcId, instructions.size(), MAX_INSTRUCTIONS_PER_METHOD);
                     generateSplitFunction(gen, params, funcId, compiledFunctions, instructions, lowLevelFunctions, className, methodType);
                 }
             } else {
@@ -330,6 +318,27 @@ public class FunctionCodeGenerator {
         });
     }
 
+    private static void generateSingleFunction(
+        ClassGenerator gen, CompilationParams params, DataLocation funcId,
+        Set<DataLocation> compiledFunctions, List<Instruction> instructions,
+        java.util.Map<String, List<BytecodeInstruction>> lowLevelFunctions,
+        ClassDesc className, ClassDesc nbtType, MethodTypeDesc methodType
+    ) {
+        var entryWriter = new CodeWriter();
+        var staticCommandSourceStack = entryWriter.createRegister();
+        entryWriter.setValue(staticCommandSourceStack, new BytecodeValue.Parameter(0, params.commandSourceStackType()));
+        var staticFunctionCompound = entryWriter.createRegister();
+        entryWriter.setValue(staticFunctionCompound, new BytecodeValue.Parameter(1, nbtType));
+        Map<String, BytecodeValue> staticArguments = Map.of("CommandSourceStack", staticCommandSourceStack, "FunctionCompound", staticFunctionCompound);
+        var entryContext = new EmitterContext(funcId, params.codeFieldStorage(), entryWriter, compiledFunctions, new HashMap<>(staticArguments), null, instructions);
+        entryContext.emitForEach();
+        entryWriter.returnValue(new BytecodeValue.LongValue(NO_RETURN_SENTINEL));
+
+        var entryBytecode = BytecodeOptimizer.optimizeInstructions(entryWriter.getInstructions());
+        lowLevelFunctions.put(className.displayName() + "#run", entryBytecode);
+        gen.addFunction("run", entryBytecode, methodType);
+    }
+
     private static void generateSplitFunction(
         ClassGenerator gen, CompilationParams params, DataLocation funcId,
         Set<DataLocation> compiledFunctions, List<Instruction> instructions,
@@ -341,10 +350,9 @@ public class FunctionCodeGenerator {
         // Find safe split points in the instruction list
         var splitPoints = findSafeInstructionSplitPoints(instructions);
 
-        // Calculate target number of chunks
-        // Estimate total cost: generate bytecode for the full function and measure
+        // Target chunk size: keep each chunk under the per-method instruction limit
         int totalInstructions = instructions.size();
-        int targetChunkSize = Math.max(1, totalInstructions / 8); // Start with 8 chunks
+        int targetChunkSize = MAX_INSTRUCTIONS_PER_METHOD;
 
         // Split into chunks at safe points
         var chunks = splitInstructionsIntoChunks(instructions, splitPoints, targetChunkSize);
@@ -395,14 +403,6 @@ public class FunctionCodeGenerator {
         var dispatchBytecode = BytecodeOptimizer.optimizeInstructions(dispatchWriter.getInstructions());
         lowLevelFunctions.put(className.displayName() + "#run", dispatchBytecode);
         gen.addFunction("run", dispatchBytecode, methodType);
-    }
-
-    private static int estimateBytecodeSize(List<BytecodeInstruction> instructions) {
-        int cost = 0;
-        for(var instr : instructions) {
-            cost += instr.cost();
-        }
-        return cost;
     }
 
     /**
