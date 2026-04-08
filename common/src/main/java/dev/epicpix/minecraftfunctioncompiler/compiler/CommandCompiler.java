@@ -876,9 +876,9 @@ public final class CommandCompiler {
                     context.writeInstruction(Instructions.setTime(world.content(), LocationData.ofInteger(time)));
                 }
             }
-            case CommandTimeSetToMarker(String timeMarkerId) -> {
+            case CommandTimeSetToMarker(DataLocation timeMarkerId) -> {
                 try(var world = context.getWorld()) {
-                    context.writeInstruction(Instructions.setTimeToMarker(world.content(), timeMarkerId));
+                    context.writeInstruction(Instructions.setTimeToMarker(world.content(), timeMarkerId.toString()));
                 }
             }
             case CommandTimeAdd(int time) -> {
@@ -911,22 +911,22 @@ public final class CommandCompiler {
                     }
                 }
             }
-            case CommandTimeQueryTimelineTicks(String timelineId) -> {
+            case CommandTimeQueryTimelineTicks(DataLocation timelineId) -> {
                 result.markImplemented();
                 try(var world = context.getWorld()) {
                     if (result.generatingResult()) {
                         var val = context.<Integer>createLocal();
-                        context.writeInstruction(Instructions.queryTimelineTicks(val, world.content(), timelineId));
+                        context.writeInstruction(Instructions.queryTimelineTicks(val, world.content(), timelineId.toString()));
                         result.updateResultValue(val);
                     }
                 }
             }
-            case CommandTimeQueryTimelineRepetitions(String timelineId) -> {
+            case CommandTimeQueryTimelineRepetitions(DataLocation timelineId) -> {
                 result.markImplemented();
                 try(var world = context.getWorld()) {
                     if (result.generatingResult()) {
                         var val = context.<Integer>createLocal();
-                        context.writeInstruction(Instructions.queryTimelineRepetitions(val, world.content(), timelineId));
+                        context.writeInstruction(Instructions.queryTimelineRepetitions(val, world.content(), timelineId.toString()));
                         result.updateResultValue(val);
                     }
                 }

@@ -117,14 +117,14 @@ SUMMON_POS/summon <entity:resource_location> <pos:vec3>
 SUMMON/summon <entity:resource_location>
 
 TIME_SET/time set <time:time>
-TIME_SET_TO_MARKER/time set <time_marker_id:greedy_string>
+TIME_SET_TO_MARKER/time set <time_marker_id:resource_location>
 TIME_ADD/time add <time:time>
 TIME_RATE/time rate <rate:float>
 TIME_PAUSE/time pause
 TIME_RESUME/time resume
 TIME_QUERY_TIME/time query time
-TIME_QUERY_TIMELINE_TICKS/time query <timeline_id:greedy_string>
-TIME_QUERY_TIMELINE_REPETITIONS/time query <timeline_id:greedy_string> repetition
+TIME_QUERY_TIMELINE_TICKS/time query <timeline_id:resource_location>
+TIME_QUERY_TIMELINE_REPETITIONS/time query <timeline_id:resource_location> repetition
 TIME_QUERY_GAMETIME/time query gametime
 TIME_OF/time of <command:command[root=time]
 

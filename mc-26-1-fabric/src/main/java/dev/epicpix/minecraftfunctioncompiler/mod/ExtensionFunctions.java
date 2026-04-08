@@ -765,7 +765,7 @@ public class ExtensionFunctions {
     public static void setTimeToMarker(MinecraftServer server, ServerLevel world, String timeMarkerId) {
         Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
 
-        server.clockManager().moveToTimeMarker(clock, ResourceKey.create(ClockTimeMarkers.ROOT_ID, Identifier.withDefaultNamespace(timeMarkerId)));
+        server.clockManager().moveToTimeMarker(clock, ResourceKey.create(ClockTimeMarkers.ROOT_ID, Identifier.parse(timeMarkerId)));
     }
 
     public static void addTime(MinecraftServer server, ServerLevel world, int time) {
@@ -797,7 +797,7 @@ public class ExtensionFunctions {
         ServerClockManager clockManager = server.clockManager();
         Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
         Holder<Timeline> timeline = world.registryAccess().get(
-                ResourceKey.create(Registries.TIMELINE, Identifier.withDefaultNamespace(timelineId))
+                ResourceKey.create(Registries.TIMELINE, Identifier.parse(timelineId))
         ).get();
 
         long currentTicks = timeline.value().getCurrentTicks(clockManager);
@@ -808,7 +808,7 @@ public class ExtensionFunctions {
         ServerClockManager clockManager = server.clockManager();
         Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
         Holder<Timeline> timeline = world.registryAccess().get(
-                ResourceKey.create(Registries.TIMELINE, Identifier.withDefaultNamespace(timelineId))
+                ResourceKey.create(Registries.TIMELINE, Identifier.parse(timelineId))
         ).get();
 
         long repetitions = timeline.value().getPeriodCount(clockManager);
