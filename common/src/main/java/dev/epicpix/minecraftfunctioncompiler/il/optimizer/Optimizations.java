@@ -162,18 +162,55 @@ public final class Optimizations {
     private static void removeDuplicateChecks(OptimizationPass pass) {
         if(pass.thisInstruction().type() == InstructionTypes.IF_NULL_JUMP) {
             var compareData = pass.thisInstruction().get("local");
-            var reassignmentInstrs = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes.DUP, List.of(Pair.of("result", compareData)));
-            if(reassignmentInstrs.isEmpty()) {
-                var labelData = pass.thisInstruction().get("label");
-                var delInstrs = pass.findInstructions(0, pass.context().getInstructionCount(), false, InstructionTypes.IF_NULL_JUMP, List.of(Pair.of("local", compareData), Pair.of("label", labelData)));
-                if(!delInstrs.isEmpty()) {
-                    var validDelInstrs = new IntOpenHashSet(pass.findExecutedInstructions());
-                    validDelInstrs.retainAll(delInstrs);
-                    if(!validDelInstrs.isEmpty()) {
-                        pass.removeInstruction(pass.thisInstructionIndex());
+            int n = pass.context().getInstructionCount();
+
+            // Find ALL prior IF_NULL_JUMP instructions checking this same local,
+            // regardless of their target label. The key insight: if a previous
+            // IF_NULL_JUMP on the same local DOMINATES this one and the local is
+            // not re-assigned between them, then by the time control flow reaches
+            // this instruction the local is provably non-null — so this jump can
+            // never branch and is dead code. The previous version only matched
+            // duplicates with the *exact same* target label, which missed the
+            // common pattern of `execute if score ... if score ... if score`
+            // where each segment generates its own selector check with a
+            // different skip label, leaving 4+ identical IF_NULL_JUMPs that the
+            // optimizer couldn't fold (e.g. armor_statues:locking/uuid_check).
+            var sameLocalChecks = pass.findInstructions(0, n, false,
+                InstructionTypes.IF_NULL_JUMP,
+                List.of(Pair.of("local", compareData)));
+            if(sameLocalChecks.isEmpty()) return;
+
+            var dominators = new IntOpenHashSet(pass.findExecutedInstructions());
+
+            // Pick the closest dominating predecessor — fewer instructions
+            // between it and us means smaller window for re-assignment.
+            int closestPrev = -1;
+            int thisIdx = pass.thisInstructionIndex();
+            for(var it = sameLocalChecks.intIterator(); it.hasNext(); ) {
+                int idx = it.nextInt();
+                if(idx < thisIdx && idx > closestPrev && dominators.contains(idx)) {
+                    closestPrev = idx;
+                }
+            }
+            if(closestPrev == -1) return;
+
+            // Verify no instruction strictly between closestPrev and us writes
+            // the local through its "result" field. We scan all argument names
+            // by string match because "result" is not always at index 0
+            // (e.g. SCORE_DATA_NO_AUTO_CREATE places it after holder/objective).
+            for(int i = closestPrev + 1; i < thisIdx; i++) {
+                var instr = pass.getInstruction(i);
+                String[] names = instr.type().argumentNames();
+                Object[] data = instr.data();
+                for(int j = 0; j < names.length; j++) {
+                    if("result".equals(names[j]) && Objects.equals(data[j], compareData)) {
+                        return; // re-assignment between checks — keep this one
                     }
                 }
             }
+
+            // Provably dead jump — remove it.
+            pass.removeInstruction(thisIdx);
         }else if(pass.thisInstruction().type() == InstructionTypes.ASSUME_COMMAND_STACK) {
             var stackFrom = Objects.requireNonNull(pass.thisInstruction().get("object"));
             var stackTo = Objects.requireNonNull(pass.thisInstruction().get("result"));
