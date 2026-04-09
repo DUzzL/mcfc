@@ -69,12 +69,77 @@ public class OptimizationContext {
     }
 
     /**
-     * Invalidates both O(n) caches.  Must be called whenever the instruction list
-     * is structurally modified (add, remove, or replace).
+     * Invalidates both O(n) caches.  Kept as an escape hatch for callers that
+     * cannot describe their mutation incrementally.
      */
     void invalidateCaches() {
         globalValueCounts = null;
         typeIndex = null;
+    }
+
+    /** Increment globalValueCounts for every non-null value in {@code data}. */
+    private void incCounts(@Nullable Object[] data) {
+        if(globalValueCounts == null) return;
+        for(var d : data) {
+            if(d != null) globalValueCounts.merge(d, 1, Integer::sum);
+        }
+    }
+
+    /** Decrement globalValueCounts for every non-null value in {@code data}. */
+    private void decCounts(@Nullable Object[] data) {
+        if(globalValueCounts == null) return;
+        for(var d : data) {
+            if(d == null) continue;
+            Integer c = globalValueCounts.get(d);
+            if(c == null) continue;
+            if(c <= 1) globalValueCounts.remove(d);
+            else globalValueCounts.put(d, c - 1);
+        }
+    }
+
+    /**
+     * Called after an instruction is inserted at {@code index}.
+     * globalValueCounts is updated incrementally; typeIndex is invalidated
+     * because every index >= {@code index} has shifted by +1.
+     */
+    void onInstructionAdded(int index, Instruction instr) {
+        incCounts(instr.data());
+        typeIndex = null;
+    }
+
+    /**
+     * Called after an instruction is removed from {@code index}.
+     * globalValueCounts is updated incrementally; typeIndex is invalidated
+     * because every index > {@code index} has shifted by -1.
+     */
+    void onInstructionRemoved(int index, Instruction removed) {
+        decCounts(removed.data());
+        typeIndex = null;
+    }
+
+    /**
+     * Called after an instruction at {@code index} is replaced in-place.
+     * Both caches are updated incrementally — no index shift occurs, so the
+     * typeIndex only needs the swap if the type actually changed.
+     */
+    void onInstructionReplaced(int index, Instruction oldInstr, Instruction newInstr) {
+        if(globalValueCounts != null) {
+            decCounts(oldInstr.data());
+            incCounts(newInstr.data());
+        }
+        if(typeIndex != null && oldInstr.type() != newInstr.type()) {
+            var oldList = typeIndex.get(oldInstr.type());
+            if(oldList != null) {
+                int pos = it.unimi.dsi.fastutil.ints.IntArrays.binarySearch(
+                    oldList.elements(), 0, oldList.size(), index);
+                if(pos >= 0) oldList.removeInt(pos);
+            }
+            var newList = typeIndex.computeIfAbsent(newInstr.type(), k -> new IntArrayList());
+            int ins = it.unimi.dsi.fastutil.ints.IntArrays.binarySearch(
+                newList.elements(), 0, newList.size(), index);
+            if(ins < 0) ins = -ins - 1;
+            newList.add(ins, index);
+        }
     }
 
     /**

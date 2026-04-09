@@ -237,21 +237,21 @@ public final class OptimizationPass {
 
     public void addInstruction(int index, Instruction instruction) {
         context.instructions.add(index, instruction);
-        context.invalidateCaches();
+        context.onInstructionAdded(index, instruction);
         resetIndex = Math.min(resetIndex, index);
         shouldEvaluateNewInstructionPaths = true;
     }
 
     public void removeInstruction(int index) {
-        context.instructions.remove(index);
-        context.invalidateCaches();
+        var removed = context.instructions.remove(index);
+        context.onInstructionRemoved(index, removed);
         resetIndex = Math.min(resetIndex, index);
         shouldEvaluateNewInstructionPaths = true;
     }
 
     public void replaceInstruction(int index, Instruction instruction) {
         var prev = context.instructions.set(index, instruction);
-        context.invalidateCaches();
+        context.onInstructionReplaced(index, prev, instruction);
         resetIndex = Math.min(resetIndex, index);
         var oldIsEnding = prev.type() == InstructionTypes.JUMP || prev.type() == InstructionTypes.RETURN_SUCCESS || prev.type() == InstructionTypes.RETURN_FAIL;
         var newIsEnding = instruction.type() == InstructionTypes.JUMP || instruction.type() == InstructionTypes.RETURN_SUCCESS || instruction.type() == InstructionTypes.RETURN_FAIL;
