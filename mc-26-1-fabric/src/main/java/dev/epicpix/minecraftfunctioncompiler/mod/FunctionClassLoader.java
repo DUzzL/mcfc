@@ -34,6 +34,22 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<MinecraftSe
         super(parent, FabricLoader.getInstance().getGameDir().resolve("generated"), minecraftServer, sourceFileProvider.mcfc$getSourceFiles());
     }
 
+    /**
+     * Returns "modVersion/mcVersion" so the cache is automatically invalidated
+     * whenever either the MCFC mod or Minecraft itself is updated.
+     */
+    @Override
+    protected String getCompilerVersion() {
+        var loader = FabricLoader.getInstance();
+        var modVersion = loader.getModContainer("minecraftfunctioncompiler")
+            .map(c -> c.getMetadata().getVersion().getFriendlyString())
+            .orElse("unknown");
+        var mcVersion = loader.getModContainer("minecraft")
+            .map(c -> c.getMetadata().getVersion().getFriendlyString())
+            .orElse("unknown");
+        return modVersion + "/" + mcVersion;
+    }
+
     public void loadFunctions(ServerFunctionManager serverFunctionManager, boolean autoEnable, Runnable onComplete) {
         if(totalFunctionCount() == 0) return;
         if(!BLOCKING_COMPILATION && !FunctionCompilerReporter.isTestEnvironment()) {
