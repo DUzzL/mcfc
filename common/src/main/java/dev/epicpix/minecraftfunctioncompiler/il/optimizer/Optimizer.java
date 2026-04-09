@@ -9,6 +9,14 @@ import java.util.List;
 
 public class Optimizer {
 
+    // Functions with more IL instructions than this threshold get a reduced
+    // optimization pass: inlineLists is skipped (its bulk ArrayList.remove/add
+    // is O(instructions * moves) and dominates compile time for huge config
+    // functions), and the outer loop is capped at MAX_ROUNDS_LARGE to prevent
+    // quadratic blowup from repeated full-function sweeps.
+    private static final int LARGE_FUNCTION_THRESHOLD = 3_000;
+    private static final int MAX_ROUNDS_LARGE          = 5;
+
     public static List<Instruction> optimize(List<Instruction> instructions, LengauerTarjan tarjan) {
         int highestLocal = -1;
         for(var i : instructions) {
@@ -19,7 +27,7 @@ public class Optimizer {
             }
         }
         OptimizationContext context = new OptimizationContext(new ArrayList<>(instructions), highestLocal + 1, tarjan);
-        doOptimizations(context);
+        doOptimizations(context, context.getInstructionCount() > LARGE_FUNCTION_THRESHOLD);
         return context.getInstructions();
     }
 
@@ -45,15 +53,21 @@ public class Optimizer {
         pass.takeResetIndex();
     }
 
-    private static void doOptimizations(OptimizationContext context) {
+    private static void doOptimizations(OptimizationContext context, boolean isLargeFunction) {
         boolean queueNext = true;
         var pass = new OptimizationPass(-1, context);
+        // Large functions use a reduced optimisation set (no inlineLists) and a
+        // round cap so that config-style 50k-instruction functions don't spend
+        // minutes in quadratic ArrayList.remove / cache-rebuild loops.
+        var optimizations = isLargeFunction ? Optimizations.LARGE_FUNCTION_OPTIMIZATIONS : Optimizations.OPTIMIZATIONS;
+        int maxRounds = isLargeFunction ? MAX_ROUNDS_LARGE : Integer.MAX_VALUE;
+        int rounds = 0;
 
         boolean recheckDeadCode = true;
-        while(queueNext) {
+        while(queueNext && rounds++ < maxRounds) {
             queueNext = false;
 
-            for(var opt : Optimizations.OPTIMIZATIONS) {
+            for(var opt : optimizations) {
                 if(context.getInstructionCount() == 0) return;
                 if(recheckDeadCode) {
                     removeDeadCodeQuick(pass);

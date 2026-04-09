@@ -30,6 +30,24 @@ public final class Optimizations {
         Optimizations::removeUnusedData
     );
 
+    /**
+     * Reduced optimisation set used for functions that exceed
+     * {@link Optimizer#LARGE_FUNCTION_THRESHOLD} instructions.
+     * {@code inlineLists} is intentionally omitted: it moves instruction blocks
+     * via repeated {@code ArrayList.remove} / {@code add} calls which are O(n)
+     * each, making the overall pass O(n * moves) — prohibitive for 10k-50k
+     * instruction config functions.  The emitted code is still correct; entity
+     * selectors remain in list form rather than being inlined, which has no
+     * observable effect for functions that run infrequently (config/init).
+     */
+    public static final List<Optimization> LARGE_FUNCTION_OPTIMIZATIONS = List.of(
+        Optimizations::mergeValues,
+        Optimizations::removeDuplicateChecks,
+        Optimizations::mergeLabels,
+        Optimizations::removeUselessCommandStackData,
+        Optimizations::removeUnusedData
+    );
+
     private static void mergeLabels(OptimizationPass pass) {
         if(pass.thisInstruction().type() != InstructionTypes.LABEL) return;
         var thisLabel = Objects.requireNonNull(pass.thisInstruction().<LabelData>get("label"));
