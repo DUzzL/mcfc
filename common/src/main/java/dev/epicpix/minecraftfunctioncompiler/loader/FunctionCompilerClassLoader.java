@@ -67,10 +67,31 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
 
     private static final Logger LOGGER = LoggerFactory.getLogger("minecraftfunctioncompiler");
 
+    // ── Reusable Gson / HexFormat instances ────────────────────────────────────
+    // These are stateless and thread-safe; allocating a new Gson per call is wasteful.
+    private static final Gson GSON = new Gson();
+    private static final Gson PRETTY_GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final Gson PRETTY_GSON_WITH_NULLS = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
+    private static final Gson PRETTY_GSON_NO_HTML_ESCAPE = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create();
+    private static final HexFormat HEX = HexFormat.of();
+
     // ── Cache constants ────────────────────────────────────────────────────────
     private static final String CACHE_MANIFEST     = "manifest.json";
     private static final String CACHE_DATA_CLASS   = "data.class";
     private static final String CACHE_FN_PREFIX    = "fn/";
+
+    /**
+     * Idempotent: ensures generatedDir exists. {@link Files#createDirectories}
+     * is a no-op when the directory already exists, so the only failures here
+     * are real I/O problems — those are logged at warn level rather than swallowed.
+     */
+    private void ensureGeneratedDir() {
+        try {
+            Files.createDirectories(generatedDir);
+        } catch(Exception e) {
+            LOGGER.warn("Failed to create generated dir {}", generatedDir, e);
+        }
+    }
 
     public interface SourceFileProvider {
         default Map<DataLocation, List<String>> mcfc$getSourceFiles() {
@@ -204,18 +225,18 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         }
         md.update(getCompilerVersion().getBytes(StandardCharsets.UTF_8));
         // Sort by function ID so the hash is order-independent
-        functionSources.entrySet().stream()
-            .sorted(Map.Entry.comparingByKey(Comparator.comparing(DataLocation::toString)))
-            .forEach(entry -> {
-                md.update(entry.getKey().toString().getBytes(StandardCharsets.UTF_8));
-                md.update((byte) '\0'); // key separator
-                for(var line : entry.getValue()) {
-                    md.update(line.getBytes(StandardCharsets.UTF_8));
-                    md.update((byte) '\n');
-                }
-                md.update((byte) '\0'); // entry separator
-            });
-        return HexFormat.of().formatHex(md.digest());
+        var sortedEntries = new ArrayList<>(functionSources.entrySet());
+        sortedEntries.sort(Map.Entry.comparingByKey(Comparator.comparing(DataLocation::toString)));
+        for(var entry : sortedEntries) {
+            md.update(entry.getKey().toString().getBytes(StandardCharsets.UTF_8));
+            md.update((byte) '\0'); // key separator
+            for(var line : entry.getValue()) {
+                md.update(line.getBytes(StandardCharsets.UTF_8));
+                md.update((byte) '\n');
+            }
+            md.update((byte) '\0'); // entry separator
+        }
+        return HEX.formatHex(md.digest());
     }
 
     /** Relative cache path for a function class file. */
@@ -238,7 +259,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         var manifestPath = cacheDir.resolve(CACHE_MANIFEST);
         if(!Files.exists(manifestPath)) return null;
 
-        var manifest = new Gson().fromJson(Files.readString(manifestPath), JsonObject.class);
+        var manifest = GSON.fromJson(Files.readString(manifestPath), JsonObject.class);
         if(manifest == null || !manifest.has("hash") || !manifest.has("functions")) return null;
         if(!globalHash.equals(manifest.get("hash").getAsString())) return null;
 
@@ -246,16 +267,27 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         if(!Files.exists(dataClassPath)) return null;
 
         var fnEntries = manifest.getAsJsonObject("functions");
-        var functionClassBytes = new HashMap<DataLocation, byte[]>(functionIds.size());
+        // Resolve and existence-check all paths sequentially first — any miss is a cache miss.
+        var resolved = new ArrayList<Map.Entry<DataLocation, Path>>(functionIds.size());
         for(var loc : functionIds) {
-            var key  = loc.toString();
+            var key = loc.toString();
             if(!fnEntries.has(key)) return null;
             var path = cacheDir.resolve(fnEntries.get(key).getAsString());
             if(!Files.exists(path)) return null;
-            functionClassBytes.put(loc, Files.readAllBytes(path));
+            resolved.add(Map.entry(loc, path));
         }
+        // Read class bytes in parallel — this dominates cache-load time on cold disk caches.
+        var functionClassBytes = new ConcurrentHashMap<DataLocation, byte[]>(functionIds.size());
+        resolved.parallelStream().forEach(e -> {
+            try {
+                functionClassBytes.put(e.getKey(), Files.readAllBytes(e.getValue()));
+            } catch(java.io.IOException ex) {
+                throw new java.io.UncheckedIOException(ex);
+            }
+        });
+        var result = new HashMap<>(functionClassBytes);
 
-        return new CacheLoadResult(functionClassBytes, Files.readAllBytes(dataClassPath));
+        return new CacheLoadResult(result, Files.readAllBytes(dataClassPath));
     }
 
     private record CacheLoadResult(HashMap<DataLocation, byte[]> functionClassBytes, byte[] dataClassBytes) {}
@@ -264,7 +296,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
      * Persists compilation results to disk so future startups can skip recompilation.
      * Failures are logged but do not abort the already-completed compilation.
      */
-    private void saveToCache(String globalHash, HashMap<DataLocation, byte[]> functionClassBytes, byte[] dataClassBytes) throws Exception {
+    private void saveToCache(String globalHash, Map<DataLocation, byte[]> functionClassBytes, byte[] dataClassBytes) throws Exception {
         Files.createDirectories(cacheDir);
 
         var manifest  = new JsonObject();
@@ -281,8 +313,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         manifest.add("functions", functions);
 
         Files.write(cacheDir.resolve(CACHE_DATA_CLASS), dataClassBytes);
-        Files.writeString(cacheDir.resolve(CACHE_MANIFEST),
-            new GsonBuilder().setPrettyPrinting().create().toJson(manifest));
+        Files.writeString(cacheDir.resolve(CACHE_MANIFEST), PRETTY_GSON.toJson(manifest));
     }
 
     // ── Load + handle registration ─────────────────────────────────────────────
@@ -332,13 +363,15 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     public void loadFunctionClasses(IArgumentLookup lookup, CompilationParams params,
                                     Object serverFunctionManager, boolean autoEnable) {
         if(ALLOW_EXTERNAL_DATA_ACCESS && GENERATE_REGISTRY_FILE) {
-            try { Files.createDirectory(generatedDir); } catch(Exception ignored) {}
+            ensureGeneratedDir();
             try {
                 var registries    = DataRegistries.extractRegistries();
-                var registriesStr = new GsonBuilder().setPrettyPrinting().serializeNulls().create().toJson(registries);
+                var registriesStr = PRETTY_GSON_WITH_NULLS.toJson(registries);
                 Files.writeString(generatedDir.resolve("registries.json"), registriesStr);
                 LOGGER.info("Wrote {} lines into registries.json", registriesStr.lines().count());
-            } catch(Exception ignored) {}
+            } catch(Exception e) {
+                LOGGER.warn("Failed to write registries.json", e);
+            }
         }
 
         // ── Parse ─────────────────────────────────────────────────────────────
@@ -487,15 +520,17 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
                     dump.append("└──\n\n");
                     json.add(e.getKey().toString(), Instruction.generateInstructionsJson(instrList));
                 }
-                try { Files.createDirectory(generatedDir); } catch(Exception ignored) {}
+                ensureGeneratedDir();
                 try {
                     String txt = dump.toString();
                     Files.writeString(generatedDir.resolve("instruction_dump_" + suffix + ".txt"), txt);
                     LOGGER.info("Wrote {} lines into instruction_dump_{}.txt", txt.lines().count(), suffix);
-                    String jsonStr = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(json);
+                    String jsonStr = PRETTY_GSON_NO_HTML_ESCAPE.toJson(json);
                     Files.writeString(generatedDir.resolve("instruction_dump_" + suffix + ".json"), jsonStr);
                     LOGGER.info("Wrote {} lines into instruction_dump_{}.json", jsonStr.lines().count(), suffix);
-                } catch(Exception ignored) {}
+                } catch(Exception e) {
+                    LOGGER.warn("Failed to write instruction_dump_{} files", suffix, e);
+                }
             }
         }
 
@@ -521,7 +556,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         // Persist to cache before defineClass (while we still have all bytes)
         if(!DEBUG_DUMP_INSTRUCTIONS) {
             try {
-                saveToCache(globalHash, new HashMap<>(generatedBytes), dataClassBytes);
+                saveToCache(globalHash, generatedBytes, dataClassBytes);
                 LOGGER.info("Saved {} compiled functions to cache", generatedBytes.size());
             } catch(Exception e) {
                 LOGGER.warn("Failed to save compilation cache ({}), compilation will continue", e.getMessage());
@@ -577,19 +612,21 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
                 json.add(e.getKey(), instrJson);
                 dump.append("└──\n\n");
             }
-            try { Files.createDirectory(generatedDir); } catch(Exception ignored) {}
+            ensureGeneratedDir();
             try {
                 String txt = dump.toString();
                 Files.writeString(generatedDir.resolve("instruction_dump_low_level.txt"), txt);
                 LOGGER.info("Wrote {} lines into instruction_dump_low_level.txt", txt.lines().count());
-                String jsonStr = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(json);
+                String jsonStr = PRETTY_GSON_NO_HTML_ESCAPE.toJson(json);
                 Files.writeString(generatedDir.resolve("instruction_dump_low_level.json"), jsonStr);
                 LOGGER.info("Wrote {} lines into instruction_dump_low_level.json", jsonStr.lines().count());
-            } catch(Exception ignored) {}
+            } catch(Exception e) {
+                LOGGER.warn("Failed to write instruction_dump_low_level files", e);
+            }
         }
 
         if(DEBUG_GENERATE_GRAPH) {
-            try { Files.createDirectory(generatedDir); } catch(Exception ignored) {}
+            ensureGeneratedDir();
             if(DEBUG_DUMP_INSTRUCTIONS) GraphGenerator.generateGraphs(new HashMap<>(debugOptimizedMap), generatedDir);
             BytecodeGraphGenerator.generateBytecodeGraphs(lowLevelFunctions, generatedDir);
         }
@@ -639,8 +676,12 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
 
     private Class<?> defineClass(String name, byte[] data) {
         if(DEBUG_DUMP_CLASS_FILES) {
-            try { Files.createDirectory(generatedDir); } catch(Exception ignored) {}
-            try { Files.write(generatedDir.resolve(name + ".class"), data); } catch(Exception ignored) {}
+            ensureGeneratedDir();
+            try {
+                Files.write(generatedDir.resolve(name + ".class"), data);
+            } catch(Exception e) {
+                LOGGER.warn("Failed to dump class file {}", name, e);
+            }
         }
         return defineClass(name, data, 0, data.length);
     }
