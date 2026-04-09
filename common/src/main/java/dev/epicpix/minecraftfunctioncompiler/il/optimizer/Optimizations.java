@@ -293,8 +293,8 @@ public final class Optimizations {
     private static void removeUnusedData(OptimizationPass pass) {
         if(pass.thisInstruction().type().isPure()) {
             var result = Objects.requireNonNull(pass.thisInstruction().get("result"));
-
-            if(!pass.isValueUsed(0, pass.context().getInstructionCount(), false, result)) {
+            // O(1) via cached global-value-frequency map instead of O(n) linear scan
+            if(!pass.isValueUsedAnywhere(result)) {
                 pass.removeInstruction(pass.thisInstructionIndex());
             }
         }

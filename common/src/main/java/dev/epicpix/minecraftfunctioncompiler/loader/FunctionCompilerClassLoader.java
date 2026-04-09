@@ -409,6 +409,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         definedFunctions.entrySet().parallelStream().forEach(entry -> {
             var key      = entry.getKey();
             var commands = entry.getValue();
+            var fnStart  = System.nanoTime();
 
             // 1) compile to IL
             List<Instruction> compiled;
@@ -456,6 +457,12 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
                 diagnostics.addDiagnosticSafe(new Diagnostic(DiagnosticKind.LOAD_ERROR, FUNCTION_CLASS_LOAD_FAILED,
                     "Failed to load function (" + key + ")", null, key, null, e));
                 LOGGER.error("Failed to load function ({}), skipping", key, e);
+            }
+
+            // Log functions that take suspiciously long (likely O(n²) optimizer hit)
+            var fnElapsedMs = (System.nanoTime() - fnStart) / 1_000_000L;
+            if(fnElapsedMs > 2000) {
+                LOGGER.warn("Slow compile: {} took {}ms — consider splitting this function", key, fnElapsedMs);
             }
         });
 

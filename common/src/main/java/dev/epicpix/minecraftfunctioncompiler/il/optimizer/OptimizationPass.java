@@ -47,50 +47,91 @@ public final class OptimizationPass {
         return getInstruction(thisInstruction - 1);
     }
 
+    // ── Value-use queries ──────────────────────────────────────────────────────
+
+    /**
+     * O(n) range scan — kept for callers that need a specific [start, end) window.
+     * For global (0, n) checks prefer {@link #isValueUsedAnywhere}.
+     */
     public boolean isValueUsed(int start, int end, boolean includeSelf, Object value) {
-        for(int i = start; i<end; i++) {
+        for(int i = start; i < end; i++) {
             if(!includeSelf && i == thisInstruction) continue;
-            var instr = getInstruction(i);
-            if(instr.containsValue(value)) {
-                return true;
-            }
+            if(getInstruction(i).containsValue(value)) return true;
         }
         return false;
     }
 
-    public IntList findInstructions(int start, int end, boolean includeSelf, List<InstructionType> types, List<Pair<String, Object>> dataPairs) {
+    /**
+     * O(1) amortised — checks whether {@code value} appears in ANY data field of
+     * ANY instruction other than the current one, using the cached global frequency
+     * map in {@link OptimizationContext}.
+     *
+     * Semantically equivalent to {@code isValueUsed(0, n, false, value)} but avoids
+     * the O(n) scan that made removeUnusedData O(n²) for large functions.
+     */
+    public boolean isValueUsedAnywhere(Object value) {
+        var counts = context.getGlobalValueCounts();
+        int total = counts.getOrDefault(value, 0);
+        if(total == 0) return false;
+        // Subtract the contribution of thisInstruction so we don't count self
+        for(var d : thisInstruction().data()) {
+            if(Objects.equals(d, value) && --total == 0) return false;
+        }
+        return total > 0;
+    }
+
+    // ── Instruction search ─────────────────────────────────────────────────────
+
+    /**
+     * O(k) via type index where k = number of instructions with the given type.
+     * For most types k << n, making this dramatically faster than the old O(n) scan.
+     */
+    public IntList findInstructions(int start, int end, boolean includeSelf, InstructionType type, List<Pair<String, Object>> dataPairs) {
+        var indexed = context.getTypeIndex().get(type);
+        if(indexed == null) return IntList.of();
         var results = new IntArrayList();
-        next: for(int i = start; i < end; i++) {
+        for(var it = indexed.intIterator(); it.hasNext(); ) {
+            var i = it.nextInt();
+            if(i < start || i >= end) continue;
             if(i == thisInstruction && !includeSelf) continue;
             var instruction = getInstruction(i);
-            for(var type : types) {
-                if(instruction.type() == type) {
-                    for(var data : dataPairs) {
-                        if(!Objects.equals(instruction.data()[instruction.type().getArgumentIndex(data.first())], data.second())) {
-                            continue next;
-                        }
-                    }
-                    results.add(i);
+            boolean match = true;
+            for(var data : dataPairs) {
+                if(!Objects.equals(instruction.data()[type.getArgumentIndex(data.first())], data.second())) {
+                    match = false;
+                    break;
                 }
             }
+            if(match) results.add(i);
         }
         return results;
     }
 
-    public IntList findInstructions(int start, int end, boolean includeSelf, InstructionType type, List<Pair<String, Object>> dataPairs) {
+    /**
+     * Multi-type variant — uses type index for each requested type.
+     */
+    public IntList findInstructions(int start, int end, boolean includeSelf, List<InstructionType> types, List<Pair<String, Object>> dataPairs) {
+        var typeIdx = context.getTypeIndex();
         var results = new IntArrayList();
-        next: for(int i = start; i < end; i++) {
-            if(i == thisInstruction && !includeSelf) continue;
-            var instruction = getInstruction(i);
-            if(instruction.type() == type) {
+        for(var type : types) {
+            var indexed = typeIdx.get(type);
+            if(indexed == null) continue;
+            next:
+            for(var it = indexed.intIterator(); it.hasNext(); ) {
+                var i = it.nextInt();
+                if(i < start || i >= end) continue;
+                if(i == thisInstruction && !includeSelf) continue;
+                var instruction = getInstruction(i);
                 for(var data : dataPairs) {
-                    if(!Objects.equals(instruction.data()[type.getArgumentIndex(data.first())], data.second())) {
+                    if(!Objects.equals(instruction.data()[instruction.type().getArgumentIndex(data.first())], data.second())) {
                         continue next;
                     }
                 }
                 results.add(i);
             }
         }
+        // Restore ascending order (results from different types may be interleaved)
+        results.sort(null);
         return results;
     }
 
@@ -107,17 +148,18 @@ public final class OptimizationPass {
             var i = it.nextInt();
             if(i == thisInstruction && !includeSelf) continue;
             var instruction = getInstruction(i);
-            if(instruction.type() == type) {
-                for(var data : dataPairs) {
-                    if(!Objects.equals(instruction.data()[type.getArgumentIndex(data.first())], data.second())) {
-                        continue next;
-                    }
+            if(instruction.type() != type) continue;
+            for(var data : dataPairs) {
+                if(!Objects.equals(instruction.data()[type.getArgumentIndex(data.first())], data.second())) {
+                    continue next;
                 }
-                results.add(i);
             }
+            results.add(i);
         }
         return results;
     }
+
+    // ── Edge graph ─────────────────────────────────────────────────────────────
 
     public void generateInstructionEdges(Int2ObjectMap<IntSet> forward, @Nullable Int2ObjectMap<IntSet> backward) {
         var labelLocations = new Int2IntOpenHashMap();
@@ -127,14 +169,12 @@ public final class OptimizationPass {
             if(instruction.type() == InstructionTypes.LABEL) {
                 labelLocations.put(Objects.requireNonNull(instruction.<LabelData>get(0)).id(), i);
             }
-            // Reuse existing set if present, otherwise create; clear in either case
             if(backward != null) {
                 backward.computeIfAbsent(i, k -> new IntLinkedOpenHashSet(2)).clear();
             }
         }
 
         for(int i = 0; i < n; i++) {
-            // Reuse the existing set for this index, or create a new one if not present
             IntSet set = forward.computeIfAbsent(i, k -> new IntLinkedOpenHashSet(2));
             set.clear();
             var instruction = getInstruction(i);
@@ -148,12 +188,17 @@ public final class OptimizationPass {
                     }
                 }
             }
-            if(instruction.type() != InstructionTypes.JUMP && instruction.type() != InstructionTypes.RETURN_SUCCESS && instruction.type() != InstructionTypes.RETURN_FAIL && i != n - 1) {
+            if(instruction.type() != InstructionTypes.JUMP
+                    && instruction.type() != InstructionTypes.RETURN_SUCCESS
+                    && instruction.type() != InstructionTypes.RETURN_FAIL
+                    && i != n - 1) {
                 set.add(i + 1);
                 if(backward != null) backward.get(i + 1).add(i);
             }
         }
     }
+
+    // ── Dominator queries ──────────────────────────────────────────────────────
 
     public IntList findExecutedInstructions() {
         return findExecutedInstructionsUntil(thisInstruction);
@@ -169,8 +214,10 @@ public final class OptimizationPass {
         return context.tarjan.getDominators(index);
     }
 
+    // ── Bulk data replacement ──────────────────────────────────────────────────
+
     public void replaceInstructionData(boolean includeSelf, Object from, Object to) {
-        for(int i = 0; i<context.getInstructionCount(); i++) {
+        for(int i = 0; i < context.getInstructionCount(); i++) {
             if(!includeSelf && i == thisInstruction) continue;
             var instr = getInstruction(i);
             var replacedInstructionData = instr.optReplaceData(from, to);
@@ -184,30 +231,35 @@ public final class OptimizationPass {
         return context;
     }
 
+    // ── Instruction mutation — all invalidate the O(n) caches ─────────────────
+
     private boolean shouldEvaluateNewInstructionPaths = true;
 
     public void addInstruction(int index, Instruction instruction) {
         context.instructions.add(index, instruction);
+        context.invalidateCaches();
         resetIndex = Math.min(resetIndex, index);
         shouldEvaluateNewInstructionPaths = true;
     }
 
     public void removeInstruction(int index) {
         context.instructions.remove(index);
+        context.invalidateCaches();
         resetIndex = Math.min(resetIndex, index);
         shouldEvaluateNewInstructionPaths = true;
     }
 
     public void replaceInstruction(int index, Instruction instruction) {
         var prev = context.instructions.set(index, instruction);
+        context.invalidateCaches();
         resetIndex = Math.min(resetIndex, index);
-        var oldIsEndingInstruction = prev.type() == InstructionTypes.JUMP || prev.type() == InstructionTypes.RETURN_SUCCESS || prev.type() == InstructionTypes.RETURN_FAIL;
-        var newIsEndingInstruction = instruction.type() == InstructionTypes.JUMP || instruction.type() == InstructionTypes.RETURN_SUCCESS || instruction.type() == InstructionTypes.RETURN_FAIL;
-        if(oldIsEndingInstruction || newIsEndingInstruction || prev.type().isConditionJump() || instruction.type().isConditionJump()) {
+        var oldIsEnding = prev.type() == InstructionTypes.JUMP || prev.type() == InstructionTypes.RETURN_SUCCESS || prev.type() == InstructionTypes.RETURN_FAIL;
+        var newIsEnding = instruction.type() == InstructionTypes.JUMP || instruction.type() == InstructionTypes.RETURN_SUCCESS || instruction.type() == InstructionTypes.RETURN_FAIL;
+        if(oldIsEnding || newIsEnding || prev.type().isConditionJump() || instruction.type().isConditionJump()) {
             if(!shouldEvaluateNewInstructionPaths && prev.type() == instruction.type()) {
                 var oldData = prev.data();
                 var newData = instruction.data();
-                for(int i = 0; i<newData.length; i++) {
+                for(int i = 0; i < newData.length; i++) {
                     if(oldData[i] == newData[i]) continue;
                     if(oldData[i] instanceof LabelData || newData[i] instanceof LabelData) {
                         shouldEvaluateNewInstructionPaths = true;
@@ -234,5 +286,4 @@ public final class OptimizationPass {
     void setThisInstruction(int index) {
         thisInstruction = index;
     }
-
 }
