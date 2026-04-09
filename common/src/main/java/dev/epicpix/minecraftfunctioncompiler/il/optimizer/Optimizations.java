@@ -68,14 +68,27 @@ public final class Optimizations {
             return;
         }
 
+        // Count references via the type-index instead of a full O(n) scan over
+        // every instruction in the function. We only care about JUMP and
+        // conditional-jump types, and only need to distinguish {0, 1, ≥2} —
+        // anything ≥2 means "keep the label as-is", so we can early-out.
+        // Previously this was the dominant cost on label-heavy config functions.
         int useCount = 0;
-        for(int i = 0; i<pass.context().getInstructionCount(); i++) {
-            if(i == pass.thisInstructionIndex()) continue;
-            var instr = pass.getInstruction(i);
-            if((instr.type() == InstructionTypes.JUMP || instr.type().isConditionJump()) && instr.containsValue(thisLabel)) {
-                useCount++;
+        int thisIdx = pass.thisInstructionIndex();
+        var typeIndex = pass.context().getTypeIndex();
+        outer:
+        for(var typeEntry : typeIndex.entrySet()) {
+            var type = typeEntry.getKey();
+            if(type != InstructionTypes.JUMP && !type.isConditionJump()) continue;
+            for(var it = typeEntry.getValue().intIterator(); it.hasNext(); ) {
+                int i = it.nextInt();
+                if(i == thisIdx) continue;
+                if(pass.getInstruction(i).containsValue(thisLabel)) {
+                    if(++useCount >= 2) break outer;
+                }
             }
         }
+
         if(prevInstruction != null && prevInstruction.type() == InstructionTypes.JUMP && Objects.equals(prevInstruction.get("label"), thisLabel)) {
             if(useCount == 1) {
                 pass.removeInstruction(pass.thisInstructionIndex());
@@ -90,20 +103,24 @@ public final class Optimizations {
     private static void removeUselessCommandStackData(OptimizationPass pass) {
         if(pass.thisInstruction().type() == InstructionTypes.GET_STACK_ENTITY) {
             var stack = pass.thisInstruction().get("stack");
-            Object entitySource = null;
-            for(int i = 0; i<pass.context().getInstructionCount(); i++) {
-                var instr = pass.getInstruction(i);
-                if(instr.type() == InstructionTypes.GET_COMMAND_STACK) {
-                    if(Objects.equals(instr.get("result"), stack)) {
-                        return;
-                    }
-                }else if(instr.type() == InstructionTypes.MAKE_COMMAND_SOURCE_STACK) {
-                    if(Objects.equals(instr.get("result"), stack)) {
-                        entitySource = instr.get("entity");
-                        break;
-                    }
-                }
+            int n = pass.context().getInstructionCount();
+
+            // Type-index lookup: find any GET_COMMAND_STACK whose result == stack.
+            // If one exists, the source isn't a constant entity and we can't merge.
+            // Previously this was a linear scan over the entire instruction list
+            // for every GET_STACK_ENTITY — O(n²×k) on functions with thousands of
+            // command-source uses (the BlazeAndCave config functions).
+            if(!pass.findInstructions(0, n, false, InstructionTypes.GET_COMMAND_STACK,
+                    List.of(Pair.of("result", stack))).isEmpty()) {
+                return;
             }
+
+            var defIndex = pass.findSingleInstruction(0, n, false,
+                InstructionTypes.MAKE_COMMAND_SOURCE_STACK,
+                List.of(Pair.of("result", stack)));
+            if(defIndex == null) return;
+
+            var entitySource = pass.getInstruction(defIndex).get("entity");
             if(entitySource == null) return;
 
             var replaceFrom = Objects.requireNonNull(pass.thisInstruction().get("result"));
