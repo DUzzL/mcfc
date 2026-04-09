@@ -27,6 +27,7 @@ public final class Optimizations {
         Optimizations::inlineLists,
         Optimizations::mergeLabels,
         Optimizations::removeUselessCommandStackData,
+        Optimizations::removeDeadComparisons,
         Optimizations::removeUnusedData
     );
 
@@ -45,6 +46,7 @@ public final class Optimizations {
         Optimizations::removeDuplicateChecks,
         Optimizations::mergeLabels,
         Optimizations::removeUselessCommandStackData,
+        Optimizations::removeDeadComparisons,
         Optimizations::removeUnusedData
     );
 
@@ -343,6 +345,57 @@ public final class Optimizations {
             }
         }
 
+    }
+
+    /**
+     * Removes IF_NUMBER_COMPARE_JUMP instructions whose operand is a local
+     * that is never written by any instruction in the function.
+     *
+     * Background: when control flow falls into a landing pad after a
+     * `IF_NULL_JUMP local<X> → label` because local<X> was null, code in the
+     * landing pad may read other locals (e.g. score values) that were only
+     * defined in the happy path that we skipped. The emitter falls back to
+     * NullValue for such loads and prints a "Loading undefined local" warning.
+     *
+     * For numeric comparisons against a constant the result is always false
+     * (null != any int), so the jump is unreachable and the whole instruction
+     * can be deleted. After deletion the landing pad collapses to an empty
+     * label which mergeLabels then folds into the following block.
+     *
+     * This is the second half of the fix for the chained
+     * `execute if score ... if score ... run function` pattern, with
+     * removeDuplicateChecks handling the IF_NULL_JUMP side. See e.g.
+     * armor_statues:locking/uuid_check, armor_statues:help/chat_actionbar_toggle.
+     */
+    private static void removeDeadComparisons(OptimizationPass pass) {
+        if(pass.thisInstruction().type() != InstructionTypes.IF_NUMBER_COMPARE_JUMP) return;
+        var a = pass.thisInstruction().get("a");
+        var b = pass.thisInstruction().get("b");
+        if(isUnstoredLocal(pass, a) || isUnstoredLocal(pass, b)) {
+            pass.removeInstruction(pass.thisInstructionIndex());
+        }
+    }
+
+    /**
+     * Returns true iff {@code value} is a local-flavoured LocationData that
+     * is never written through any instruction's "result" field anywhere in
+     * the function. The "result" position is looked up by argument-name match
+     * because it is not always at index 0 (e.g. SCORE_DATA_NO_AUTO_CREATE).
+     */
+    private static boolean isUnstoredLocal(OptimizationPass pass, Object value) {
+        if(!(value instanceof LocationData<?> loc) || loc.local() == null) return false;
+        int n = pass.context().getInstructionCount();
+        int self = pass.thisInstructionIndex();
+        for(int i = 0; i < n; i++) {
+            if(i == self) continue;
+            var instr = pass.getInstruction(i);
+            String[] names = instr.type().argumentNames();
+            Object[] data = instr.data();
+            for(int j = 0; j < names.length; j++) {
+                if("result".equals(names[j]) && Objects.equals(data[j], value)) return false;
+            }
+        }
+        return true;
     }
 
     private static void removeUnusedData(OptimizationPass pass) {
