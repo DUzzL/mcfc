@@ -378,7 +378,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
                     finishLoading(autoEnable);
                     return;
                 }
-            } catch(Exception e) {
+            } catch(Throwable e) {
                 LOGGER.warn("Cache read failed ({}), falling back to full compilation", e.getMessage());
             }
         }
