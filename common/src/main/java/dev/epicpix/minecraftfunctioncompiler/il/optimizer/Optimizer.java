@@ -38,12 +38,13 @@ public class Optimizer {
         var stack = new IntArrayList(instrCount);
         var traversed = new boolean[instrCount];
         stack.push(0);
+        traversed[0] = true;
         while(!stack.isEmpty()) {
             var index = stack.popInt();
-            traversed[index] = true;
             for(var it = pass.context().deadCodeForward.get(index).intIterator(); it.hasNext(); ) {
                 var next = it.nextInt();
                 if(traversed[next]) continue;
+                traversed[next] = true;
                 stack.push(next);
             }
         }
