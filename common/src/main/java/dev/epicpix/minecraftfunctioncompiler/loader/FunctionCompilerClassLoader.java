@@ -175,7 +175,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         backgroundThread.setName("Function Compiler");
         backgroundThread.setUncaughtExceptionHandler((t, e) -> {
             if(e instanceof DiagnosticException de) diagnostics.addDiagnostic(de.toDiagnostic());
-            diagnostics.addDiagnostic(new Diagnostic(DiagnosticKind.EXECUTION_ERROR, COMPILER_UNCAUGHT_EXCEPTION,
+            else diagnostics.addDiagnostic(new Diagnostic(DiagnosticKind.EXECUTION_ERROR, COMPILER_UNCAUGHT_EXCEPTION,
                 "Uncaught exception caught in compilation thread", null, null, null, e));
             setState(State.FAILED);
             LOGGER.error("Compiler Thread threw an uncaught exception", e);
