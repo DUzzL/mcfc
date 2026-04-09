@@ -71,7 +71,7 @@ public final class OptimizationPass {
      */
     public boolean isValueUsedAnywhere(Object value) {
         var counts = context.getGlobalValueCounts();
-        int total = counts.getOrDefault(value, 0);
+        int total = counts.getInt(value);
         if(total == 0) return false;
         // Subtract the contribution of thisInstruction so we don't count self
         for(var d : thisInstruction().data()) {
