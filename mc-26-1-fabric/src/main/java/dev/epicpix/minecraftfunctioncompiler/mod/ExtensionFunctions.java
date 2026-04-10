@@ -721,26 +721,49 @@ public class ExtensionFunctions {
 
     // Playsound
 
+    /** Cached sound-event holder + source-enum pair per (sound-id, source-name) input. */
+    private record SoundParsed(net.minecraft.core.Holder<net.minecraft.sounds.SoundEvent> holder, net.minecraft.sounds.SoundSource source) {}
+
     /**
-     * Play a sound to a list of entities (players only). Parses sound name,
-     * sound source, and squared-distance threshold once, then iterates players.
-     * Previously each player caused a fresh Identifier.parse, SoundEvent
-     * construction, and Locale.toUpperCase + SoundSource.valueOf call.
+     * Cross-call cache of parsed (sound, source) pairs. Same sizing logic as
+     * ITEM_PARSE_CACHE — datapacks use a bounded set of sounds, unbounded map
+     * is fine. Key is `sound + '\0' + source` because either part alone can
+     * repeat across different pairs.
+     */
+    private static final java.util.concurrent.ConcurrentHashMap<String, SoundParsed> SOUND_PARSE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * Play a sound to a list of entities (players only). Sound identifier and
+     * source-category string are parsed at most once per unique pair for the
+     * lifetime of the server — subsequent calls hit a ConcurrentHashMap and
+     * go straight to per-player distance checks and packet dispatch.
+     *
+     * Previously every call paid for Identifier.parse + SoundEvent.
+     * createVariableRangeEvent + Holder.direct + String.toUpperCase +
+     * SoundSource.valueOf, even when the same playsound ran thousands of
+     * times from a tick function.
      */
     public static void playSoundToAll(List<? extends Entity> entities, String sound, String source, net.minecraft.world.phys.Vec3 pos, double volume, double pitch, double minVolume) {
         if (entities.isEmpty()) return;
 
-        // Parse once
-        var soundEvent = net.minecraft.sounds.SoundEvent.createVariableRangeEvent(Identifier.parse(sound));
-        var soundHolder = net.minecraft.core.Holder.direct(soundEvent);
-        var soundSource = net.minecraft.sounds.SoundSource.valueOf(source.toUpperCase(java.util.Locale.ROOT));
+        String cacheKey = sound + '\0' + source;
+        var parsed = SOUND_PARSE_CACHE.get(cacheKey);
+        if (parsed == null) {
+            var soundEvent = net.minecraft.sounds.SoundEvent.createVariableRangeEvent(Identifier.parse(sound));
+            var holder = net.minecraft.core.Holder.direct(soundEvent);
+            var soundSource = net.minecraft.sounds.SoundSource.valueOf(source.toUpperCase(java.util.Locale.ROOT));
+            parsed = new SoundParsed(holder, soundSource);
+            SOUND_PARSE_CACHE.put(cacheKey, parsed);
+        }
+        var soundHolder = parsed.holder();
+        var soundSource = parsed.source();
+
         float dist = Math.max((float) volume, 1.0f) * 16.0f;
         float distSqThreshold = dist * dist;
         float vol = (float) volume;
         float pit = (float) pitch;
         float minVol = (float) minVolume;
 
-        // Per-player packet dispatch
         for (var entity : entities) {
             if (!(entity instanceof ServerPlayer player)) continue;
             double dx = pos.x - player.getX();
