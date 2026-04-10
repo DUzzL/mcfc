@@ -838,17 +838,28 @@ public class ExtensionFunctions {
     // Gamerule
 
     public static void setGamerule(MinecraftServer server, String rule, String value) {
-        // The command path through GameRuleCommand.setRule() broadcasts
-        // `[Server: Gamerule X is now set to: Y]` to every player on 26.1+
-        // even when the value is unchanged. Datapacks that set gamerules on
-        // every advancement reward (e.g. BACAP's `gamerule command_block_output
-        // false` in bacap/root.mcfunction) were spamming the chat for every
-        // player in range. withSuppressedOutput() silences the feedback while
-        // keeping all side effects of the command identical.
-        server.getCommands().performPrefixedCommand(
-                server.createCommandSourceStack().withSuppressedOutput(),
-                "gamerule " + rule + " " + value
-        );
+        // Direct API path: parse the value via the rule's own deserialize(),
+        // then call GameRules.set(rule, value, server). This is exactly what
+        // GameRuleCommand.setRule() does internally, minus the chat broadcast
+        // that 26.1+ added for every /gamerule invocation (even no-ops) and
+        // the command-source permission check.
+        //
+        // Verified against 26.1 server.jar:
+        //   GameRule<T>.deserialize(String) -> DataResult<T>
+        //   GameRules.set(GameRule<T>, T, MinecraftServer)
+        //
+        // Datapacks that set gamerules on per-player reward chains (e.g. BACAP
+        // running `gamerule command_block_output false` in bacap/root.mcfunction
+        // on every advancement) were spamming
+        // `[Server: Gamerule X is now set to: Y]` to every player on 26.1+.
+        var gameRules = server.getGameRules();
+        gameRules.visitGameRuleTypes(new net.minecraft.world.level.gamerules.GameRuleTypeVisitor() {
+            @Override
+            public <T> void visit(net.minecraft.world.level.gamerules.GameRule<T> gameRule) {
+                if (!rule.equals(gameRule.id())) return;
+                gameRule.deserialize(value).result().ifPresent(v -> gameRules.set(gameRule, v, server));
+            }
+        });
     }
 
     public static int queryGamerule(MinecraftServer server, String rule) {
