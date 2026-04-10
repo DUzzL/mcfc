@@ -645,7 +645,6 @@ public class ExtensionFunctions {
 
     // Give
 
-    // TODO: ServerPlayer player -> Collection<ServerPlayer> players
     public static void giveItems(MinecraftServer server, ServerPlayer player, String itemString) {
         String itemPart;
         int count = 1;
@@ -707,7 +706,6 @@ public class ExtensionFunctions {
 
     // Playsound
 
-    // TODO: ServerPlayer player -> Collection<ServerPlayer> players
     public static void playSound(ServerPlayer player, String sound, String source, net.minecraft.world.phys.Vec3 pos, double volume, double pitch, double minVolume) {
         var soundEvent = net.minecraft.sounds.SoundEvent.createVariableRangeEvent(Identifier.parse(sound));
         var soundSource = net.minecraft.sounds.SoundSource.valueOf(source.toUpperCase(java.util.Locale.ROOT));
