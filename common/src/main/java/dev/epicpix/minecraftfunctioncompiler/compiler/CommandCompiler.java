@@ -794,56 +794,38 @@ public final class CommandCompiler {
             case CommandWeatherThunder _ -> context.writeInstruction(Instructions.setWeatherDynamic(SetRandomizedWeatherData.THUNDER));
             // give
             case CommandGive(SelectorArgument targets, String item) -> {
-                try(var selector = context.forSelector(targets, result)) {
-                    var playerLocation = context.<TServerPlayer>createLocal();
-                    selector.writeInstruction(Instructions.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
-                    selector.writeInstruction(Instructions.giveItems(playerLocation, item));
-                }
+                var players = context.getSelectorList(targets, null);
+                context.writeInstruction(Instructions.giveItemsToAll(players, item));
             }
             // playsound
             case CommandPlaysoundMinVolume(DataLocation sound, String source, SelectorArgument targets, WorldCoordinates pos, double volume, double pitch, double minVolume) -> {
-                try(var selector = context.forSelector(targets, result)) {
-                    var playerLocation = context.<TServerPlayer>createLocal();
-                    selector.writeInstruction(Instructions.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
-                    try(var position = context.applyPosition(pos)) {
-                        selector.writeInstruction(Instructions.playSound(playerLocation, sound.toString(), source, position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(pitch), LocationData.ofDouble(minVolume)));
-                    }
+                var players = context.getSelectorList(targets, null);
+                try(var position = context.applyPosition(pos)) {
+                    context.writeInstruction(Instructions.playSoundToAll(players, sound.toString(), source, position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(pitch), LocationData.ofDouble(minVolume)));
                 }
             }
             case CommandPlaysoundPitch(DataLocation sound, String source, SelectorArgument targets, WorldCoordinates pos, double volume, double pitch) -> {
-                try(var selector = context.forSelector(targets, result)) {
-                    var playerLocation = context.<TServerPlayer>createLocal();
-                    selector.writeInstruction(Instructions.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
-                    try(var position = context.applyPosition(pos)) {
-                        selector.writeInstruction(Instructions.playSound(playerLocation, sound.toString(), source, position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(pitch), LocationData.ofDouble(0.0)));
-                    }
+                var players = context.getSelectorList(targets, null);
+                try(var position = context.applyPosition(pos)) {
+                    context.writeInstruction(Instructions.playSoundToAll(players, sound.toString(), source, position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(pitch), LocationData.ofDouble(0.0)));
                 }
             }
             case CommandPlaysoundVolume(DataLocation sound, String source, SelectorArgument targets, WorldCoordinates pos, double volume) -> {
-                try(var selector = context.forSelector(targets, result)) {
-                    var playerLocation = context.<TServerPlayer>createLocal();
-                    selector.writeInstruction(Instructions.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
-                    try(var position = context.applyPosition(pos)) {
-                        selector.writeInstruction(Instructions.playSound(playerLocation, sound.toString(), source, position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
-                    }
+                var players = context.getSelectorList(targets, null);
+                try(var position = context.applyPosition(pos)) {
+                    context.writeInstruction(Instructions.playSoundToAll(players, sound.toString(), source, position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
                 }
             }
             case CommandPlaysoundPos(DataLocation sound, String source, SelectorArgument targets, WorldCoordinates pos) -> {
-                try(var selector = context.forSelector(targets, result)) {
-                    var playerLocation = context.<TServerPlayer>createLocal();
-                    selector.writeInstruction(Instructions.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
-                    try(var position = context.applyPosition(pos)) {
-                        selector.writeInstruction(Instructions.playSound(playerLocation, sound.toString(), source, position.content(), LocationData.ofDouble(1.0), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
-                    }
+                var players = context.getSelectorList(targets, null);
+                try(var position = context.applyPosition(pos)) {
+                    context.writeInstruction(Instructions.playSoundToAll(players, sound.toString(), source, position.content(), LocationData.ofDouble(1.0), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
                 }
             }
             case CommandPlaysound(DataLocation sound, String source, SelectorArgument targets) -> {
-                try(var selector = context.forSelector(targets, result)) {
-                    var playerLocation = context.<TServerPlayer>createLocal();
-                    selector.writeInstruction(Instructions.tryAsPlayer(playerLocation, selector.content(), selector.data().contextEndLabel()));
-                    try(var position = context.getPosition()) {
-                        selector.writeInstruction(Instructions.playSound(playerLocation, sound.toString(), source, position.content(), LocationData.ofDouble(1.0), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
-                    }
+                var players = context.getSelectorList(targets, null);
+                try(var position = context.getPosition()) {
+                    context.writeInstruction(Instructions.playSoundToAll(players, sound.toString(), source, position.content(), LocationData.ofDouble(1.0), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
                 }
             }
             // summon

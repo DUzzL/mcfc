@@ -645,6 +645,60 @@ public class ExtensionFunctions {
 
     // Give
 
+    /**
+     * Give an item stack to a list of entities (players only). Parses the item
+     * string once, then iterates over the player subset. Parse work (Identifier,
+     * registry lookup, stack size calculation) is loop-invariant — doing it per
+     * player like the old giveItems() path did was 20× wasted work on `give @a`.
+     */
+    public static void giveItemsToAll(MinecraftServer server, List<? extends Entity> entities, String itemString) {
+        if (entities.isEmpty()) return;
+
+        // Parse once
+        String itemPart;
+        int count = 1;
+        int bracketDepth = 0;
+        int lastSpaceOutside = -1;
+        for (int i = 0; i < itemString.length(); i++) {
+            char c = itemString.charAt(i);
+            if (c == '[' || c == '{') bracketDepth++;
+            else if (c == ']' || c == '}') bracketDepth--;
+            else if (c == ' ' && bracketDepth == 0) lastSpaceOutside = i;
+        }
+        if (lastSpaceOutside > 0) {
+            String tail = itemString.substring(lastSpaceOutside + 1);
+            int parsed = parseInt(tail, Integer.MIN_VALUE);
+            if (parsed != Integer.MIN_VALUE) {
+                count = parsed;
+                itemPart = itemString.substring(0, lastSpaceOutside);
+            } else {
+                itemPart = itemString;
+            }
+        } else {
+            itemPart = itemString;
+        }
+        String itemId = itemPart.contains("[") ? itemPart.substring(0, itemPart.indexOf('[')) : itemPart;
+        var itemOptional = server.registryAccess().lookupOrThrow(Registries.ITEM)
+            .get(ResourceKey.create(Registries.ITEM, Identifier.parse(itemId)));
+        if (itemOptional.isEmpty()) return;
+        var item = itemOptional.get();
+        int maxStackSize = item.value().getDefaultMaxStackSize();
+
+        // Per-player distribution
+        for (var entity : entities) {
+            if (!(entity instanceof ServerPlayer player)) continue;
+            int remaining = count;
+            while (remaining > 0) {
+                int stackSize = Math.min(remaining, maxStackSize);
+                var stack = new net.minecraft.world.item.ItemStack(item, stackSize);
+                if (!player.getInventory().add(stack)) {
+                    player.drop(stack, false);
+                }
+                remaining -= stackSize;
+            }
+        }
+    }
+
     public static void giveItems(MinecraftServer server, ServerPlayer player, String itemString) {
         String itemPart;
         int count = 1;
@@ -705,6 +759,50 @@ public class ExtensionFunctions {
     }
 
     // Playsound
+
+    /**
+     * Play a sound to a list of entities (players only). Parses sound name,
+     * sound source, and squared-distance threshold once, then iterates players.
+     * Previously each player caused a fresh Identifier.parse, SoundEvent
+     * construction, and Locale.toUpperCase + SoundSource.valueOf call.
+     */
+    public static void playSoundToAll(List<? extends Entity> entities, String sound, String source, net.minecraft.world.phys.Vec3 pos, double volume, double pitch, double minVolume) {
+        if (entities.isEmpty()) return;
+
+        // Parse once
+        var soundEvent = net.minecraft.sounds.SoundEvent.createVariableRangeEvent(Identifier.parse(sound));
+        var soundHolder = net.minecraft.core.Holder.direct(soundEvent);
+        var soundSource = net.minecraft.sounds.SoundSource.valueOf(source.toUpperCase(java.util.Locale.ROOT));
+        float dist = Math.max((float) volume, 1.0f) * 16.0f;
+        float distSqThreshold = dist * dist;
+        float vol = (float) volume;
+        float pit = (float) pitch;
+        float minVol = (float) minVolume;
+
+        // Per-player packet dispatch
+        for (var entity : entities) {
+            if (!(entity instanceof ServerPlayer player)) continue;
+            double dx = pos.x - player.getX();
+            double dy = pos.y - player.getY();
+            double dz = pos.z - player.getZ();
+            double distSq = dx * dx + dy * dy + dz * dz;
+            long seed = player.level().getRandom().nextLong();
+            if (distSq > distSqThreshold) {
+                if (minVol <= 0.0f) continue;
+                double d = Math.sqrt(distSq);
+                double nx = player.getX() + dx / d * 2.0;
+                double ny = player.getY() + dy / d * 2.0;
+                double nz = player.getZ() + dz / d * 2.0;
+                player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
+                    soundHolder, soundSource, nx, ny, nz, minVol, pit, seed
+                ));
+            } else {
+                player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
+                    soundHolder, soundSource, pos.x, pos.y, pos.z, vol, pit, seed
+                ));
+            }
+        }
+    }
 
     public static void playSound(ServerPlayer player, String sound, String source, net.minecraft.world.phys.Vec3 pos, double volume, double pitch, double minVolume) {
         var soundEvent = net.minecraft.sounds.SoundEvent.createVariableRangeEvent(Identifier.parse(sound));
