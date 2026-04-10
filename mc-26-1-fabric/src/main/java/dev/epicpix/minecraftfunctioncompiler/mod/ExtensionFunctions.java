@@ -310,8 +310,28 @@ public class ExtensionFunctions {
 
     // Advancement commands
 
+    /**
+     * Cross-call cache of parsed Identifiers. {@link Identifier#parse(String)} walks
+     * every character validating the namespace/path grammar and allocates a new
+     * Identifier instance per call. Datapacks reference a bounded set of string
+     * identifiers (advancement ids, predicate ids, registry keys) so an unbounded
+     * map is fine — caps out at whatever the datapack referenced.
+     *
+     * Used by the advancement helpers, predicate helpers, and anywhere else a
+     * hot path would otherwise re-parse a constant string id per tick.
+     */
+    private static final java.util.concurrent.ConcurrentHashMap<String, Identifier> IDENTIFIER_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static Identifier cachedId(String id) {
+        var cached = IDENTIFIER_CACHE.get(id);
+        if (cached != null) return cached;
+        var parsed = Identifier.parse(id);
+        IDENTIFIER_CACHE.put(id, parsed);
+        return parsed;
+    }
+
     public static int grantAdvancementOnly(MinecraftServer server, ServerPlayer player, String id) {
-        AdvancementHolder holder = server.getAdvancements().get(Identifier.parse(id));
+        AdvancementHolder holder = server.getAdvancements().get(cachedId(id));
         if (holder == null) return 0;
         int count = 0;
         for (String criterion : holder.value().criteria().keySet()) {
@@ -321,13 +341,13 @@ public class ExtensionFunctions {
     }
 
     public static int grantAdvancementCriterion(MinecraftServer server, ServerPlayer player, String id, String criterion) {
-        AdvancementHolder holder = server.getAdvancements().get(Identifier.parse(id));
+        AdvancementHolder holder = server.getAdvancements().get(cachedId(id));
         if (holder == null) return 0;
         return player.getAdvancements().award(holder, criterion) ? 1 : 0;
     }
 
     public static int revokeAdvancementOnly(MinecraftServer server, ServerPlayer player, String id) {
-        AdvancementHolder holder = server.getAdvancements().get(Identifier.parse(id));
+        AdvancementHolder holder = server.getAdvancements().get(cachedId(id));
         if (holder == null) return 0;
         int count = 0;
         for (String criterion : holder.value().criteria().keySet()) {
@@ -337,7 +357,7 @@ public class ExtensionFunctions {
     }
 
     public static int revokeAdvancementCriterion(MinecraftServer server, ServerPlayer player, String id, String criterion) {
-        AdvancementHolder holder = server.getAdvancements().get(Identifier.parse(id));
+        AdvancementHolder holder = server.getAdvancements().get(cachedId(id));
         if (holder == null) return 0;
         return player.getAdvancements().revoke(holder, criterion) ? 1 : 0;
     }
@@ -363,7 +383,7 @@ public class ExtensionFunctions {
     }
 
     public static int grantAdvancementTree(MinecraftServer server, ServerPlayer player, String id, String mode) {
-        AdvancementHolder holder = server.getAdvancements().get(Identifier.parse(id));
+        AdvancementHolder holder = server.getAdvancements().get(cachedId(id));
         if (holder == null) return 0;
         AdvancementNode node = server.getAdvancements().tree().get(holder);
         if (node == null) return 0;
@@ -377,7 +397,7 @@ public class ExtensionFunctions {
     }
 
     public static int revokeAdvancementTree(MinecraftServer server, ServerPlayer player, String id, String mode) {
-        AdvancementHolder holder = server.getAdvancements().get(Identifier.parse(id));
+        AdvancementHolder holder = server.getAdvancements().get(cachedId(id));
         if (holder == null) return 0;
         AdvancementNode node = server.getAdvancements().tree().get(holder);
         if (node == null) return 0;
@@ -428,13 +448,13 @@ public class ExtensionFunctions {
     // Selector advancement checks
 
     public static boolean isAdvancementDone(MinecraftServer server, ServerPlayer player, String id) {
-        AdvancementHolder holder = server.getAdvancements().get(Identifier.parse(id));
+        AdvancementHolder holder = server.getAdvancements().get(cachedId(id));
         if (holder == null) return false;
         return player.getAdvancements().getOrStartProgress(holder).isDone();
     }
 
     public static boolean isAdvancementCriterionDone(MinecraftServer server, ServerPlayer player, String id, String criterion) {
-        AdvancementHolder holder = server.getAdvancements().get(Identifier.parse(id));
+        AdvancementHolder holder = server.getAdvancements().get(cachedId(id));
         if (holder == null) return false;
         CriterionProgress progress = player.getAdvancements().getOrStartProgress(holder).getCriterion(criterion);
         return progress != null && progress.isDone();
@@ -445,7 +465,7 @@ public class ExtensionFunctions {
     public static boolean testEntityPredicate(MinecraftServer server, Entity entity, String predicateId) {
         var lookup = server.reloadableRegistries().lookup().lookup(Registries.PREDICATE);
         if (lookup.isEmpty()) return false;
-        var holder = lookup.get().get(ResourceKey.create(Registries.PREDICATE, Identifier.parse(predicateId)));
+        var holder = lookup.get().get(ResourceKey.create(Registries.PREDICATE, cachedId(predicateId)));
         if (holder.isEmpty()) return false;
         LootItemCondition condition = holder.get().value();
         ServerLevel level = (ServerLevel) entity.level();
@@ -1065,17 +1085,31 @@ public class ExtensionFunctions {
 
     // Block checking для execute if block
 
+    /** Cached resolution of `#namespace:tag` predicate strings to TagKey<Block>. */
+    private static final java.util.concurrent.ConcurrentHashMap<String, net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block>> BLOCK_TAG_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    /** Cached resolution of `namespace:block` predicate strings to Block registry entries. Null means unknown block (cached as sentinel). */
+    private static final java.util.concurrent.ConcurrentHashMap<String, net.minecraft.world.level.block.Block> BLOCK_ID_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
     public static boolean checkBlock(net.minecraft.server.level.ServerLevel level, Vec3 position, String predicate) {
         var blockPos = net.minecraft.core.BlockPos.containing(position);
         var state = level.getBlockState(blockPos);
         if (predicate.startsWith("#")) {
-            var id = Identifier.parse(predicate.substring(1));
-            var tagKey = net.minecraft.tags.TagKey.create(Registries.BLOCK, id);
+            var tagKey = BLOCK_TAG_CACHE.get(predicate);
+            if (tagKey == null) {
+                tagKey = net.minecraft.tags.TagKey.create(Registries.BLOCK, cachedId(predicate.substring(1)));
+                BLOCK_TAG_CACHE.put(predicate, tagKey);
+            }
             return state.is(tagKey);
         }
         String blockId = predicate.contains("[") ? predicate.substring(0, predicate.indexOf('[')) : predicate;
-        var optBlock = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getOptional(Identifier.parse(blockId));
-        return optBlock.isPresent() && state.is(optBlock.get());
+        var block = BLOCK_ID_CACHE.get(blockId);
+        if (block == null) {
+            var optBlock = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getOptional(cachedId(blockId));
+            if (optBlock.isEmpty()) return false;
+            block = optBlock.get();
+            BLOCK_ID_CACHE.put(blockId, block);
+        }
+        return state.is(block);
     }
 
     // Entity relations для execute on leasher / attacker / owner
