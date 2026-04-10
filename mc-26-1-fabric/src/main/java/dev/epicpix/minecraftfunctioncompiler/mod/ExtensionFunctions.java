@@ -838,8 +838,16 @@ public class ExtensionFunctions {
     // Gamerule
 
     public static void setGamerule(MinecraftServer server, String rule, String value) {
+        // The command path through GameRuleCommand.setRule() broadcasts
+        // `[Server: Gamerule X is now set to: Y]` to every player on 26.1+
+        // even when the value is unchanged. Datapacks that set gamerules on
+        // every advancement reward (e.g. BACAP's `gamerule command_block_output
+        // false` in bacap/root.mcfunction) were spamming the chat for every
+        // player in range. withSuppressedOutput() silences the feedback while
+        // keeping all side effects of the command identical.
         server.getCommands().performPrefixedCommand(
-                server.createCommandSourceStack(), "gamerule " + rule + " " + value
+                server.createCommandSourceStack().withSuppressedOutput(),
+                "gamerule " + rule + " " + value
         );
     }
 
