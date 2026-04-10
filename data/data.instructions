@@ -708,8 +708,8 @@
 @COPY_TEXT(<net.minecraft.network.chat.Component> [ctx:text]) -> <net.minecraft.network.chat.MutableComponent> = [ctx:text].copy();
 
 // give
-@GIVE_ITEMS_TO_ALL(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.util.List<net.minecraft.world.entity.Entity> > [ctx:entities], <java.lang.String> [instr:item_string]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.giveItemsToAll([static:MinecraftServer], [ctx:entities], [instr:item_string]);
+@GIVE_ITEMS_TO_ALL(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.util.List<net.minecraft.world.entity.Entity> > [ctx:entities], <java.lang.String> [instr:item_string], int [instr:count]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.giveItemsToAll([static:MinecraftServer], [ctx:entities], [instr:item_string], [instr:count]);
 }
 
 // playsound

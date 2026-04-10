@@ -661,72 +661,38 @@ public class ExtensionFunctions {
      * accepts. Cached so repeated `give` calls with the same string don't
      * reparse.
      *
+     * The input is expected to be just the item descriptor — count is now a
+     * separate argument passed explicitly to giveItemsToAll, so no trailing
+     * space/number splitting is needed here.
+     *
      * Returns null on malformed input (logged once per string at WARN).
      */
     private static net.minecraft.commands.arguments.item.@Nullable ItemInput parseItemInput(MinecraftServer server, String itemString) {
         var cached = ITEM_PARSE_CACHE.get(itemString);
         if (cached != null) return cached;
 
-        // Strip trailing `<space><count>` if present — give-syntax puts count
-        // after the item descriptor, but ItemParser only reads the item half.
-        String itemPart = itemString;
-        int bracketDepth = 0;
-        int lastSpaceOutside = -1;
-        for (int i = 0; i < itemString.length(); i++) {
-            char c = itemString.charAt(i);
-            if (c == '[' || c == '{') bracketDepth++;
-            else if (c == ']' || c == '}') bracketDepth--;
-            else if (c == ' ' && bracketDepth == 0) lastSpaceOutside = i;
-        }
-        if (lastSpaceOutside > 0) {
-            String tail = itemString.substring(lastSpaceOutside + 1);
-            if (parseInt(tail, Integer.MIN_VALUE) != Integer.MIN_VALUE) {
-                itemPart = itemString.substring(0, lastSpaceOutside);
-            }
-        }
-
         var parser = new net.minecraft.commands.arguments.item.ItemParser(server.registryAccess());
         try {
-            var input = parser.parse(new com.mojang.brigadier.StringReader(itemPart));
+            var input = parser.parse(new com.mojang.brigadier.StringReader(itemString));
             ITEM_PARSE_CACHE.put(itemString, input);
             return input;
         } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
-            LOGGER.warn("Failed to parse item string '{}': {}", itemPart, e.getMessage());
+            LOGGER.warn("Failed to parse item string '{}': {}", itemString, e.getMessage());
             return null;
         }
-    }
-
-    /**
-     * Extract the count suffix from an item string, defaulting to 1.
-     */
-    private static int parseItemCount(String itemString) {
-        int bracketDepth = 0;
-        int lastSpaceOutside = -1;
-        for (int i = 0; i < itemString.length(); i++) {
-            char c = itemString.charAt(i);
-            if (c == '[' || c == '{') bracketDepth++;
-            else if (c == ']' || c == '}') bracketDepth--;
-            else if (c == ' ' && bracketDepth == 0) lastSpaceOutside = i;
-        }
-        if (lastSpaceOutside > 0) {
-            int parsed = parseInt(itemString.substring(lastSpaceOutside + 1), Integer.MIN_VALUE);
-            if (parsed != Integer.MIN_VALUE) return parsed;
-        }
-        return 1;
     }
 
     /**
      * Give an item stack to a list of entities (players only). All parsing
      * (vanilla ItemParser including components, enchantments, NBT) happens
      * once and is cached across calls — per-player cost is only
-     * ItemStack.copy() + inventory.add().
+     * ItemStack.copyWithCount() + inventory.add().
      */
-    public static void giveItemsToAll(MinecraftServer server, List<? extends Entity> entities, String itemString) {
-        if (entities.isEmpty()) return;
+    public static void giveItemsToAll(MinecraftServer server, List<? extends Entity> entities, String itemString, int count) {
+        if (entities.isEmpty() || count <= 0) return;
 
         var input = parseItemInput(server, itemString);
         if (input == null) return;
-        int count = parseItemCount(itemString);
 
         // Build a prototype stack once — createItemStack validates the
         // components and max count; subsequent per-player stacks are cheap copies.
@@ -751,21 +717,6 @@ public class ExtensionFunctions {
                 remaining -= stackSize;
             }
         }
-    }
-
-    private static int parseInt(String s, int defaultValue) {
-        int result = 0;
-        boolean negative = false;
-        int i = 0;
-        if (s.isEmpty()) return defaultValue;
-        if (s.charAt(0) == '-') { negative = true; i = 1; }
-        if (i >= s.length()) return defaultValue;
-        for (; i < s.length(); i++) {
-            char c = s.charAt(i);
-            if (c < '0' || c > '9') return defaultValue;
-            result = result * 10 + (c - '0');
-        }
-        return negative ? -result : result;
     }
 
     // Playsound
