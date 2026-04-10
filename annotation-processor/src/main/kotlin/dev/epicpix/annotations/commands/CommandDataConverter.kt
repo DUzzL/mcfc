@@ -359,6 +359,14 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 builder.append("    var a$argumentIndex = reader.readBlockPredicate();\n")
                 newTypedArguments.add(data.argName!! to "java.lang.String")
             }
+            "item_stack" -> {
+                // Returns the raw descriptor string; the per-version compiler
+                // resolves it to an ItemInput via vanilla's ItemParser.
+                // Bracket-balanced so component values with spaces
+                // (e.g. quoted custom_name) don't terminate the read early.
+                builder.append("    var a$argumentIndex = reader.readItemStackString();\n")
+                newTypedArguments.add(data.argName!! to "java.lang.String")
+            }
             "vec3" -> {
                 builder.append("    var a$argumentIndex = reader.readVec3();\n")
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates")

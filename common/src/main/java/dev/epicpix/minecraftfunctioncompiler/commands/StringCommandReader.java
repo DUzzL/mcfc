@@ -224,6 +224,26 @@ public class StringCommandReader {
         return command.substring(start, index);
     }
 
+    /**
+     * Reads an item descriptor string: {@code namespace:item[component=value,...]{nbt}}.
+     * Balances square and curly brackets so component values containing spaces
+     * (e.g. quoted custom_name) don't terminate the read early. Stops at the
+     * first space outside any bracket group. Returned string is fed to the
+     * per-version ItemParser downstream.
+     */
+    public String readItemStackString() {
+        int start = index;
+        int depth = 0;
+        while(canRead()) {
+            char c = peek();
+            if(c == '[' || c == '{') { depth++; skip(); }
+            else if(c == ']' || c == '}') { depth--; skip(); }
+            else if(c == ' ' && depth == 0) break;
+            else skip();
+        }
+        return command.substring(start, index);
+    }
+
     public MacroTemplate<String> readUntilSpaceWithTemplate(List<MacroValidator> validators) {
         if(!allowMacros) return MacroTemplate.fromStringLiteral(readUntilSpace());
         ArrayList<MacroTemplate.MacroPart> parts = new ArrayList<>();
