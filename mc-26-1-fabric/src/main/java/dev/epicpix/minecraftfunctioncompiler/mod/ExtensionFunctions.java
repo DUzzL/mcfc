@@ -249,6 +249,17 @@ public class ExtensionFunctions {
 
 
     public static List<Entity> getEntitiesInside(ServerLevel level, double minX, double minY, double minZ, double maxX, double maxY, double maxZ, int limit) {
+        // Direct 3D lookup: for every (chunkX, chunkY, chunkZ) in the bounding
+        // box volume, call sectionStorage.getSection(asLong(x, y, z)) once.
+        // Non-existent sections return null and cost one ConcurrentHashMap miss.
+        //
+        // Previous implementation used sectionIds.subSet(chunksStart, chunksEnd + 1L)
+        // inside a per-chunkX loop, which on the Async mod's
+        // ConcurrentLongSortedSet allocates a fresh backing set and addAll-copies
+        // the subrange every call — profiler showed ~0.1ms of that per
+        // getEntitiesInside on a 50-player server. Direct lookup is
+        // allocation-free; for a typical BB of 5x5x5 chunks it's 125 ConcurrentHashMap.get
+        // calls each ≈50ns, well under the amortized subSet cost.
         var result = new ArrayList<Entity>();
         var sectionStorage = level.entityManager.sectionStorage;
 
@@ -259,26 +270,17 @@ public class ExtensionFunctions {
         int chunkMaxY = Mth.floor(maxY) >> 4;
         int chunkMaxZ = Mth.floor(maxZ + 2) >> 4;
 
-        for(var chunkX = chunkMinX; chunkX <= chunkMaxX; chunkX++) {
-            long chunksStart = SectionPos.asLong(chunkX, 0, 0);
-            long chunksEnd = SectionPos.asLong(chunkX, -1, -1);
-
-            var sectIter = sectionStorage.sectionIds.subSet(chunksStart, chunksEnd + 1L).iterator();
-            while(sectIter.hasNext()) {
-                var sectionId = sectIter.nextLong();
-                int chunkY = SectionPos.y(sectionId);
-                int chunkZ = SectionPos.z(sectionId);
-                if (chunkY >= chunkMinY && chunkY <= chunkMaxY && chunkZ >= chunkMinZ && chunkZ <= chunkMaxZ) {
-                    var section = sectionStorage.getSection(sectionId);
-                    if (section != null && !section.isEmpty() && section.getStatus().isAccessible()) {
-                        var entities = section.storage.find(Entity.class);
-                        if(!entities.isEmpty()) {
-                            for(var entity : entities) {
-                                if(entity.getBoundingBox().intersects(minX, minY, minZ, maxX, maxY, maxZ)) {
-                                    result.add(entity);
-                                    if(result.size() >= limit) return result;
-                                }
-                            }
+        for (int cx = chunkMinX; cx <= chunkMaxX; cx++) {
+            for (int cy = chunkMinY; cy <= chunkMaxY; cy++) {
+                for (int cz = chunkMinZ; cz <= chunkMaxZ; cz++) {
+                    var section = sectionStorage.getSection(SectionPos.asLong(cx, cy, cz));
+                    if (section == null || section.isEmpty() || !section.getStatus().isAccessible()) continue;
+                    var entities = section.storage.find(Entity.class);
+                    if (entities.isEmpty()) continue;
+                    for (var entity : entities) {
+                        if (entity.getBoundingBox().intersects(minX, minY, minZ, maxX, maxY, maxZ)) {
+                            result.add(entity);
+                            if (result.size() >= limit) return result;
                         }
                     }
                 }
