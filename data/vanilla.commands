@@ -104,7 +104,8 @@ WEATHER_RAIN/weather rain
 WEATHER_THUNDER_TIMED/weather thunder <duration:time[minimum=1]>
 WEATHER_THUNDER/weather thunder
 
-GIVE/give <targets:entity_selector[players]> <item:greedy_string>
+GIVE/give <targets:entity_selector[players]> <item:item_stack>
+GIVE_COUNT/give <targets:entity_selector[players]> <item:item_stack> <count:int>
 
 PLAYSOUND_MIN_VOLUME/playsound <sound:resource_location> <source:word> <targets:entity_selector[players]> <pos:vec3> <volume:double> <pitch:double> <min_volume:double>
 PLAYSOUND_PITCH/playsound <sound:resource_location> <source:word> <targets:entity_selector[players]> <pos:vec3> <volume:double> <pitch:double>

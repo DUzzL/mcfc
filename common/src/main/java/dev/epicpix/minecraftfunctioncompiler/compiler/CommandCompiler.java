@@ -797,6 +797,14 @@ public final class CommandCompiler {
                 var players = context.getSelectorList(targets, null);
                 context.writeInstruction(Instructions.giveItemsToAll(players, item));
             }
+            case CommandGiveCount(SelectorArgument targets, String item, int count) -> {
+                // Append count back onto the item string so the runtime parser
+                // (which still expects `id[components] N` format for backwards
+                // compatibility) picks it up. A follow-up step will add an
+                // explicit-count IL instruction that takes item + int separately.
+                var players = context.getSelectorList(targets, null);
+                context.writeInstruction(Instructions.giveItemsToAll(players, item + " " + count));
+            }
             // playsound
             case CommandPlaysoundMinVolume(DataLocation sound, String source, SelectorArgument targets, WorldCoordinates pos, double volume, double pitch, double minVolume) -> {
                 var players = context.getSelectorList(targets, null);
