@@ -753,50 +753,6 @@ public class ExtensionFunctions {
         }
     }
 
-    public static void giveItems(MinecraftServer server, ServerPlayer player, String itemString) {
-        String itemPart;
-        int count = 1;
-
-        int bracketDepth = 0;
-        int lastSpaceOutside = -1;
-        for (int i = 0; i < itemString.length(); i++) {
-            char c = itemString.charAt(i);
-            if (c == '[' || c == '{') bracketDepth++;
-            else if (c == ']' || c == '}') bracketDepth--;
-            else if (c == ' ' && bracketDepth == 0) lastSpaceOutside = i;
-        }
-
-        if (lastSpaceOutside > 0) {
-            String tail = itemString.substring(lastSpaceOutside + 1);
-            int parsed = parseInt(tail, Integer.MIN_VALUE);
-            if (parsed != Integer.MIN_VALUE) {
-                count = parsed;
-                itemPart = itemString.substring(0, lastSpaceOutside);
-            } else {
-                itemPart = itemString;
-            }
-        } else {
-            itemPart = itemString;
-        }
-
-        String itemId = itemPart.contains("[") ? itemPart.substring(0, itemPart.indexOf('[')) : itemPart;
-        var itemOptional = server.registryAccess().lookupOrThrow(Registries.ITEM)
-            .get(ResourceKey.create(Registries.ITEM, Identifier.parse(itemId)));
-        if (itemOptional.isEmpty()) return;
-
-        int remaining = count;
-        var item = itemOptional.get();
-        int maxStackSize = item.value().getDefaultMaxStackSize();
-        while (remaining > 0) {
-            int stackSize = Math.min(remaining, maxStackSize);
-            var stack = new net.minecraft.world.item.ItemStack(item, stackSize);
-            if (!player.getInventory().add(stack)) {
-                player.drop(stack, false);
-            }
-            remaining -= stackSize;
-        }
-    }
-
     private static int parseInt(String s, int defaultValue) {
         int result = 0;
         boolean negative = false;
@@ -855,30 +811,6 @@ public class ExtensionFunctions {
                     soundHolder, soundSource, pos.x, pos.y, pos.z, vol, pit, seed
                 ));
             }
-        }
-    }
-
-    public static void playSound(ServerPlayer player, String sound, String source, net.minecraft.world.phys.Vec3 pos, double volume, double pitch, double minVolume) {
-        var soundEvent = net.minecraft.sounds.SoundEvent.createVariableRangeEvent(Identifier.parse(sound));
-        var soundSource = net.minecraft.sounds.SoundSource.valueOf(source.toUpperCase(java.util.Locale.ROOT));
-        float dist = Math.max((float) volume, 1.0f) * 16.0f;
-        double dx = pos.x - player.getX();
-        double dy = pos.y - player.getY();
-        double dz = pos.z - player.getZ();
-        double distSq = dx * dx + dy * dy + dz * dz;
-        if (distSq > dist * dist) {
-            if (minVolume <= 0.0) return;
-            double d = Math.sqrt(distSq);
-            double nx = player.getX() + dx / d * 2.0;
-            double ny = player.getY() + dy / d * 2.0;
-            double nz = player.getZ() + dz / d * 2.0;
-            player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
-                net.minecraft.core.Holder.direct(soundEvent), soundSource, nx, ny, nz, (float) minVolume, (float) pitch, player.level().getRandom().nextLong()
-            ));
-        } else {
-            player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
-                net.minecraft.core.Holder.direct(soundEvent), soundSource, pos.x, pos.y, pos.z, (float) volume, (float) pitch, player.level().getRandom().nextLong()
-            ));
         }
     }
 

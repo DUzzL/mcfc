@@ -708,19 +708,11 @@
 @COPY_TEXT(<net.minecraft.network.chat.Component> [ctx:text]) -> <net.minecraft.network.chat.MutableComponent> = [ctx:text].copy();
 
 // give
-@GIVE_ITEMS(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:item_string]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.giveItems([static:MinecraftServer], [ctx:player], [instr:item_string]);
-}
-
 @GIVE_ITEMS_TO_ALL(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.util.List<net.minecraft.world.entity.Entity> > [ctx:entities], <java.lang.String> [instr:item_string]) {
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.giveItemsToAll([static:MinecraftServer], [ctx:entities], [instr:item_string]);
 }
 
 // playsound
-@PLAY_SOUND(<net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:sound], <java.lang.String> [instr:source], <net.minecraft.world.phys.Vec3> [ctx:pos], double [ctx:volume], double [ctx:pitch], double [ctx:min_volume]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.playSound([ctx:player], [instr:sound], [instr:source], [ctx:pos], [ctx:volume], [ctx:pitch], [ctx:min_volume]);
-}
-
 @PLAY_SOUND_TO_ALL(<java.util.List<net.minecraft.world.entity.Entity> > [ctx:entities], <java.lang.String> [instr:sound], <java.lang.String> [instr:source], <net.minecraft.world.phys.Vec3> [ctx:pos], double [ctx:volume], double [ctx:pitch], double [ctx:min_volume]) {
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.playSoundToAll([ctx:entities], [instr:sound], [instr:source], [ctx:pos], [ctx:volume], [ctx:pitch], [ctx:min_volume]);
 }
