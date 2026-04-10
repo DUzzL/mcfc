@@ -646,17 +646,30 @@ public class ExtensionFunctions {
     // Give
 
     /**
-     * Give an item stack to a list of entities (players only). Parses the item
-     * string once, then iterates over the player subset. Parse work (Identifier,
-     * registry lookup, stack size calculation) is loop-invariant — doing it per
-     * player like the old giveItems() path did was 20× wasted work on `give @a`.
+     * Cache of parsed item strings. Datapacks reference a bounded set of items
+     * (hundreds at most for even the largest packs), so an unbounded ConcurrentHashMap
+     * is fine — we pay the ItemParser cost exactly once per unique string, for
+     * the lifetime of the server. Each subsequent `give @a X` with the same string
+     * is a single map lookup plus inventory.add() per player.
      */
-    public static void giveItemsToAll(MinecraftServer server, List<? extends Entity> entities, String itemString) {
-        if (entities.isEmpty()) return;
+    private static final java.util.concurrent.ConcurrentHashMap<String, net.minecraft.commands.arguments.item.ItemInput> ITEM_PARSE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
-        // Parse once
-        String itemPart;
-        int count = 1;
+    /**
+     * Parse an item string using vanilla's ItemParser — supports the full
+     * `id[component=value,...]` syntax with enchantments, custom names, lore,
+     * attribute modifiers, and anything else the game command dispatcher
+     * accepts. Cached so repeated `give` calls with the same string don't
+     * reparse.
+     *
+     * Returns null on malformed input (logged once per string at WARN).
+     */
+    private static net.minecraft.commands.arguments.item.@Nullable ItemInput parseItemInput(MinecraftServer server, String itemString) {
+        var cached = ITEM_PARSE_CACHE.get(itemString);
+        if (cached != null) return cached;
+
+        // Strip trailing `<space><count>` if present — give-syntax puts count
+        // after the item descriptor, but ItemParser only reads the item half.
+        String itemPart = itemString;
         int bracketDepth = 0;
         int lastSpaceOutside = -1;
         for (int i = 0; i < itemString.length(); i++) {
@@ -667,30 +680,71 @@ public class ExtensionFunctions {
         }
         if (lastSpaceOutside > 0) {
             String tail = itemString.substring(lastSpaceOutside + 1);
-            int parsed = parseInt(tail, Integer.MIN_VALUE);
-            if (parsed != Integer.MIN_VALUE) {
-                count = parsed;
+            if (parseInt(tail, Integer.MIN_VALUE) != Integer.MIN_VALUE) {
                 itemPart = itemString.substring(0, lastSpaceOutside);
-            } else {
-                itemPart = itemString;
             }
-        } else {
-            itemPart = itemString;
         }
-        String itemId = itemPart.contains("[") ? itemPart.substring(0, itemPart.indexOf('[')) : itemPart;
-        var itemOptional = server.registryAccess().lookupOrThrow(Registries.ITEM)
-            .get(ResourceKey.create(Registries.ITEM, Identifier.parse(itemId)));
-        if (itemOptional.isEmpty()) return;
-        var item = itemOptional.get();
-        int maxStackSize = item.value().getDefaultMaxStackSize();
 
-        // Per-player distribution
+        var parser = new net.minecraft.commands.arguments.item.ItemParser(server.registryAccess());
+        try {
+            var input = parser.parse(new com.mojang.brigadier.StringReader(itemPart));
+            ITEM_PARSE_CACHE.put(itemString, input);
+            return input;
+        } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
+            LOGGER.warn("Failed to parse item string '{}': {}", itemPart, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Extract the count suffix from an item string, defaulting to 1.
+     */
+    private static int parseItemCount(String itemString) {
+        int bracketDepth = 0;
+        int lastSpaceOutside = -1;
+        for (int i = 0; i < itemString.length(); i++) {
+            char c = itemString.charAt(i);
+            if (c == '[' || c == '{') bracketDepth++;
+            else if (c == ']' || c == '}') bracketDepth--;
+            else if (c == ' ' && bracketDepth == 0) lastSpaceOutside = i;
+        }
+        if (lastSpaceOutside > 0) {
+            int parsed = parseInt(itemString.substring(lastSpaceOutside + 1), Integer.MIN_VALUE);
+            if (parsed != Integer.MIN_VALUE) return parsed;
+        }
+        return 1;
+    }
+
+    /**
+     * Give an item stack to a list of entities (players only). All parsing
+     * (vanilla ItemParser including components, enchantments, NBT) happens
+     * once and is cached across calls — per-player cost is only
+     * ItemStack.copy() + inventory.add().
+     */
+    public static void giveItemsToAll(MinecraftServer server, List<? extends Entity> entities, String itemString) {
+        if (entities.isEmpty()) return;
+
+        var input = parseItemInput(server, itemString);
+        if (input == null) return;
+        int count = parseItemCount(itemString);
+
+        // Build a prototype stack once — createItemStack validates the
+        // components and max count; subsequent per-player stacks are cheap copies.
+        net.minecraft.world.item.ItemStack prototype;
+        try {
+            prototype = input.createItemStack(1);
+        } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
+            LOGGER.warn("Failed to build item stack for '{}': {}", itemString, e.getMessage());
+            return;
+        }
+        int maxStackSize = prototype.getMaxStackSize();
+
         for (var entity : entities) {
             if (!(entity instanceof ServerPlayer player)) continue;
             int remaining = count;
             while (remaining > 0) {
                 int stackSize = Math.min(remaining, maxStackSize);
-                var stack = new net.minecraft.world.item.ItemStack(item, stackSize);
+                var stack = prototype.copyWithCount(stackSize);
                 if (!player.getInventory().add(stack)) {
                     player.drop(stack, false);
                 }
