@@ -177,7 +177,8 @@ public class ExtensionFunctions {
         if (cached != null) return cached;
         try {
             var reader = new com.mojang.brigadier.StringReader(itemString);
-            var result = net.minecraft.commands.arguments.item.ItemPredicateArgument.itemPredicate(server.registryAccess()).parse(reader);
+            var buildContext = net.minecraft.commands.CommandBuildContext.simple(server.registryAccess(), server.enabledFeatures());
+            var result = net.minecraft.commands.arguments.item.ItemPredicateArgument.itemPredicate(buildContext).parse(reader);
             ITEM_PREDICATE_CACHE.put(itemString, result);
             return result;
         } catch (Exception e) {
@@ -241,7 +242,7 @@ public class ExtensionFunctions {
         if (particle == null) return;
         for (var entity : viewers) {
             if (entity instanceof ServerPlayer player) {
-                level.sendParticles(player, particle, true, pos.x, pos.y, pos.z, count, delta.x, delta.y, delta.z, speed);
+                level.sendParticles(player, particle, true, true, pos.x, pos.y, pos.z, count, delta.x, delta.y, delta.z, speed);
             }
         }
     }
