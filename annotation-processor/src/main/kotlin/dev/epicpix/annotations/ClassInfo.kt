@@ -72,6 +72,8 @@ private fun fixKotlinDesc(type: KSType): String {
         "kotlin.collections.Map" -> "Ljava/util/Map;"
         "kotlin.collections.Iterable" -> "Ljava/lang/Iterable;"
         "kotlin.collections.MutableIterable" -> "Ljava/lang/Iterable;"
+        "kotlin.collections.Iterator" -> "Ljava/util/Iterator;"
+        "kotlin.collections.MutableIterator" -> "Ljava/util/Iterator;"
         "kotlin.Array" -> "[Ljava/lang/Object;"
         else -> {
             if(from.startsWith("kotlin.")) throw IllegalArgumentException("Unknown kotlin class: $from")

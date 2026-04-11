@@ -14,6 +14,8 @@ fun kotlinToJavaType(type: String, genericUsage: Boolean, generics: List<String>
         "kotlin.collections.List" -> if(!genericUsage) "List" else "List${if(generics.isEmpty()) "<?>" else ""}"
         "kotlin.collections.MutableList" -> if(!genericUsage) "List" else "List${if(generics.isEmpty()) "<?>" else ""}"
         "kotlin.collections.Map" -> "Map"
+        "kotlin.collections.Iterator" -> if(!genericUsage) "Iterator" else "Iterator${if(generics.isEmpty()) "<?>" else ""}"
+        "kotlin.collections.MutableIterator" -> if(!genericUsage) "Iterator" else "Iterator${if(generics.isEmpty()) "<?>" else ""}"
         "java.util.List" -> if(!genericUsage) "List" else "List${if(generics.isEmpty()) "<?>" else ""}"
         else -> if(type.startsWith("kotlin.")) throw UnsupportedOperationException("Unknown kotlin type: $type") else type
     } + genericsString
