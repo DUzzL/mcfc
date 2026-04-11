@@ -176,11 +176,11 @@ public class ExtensionFunctions {
         var cached = ITEM_PREDICATE_CACHE.get(itemString);
         if (cached != null) return cached;
         try {
-            var reader = new com.mojang.brigadier.StringReader(itemString);
-            var buildContext = net.minecraft.commands.CommandBuildContext.simple(server.registryAccess(), server.worldData().enabledFeatures());
-            var result = net.minecraft.commands.arguments.item.ItemPredicateArgument.itemPredicate(buildContext).parse(reader);
-            ITEM_PREDICATE_CACHE.put(itemString, result);
-            return result;
+            var input = parseItemInput(server, itemString);
+            if (input == null) return null;
+            java.util.function.Predicate<net.minecraft.world.item.ItemStack> predicate = input::test;
+            ITEM_PREDICATE_CACHE.put(itemString, predicate);
+            return predicate;
         } catch (Exception e) {
             LOGGER.warn("Failed to parse item predicate '{}': {}", itemString, e.getMessage());
             return null;
