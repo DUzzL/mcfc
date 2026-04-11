@@ -172,7 +172,7 @@ public class ExtensionFunctions {
 
     private static final java.util.concurrent.ConcurrentHashMap<String, java.util.function.Predicate<net.minecraft.world.item.ItemStack>> ITEM_PREDICATE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
-    private static @Nullable java.util.function.Predicate<net.minecraft.world.item.ItemStack> parseItemPredicate(MinecraftServer server, String itemString) {
+    private static java.util.function.@Nullable Predicate<net.minecraft.world.item.ItemStack> parseItemPredicate(MinecraftServer server, String itemString) {
         var cached = ITEM_PREDICATE_CACHE.get(itemString);
         if (cached != null) return cached;
         try {
@@ -210,7 +210,7 @@ public class ExtensionFunctions {
 
     private static final java.util.concurrent.ConcurrentHashMap<String, net.minecraft.core.particles.ParticleOptions> PARTICLE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
-    private static @Nullable net.minecraft.core.particles.ParticleOptions parseParticle(MinecraftServer server, String particleName) {
+    private static net.minecraft.core.particles.@Nullable ParticleOptions parseParticle(MinecraftServer server, String particleName) {
         var cached = PARTICLE_CACHE.get(particleName);
         if (cached != null) return cached;
         try {
