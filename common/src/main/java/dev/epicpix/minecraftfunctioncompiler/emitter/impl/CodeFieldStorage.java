@@ -133,11 +133,11 @@ public final class CodeFieldStorage {
         return cw.getDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerType);
     }
 
-    private <T> CodeWriter writeFromStorage(HashSet<CodeFieldStorageMapKind<?>> written, CodeWriter cw, ClassGenerator classGenerator, CodeFieldStorageMapKind<T> kind) {
-        if(written.contains(kind)) return cw;
+    private <T> void writeFromStorage(HashSet<CodeFieldStorageMapKind<?>> written, CodeWriter cw, ClassGenerator classGenerator, CodeFieldStorageMapKind<T> kind) {
+        if(written.contains(kind)) return;
         written.add(kind);
         for(var dep : kind.getDependencies()) {
-            cw = writeFromStorage(written, cw, classGenerator, dep);
+            writeFromStorage(written, cw, classGenerator, dep);
         }
         for(var value : map.getStorage(kind)) {
             var name = kind.generateName(map, value);
@@ -145,8 +145,6 @@ public final class CodeFieldStorage {
             cw.setDataField(name, map.getValueType(kind), writtenValue);
             classGenerator.addFinalField(name, map.getValueType(kind));
         }
-
-        return cw;
     }
 
     public BytecodeValue getGeneratorMinecraftServer() {
@@ -155,21 +153,39 @@ public final class CodeFieldStorage {
 
     public byte[] generate(HashMap<String, List<BytecodeInstruction>> lowLevelInstructions) {
         return ClassGenerator.createClassGenerator(DATA_CLASS, true, classGenerator -> {
-            var cw = new CodeWriter();
-
-            cw.setDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerType, new BytecodeValue.Parameter(1, serverFunctionManagerType));
-
+            // Generate per-kind sub-methods to avoid JVM 65535 bytecode limit.
+            // Each CodeFieldStorageMapKind gets its own load$N static method.
             HashSet<CodeFieldStorageMapKind<?>> written = new HashSet<>();
+            var loadMethodType = MethodTypeDesc.of(ConstantDescs.CD_void, minecraftServerType, serverFunctionManagerType);
+            var subMethodNames = new java.util.ArrayList<String>();
+
             for(var kind : CodeFieldStorageMapKind.values()) {
-                cw = writeFromStorage(written, cw, classGenerator, kind);
+                if(written.contains(kind)) continue;
+                var subCw = new CodeWriter();
+                writeFromStorage(written, subCw, classGenerator, kind);
+                var rawInstructions = subCw.getInstructions();
+                if(rawInstructions.isEmpty()) continue;
+
+                subCw.returnVoid();
+                var subName = "load$" + subMethodNames.size();
+                var optimized = BytecodeOptimizer.optimizeInstructions(subCw.getInstructions());
+                lowLevelInstructions.put(DATA_CLASS.displayName() + "#" + subName, optimized);
+                classGenerator.addFunction(subName, optimized, loadMethodType);
+                subMethodNames.add(subName);
             }
 
-            cw.returnVoid();
+            // Main load() method: set ServerFunctionManager field, then call each sub-method
+            var mainCw = new CodeWriter();
+            mainCw.setDataField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerType, new BytecodeValue.Parameter(1, serverFunctionManagerType));
+            for(var subName : subMethodNames) {
+                var target = new dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget.FunctionTarget(DATA_CLASS, subName, loadMethodType, true, false, false, true);
+                mainCw.writeTarget(target, new BytecodeValue.Parameter(0, minecraftServerType), new BytecodeValue.Parameter(1, serverFunctionManagerType));
+            }
+            mainCw.returnVoid();
 
-            var instructions = BytecodeOptimizer.optimizeInstructions(cw.getInstructions());
-            lowLevelInstructions.put(DATA_CLASS.displayName() + "#load", instructions);
-
-            classGenerator.addFunction("load", instructions, MethodTypeDesc.of(ConstantDescs.CD_void, minecraftServerType, serverFunctionManagerType));
+            var mainInstructions = BytecodeOptimizer.optimizeInstructions(mainCw.getInstructions());
+            lowLevelInstructions.put(DATA_CLASS.displayName() + "#load", mainInstructions);
+            classGenerator.addFunction("load", mainInstructions, loadMethodType);
 
             classGenerator.addFinalField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerType);
             classGenerator.addField(RUN_RESULT_FIELD, ConstantDescs.CD_long, 0L);

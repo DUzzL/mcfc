@@ -16,6 +16,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument;
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCompareOperation;
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreboardOperation;
 import dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument;
+import dev.epicpix.minecraftfunctioncompiler.data.SelectorSort;
 import dev.epicpix.minecraftfunctioncompiler.data.SwizzleArgument;
 import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPath;
@@ -1149,17 +1150,17 @@ public final class CommandCompiler {
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: slot mapping + item parsing),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandItemReplaceEntityWith(SelectorArgument targets, String slot, String item) ->
-                emitVanillaFallback(context, "item replace entity " + targets + " " + slot + " with " + item);
+                emitVanillaFallback(context, "item replace entity " + selectorToString(targets) + " " + slot + " with " + item);
             case CommandItemReplaceEntityFromEntity(SelectorArgument targets, String slot, SelectorArgument source) ->
-                emitVanillaFallback(context, "item replace entity " + targets + " " + slot + " from entity " + source);
+                emitVanillaFallback(context, "item replace entity " + selectorToString(targets) + " " + slot + " from entity " + selectorToString(source));
             case CommandItemReplaceEntityFromEntitySlot(SelectorArgument targets, String slot, SelectorArgument source, String sourceSlot) ->
-                emitVanillaFallback(context, "item replace entity " + targets + " " + slot + " from entity " + source + " " + sourceSlot);
+                emitVanillaFallback(context, "item replace entity " + selectorToString(targets) + " " + slot + " from entity " + selectorToString(source) + " " + sourceSlot);
             case CommandItemReplaceBlockWith(WorldCoordinates pos, String slot, String item) ->
                 emitVanillaFallback(context, "item replace block " + worldCoordsToString(pos) + " " + slot + " with " + item);
             case CommandItemReplaceBlockFromEntity(WorldCoordinates pos, String slot, SelectorArgument source) ->
-                emitVanillaFallback(context, "item replace block " + worldCoordsToString(pos) + " " + slot + " from entity " + source);
+                emitVanillaFallback(context, "item replace block " + worldCoordsToString(pos) + " " + slot + " from entity " + selectorToString(source));
             case CommandItemReplaceBlockFromEntitySlot(WorldCoordinates pos, String slot, SelectorArgument source, String sourceSlot) ->
-                emitVanillaFallback(context, "item replace block " + worldCoordsToString(pos) + " " + slot + " from entity " + source + " " + sourceSlot);
+                emitVanillaFallback(context, "item replace block " + worldCoordsToString(pos) + " " + slot + " from entity " + selectorToString(source) + " " + sourceSlot);
             case CommandItemReplaceBlockFromBlock(WorldCoordinates pos, String slot, WorldCoordinates sourcePos) ->
                 emitVanillaFallback(context, "item replace block " + worldCoordsToString(pos) + " " + slot + " from block " + worldCoordsToString(sourcePos));
             case CommandItemReplaceBlockFromBlockSlot(WorldCoordinates pos, String slot, WorldCoordinates sourcePos, String sourceSlot) ->
@@ -1192,9 +1193,9 @@ public final class CommandCompiler {
                 }
             }
             case CommandScoreboardPlayersDisplayNameGreedy(ScoreHolderArgument targets, String objective, String displayName) ->
-                emitVanillaFallback(context, "scoreboard players display name " + targets + " " + objective + " " + displayName);
+                emitVanillaFallback(context, "scoreboard players display name " + scoreHolderToString(targets) + " " + objective + " " + displayName);
             case CommandScoreboardPlayersDisplayNameClear(ScoreHolderArgument targets) ->
-                emitVanillaFallback(context, "scoreboard players display name " + targets);
+                emitVanillaFallback(context, "scoreboard players display name " + scoreHolderToString(targets));
             case CommandScoreboardObjectivesSetdisplay(String slot, String objective) ->
                 context.writeInstruction(Instructions.scoreboardSetdisplay(slot, objective));
             case CommandScoreboardPlayersDisplayNumberformatBlank(ScoreHolderArgument targets, String objective) -> {
@@ -1266,9 +1267,9 @@ public final class CommandCompiler {
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: item predicate parsing + slot iteration),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandExecuteIfItemsEntity(SelectorArgument targets, String slot, String predicate, CommandParams command) ->
-                emitVanillaFallback(context, "execute if items entity " + targets + " " + slot + " " + predicate + " run " + getRawCommand(command));
+                emitVanillaFallback(context, "execute if items entity " + selectorToString(targets) + " " + slot + " " + predicate + " run " + getRawCommand(command));
             case CommandExecuteUnlessItemsEntity(SelectorArgument targets, String slot, String predicate, CommandParams command) ->
-                emitVanillaFallback(context, "execute unless items entity " + targets + " " + slot + " " + predicate + " run " + getRawCommand(command));
+                emitVanillaFallback(context, "execute unless items entity " + selectorToString(targets) + " " + slot + " " + predicate + " run " + getRawCommand(command));
             case CommandExecuteIfItemsBlock(WorldCoordinates pos, String slot, String predicate, CommandParams command) ->
                 emitVanillaFallback(context, "execute if items block " + worldCoordsToString(pos) + " " + slot + " " + predicate + " run " + getRawCommand(command));
             case CommandExecuteUnlessItemsBlock(WorldCoordinates pos, String slot, String predicate, CommandParams command) ->
@@ -1277,11 +1278,11 @@ public final class CommandCompiler {
             // execute if/unless items standalone — для execute store result ... if items ...
             case CommandExecuteIfItemsEntityOnly(SelectorArgument targets, String slot, String predicate) -> {
                 result.markImplemented();
-                emitVanillaFallback(context, "execute if items entity " + targets + " " + slot + " " + predicate);
+                emitVanillaFallback(context, "execute if items entity " + selectorToString(targets) + " " + slot + " " + predicate);
             }
             case CommandExecuteUnlessItemsEntityOnly(SelectorArgument targets, String slot, String predicate) -> {
                 result.markImplemented();
-                emitVanillaFallback(context, "execute unless items entity " + targets + " " + slot + " " + predicate);
+                emitVanillaFallback(context, "execute unless items entity " + selectorToString(targets) + " " + slot + " " + predicate);
             }
             case CommandExecuteIfItemsBlockOnly(WorldCoordinates pos, String slot, String predicate) -> {
                 result.markImplemented();
@@ -1295,7 +1296,7 @@ public final class CommandCompiler {
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: entity NBT load/save + path resolution),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandExecuteStoreEntity(ResultStoreLocationType storeLocation, SelectorArgument target, NbtPath path, ResultStoreType storeType, double scale, CommandParams command) ->
-                emitVanillaFallback(context, "execute store " + storeLocation.name().toLowerCase() + " entity " + target + " " + nbtPathToString(path) + " " + storeType.name().toLowerCase() + " " + scale + " run " + getRawCommand(command));
+                emitVanillaFallback(context, "execute store " + storeLocation.name().toLowerCase() + " entity " + selectorToString(target) + " " + nbtPathToString(path) + " " + storeType.name().toLowerCase() + " " + scale + " run " + getRawCommand(command));
 
             // execute on leasher / attacker / controller / owner / passengers
             case CommandExecuteOnLeasher(CommandParams command) -> {
@@ -1519,30 +1520,30 @@ public final class CommandCompiler {
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: loot table resolution + item distribution),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandLootReplaceEntityLoot(SelectorArgument target, String slot, DataLocation loot) ->
-                emitVanillaFallback(context, "loot replace entity " + target + " " + slot + " loot " + loot);
+                emitVanillaFallback(context, "loot replace entity " + selectorToString(target) + " " + slot + " loot " + loot);
             case CommandLootReplaceEntityKill(SelectorArgument target, String slot, SelectorArgument kill) ->
-                emitVanillaFallback(context, "loot replace entity " + target + " " + slot + " kill " + kill);
+                emitVanillaFallback(context, "loot replace entity " + selectorToString(target) + " " + slot + " kill " + selectorToString(kill));
             case CommandLootReplaceBlockLoot(WorldCoordinates pos, String slot, DataLocation loot) ->
                 emitVanillaFallback(context, "loot replace block " + worldCoordsToString(pos) + " " + slot + " loot " + loot);
             case CommandLootReplaceBlockKill(WorldCoordinates pos, String slot, SelectorArgument kill) ->
-                emitVanillaFallback(context, "loot replace block " + worldCoordsToString(pos) + " " + slot + " kill " + kill);
+                emitVanillaFallback(context, "loot replace block " + worldCoordsToString(pos) + " " + slot + " kill " + selectorToString(kill));
             case CommandLootInsertLoot(WorldCoordinates pos, DataLocation loot) ->
                 emitVanillaFallback(context, "loot insert " + worldCoordsToString(pos) + " loot " + loot);
             case CommandLootInsertKill(WorldCoordinates pos, SelectorArgument kill) ->
-                emitVanillaFallback(context, "loot insert " + worldCoordsToString(pos) + " kill " + kill);
+                emitVanillaFallback(context, "loot insert " + worldCoordsToString(pos) + " kill " + selectorToString(kill));
             case CommandLootGiveLoot(SelectorArgument players, DataLocation loot) ->
-                emitVanillaFallback(context, "loot give " + players + " loot " + loot);
+                emitVanillaFallback(context, "loot give " + selectorToString(players) + " loot " + loot);
             case CommandLootGiveKill(SelectorArgument players, SelectorArgument kill) ->
-                emitVanillaFallback(context, "loot give " + players + " kill " + kill);
+                emitVanillaFallback(context, "loot give " + selectorToString(players) + " kill " + selectorToString(kill));
             case CommandLootSpawnLoot(WorldCoordinates pos, DataLocation loot) ->
                 emitVanillaFallback(context, "loot spawn " + worldCoordsToString(pos) + " loot " + loot);
             case CommandLootSpawnKill(WorldCoordinates pos, SelectorArgument kill) ->
-                emitVanillaFallback(context, "loot spawn " + worldCoordsToString(pos) + " kill " + kill);
+                emitVanillaFallback(context, "loot spawn " + worldCoordsToString(pos) + " kill " + selectorToString(kill));
 
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: loot function resolution + item modification),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandItemModifyEntity(SelectorArgument targets, String slot, String modifier) ->
-                emitVanillaFallback(context, "item modify entity " + targets + " " + slot + " " + modifier);
+                emitVanillaFallback(context, "item modify entity " + selectorToString(targets) + " " + slot + " " + modifier);
             case CommandItemModifyBlock(WorldCoordinates pos, String slot, String modifier) ->
                 emitVanillaFallback(context, "item modify block " + worldCoordsToString(pos) + " " + slot + " " + modifier);
 
@@ -2016,13 +2017,13 @@ public final class CommandCompiler {
             case CommandLootInsertMineOffhand(WorldCoordinates pos, WorldCoordinates pos2) ->
                 emitVanillaFallback(context, "loot insert " + worldCoordsToString(pos) + " mine " + worldCoordsToString(pos2) + " offhand");
             case CommandLootGiveFish(SelectorArgument players, DataLocation lootTable, WorldCoordinates pos) ->
-                emitVanillaFallback(context, "loot give " + players + " fish " + lootTable + " " + worldCoordsToString(pos));
+                emitVanillaFallback(context, "loot give " + selectorToString(players) + " fish " + lootTable + " " + worldCoordsToString(pos));
             case CommandLootGiveMine(SelectorArgument players, WorldCoordinates pos, String tool) ->
-                emitVanillaFallback(context, "loot give " + players + " mine " + worldCoordsToString(pos) + " " + tool);
+                emitVanillaFallback(context, "loot give " + selectorToString(players) + " mine " + worldCoordsToString(pos) + " " + tool);
             case CommandLootGiveMineMainhand(SelectorArgument players, WorldCoordinates pos) ->
-                emitVanillaFallback(context, "loot give " + players + " mine " + worldCoordsToString(pos) + " mainhand");
+                emitVanillaFallback(context, "loot give " + selectorToString(players) + " mine " + worldCoordsToString(pos) + " mainhand");
             case CommandLootGiveMineOffhand(SelectorArgument players, WorldCoordinates pos) ->
-                emitVanillaFallback(context, "loot give " + players + " mine " + worldCoordsToString(pos) + " offhand");
+                emitVanillaFallback(context, "loot give " + selectorToString(players) + " mine " + worldCoordsToString(pos) + " offhand");
 
             // vanilla fallback for partial compilation
             case CommandFallbackVanilla(String rawCommand) -> {
@@ -2363,7 +2364,7 @@ public final class CommandCompiler {
                 var iter = entries.entrySet().iterator();
                 while(iter.hasNext()) {
                     var e = iter.next();
-                    sb.append(e.getKey()).append(':').append(nbtValueToString(e.getValue()));
+                    sb.append(escapeNbtKey(e.getKey())).append(':').append(nbtValueToString(e.getValue()));
                     if(iter.hasNext()) sb.append(',');
                 }
                 yield sb.append('}').toString();
@@ -2401,10 +2402,76 @@ public final class CommandCompiler {
         };
     }
 
+    private static String selectorToString(SelectorArgument sel) {
+        if(sel.entityUuid() != null) return sel.entityUuid().toString();
+        if(sel.playerName() != null) return sel.playerName();
+        if(sel.self()) {
+            // Check if there are any extra filters beyond self
+            if(sel.tags().isEmpty() && sel.names().isEmpty() && sel.scores().isEmpty()
+                && sel.entityTypes() == null && sel.distance() == null && sel.level() == null
+                && sel.gamemodes().isEmpty() && sel.predicates().isEmpty() && sel.nbts().isEmpty()
+                && sel.hasTags() == null && sel.hasTeam() == null && sel.teams().isEmpty()
+                && sel.advancements() == null && sel.yaw() == null && sel.pitch() == null) {
+                return "@s";
+            }
+        }
+        // Full selector serialization
+        var sb = new StringBuilder("@e");
+        if(sel.self()) sb = new StringBuilder("@s");
+        else if(sel.requirePlayer() && sel.limit() != null && sel.limit() == 1 && sel.sort() == SelectorSort.NEAREST) sb = new StringBuilder("@p");
+        else if(sel.requirePlayer()) sb = new StringBuilder("@a");
+        else if(sel.sort() == SelectorSort.RANDOM && sel.limit() != null && sel.limit() == 1) sb = new StringBuilder("@r");
+
+        var args = new java.util.ArrayList<String>();
+        if(sel.entityTypes() != null) {
+            for(var type : sel.entityTypes().data()) {
+                args.add((sel.entityTypes().negated() ? "type=!" : "type=") + type);
+            }
+        }
+        if(sel.limit() != null && !sel.self()) args.add("limit=" + sel.limit());
+        if(sel.sort() != null && sel.sort() != SelectorSort.ARBITRARY && !sel.self()) args.add("sort=" + sel.sort().name().toLowerCase());
+        if(sel.distance() != null) args.add("distance=" + sel.distance());
+        for(var tag : sel.tags()) args.add("tag=" + (tag.negated() ? "!" : "") + tag.data().getStaticValue());
+        for(var name : sel.names()) args.add("name=" + (name.negated() ? "!" : "") + name.data());
+        for(var team : sel.teams()) args.add("team=" + (team.negated() ? "!" : "") + team.data());
+        for(var gm : sel.gamemodes()) args.add("gamemode=" + (gm.negated() ? "!" : "") + gm.data().name().toLowerCase());
+        for(var entry : sel.scores().entrySet()) args.add("scores={" + entry.getKey() + "=" + entry.getValue() + "}");
+        for(var nbt : sel.nbts()) args.add("nbt=" + (nbt.negated() ? "!" : "") + nbtValueToString(nbt.data()));
+        for(var pred : sel.predicates()) args.add("predicate=" + (pred.negated() ? "!" : "") + pred.data());
+        if(sel.level() != null) args.add("level=" + sel.level());
+        if(sel.x() != null) args.add("x=" + sel.x());
+        if(sel.y() != null) args.add("y=" + sel.y());
+        if(sel.z() != null) args.add("z=" + sel.z());
+        if(sel.dx() != null) args.add("dx=" + sel.dx());
+        if(sel.dy() != null) args.add("dy=" + sel.dy());
+        if(sel.dz() != null) args.add("dz=" + sel.dz());
+
+        if(!args.isEmpty()) {
+            sb.append('[');
+            sb.append(String.join(",", args));
+            sb.append(']');
+        }
+        return sb.toString();
+    }
+
+    private static String scoreHolderToString(ScoreHolderArgument holder) {
+        if(holder.all()) return "*";
+        if(holder.name() != null) return holder.name().getStaticValue();
+        if(holder.selector() != null) return selectorToString(holder.selector());
+        return "@s";
+    }
+
+    private static final java.util.regex.Pattern NBT_SIMPLE_KEY = java.util.regex.Pattern.compile("[A-Za-z0-9._+-]+");
+
+    private static String escapeNbtKey(String key) {
+        if(NBT_SIMPLE_KEY.matcher(key).matches()) return key;
+        return '"' + key.replace("\\", "\\\\").replace("\"", "\\\"") + '"';
+    }
+
     private static String nbtDataLocationToString(NbtDataLocation loc) {
         return switch(loc) {
             case NbtDataLocation.Storage(DataLocation storage) -> "storage " + storage;
-            case NbtDataLocation.Entity(SelectorArgument selector) -> "entity " + selector;
+            case NbtDataLocation.Entity(SelectorArgument selector) -> "entity " + selectorToString(selector);
             case NbtDataLocation.Block(WorldCoordinates pos) -> "block " + worldCoordsToString(pos);
         };
     }
