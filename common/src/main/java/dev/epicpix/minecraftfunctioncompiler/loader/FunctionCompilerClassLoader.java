@@ -99,7 +99,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         }
     }
 
-    private final HashMap<TIdentifier, MethodHandle> handles = new HashMap<>();
+    private final java.util.concurrent.ConcurrentHashMap<TIdentifier, MethodHandle> handles = new java.util.concurrent.ConcurrentHashMap<>();
 
     public final ClassLoader parent;
     public final TMinecraftServer minecraftServer;
@@ -108,7 +108,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     private final HashMap<DataLocation, List<String>> sourceFiles;
     private final DiagnosticCollector diagnostics = new DiagnosticCollector();
 
-    private State state = State.NOTHING_LOADED;
+    private volatile State state = State.NOTHING_LOADED;
     private @Nullable MethodHandle resultField;
 
     public enum State {

@@ -363,8 +363,34 @@ public final class CommandCompiler {
                                 innerContext.writeInstruction(Instructions.numberToFloat(convertedFloat, multipliedDouble));
                                 innerContext.writeInstruction(Instructions.createFloatTag(tagLocal, convertedFloat));
                             }
+                        }else if(storeType == ResultStoreType.BYTE || storeType == ResultStoreType.SHORT) {
+                            if(scale == 1.0d) {
+                                innerContext.writeInstruction(storeType == ResultStoreType.BYTE
+                                    ? Instructions.createByteTag(tagLocal, localResultValue)
+                                    : Instructions.createShortTag(tagLocal, localResultValue));
+                            }else {
+                                var resultDouble = context.<Double>createLocal();
+                                innerContext.writeInstruction(Instructions.numberToDouble(resultDouble, localResultValue));
+                                var multipliedDouble = context.<Double>createLocal();
+                                innerContext.writeInstruction(Instructions.valueMul(multipliedDouble, resultDouble, LocationData.ofDouble(scale)));
+                                var convertedInteger = context.<Integer>createLocal();
+                                innerContext.writeInstruction(Instructions.numberToInteger(convertedInteger, multipliedDouble));
+                                innerContext.writeInstruction(storeType == ResultStoreType.BYTE
+                                    ? Instructions.createByteTag(tagLocal, convertedInteger)
+                                    : Instructions.createShortTag(tagLocal, convertedInteger));
+                            }
+                        }else if(storeType == ResultStoreType.LONG) {
+                            if(scale == 1.0d) {
+                                innerContext.writeInstruction(Instructions.createLongTag(tagLocal, localResultValue));
+                            }else {
+                                var resultDouble = context.<Double>createLocal();
+                                innerContext.writeInstruction(Instructions.numberToDouble(resultDouble, localResultValue));
+                                var multipliedDouble = context.<Double>createLocal();
+                                innerContext.writeInstruction(Instructions.valueMul(multipliedDouble, resultDouble, LocationData.ofDouble(scale)));
+                                innerContext.writeInstruction(Instructions.createLongTagFromDouble(tagLocal, multipliedDouble));
+                            }
                         }else {
-                            throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_STORE, context.getSource(), "Storing into storage with a non-int/non-double/non-float type is not yet implemented"));
+                            throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_STORE, context.getSource(), "Storing into storage with unsupported type: " + storeType));
                         }
                         assignNbtValue(context, value, last, tagLocal, setCountLocal, innerContext.endLabel());
                     }
@@ -1797,12 +1823,14 @@ public final class CommandCompiler {
         context.writeInstruction(Instructions.tryAsNbtList(list, source, failLabel));
         var length = context.<Integer>createLocal();
         context.writeInstruction(Instructions.getListLength(length, list));
-        context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, LocationData.ofInteger(indexed.index()), length, failLabel));
         var index = context.<Integer>createLocal();
 
         if(indexed.index() >= 0) {
+            context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, LocationData.ofInteger(indexed.index()), length, failLabel));
             context.writeInstruction(Instructions.dup(index, LocationData.ofInteger(indexed.index())));
         }else {
+            // For negative indices: fail if abs(index) > length (e.g. list[-3] on a 2-element list)
+            context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN, LocationData.ofInteger(-indexed.index()), length, failLabel));
             context.writeInstruction(Instructions.dup(index, length));
             context.writeInstruction(Instructions.valueSub(index, index, LocationData.ofInteger(-indexed.index())));
         }

@@ -103,6 +103,12 @@ public class ExtensionFunctions {
         }
     }
 
+    // Tag creation helpers for execute store byte/short/long
+    public static Tag createByteTag(int value) { return ByteTag.valueOf((byte) value); }
+    public static Tag createShortTag(int value) { return ShortTag.valueOf((short) value); }
+    public static Tag createLongTag(int value) { return LongTag.valueOf((long) value); }
+    public static Tag createLongTagFromDouble(double value) { return LongTag.valueOf((long) value); }
+
     public static void sortEntitiesClosest(Vec3 origin, List<Entity> list) {
         list.sort(Comparator.comparingDouble(a -> a.distanceToSqr(origin)));
     }
@@ -912,7 +918,10 @@ public class ExtensionFunctions {
             if (entity instanceof net.minecraft.world.entity.Mob mob) {
                 mob.finalizeSpawn(world, world.getCurrentDifficultyAt(entity.blockPosition()), net.minecraft.world.entity.EntitySpawnReason.COMMAND, null);
             }
-            world.tryAddFreshEntityWithPassengers(entity);
+            if (world.tryAddFreshEntityWithPassengers(entity)) {
+                // Invalidate the per-tick entity cache so subsequent @e sees the new entity
+                allEntitiesCache.remove(world);
+            }
         }
     }
 
@@ -958,23 +967,23 @@ public class ExtensionFunctions {
 
     public static int queryTimelineTicks(MinecraftServer server, ServerLevel world, String timelineId) {
         ServerClockManager clockManager = server.clockManager();
-        Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
-        Holder<Timeline> timeline = world.registryAccess().get(
+        var timelineOpt = world.registryAccess().get(
                 ResourceKey.create(Registries.TIMELINE, Identifier.parse(timelineId))
-        ).get();
+        );
+        if (timelineOpt.isEmpty()) return 0;
 
-        long currentTicks = timeline.value().getCurrentTicks(clockManager);
+        long currentTicks = timelineOpt.get().value().getCurrentTicks(clockManager);
         return TimeCommand.wrapTime(currentTicks);
     }
 
     public static int queryTimelineRepetitions(MinecraftServer server, ServerLevel world, String timelineId) {
         ServerClockManager clockManager = server.clockManager();
-        Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
-        Holder<Timeline> timeline = world.registryAccess().get(
+        var timelineOpt = world.registryAccess().get(
                 ResourceKey.create(Registries.TIMELINE, Identifier.parse(timelineId))
-        ).get();
+        );
+        if (timelineOpt.isEmpty()) return 0;
 
-        long repetitions = timeline.value().getPeriodCount(clockManager);
+        long repetitions = timelineOpt.get().value().getPeriodCount(clockManager);
         return TimeCommand.wrapTime(repetitions);
     }
 
@@ -1066,6 +1075,10 @@ public class ExtensionFunctions {
 
     public static void executeVanillaCommand(CommandSourceStack stack, String command) {
         stack.getServer().getCommands().performPrefixedCommand(stack, command);
+        // Vanilla commands can summon/kill entities or modify entity NBT,
+        // so invalidate both caches to prevent stale data in subsequent selectors
+        allEntitiesCache.clear();
+        entityNbtTickCache.clear();
     }
 
     // ScoreText с именованным score holder

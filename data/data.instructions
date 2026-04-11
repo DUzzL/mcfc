@@ -588,6 +588,14 @@
 @CREATE_FLOAT_TAG(float [ctx:value]) -> <net.minecraft.nbt.Tag> = <net.minecraft.nbt.FloatTag>.valueOf([ctx:value]);
 ##PURE
 @CREATE_INT_TAG(int [ctx:value]) -> <net.minecraft.nbt.Tag> = <net.minecraft.nbt.IntTag>.valueOf([ctx:value]);
+##PURE
+@CREATE_BYTE_TAG(int [ctx:value]) -> <net.minecraft.nbt.Tag> = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.createByteTag([ctx:value]);
+##PURE
+@CREATE_SHORT_TAG(int [ctx:value]) -> <net.minecraft.nbt.Tag> = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.createShortTag([ctx:value]);
+##PURE
+@CREATE_LONG_TAG(int [ctx:value]) -> <net.minecraft.nbt.Tag> = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.createLongTag([ctx:value]);
+##PURE
+@CREATE_LONG_TAG_FROM_DOUBLE(double [ctx:value]) -> <net.minecraft.nbt.Tag> = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.createLongTagFromDouble([ctx:value]);
 
 @SORT_LIST_ENTITY_NEAREST(<net.minecraft.world.phys.Vec3> [ctx:position], mut <java.util.List> [ctx:list]) {
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.sortEntitiesClosest([ctx:position], [ctx:list]);
