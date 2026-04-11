@@ -233,117 +233,6 @@ public class ExtensionFunctions {
     }
 
     // -------------------------------------------------------------------------
-    // Setblock / Fill — native compilation helpers
-    // -------------------------------------------------------------------------
-
-    private static final java.util.concurrent.ConcurrentHashMap<String, net.minecraft.commands.arguments.blocks.BlockInput> BLOCK_INPUT_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
-
-    private static @Nullable net.minecraft.commands.arguments.blocks.BlockInput parseBlockInput(MinecraftServer server, String blockString) {
-        var cached = BLOCK_INPUT_CACHE.get(blockString);
-        if (cached != null) return cached;
-        try {
-            var parser = new net.minecraft.commands.arguments.blocks.BlockStateParser(server.registryAccess().lookupOrThrow(Registries.BLOCK), false);
-            var result = parser.parse(new com.mojang.brigadier.StringReader(blockString));
-            var input = new net.minecraft.commands.arguments.blocks.BlockInput(result.blockState(), result.properties().keySet(), result.nbt());
-            BLOCK_INPUT_CACHE.put(blockString, input);
-            return input;
-        } catch (Exception e) {
-            LOGGER.warn("Failed to parse block state '{}': {}", blockString, e.getMessage());
-            return null;
-        }
-    }
-
-    public static int setBlock(ServerLevel level, Vec3 pos, String blockString, String mode) {
-        var input = parseBlockInput(level.getServer(), blockString);
-        if (input == null) return 0;
-        var blockPos = net.minecraft.core.BlockPos.containing(pos);
-        return switch (mode) {
-            case "replace" -> {
-                if (!input.place(level, blockPos, 2)) yield 0;
-                level.blockUpdated(blockPos, input.getState().getBlock());
-                yield 1;
-            }
-            case "keep" -> {
-                if (!level.getBlockState(blockPos).isAir()) yield 0;
-                if (!input.place(level, blockPos, 2)) yield 0;
-                level.blockUpdated(blockPos, input.getState().getBlock());
-                yield 1;
-            }
-            case "destroy" -> {
-                level.destroyBlock(blockPos, true);
-                if (!input.place(level, blockPos, 2)) yield 0;
-                level.blockUpdated(blockPos, input.getState().getBlock());
-                yield 1;
-            }
-            default -> 0;
-        };
-    }
-
-    public static int fillBlocks(ServerLevel level, Vec3 fromVec, Vec3 toVec, String blockString, String mode, @Nullable String filterString) {
-        var input = parseBlockInput(level.getServer(), blockString);
-        if (input == null) return 0;
-        var from = net.minecraft.core.BlockPos.containing(fromVec);
-        var to = net.minecraft.core.BlockPos.containing(toVec);
-        var boundedFrom = new net.minecraft.core.BlockPos(Math.min(from.getX(), to.getX()), Math.min(from.getY(), to.getY()), Math.min(from.getZ(), to.getZ()));
-        var boundedTo = new net.minecraft.core.BlockPos(Math.max(from.getX(), to.getX()), Math.max(from.getY(), to.getY()), Math.max(from.getZ(), to.getZ()));
-
-        int count = 0;
-        var positions = net.minecraft.core.BlockPos.betweenClosed(boundedFrom, boundedTo);
-        for (var blockPos : positions) {
-            var currentState = level.getBlockState(blockPos);
-            boolean isEdge = blockPos.getX() == boundedFrom.getX() || blockPos.getX() == boundedTo.getX()
-                    || blockPos.getY() == boundedFrom.getY() || blockPos.getY() == boundedTo.getY()
-                    || blockPos.getZ() == boundedFrom.getZ() || blockPos.getZ() == boundedTo.getZ();
-            boolean isInner = !isEdge;
-
-            boolean shouldPlace = switch (mode) {
-                case "replace" -> filterString == null || checkBlockFilter(currentState, level, filterString);
-                case "keep" -> currentState.isAir();
-                case "destroy" -> true;
-                case "hollow" -> isEdge || currentState.isAir();
-                case "outline" -> isEdge;
-                default -> true;
-            };
-
-            if (!shouldPlace) continue;
-
-            if ("destroy".equals(mode)) {
-                level.destroyBlock(blockPos, true);
-            }
-
-            var stateToPlace = ("hollow".equals(mode) && isInner)
-                    ? net.minecraft.world.level.block.Blocks.AIR.defaultBlockState()
-                    : input.getState();
-
-            if (level.setBlock(blockPos, stateToPlace, 2)) {
-                count++;
-            }
-        }
-
-        return count;
-    }
-
-    private static boolean checkBlockFilter(net.minecraft.world.level.block.state.BlockState state, ServerLevel level, String filter) {
-        if (filter.startsWith("#")) {
-            var tagKey = BLOCK_TAG_CACHE.get(filter);
-            if (tagKey == null) {
-                tagKey = net.minecraft.tags.TagKey.create(Registries.BLOCK, cachedId(filter.substring(1)));
-                BLOCK_TAG_CACHE.put(filter, tagKey);
-            }
-            return state.is(tagKey);
-        }
-        String blockId = filter.contains("[") ? filter.substring(0, filter.indexOf('[')) : filter;
-        var block = BLOCK_ID_CACHE.get(blockId);
-        if (block == null) {
-            var optBlock = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getOptional(cachedId(blockId));
-            if (optBlock.isEmpty()) return false;
-            block = optBlock.get();
-            BLOCK_ID_CACHE.put(blockId, block);
-        }
-        return state.is(block);
-    }
-
-    // -------------------------------------------------------------------------
     // Team commands — native compilation helpers
     // -------------------------------------------------------------------------
 
@@ -391,10 +280,9 @@ public class ExtensionFunctions {
             case "color" -> team.setColor(net.minecraft.ChatFormatting.getByName(value));
             case "friendlyFire" -> team.setAllowFriendlyFire(Boolean.parseBoolean(value));
             case "seeFriendlyInvisibles" -> team.setSeeFriendlyInvisibles(Boolean.parseBoolean(value));
-            case "nametagVisibility" -> team.setNameTagVisibility(net.minecraft.world.scores.Team.Visibility.byName(value));
-            case "deathMessageVisibility" -> team.setDeathMessageVisibility(net.minecraft.world.scores.Team.Visibility.byName(value));
-            case "collisionRule" -> team.setCollisionRule(net.minecraft.world.scores.Team.CollisionRule.byName(value));
         }
+        // nametagVisibility, deathMessageVisibility, collisionRule have
+        // complex enum resolution — handled by vanilla fallback in compiler
     }
 
     // -------------------------------------------------------------------------
@@ -402,12 +290,14 @@ public class ExtensionFunctions {
     // -------------------------------------------------------------------------
 
     public static void recipeGive(MinecraftServer server, ServerPlayer player, String recipeId) {
-        var recipe = server.getRecipeManager().byKey(cachedId(recipeId));
+        var key = ResourceKey.create(Registries.RECIPE, cachedId(recipeId));
+        var recipe = server.getRecipeManager().byKey(key);
         if (recipe.isPresent()) player.awardRecipes(java.util.List.of(recipe.get()));
     }
 
     public static void recipeTake(MinecraftServer server, ServerPlayer player, String recipeId) {
-        var recipe = server.getRecipeManager().byKey(cachedId(recipeId));
+        var key = ResourceKey.create(Registries.RECIPE, cachedId(recipeId));
+        var recipe = server.getRecipeManager().byKey(key);
         if (recipe.isPresent()) player.resetRecipes(java.util.List.of(recipe.get()));
     }
 
@@ -419,26 +309,7 @@ public class ExtensionFunctions {
         player.resetRecipes(server.getRecipeManager().getRecipes());
     }
 
-    // -------------------------------------------------------------------------
-    // Random commands — native compilation helpers
-    // -------------------------------------------------------------------------
-
-    public static int randomValue(MinecraftServer server, int min, int max) {
-        return net.minecraft.util.RandomSource.create().nextIntBetweenInclusive(min, max);
-    }
-
-    public static int randomRoll(MinecraftServer server, int min, int max, String sequenceId) {
-        var sequence = server.getWorldData().randomSequences().get(cachedId(sequenceId));
-        return sequence.nextIntBetweenInclusive(min, max);
-    }
-
-    public static void randomReset(MinecraftServer server, String sequenceId) {
-        server.getWorldData().randomSequences().reset(cachedId(sequenceId));
-    }
-
-    public static void randomResetAll(MinecraftServer server) {
-        server.getWorldData().randomSequences().resetAll();
-    }
+    // Random commands — kept as vanilla fallback (complex random sequence API)
 
     public static void spawnParticle(MinecraftServer server, ServerLevel level, String particleName, Vec3 pos, Vec3 delta, double speed, int count) {
         var particle = parseParticle(server, particleName);

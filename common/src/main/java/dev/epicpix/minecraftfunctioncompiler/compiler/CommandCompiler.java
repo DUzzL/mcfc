@@ -1608,8 +1608,13 @@ public final class CommandCompiler {
                 emitVanillaFallback(context, "team list");
             case CommandTeamListTeam(String team) ->
                 emitVanillaFallback(context, "team list " + team);
-            case CommandTeamModify(String team, String option, String value) ->
-                context.writeInstruction(Instructions.teamModify(team, option, value));
+            case CommandTeamModify(String team, String option, String value) -> {
+                if (option.equals("color") || option.equals("friendlyFire") || option.equals("seeFriendlyInvisibles")) {
+                    context.writeInstruction(Instructions.teamModify(team, option, value));
+                } else {
+                    emitVanillaFallback(context, "team modify " + team + " " + option + " " + value);
+                }
+            }
             case CommandTeamEmpty(String team) ->
                 context.writeInstruction(Instructions.teamEmpty(team));
 
@@ -1636,103 +1641,29 @@ public final class CommandCompiler {
                 }
             }
 
-            // setblock — native compilation
-            case CommandSetblockReplace(WorldCoordinates pos, String block) -> {
-                try(var world = context.getWorld()) {
-                    try(var position = context.applyPosition(pos)) {
-                        var setResult = context.<Integer>createLocal();
-                        context.writeInstruction(Instructions.setBlock(setResult, world.content(), position.content(), block, "replace"));
-                    }
-                }
-            }
-            case CommandSetblockKeep(WorldCoordinates pos, String block) -> {
-                try(var world = context.getWorld()) {
-                    try(var position = context.applyPosition(pos)) {
-                        var setResult = context.<Integer>createLocal();
-                        context.writeInstruction(Instructions.setBlock(setResult, world.content(), position.content(), block, "keep"));
-                    }
-                }
-            }
-            case CommandSetblockDestroy(WorldCoordinates pos, String block) -> {
-                try(var world = context.getWorld()) {
-                    try(var position = context.applyPosition(pos)) {
-                        var setResult = context.<Integer>createLocal();
-                        context.writeInstruction(Instructions.setBlock(setResult, world.content(), position.content(), block, "destroy"));
-                    }
-                }
-            }
+            // setblock — vanilla fallback (BlockStateParser API requires MC source access)
+            case CommandSetblockReplace(WorldCoordinates pos, String block) ->
+                emitVanillaFallback(context, "setblock " + worldCoordsToString(pos) + " " + block);
+            case CommandSetblockKeep(WorldCoordinates pos, String block) ->
+                emitVanillaFallback(context, "setblock " + worldCoordsToString(pos) + " " + block + " keep");
+            case CommandSetblockDestroy(WorldCoordinates pos, String block) ->
+                emitVanillaFallback(context, "setblock " + worldCoordsToString(pos) + " " + block + " destroy");
 
-            // fill — native compilation
-            case CommandFill(WorldCoordinates from, WorldCoordinates to, String block) -> {
-                try(var world = context.getWorld()) {
-                    try(var fromPos = context.applyPosition(from)) {
-                        try(var toPos = context.applyPosition(to)) {
-                            var fillResult = context.<Integer>createLocal();
-                            context.writeInstruction(Instructions.fillBlocks(fillResult, world.content(), fromPos.content(), toPos.content(), block, "replace"));
-                        }
-                    }
-                }
-            }
-            case CommandFillReplace(WorldCoordinates from, WorldCoordinates to, String block) -> {
-                try(var world = context.getWorld()) {
-                    try(var fromPos = context.applyPosition(from)) {
-                        try(var toPos = context.applyPosition(to)) {
-                            var fillResult = context.<Integer>createLocal();
-                            context.writeInstruction(Instructions.fillBlocks(fillResult, world.content(), fromPos.content(), toPos.content(), block, "replace"));
-                        }
-                    }
-                }
-            }
-            case CommandFillReplaceFilter(WorldCoordinates from, WorldCoordinates to, String block, String filter) -> {
-                try(var world = context.getWorld()) {
-                    try(var fromPos = context.applyPosition(from)) {
-                        try(var toPos = context.applyPosition(to)) {
-                            var fillResult = context.<Integer>createLocal();
-                            context.writeInstruction(Instructions.fillBlocksFilter(fillResult, world.content(), fromPos.content(), toPos.content(), block, "replace", filter));
-                        }
-                    }
-                }
-            }
-            case CommandFillKeep(WorldCoordinates from, WorldCoordinates to, String block) -> {
-                try(var world = context.getWorld()) {
-                    try(var fromPos = context.applyPosition(from)) {
-                        try(var toPos = context.applyPosition(to)) {
-                            var fillResult = context.<Integer>createLocal();
-                            context.writeInstruction(Instructions.fillBlocks(fillResult, world.content(), fromPos.content(), toPos.content(), block, "keep"));
-                        }
-                    }
-                }
-            }
-            case CommandFillDestroy(WorldCoordinates from, WorldCoordinates to, String block) -> {
-                try(var world = context.getWorld()) {
-                    try(var fromPos = context.applyPosition(from)) {
-                        try(var toPos = context.applyPosition(to)) {
-                            var fillResult = context.<Integer>createLocal();
-                            context.writeInstruction(Instructions.fillBlocks(fillResult, world.content(), fromPos.content(), toPos.content(), block, "destroy"));
-                        }
-                    }
-                }
-            }
-            case CommandFillHollow(WorldCoordinates from, WorldCoordinates to, String block) -> {
-                try(var world = context.getWorld()) {
-                    try(var fromPos = context.applyPosition(from)) {
-                        try(var toPos = context.applyPosition(to)) {
-                            var fillResult = context.<Integer>createLocal();
-                            context.writeInstruction(Instructions.fillBlocks(fillResult, world.content(), fromPos.content(), toPos.content(), block, "hollow"));
-                        }
-                    }
-                }
-            }
-            case CommandFillOutline(WorldCoordinates from, WorldCoordinates to, String block) -> {
-                try(var world = context.getWorld()) {
-                    try(var fromPos = context.applyPosition(from)) {
-                        try(var toPos = context.applyPosition(to)) {
-                            var fillResult = context.<Integer>createLocal();
-                            context.writeInstruction(Instructions.fillBlocks(fillResult, world.content(), fromPos.content(), toPos.content(), block, "outline"));
-                        }
-                    }
-                }
-            }
+            // fill — vanilla fallback (BlockStateParser API requires MC source access)
+            case CommandFill(WorldCoordinates from, WorldCoordinates to, String block) ->
+                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block);
+            case CommandFillReplace(WorldCoordinates from, WorldCoordinates to, String block) ->
+                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block + " replace");
+            case CommandFillReplaceFilter(WorldCoordinates from, WorldCoordinates to, String block, String filter) ->
+                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block + " replace " + filter);
+            case CommandFillKeep(WorldCoordinates from, WorldCoordinates to, String block) ->
+                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block + " keep");
+            case CommandFillDestroy(WorldCoordinates from, WorldCoordinates to, String block) ->
+                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block + " destroy");
+            case CommandFillHollow(WorldCoordinates from, WorldCoordinates to, String block) ->
+                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block + " hollow");
+            case CommandFillOutline(WorldCoordinates from, WorldCoordinates to, String block) ->
+                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block + " outline");
 
             // particle — native compilation
             case CommandParticle(DataLocation name, WorldCoordinates pos) -> {
@@ -1762,23 +1693,19 @@ public final class CommandCompiler {
                 }
             }
 
-            // random — native compilation
+            // random — vanilla fallback (random sequence API requires MC source access)
             case CommandRandomValue(IntRangeArgument range) -> {
                 result.markImplemented();
-                var val = context.<Integer>createLocal();
-                context.writeInstruction(Instructions.randomValue(val, LocationData.ofInteger(range.minimum()), LocationData.ofInteger(range.maximum())));
-                result.updateResultValue(val);
+                emitVanillaFallback(context, "random value " + rangeToString(range));
             }
             case CommandRandomRoll(IntRangeArgument range, DataLocation sequence) -> {
                 result.markImplemented();
-                var val = context.<Integer>createLocal();
-                context.writeInstruction(Instructions.randomRoll(val, LocationData.ofInteger(range.minimum()), LocationData.ofInteger(range.maximum()), sequence.toString()));
-                result.updateResultValue(val);
+                emitVanillaFallback(context, "random roll " + rangeToString(range) + " " + sequence);
             }
             case CommandRandomReset(DataLocation sequence) ->
-                context.writeInstruction(Instructions.randomReset(sequence.toString()));
+                emitVanillaFallback(context, "random reset " + sequence);
             case CommandRandomResetAll() ->
-                context.writeInstruction(Instructions.randomResetAll());
+                emitVanillaFallback(context, "random reset *");
 
             // clear — native compilation
             case CommandClear() -> {
