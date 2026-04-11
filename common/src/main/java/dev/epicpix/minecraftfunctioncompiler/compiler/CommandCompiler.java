@@ -1095,11 +1095,21 @@ public final class CommandCompiler {
                 }
             }
 
-            // recipe give/take * wildcard
-            case CommandRecipeGiveAllStar(SelectorArgument targets, String star) ->
-                emitVanillaFallback(context, "recipe give " + targets + " *");
-            case CommandRecipeTakeAllStar(SelectorArgument targets, String star) ->
-                emitVanillaFallback(context, "recipe take " + targets + " *");
+            // recipe give/take * wildcard — native compilation
+            case CommandRecipeGiveAllStar(SelectorArgument targets, String star) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    var player = context.<TServerPlayer>createLocal();
+                    selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
+                    selector.writeInstruction(Instructions.recipeGiveAll(player));
+                }
+            }
+            case CommandRecipeTakeAllStar(SelectorArgument targets, String star) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    var player = context.<TServerPlayer>createLocal();
+                    selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
+                    selector.writeInstruction(Instructions.recipeTakeAll(player));
+                }
+            }
 
             // execute summon / positioned over — vanilla fallback
             case CommandExecuteSummon(DataLocation entity, CommandParams command) ->
@@ -1573,26 +1583,35 @@ public final class CommandCompiler {
                 emitVanillaFallback(context, "tp " + worldCoordsToString(pos) + " facing " + worldCoordsToString(facingPos));
 
             // team — vanilla fallback
+            // team — native compilation
             case CommandTeamAdd(String team) ->
-                emitVanillaFallback(context, "team add " + team);
-            case CommandTeamAddDisplay(String team, Text display) ->
-                emitVanillaFallback(context, "team add " + team + " " + nbtValueToString(new NbtValue.StringLiteral(display.toString())));
+                context.writeInstruction(Instructions.teamAdd(team));
+            case CommandTeamAddDisplay(String team, Text display) -> {
+                var displayText = loadText(context, display);
+                context.writeInstruction(Instructions.teamAddDisplay(team, displayText));
+            }
             case CommandTeamRemove(String team) ->
-                emitVanillaFallback(context, "team remove " + team);
-            case CommandTeamJoin(String team) ->
-                emitVanillaFallback(context, "team join " + team);
+                context.writeInstruction(Instructions.teamRemove(team));
+            case CommandTeamJoin(String team) -> {
+                try(var current = context.getCurrentEntity()) {
+                    current.writeInstruction(Instructions.teamJoin(team, current.content()));
+                }
+            }
             case CommandTeamJoinMembers(String team, ScoreHolderArgument members) ->
+                // ScoreHolderArgument is complex (can be selectors, *, names) — keep fallback
                 emitVanillaFallback(context, "team join " + team + " " + members);
             case CommandTeamLeave(ScoreHolderArgument members) ->
+                // ScoreHolderArgument is complex — keep fallback
                 emitVanillaFallback(context, "team leave " + members);
             case CommandTeamList() ->
+                // team list outputs to chat — no perf benefit from native
                 emitVanillaFallback(context, "team list");
             case CommandTeamListTeam(String team) ->
                 emitVanillaFallback(context, "team list " + team);
             case CommandTeamModify(String team, String option, String value) ->
-                emitVanillaFallback(context, "team modify " + team + " " + option + " " + value);
+                context.writeInstruction(Instructions.teamModify(team, option, value));
             case CommandTeamEmpty(String team) ->
-                emitVanillaFallback(context, "team empty " + team);
+                context.writeInstruction(Instructions.teamEmpty(team));
 
             // stopsound — native compilation
             case CommandStopsound(SelectorArgument targets) -> {
@@ -1617,29 +1636,93 @@ public final class CommandCompiler {
                 }
             }
 
-            // setblock — vanilla fallback
-            case CommandSetblockReplace(WorldCoordinates pos, String block) ->
-                emitVanillaFallback(context, "setblock " + worldCoordsToString(pos) + " " + block);
-            case CommandSetblockKeep(WorldCoordinates pos, String block) ->
-                emitVanillaFallback(context, "setblock " + worldCoordsToString(pos) + " " + block + " keep");
-            case CommandSetblockDestroy(WorldCoordinates pos, String block) ->
-                emitVanillaFallback(context, "setblock " + worldCoordsToString(pos) + " " + block + " destroy");
+            // setblock — native compilation
+            case CommandSetblockReplace(WorldCoordinates pos, String block) -> {
+                try(var world = context.getWorld()) {
+                    try(var position = context.applyPosition(pos)) {
+                        context.writeInstruction(Instructions.setBlock(world.content(), position.content(), block, "replace"));
+                    }
+                }
+            }
+            case CommandSetblockKeep(WorldCoordinates pos, String block) -> {
+                try(var world = context.getWorld()) {
+                    try(var position = context.applyPosition(pos)) {
+                        context.writeInstruction(Instructions.setBlock(world.content(), position.content(), block, "keep"));
+                    }
+                }
+            }
+            case CommandSetblockDestroy(WorldCoordinates pos, String block) -> {
+                try(var world = context.getWorld()) {
+                    try(var position = context.applyPosition(pos)) {
+                        context.writeInstruction(Instructions.setBlock(world.content(), position.content(), block, "destroy"));
+                    }
+                }
+            }
 
-            // fill — vanilla fallback
-            case CommandFill(WorldCoordinates from, WorldCoordinates to, String block) ->
-                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block);
-            case CommandFillReplace(WorldCoordinates from, WorldCoordinates to, String block) ->
-                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block + " replace");
-            case CommandFillReplaceFilter(WorldCoordinates from, WorldCoordinates to, String block, String filter) ->
-                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block + " replace " + filter);
-            case CommandFillKeep(WorldCoordinates from, WorldCoordinates to, String block) ->
-                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block + " keep");
-            case CommandFillDestroy(WorldCoordinates from, WorldCoordinates to, String block) ->
-                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block + " destroy");
-            case CommandFillHollow(WorldCoordinates from, WorldCoordinates to, String block) ->
-                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block + " hollow");
-            case CommandFillOutline(WorldCoordinates from, WorldCoordinates to, String block) ->
-                emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block + " outline");
+            // fill — native compilation
+            case CommandFill(WorldCoordinates from, WorldCoordinates to, String block) -> {
+                try(var world = context.getWorld()) {
+                    try(var fromPos = context.applyPosition(from)) {
+                        try(var toPos = context.applyPosition(to)) {
+                            context.writeInstruction(Instructions.fillBlocks(world.content(), fromPos.content(), toPos.content(), block, "replace"));
+                        }
+                    }
+                }
+            }
+            case CommandFillReplace(WorldCoordinates from, WorldCoordinates to, String block) -> {
+                try(var world = context.getWorld()) {
+                    try(var fromPos = context.applyPosition(from)) {
+                        try(var toPos = context.applyPosition(to)) {
+                            context.writeInstruction(Instructions.fillBlocks(world.content(), fromPos.content(), toPos.content(), block, "replace"));
+                        }
+                    }
+                }
+            }
+            case CommandFillReplaceFilter(WorldCoordinates from, WorldCoordinates to, String block, String filter) -> {
+                try(var world = context.getWorld()) {
+                    try(var fromPos = context.applyPosition(from)) {
+                        try(var toPos = context.applyPosition(to)) {
+                            context.writeInstruction(Instructions.fillBlocksFilter(world.content(), fromPos.content(), toPos.content(), block, "replace", filter));
+                        }
+                    }
+                }
+            }
+            case CommandFillKeep(WorldCoordinates from, WorldCoordinates to, String block) -> {
+                try(var world = context.getWorld()) {
+                    try(var fromPos = context.applyPosition(from)) {
+                        try(var toPos = context.applyPosition(to)) {
+                            context.writeInstruction(Instructions.fillBlocks(world.content(), fromPos.content(), toPos.content(), block, "keep"));
+                        }
+                    }
+                }
+            }
+            case CommandFillDestroy(WorldCoordinates from, WorldCoordinates to, String block) -> {
+                try(var world = context.getWorld()) {
+                    try(var fromPos = context.applyPosition(from)) {
+                        try(var toPos = context.applyPosition(to)) {
+                            context.writeInstruction(Instructions.fillBlocks(world.content(), fromPos.content(), toPos.content(), block, "destroy"));
+                        }
+                    }
+                }
+            }
+            case CommandFillHollow(WorldCoordinates from, WorldCoordinates to, String block) -> {
+                try(var world = context.getWorld()) {
+                    try(var fromPos = context.applyPosition(from)) {
+                        try(var toPos = context.applyPosition(to)) {
+                            context.writeInstruction(Instructions.fillBlocks(world.content(), fromPos.content(), toPos.content(), block, "hollow"));
+                        }
+                    }
+                }
+            }
+            case CommandFillOutline(WorldCoordinates from, WorldCoordinates to, String block) -> {
+                try(var world = context.getWorld()) {
+                    try(var fromPos = context.applyPosition(from)) {
+                        try(var toPos = context.applyPosition(to)) {
+                            context.writeInstruction(Instructions.fillBlocks(world.content(), fromPos.content(), toPos.content(), block, "outline"));
+                        }
+                    }
+                }
+            }
 
             // particle — native compilation
             case CommandParticle(DataLocation name, WorldCoordinates pos) -> {
@@ -1669,19 +1752,23 @@ public final class CommandCompiler {
                 }
             }
 
-            // random — vanilla fallback
+            // random — native compilation
             case CommandRandomValue(IntRangeArgument range) -> {
                 result.markImplemented();
-                emitVanillaFallback(context, "random value " + rangeToString(range));
+                var val = context.<Integer>createLocal();
+                context.writeInstruction(Instructions.randomValue(val, LocationData.ofInteger(range.min()), LocationData.ofInteger(range.max())));
+                result.updateResultValue(val);
             }
             case CommandRandomRoll(IntRangeArgument range, DataLocation sequence) -> {
                 result.markImplemented();
-                emitVanillaFallback(context, "random roll " + rangeToString(range) + " " + sequence);
+                var val = context.<Integer>createLocal();
+                context.writeInstruction(Instructions.randomRoll(val, LocationData.ofInteger(range.min()), LocationData.ofInteger(range.max()), sequence.toString()));
+                result.updateResultValue(val);
             }
             case CommandRandomReset(DataLocation sequence) ->
-                emitVanillaFallback(context, "random reset " + sequence);
+                context.writeInstruction(Instructions.randomReset(sequence.toString()));
             case CommandRandomResetAll() ->
-                emitVanillaFallback(context, "random reset *");
+                context.writeInstruction(Instructions.randomResetAll());
 
             // clear — native compilation
             case CommandClear() -> {
@@ -1725,11 +1812,21 @@ public final class CommandCompiler {
                 }
             }
 
-            // recipe — vanilla fallback
-            case CommandRecipeGive(SelectorArgument targets, DataLocation recipe) ->
-                emitVanillaFallback(context, "recipe give " + targets + " " + recipe);
-            case CommandRecipeTake(SelectorArgument targets, DataLocation recipe) ->
-                emitVanillaFallback(context, "recipe take " + targets + " " + recipe);
+            // recipe — native compilation
+            case CommandRecipeGive(SelectorArgument targets, DataLocation recipe) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    var player = context.<TServerPlayer>createLocal();
+                    selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
+                    selector.writeInstruction(Instructions.recipeGive(player, recipe.toString()));
+                }
+            }
+            case CommandRecipeTake(SelectorArgument targets, DataLocation recipe) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    var player = context.<TServerPlayer>createLocal();
+                    selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
+                    selector.writeInstruction(Instructions.recipeTake(player, recipe.toString()));
+                }
+            }
 
             // loot дополнительные источники
             case CommandLootSpawnFish(WorldCoordinates pos, DataLocation lootTable, WorldCoordinates pos2) ->

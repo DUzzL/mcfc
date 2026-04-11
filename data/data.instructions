@@ -784,6 +784,67 @@
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.spawnParticleForPlayers([static:MinecraftServer], [ctx:world], [instr:particle], [ctx:pos], [ctx:delta], [ctx:speed], [ctx:count], [ctx:viewers]);
 }
 
+// setblock / fill
+@SET_BLOCK(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:pos], <java.lang.String> [instr:block], <java.lang.String> [instr:mode]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setBlock([ctx:world], [ctx:pos], [instr:block], [instr:mode]);
+@FILL_BLOCKS(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:from], <net.minecraft.world.phys.Vec3> [ctx:to], <java.lang.String> [instr:block], <java.lang.String> [instr:mode]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.fillBlocks([ctx:world], [ctx:from], [ctx:to], [instr:block], [instr:mode], null);
+@FILL_BLOCKS_FILTER(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:from], <net.minecraft.world.phys.Vec3> [ctx:to], <java.lang.String> [instr:block], <java.lang.String> [instr:mode], <java.lang.String> [instr:filter]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.fillBlocks([ctx:world], [ctx:from], [ctx:to], [instr:block], [instr:mode], [instr:filter]);
+
+// team
+@TEAM_ADD(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:team]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teamAdd([static:MinecraftServer], [instr:team]);
+}
+@TEAM_ADD_DISPLAY(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:team], <net.minecraft.network.chat.Component> [ctx:display]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teamAddDisplay([static:MinecraftServer], [instr:team], [ctx:display]);
+}
+@TEAM_REMOVE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:team]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teamRemove([static:MinecraftServer], [instr:team]);
+}
+@TEAM_JOIN(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:team], <net.minecraft.world.entity.Entity> [ctx:entity]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teamJoin([static:MinecraftServer], [instr:team], [ctx:entity]);
+}
+@TEAM_JOIN_MEMBER(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:team], <java.lang.String> [ctx:member]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teamJoinMembers([static:MinecraftServer], [instr:team], [ctx:member]);
+}
+@TEAM_LEAVE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [ctx:member]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teamLeave([static:MinecraftServer], [ctx:member]);
+}
+@TEAM_EMPTY(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:team]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teamEmpty([static:MinecraftServer], [instr:team]);
+}
+@TEAM_MODIFY(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:team], <java.lang.String> [instr:option], <java.lang.String> [instr:value]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teamModify([static:MinecraftServer], [instr:team], [instr:option], [instr:value]);
+}
+
+// recipe
+@RECIPE_GIVE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:recipe]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.recipeGive([static:MinecraftServer], [ctx:player], [instr:recipe]);
+}
+@RECIPE_TAKE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:recipe]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.recipeTake([static:MinecraftServer], [ctx:player], [instr:recipe]);
+}
+@RECIPE_GIVE_ALL(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.recipeGiveAll([static:MinecraftServer], [ctx:player]);
+}
+@RECIPE_TAKE_ALL(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.recipeTakeAll([static:MinecraftServer], [ctx:player]);
+}
+
+// random
+##PURE
+@RANDOM_VALUE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], int [ctx:min], int [ctx:max]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.randomValue([static:MinecraftServer], [ctx:min], [ctx:max]);
+@RANDOM_ROLL(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], int [ctx:min], int [ctx:max], <java.lang.String> [instr:sequence]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.randomRoll([static:MinecraftServer], [ctx:min], [ctx:max], [instr:sequence]);
+@RANDOM_RESET(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:sequence]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.randomReset([static:MinecraftServer], [instr:sequence]);
+}
+@RANDOM_RESET_ALL(<net.minecraft.server.MinecraftServer> [static:MinecraftServer]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.randomResetAll([static:MinecraftServer]);
+}
+
 // time
 @SET_TIME(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], int [ctx:time]) {
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setTime([static:MinecraftServer], [ctx:world], [ctx:time]);
