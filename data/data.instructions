@@ -278,7 +278,7 @@
 @GET_WORLDS_ITERATOR(<java.lang.Iterable> [static:AllWorlds]) -> <java.util.Iterator<net.minecraft.server.level.ServerLevel> > = [static:AllWorlds].iterator();
 
 ##PURE
-@GET_ENTITIES(<net.minecraft.server.level.ServerLevel> [ctx:world]) -> <java.util.Iterator<net.minecraft.world.entity.Entity> > = [ctx:world].getAllEntities().iterator();
+@GET_ENTITIES(<net.minecraft.server.level.ServerLevel> [ctx:world]) -> <java.util.Iterator<net.minecraft.world.entity.Entity> > = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getAllEntitiesFast([ctx:world]);
 
 ##PURE
 @GET_ENTITIES_INSIDE(<net.minecraft.server.level.ServerLevel> [ctx:world], double [ctx:min_x], double [ctx:min_y], double [ctx:min_z], double [ctx:max_x], double [ctx:max_y], double [ctx:max_z], int [ctx:limit]) -> <java.util.List<net.minecraft.world.entity.Entity> >

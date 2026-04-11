@@ -248,6 +248,91 @@ public class ExtensionFunctions {
     });
 
 
+    // -------------------------------------------------------------------------
+    // getAllEntities optimization — per-tick cache + direct section iteration
+    //
+    // Vanilla ServerLevel.getAllEntities() creates a lazy Iterable that walks
+    // PersistentEntitySectionManager → LevelEntityGetter → all EntitySections.
+    // Every call re-walks the full section graph.
+    //
+    // Datapacks using @e compile to GET_ENTITIES which invokes getAllEntities()
+    // potentially many times per tick across multiple functions. The per-tick
+    // cache ensures the section graph is walked at most once per world per tick.
+    //
+    // Direct section storage access via entityManager.sectionStorage bypasses
+    // the LevelEntityGetter interface chain. For worlds with many loaded
+    // entity sections (>PARALLEL_SECTION_THRESHOLD), collection is split
+    // across a dedicated ForkJoinPool so multiple cores contribute to the
+    // snapshot — safe because the server thread is blocked on Future.get()
+    // during that window, so no entity state mutations can race.
+    // -------------------------------------------------------------------------
+
+    private static final java.util.IdentityHashMap<ServerLevel, List<Entity>> allEntitiesCache = new java.util.IdentityHashMap<>();
+    private static int allEntitiesCacheTick = Integer.MIN_VALUE;
+    private static int lastEntityCountHint = 256;
+
+    private static final int PARALLEL_SECTION_THRESHOLD = 256;
+    private static final java.util.concurrent.ForkJoinPool ENTITY_COLLECT_POOL =
+            new java.util.concurrent.ForkJoinPool(Math.max(2, Runtime.getRuntime().availableProcessors() / 2));
+
+    public static java.util.Iterator<Entity> getAllEntitiesFast(ServerLevel level) {
+        int currentTick = level.getServer().getTickCount();
+        if (currentTick != allEntitiesCacheTick) {
+            allEntitiesCache.clear();
+            allEntitiesCacheTick = currentTick;
+        }
+
+        List<Entity> cached = allEntitiesCache.get(level);
+        if (cached != null) return cached.iterator();
+
+        var sectionStorage = level.entityManager.sectionStorage;
+        long[] ids = sectionStorage.sectionIds.toLongArray();
+
+        List<Entity> result;
+        if (ids.length > PARALLEL_SECTION_THRESHOLD) {
+            int parallelism = ENTITY_COLLECT_POOL.getParallelism();
+            int chunkSize = Math.max(1, (ids.length + parallelism - 1) / parallelism);
+
+            var futures = new ArrayList<java.util.concurrent.Future<List<Entity>>>(parallelism);
+            for (int i = 0; i < ids.length; i += chunkSize) {
+                final int start = i;
+                final int end = Math.min(i + chunkSize, ids.length);
+                futures.add(ENTITY_COLLECT_POOL.submit(() -> {
+                    var partial = new ArrayList<Entity>();
+                    for (int j = start; j < end; j++) {
+                        var section = sectionStorage.getSection(ids[j]);
+                        if (section == null || section.isEmpty() || !section.getStatus().isAccessible()) continue;
+                        partial.addAll(section.storage.find(Entity.class));
+                    }
+                    return partial;
+                }));
+            }
+
+            result = new ArrayList<>(lastEntityCountHint);
+            for (var future : futures) {
+                try {
+                    result.addAll(future.get());
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                } catch (java.util.concurrent.ExecutionException e) {
+                    LOGGER.warn("Parallel entity collection failed", e.getCause());
+                }
+            }
+        } else {
+            result = new ArrayList<>(lastEntityCountHint);
+            for (long id : ids) {
+                var section = sectionStorage.getSection(id);
+                if (section == null || section.isEmpty() || !section.getStatus().isAccessible()) continue;
+                result.addAll(section.storage.find(Entity.class));
+            }
+        }
+
+        lastEntityCountHint = Math.max(result.size(), 64);
+        allEntitiesCache.put(level, result);
+        return result.iterator();
+    }
+
     public static List<Entity> getEntitiesInside(ServerLevel level, double minX, double minY, double minZ, double maxX, double maxY, double maxZ, int limit) {
         // Direct 3D lookup: for every (chunkX, chunkY, chunkZ) in the bounding
         // box volume, call sectionStorage.getSection(asLong(x, y, z)) once.
