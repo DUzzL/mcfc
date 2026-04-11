@@ -734,6 +734,56 @@
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.summonEntityNbt([static:MinecraftServer], [ctx:world], [instr:entity_type], [ctx:pos], [ctx:nbt]);
 }
 
+// effect
+@EFFECT_GIVE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:effect_id], int [instr:duration_ticks], int [instr:amplifier], boolean [instr:hide_particles]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.effectGive([ctx:entity], [static:MinecraftServer], [instr:effect_id], [instr:duration_ticks], [instr:amplifier], [instr:hide_particles]);
+}
+@EFFECT_CLEAR_ALL(<net.minecraft.world.entity.Entity> [ctx:entity]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.effectClearAll([ctx:entity]);
+}
+@EFFECT_CLEAR(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:effect_id]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.effectClearEffect([ctx:entity], [static:MinecraftServer], [instr:effect_id]);
+}
+
+// teleport
+@TELEPORT_TO_ENTITY(mut <net.minecraft.world.entity.Entity> [ctx:target], <net.minecraft.world.entity.Entity> [ctx:destination]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teleportToEntity([ctx:target], [ctx:destination]);
+}
+@TELEPORT_TO_POS(mut <net.minecraft.world.entity.Entity> [ctx:target], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:pos]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teleportToPos([ctx:target], [ctx:world], [ctx:pos]);
+}
+@TELEPORT_TO_POS_ROT(mut <net.minecraft.world.entity.Entity> [ctx:target], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:pos], float [ctx:yaw], float [ctx:pitch]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teleportToPosRot([ctx:target], [ctx:world], [ctx:pos], [ctx:yaw], [ctx:pitch]);
+}
+
+// clear
+@CLEAR_PLAYER_INVENTORY(<net.minecraft.server.level.ServerPlayer> [ctx:player]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.clearPlayerInventory([ctx:player]);
+@CLEAR_PLAYER_ITEM(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:item], int [instr:max_count]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.clearPlayerItem([ctx:player], [static:MinecraftServer], [instr:item], [instr:max_count]);
+
+// stopsound
+@STOPSOUND_ALL(<net.minecraft.server.level.ServerPlayer> [ctx:player]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.stopsoundAll([ctx:player]);
+}
+@STOPSOUND_SOURCE(<net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:source]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.stopsoundSource([ctx:player], [instr:source]);
+}
+@STOPSOUND_SOURCE_SOUND(<net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:source], <java.lang.String> [instr:sound]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.stopsoundSourceSound([ctx:player], [instr:source], [instr:sound]);
+}
+
+// particle
+@SPAWN_PARTICLE_SIMPLE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:particle], <net.minecraft.world.phys.Vec3> [ctx:pos]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.spawnParticleSimple([static:MinecraftServer], [ctx:world], [instr:particle], [ctx:pos]);
+}
+@SPAWN_PARTICLE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:particle], <net.minecraft.world.phys.Vec3> [ctx:pos], <net.minecraft.world.phys.Vec3> [ctx:delta], double [ctx:speed], int [ctx:count]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.spawnParticle([static:MinecraftServer], [ctx:world], [instr:particle], [ctx:pos], [ctx:delta], [ctx:speed], [ctx:count]);
+}
+@SPAWN_PARTICLE_FOR_PLAYERS(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:particle], <net.minecraft.world.phys.Vec3> [ctx:pos], <net.minecraft.world.phys.Vec3> [ctx:delta], double [ctx:speed], int [ctx:count], <java.util.List<net.minecraft.world.entity.Entity> > [ctx:viewers]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.spawnParticleForPlayers([static:MinecraftServer], [ctx:world], [instr:particle], [ctx:pos], [ctx:delta], [ctx:speed], [ctx:count], [ctx:viewers]);
+}
+
 // time
 @SET_TIME(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], int [ctx:time]) {
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setTime([static:MinecraftServer], [ctx:world], [ctx:time]);

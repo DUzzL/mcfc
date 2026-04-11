@@ -1472,31 +1472,93 @@ public final class CommandCompiler {
             case CommandItemModifyBlock(WorldCoordinates pos, String slot, String modifier) ->
                 emitVanillaFallback(context, "item modify block " + worldCoordsToString(pos) + " " + slot + " " + modifier);
 
-            // effect — vanilla fallback
-            case CommandEffectGive(SelectorArgument targets, DataLocation effect) ->
-                emitVanillaFallback(context, "effect give " + targets + " " + effect);
-            case CommandEffectGiveSeconds(SelectorArgument targets, DataLocation effect, int seconds) ->
-                emitVanillaFallback(context, "effect give " + targets + " " + effect + " " + seconds);
-            case CommandEffectGiveSecondsAmplifier(SelectorArgument targets, DataLocation effect, int seconds, int amplifier) ->
-                emitVanillaFallback(context, "effect give " + targets + " " + effect + " " + seconds + " " + amplifier);
-            case CommandEffectGiveSecondsAmplifierHide(SelectorArgument targets, DataLocation effect, int seconds, int amplifier, boolean hide) ->
-                emitVanillaFallback(context, "effect give " + targets + " " + effect + " " + seconds + " " + amplifier + " " + hide);
-            case CommandEffectClear() ->
-                emitVanillaFallback(context, "effect clear");
-            case CommandEffectClearTargets(SelectorArgument targets) ->
-                emitVanillaFallback(context, "effect clear " + targets);
-            case CommandEffectClearTargetsEffect(SelectorArgument targets, DataLocation effect) ->
-                emitVanillaFallback(context, "effect clear " + targets + " " + effect);
+            // effect — native compilation
+            case CommandEffectGive(SelectorArgument targets, DataLocation effect) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    selector.writeInstruction(Instructions.effectGive(selector.content(), effect.toString(), -1, 0, false));
+                }
+            }
+            case CommandEffectGiveSeconds(SelectorArgument targets, DataLocation effect, int seconds) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    selector.writeInstruction(Instructions.effectGive(selector.content(), effect.toString(), seconds * 20, 0, false));
+                }
+            }
+            case CommandEffectGiveSecondsAmplifier(SelectorArgument targets, DataLocation effect, int seconds, int amplifier) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    selector.writeInstruction(Instructions.effectGive(selector.content(), effect.toString(), seconds * 20, amplifier, false));
+                }
+            }
+            case CommandEffectGiveSecondsAmplifierHide(SelectorArgument targets, DataLocation effect, int seconds, int amplifier, boolean hide) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    selector.writeInstruction(Instructions.effectGive(selector.content(), effect.toString(), seconds * 20, amplifier, hide));
+                }
+            }
+            case CommandEffectClear() -> {
+                try(var selector = context.getCurrentEntity()) {
+                    selector.writeInstruction(Instructions.effectClearAll(selector.content()));
+                }
+            }
+            case CommandEffectClearTargets(SelectorArgument targets) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    selector.writeInstruction(Instructions.effectClearAll(selector.content()));
+                }
+            }
+            case CommandEffectClearTargetsEffect(SelectorArgument targets, DataLocation effect) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    selector.writeInstruction(Instructions.effectClear(selector.content(), effect.toString()));
+                }
+            }
 
-            // tp — vanilla fallback
-            case CommandTpEntity(SelectorArgument destination) ->
-                emitVanillaFallback(context, "tp " + destination);
-            case CommandTpTargetsEntity(SelectorArgument targets, SelectorArgument destination) ->
-                emitVanillaFallback(context, "tp " + targets + " " + destination);
-            case CommandTpTargetsPos(SelectorArgument targets, WorldCoordinates pos) ->
-                emitVanillaFallback(context, "tp " + targets + " " + worldCoordsToString(pos));
-            case CommandTpTargetsPosRot(SelectorArgument targets, WorldCoordinates pos, RotationCoordinates rot) ->
-                emitVanillaFallback(context, "tp " + targets + " " + worldCoordsToString(pos) + " " + rot.yaw() + " " + rot.pitch());
+            // tp — native compilation for basic variants, vanilla fallback for facing
+            case CommandTpEntity(SelectorArgument destination) -> {
+                try(var current = context.getCurrentEntity()) {
+                    try(var dest = context.forSelector(destination, result)) {
+                        current.writeInstruction(Instructions.teleportToEntity(current.content(), dest.content()));
+                    }
+                }
+            }
+            case CommandTpTargetsEntity(SelectorArgument targets, SelectorArgument destination) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    // resolve destination once, then tp each target to it
+                    try(var dest = context.forSelector(destination, result)) {
+                        selector.writeInstruction(Instructions.teleportToEntity(selector.content(), dest.content()));
+                    }
+                }
+            }
+            case CommandTpTargetsPos(SelectorArgument targets, WorldCoordinates pos) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    try(var world = context.getWorld()) {
+                        try(var position = context.applyPosition(pos)) {
+                            selector.writeInstruction(Instructions.teleportToPos(selector.content(), world.content(), position.content()));
+                        }
+                    }
+                }
+            }
+            case CommandTpTargetsPosRot(SelectorArgument targets, WorldCoordinates pos, RotationCoordinates rot) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    try(var world = context.getWorld()) {
+                        try(var position = context.applyPosition(pos)) {
+                            try(var rotation = context.applyRotation(rot)) {
+                                var yaw = context.<Float>createLocal();
+                                var pitch = context.<Float>createLocal();
+                                selector.writeInstruction(Instructions.getRotationYaw(yaw, rotation.content()));
+                                selector.writeInstruction(Instructions.getRotationPitch(pitch, rotation.content()));
+                                selector.writeInstruction(Instructions.teleportToPosRot(selector.content(), world.content(), position.content(), yaw, pitch));
+                            }
+                        }
+                    }
+                }
+            }
+            case CommandTpPos(WorldCoordinates pos) -> {
+                try(var current = context.getCurrentEntity()) {
+                    try(var world = context.getWorld()) {
+                        try(var position = context.applyPosition(pos)) {
+                            current.writeInstruction(Instructions.teleportToPos(current.content(), world.content(), position.content()));
+                        }
+                    }
+                }
+            }
+            // tp facing variants — vanilla fallback (complex rotation math)
             case CommandTpTargetsPosFacingEntity(SelectorArgument targets, WorldCoordinates pos, SelectorArgument facingTarget) ->
                 emitVanillaFallback(context, "tp " + targets + " " + worldCoordsToString(pos) + " facing entity " + facingTarget);
             case CommandTpTargetsPosFacingEntityAnchor(SelectorArgument targets, WorldCoordinates pos, SelectorArgument facingTarget, LocationAnchor anchor) ->
@@ -1509,8 +1571,6 @@ public final class CommandCompiler {
                 emitVanillaFallback(context, "tp " + worldCoordsToString(pos) + " facing entity " + facingTarget + " " + anchor.name().toLowerCase());
             case CommandTpPosFacingPos(WorldCoordinates pos, WorldCoordinates facingPos) ->
                 emitVanillaFallback(context, "tp " + worldCoordsToString(pos) + " facing " + worldCoordsToString(facingPos));
-            case CommandTpPos(WorldCoordinates pos) ->
-                emitVanillaFallback(context, "tp " + worldCoordsToString(pos));
 
             // team — vanilla fallback
             case CommandTeamAdd(String team) ->
@@ -1534,13 +1594,28 @@ public final class CommandCompiler {
             case CommandTeamEmpty(String team) ->
                 emitVanillaFallback(context, "team empty " + team);
 
-            // stopsound — vanilla fallback
-            case CommandStopsound(SelectorArgument targets) ->
-                emitVanillaFallback(context, "stopsound " + targets);
-            case CommandStopsoundSource(SelectorArgument targets, String source) ->
-                emitVanillaFallback(context, "stopsound " + targets + " " + source);
-            case CommandStopsoundSound(SelectorArgument targets, String source, DataLocation sound) ->
-                emitVanillaFallback(context, "stopsound " + targets + " " + source + " " + sound);
+            // stopsound — native compilation
+            case CommandStopsound(SelectorArgument targets) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    var player = context.<TServerPlayer>createLocal();
+                    selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
+                    selector.writeInstruction(Instructions.stopsoundAll(player));
+                }
+            }
+            case CommandStopsoundSource(SelectorArgument targets, String source) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    var player = context.<TServerPlayer>createLocal();
+                    selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
+                    selector.writeInstruction(Instructions.stopsoundSource(player, source));
+                }
+            }
+            case CommandStopsoundSound(SelectorArgument targets, String source, DataLocation sound) -> {
+                try(var selector = context.forSelector(targets, result)) {
+                    var player = context.<TServerPlayer>createLocal();
+                    selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
+                    selector.writeInstruction(Instructions.stopsoundSourceSound(player, source, sound.toString()));
+                }
+            }
 
             // setblock — vanilla fallback
             case CommandSetblockReplace(WorldCoordinates pos, String block) ->
@@ -1566,13 +1641,33 @@ public final class CommandCompiler {
             case CommandFillOutline(WorldCoordinates from, WorldCoordinates to, String block) ->
                 emitVanillaFallback(context, "fill " + worldCoordsToString(from) + " " + worldCoordsToString(to) + " " + block + " outline");
 
-            // particle — vanilla fallback
-            case CommandParticle(DataLocation name, WorldCoordinates pos) ->
-                emitVanillaFallback(context, "particle " + name + " " + worldCoordsToString(pos));
-            case CommandParticleViewers(DataLocation name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count) ->
-                emitVanillaFallback(context, "particle " + name + " " + worldCoordsToString(pos) + " " + worldCoordsToString(delta) + " " + speed + " " + count);
-            case CommandParticleViewersParams(DataLocation name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count, SelectorArgument viewers) ->
-                emitVanillaFallback(context, "particle " + name + " " + worldCoordsToString(pos) + " " + worldCoordsToString(delta) + " " + speed + " " + count + " " + viewers);
+            // particle — native compilation
+            case CommandParticle(DataLocation name, WorldCoordinates pos) -> {
+                try(var world = context.getWorld()) {
+                    try(var position = context.applyPosition(pos)) {
+                        context.writeInstruction(Instructions.spawnParticleSimple(world.content(), name.toString(), position.content()));
+                    }
+                }
+            }
+            case CommandParticleViewers(DataLocation name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count) -> {
+                try(var world = context.getWorld()) {
+                    try(var position = context.applyPosition(pos)) {
+                        try(var deltaPos = context.applyPosition(delta)) {
+                            context.writeInstruction(Instructions.spawnParticle(world.content(), name.toString(), position.content(), deltaPos.content(), LocationData.ofDouble(speed), LocationData.ofInteger(count)));
+                        }
+                    }
+                }
+            }
+            case CommandParticleViewersParams(DataLocation name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count, SelectorArgument viewers) -> {
+                try(var world = context.getWorld()) {
+                    try(var position = context.applyPosition(pos)) {
+                        try(var deltaPos = context.applyPosition(delta)) {
+                            var viewerList = context.getSelectorList(viewers, null);
+                            context.writeInstruction(Instructions.spawnParticleForPlayers(world.content(), name.toString(), position.content(), deltaPos.content(), LocationData.ofDouble(speed), LocationData.ofInteger(count), viewerList));
+                        }
+                    }
+                }
+            }
 
             // random — vanilla fallback
             case CommandRandomValue(IntRangeArgument range) -> {
@@ -1588,22 +1683,46 @@ public final class CommandCompiler {
             case CommandRandomResetAll() ->
                 emitVanillaFallback(context, "random reset *");
 
-            // clear — vanilla fallback
+            // clear — native compilation
             case CommandClear() -> {
                 result.markImplemented();
-                emitVanillaFallback(context, "clear");
+                try(var current = context.getCurrentEntity()) {
+                    var player = context.<TServerPlayer>createLocal();
+                    current.writeInstruction(Instructions.tryAsPlayer(player, current.content(), current.data().contextEndLabel()));
+                    var cleared = context.<Integer>createLocal();
+                    current.writeInstruction(Instructions.clearPlayerInventory(cleared, player));
+                    result.updateResultValue(cleared);
+                }
             }
             case CommandClearTargets(SelectorArgument targets) -> {
                 result.markImplemented();
-                emitVanillaFallback(context, "clear " + targets);
+                try(var selector = context.forSelector(targets, result)) {
+                    var player = context.<TServerPlayer>createLocal();
+                    selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
+                    var cleared = context.<Integer>createLocal();
+                    selector.writeInstruction(Instructions.clearPlayerInventory(cleared, player));
+                    result.updateResultValue(cleared);
+                }
             }
             case CommandClearTargetsItem(SelectorArgument targets, String item) -> {
                 result.markImplemented();
-                emitVanillaFallback(context, "clear " + targets + " " + item);
+                try(var selector = context.forSelector(targets, result)) {
+                    var player = context.<TServerPlayer>createLocal();
+                    selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
+                    var cleared = context.<Integer>createLocal();
+                    selector.writeInstruction(Instructions.clearPlayerItem(cleared, player, item, -1));
+                    result.updateResultValue(cleared);
+                }
             }
             case CommandClearTargetsItemMax(SelectorArgument targets, String item, int maxCount) -> {
                 result.markImplemented();
-                emitVanillaFallback(context, "clear " + targets + " " + item + " " + maxCount);
+                try(var selector = context.forSelector(targets, result)) {
+                    var player = context.<TServerPlayer>createLocal();
+                    selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
+                    var cleared = context.<Integer>createLocal();
+                    selector.writeInstruction(Instructions.clearPlayerItem(cleared, player, item, maxCount));
+                    result.updateResultValue(cleared);
+                }
             }
 
             // recipe — vanilla fallback

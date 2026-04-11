@@ -109,6 +109,143 @@ public class ExtensionFunctions {
     public static Tag createLongTag(int value) { return LongTag.valueOf((long) value); }
     public static Tag createLongTagFromDouble(double value) { return LongTag.valueOf((long) value); }
 
+    // -------------------------------------------------------------------------
+    // Effect commands — native compilation helpers
+    // -------------------------------------------------------------------------
+
+    public static void effectGive(Entity entity, MinecraftServer server, String effectId, int durationTicks, int amplifier, boolean hideParticles) {
+        if (!(entity instanceof net.minecraft.world.entity.LivingEntity living)) return;
+        var effectKey = ResourceKey.create(Registries.MOB_EFFECT, cachedId(effectId));
+        var lookup = server.registryAccess().lookup(Registries.MOB_EFFECT);
+        if (lookup.isEmpty()) return;
+        var effectOpt = lookup.get().get(effectKey);
+        if (effectOpt.isEmpty()) return;
+        living.addEffect(new net.minecraft.world.effect.MobEffectInstance(effectOpt.get(), durationTicks, amplifier, false, !hideParticles));
+    }
+
+    public static void effectClearAll(Entity entity) {
+        if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
+            living.removeAllEffects();
+        }
+    }
+
+    public static void effectClearEffect(Entity entity, MinecraftServer server, String effectId) {
+        if (!(entity instanceof net.minecraft.world.entity.LivingEntity living)) return;
+        var effectKey = ResourceKey.create(Registries.MOB_EFFECT, cachedId(effectId));
+        var lookup = server.registryAccess().lookup(Registries.MOB_EFFECT);
+        if (lookup.isEmpty()) return;
+        var effectOpt = lookup.get().get(effectKey);
+        if (effectOpt.isEmpty()) return;
+        living.removeEffect(effectOpt.get());
+    }
+
+    // -------------------------------------------------------------------------
+    // Teleport commands — native compilation helpers
+    // -------------------------------------------------------------------------
+
+    public static void teleportToEntity(Entity target, Entity destination) {
+        target.teleportTo(((ServerLevel) destination.level()), destination.getX(), destination.getY(), destination.getZ(),
+                java.util.Set.of(), destination.getYRot(), destination.getXRot(), true);
+    }
+
+    public static void teleportToPos(Entity target, ServerLevel world, double x, double y, double z) {
+        target.teleportTo(world, x, y, z, java.util.Set.of(), target.getYRot(), target.getXRot(), true);
+    }
+
+    public static void teleportToPosRot(Entity target, ServerLevel world, double x, double y, double z, float yaw, float pitch) {
+        target.teleportTo(world, x, y, z, java.util.Set.of(), yaw, pitch, true);
+    }
+
+    // -------------------------------------------------------------------------
+    // Clear commands — native compilation helpers
+    // -------------------------------------------------------------------------
+
+    public static int clearPlayerInventory(ServerPlayer player) {
+        return player.getInventory().clearOrCountMatchingItems(stack -> true, -1, player.inventoryMenu.getCraftSlots());
+    }
+
+    public static int clearPlayerItem(ServerPlayer player, MinecraftServer server, String itemPredicate, int maxCount) {
+        var parsed = parseItemPredicate(server, itemPredicate);
+        if (parsed == null) return 0;
+        return player.getInventory().clearOrCountMatchingItems(parsed, maxCount, player.inventoryMenu.getCraftSlots());
+    }
+
+    private static final java.util.concurrent.ConcurrentHashMap<String, java.util.function.Predicate<net.minecraft.world.item.ItemStack>> ITEM_PREDICATE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static @Nullable java.util.function.Predicate<net.minecraft.world.item.ItemStack> parseItemPredicate(MinecraftServer server, String itemString) {
+        var cached = ITEM_PREDICATE_CACHE.get(itemString);
+        if (cached != null) return cached;
+        try {
+            var reader = new com.mojang.brigadier.StringReader(itemString);
+            var result = net.minecraft.commands.arguments.item.ItemPredicateArgument.itemPredicate(server.registryAccess()).parse(reader);
+            ITEM_PREDICATE_CACHE.put(itemString, result);
+            return result;
+        } catch (Exception e) {
+            LOGGER.warn("Failed to parse item predicate '{}': {}", itemString, e.getMessage());
+            return null;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Stopsound commands — native compilation helpers
+    // -------------------------------------------------------------------------
+
+    public static void stopsoundAll(ServerPlayer player) {
+        player.connection.send(new net.minecraft.network.protocol.game.ClientboundStopSoundPacket(null, null));
+    }
+
+    public static void stopsoundSource(ServerPlayer player, String source) {
+        var soundSource = net.minecraft.sounds.SoundSource.valueOf(source.toUpperCase(java.util.Locale.ROOT));
+        player.connection.send(new net.minecraft.network.protocol.game.ClientboundStopSoundPacket(null, soundSource));
+    }
+
+    public static void stopsoundSourceSound(ServerPlayer player, String source, String sound) {
+        var soundSource = net.minecraft.sounds.SoundSource.valueOf(source.toUpperCase(java.util.Locale.ROOT));
+        player.connection.send(new net.minecraft.network.protocol.game.ClientboundStopSoundPacket(cachedId(sound), soundSource));
+    }
+
+    // -------------------------------------------------------------------------
+    // Particle commands — native compilation helpers
+    // -------------------------------------------------------------------------
+
+    private static final java.util.concurrent.ConcurrentHashMap<String, net.minecraft.core.particles.ParticleOptions> PARTICLE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static @Nullable net.minecraft.core.particles.ParticleOptions parseParticle(MinecraftServer server, String particleName) {
+        var cached = PARTICLE_CACHE.get(particleName);
+        if (cached != null) return cached;
+        try {
+            var reader = new com.mojang.brigadier.StringReader(particleName);
+            var result = net.minecraft.commands.arguments.ParticleArgument.readParticle(reader, server.registryAccess());
+            PARTICLE_CACHE.put(particleName, result);
+            return result;
+        } catch (Exception e) {
+            LOGGER.warn("Failed to parse particle '{}': {}", particleName, e.getMessage());
+            return null;
+        }
+    }
+
+    public static void spawnParticleSimple(MinecraftServer server, ServerLevel level, String particleName, Vec3 pos) {
+        var particle = parseParticle(server, particleName);
+        if (particle == null) return;
+        level.sendParticles(particle, pos.x, pos.y, pos.z, 0, 0, 0, 0, 0);
+    }
+
+    public static void spawnParticle(MinecraftServer server, ServerLevel level, String particleName, Vec3 pos, Vec3 delta, double speed, int count) {
+        var particle = parseParticle(server, particleName);
+        if (particle == null) return;
+        level.sendParticles(particle, pos.x, pos.y, pos.z, count, delta.x, delta.y, delta.z, speed);
+    }
+
+    public static void spawnParticleForPlayers(MinecraftServer server, ServerLevel level, String particleName, Vec3 pos, Vec3 delta, double speed, int count, List<? extends Entity> viewers) {
+        var particle = parseParticle(server, particleName);
+        if (particle == null) return;
+        for (var entity : viewers) {
+            if (entity instanceof ServerPlayer player) {
+                level.sendParticles(player, particle, true, pos.x, pos.y, pos.z, count, delta.x, delta.y, delta.z, speed);
+            }
+        }
+    }
+
     public static void sortEntitiesClosest(Vec3 origin, List<Entity> list) {
         list.sort(Comparator.comparingDouble(a -> a.distanceToSqr(origin)));
     }
