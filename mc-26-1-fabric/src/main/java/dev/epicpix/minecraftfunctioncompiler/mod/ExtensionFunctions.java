@@ -148,12 +148,12 @@ public class ExtensionFunctions {
                 java.util.Set.of(), destination.getYRot(), destination.getXRot(), true);
     }
 
-    public static void teleportToPos(Entity target, ServerLevel world, double x, double y, double z) {
-        target.teleportTo(world, x, y, z, java.util.Set.of(), target.getYRot(), target.getXRot(), true);
+    public static void teleportToPos(Entity target, ServerLevel world, Vec3 pos) {
+        target.teleportTo(world, pos.x, pos.y, pos.z, java.util.Set.of(), target.getYRot(), target.getXRot(), true);
     }
 
-    public static void teleportToPosRot(Entity target, ServerLevel world, double x, double y, double z, float yaw, float pitch) {
-        target.teleportTo(world, x, y, z, java.util.Set.of(), yaw, pitch, true);
+    public static void teleportToPosRot(Entity target, ServerLevel world, Vec3 pos, float yaw, float pitch) {
+        target.teleportTo(world, pos.x, pos.y, pos.z, java.util.Set.of(), yaw, pitch, true);
     }
 
     // -------------------------------------------------------------------------
