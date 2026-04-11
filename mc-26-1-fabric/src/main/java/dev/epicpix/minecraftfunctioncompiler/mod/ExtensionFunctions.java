@@ -178,7 +178,8 @@ public class ExtensionFunctions {
         try {
             var input = parseItemInput(server, itemString);
             if (input == null) return null;
-            java.util.function.Predicate<net.minecraft.world.item.ItemStack> predicate = input::test;
+            var holder = input.item();
+            java.util.function.Predicate<net.minecraft.world.item.ItemStack> predicate = stack -> stack.is(holder);
             ITEM_PREDICATE_CACHE.put(itemString, predicate);
             return predicate;
         } catch (Exception e) {
