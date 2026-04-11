@@ -58,7 +58,6 @@ import net.minecraft.world.scores.PlayerScores;
 import net.minecraft.world.scores.ReadOnlyScoreInfo;
 import net.minecraft.world.scores.ScoreAccess;
 import net.minecraft.world.scores.ScoreHolder;
-import net.minecraft.world.timeline.Timeline;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -106,21 +105,19 @@ public class ExtensionFunctions {
     // Tag creation helpers for execute store byte/short/long
     public static Tag createByteTag(int value) { return ByteTag.valueOf((byte) value); }
     public static Tag createShortTag(int value) { return ShortTag.valueOf((short) value); }
-    public static Tag createLongTag(int value) { return LongTag.valueOf((long) value); }
+    public static Tag createLongTag(int value) { return LongTag.valueOf(value); }
     public static Tag createLongTagFromDouble(double value) { return LongTag.valueOf((long) value); }
 
     // -------------------------------------------------------------------------
     // Effect commands — native compilation helpers
     // -------------------------------------------------------------------------
 
-    public static void effectGive(Entity entity, MinecraftServer server, String effectId, int durationTicks, int amplifier, boolean hideParticles) {
+    public static void effectGive(Entity entity, @Nullable Entity sourceEntity, MinecraftServer server, String effectId, int durationTicks, int amplifier, boolean hideParticles) {
         if (!(entity instanceof net.minecraft.world.entity.LivingEntity living)) return;
         var effectKey = ResourceKey.create(Registries.MOB_EFFECT, cachedId(effectId));
-        var lookup = server.registryAccess().lookup(Registries.MOB_EFFECT);
-        if (lookup.isEmpty()) return;
-        var effectOpt = lookup.get().get(effectKey);
-        if (effectOpt.isEmpty()) return;
-        living.addEffect(new net.minecraft.world.effect.MobEffectInstance(effectOpt.get(), durationTicks, amplifier, false, !hideParticles));
+        server.registryAccess().lookup(Registries.MOB_EFFECT)
+            .flatMap(lookup -> lookup.get(effectKey))
+            .ifPresent(effect -> living.addEffect(new net.minecraft.world.effect.MobEffectInstance(effect, durationTicks, amplifier, false, !hideParticles), sourceEntity));
     }
 
     public static void effectClearAll(Entity entity) {
@@ -132,11 +129,9 @@ public class ExtensionFunctions {
     public static void effectClearEffect(Entity entity, MinecraftServer server, String effectId) {
         if (!(entity instanceof net.minecraft.world.entity.LivingEntity living)) return;
         var effectKey = ResourceKey.create(Registries.MOB_EFFECT, cachedId(effectId));
-        var lookup = server.registryAccess().lookup(Registries.MOB_EFFECT);
-        if (lookup.isEmpty()) return;
-        var effectOpt = lookup.get().get(effectKey);
-        if (effectOpt.isEmpty()) return;
-        living.removeEffect(effectOpt.get());
+        server.registryAccess().lookup(Registries.MOB_EFFECT)
+            .flatMap(lookup -> lookup.get(effectKey))
+            .ifPresent(living::removeEffect);
     }
 
     // -------------------------------------------------------------------------
@@ -144,16 +139,33 @@ public class ExtensionFunctions {
     // -------------------------------------------------------------------------
 
     public static void teleportToEntity(Entity target, Entity destination) {
-        target.teleportTo(((ServerLevel) destination.level()), destination.getX(), destination.getY(), destination.getZ(),
-                java.util.Set.of(), destination.getYRot(), destination.getXRot(), true);
+        if (!(destination.level() instanceof ServerLevel destLevel)) return;
+        if (target.teleportTo(destLevel, destination.getX(), destination.getY(), destination.getZ(),
+                java.util.Set.of(), destination.getYRot(), destination.getXRot(), true)) {
+            postTeleportCleanup(target);
+        }
     }
 
     public static void teleportToPos(Entity target, ServerLevel world, Vec3 pos) {
-        target.teleportTo(world, pos.x, pos.y, pos.z, java.util.Set.of(), target.getYRot(), target.getXRot(), true);
+        if (target.teleportTo(world, pos.x, pos.y, pos.z, java.util.Set.of(), target.getYRot(), target.getXRot(), true)) {
+            postTeleportCleanup(target);
+        }
     }
 
     public static void teleportToPosRot(Entity target, ServerLevel world, Vec3 pos, float yaw, float pitch) {
-        target.teleportTo(world, pos.x, pos.y, pos.z, java.util.Set.of(), yaw, pitch, true);
+        if (target.teleportTo(world, pos.x, pos.y, pos.z, java.util.Set.of(), Mth.wrapDegrees(yaw), Mth.wrapDegrees(pitch), true)) {
+            postTeleportCleanup(target);
+        }
+    }
+
+    private static void postTeleportCleanup(Entity entity) {
+        if (!(entity instanceof net.minecraft.world.entity.LivingEntity living && living.isFallFlying())) {
+            entity.setDeltaMovement(entity.getDeltaMovement().multiply(1.0, 0.0, 1.0));
+            entity.setOnGround(true);
+        }
+        if (entity instanceof net.minecraft.world.entity.PathfinderMob mob) {
+            mob.getNavigation().stop();
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -161,13 +173,19 @@ public class ExtensionFunctions {
     // -------------------------------------------------------------------------
 
     public static int clearPlayerInventory(ServerPlayer player) {
-        return player.getInventory().clearOrCountMatchingItems(stack -> true, -1, player.inventoryMenu.getCraftSlots());
+        int count = player.getInventory().clearOrCountMatchingItems(stack -> true, -1, player.inventoryMenu.getCraftSlots());
+        player.inventoryMenu.broadcastChanges();
+        player.containerMenu.slotsChanged(player.getInventory());
+        return count;
     }
 
     public static int clearPlayerItem(ServerPlayer player, MinecraftServer server, String itemPredicate, int maxCount) {
         var parsed = parseItemPredicate(server, itemPredicate);
         if (parsed == null) return 0;
-        return player.getInventory().clearOrCountMatchingItems(parsed, maxCount, player.inventoryMenu.getCraftSlots());
+        int count = player.getInventory().clearOrCountMatchingItems(parsed, maxCount, player.inventoryMenu.getCraftSlots());
+        player.inventoryMenu.broadcastChanges();
+        player.containerMenu.slotsChanged(player.getInventory());
+        return count;
     }
 
     private static final java.util.concurrent.ConcurrentHashMap<String, java.util.function.Predicate<net.minecraft.world.item.ItemStack>> ITEM_PREDICATE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
@@ -277,12 +295,14 @@ public class ExtensionFunctions {
         var team = server.getScoreboard().getPlayerTeam(teamName);
         if (team == null) return;
         switch (option) {
-            case "color" -> team.setColor(net.minecraft.ChatFormatting.getByName(value));
+            case "color" -> {
+                var color = net.minecraft.ChatFormatting.getByName(value);
+                if (color != null) team.setColor(color);
+            }
             case "friendlyFire" -> team.setAllowFriendlyFire(Boolean.parseBoolean(value));
             case "seeFriendlyInvisibles" -> team.setSeeFriendlyInvisibles(Boolean.parseBoolean(value));
+            default -> {}
         }
-        // nametagVisibility, deathMessageVisibility, collisionRule have
-        // complex enum resolution — handled by vanilla fallback in compiler
     }
 
     // -------------------------------------------------------------------------
@@ -291,14 +311,12 @@ public class ExtensionFunctions {
 
     public static void recipeGive(MinecraftServer server, ServerPlayer player, String recipeId) {
         var key = ResourceKey.create(Registries.RECIPE, cachedId(recipeId));
-        var recipe = server.getRecipeManager().byKey(key);
-        if (recipe.isPresent()) player.awardRecipes(java.util.List.of(recipe.get()));
+        server.getRecipeManager().byKey(key).ifPresent(recipe -> player.awardRecipes(java.util.List.of(recipe)));
     }
 
     public static void recipeTake(MinecraftServer server, ServerPlayer player, String recipeId) {
         var key = ResourceKey.create(Registries.RECIPE, cachedId(recipeId));
-        var recipe = server.getRecipeManager().byKey(key);
-        if (recipe.isPresent()) player.resetRecipes(java.util.List.of(recipe.get()));
+        server.getRecipeManager().byKey(key).ifPresent(recipe -> player.resetRecipes(java.util.List.of(recipe)));
     }
 
     public static void recipeGiveAll(MinecraftServer server, ServerPlayer player) {
@@ -465,6 +483,13 @@ public class ExtensionFunctions {
         }
     }
 
+    private static <T extends Enum<T> & net.minecraft.util.StringRepresentable> @Nullable T findBySerializedName(T[] values, String name) {
+        for (T val : values) {
+            if (val.getSerializedName().equals(name)) return val;
+        }
+        return null;
+    }
+
     private static final Pattern STRING_SIMPLE_VALUE = Pattern.compile("[A-Za-z0-9._+-]+");
     private static final DecimalFormat TAG_DECIMAL_FORMAT = Util.make(new DecimalFormat("#"), format -> {
         format.setMaximumFractionDigits(15);
@@ -627,7 +652,7 @@ public class ExtensionFunctions {
      * Identifier instance per call. Datapacks reference a bounded set of string
      * identifiers (advancement ids, predicate ids, registry keys) so an unbounded
      * map is fine — caps out at whatever the datapack referenced.
-     *
+
      * Used by the advancement helpers, predicate helpers, and anywhere else a
      * hot path would otherwise re-parse a constant string id per tick.
      */
@@ -774,12 +799,12 @@ public class ExtensionFunctions {
     // Selector predicate check
 
     public static boolean testEntityPredicate(MinecraftServer server, Entity entity, String predicateId) {
-        var lookup = server.reloadableRegistries().lookup().lookup(Registries.PREDICATE);
-        if (lookup.isEmpty()) return false;
-        var holder = lookup.get().get(ResourceKey.create(Registries.PREDICATE, cachedId(predicateId)));
-        if (holder.isEmpty()) return false;
-        LootItemCondition condition = holder.get().value();
-        ServerLevel level = (ServerLevel) entity.level();
+        var lookupOpt = server.reloadableRegistries().lookup().lookup(Registries.PREDICATE);
+        if (lookupOpt.isEmpty()) return false;
+        var holderOpt = lookupOpt.orElseThrow().get(ResourceKey.create(Registries.PREDICATE, cachedId(predicateId)));
+        if (holderOpt.isEmpty()) return false;
+        LootItemCondition condition = holderOpt.orElseThrow().value();
+        if (!(entity.level() instanceof ServerLevel level)) return false;
         LootParams params = new LootParams.Builder(level)
                 .withParameter(LootContextParams.THIS_ENTITY, entity)
                 .withParameter(LootContextParams.ORIGIN, entity.position())
@@ -818,7 +843,8 @@ public class ExtensionFunctions {
 
     /** Returns cached NBT, computing it on first access within the current tick. */
     private static CompoundTag getCachedEntityNbt(Entity entity) {
-        var server = entity.level() instanceof ServerLevel sl ? sl.getServer() : null;
+        var level = entity.level();
+        var server = level instanceof ServerLevel sl ? sl.getServer() : null;
         int currentTick = server != null ? server.getTickCount() : 0;
         if (currentTick != entityNbtCacheTick) {
             entityNbtTickCache.clear();
@@ -831,85 +857,82 @@ public class ExtensionFunctions {
      * Try to evaluate an NBT pattern against an entity WITHOUT serialization.
      * Returns {@code null} if the pattern contains keys not in the fast-path set
      * (caller should fall back to full serialization).
-     *
+
      * Supported keys: Tags, CustomName, CustomNameVisible, Health, MaxHealth,
      * Air, MaxAir, Fire, FallDistance, OnGround, NoGravity, Invulnerable,
      * Silent, Glowing.
      */
     private static @Nullable Boolean tryMatchEntityNbtFast(Entity entity, CompoundTag pattern) {
-        for (String key : pattern.keySet()) {
-            Boolean keyResult = matchSingleKey(entity, key, pattern.get(key));
+        for (var entry : pattern.entrySet()) {
+            Boolean keyResult = matchSingleKey(entity, entry.getKey(), entry.getValue());
             if (keyResult == null) return null;   // unknown key — need full serialization
             if (!keyResult) return Boolean.FALSE;  // known key, value didn't match
         }
         return Boolean.TRUE;
     }
 
-    private static @Nullable Boolean matchSingleKey(Entity entity, String key, net.minecraft.nbt.Tag value) {
+    private static @Nullable Boolean matchSingleKey(Entity entity, String key, Tag value) {
         return switch (key) {
             case "Tags" -> {
                 if (!(value instanceof ListTag tagList)) yield null;
                 var entityTags = entity.entityTags();
-                for (int i = 0; i < tagList.size(); i++) {
-                    var t = tagList.get(i);
+                for (Tag t : tagList) {
                     if (!(t instanceof StringTag st)) yield null;
                     if (!entityTags.contains(st.asString().orElse(""))) yield Boolean.FALSE;
                 }
                 yield Boolean.TRUE;
             }
-            case "CustomName" -> {
-                // Component.Serializer.toJson removed in MC 26.1 — fall back to full serialization
-                yield null;
-            }
+            // Component.Serializer.toJson removed in MC 26.1 — fall back to full serialization
+            case "CustomName" -> null;
             case "CustomNameVisible" -> {
                 if (!(value instanceof ByteTag expected)) yield null;
-                yield Boolean.valueOf(entity.isCustomNameVisible() == (expected.byteValue() != 0));
+                yield entity.isCustomNameVisible() == (expected.byteValue() != 0);
             }
             case "Health" -> {
                 if (!(entity instanceof net.minecraft.world.entity.LivingEntity living)) yield Boolean.FALSE;
                 if (!(value instanceof FloatTag expected)) yield null;
-                yield Boolean.valueOf(living.getHealth() == expected.floatValue());
+                yield living.getHealth() == expected.floatValue();
             }
             case "MaxHealth" -> {
                 if (!(entity instanceof net.minecraft.world.entity.LivingEntity living)) yield Boolean.FALSE;
                 if (!(value instanceof FloatTag expected)) yield null;
-                yield Boolean.valueOf(living.getMaxHealth() == expected.floatValue());
+                yield living.getMaxHealth() == expected.floatValue();
             }
             case "Air" -> {
                 if (!(value instanceof ShortTag expected)) yield null;
-                yield Boolean.valueOf(entity.getAirSupply() == expected.shortValue());
+                yield entity.getAirSupply() == expected.shortValue();
             }
             case "MaxAir" -> {
                 if (!(value instanceof ShortTag expected)) yield null;
-                yield Boolean.valueOf(entity.getMaxAirSupply() == expected.shortValue());
+                yield entity.getMaxAirSupply() == expected.shortValue();
             }
             case "Fire" -> {
                 if (!(value instanceof ShortTag expected)) yield null;
-                yield Boolean.valueOf(entity.getRemainingFireTicks() == expected.shortValue());
+                yield entity.getRemainingFireTicks() == expected.shortValue();
             }
             case "FallDistance" -> {
                 if (!(value instanceof FloatTag expected)) yield null;
-                yield Boolean.valueOf((float) entity.fallDistance == expected.floatValue());
+                yield (float) entity.fallDistance == expected.floatValue();
             }
             case "OnGround" -> {
                 if (!(value instanceof ByteTag expected)) yield null;
-                yield Boolean.valueOf(entity.onGround() == (expected.byteValue() != 0));
+                yield entity.onGround() == (expected.byteValue() != 0);
             }
             case "NoGravity" -> {
                 if (!(value instanceof ByteTag expected)) yield null;
-                yield Boolean.valueOf(entity.isNoGravity() == (expected.byteValue() != 0));
+                yield entity.isNoGravity() == (expected.byteValue() != 0);
             }
             case "Invulnerable" -> {
                 if (!(value instanceof ByteTag expected)) yield null;
-                yield Boolean.valueOf(entity.isInvulnerable() == (expected.byteValue() != 0));
+                yield entity.isInvulnerable() == (expected.byteValue() != 0);
             }
             case "Silent" -> {
                 if (!(value instanceof ByteTag expected)) yield null;
-                yield Boolean.valueOf(entity.isSilent() == (expected.byteValue() != 0));
+                yield entity.isSilent() == (expected.byteValue() != 0);
             }
             case "Glowing" -> {
                 if (!(value instanceof ByteTag expected)) yield null;
-                yield Boolean.valueOf(entity.hasGlowingTag() == (expected.byteValue() != 0));
+                yield entity.hasGlowingTag() == (expected.byteValue() != 0);
             }
             default -> null; // complex key — fall back to full serialization
         };
@@ -991,11 +1014,11 @@ public class ExtensionFunctions {
      * attribute modifiers, and anything else the game command dispatcher
      * accepts. Cached so repeated `give` calls with the same string don't
      * reparse.
-     *
+
      * The input is expected to be just the item descriptor — count is now a
      * separate argument passed explicitly to giveItemsToAll, so no trailing
      * space/number splitting is needed here.
-     *
+
      * Returns null on malformed input (logged once per string at WARN).
      */
     private static net.minecraft.commands.arguments.item.@Nullable ItemInput parseItemInput(MinecraftServer server, String itemString) {
@@ -1068,7 +1091,7 @@ public class ExtensionFunctions {
      * source-category string are parsed at most once per unique pair for the
      * lifetime of the server — subsequent calls hit a ConcurrentHashMap and
      * go straight to per-player distance checks and packet dispatch.
-     *
+
      * Previously every call paid for Identifier.parse + SoundEvent.
      * createVariableRangeEvent + Holder.direct + String.toUpperCase +
      * SoundSource.valueOf, even when the same playsound ran thousands of
@@ -1189,8 +1212,7 @@ public class ExtensionFunctions {
                 ResourceKey.create(Registries.TIMELINE, Identifier.parse(timelineId))
         );
         if (timelineOpt.isEmpty()) return 0;
-
-        long currentTicks = timelineOpt.get().value().getCurrentTicks(clockManager);
+        long currentTicks = timelineOpt.orElseThrow().value().getCurrentTicks(clockManager);
         return TimeCommand.wrapTime(currentTicks);
     }
 
@@ -1200,8 +1222,7 @@ public class ExtensionFunctions {
                 ResourceKey.create(Registries.TIMELINE, Identifier.parse(timelineId))
         );
         if (timelineOpt.isEmpty()) return 0;
-
-        long repetitions = timelineOpt.get().value().getPeriodCount(clockManager);
+        long repetitions = timelineOpt.orElseThrow().value().getPeriodCount(clockManager);
         return TimeCommand.wrapTime(repetitions);
     }
 
@@ -1312,8 +1333,7 @@ public class ExtensionFunctions {
 
     // Поиск первого NBT элемента в ListTag по compound-фильтру
     public static @Nullable Tag findFirstNbtMatchingCompound(ListTag list, CompoundTag filter) {
-        for (int i = 0; i < list.size(); i++) {
-            Tag element = list.get(i);
+        for (Tag element : list) {
             if (element instanceof CompoundTag compound && NbtUtils.compareNbt(filter, compound, true)) {
                 return element;
             }
@@ -1372,7 +1392,7 @@ public class ExtensionFunctions {
             .orElse(net.minecraft.world.scores.criteria.ObjectiveCriteria.DUMMY);
         var display = displayName != null ? displayName : net.minecraft.network.chat.Component.literal(name);
         scoreboard.addObjective(name, criterion, display,
-            net.minecraft.world.scores.criteria.ObjectiveCriteria.RenderType.INTEGER, false, null);
+            criterion.getDefaultRenderType(), false, null);
     }
 
     // NBT list operations
@@ -1403,31 +1423,82 @@ public class ExtensionFunctions {
 
     // Block checking для execute if block
 
-    /** Cached resolution of `#namespace:tag` predicate strings to TagKey<Block>. */
-    private static final java.util.concurrent.ConcurrentHashMap<String, net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block>> BLOCK_TAG_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
-    /** Cached resolution of `namespace:block` predicate strings to Block registry entries. Null means unknown block (cached as sentinel). */
-    private static final java.util.concurrent.ConcurrentHashMap<String, net.minecraft.world.level.block.Block> BLOCK_ID_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.concurrent.ConcurrentHashMap<String, java.util.function.Predicate<net.minecraft.world.level.block.state.BlockState>> BLOCK_PREDICATE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
     public static boolean checkBlock(net.minecraft.server.level.ServerLevel level, Vec3 position, String predicate) {
         var blockPos = net.minecraft.core.BlockPos.containing(position);
         var state = level.getBlockState(blockPos);
-        if (predicate.startsWith("#")) {
-            var tagKey = BLOCK_TAG_CACHE.get(predicate);
-            if (tagKey == null) {
-                tagKey = net.minecraft.tags.TagKey.create(Registries.BLOCK, cachedId(predicate.substring(1)));
-                BLOCK_TAG_CACHE.put(predicate, tagKey);
-            }
-            return state.is(tagKey);
+        // Fast path: cached predicates without NBT
+        var cached = BLOCK_PREDICATE_CACHE.get(predicate);
+        if (cached != null) return cached.test(state);
+        try {
+            var blockLookup = level.registryAccess().lookupOrThrow(Registries.BLOCK);
+            var parsed = net.minecraft.commands.arguments.blocks.BlockStateParser.parseForTesting(blockLookup, predicate, true);
+            return parsed.map(
+                blockResult -> {
+                    var targetState = blockResult.blockState();
+                    var props = blockResult.properties();
+                    var nbt = blockResult.nbt();
+                    // Check block type + specified properties
+                    if (!state.is(targetState.getBlock())) return false;
+                    for (var prop : props.entrySet()) {
+                        if (!Objects.equals(state.getValue(prop.getKey()), prop.getValue())) return false;
+                    }
+                    // Check NBT if specified
+                    if (nbt != null) {
+                        var blockEntity = level.getBlockEntity(blockPos);
+                        if (blockEntity == null) return false;
+                        var beTag = blockEntity.saveWithFullMetadata(level.registryAccess());
+                        if (!NbtUtils.compareNbt(nbt, beTag, true)) return false;
+                    } else {
+                        // Cache only predicates without NBT (state-only checks are position-independent)
+                        java.util.function.Predicate<net.minecraft.world.level.block.state.BlockState> cacheable = s -> {
+                            if (!s.is(targetState.getBlock())) return false;
+                            for (var p : props.entrySet()) {
+                                if (!Objects.equals(s.getValue(p.getKey()), p.getValue())) return false;
+                            }
+                            return true;
+                        };
+                        BLOCK_PREDICATE_CACHE.put(predicate, cacheable);
+                    }
+                    return true;
+                },
+                tagResult -> {
+                    var tag = tagResult.tag();
+                    var vagueProps = tagResult.vagueProperties();
+                    if (!state.is(tag)) return false;
+                    for (var entry : vagueProps.entrySet()) {
+                        var prop = state.getBlock().getStateDefinition().getProperty(entry.getKey());
+                        if (prop == null) return false;
+                        var val = prop.getValue(entry.getValue());
+                        if (val.isEmpty() || !Objects.equals(state.getValue(prop), val.get())) return false;
+                    }
+                    // Tags without NBT can be cached
+                    if (tagResult.nbt() == null) {
+                        java.util.function.Predicate<net.minecraft.world.level.block.state.BlockState> cacheable = s -> {
+                            if (!s.is(tag)) return false;
+                            for (var e : vagueProps.entrySet()) {
+                                var p = s.getBlock().getStateDefinition().getProperty(e.getKey());
+                                if (p == null) return false;
+                                var v = p.getValue(e.getValue());
+                                if (v.isEmpty() || !Objects.equals(s.getValue(p), v.get())) return false;
+                            }
+                            return true;
+                        };
+                        BLOCK_PREDICATE_CACHE.put(predicate, cacheable);
+                    } else {
+                        var blockEntity = level.getBlockEntity(blockPos);
+                        if (blockEntity == null) return false;
+                        var beTag = blockEntity.saveWithFullMetadata(level.registryAccess());
+                        if (!NbtUtils.compareNbt(tagResult.nbt(), beTag, true)) return false;
+                    }
+                    return true;
+                }
+            );
+        } catch (Exception e) {
+            LOGGER.warn("Failed to parse block predicate '{}': {}", predicate, e.getMessage());
+            return false;
         }
-        String blockId = predicate.contains("[") ? predicate.substring(0, predicate.indexOf('[')) : predicate;
-        var block = BLOCK_ID_CACHE.get(blockId);
-        if (block == null) {
-            var optBlock = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getOptional(cachedId(blockId));
-            if (optBlock.isEmpty()) return false;
-            block = optBlock.get();
-            BLOCK_ID_CACHE.put(blockId, block);
-        }
-        return state.is(block);
     }
 
     // Entity relations для execute on leasher / attacker / owner
@@ -1451,6 +1522,325 @@ public class ExtensionFunctions {
             return ownable.getOwner();
         }
         return null;
+    }
+
+    // -------------------------------------------------------------------------
+    // Scoreboard display — setdisplay, players display name/numberformat
+    // -------------------------------------------------------------------------
+
+    public static void scoreboardSetdisplayClear(MinecraftServer server, String slotName) {
+        var slot = net.minecraft.world.scores.DisplaySlot.CODEC.byName(slotName);
+        if (slot != null) server.getScoreboard().setDisplayObjective(slot, null);
+    }
+
+    public static void scoreboardSetdisplay(MinecraftServer server, String slotName, String objectiveName) {
+        var slot = net.minecraft.world.scores.DisplaySlot.CODEC.byName(slotName);
+        if (slot == null) return;
+        var obj = server.getScoreboard().getObjective(objectiveName);
+        if (obj != null) server.getScoreboard().setDisplayObjective(slot, obj);
+    }
+
+    public static void scoreboardPlayersDisplayName(ServerScoreboard scoreboard, ScoreHolder holder, String objectiveName, @Nullable Component displayName) {
+        var obj = scoreboard.getObjective(objectiveName);
+        if (obj == null) return;
+        scoreboard.getOrCreatePlayerScore(holder, obj).display(displayName);
+    }
+
+    public static void scoreboardPlayersNumberformatBlank(ServerScoreboard scoreboard, ScoreHolder holder, String objectiveName) {
+        var obj = scoreboard.getObjective(objectiveName);
+        if (obj == null) return;
+        scoreboard.getOrCreatePlayerScore(holder, obj).numberFormatOverride(net.minecraft.network.chat.numbers.BlankFormat.INSTANCE);
+    }
+
+    public static void scoreboardPlayersNumberformatStyled(MinecraftServer server, ServerScoreboard scoreboard, ScoreHolder holder, String objectiveName, String styleJson) {
+        var obj = scoreboard.getObjective(objectiveName);
+        if (obj == null) return;
+        try {
+            var style = net.minecraft.network.chat.Style.Serializer.CODEC.parse(
+                server.registryAccess().createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE),
+                com.google.gson.JsonParser.parseString(styleJson)
+            ).getOrThrow();
+            scoreboard.getOrCreatePlayerScore(holder, obj).numberFormatOverride(new net.minecraft.network.chat.numbers.StyledFormat(style));
+        } catch (Exception e) {
+            LOGGER.warn("Failed to parse style for numberformat: {}", styleJson, e);
+        }
+    }
+
+    public static void scoreboardPlayersNumberformatFixed(ServerScoreboard scoreboard, ScoreHolder holder, String objectiveName, Component text) {
+        var obj = scoreboard.getObjective(objectiveName);
+        if (obj == null) return;
+        scoreboard.getOrCreatePlayerScore(holder, obj).numberFormatOverride(new net.minecraft.network.chat.numbers.FixedFormat(text));
+    }
+
+    // -------------------------------------------------------------------------
+    // Team modify — visibility, collision, prefix, suffix, displayName
+    // -------------------------------------------------------------------------
+
+    public static void teamModifyFull(MinecraftServer server, String teamName, String option, String value) {
+        var team = server.getScoreboard().getPlayerTeam(teamName);
+        if (team == null) return;
+        switch (option) {
+            case "color" -> {
+                var color = net.minecraft.ChatFormatting.getByName(value);
+                if (color != null) team.setColor(color);
+            }
+            case "friendlyFire" -> team.setAllowFriendlyFire(Boolean.parseBoolean(value));
+            case "seeFriendlyInvisibles" -> team.setSeeFriendlyInvisibles(Boolean.parseBoolean(value));
+            case "nametagVisibility" -> {
+                var vis = findBySerializedName(net.minecraft.world.scores.Team.Visibility.values(), value);
+                if (vis != null) team.setNameTagVisibility(vis);
+            }
+            case "deathMessageVisibility" -> {
+                var vis = findBySerializedName(net.minecraft.world.scores.Team.Visibility.values(), value);
+                if (vis != null) team.setDeathMessageVisibility(vis);
+            }
+            case "collisionRule" -> {
+                var rule = findBySerializedName(net.minecraft.world.scores.Team.CollisionRule.values(), value);
+                if (rule != null) team.setCollisionRule(rule);
+            }
+            case "prefix" -> {
+                try {
+                    var component = net.minecraft.network.chat.ComponentSerialization.CODEC.parse(
+                        server.registryAccess().createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE),
+                        com.google.gson.JsonParser.parseString(value)
+                    ).getOrThrow();
+                    team.setPlayerPrefix(component);
+                } catch (Exception ignored) {}
+            }
+            case "suffix" -> {
+                try {
+                    var component = net.minecraft.network.chat.ComponentSerialization.CODEC.parse(
+                        server.registryAccess().createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE),
+                        com.google.gson.JsonParser.parseString(value)
+                    ).getOrThrow();
+                    team.setPlayerSuffix(component);
+                } catch (Exception ignored) {}
+            }
+            default -> {}
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Random commands — value, roll, reset
+    // -------------------------------------------------------------------------
+
+    public static int randomValue(ServerLevel level, int min, int max) {
+        return Mth.randomBetweenInclusive(level.getRandom(), min, max);
+    }
+
+    public static int randomValueSequence(MinecraftServer server, int min, int max, String sequenceId) {
+        var source = server.getRandomSequence(cachedId(sequenceId));
+        return Mth.randomBetweenInclusive(source, min, max);
+    }
+
+    public static void randomResetSequence(MinecraftServer server, ServerLevel level, String sequenceId) {
+        server.getRandomSequences().reset(cachedId(sequenceId), level.getSeed());
+    }
+
+    public static void randomResetAll(MinecraftServer server) {
+        server.getRandomSequences().clear();
+    }
+
+    // -------------------------------------------------------------------------
+    // Setblock / Fill — native block placement
+    // -------------------------------------------------------------------------
+
+    private static final java.util.concurrent.ConcurrentHashMap<String, net.minecraft.commands.arguments.blocks.BlockInput> BLOCK_INPUT_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static net.minecraft.commands.arguments.blocks.@Nullable BlockInput parseBlockInput(MinecraftServer server, String blockString) {
+        var cached = BLOCK_INPUT_CACHE.get(blockString);
+        if (cached != null) return cached;
+        try {
+            var result = net.minecraft.commands.arguments.blocks.BlockStateParser.parseForBlock(
+                server.registryAccess().lookupOrThrow(Registries.BLOCK), blockString, true);
+            var input = new net.minecraft.commands.arguments.blocks.BlockInput(result.blockState(), result.properties().keySet(), result.nbt());
+            BLOCK_INPUT_CACHE.put(blockString, input);
+            return input;
+        } catch (Exception e) {
+            LOGGER.warn("Failed to parse block state '{}': {}", blockString, e.getMessage());
+            return null;
+        }
+    }
+
+    public static int setBlock(MinecraftServer server, ServerLevel level, Vec3 pos, String blockString, int mode) {
+        var input = parseBlockInput(server, blockString);
+        if (input == null) return 0;
+        var blockPos = net.minecraft.core.BlockPos.containing(pos);
+        if (!level.isInWorldBounds(blockPos)) return 0;
+        switch (mode) {
+            case 1 -> { // keep — only place if current block is air
+                if (!level.getBlockState(blockPos).isAir()) return 0;
+            }
+            case 2 -> // destroy — break the block first
+                level.destroyBlock(blockPos, true);
+            default -> {} // replace — no pre-processing
+        }
+        if (!input.place(level, blockPos, 2 | 256)) return 0;
+        level.updateNeighboursOnBlockSet(blockPos, level.getBlockState(blockPos));
+        return 1;
+    }
+
+    public static int fillBlocks(MinecraftServer server, ServerLevel level, Vec3 from, Vec3 to, String blockString, int mode, @Nullable String filterString) {
+        var input = parseBlockInput(server, blockString);
+        if (input == null) return 0;
+        java.util.function.@Nullable Predicate<net.minecraft.world.level.block.state.BlockState> filterPredicate = null;
+        if (filterString != null) {
+            var cached = BLOCK_PREDICATE_CACHE.get(filterString);
+            if (cached != null) {
+                filterPredicate = cached;
+            } else {
+                // trigger cache population via checkBlock
+                checkBlock(level, from, filterString);
+                filterPredicate = BLOCK_PREDICATE_CACHE.get(filterString);
+            }
+        }
+        var fromPos = net.minecraft.core.BlockPos.containing(from);
+        var toPos = net.minecraft.core.BlockPos.containing(to);
+        var region = net.minecraft.world.level.levelgen.structure.BoundingBox.fromCorners(fromPos, toPos);
+        int count = 0;
+        var updatePositions = new java.util.ArrayList<net.minecraft.core.BlockPos>();
+
+        for (var blockPos : net.minecraft.core.BlockPos.betweenClosed(
+                region.minX(), region.minY(), region.minZ(),
+                region.maxX(), region.maxY(), region.maxZ())) {
+            // mode: 0=replace, 1=replace_filter, 2=keep, 3=destroy, 4=hollow, 5=outline
+            switch (mode) {
+                case 1 -> { // replace with filter — only replace blocks matching filter predicate
+                    if (filterPredicate != null && !filterPredicate.test(level.getBlockState(blockPos))) continue;
+                }
+                case 2 -> { // keep
+                    if (!level.getBlockState(blockPos).isAir()) continue;
+                }
+                case 3 -> { // destroy
+                    level.destroyBlock(blockPos, true);
+                }
+                case 4 -> { // hollow
+                    boolean isEdge = blockPos.getX() == region.minX() || blockPos.getX() == region.maxX()
+                            || blockPos.getY() == region.minY() || blockPos.getY() == region.maxY()
+                            || blockPos.getZ() == region.minZ() || blockPos.getZ() == region.maxZ();
+                    if (!isEdge) {
+                        // interior — set to air
+                        var airState = net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+                        if (!level.getBlockState(blockPos).equals(airState)) {
+                            level.setBlock(blockPos, airState, 2 | 256);
+                            updatePositions.add(blockPos.immutable());
+                            count++;
+                        }
+                        continue;
+                    }
+                }
+                case 5 -> { // outline
+                    boolean isEdge = blockPos.getX() == region.minX() || blockPos.getX() == region.maxX()
+                            || blockPos.getY() == region.minY() || blockPos.getY() == region.maxY()
+                            || blockPos.getZ() == region.minZ() || blockPos.getZ() == region.maxZ();
+                    if (!isEdge) continue;
+                }
+            }
+            if (input.place(level, blockPos, 2 | 256)) {
+                updatePositions.add(blockPos.immutable());
+                count++;
+            }
+        }
+        for (var pos2 : updatePositions) {
+            level.updateNeighboursOnBlockSet(pos2, level.getBlockState(pos2));
+        }
+        return count;
+    }
+
+    // -------------------------------------------------------------------------
+    // Teleport facing — tp with facing entity / coordinates
+    // -------------------------------------------------------------------------
+
+    public static void teleportFacingPos(Entity target, ServerLevel world, Vec3 pos, Vec3 facingPos) {
+        double dx = facingPos.x - pos.x;
+        double dy = facingPos.y - pos.y;
+        double dz = facingPos.z - pos.z;
+        double dist = Math.sqrt(dx * dx + dz * dz);
+        float xRot = Mth.wrapDegrees((float)(-(Mth.atan2(dy, dist) * (180.0 / Math.PI))));
+        float yRot = Mth.wrapDegrees((float)(Mth.atan2(dz, dx) * (180.0 / Math.PI)) - 90.0f);
+        if (target.teleportTo(world, pos.x, pos.y, pos.z, java.util.Set.of(), yRot, xRot, true)) {
+            postTeleportCleanup(target);
+        }
+    }
+
+    public static void teleportFacingEntity(Entity target, ServerLevel world, Vec3 pos, Entity facingEntity, boolean useEyes) {
+        double ey = useEyes && facingEntity instanceof net.minecraft.world.entity.LivingEntity living
+                ? living.getY() + living.getEyeHeight()
+                : facingEntity.getY();
+        teleportFacingPos(target, world, pos, new Vec3(facingEntity.getX(), ey, facingEntity.getZ()));
+    }
+
+    // -------------------------------------------------------------------------
+    // Data operations — merge entity, remove storage/entity, modify from/string
+    // -------------------------------------------------------------------------
+
+    public static void dataMergeEntity(Entity entity, MinecraftServer server, CompoundTag patch) {
+        if (entity instanceof net.minecraft.world.entity.player.Player) return;
+        var uuid = entity.getUUID();
+        var current = net.minecraft.advancements.criterion.NbtPredicate.getEntityTagToCompare(entity);
+        current.merge(patch);
+        try (var reporter = new net.minecraft.util.ProblemReporter.ScopedCollector(entity.problemPath(), LOGGER)) {
+            entity.load(net.minecraft.world.level.storage.TagValueInput.create(reporter, server.registryAccess(), current));
+            entity.setUUID(uuid);
+        }
+        entityNbtTickCache.remove(entity);
+    }
+
+    public static void dataRemoveStorage(net.minecraft.world.level.storage.CommandStorage storage, String storageName, String path) {
+        var id = cachedId(storageName);
+        try {
+            var nbtPath = net.minecraft.commands.arguments.NbtPathArgument.NbtPath.of(path);
+            var data = storage.get(id);
+            nbtPath.remove(data);
+            storage.set(id, data);
+        } catch (Exception e) {
+            LOGGER.warn("Failed to remove data from storage {}: {}", storageName, e.getMessage());
+        }
+    }
+
+    public static void dataRemoveEntity(Entity entity, MinecraftServer server, String path) {
+        if (entity instanceof net.minecraft.world.entity.player.Player) return;
+        var compound = net.minecraft.advancements.criterion.NbtPredicate.getEntityTagToCompare(entity);
+        try {
+            var nbtPath = net.minecraft.commands.arguments.NbtPathArgument.NbtPath.of(path);
+            nbtPath.remove(compound);
+            var uuid = entity.getUUID();
+            try (var reporter = new net.minecraft.util.ProblemReporter.ScopedCollector(entity.problemPath(), LOGGER)) {
+                entity.load(net.minecraft.world.level.storage.TagValueInput.create(reporter, server.registryAccess(), compound));
+                entity.setUUID(uuid);
+            }
+            entityNbtTickCache.remove(entity);
+        } catch (Exception e) {
+            LOGGER.warn("Failed to remove data from entity: {}", e.getMessage());
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Execute summon / positioned over
+    // -------------------------------------------------------------------------
+
+    public static @Nullable Entity executeSummon(CommandSourceStack source, String entityTypeId) {
+        try {
+            var entityTypeOpt = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(cachedId(entityTypeId));
+            if (entityTypeOpt.isEmpty()) return null;
+            var level = source.getLevel();
+            var entity = entityTypeOpt.get().value().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+            if (entity == null) return null;
+            var pos = source.getPosition();
+            entity.snapTo(pos.x, pos.y, pos.z, entity.getYRot(), entity.getXRot());
+            if (!level.tryAddFreshEntityWithPassengers(entity)) return null;
+            allEntitiesCache.clear();
+            return entity;
+        } catch (Exception e) {
+            LOGGER.warn("Failed to summon entity '{}': {}", entityTypeId, e.getMessage());
+            return null;
+        }
+    }
+
+    public static Vec3 positionedOver(ServerLevel level, Vec3 pos, String heightmapType) {
+        var heightmap = net.minecraft.world.level.levelgen.Heightmap.Types.valueOf(heightmapType.toUpperCase(Locale.ROOT));
+        int height = level.getHeight(heightmap, Mth.floor(pos.x), Mth.floor(pos.z));
+        return new Vec3(pos.x, height, pos.z);
     }
 
 }

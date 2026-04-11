@@ -735,8 +735,8 @@
 }
 
 // effect
-@EFFECT_GIVE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:effect_id], int [instr:duration_ticks], int [instr:amplifier], boolean [instr:hide_particles]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.effectGive([ctx:entity], [static:MinecraftServer], [instr:effect_id], [instr:duration_ticks], [instr:amplifier], [instr:hide_particles]);
+@EFFECT_GIVE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.entity.Entity> [ctx:source_entity], <java.lang.String> [instr:effect_id], int [instr:duration_ticks], int [instr:amplifier], boolean [instr:hide_particles]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.effectGive([ctx:entity], [ctx:source_entity], [static:MinecraftServer], [instr:effect_id], [instr:duration_ticks], [instr:amplifier], [instr:hide_particles]);
 }
 @EFFECT_CLEAR_ALL(<net.minecraft.world.entity.Entity> [ctx:entity]) {
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.effectClearAll([ctx:entity]);
@@ -800,8 +800,14 @@
 @TEAM_JOIN_MEMBER(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:team], <java.lang.String> [ctx:member]) {
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teamJoinMembers([static:MinecraftServer], [instr:team], [ctx:member]);
 }
+@TEAM_JOIN_SCORE_HOLDER(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:team], <net.minecraft.world.scores.ScoreHolder> [ctx:holder]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teamJoinMembers([static:MinecraftServer], [instr:team], [ctx:holder].getScoreboardName());
+}
 @TEAM_LEAVE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [ctx:member]) {
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teamLeave([static:MinecraftServer], [ctx:member]);
+}
+@TEAM_LEAVE_SCORE_HOLDER(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.world.scores.ScoreHolder> [ctx:holder]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teamLeave([static:MinecraftServer], [ctx:holder].getScoreboardName());
 }
 @TEAM_EMPTY(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:team]) {
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teamEmpty([static:MinecraftServer], [instr:team]);
@@ -994,3 +1000,103 @@
 ##PURE
 @GET_NBT_TEXT(<net.minecraft.world.level.storage.CommandStorage> [static:CommandStorage], <java.lang.String> [instr:storage_name], <java.lang.String> [instr:path]) -> <net.minecraft.network.chat.Component>
   = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getNbtText([static:CommandStorage], [instr:storage_name], [instr:path]);
+
+// scoreboard objectives setdisplay
+@SCOREBOARD_SETDISPLAY_CLEAR(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:slot]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.scoreboardSetdisplayClear([static:MinecraftServer], [instr:slot]);
+}
+
+@SCOREBOARD_SETDISPLAY(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:slot], <java.lang.String> [instr:objective]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.scoreboardSetdisplay([static:MinecraftServer], [instr:slot], [instr:objective]);
+}
+
+// scoreboard players display name
+@SCOREBOARD_PLAYERS_DISPLAY_NAME(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.ScoreHolder> [ctx:holder], <java.lang.String> [instr:objective], <net.minecraft.network.chat.Component> [ctx:display]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.scoreboardPlayersDisplayName([static:Scoreboard], [ctx:holder], [instr:objective], [ctx:display]);
+}
+
+@SCOREBOARD_PLAYERS_DISPLAY_NAME_CLEAR(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.ScoreHolder> [ctx:holder], <java.lang.String> [instr:objective]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.scoreboardPlayersDisplayName([static:Scoreboard], [ctx:holder], [instr:objective], null);
+}
+
+// scoreboard players display numberformat
+@SCOREBOARD_PLAYERS_NUMBERFORMAT_BLANK(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.ScoreHolder> [ctx:holder], <java.lang.String> [instr:objective]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.scoreboardPlayersNumberformatBlank([static:Scoreboard], [ctx:holder], [instr:objective]);
+}
+
+@SCOREBOARD_PLAYERS_NUMBERFORMAT_STYLED(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.ScoreHolder> [ctx:holder], <java.lang.String> [instr:objective], <java.lang.String> [instr:style]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.scoreboardPlayersNumberformatStyled([static:MinecraftServer], [static:Scoreboard], [ctx:holder], [instr:objective], [instr:style]);
+}
+
+@SCOREBOARD_PLAYERS_NUMBERFORMAT_FIXED(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.ScoreHolder> [ctx:holder], <java.lang.String> [instr:objective], <net.minecraft.network.chat.Component> [ctx:text]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.scoreboardPlayersNumberformatFixed([static:Scoreboard], [ctx:holder], [instr:objective], [ctx:text]);
+}
+
+// team modify — full version with visibility/collision support
+@TEAM_MODIFY_FULL(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:team], <java.lang.String> [instr:option], <java.lang.String> [instr:value]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teamModifyFull([static:MinecraftServer], [instr:team], [instr:option], [instr:value]);
+}
+
+// random commands
+##PURE
+@RANDOM_VALUE(<net.minecraft.server.level.ServerLevel> [ctx:world], int [instr:min], int [instr:max]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.randomValue([ctx:world], [instr:min], [instr:max]);
+
+##PURE
+@RANDOM_VALUE_SEQUENCE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], int [instr:min], int [instr:max], <java.lang.String> [instr:sequence]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.randomValueSequence([static:MinecraftServer], [instr:min], [instr:max], [instr:sequence]);
+
+@RANDOM_RESET_SEQUENCE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:sequence]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.randomResetSequence([static:MinecraftServer], [ctx:world], [instr:sequence]);
+}
+
+@RANDOM_RESET_ALL(<net.minecraft.server.MinecraftServer> [static:MinecraftServer]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.randomResetAll([static:MinecraftServer]);
+}
+
+// setblock — native block placement
+##PURE
+@SET_BLOCK(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:pos], <java.lang.String> [instr:block], int [instr:mode]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setBlock([static:MinecraftServer], [ctx:world], [ctx:pos], [instr:block], [instr:mode]);
+
+// fill — native block fill
+##PURE
+@FILL_BLOCKS(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:from], <net.minecraft.world.phys.Vec3> [ctx:to], <java.lang.String> [instr:block], int [instr:mode]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.fillBlocks([static:MinecraftServer], [ctx:world], [ctx:from], [ctx:to], [instr:block], [instr:mode], null);
+
+##PURE
+@FILL_BLOCKS_FILTER(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:from], <net.minecraft.world.phys.Vec3> [ctx:to], <java.lang.String> [instr:block], <java.lang.String> [instr:filter]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.fillBlocks([static:MinecraftServer], [ctx:world], [ctx:from], [ctx:to], [instr:block], 1, [instr:filter]);
+
+// teleport facing
+@TELEPORT_FACING_POS(mut <net.minecraft.world.entity.Entity> [ctx:target], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:pos], <net.minecraft.world.phys.Vec3> [ctx:facing_pos]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teleportFacingPos([ctx:target], [ctx:world], [ctx:pos], [ctx:facing_pos]);
+}
+
+@TELEPORT_FACING_ENTITY(mut <net.minecraft.world.entity.Entity> [ctx:target], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:pos], <net.minecraft.world.entity.Entity> [ctx:facing_entity], boolean [instr:use_eyes]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teleportFacingEntity([ctx:target], [ctx:world], [ctx:pos], [ctx:facing_entity], [instr:use_eyes]);
+}
+
+// data merge entity
+@DATA_MERGE_ENTITY(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.nbt.CompoundTag> [ctx:patch]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.dataMergeEntity([ctx:entity], [static:MinecraftServer], [ctx:patch]);
+}
+
+// data remove storage / entity
+@DATA_REMOVE_STORAGE(<net.minecraft.world.level.storage.CommandStorage> [static:CommandStorage], <java.lang.String> [instr:storage_name], <java.lang.String> [instr:path]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.dataRemoveStorage([static:CommandStorage], [instr:storage_name], [instr:path]);
+}
+
+@DATA_REMOVE_ENTITY(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:path]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.dataRemoveEntity([ctx:entity], [static:MinecraftServer], [instr:path]);
+}
+
+// execute summon
+##PURE
+@EXECUTE_SUMMON(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <java.lang.String> [instr:entity_type]) -> <net.minecraft.world.entity.Entity>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.executeSummon([ctx:stack], [instr:entity_type]);
+
+// execute positioned over
+##PURE
+@POSITIONED_OVER(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:pos], <java.lang.String> [instr:heightmap]) -> <net.minecraft.world.phys.Vec3>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.positionedOver([ctx:world], [ctx:pos], [instr:heightmap]);
