@@ -177,7 +177,7 @@ public class ExtensionFunctions {
         if (cached != null) return cached;
         try {
             var reader = new com.mojang.brigadier.StringReader(itemString);
-            var buildContext = net.minecraft.commands.CommandBuildContext.simple(server.registryAccess(), server.enabledFeatures());
+            var buildContext = net.minecraft.commands.CommandBuildContext.simple(server.registryAccess(), server.worldData().enabledFeatures());
             var result = net.minecraft.commands.arguments.item.ItemPredicateArgument.itemPredicate(buildContext).parse(reader);
             ITEM_PREDICATE_CACHE.put(itemString, result);
             return result;
