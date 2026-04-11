@@ -1640,21 +1640,24 @@ public final class CommandCompiler {
             case CommandSetblockReplace(WorldCoordinates pos, String block) -> {
                 try(var world = context.getWorld()) {
                     try(var position = context.applyPosition(pos)) {
-                        context.writeInstruction(Instructions.setBlock(world.content(), position.content(), block, "replace"));
+                        var setResult = context.<Integer>createLocal();
+                        context.writeInstruction(Instructions.setBlock(setResult, world.content(), position.content(), block, "replace"));
                     }
                 }
             }
             case CommandSetblockKeep(WorldCoordinates pos, String block) -> {
                 try(var world = context.getWorld()) {
                     try(var position = context.applyPosition(pos)) {
-                        context.writeInstruction(Instructions.setBlock(world.content(), position.content(), block, "keep"));
+                        var setResult = context.<Integer>createLocal();
+                        context.writeInstruction(Instructions.setBlock(setResult, world.content(), position.content(), block, "keep"));
                     }
                 }
             }
             case CommandSetblockDestroy(WorldCoordinates pos, String block) -> {
                 try(var world = context.getWorld()) {
                     try(var position = context.applyPosition(pos)) {
-                        context.writeInstruction(Instructions.setBlock(world.content(), position.content(), block, "destroy"));
+                        var setResult = context.<Integer>createLocal();
+                        context.writeInstruction(Instructions.setBlock(setResult, world.content(), position.content(), block, "destroy"));
                     }
                 }
             }
@@ -1664,7 +1667,8 @@ public final class CommandCompiler {
                 try(var world = context.getWorld()) {
                     try(var fromPos = context.applyPosition(from)) {
                         try(var toPos = context.applyPosition(to)) {
-                            context.writeInstruction(Instructions.fillBlocks(world.content(), fromPos.content(), toPos.content(), block, "replace"));
+                            var fillResult = context.<Integer>createLocal();
+                            context.writeInstruction(Instructions.fillBlocks(fillResult, world.content(), fromPos.content(), toPos.content(), block, "replace"));
                         }
                     }
                 }
@@ -1673,7 +1677,8 @@ public final class CommandCompiler {
                 try(var world = context.getWorld()) {
                     try(var fromPos = context.applyPosition(from)) {
                         try(var toPos = context.applyPosition(to)) {
-                            context.writeInstruction(Instructions.fillBlocks(world.content(), fromPos.content(), toPos.content(), block, "replace"));
+                            var fillResult = context.<Integer>createLocal();
+                            context.writeInstruction(Instructions.fillBlocks(fillResult, world.content(), fromPos.content(), toPos.content(), block, "replace"));
                         }
                     }
                 }
@@ -1682,7 +1687,8 @@ public final class CommandCompiler {
                 try(var world = context.getWorld()) {
                     try(var fromPos = context.applyPosition(from)) {
                         try(var toPos = context.applyPosition(to)) {
-                            context.writeInstruction(Instructions.fillBlocksFilter(world.content(), fromPos.content(), toPos.content(), block, "replace", filter));
+                            var fillResult = context.<Integer>createLocal();
+                            context.writeInstruction(Instructions.fillBlocksFilter(fillResult, world.content(), fromPos.content(), toPos.content(), block, "replace", filter));
                         }
                     }
                 }
@@ -1691,7 +1697,8 @@ public final class CommandCompiler {
                 try(var world = context.getWorld()) {
                     try(var fromPos = context.applyPosition(from)) {
                         try(var toPos = context.applyPosition(to)) {
-                            context.writeInstruction(Instructions.fillBlocks(world.content(), fromPos.content(), toPos.content(), block, "keep"));
+                            var fillResult = context.<Integer>createLocal();
+                            context.writeInstruction(Instructions.fillBlocks(fillResult, world.content(), fromPos.content(), toPos.content(), block, "keep"));
                         }
                     }
                 }
@@ -1700,7 +1707,8 @@ public final class CommandCompiler {
                 try(var world = context.getWorld()) {
                     try(var fromPos = context.applyPosition(from)) {
                         try(var toPos = context.applyPosition(to)) {
-                            context.writeInstruction(Instructions.fillBlocks(world.content(), fromPos.content(), toPos.content(), block, "destroy"));
+                            var fillResult = context.<Integer>createLocal();
+                            context.writeInstruction(Instructions.fillBlocks(fillResult, world.content(), fromPos.content(), toPos.content(), block, "destroy"));
                         }
                     }
                 }
@@ -1709,7 +1717,8 @@ public final class CommandCompiler {
                 try(var world = context.getWorld()) {
                     try(var fromPos = context.applyPosition(from)) {
                         try(var toPos = context.applyPosition(to)) {
-                            context.writeInstruction(Instructions.fillBlocks(world.content(), fromPos.content(), toPos.content(), block, "hollow"));
+                            var fillResult = context.<Integer>createLocal();
+                            context.writeInstruction(Instructions.fillBlocks(fillResult, world.content(), fromPos.content(), toPos.content(), block, "hollow"));
                         }
                     }
                 }
@@ -1718,7 +1727,8 @@ public final class CommandCompiler {
                 try(var world = context.getWorld()) {
                     try(var fromPos = context.applyPosition(from)) {
                         try(var toPos = context.applyPosition(to)) {
-                            context.writeInstruction(Instructions.fillBlocks(world.content(), fromPos.content(), toPos.content(), block, "outline"));
+                            var fillResult = context.<Integer>createLocal();
+                            context.writeInstruction(Instructions.fillBlocks(fillResult, world.content(), fromPos.content(), toPos.content(), block, "outline"));
                         }
                     }
                 }
@@ -1756,13 +1766,13 @@ public final class CommandCompiler {
             case CommandRandomValue(IntRangeArgument range) -> {
                 result.markImplemented();
                 var val = context.<Integer>createLocal();
-                context.writeInstruction(Instructions.randomValue(val, LocationData.ofInteger(range.min()), LocationData.ofInteger(range.max())));
+                context.writeInstruction(Instructions.randomValue(val, LocationData.ofInteger(range.minimum()), LocationData.ofInteger(range.maximum())));
                 result.updateResultValue(val);
             }
             case CommandRandomRoll(IntRangeArgument range, DataLocation sequence) -> {
                 result.markImplemented();
                 var val = context.<Integer>createLocal();
-                context.writeInstruction(Instructions.randomRoll(val, LocationData.ofInteger(range.min()), LocationData.ofInteger(range.max()), sequence.toString()));
+                context.writeInstruction(Instructions.randomRoll(val, LocationData.ofInteger(range.minimum()), LocationData.ofInteger(range.maximum()), sequence.toString()));
                 result.updateResultValue(val);
             }
             case CommandRandomReset(DataLocation sequence) ->
