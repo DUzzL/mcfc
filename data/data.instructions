@@ -700,6 +700,11 @@
 }
 
 ##CONDITIONAL_JUMP
+@CHECK_COMMAND_PREDICATE(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:position], <java.lang.String> [instr:predicate_id], boolean [instr:expected], label [ctx:fail_label]) {
+  _jumpIfNotEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.testCommandPredicate([static:MinecraftServer], [ctx:entity], [ctx:world], [ctx:position], [instr:predicate_id]), [instr:expected], [ctx:fail_label]);
+}
+
+##CONDITIONAL_JUMP
 @CHECK_ENTITY_NBT(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.nbt.Tag> [ctx:pattern], boolean [instr:expected], label [ctx:fail_label]) {
   _jumpIfNotEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.matchesEntityNbt([ctx:entity], cast([ctx:pattern], <net.minecraft.nbt.CompoundTag>)), [instr:expected], [ctx:fail_label]);
 }
@@ -1054,17 +1059,15 @@
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.randomResetAll([static:MinecraftServer]);
 }
 
-// setblock — native block placement
-##PURE
+// setblock — native block placement (NOT pure: has world side effects)
 @SET_BLOCK(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:pos], <java.lang.String> [instr:block], int [instr:mode]) -> int
   = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setBlock([static:MinecraftServer], [ctx:world], [ctx:pos], [instr:block], [instr:mode]);
 
 // fill — native block fill
-##PURE
+// fill — native block fill (NOT pure: has world side effects)
 @FILL_BLOCKS(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:from], <net.minecraft.world.phys.Vec3> [ctx:to], <java.lang.String> [instr:block], int [instr:mode]) -> int
   = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.fillBlocks([static:MinecraftServer], [ctx:world], [ctx:from], [ctx:to], [instr:block], [instr:mode], null);
 
-##PURE
 @FILL_BLOCKS_FILTER(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:from], <net.minecraft.world.phys.Vec3> [ctx:to], <java.lang.String> [instr:block], <java.lang.String> [instr:filter]) -> int
   = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.fillBlocks([static:MinecraftServer], [ctx:world], [ctx:from], [ctx:to], [instr:block], 1, [instr:filter]);
 

@@ -979,17 +979,25 @@ public final class CommandCompiler {
             // execute if/unless predicate
             case CommandExecuteIfPredicate(DataLocation predicate, CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext)) {
-                    try(var currentEntity = context.getCurrentEntity()) {
-                        currentEntity.writeInstruction(Instructions.checkEntityPredicate(currentEntity.content(), predicate.toString(), true, currentEntity.endLabel()));
-                        compile(context, fContext.content(), command, result);
+                    try(var currentEntity = context.getCurrentNullableEntity()) {
+                        try(var world = context.getWorld()) {
+                            try(var position = context.getPosition()) {
+                                position.writeInstruction(Instructions.checkCommandPredicate(currentEntity.content(), world.content(), position.content(), predicate.toString(), true, position.endLabel()));
+                                compile(context, fContext.content(), command, result);
+                            }
+                        }
                     }
                 }
             }
             case CommandExecuteUnlessPredicate(DataLocation predicate, CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext)) {
-                    try(var currentEntity = context.getCurrentEntity()) {
-                        currentEntity.writeInstruction(Instructions.checkEntityPredicate(currentEntity.content(), predicate.toString(), false, currentEntity.endLabel()));
-                        compile(context, fContext.content(), command, result);
+                    try(var currentEntity = context.getCurrentNullableEntity()) {
+                        try(var world = context.getWorld()) {
+                            try(var position = context.getPosition()) {
+                                position.writeInstruction(Instructions.checkCommandPredicate(currentEntity.content(), world.content(), position.content(), predicate.toString(), false, position.endLabel()));
+                                compile(context, fContext.content(), command, result);
+                            }
+                        }
                     }
                 }
             }
@@ -1087,7 +1095,10 @@ public final class CommandCompiler {
             }
             case CommandExecuteIfEntityOnly(SelectorArgument entities) -> {
                 result.markImplemented();
-                try(var ignored = context.forSelector(entities.limit(1), result)) {}
+                var entityList = context.getSelectorList(entities, result);
+                var countLocal = context.<Integer>createLocal();
+                context.writeInstruction(Instructions.getListLength(countLocal, entityList));
+                result.updateResultValue(countLocal);
             }
             case CommandExecuteUnlessEntityOnly(SelectorArgument entities) -> {
                 result.markImplemented();

@@ -796,7 +796,7 @@ public class ExtensionFunctions {
         return progress != null && progress.isDone();
     }
 
-    // Selector predicate check
+    // Selector predicate check (used by @e[predicate=...] selector filters)
 
     public static boolean testEntityPredicate(MinecraftServer server, Entity entity, String predicateId) {
         var lookupOpt = server.reloadableRegistries().lookup().lookup(Registries.PREDICATE);
@@ -811,6 +811,25 @@ public class ExtensionFunctions {
                 .create(LootContextParamSets.SELECTOR);
         LootContext ctx = new LootContext.Builder(params).create(Optional.empty());
         return condition.test(ctx);
+    }
+
+    // Execute if predicate check (uses COMMAND param set with position context, entity optional)
+
+    public static boolean testCommandPredicate(MinecraftServer server, @Nullable Entity entity, ServerLevel level, Vec3 position, String predicateId) {
+        var lookupOpt = server.reloadableRegistries().lookup().lookup(Registries.PREDICATE);
+        if (lookupOpt.isEmpty()) return false;
+        var holderOpt = lookupOpt.orElseThrow().get(ResourceKey.create(Registries.PREDICATE, cachedId(predicateId)));
+        if (holderOpt.isEmpty()) return false;
+        var holder = holderOpt.orElseThrow();
+        LootParams.Builder builder = new LootParams.Builder(level)
+                .withParameter(LootContextParams.ORIGIN, position);
+        if (entity != null) {
+            builder.withOptionalParameter(LootContextParams.THIS_ENTITY, entity);
+        }
+        LootParams params = builder.create(LootContextParamSets.COMMAND);
+        LootContext ctx = new LootContext.Builder(params).create(Optional.empty());
+        ctx.pushVisitedElement(LootContext.createVisitedEntry(holder.value()));
+        return holder.value().test(ctx);
     }
 
     // Selector NBT check
