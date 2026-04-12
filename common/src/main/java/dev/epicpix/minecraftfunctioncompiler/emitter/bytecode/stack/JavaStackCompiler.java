@@ -345,7 +345,10 @@ public class JavaStackCompiler {
                 }
             }
             case StackInstruction.New(ClassDesc type) -> cb.new_(type);
-            case StackInstruction.NewArray(ClassDesc type) -> cb.newarray(TypeKind.from(type));
+            case StackInstruction.NewArray(ClassDesc type) -> {
+                if(type.isPrimitive()) cb.newarray(TypeKind.from(type));
+                else cb.anewarray(type);
+            }
             case StackInstruction.ArrayStore _ -> {
                 var array = get(currentTypeStack, -3);
                 if(!array.isArray()) {

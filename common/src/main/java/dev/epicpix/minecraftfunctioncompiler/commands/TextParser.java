@@ -8,7 +8,9 @@ import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.NbtDataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument;
 import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
+import dev.epicpix.minecraftfunctioncompiler.data.text.TextClickEvent;
 import dev.epicpix.minecraftfunctioncompiler.data.text.TextContent;
+import dev.epicpix.minecraftfunctioncompiler.data.text.TextHoverEvent;
 import dev.epicpix.minecraftfunctioncompiler.data.text.TextStyle;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
@@ -160,12 +162,15 @@ public final class TextParser {
                 String insertion = obj.has("insertion") ? obj.get("insertion").getAsString() : null;
                 DataLocation font = obj.has("font") ? new DataLocation(obj.get("font").getAsString()) : null;
 
-                if(obj.has("clickEvent"))
-                    throw createError(reader, TEXT_INVALID_UNSUPPORTED_CLICK_EVENT, "\"clickEvent\" in text is not yet supported");
-                if(obj.has("hoverEvent"))
-                    throw createError(reader, TEXT_INVALID_UNSUPPORTED_HOVER_EVENT, "\"hoverEvent\" in text is not yet supported");
+                TextClickEvent clickEvent = null;
+                if(obj.has("click_event")) clickEvent = parseClickEvent(obj.getAsJsonObject("click_event"), reader);
+                else if(obj.has("clickEvent")) clickEvent = parseClickEventLegacy(obj.getAsJsonObject("clickEvent"), reader);
 
-                return new Text(siblings, new TextStyle(color, shadowColor, bold, italic, underlined, strikethrough, obfuscated, null, null, insertion, font), content);
+                TextHoverEvent<?> hoverEvent = null;
+                if(obj.has("hover_event")) hoverEvent = parseHoverEvent(obj.get("hover_event"), reader);
+                else if(obj.has("hoverEvent")) hoverEvent = parseHoverEventLegacy(obj.getAsJsonObject("hoverEvent"), reader);
+
+                return new Text(siblings, new TextStyle(color, shadowColor, bold, italic, underlined, strikethrough, obfuscated, clickEvent, hoverEvent, insertion, font), content);
             }
             case JsonArray arr -> {
                 Text text = jsonToText(arr.get(0), reader);
@@ -177,6 +182,58 @@ public final class TextParser {
             }
             case null, default -> throw createError(reader, TEXT_INVALID, "Cannot turn \"" + element + "\" into Text");
         }
+    }
+
+    // New format (MC 1.21.5+): click_event with action + action-specific fields
+    private static @Nullable TextClickEvent parseClickEvent(JsonObject obj, StringCommandReader reader) {
+        if(!obj.has("action")) return null;
+        String action = obj.get("action").getAsString();
+        return switch(action) {
+            case "open_url" -> obj.has("url") ? new TextClickEvent(TextClickEvent.Action.OPEN_URL, obj.get("url").getAsString()) : null;
+            case "run_command" -> obj.has("command") ? new TextClickEvent(TextClickEvent.Action.RUN_COMMAND, obj.get("command").getAsString()) : null;
+            case "suggest_command" -> obj.has("command") ? new TextClickEvent(TextClickEvent.Action.SUGGEST_COMMAND, obj.get("command").getAsString()) : null;
+            case "change_page" -> obj.has("page") ? new TextClickEvent(TextClickEvent.Action.CHANGE_PAGE, obj.get("page").getAsString()) : null;
+            case "copy_to_clipboard" -> obj.has("value") ? new TextClickEvent(TextClickEvent.Action.COPY_TO_CLIPBOARD, obj.get("value").getAsString()) : null;
+            default -> null;
+        };
+    }
+
+    // Legacy format (pre-1.21.5): clickEvent with action + value
+    private static @Nullable TextClickEvent parseClickEventLegacy(JsonObject obj, StringCommandReader reader) {
+        if(!obj.has("action") || !obj.has("value")) return null;
+        String action = obj.get("action").getAsString();
+        String value = obj.get("value").getAsString();
+        return switch(action) {
+            case "open_url" -> new TextClickEvent(TextClickEvent.Action.OPEN_URL, value);
+            case "run_command" -> new TextClickEvent(TextClickEvent.Action.RUN_COMMAND, value);
+            case "suggest_command" -> new TextClickEvent(TextClickEvent.Action.SUGGEST_COMMAND, value);
+            case "change_page" -> new TextClickEvent(TextClickEvent.Action.CHANGE_PAGE, value);
+            case "copy_to_clipboard" -> new TextClickEvent(TextClickEvent.Action.COPY_TO_CLIPBOARD, value);
+            default -> null;
+        };
+    }
+
+    // New format (MC 1.21.5+): hover_event can be an object OR array; for show_text, value is nested Text
+    private static @Nullable TextHoverEvent<?> parseHoverEvent(JsonElement element, StringCommandReader reader) {
+        if(!(element instanceof JsonObject obj)) return null;
+        if(!obj.has("action")) return null;
+        String action = obj.get("action").getAsString();
+        if("show_text".equals(action) && obj.has("value")) {
+            Text text = jsonToText(obj.get("value"), reader);
+            return new TextHoverEvent<>(TextHoverEvent.Action.SHOW_TEXT, text);
+        }
+        return null;
+    }
+
+    // Legacy format (pre-1.21.5): hoverEvent with action + value
+    private static @Nullable TextHoverEvent<?> parseHoverEventLegacy(JsonObject obj, StringCommandReader reader) {
+        if(!obj.has("action") || !obj.has("value")) return null;
+        String action = obj.get("action").getAsString();
+        if("show_text".equals(action)) {
+            Text text = jsonToText(obj.get("value"), reader);
+            return new TextHoverEvent<>(TextHoverEvent.Action.SHOW_TEXT, text);
+        }
+        return null;
     }
 
 }

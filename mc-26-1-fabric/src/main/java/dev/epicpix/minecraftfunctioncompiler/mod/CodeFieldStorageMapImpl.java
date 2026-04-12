@@ -82,6 +82,13 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
 
     private static final InstructionTarget STYLE_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(Style.class, TextColor.class, Integer.class, Boolean.class, Boolean.class, Boolean.class, Boolean.class, Boolean.class, ClickEvent.class, HoverEvent.class, String.class, FontDescription.class);
     private static final InstructionTarget FONT_DESCRIPTION_RESOURCE_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(FontDescription.Resource.class, Identifier.class);
+    private static final InstructionTarget CLICK_RUN_COMMAND_INIT = InstructionTarget.FunctionTarget.initFunction(ClickEvent.RunCommand.class, String.class);
+    private static final InstructionTarget CLICK_SUGGEST_COMMAND_INIT = InstructionTarget.FunctionTarget.initFunction(ClickEvent.SuggestCommand.class, String.class);
+    private static final InstructionTarget CLICK_COPY_INIT = InstructionTarget.FunctionTarget.initFunction(ClickEvent.CopyToClipboard.class, String.class);
+    private static final InstructionTarget CLICK_CHANGE_PAGE_INIT = InstructionTarget.FunctionTarget.initFunction(ClickEvent.ChangePage.class, int.class);
+    private static final InstructionTarget URI_CREATE = new InstructionTarget.FunctionTarget(java.net.URI.class.describeConstable().orElseThrow(), "create", java.lang.constant.MethodTypeDesc.of(java.net.URI.class.describeConstable().orElseThrow(), String.class.describeConstable().orElseThrow()), true, false, false, true);
+    private static final InstructionTarget CLICK_OPEN_URL_INIT = InstructionTarget.FunctionTarget.initFunction(ClickEvent.OpenUrl.class, java.net.URI.class);
+    private static final InstructionTarget HOVER_SHOW_TEXT_INIT = InstructionTarget.FunctionTarget.initFunction(HoverEvent.ShowText.class, Component.class);
     private static final InstructionTarget LIST_TAG_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(ListTag.class);
     private static final InstructionTarget BYTE_ARRAY_TAG_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(ByteArrayTag.class, byte[].class);
     private static final InstructionTarget COMPOUND_TAG_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(CompoundTag.class);
@@ -135,8 +142,26 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
             args.add(writeBoolean(cw, value.underlined()));
             args.add(writeBoolean(cw, value.strikethrough()));
             args.add(writeBoolean(cw, value.obfuscated()));
-            args.add(new BytecodeValue.NullValue());
-            args.add(new BytecodeValue.NullValue());
+            // clickEvent
+            if(value.clickEvent() != null) {
+                var ce = value.clickEvent();
+                args.add(switch(ce.action()) {
+                    case RUN_COMMAND -> cw.newObjectCreate(CLICK_RUN_COMMAND_INIT, new BytecodeValue.StringValue(ce.value()));
+                    case SUGGEST_COMMAND -> cw.newObjectCreate(CLICK_SUGGEST_COMMAND_INIT, new BytecodeValue.StringValue(ce.value()));
+                    case COPY_TO_CLIPBOARD -> cw.newObjectCreate(CLICK_COPY_INIT, new BytecodeValue.StringValue(ce.value()));
+                    case CHANGE_PAGE -> cw.newObjectCreate(CLICK_CHANGE_PAGE_INIT, new BytecodeValue.IntegerValue(Integer.parseInt(ce.value())));
+                    case OPEN_URL -> cw.newObjectCreate(CLICK_OPEN_URL_INIT, cw.writeTarget(URI_CREATE, new BytecodeValue.StringValue(ce.value())));
+                });
+            } else {
+                args.add(new BytecodeValue.NullValue());
+            }
+            // hoverEvent
+            if(value.hoverEvent() != null && value.hoverEvent().action() == dev.epicpix.minecraftfunctioncompiler.data.text.TextHoverEvent.Action.SHOW_TEXT) {
+                var hoverText = (Text) value.hoverEvent().value();
+                args.add(cw.newObjectCreate(HOVER_SHOW_TEXT_INIT, writeTextValue(hoverText, cw, cf)));
+            } else {
+                args.add(new BytecodeValue.NullValue());
+            }
             if(value.insertion() != null) {
                 args.add(new BytecodeValue.StringValue(value.insertion()));
             }else {

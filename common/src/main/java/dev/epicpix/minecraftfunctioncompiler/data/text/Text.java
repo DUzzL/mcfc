@@ -16,6 +16,11 @@ public record Text(List<Text> siblings, TextStyle style, TextContent content) {
                 }
             }
         }
+        // Recurse into hover event text so nested TextStyles are pre-registered
+        if(style.hoverEvent() != null && style.hoverEvent().action() == TextHoverEvent.Action.SHOW_TEXT) {
+            var hoverText = (Text) style.hoverEvent().value();
+            hoverText.forEachComponent(consumer);
+        }
         consumer.accept(this);
     }
 
