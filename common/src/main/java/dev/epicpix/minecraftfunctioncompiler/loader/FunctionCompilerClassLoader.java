@@ -436,14 +436,16 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         ConcurrentHashMap<DataLocation, List<Instruction>> debugCompiledMap  = DEBUG_DUMP_INSTRUCTIONS ? new ConcurrentHashMap<>() : null;
         ConcurrentHashMap<DataLocation, List<Instruction>> debugOptimizedMap = DEBUG_DUMP_INSTRUCTIONS ? new ConcurrentHashMap<>() : null;
 
-        var compiledFunctionSet = new HashSet<>(definedFunctions.keySet());
         var generatedBytes      = new ConcurrentHashMap<DataLocation, byte[]>();
 
+        // Pass 1 (parallel): compile + optimize each function. A function that fails
+        // here will NOT appear in compiledFunctionSet, so callers emit the vanilla
+        // fallback path instead of invokestatic to a class that was never generated.
+        var optimizedFunctions = new ConcurrentHashMap<DataLocation, List<Instruction>>();
         definedFunctions.entrySet().parallelStream().forEach(entry -> {
             var key      = entry.getKey();
             var commands = entry.getValue();
 
-            // 1) compile to IL
             List<Instruction> compiled;
             try {
                 compiled = CommandCompiler.compile(key, commands);
@@ -459,7 +461,6 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
             preOptCount.addAndGet(compiled.size());
             if(DEBUG_DUMP_INSTRUCTIONS) debugCompiledMap.put(key, Instructions.addStaticRequirements(compiled));
 
-            // 2) optimize IL
             List<Instruction> optimized;
             try {
                 optimized = Optimizer.optimize(compiled, new LengauerTarjan());
@@ -477,7 +478,17 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
             successCount.incrementAndGet();
             if(DEBUG_DUMP_INSTRUCTIONS) debugOptimizedMap.put(key, optimized);
 
-            // 3) generate class bytes — IL is released after this
+            optimizedFunctions.put(key, optimized);
+        });
+
+        var compiledFunctionSet = java.util.Set.copyOf(optimizedFunctions.keySet());
+
+        // Pass 2 (parallel): generate class bytes. Callers of failed-to-compile
+        // functions see them absent from compiledFunctionSet and emit the vanilla
+        // dispatch path (ServerFunctionManager.execute) instead of invokestatic.
+        optimizedFunctions.entrySet().parallelStream().forEach(entry -> {
+            var key       = entry.getKey();
+            var optimized = entry.getValue();
             try {
                 var bytes = FunctionCodeGenerator.generateFunctionClass(params, key, optimized, compiledFunctionSet, lowLevelFunctions);
                 totalFnFileSize.addAndGet(bytes.length);
@@ -491,6 +502,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
                 LOGGER.error("Failed to load function ({}), skipping", key, e);
             }
         });
+        optimizedFunctions.clear();
 
         definedFunctions.clear();
         var compileTime = (System.nanoTime() - startCompile) / 1_000_000_000d;
@@ -558,6 +570,9 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
 
         // Sequential defineClass pass
         var loadedFunctions = new HashMap<DataLocation, Class<?>>(generatedBytes.size());
+        // Keep raw bytecode around so we can dump .class for any function that
+        // fails MethodHandles.findStatic (e.g. VerifyError from a codegen bug).
+        var rawBytes = new HashMap<>(generatedBytes);
         for(var entry : generatedBytes.entrySet()) {
             var key  = entry.getKey();
             var name = ("mcfc/function/" + key.namespace() + "/" + key.path()).replace('.', '$').replace('/', '.');
@@ -626,20 +641,64 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
 
         // ── Handle registration ───────────────────────────────────────────────
         var startHandles = System.nanoTime();
+        int failedCount = 0;
+        Path failedDumpDir = null;
         for(var key : loadedFunctions.keySet()) {
             try {
                 registerFunction(loadedFunctions.get(key), key, params);
             } catch(Throwable e) {
+                // Compiler bug on this specific function — skip it so vanilla handles it.
+                // Don't fail the whole datapack just because one function has a codegen issue.
                 if(e instanceof DiagnosticException de) diagnostics.addDiagnostic(de.toDiagnostic());
                 diagnostics.addDiagnostic(new Diagnostic(DiagnosticKind.LOAD_ERROR, FUNCTION_LOAD_FAILED,
-                    "Failed to create function handle (" + key + ")", null, key, null, e));
-                LOGGER.error("Failed to create function handle ({}), clearing data", key, e);
-                setState(State.FAILED);
-                FunctionCompilerReporter.reportExceptionWithInstructions("load_function_class", e, List.of());
-                FunctionCompilerReporter.sendReports();
-                resetHandles();
-                return;
+                    "Failed to create function handle (" + key + "), falling back to vanilla", null, key, null, e));
+                LOGGER.warn("Failed to create function handle ({}), falling back to vanilla for this function", key, e);
+                failedCount++;
+
+                // Dump IL + raw .class for this function so the codegen bug can be diagnosed offline.
+                try {
+                    if(failedDumpDir == null) {
+                        failedDumpDir = generatedDir.resolve("failed_functions");
+                        Files.createDirectories(failedDumpDir);
+                    }
+                    var safeName = (key.namespace() + "__" + key.path()).replace('/', '_');
+                    // lowLevelFunctions is keyed by ClassDesc.displayName() which is just the
+                    // unqualified class name (last path segment), e.g. "swirly#run", not the
+                    // full "mcfc/function/vanilla_refresh/death/soul/swirly#run".
+                    var lastSlash = key.path().lastIndexOf('/');
+                    var simpleName = lastSlash < 0 ? key.path() : key.path().substring(lastSlash + 1);
+                    var classPrefix = simpleName + "#";
+
+                    var ilDump = new StringBuilder();
+                    ilDump.append("# ").append(key).append("\n");
+                    ilDump.append("# exception: ").append(e.getClass().getName()).append(": ").append(e.getMessage()).append("\n\n");
+                    var methods = lowLevelFunctions.entrySet().stream()
+                        .filter(en -> en.getKey().startsWith(classPrefix))
+                        .sorted(Map.Entry.comparingByKey())
+                        .toList();
+                    for(var en : methods) {
+                        ilDump.append("┌── method ").append(en.getKey()).append(" (")
+                            .append(en.getValue().size()).append(" instructions)\n");
+                        for(var instr : en.getValue()) {
+                            ilDump.append("│ ").append(BytecodeFormatter.formatInstruction(instr)).append("\n");
+                        }
+                        ilDump.append("└──\n\n");
+                    }
+                    Files.writeString(failedDumpDir.resolve(safeName + ".il.txt"), ilDump.toString());
+
+                    var classBytes = rawBytes.get(key);
+                    if(classBytes != null) {
+                        Files.write(failedDumpDir.resolve(safeName + ".class"), classBytes);
+                    }
+                    LOGGER.warn("  → dumped IL and .class to {}/{}.*", failedDumpDir, safeName);
+                } catch(Exception dumpEx) {
+                    LOGGER.warn("  → failed to dump diagnostic info for {}", key, dumpEx);
+                }
             }
+        }
+        rawBytes.clear();
+        if(failedCount > 0) {
+            LOGGER.warn("{} function(s) fell back to vanilla due to codegen issues", failedCount);
         }
         var handleLoadTime = (System.nanoTime() - startHandles) / 1_000_000_000d;
         if(DEBUG_PRINT_TIMINGS) LOGGER.info("Loaded handles in {}ms", (int)(handleLoadTime * 1000));

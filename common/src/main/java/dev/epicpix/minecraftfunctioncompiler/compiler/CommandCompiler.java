@@ -24,6 +24,8 @@ import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtPathPart;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue;
 import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
 import dev.epicpix.minecraftfunctioncompiler.data.text.TextContent;
+import dev.epicpix.minecraftfunctioncompiler.data.text.TextHoverEvent;
+import dev.epicpix.minecraftfunctioncompiler.data.text.TextStyle;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.emitter.types.NumberComparisonType;
@@ -301,9 +303,7 @@ public final class CommandCompiler {
                     localResult.checkImplemented(command);
                     var localResultValue = storeLocation == ResultStoreLocationType.SUCCESS ? localResult.getSuccess() : localResult.getResult();
                     try(var scoreAccessor = context.forScoreAccessors(targets, result)) {
-                        try(var scoreData = context.getScoreDataAutoCreate(scoreAccessor.content())) {
-                            scoreData.writeInstruction(Instructions.setScore(scoreData.content(), localResultValue));
-                        }
+                        scoreAccessor.writeInstruction(Instructions.setScoreSafe(scoreAccessor.content().objective(), scoreAccessor.content().scoreHolder(), localResultValue));
                     }
                 }
             }
@@ -588,7 +588,7 @@ public final class CommandCompiler {
                         scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
                         var updatedScoreValue = context.<Integer>createLocal();
                         scoreData.writeInstruction(Instructions.valueAdd(updatedScoreValue, scoreValue, context.getResolvedIntegerMacro(score)));
-                        scoreData.writeInstruction(Instructions.setScore(scoreData.content(), updatedScoreValue));
+                        scoreData.writeInstruction(Instructions.setScoreSafe(targets.content().objective(), targets.content().scoreHolder(), updatedScoreValue));
                     }
                 }
             }
@@ -622,11 +622,15 @@ public final class CommandCompiler {
                     try(var source = context.forScoreAccessors(sourceArg, result)) {
                         try(var targetScore = context.getScoreDataAutoCreate(targets.content())) {
                             try(var sourceScore = context.getScoreDataAutoCreate(source.content())) {
+                                var targetObj = targets.content().objective();
+                                var targetHolder = targets.content().scoreHolder();
+                                var sourceObj = source.content().objective();
+                                var sourceHolder = source.content().scoreHolder();
                                 switch(operation) {
                                     case SET -> {
                                         var scoreValue = context.<Integer>createLocal();
                                         sourceScore.writeInstruction(Instructions.getScoreValue(scoreValue, sourceScore.content()));
-                                        sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), scoreValue));
+                                        sourceScore.writeInstruction(Instructions.setScoreSafe(targetObj, targetHolder, scoreValue));
                                         result.updateResultValue(scoreValue);
                                     }
                                     case ADD -> {
@@ -636,7 +640,7 @@ public final class CommandCompiler {
                                         sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
                                         var updatedScoreValue = context.<Integer>createLocal();
                                         sourceScore.writeInstruction(Instructions.valueAdd(updatedScoreValue, scoreValueA, scoreValueB));
-                                        sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
+                                        sourceScore.writeInstruction(Instructions.setScoreSafe(targetObj, targetHolder, updatedScoreValue));
                                         result.updateResultValue(updatedScoreValue);
                                     }
                                     case SUB -> {
@@ -646,7 +650,7 @@ public final class CommandCompiler {
                                         sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
                                         var updatedScoreValue = context.<Integer>createLocal();
                                         sourceScore.writeInstruction(Instructions.valueSub(updatedScoreValue, scoreValueA, scoreValueB));
-                                        sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
+                                        sourceScore.writeInstruction(Instructions.setScoreSafe(targetObj, targetHolder, updatedScoreValue));
                                         result.updateResultValue(updatedScoreValue);
                                     }
                                     case MUL -> {
@@ -656,7 +660,7 @@ public final class CommandCompiler {
                                         sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
                                         var updatedScoreValue = context.<Integer>createLocal();
                                         sourceScore.writeInstruction(Instructions.valueMul(updatedScoreValue, scoreValueA, scoreValueB));
-                                        sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
+                                        sourceScore.writeInstruction(Instructions.setScoreSafe(targetObj, targetHolder, updatedScoreValue));
                                         result.updateResultValue(updatedScoreValue);
                                     }
                                     case DIV -> {
@@ -668,7 +672,7 @@ public final class CommandCompiler {
 
                                         var updatedScoreValue = context.<Integer>createLocal();
                                         sourceScore.writeInstruction(Instructions.intFloorDiv(updatedScoreValue, dividend, divisor));
-                                        sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
+                                        sourceScore.writeInstruction(Instructions.setScoreSafe(targetObj, targetHolder, updatedScoreValue));
                                         result.updateResultValue(updatedScoreValue);
                                     }
                                     case MOD -> {
@@ -680,7 +684,7 @@ public final class CommandCompiler {
 
                                         var updatedScoreValue = context.<Integer>createLocal();
                                         sourceScore.writeInstruction(Instructions.intFloorMod(updatedScoreValue, dividend, divisor));
-                                        sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
+                                        sourceScore.writeInstruction(Instructions.setScoreSafe(targetObj, targetHolder, updatedScoreValue));
                                         result.updateResultValue(updatedScoreValue);
                                     }
                                     case MIN -> {
@@ -690,7 +694,7 @@ public final class CommandCompiler {
                                         sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
                                         var updatedScoreValue = context.<Integer>createLocal();
                                         sourceScore.writeInstruction(Instructions.intMin(updatedScoreValue, scoreValueA, scoreValueB));
-                                        sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
+                                        sourceScore.writeInstruction(Instructions.setScoreSafe(targetObj, targetHolder, updatedScoreValue));
                                         result.updateResultValue(updatedScoreValue);
                                     }
                                     case MAX -> {
@@ -700,7 +704,7 @@ public final class CommandCompiler {
                                         sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
                                         var updatedScoreValue = context.<Integer>createLocal();
                                         sourceScore.writeInstruction(Instructions.intMax(updatedScoreValue, scoreValueA, scoreValueB));
-                                        sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), updatedScoreValue));
+                                        sourceScore.writeInstruction(Instructions.setScoreSafe(targetObj, targetHolder, updatedScoreValue));
                                         result.updateResultValue(updatedScoreValue);
                                     }
                                     case SWAP -> {
@@ -709,8 +713,8 @@ public final class CommandCompiler {
                                         var scoreValueB = context.<Integer>createLocal();
                                         sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
 
-                                        sourceScore.writeInstruction(Instructions.setScore(targetScore.content(), scoreValueA));
-                                        sourceScore.writeInstruction(Instructions.setScore(sourceScore.content(), scoreValueB));
+                                        sourceScore.writeInstruction(Instructions.setScoreSafe(targetObj, targetHolder, scoreValueA));
+                                        sourceScore.writeInstruction(Instructions.setScoreSafe(sourceObj, sourceHolder, scoreValueB));
                                         result.updateResultValue(scoreValueA);
                                     }
                                 }
@@ -726,7 +730,7 @@ public final class CommandCompiler {
                         scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
                         var updatedScoreValue = context.<Integer>createLocal();
                         scoreData.writeInstruction(Instructions.valueSub(updatedScoreValue, scoreValue, context.getResolvedIntegerMacro(score)));
-                        scoreData.writeInstruction(Instructions.setScore(scoreData.content(), updatedScoreValue));
+                        scoreData.writeInstruction(Instructions.setScoreSafe(targets.content().objective(), targets.content().scoreHolder(), updatedScoreValue));
                     }
                 }
             }
@@ -744,9 +748,7 @@ public final class CommandCompiler {
             }
             case CommandScoreboardPlayersSet(ScoreAccessorArgument targetsArg, MacroTemplate<Integer> score) -> {
                 try(var targets = context.forScoreAccessors(targetsArg, result)) {
-                    try(var scoreData = context.getScoreDataAutoCreate(targets.content())) {
-                        scoreData.writeInstruction(Instructions.setScore(scoreData.content(), context.getResolvedIntegerMacro(score)));
-                    }
+                    targets.writeInstruction(Instructions.setScoreSafe(targets.content().objective(), targets.content().scoreHolder(), context.getResolvedIntegerMacro(score)));
                 }
             }
             case CommandTagAdd(SelectorArgument targets, String name) -> {
@@ -1658,7 +1660,7 @@ public final class CommandCompiler {
                     try(var world = context.getWorld()) {
                         try(var position = context.applyPosition(pos)) {
                             try(var facing = context.forSelector(facingTarget, result)) {
-                                selector.writeInstruction(Instructions.teleportFacingEntity(selector.content(), world.content(), position.content(), facing.content(), false));
+                                facing.writeInstruction(Instructions.teleportFacingEntity(selector.content(), world.content(), position.content(), facing.content(), false));
                             }
                         }
                     }
@@ -1669,7 +1671,7 @@ public final class CommandCompiler {
                     try(var world = context.getWorld()) {
                         try(var position = context.applyPosition(pos)) {
                             try(var facing = context.forSelector(facingTarget, result)) {
-                                selector.writeInstruction(Instructions.teleportFacingEntity(selector.content(), world.content(), position.content(), facing.content(), anchor == LocationAnchor.EYES));
+                                facing.writeInstruction(Instructions.teleportFacingEntity(selector.content(), world.content(), position.content(), facing.content(), anchor == LocationAnchor.EYES));
                             }
                         }
                     }
@@ -1680,7 +1682,7 @@ public final class CommandCompiler {
                     try(var world = context.getWorld()) {
                         try(var position = context.applyPosition(pos)) {
                             try(var facingPosition = context.applyPosition(facingPos)) {
-                                selector.writeInstruction(Instructions.teleportFacingPos(selector.content(), world.content(), position.content(), facingPosition.content()));
+                                facingPosition.writeInstruction(Instructions.teleportFacingPos(selector.content(), world.content(), position.content(), facingPosition.content()));
                             }
                         }
                     }
@@ -1691,7 +1693,7 @@ public final class CommandCompiler {
                     try(var world = context.getWorld()) {
                         try(var position = context.applyPosition(pos)) {
                             try(var facing = context.forSelector(facingTarget, result)) {
-                                current.writeInstruction(Instructions.teleportFacingEntity(current.content(), world.content(), position.content(), facing.content(), false));
+                                facing.writeInstruction(Instructions.teleportFacingEntity(current.content(), world.content(), position.content(), facing.content(), false));
                             }
                         }
                     }
@@ -1702,7 +1704,7 @@ public final class CommandCompiler {
                     try(var world = context.getWorld()) {
                         try(var position = context.applyPosition(pos)) {
                             try(var facing = context.forSelector(facingTarget, result)) {
-                                current.writeInstruction(Instructions.teleportFacingEntity(current.content(), world.content(), position.content(), facing.content(), anchor == LocationAnchor.EYES));
+                                facing.writeInstruction(Instructions.teleportFacingEntity(current.content(), world.content(), position.content(), facing.content(), anchor == LocationAnchor.EYES));
                             }
                         }
                     }
@@ -1713,7 +1715,7 @@ public final class CommandCompiler {
                     try(var world = context.getWorld()) {
                         try(var position = context.applyPosition(pos)) {
                             try(var facingPosition = context.applyPosition(facingPos)) {
-                                current.writeInstruction(Instructions.teleportFacingPos(current.content(), world.content(), position.content(), facingPosition.content()));
+                                facingPosition.writeInstruction(Instructions.teleportFacingPos(current.content(), world.content(), position.content(), facingPosition.content()));
                             }
                         }
                     }
@@ -1897,6 +1899,13 @@ public final class CommandCompiler {
             }
 
             // particle — native compilation
+            case CommandParticleName(DataLocation name) -> {
+                try(var world = context.getWorld()) {
+                    try(var position = context.getPosition()) {
+                        context.writeInstruction(Instructions.spawnParticleSimple(world.content(), name.toString(), position.content()));
+                    }
+                }
+            }
             case CommandParticle(DataLocation name, WorldCoordinates pos) -> {
                 try(var world = context.getWorld()) {
                     try(var position = context.applyPosition(pos)) {
@@ -1913,7 +1922,45 @@ public final class CommandCompiler {
                     }
                 }
             }
+            case CommandParticleViewersForce(DataLocation name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count) -> {
+                try(var world = context.getWorld()) {
+                    try(var position = context.applyPosition(pos)) {
+                        try(var deltaPos = context.applyPosition(delta)) {
+                            context.writeInstruction(Instructions.spawnParticle(world.content(), name.toString(), position.content(), deltaPos.content(), LocationData.ofDouble(speed), LocationData.ofInteger(count)));
+                        }
+                    }
+                }
+            }
+            case CommandParticleViewersNormal(DataLocation name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count) -> {
+                try(var world = context.getWorld()) {
+                    try(var position = context.applyPosition(pos)) {
+                        try(var deltaPos = context.applyPosition(delta)) {
+                            context.writeInstruction(Instructions.spawnParticle(world.content(), name.toString(), position.content(), deltaPos.content(), LocationData.ofDouble(speed), LocationData.ofInteger(count)));
+                        }
+                    }
+                }
+            }
             case CommandParticleViewersParams(DataLocation name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count, SelectorArgument viewers) -> {
+                try(var world = context.getWorld()) {
+                    try(var position = context.applyPosition(pos)) {
+                        try(var deltaPos = context.applyPosition(delta)) {
+                            var viewerList = context.getSelectorList(viewers, null);
+                            context.writeInstruction(Instructions.spawnParticleForPlayers(world.content(), name.toString(), position.content(), deltaPos.content(), LocationData.ofDouble(speed), LocationData.ofInteger(count), viewerList));
+                        }
+                    }
+                }
+            }
+            case CommandParticleViewersForceParams(DataLocation name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count, SelectorArgument viewers) -> {
+                try(var world = context.getWorld()) {
+                    try(var position = context.applyPosition(pos)) {
+                        try(var deltaPos = context.applyPosition(delta)) {
+                            var viewerList = context.getSelectorList(viewers, null);
+                            context.writeInstruction(Instructions.spawnParticleForPlayers(world.content(), name.toString(), position.content(), deltaPos.content(), LocationData.ofDouble(speed), LocationData.ofInteger(count), viewerList));
+                        }
+                    }
+                }
+            }
+            case CommandParticleViewersNormalParams(DataLocation name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count, SelectorArgument viewers) -> {
                 try(var world = context.getWorld()) {
                     try(var position = context.applyPosition(pos)) {
                         try(var deltaPos = context.applyPosition(delta)) {
@@ -2307,9 +2354,23 @@ public final class CommandCompiler {
                     }
                     return textLocation;
                 }
+                if(source instanceof NbtDataLocation.Entity(SelectorArgument selector)) {
+                    var entityList = context.getSelectorList(selector, null);
+                    var textLocation = context.<TComponent>createLocal();
+                    context.writeInstruction(Instructions.getEntityNbtText(textLocation, entityList, nbtPathToString(path)));
+                    if(!text.style().isEmpty() || !text.siblings().isEmpty()) {
+                        var mutableText = context.<TMutableComponent>createLocal();
+                        context.writeInstruction(Instructions.copyText(mutableText, textLocation));
+                        applyStyleAndSiblings(context, text, mutableText);
+                        return mutableText;
+                    }
+                    return textLocation;
+                }
             }
             if(text.content().isConstant()) {
-                var innerText = new Text(List.of(), text.style(), text.content());
+                // Bake only content as a constant component (empty style, no siblings),
+                // then apply style (possibly with runtime hoverEvent) and siblings at runtime.
+                var innerText = new Text(List.of(), TextStyle.empty(), text.content());
                 var textLocation = context.<TMutableComponent>createLocal();
                 context.writeInstruction(Instructions.copyText(textLocation, loadText(context, innerText)));
                 applyStyleAndSiblings(context, text, textLocation);
@@ -2321,9 +2382,29 @@ public final class CommandCompiler {
 
     private static void applyStyleAndSiblings(CompilationContext context, Text text, LocationData<TMutableComponent> textLocation) {
         if(!text.style().isEmpty()) {
-            var style = context.<TStyle>createLocal();
-            context.writeInstruction(Instructions.loadTextStyle(style, text.style()));
-            context.writeInstruction(Instructions.setTextStyle(textLocation, style));
+            TextStyle baked = text.style();
+            Text runtimeHover = null;
+            // If the hoverEvent's Text is non-constant (e.g. contains ScoreText/NbtText),
+            // we can't bake it into the Style statically. Strip it and apply at runtime.
+            if(baked.hoverEvent() != null
+                    && baked.hoverEvent().action() == TextHoverEvent.Action.SHOW_TEXT
+                    && !((Text) baked.hoverEvent().value()).isConstant()) {
+                runtimeHover = (Text) baked.hoverEvent().value();
+                baked = new TextStyle(
+                    baked.color(), baked.shadowColor(),
+                    baked.bold(), baked.italic(), baked.underlined(), baked.strikethrough(), baked.obfuscated(),
+                    baked.clickEvent(), null, baked.insertion(), baked.font()
+                );
+            }
+            if(!baked.isEmpty()) {
+                var style = context.<TStyle>createLocal();
+                context.writeInstruction(Instructions.loadTextStyle(style, baked));
+                context.writeInstruction(Instructions.setTextStyle(textLocation, style));
+            }
+            if(runtimeHover != null) {
+                var hoverComp = loadText(context, runtimeHover);
+                context.writeInstruction(Instructions.applyHoverText(textLocation, hoverComp));
+            }
         }
         for(var sibling : text.siblings()) {
             var otherText = loadText(context, sibling);

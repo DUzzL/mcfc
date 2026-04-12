@@ -304,6 +304,10 @@
 
 @SET_SCORE(mut <net.minecraft.world.scores.ScoreAccess> [ctx:score], int [ctx:value]) { [ctx:score].set([ctx:value]); }
 
+@SET_SCORE_SAFE(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <net.minecraft.world.scores.ScoreHolder> [ctx:holder], int [ctx:value]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setScoreSafe([static:Scoreboard], [ctx:objective], [ctx:holder], [ctx:value]);
+}
+
 @KILL_ENTITY(mut <net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.server.level.ServerLevel> [ctx:world]) {
   [ctx:entity].kill([ctx:world]);
 }
@@ -501,9 +505,14 @@
 
 ##PURE
 @APPLY_ROTATION_WORLD(<net.minecraft.world.phys.Vec2> [ctx:from_rotation], <dev.epicpix.minecraftfunctioncompiler.data.RotationCoordinates> [instr:rotation]) -> <net.minecraft.world.phys.Vec2> {
+  // MC's rotation Vec2 is (pitch, yaw): .x = xRot (pitch), .y = yRot (yaw). See
+  // Entity.getRotationVector() which does `new Vec2(getXRot(), getYRot())`.
+  // Previously we wrote yaw into .x and pitch into .y, which silently corrupted
+  // CommandSourceStack.withRotation downstream — `execute rotated ~5 0` ended up
+  // setting pitch=5,yaw=0 instead of pitch=0,yaw=5, giving the 90° axis skew.
   return new <net.minecraft.world.phys.Vec2>(
-    compile_or([instr:rotation].isYawRelative(), [ctx:from_rotation].x + compile_eval(to_float([instr:rotation].yaw())), compile_eval(to_float([instr:rotation].yaw()))),
-    compile_or([instr:rotation].isPitchRelative(), [ctx:from_rotation].y + compile_eval(to_float([instr:rotation].pitch())), compile_eval(to_float([instr:rotation].pitch())))
+    compile_or([instr:rotation].isPitchRelative(), [ctx:from_rotation].x + compile_eval(to_float([instr:rotation].pitch())), compile_eval(to_float([instr:rotation].pitch()))),
+    compile_or([instr:rotation].isYawRelative(), [ctx:from_rotation].y + compile_eval(to_float([instr:rotation].yaw())), compile_eval(to_float([instr:rotation].yaw())))
   );
 }
 
@@ -642,6 +651,10 @@
 
 @SET_TEXT_STYLE(<net.minecraft.network.chat.MutableComponent> [ctx:text], <net.minecraft.network.chat.Style> [ctx:style]) {
   [ctx:text].withStyle([ctx:style]);
+}
+
+@APPLY_HOVER_TEXT(mut <net.minecraft.network.chat.MutableComponent> [ctx:text], <net.minecraft.network.chat.Component> [ctx:hover]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.applyHoverText([ctx:text], [ctx:hover]);
 }
 
 @APPEND_TEXT(mut <net.minecraft.network.chat.MutableComponent> [ctx:text], <net.minecraft.network.chat.Component> [ctx:other]) {
@@ -1005,6 +1018,10 @@
 ##PURE
 @GET_NBT_TEXT(<net.minecraft.world.level.storage.CommandStorage> [static:CommandStorage], <java.lang.String> [instr:storage_name], <java.lang.String> [instr:path]) -> <net.minecraft.network.chat.Component>
   = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getNbtText([static:CommandStorage], [instr:storage_name], [instr:path]);
+
+##PURE
+@GET_ENTITY_NBT_TEXT(<java.util.List> [ctx:entities], <java.lang.String> [instr:path]) -> <net.minecraft.network.chat.Component>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getEntityNbtText([ctx:entities], [instr:path]);
 
 // scoreboard objectives setdisplay
 @SCOREBOARD_SETDISPLAY_CLEAR(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:slot]) {

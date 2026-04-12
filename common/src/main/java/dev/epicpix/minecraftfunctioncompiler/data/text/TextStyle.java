@@ -47,8 +47,9 @@ public record TextStyle(
 
     public boolean isCompilationSupported() {
         if(hoverEvent != null && hoverEvent.action() == TextHoverEvent.Action.SHOW_TEXT) {
-            var text = (Text) hoverEvent.value();
-            return text.isCompilationSupported() && text.isConstant();
+            // Non-constant hover text is compiled at runtime via APPLY_HOVER_TEXT,
+            // so we only require the hover text itself to be compilation-supported.
+            return ((Text) hoverEvent.value()).isCompilationSupported();
         }
         return true;
     }

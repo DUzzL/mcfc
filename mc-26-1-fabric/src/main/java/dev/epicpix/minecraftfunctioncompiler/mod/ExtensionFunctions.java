@@ -84,6 +84,15 @@ public class ExtensionFunctions {
         return map.get(objective) == null ? null : scoreboard.getOrCreatePlayerScore(player, objective);
     }
 
+    // Vanilla's /scoreboard players set|add|remove|operation on a read-only criterion
+    // (deathCount, playerKillCount, custom:*, etc.) fails with a command syntax error,
+    // leaving the score untouched. Mirror that: no-op instead of letting ScoreAccess.set
+    // throw IllegalStateException and kill the whole compiled function.
+    public static void setScoreSafe(ServerScoreboard scoreboard, Objective objective, ScoreHolder holder, int value) {
+        if (objective.getCriteria().isReadOnly()) return;
+        scoreboard.getOrCreatePlayerScore(holder, objective).set(value);
+    }
+
     public static void executeFunction(ServerFunctionManager manager, CommandFunction<CommandSourceStack> commandFunction, CommandSourceStack commandSourceStack, CompoundTag arguments) {
         ProfilerFiller profilerFiller = Profiler.get();
         profilerFiller.push(() -> "function " + commandFunction.id());
@@ -215,13 +224,11 @@ public class ExtensionFunctions {
     }
 
     public static void stopsoundSource(ServerPlayer player, String source) {
-        var soundSource = net.minecraft.sounds.SoundSource.valueOf(source.toUpperCase(java.util.Locale.ROOT));
-        player.connection.send(new net.minecraft.network.protocol.game.ClientboundStopSoundPacket(null, soundSource));
+        player.connection.send(new net.minecraft.network.protocol.game.ClientboundStopSoundPacket(null, parseSoundSource(source)));
     }
 
     public static void stopsoundSourceSound(ServerPlayer player, String source, String sound) {
-        var soundSource = net.minecraft.sounds.SoundSource.valueOf(source.toUpperCase(java.util.Locale.ROOT));
-        player.connection.send(new net.minecraft.network.protocol.game.ClientboundStopSoundPacket(cachedId(sound), soundSource));
+        player.connection.send(new net.minecraft.network.protocol.game.ClientboundStopSoundPacket(cachedId(sound), parseSoundSource(source)));
     }
 
     // -------------------------------------------------------------------------
@@ -1005,6 +1012,12 @@ public class ExtensionFunctions {
         return Component.translatable(key, args.toArray());
     }
 
+    // Apply a runtime-built hover-text component to a mutable Component's style.
+    // Used when the hoverEvent's Text is non-constant (contains ScoreText/NbtText/Selector).
+    public static void applyHoverText(MutableComponent text, Component hoverText) {
+        text.setStyle(text.getStyle().withHoverEvent(new net.minecraft.network.chat.HoverEvent.ShowText(hoverText)));
+    }
+
     public static Component getScoreText(MinecraftServer server, List<Entity> entities, String objective) {
         if (entities.isEmpty()) return Component.empty();
         Entity entity = entities.getFirst();
@@ -1116,6 +1129,16 @@ public class ExtensionFunctions {
      * SoundSource.valueOf, even when the same playsound ran thousands of
      * times from a tick function.
      */
+    // Vanilla command parser accepts sound-source names like "player"/"block" (via
+    // SoundSource.getName()), not the enum constant names ("PLAYERS"/"BLOCKS").
+    // Match both forms so datapack strings stay valid at runtime.
+    private static net.minecraft.sounds.SoundSource parseSoundSource(String name) {
+        for (var s : net.minecraft.sounds.SoundSource.values()) {
+            if (s.getName().equalsIgnoreCase(name)) return s;
+        }
+        return net.minecraft.sounds.SoundSource.valueOf(name.toUpperCase(java.util.Locale.ROOT));
+    }
+
     public static void playSoundToAll(List<? extends Entity> entities, String sound, String source, net.minecraft.world.phys.Vec3 pos, double volume, double pitch, double minVolume) {
         if (entities.isEmpty()) return;
 
@@ -1124,7 +1147,7 @@ public class ExtensionFunctions {
         if (parsed == null) {
             var soundEvent = net.minecraft.sounds.SoundEvent.createVariableRangeEvent(Identifier.parse(sound));
             var holder = net.minecraft.core.Holder.direct(soundEvent);
-            var soundSource = net.minecraft.sounds.SoundSource.valueOf(source.toUpperCase(java.util.Locale.ROOT));
+            var soundSource = parseSoundSource(source);
             parsed = new SoundParsed(holder, soundSource);
             SOUND_PARSE_CACHE.put(cacheKey, parsed);
         }
@@ -1372,7 +1395,18 @@ public class ExtensionFunctions {
     public static Component getNbtText(net.minecraft.world.level.storage.CommandStorage storage,
             String storageName, String path) {
         var compound = storage.get(Identifier.parse(storageName));
-        net.minecraft.nbt.Tag current = compound;
+        return walkNbtPathAsText(compound, path);
+    }
+
+    // NbtText — получить NBT из первой подходящей entity как Component
+    public static Component getEntityNbtText(List<? extends Entity> entities, String path) {
+        if (entities.isEmpty()) return Component.empty();
+        return walkNbtPathAsText(getEntityNbt(entities.getFirst()), path);
+    }
+
+    private static Component walkNbtPathAsText(net.minecraft.nbt.@Nullable Tag root, String path) {
+        net.minecraft.nbt.Tag current = root;
+        if (current == null) return Component.empty();
         for (String part : path.split("\\.")) {
             if (part.isEmpty()) continue;
             if (current instanceof CompoundTag ct) {
