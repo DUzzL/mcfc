@@ -15,7 +15,6 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.GraphGenerator;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeFormatter;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeGraphGenerator;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeInstruction;
-import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
@@ -41,7 +40,6 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +59,6 @@ import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.CO
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.FUNCTION_CLASS_LOAD_FAILED;
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.FUNCTION_EXECUTION_FAILED;
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.FUNCTION_LOAD_FAILED;
-import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.FUNCTION_LOAD_TOO_BIG;
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.UNSPECIFIED_COMMAND_ERROR;
 
 public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier, TCommandSourceStack, TCompoundTag> extends ClassLoader {

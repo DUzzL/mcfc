@@ -13,6 +13,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
 import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -68,7 +69,7 @@ public final class Optimizations {
         for(int i = 0; i < n; i++) {
             var instr = ctx.getInstruction(i);
             if(instr.type() == InstructionTypes.LABEL) {
-                var ld = instr.<LabelData>get("label");
+                var ld = Objects.requireNonNull(instr.<LabelData>get("label"));
                 if(prevLabel != null) {
                     if(forwarding == null) forwarding = new java.util.HashMap<>();
                     // Resolve transitively: if prevLabel itself was forwarded
@@ -94,7 +95,7 @@ public final class Optimizations {
             var instr = ctx.getInstruction(i);
             if(instr.type() == InstructionTypes.LABEL) continue;
             var data = instr.data();
-            Object[] newData = null;
+            @Nullable Object[] newData = null;
             for(int d = 0; d < data.length; d++) {
                 if(data[d] instanceof LabelData(int id)) {
                     var to = fwd.get(id);
@@ -112,7 +113,7 @@ public final class Optimizations {
         for(int i = ctx.getInstructionCount() - 1; i >= 0; i--) {
             var instr = ctx.getInstruction(i);
             if(instr.type() == InstructionTypes.LABEL) {
-                var ld = instr.<LabelData>get("label");
+                var ld = Objects.requireNonNull(instr.<LabelData>get("label"));
                 if(fwd.containsKey(ld.id())) pass.removeInstruction(i);
             }
         }
@@ -477,7 +478,7 @@ public final class Optimizations {
      * twice per IF_NUMBER_COMPARE_JUMP from removeDeadComparisons, that loop
      * was O(n²) and burned ~744 s of CPU on a single 18 k-command function.
      */
-    private static boolean isUnstoredLocal(OptimizationPass pass, Object value) {
+    private static boolean isUnstoredLocal(OptimizationPass pass, @Nullable Object value) {
         if(!(value instanceof LocationData<?> loc) || loc.local() == null) return false;
         var ctx = pass.context();
         int total = ctx.getResultValueCounts().getOrDefault(value, 0);

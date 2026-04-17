@@ -679,7 +679,7 @@ public class FunctionCodeGenerator {
 
             int rangeStart = Integer.MAX_VALUE;
             int rangeEnd = Integer.MIN_VALUE;
-            if(defPos != null) { rangeStart = Math.min(rangeStart, defPos); rangeEnd = Math.max(rangeEnd, defPos); }
+            if(defPos != null) { rangeStart = defPos; rangeEnd = defPos; }
             if(minRef != null) { rangeStart = Math.min(rangeStart, minRef); rangeEnd = Math.max(rangeEnd, minRef); }
             if(maxRef != null) { rangeStart = Math.min(rangeStart, maxRef); rangeEnd = Math.max(rangeEnd, maxRef); }
 

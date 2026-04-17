@@ -103,7 +103,8 @@ public class SimpleFunctionCompiler {
 
                 if(diagnostic.extra() != null) eObj.addProperty("extra", diagnostic.extra());
                 if(diagnostic.cause() != null) eObj.add("cause", exceptionJson(diagnostic.cause()));
-                jsonData(results, "errors", diagnostic.location(), () -> eObj);
+                Object locKey = diagnostic.location() != null ? diagnostic.location() : "global";
+                jsonData(results, "errors", locKey, () -> eObj);
             }
             Files.createDirectories(generatedPath);
             for(var _ : classBytes) {

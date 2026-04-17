@@ -8,7 +8,6 @@ import org.jspecify.annotations.Nullable;
 import java.lang.constant.ClassDesc;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;

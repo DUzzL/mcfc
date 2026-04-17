@@ -1,7 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.mod.mixin;
 
 import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilationStarter;
-import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.mod.FunctionClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.mod.FunctionCompilerMain;
 import net.minecraft.commands.CommandSourceStack;

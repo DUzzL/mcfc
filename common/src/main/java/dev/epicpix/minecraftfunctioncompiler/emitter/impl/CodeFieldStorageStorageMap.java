@@ -59,11 +59,11 @@ public final class CodeFieldStorageStorageMap {
      * Returns values in stable insertion order for use during generate().
      * Called single-threaded after all parallel compilation is complete.
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "DataFlowIssue"})
     public <T> ArrayList<T> getStorage(CodeFieldStorageMapKind<T> key) {
         var indexMap = getIndexMap(key);
         var result = new ArrayList<T>(indexMap.size());
-        // fill slots
+        // fill slots (overwritten below; every index is covered by indexMap values 0..size-1)
         for(int i = 0; i < indexMap.size(); i++) result.add(null);
         for(var entry : indexMap.entrySet()) {
             result.set(entry.getValue(), (T) entry.getKey());
