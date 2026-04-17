@@ -50,34 +50,124 @@ public final class Optimizations {
         Optimizations::removeUnusedData
     );
 
+    /**
+     * One-shot per round: collapse every chain of adjacent LABEL instructions
+     * into a single LABEL by rewriting every reference to the doomed labels
+     * to point at the surviving (earliest) label, then removing the doomed
+     * LABEL instructions.  Total cost O(N × avgDataLen) regardless of how
+     * many adjacent pairs exist.
+     */
+    static void bulkMergeAdjacentLabels(OptimizationPass pass) {
+        var ctx = pass.context();
+        int n = ctx.getInstructionCount();
+        if(n < 2) return;
+
+        // Step 1: build forwarding map keyed by label id.
+        java.util.HashMap<Integer, LabelData> forwarding = null;
+        LabelData prevLabel = null;
+        for(int i = 0; i < n; i++) {
+            var instr = ctx.getInstruction(i);
+            if(instr.type() == InstructionTypes.LABEL) {
+                var ld = instr.<LabelData>get("label");
+                if(prevLabel != null) {
+                    if(forwarding == null) forwarding = new java.util.HashMap<>();
+                    // Resolve transitively: if prevLabel itself was forwarded
+                    // (chain of three or more adjacent labels), forward
+                    // straight to the chain's root rather than an
+                    // intermediate label that's about to be removed.
+                    var target = forwarding.getOrDefault(prevLabel.id(), prevLabel);
+                    forwarding.put(ld.id(), target);
+                }
+                prevLabel = ld;
+            } else {
+                prevLabel = null;
+            }
+        }
+        if(forwarding == null) return;
+
+        // Step 2: single sweep — rewrite references in every instruction.
+        // Skip LABEL definitions: rewriting their own "label" slot would
+        // change the label they define, breaking step 3's identification of
+        // which LABELs to remove and leaving duplicate-id LABELs in the IR.
+        final var fwd = forwarding;
+        for(int i = 0; i < n; i++) {
+            var instr = ctx.getInstruction(i);
+            if(instr.type() == InstructionTypes.LABEL) continue;
+            var data = instr.data();
+            Object[] newData = null;
+            for(int d = 0; d < data.length; d++) {
+                if(data[d] instanceof LabelData(int id)) {
+                    var to = fwd.get(id);
+                    if(to != null) {
+                        if(newData == null) newData = data.clone();
+                        newData[d] = to;
+                    }
+                }
+            }
+            if(newData != null) pass.modifyInstructionData(i, newData);
+        }
+
+        // Step 3: drop the now-redundant LABEL instructions, walking backward
+        // so removals don't disturb indices we haven't visited yet.
+        for(int i = ctx.getInstructionCount() - 1; i >= 0; i--) {
+            var instr = ctx.getInstruction(i);
+            if(instr.type() == InstructionTypes.LABEL) {
+                var ld = instr.<LabelData>get("label");
+                if(fwd.containsKey(ld.id())) pass.removeInstruction(i);
+            }
+        }
+    }
+
     private static void mergeLabels(OptimizationPass pass) {
+        // Bulk-merge ALL adjacent LABEL pairs in one O(N × avgDataLen) sweep
+        // at the start of the round.  The previous per-instruction approach
+        // was O(K × N) where K is the number of adjacent-LABEL pairs: every
+        // pair triggered a separate scan of all jump instructions to rewrite
+        // the doomed label's references.  On a single .mcfunction with
+        // ~5 k adjacent pairs and ~50 k jumps that was ~250 M containsValue
+        // calls per round and dominated total compile time (observed via
+        // thread dump: one carrier thread at 99.5% CPU for 558 s).
+        //
+        // The bulk algorithm:
+        //   1. Walk instructions, build forwarding map: for every adjacent
+        //      LABEL X; LABEL Y, record forwarding[Y.id] = X (resolving X's
+        //      own forwarding transitively if it is itself a forwarded
+        //      target).
+        //   2. Single sweep: for every instruction, replace any LabelData
+        //      whose id is forwarded with its forwarding target.
+        //   3. Walk backward and remove every LABEL whose id is in the
+        //      forwarding map.
+        if(pass.thisInstructionIndex() == 0) {
+            bulkMergeAdjacentLabels(pass);
+        }
+
         if(pass.thisInstruction().type() != InstructionTypes.LABEL) return;
         var thisLabel = Objects.requireNonNull(pass.thisInstruction().<LabelData>get("label"));
 
         var prevInstruction = pass.previousInstruction();
         if(prevInstruction != null && prevInstruction.type() == InstructionTypes.LABEL) {
-            var newLabel = Objects.requireNonNull(prevInstruction.<LabelData>get("label"));
-            int instrCount = pass.context().getInstructionCount();
-            for(int o = 0; o<instrCount; o++) {
-                if(o == pass.thisInstructionIndex()) continue;
-                var instr = pass.getInstruction(o);
-                var replacedInstructionData = instr.optReplaceDataIf(value -> value instanceof LabelData(int id) && id == thisLabel.id(), newLabel);
-                if(replacedInstructionData.isPresent()) {
-                    pass.modifyInstructionData(o, replacedInstructionData.get());
-                }
-            }
-            pass.removeInstruction(pass.thisInstructionIndex());
+            // Defer: another opt (or this opt's own Case B below) created an
+            // adjacent LABEL pair AFTER the start-of-round bulk ran.  Doing
+            // the per-instruction O(N) typeIndex scan to fix it here turned
+            // pathological — every Case A fallback firing rebuilt typeIndex
+            // (because other opts' removes invalidated it), and on a single
+            // big function this loop burned ~500 s of CPU.  Returning here
+            // leaves the adjacent pair in place; the next round's bulk pass
+            // will collapse it.  After the final round, optimize() runs one
+            // more bulk pass to catch anything still standing.
             return;
         }
 
-        int useCount = 0;
-        for(int i = 0; i<pass.context().getInstructionCount(); i++) {
-            if(i == pass.thisInstructionIndex()) continue;
-            var instr = pass.getInstruction(i);
-            if((instr.type() == InstructionTypes.JUMP || instr.type().isConditionJump()) && instr.containsValue(thisLabel)) {
-                useCount++;
-            }
-        }
+        // Fast path: globalValueCounts is an incrementally maintained O(1)
+        // lookup of "how many times does this exact Object appear across all
+        // instruction data[] slots?". LabelData is only ever stored in two
+        // places — the LABEL instruction's own "label" slot (exactly once)
+        // and the target slot of a JUMP / conditional jump — so total count
+        // minus the self-reference is precisely the jump-target use count.
+        // Previously this was an O(N) scan, making the whole pass O(N²) on
+        // label-heavy functions: a single 18k-command .mcfunction with ~10k
+        // labels was burning ~500 M Objects.equals calls per pass round.
+        int useCount = pass.context().getGlobalValueCounts().getOrDefault(thisLabel, 0) - 1;
         if(prevInstruction != null && prevInstruction.type() == InstructionTypes.JUMP && Objects.equals(prevInstruction.get("label"), thisLabel)) {
             if(useCount == 1) {
                 pass.removeInstruction(pass.thisInstructionIndex());
@@ -379,23 +469,27 @@ public final class Optimizations {
     /**
      * Returns true iff {@code value} is a local-flavoured LocationData that
      * is never written through any instruction's "result" field anywhere in
-     * the function. The "result" position is looked up by argument-name match
-     * because it is not always at index 0 (e.g. SCORE_DATA_NO_AUTO_CREATE).
+     * the function (the current instruction itself is excluded — a value is
+     * "unstored" if NO other instruction writes it).
+     *
+     * <p>O(1) via the incrementally-maintained result-value count map in
+     * {@link OptimizationContext}.  Was an O(n) full-instruction scan; called
+     * twice per IF_NUMBER_COMPARE_JUMP from removeDeadComparisons, that loop
+     * was O(n²) and burned ~744 s of CPU on a single 18 k-command function.
      */
     private static boolean isUnstoredLocal(OptimizationPass pass, Object value) {
         if(!(value instanceof LocationData<?> loc) || loc.local() == null) return false;
-        int n = pass.context().getInstructionCount();
-        int self = pass.thisInstructionIndex();
-        for(int i = 0; i < n; i++) {
-            if(i == self) continue;
-            var instr = pass.getInstruction(i);
-            String[] names = instr.type().argumentNames();
-            Object[] data = instr.data();
-            for(int j = 0; j < names.length; j++) {
-                if("result".equals(names[j]) && Objects.equals(data[j], value)) return false;
-            }
+        var ctx = pass.context();
+        int total = ctx.getResultValueCounts().getOrDefault(value, 0);
+        if(total == 0) return true;
+        // Total > 0: at least one instruction has this value as its result.
+        // Subtract the current instruction's contribution if it stores too.
+        var self = pass.thisInstruction();
+        int selfResultIdx = ctx.resultArgIndex(self.type());
+        if(selfResultIdx >= 0 && Objects.equals(self.data()[selfResultIdx], value)) {
+            return total == 1;
         }
-        return true;
+        return false;
     }
 
     private static void removeUnusedData(OptimizationPass pass) {

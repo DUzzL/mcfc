@@ -83,10 +83,31 @@ public final class OptimizationPass {
     // ── Instruction search ─────────────────────────────────────────────────────
 
     /**
-     * O(k) via type index where k = number of instructions with the given type.
-     * For most types k << n, making this dramatically faster than the old O(n) scan.
+     * For a single-predicate query, O(m) via the per-(type, argIndex) data
+     * index where m = number of instructions whose data value matches.  For
+     * multi-predicate queries, O(k) via the type index where k = number of
+     * instructions of that type — the extra predicates are filtered inline.
+     *
+     * <p>The single-predicate fast path is what turns removeDuplicateChecks
+     * (which calls {@code findInstructions(0, n, false, IF_NULL_JUMP,
+     * [("local", X)])} once per IF_NULL_JUMP instruction) from O(K²) into
+     * O(K), where K = number of IF_NULL_JUMPs in the function.
      */
     public IntList findInstructions(int start, int end, boolean includeSelf, InstructionType type, List<Pair<String, Object>> dataPairs) {
+        if(dataPairs.size() == 1) {
+            var pair = dataPairs.get(0);
+            int argIndex = type.getArgumentIndex(pair.first());
+            var valueMatches = context.getDataIndex(type, argIndex).get(pair.second());
+            if(valueMatches == null) return IntList.of();
+            var results = new IntArrayList();
+            for(var it = valueMatches.intIterator(); it.hasNext(); ) {
+                int i = it.nextInt();
+                if(i < start || i >= end) continue;
+                if(i == thisInstruction && !includeSelf) continue;
+                results.add(i);
+            }
+            return results;
+        }
         var indexed = context.getTypeIndex().get(type);
         if(indexed == null) return IntList.of();
         var results = new IntArrayList();
@@ -217,6 +238,24 @@ public final class OptimizationPass {
     // ── Bulk data replacement ──────────────────────────────────────────────────
 
     public void replaceInstructionData(boolean includeSelf, Object from, Object to) {
+        // Fast exit via the global value-count cache: if the value being
+        // searched-and-replaced doesn't appear in any instruction's data[]
+        // anywhere, the O(n) scan below has nothing to do.  Most callers in
+        // the optimizer use this to clean up already-rewritten or already-
+        // removed values, so the early-exit path is the common case.
+        var counts = context.getGlobalValueCounts();
+        int total = counts.getOrDefault(from, 0);
+        if(total == 0) return;
+        if(!includeSelf) {
+            // Subtract the current instruction's contribution to total —
+            // if all occurrences live on `thisInstruction` (which we'd skip
+            // anyway), there is nothing for the scan to do.
+            int selfContribution = 0;
+            for(var d : thisInstruction().data()) {
+                if(Objects.equals(d, from)) selfContribution++;
+            }
+            if(selfContribution >= total) return;
+        }
         for(int i = 0; i < context.getInstructionCount(); i++) {
             if(!includeSelf && i == thisInstruction) continue;
             var instr = getInstruction(i);

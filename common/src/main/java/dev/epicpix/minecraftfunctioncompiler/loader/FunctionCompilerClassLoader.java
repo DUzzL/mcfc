@@ -18,6 +18,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeInstructio
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
+import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
 import dev.epicpix.minecraftfunctioncompiler.il.Instructions;
 import dev.epicpix.minecraftfunctioncompiler.il.optimizer.LengauerTarjan;
 import dev.epicpix.minecraftfunctioncompiler.il.optimizer.Optimizer;
@@ -76,9 +77,11 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     private static final HexFormat HEX = HexFormat.of();
 
     // ── Cache constants ────────────────────────────────────────────────────────
+    /** Incremented whenever the on-disk cache format changes. v2 = batch-class layout. */
+    private static final String CACHE_VERSION      = "v2.1";
     private static final String CACHE_MANIFEST     = "manifest.json";
     private static final String CACHE_DATA_CLASS   = "data.class";
-    private static final String CACHE_FN_PREFIX    = "fn/";
+    private static final String CACHE_BATCH_PREFIX = "batch/";
 
     /**
      * Idempotent: ensures generatedDir exists. {@link Files#createDirectories}
@@ -142,10 +145,10 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
 
     protected abstract void setHandle(DataLocation key, MethodHandle handle);
 
-    public void registerFunction(Class<?> clazz, DataLocation key, CompilationParams params) {
+    public void registerFunction(Class<?> batchClass, DataLocation key, BatchClassPlanner.PlacedFunction placement, CompilationParams params) {
         var lookup = MethodHandles.lookup();
         try {
-            setHandle(key, lookup.findStatic(clazz, "run", MethodType.methodType(long.class,
+            setHandle(key, lookup.findStatic(batchClass, placement.baseName(), MethodType.methodType(long.class,
                 params.commandSourceStackType().resolveConstantDesc(lookup),
                 params.codeFieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND).resolveConstantDesc(lookup))));
         } catch(ReflectiveOperationException e) {
@@ -223,6 +226,8 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         } catch(java.security.NoSuchAlgorithmException e) {
             throw new RuntimeException(e); // SHA-256 is always available in Java
         }
+        md.update(CACHE_VERSION.getBytes(StandardCharsets.UTF_8));
+        md.update((byte) '\0');
         md.update(getCompilerVersion().getBytes(StandardCharsets.UTF_8));
         // Sort by function ID so the hash is order-independent
         var sortedEntries = new ArrayList<>(functionSources.entrySet());
@@ -239,20 +244,19 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         return HEX.formatHex(md.digest());
     }
 
-    /** Relative cache path for a function class file. */
-    private static String fnCachePath(DataLocation loc) {
-        // e.g. "fn/bacap/main.class" — path slashes are kept so the hierarchy mirrors the datapack
-        return CACHE_FN_PREFIX + loc.namespace() + "/" + loc.path().replace('.', '$') + ".class";
+    /** Relative cache path for batch class {@code idx}. */
+    private static String batchCachePath(int idx) {
+        return CACHE_BATCH_PREFIX + idx + ".class";
     }
 
     /**
-     * Attempts to load all compiled classes from the on-disk cache.
+     * Attempts to load all compiled batch classes from the on-disk cache.
      * Returns a populated result if the cache is valid, or {@code null} on any miss.
      *
-     * A cache miss occurs when:
-     *   - the manifest doesn't exist or is unreadable
-     *   - the stored global hash doesn't match the current one
-     *   - any expected class file is missing
+     * Under the v2 batch layout, the manifest contains:
+     *   - "hash"     — global compilation hash (must match)
+     *   - "batches"  — list of relative class-file paths, one per batch
+     *   - "functions" — { "&lt;ns&gt;:&lt;path&gt;": { "batch": N, "base": "fn_...", "hasMacros": bool }, ... }
      */
     @Nullable
     private CacheLoadResult tryLoadFromCache(String globalHash, Set<DataLocation> functionIds) throws Exception {
@@ -260,55 +264,82 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         if(!Files.exists(manifestPath)) return null;
 
         var manifest = GSON.fromJson(Files.readString(manifestPath), JsonObject.class);
-        if(manifest == null || !manifest.has("hash") || !manifest.has("functions")) return null;
+        if(manifest == null || !manifest.has("hash") || !manifest.has("batches") || !manifest.has("functions")) return null;
         if(!globalHash.equals(manifest.get("hash").getAsString())) return null;
 
         var dataClassPath = cacheDir.resolve(CACHE_DATA_CLASS);
         if(!Files.exists(dataClassPath)) return null;
 
+        // Load batch class files
+        var batchArr = manifest.getAsJsonArray("batches");
+        var batchPaths = new ArrayList<Path>(batchArr.size());
+        for(int i = 0; i < batchArr.size(); i++) {
+            var p = cacheDir.resolve(batchArr.get(i).getAsString());
+            if(!Files.exists(p)) return null;
+            batchPaths.add(p);
+        }
+
         var fnEntries = manifest.getAsJsonObject("functions");
-        // Resolve and existence-check all paths sequentially first — any miss is a cache miss.
-        var resolved = new ArrayList<Map.Entry<DataLocation, Path>>(functionIds.size());
+        var placements = new HashMap<DataLocation, BatchClassPlanner.PlacedFunction>(functionIds.size());
         for(var loc : functionIds) {
             var key = loc.toString();
             if(!fnEntries.has(key)) return null;
-            var path = cacheDir.resolve(fnEntries.get(key).getAsString());
-            if(!Files.exists(path)) return null;
-            resolved.add(Map.entry(loc, path));
+            var obj = fnEntries.getAsJsonObject(key);
+            int batch = obj.get("batch").getAsInt();
+            if(batch < 0 || batch >= batchPaths.size()) return null;
+            String base = obj.get("base").getAsString();
+            boolean hasMacros = obj.has("hasMacros") && obj.get("hasMacros").getAsBoolean();
+            placements.put(loc, new BatchClassPlanner.PlacedFunction(batch, base, hasMacros));
         }
-        // Read class bytes in parallel — this dominates cache-load time on cold disk caches.
-        var functionClassBytes = new ConcurrentHashMap<DataLocation, byte[]>(functionIds.size());
-        resolved.parallelStream().forEach(e -> {
+
+        // Read bytes in parallel
+        @SuppressWarnings("unchecked")
+        byte[][] batchBytes = new byte[batchPaths.size()][];
+        java.util.stream.IntStream.range(0, batchPaths.size()).parallel().forEach(i -> {
             try {
-                functionClassBytes.put(e.getKey(), Files.readAllBytes(e.getValue()));
+                batchBytes[i] = Files.readAllBytes(batchPaths.get(i));
             } catch(java.io.IOException ex) {
                 throw new java.io.UncheckedIOException(ex);
             }
         });
-        var result = new HashMap<>(functionClassBytes);
 
-        return new CacheLoadResult(result, Files.readAllBytes(dataClassPath));
+        return new CacheLoadResult(List.of(batchBytes), placements, Files.readAllBytes(dataClassPath));
     }
 
-    private record CacheLoadResult(HashMap<DataLocation, byte[]> functionClassBytes, byte[] dataClassBytes) {}
+    private record CacheLoadResult(
+        List<byte[]> batchBytes,
+        Map<DataLocation, BatchClassPlanner.PlacedFunction> placements,
+        byte[] dataClassBytes
+    ) {}
 
     /**
-     * Persists compilation results to disk so future startups can skip recompilation.
+     * Persists compilation results (batch classes + manifest + data class) to disk.
      * Failures are logged but do not abort the already-completed compilation.
      */
-    private void saveToCache(String globalHash, Map<DataLocation, byte[]> functionClassBytes, byte[] dataClassBytes) throws Exception {
+    private void saveToCache(String globalHash, List<byte[]> batchBytes,
+                              Map<DataLocation, BatchClassPlanner.PlacedFunction> placements,
+                              byte[] dataClassBytes) throws Exception {
         Files.createDirectories(cacheDir);
+        Files.createDirectories(cacheDir.resolve(CACHE_BATCH_PREFIX));
 
-        var manifest  = new JsonObject();
+        var manifest = new JsonObject();
         manifest.addProperty("hash", globalHash);
-        var functions = new JsonObject();
 
-        for(var entry : functionClassBytes.entrySet()) {
-            var relPath   = fnCachePath(entry.getKey());
-            var classPath = cacheDir.resolve(relPath);
-            Files.createDirectories(classPath.getParent());
-            Files.write(classPath, entry.getValue());
-            functions.addProperty(entry.getKey().toString(), relPath);
+        var batchArr = new JsonArray();
+        for(int i = 0; i < batchBytes.size(); i++) {
+            var relPath = batchCachePath(i);
+            Files.write(cacheDir.resolve(relPath), batchBytes.get(i));
+            batchArr.add(relPath);
+        }
+        manifest.add("batches", batchArr);
+
+        var functions = new JsonObject();
+        for(var entry : placements.entrySet()) {
+            var obj = new JsonObject();
+            obj.addProperty("batch", entry.getValue().batchIndex());
+            obj.addProperty("base", entry.getValue().baseName());
+            obj.addProperty("hasMacros", entry.getValue().hasMacros());
+            functions.add(entry.getKey().toString(), obj);
         }
         manifest.add("functions", functions);
 
@@ -318,15 +349,16 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
 
     // ── Load + handle registration ─────────────────────────────────────────────
 
-    private boolean defineAndLoadFromBytes(HashMap<DataLocation, byte[]> functionClassBytes, byte[] dataClassBytes,
+    private boolean defineAndLoadFromBytes(List<byte[]> batchBytes,
+                                           Map<DataLocation, BatchClassPlanner.PlacedFunction> placements,
+                                           byte[] dataClassBytes,
                                            CompilationParams params, Object serverFunctionManager,
                                            int parsedFunctionCount) throws Throwable {
-        // Define all per-function classes
-        var loadedFunctions = new HashMap<DataLocation, Class<?>>(functionClassBytes.size());
-        for(var entry : functionClassBytes.entrySet()) {
-            var key  = entry.getKey();
-            var name = ("mcfc/function/" + key.namespace() + "/" + key.path()).replace('.', '$').replace('/', '.');
-            loadedFunctions.put(key, defineClass(name, entry.getValue()));
+        // Define all batch classes — ~tens of defineClass calls even for thousands of functions
+        var batchClasses = new ArrayList<Class<?>>(batchBytes.size());
+        for(int i = 0; i < batchBytes.size(); i++) {
+            var name = (BatchClassPlanner.BATCH_CLASS_PREFIX + i).replace('/', '.');
+            batchClasses.add(defineClass(name, batchBytes.get(i)));
         }
 
         // Define and initialise the data class
@@ -339,10 +371,12 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         ).invoke(null, minecraftServer, serverFunctionManager);
         resultField = lk.findStaticSetter(defined, RUN_RESULT_FIELD, long.class);
 
-        // Register handles
-        for(var key : loadedFunctions.keySet()) {
+        // Register handles — findStatic by mangled method name within the batch class
+        for(var entry : placements.entrySet()) {
+            var key = entry.getKey();
+            var placement = entry.getValue();
             try {
-                registerFunction(loadedFunctions.get(key), key, params);
+                registerFunction(batchClasses.get(placement.batchIndex()), key, placement, params);
             } catch(Throwable e) {
                 if(e instanceof DiagnosticException de) diagnostics.addDiagnostic(de.toDiagnostic());
                 diagnostics.addDiagnostic(new Diagnostic(DiagnosticKind.LOAD_ERROR, FUNCTION_LOAD_FAILED,
@@ -398,9 +432,10 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
             try {
                 var cached = tryLoadFromCache(globalHash, definedFunctions.keySet());
                 if(cached != null) {
-                    LOGGER.info("Cache hit — loading {} functions from disk (skipping compilation)", cached.functionClassBytes().size());
+                    LOGGER.info("Cache hit — loading {} functions across {} batch class(es) from disk (skipping compilation)",
+                        cached.placements().size(), cached.batchBytes().size());
                     var startLoad = System.nanoTime();
-                    if(!defineAndLoadFromBytes(cached.functionClassBytes(), cached.dataClassBytes(), params, serverFunctionManager, parsedFunctionCount)) return;
+                    if(!defineAndLoadFromBytes(cached.batchBytes(), cached.placements(), cached.dataClassBytes(), params, serverFunctionManager, parsedFunctionCount)) return;
                     LOGGER.info("Loaded compiled functions from cache in {}ms", (int)((System.nanoTime() - startLoad) / 1_000_000d));
 
                     var functionCountsData = new FunctionCountsData(sourceFiles.size(), parsedFunctionCount, handles.size(), handles.size());
@@ -436,78 +471,167 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         ConcurrentHashMap<DataLocation, List<Instruction>> debugCompiledMap  = DEBUG_DUMP_INSTRUCTIONS ? new ConcurrentHashMap<>() : null;
         ConcurrentHashMap<DataLocation, List<Instruction>> debugOptimizedMap = DEBUG_DUMP_INSTRUCTIONS ? new ConcurrentHashMap<>() : null;
 
-        var generatedBytes      = new ConcurrentHashMap<DataLocation, byte[]>();
-
         // Pass 1 (parallel): compile + optimize each function. A function that fails
         // here will NOT appear in compiledFunctionSet, so callers emit the vanilla
         // fallback path instead of invokestatic to a class that was never generated.
+        LOGGER.info("[Phase 1] compile+optimize starting for {} function(s)", definedFunctions.size());
+        var phase1Start = System.nanoTime();
+        var phase1Progress = new AtomicInteger(0);
+        int phase1Total = definedFunctions.size();
+        int phase1Step = Math.max(100, phase1Total / 20);
         var optimizedFunctions = new ConcurrentHashMap<DataLocation, List<Instruction>>();
-        definedFunctions.entrySet().parallelStream().forEach(entry -> {
-            var key      = entry.getKey();
-            var commands = entry.getValue();
+        // One virtual thread per function. We previously tried parallelStream
+        // wrapped in commonPool().submit(...), but since JDK 10+ parallelStream
+        // always dispatches to commonPool regardless of the enclosing pool, and
+        // in this environment commonPool stubbornly refuses to scale past 1
+        // active worker (observed via thread dump: 31/32 workers parked on
+        // awaitWork while one worker chewed through everything at 99.5% CPU).
+        // The virtual-thread scheduler uses its own dedicated FJP sized to
+        // availableProcessors, so every carrier thread participates and the
+        // usual CommonPool pathology is sidestepped. `ExecutorService.close()`
+        // via try-with-resources waits for every submitted task.
+        try(var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            for(var entry : definedFunctions.entrySet()) {
+                final var key      = entry.getKey();
+                final var commands = entry.getValue();
+                executor.execute(() -> {
+                    List<Instruction> compiled;
+                    try {
+                        compiled = CommandCompiler.compile(key, commands);
+                    } catch(DiagnosticException e) {
+                        LOGGER.warn("Failed to compile function {} / {}", key, e.getMessage());
+                        diagnostics.addDiagnosticSafe(e.toDiagnostic());
+                        return;
+                    } catch(Throwable e) {
+                        LOGGER.error("Failed to compile function {}", key, e);
+                        diagnostics.addDiagnosticSafe(Diagnostic.compileError(UNSPECIFIED_COMMAND_ERROR, key, e.getMessage(), e));
+                        return;
+                    }
+                    preOptCount.addAndGet(compiled.size());
+                    if(DEBUG_DUMP_INSTRUCTIONS) debugCompiledMap.put(key, Instructions.addStaticRequirements(compiled));
 
-            List<Instruction> compiled;
-            try {
-                compiled = CommandCompiler.compile(key, commands);
-            } catch(DiagnosticException e) {
-                LOGGER.warn("Failed to compile function {} / {}", key, e.getMessage());
-                diagnostics.addDiagnosticSafe(e.toDiagnostic());
-                return;
-            } catch(Throwable e) {
-                LOGGER.error("Failed to compile function {}", key, e);
-                diagnostics.addDiagnosticSafe(Diagnostic.compileError(UNSPECIFIED_COMMAND_ERROR, key, e.getMessage(), e));
-                return;
+                    List<Instruction> optimized;
+                    try {
+                        optimized = Optimizer.optimize(compiled, new LengauerTarjan());
+                        optimized = Instructions.addStaticRequirements(optimized);
+                    } catch(DiagnosticException e) {
+                        LOGGER.warn("Failed to optimize function {} / {}", key, e.getMessage());
+                        diagnostics.addDiagnosticSafe(e.toDiagnostic());
+                        return;
+                    } catch(Throwable e) {
+                        LOGGER.error("Failed to optimize function {}", key, e);
+                        diagnostics.addDiagnosticSafe(Diagnostic.compileError(UNSPECIFIED_COMMAND_ERROR, key, e.getMessage(), e));
+                        return;
+                    }
+                    postOptCount.addAndGet(optimized.size());
+                    successCount.incrementAndGet();
+                    if(DEBUG_DUMP_INSTRUCTIONS) debugOptimizedMap.put(key, optimized);
+
+                    optimizedFunctions.put(key, optimized);
+
+                    int done = phase1Progress.incrementAndGet();
+                    if(done % phase1Step == 0 || done == phase1Total) {
+                        LOGGER.info("[Phase 1] {}/{} ({}%) — latest: {}", done, phase1Total, (done * 100 / phase1Total), key);
+                    }
+                });
             }
-            preOptCount.addAndGet(compiled.size());
-            if(DEBUG_DUMP_INSTRUCTIONS) debugCompiledMap.put(key, Instructions.addStaticRequirements(compiled));
-
-            List<Instruction> optimized;
-            try {
-                optimized = Optimizer.optimize(compiled, new LengauerTarjan());
-                optimized = Instructions.addStaticRequirements(optimized);
-            } catch(DiagnosticException e) {
-                LOGGER.warn("Failed to optimize function {} / {}", key, e.getMessage());
-                diagnostics.addDiagnosticSafe(e.toDiagnostic());
-                return;
-            } catch(Throwable e) {
-                LOGGER.error("Failed to optimize function {}", key, e);
-                diagnostics.addDiagnosticSafe(Diagnostic.compileError(UNSPECIFIED_COMMAND_ERROR, key, e.getMessage(), e));
-                return;
-            }
-            postOptCount.addAndGet(optimized.size());
-            successCount.incrementAndGet();
-            if(DEBUG_DUMP_INSTRUCTIONS) debugOptimizedMap.put(key, optimized);
-
-            optimizedFunctions.put(key, optimized);
-        });
+        }
+        LOGGER.info("[Phase 1] compile+optimize done in {}ms — {} succeeded", (System.nanoTime() - phase1Start) / 1_000_000, optimizedFunctions.size());
 
         var compiledFunctionSet = java.util.Set.copyOf(optimizedFunctions.keySet());
 
-        // Pass 2 (parallel): generate class bytes. Callers of failed-to-compile
-        // functions see them absent from compiledFunctionSet and emit the vanilla
-        // dispatch path (ServerFunctionManager.execute) instead of invokestatic.
-        optimizedFunctions.entrySet().parallelStream().forEach(entry -> {
-            var key       = entry.getKey();
-            var optimized = entry.getValue();
-            try {
-                var bytes = FunctionCodeGenerator.generateFunctionClass(params, key, optimized, compiledFunctionSet, lowLevelFunctions);
-                totalFnFileSize.addAndGet(bytes.length);
-                generatedBytes.put(key, bytes);
-            } catch(DiagnosticException e) {
-                diagnostics.addDiagnosticSafe(e.toDiagnostic());
-                LOGGER.error("Failed to generate class for function ({}), skipping", key, e);
-            } catch(Throwable e) {
-                diagnostics.addDiagnosticSafe(new Diagnostic(DiagnosticKind.LOAD_ERROR, FUNCTION_CLASS_LOAD_FAILED,
-                    "Failed to load function (" + key + ")", null, key, null, e));
-                LOGGER.error("Failed to load function ({}), skipping", key, e);
+        // Identify which functions have macros (need a runInstanced method in their batch slot)
+        var macroFunctions = ConcurrentHashMap.<DataLocation>newKeySet();
+        try(var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            for(var e : optimizedFunctions.entrySet()) {
+                final var key   = e.getKey();
+                final var value = e.getValue();
+                executor.execute(() -> {
+                    for(var instr : value) {
+                        if(instr.type() == InstructionTypes.LOAD_MACRO) {
+                            macroFunctions.add(key);
+                            return;
+                        }
+                    }
+                });
             }
-        });
+        }
+
+        // Pass 1.5: plan batch assignments. Deterministic — required for cache stability.
+        LOGGER.info("[Phase 1.5] planning batches for {} function(s) ({} with macros)", optimizedFunctions.size(), macroFunctions.size());
+        var phase15Start = System.nanoTime();
+        var planner = BatchClassPlanner.plan(optimizedFunctions, macroFunctions);
+        LOGGER.info("[Phase 1.5] planned {} function(s) into {} batch class(es) in {}ms",
+            optimizedFunctions.size(), planner.batchClasses().size(), (System.nanoTime() - phase15Start) / 1_000_000);
+
+        // Group function IDs by planned batch (deterministic order for cache stability)
+        var batchMembers = new ArrayList<ArrayList<DataLocation>>(planner.batchClasses().size());
+        for(int i = 0; i < planner.batchClasses().size(); i++) batchMembers.add(new ArrayList<>());
+        for(var loc : optimizedFunctions.keySet()) batchMembers.get(planner.placement(loc).batchIndex()).add(loc);
+        for(var list : batchMembers) list.sort((a, b) -> a.toString().compareTo(b.toString()));
+
+        // Pass 2 + 2.5 fused: per-batch parallel, per-function sequential within batch.
+        // Each batch-worker emits its functions one at a time directly into its own
+        // ClassBuilder and drops the intermediate IR before moving to the next function.
+        // This bounds heap to O(largest-function-IR × parallelism) rather than
+        // O(all-functions-IR), which previously caused GC thrashing on big datapacks.
+        int batchCount = planner.batchClasses().size();
+        byte[][] batchBytesArr = new byte[batchCount][];
+        var successfulPlacements = new ConcurrentHashMap<DataLocation, BatchClassPlanner.PlacedFunction>();
+
+        LOGGER.info("[Phase 2] emit+assemble starting — {} batch(es), parallelism={}",
+            batchCount, java.util.concurrent.ForkJoinPool.commonPool().getParallelism());
+        var phase2Start = System.nanoTime();
+        var batchesDone = new AtomicInteger(0);
+
+        try(var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+        for(int bi0 = 0; bi0 < batchCount; bi0++) {
+            final int bi = bi0;
+            executor.execute(() -> {
+            var batchStart = System.nanoTime();
+            var batchClassDesc = planner.batchClasses().get(bi);
+            var members = batchMembers.get(bi);
+            byte[] bytes = ClassGenerator.createClassGenerator(batchClassDesc, gen -> {
+                for(var key : members) {
+                    var optimized = optimizedFunctions.get(key);
+                    if(optimized == null) continue;
+                    var placement = planner.placement(key);
+                    try {
+                        var fer = FunctionCodeGenerator.emitFunctionMethods(
+                            params, key, optimized, compiledFunctionSet, planner, placement,
+                            batchClassDesc, lowLevelFunctions);
+                        for(var method : fer.methods()) {
+                            gen.addFunction(method.name(), method.instructions(), method.type());
+                        }
+                        successfulPlacements.put(key, placement);
+                    } catch(DiagnosticException e) {
+                        diagnostics.addDiagnosticSafe(e.toDiagnostic());
+                        LOGGER.error("Failed to emit methods for function ({}), skipping", key, e);
+                    } catch(Throwable e) {
+                        diagnostics.addDiagnosticSafe(new Diagnostic(DiagnosticKind.LOAD_ERROR, FUNCTION_CLASS_LOAD_FAILED,
+                            "Failed to load function (" + key + ")", null, key, null, e));
+                        LOGGER.error("Failed to load function ({}), skipping", key, e);
+                    }
+                }
+            });
+            batchBytesArr[bi] = bytes;
+            totalFnFileSize.addAndGet(bytes.length);
+            long batchMs = (System.nanoTime() - batchStart) / 1_000_000;
+            int done = batchesDone.incrementAndGet();
+            LOGGER.info("[Phase 2] batch {}/{} done: {} function(s), {} KB, {}ms",
+                done, batchCount, members.size(), bytes.length / 1024, batchMs);
+            });
+        }
+        }
+        LOGGER.info("[Phase 2] emit+assemble done in {}ms", (System.nanoTime() - phase2Start) / 1_000_000);
         optimizedFunctions.clear();
+        var batchBytes = new ArrayList<byte[]>(batchCount);
+        for(var b : batchBytesArr) batchBytes.add(b);
 
         definedFunctions.clear();
         var compileTime = (System.nanoTime() - startCompile) / 1_000_000_000d;
-        if(DEBUG_PRINT_TIMINGS) LOGGER.info("Compiled+optimized+generated {} functions in {}ms",
-            generatedBytes.size(), (int)(compileTime * 1000));
+        if(DEBUG_PRINT_TIMINGS) LOGGER.info("Compiled+optimized+emitted {} functions across {} batch class(es) in {}ms",
+            successfulPlacements.size(), batchBytes.size(), (int)(compileTime * 1000));
 
         // Debug HL dump (dead code in production)
         if(DEBUG_DUMP_INSTRUCTIONS) {
@@ -561,24 +685,26 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         // Persist to cache before defineClass (while we still have all bytes)
         if(!DEBUG_DUMP_INSTRUCTIONS) {
             try {
-                saveToCache(globalHash, generatedBytes, dataClassBytes);
-                LOGGER.info("Saved {} compiled functions to cache", generatedBytes.size());
+                saveToCache(globalHash, batchBytes, successfulPlacements, dataClassBytes);
+                LOGGER.info("Saved {} compiled functions across {} batch class(es) to cache",
+                    successfulPlacements.size(), batchBytes.size());
             } catch(Exception e) {
                 LOGGER.warn("Failed to save compilation cache ({}), compilation will continue", e.getMessage());
             }
         }
 
-        // Sequential defineClass pass
-        var loadedFunctions = new HashMap<DataLocation, Class<?>>(generatedBytes.size());
-        // Keep raw bytecode around so we can dump .class for any function that
-        // fails MethodHandles.findStatic (e.g. VerifyError from a codegen bug).
-        var rawBytes = new HashMap<>(generatedBytes);
-        for(var entry : generatedBytes.entrySet()) {
-            var key  = entry.getKey();
-            var name = ("mcfc/function/" + key.namespace() + "/" + key.path()).replace('.', '$').replace('/', '.');
-            loadedFunctions.put(key, defineClass(name, entry.getValue()));
+        // Sequential defineClass pass — one defineClass per BATCH, not per function.
+        // On a 5k-function datapack this is ~tens of defineClass calls vs. thousands,
+        // which is the whole point of batching.
+        var batchClasses = new ArrayList<Class<?>>(batchBytes.size());
+        for(int i = 0; i < batchBytes.size(); i++) {
+            var name = (BatchClassPlanner.BATCH_CLASS_PREFIX + i).replace('/', '.');
+            batchClasses.add(defineClass(name, batchBytes.get(i)));
         }
-        generatedBytes.clear();
+        // Keep raw batch bytes around so we can dump .class for any function whose
+        // findStatic fails later (codegen bug in some method of that batch).
+        var rawBatchBytes = new ArrayList<>(batchBytes);
+        batchBytes.clear();
 
         // Define and initialise the data class
         try {
@@ -640,37 +766,40 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         }
 
         // ── Handle registration ───────────────────────────────────────────────
+        // Per-function findStatic is lazy in the JVM, so a single broken method
+        // in a batch class still only kills its own handle — callers fall back to
+        // vanilla for that one function. The whole batch survives.
         var startHandles = System.nanoTime();
         int failedCount = 0;
         Path failedDumpDir = null;
-        for(var key : loadedFunctions.keySet()) {
+        for(var entry : successfulPlacements.entrySet()) {
+            var key = entry.getKey();
+            var placement = entry.getValue();
             try {
-                registerFunction(loadedFunctions.get(key), key, params);
+                registerFunction(batchClasses.get(placement.batchIndex()), key, placement, params);
             } catch(Throwable e) {
-                // Compiler bug on this specific function — skip it so vanilla handles it.
-                // Don't fail the whole datapack just because one function has a codegen issue.
                 if(e instanceof DiagnosticException de) diagnostics.addDiagnostic(de.toDiagnostic());
                 diagnostics.addDiagnostic(new Diagnostic(DiagnosticKind.LOAD_ERROR, FUNCTION_LOAD_FAILED,
                     "Failed to create function handle (" + key + "), falling back to vanilla", null, key, null, e));
                 LOGGER.warn("Failed to create function handle ({}), falling back to vanilla for this function", key, e);
                 failedCount++;
 
-                // Dump IL + raw .class for this function so the codegen bug can be diagnosed offline.
+                // Dump IL + raw batch .class for offline diagnosis.
                 try {
                     if(failedDumpDir == null) {
                         failedDumpDir = generatedDir.resolve("failed_functions");
                         Files.createDirectories(failedDumpDir);
                     }
                     var safeName = (key.namespace() + "__" + key.path()).replace('/', '_');
-                    // lowLevelFunctions is keyed by ClassDesc.displayName() which is just the
-                    // unqualified class name (last path segment), e.g. "swirly#run", not the
-                    // full "mcfc/function/vanilla_refresh/death/soul/swirly#run".
-                    var lastSlash = key.path().lastIndexOf('/');
-                    var simpleName = lastSlash < 0 ? key.path() : key.path().substring(lastSlash + 1);
-                    var classPrefix = simpleName + "#";
+                    // lowLevelFunctions is keyed by displayPrefix (the mangled base name),
+                    // e.g. "fn_vanilla_death_soul_abc12345#fn_...". Match all methods whose
+                    // prefix equals this function's mangled base.
+                    var classPrefix = placement.baseName() + "#";
 
                     var ilDump = new StringBuilder();
                     ilDump.append("# ").append(key).append("\n");
+                    ilDump.append("# batch=").append(placement.batchIndex())
+                          .append(" method=").append(placement.baseName()).append("\n");
                     ilDump.append("# exception: ").append(e.getClass().getName()).append(": ").append(e.getMessage()).append("\n\n");
                     var methods = lowLevelFunctions.entrySet().stream()
                         .filter(en -> en.getKey().startsWith(classPrefix))
@@ -686,17 +815,17 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
                     }
                     Files.writeString(failedDumpDir.resolve(safeName + ".il.txt"), ilDump.toString());
 
-                    var classBytes = rawBytes.get(key);
-                    if(classBytes != null) {
-                        Files.write(failedDumpDir.resolve(safeName + ".class"), classBytes);
+                    var bBytes = rawBatchBytes.get(placement.batchIndex());
+                    if(bBytes != null) {
+                        Files.write(failedDumpDir.resolve(safeName + ".batch" + placement.batchIndex() + ".class"), bBytes);
                     }
-                    LOGGER.warn("  → dumped IL and .class to {}/{}.*", failedDumpDir, safeName);
+                    LOGGER.warn("  → dumped IL and batch .class to {}/{}.*", failedDumpDir, safeName);
                 } catch(Exception dumpEx) {
                     LOGGER.warn("  → failed to dump diagnostic info for {}", key, dumpEx);
                 }
             }
         }
-        rawBytes.clear();
+        rawBatchBytes.clear();
         if(failedCount > 0) {
             LOGGER.warn("{} function(s) fell back to vanilla due to codegen issues", failedCount);
         }
@@ -704,7 +833,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         if(DEBUG_PRINT_TIMINGS) LOGGER.info("Loaded handles in {}ms", (int)(handleLoadTime * 1000));
 
         // ── Metrics ───────────────────────────────────────────────────────────
-        var functionCountsData = new FunctionCountsData(sourceFiles.size(), parsedFunctionCount, successCount.get(), loadedFunctions.size());
+        var functionCountsData = new FunctionCountsData(sourceFiles.size(), parsedFunctionCount, successCount.get(), successfulPlacements.size());
         var timingData         = new TimingData(parseTime, compileTime, 0d, classLoadTime, handleLoadTime);
         var codeGenMetrics     = new CodeGenerationMetrics(
             compiledCommandCount, preOptCount.get(), postOptCount.get(),

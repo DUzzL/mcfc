@@ -34,6 +34,7 @@ public final class EmitterContext {
     private final Map<String, BytecodeValue> staticArguments;
     private final @Nullable Map<String, BytecodeRegister> macroLocations;
     private final List<Instruction> instructions;
+    private final @Nullable FunctionResolver resolver;
 
     private final Int2ObjectMap<BytecodeValue> transforms = new Int2ObjectOpenHashMap<>();
     private final Int2ObjectMap<@Nullable BytecodeLabel> labelMappings = new Int2ObjectOpenHashMap<>();
@@ -50,6 +51,19 @@ public final class EmitterContext {
 
         List<Instruction> instructions
     ) {
+        this(location, fieldStorage, codeWriter, compiledFunctions, staticArguments, macroLocations, instructions, null);
+    }
+
+    public EmitterContext(
+        DataLocation location,
+        CodeFieldStorage fieldStorage,
+        CodeWriter codeWriter,
+        Set<DataLocation> compiledFunctions,
+        Map<String, BytecodeValue> staticArguments,
+        @Nullable Map<String, BytecodeRegister> macroLocations,
+        List<Instruction> instructions,
+        @Nullable FunctionResolver resolver
+    ) {
         this.location = location;
         this.fieldStorage = fieldStorage;
         this.codeWriter = codeWriter;
@@ -57,6 +71,11 @@ public final class EmitterContext {
         this.staticArguments = staticArguments;
         this.macroLocations = macroLocations;
         this.instructions = instructions;
+        this.resolver = resolver;
+    }
+
+    public @Nullable FunctionResolver resolver() {
+        return resolver;
     }
 
     public void emitForEach() {

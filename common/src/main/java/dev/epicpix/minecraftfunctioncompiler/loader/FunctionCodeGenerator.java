@@ -14,6 +14,7 @@ import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticCollector;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticResult;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
+import dev.epicpix.minecraftfunctioncompiler.emitter.FunctionResolver;
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeInstruction;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel;
@@ -78,54 +79,85 @@ public class FunctionCodeGenerator {
     }
 
     public static HashMap<DataLocation, List<CommandParams>> parseFunctions(HashMap<DataLocation, List<String>> functionSources, IArgumentLookup lookup, DiagnosticCollector diagnostics) {
-        HashMap<DataLocation, List<CommandParams>> definedFunctions = new HashMap<>();
-        HashMap<String, HashMap<String, Integer>> parseFailures = new HashMap<>();
-        int totalFailures = 0;
+        // Pre-allocate a per-file array so each command can be written to its final
+        // index without cross-thread contention. Result order within a function must
+        // match input order (mcfunction semantics are sequential).
+        HashMap<DataLocation, CommandParams[]> resultArrays = new HashMap<>(functionSources.size());
         for(var entry : functionSources.entrySet()) {
-            var key = entry.getKey();
-            var values = entry.getValue();
-            ArrayList<CommandParams> parsed = new ArrayList<>();
-            for(String value : values) {
-                DiagnosticResult<CommandParams> res;
-                if(value.startsWith("$")) {
-                    res = CommandParser.parseCommand(value.substring(1), key, true, lookup);
-                }else {
-                    res = CommandParser.parseCommand(value, key, false, lookup);
-                }
-                if(res.isError()) {
-                    var diag = res.getError();
-                    assert diag != null;
-                    diagnostics.addDiagnostic(diag);
-                    String rawCommand = value.startsWith("$") ? value.substring(1) : value;
-                    parsed.add(new CommandFallbackVanilla(rawCommand));
-                    totalFailures++;
-                    parseFailures
-                        .computeIfAbsent(diag.message(), k -> new HashMap<>())
-                        .merge(key.namespace(), 1, Integer::sum);
-                }else {
-                    parsed.add(Objects.requireNonNull(res.getResult()));
+            resultArrays.put(entry.getKey(), new CommandParams[entry.getValue().size()]);
+        }
+
+        var totalFailures = new java.util.concurrent.atomic.AtomicInteger(0);
+        var parseFailures = new java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicInteger>>();
+
+        // Fan every individual command out to a virtual thread. The inner per-command
+        // loop used to be sequential, which pinned one CPU core for minutes on
+        // datapacks whose single .mcfunction file contains tens of thousands of
+        // near-identical commands (e.g. a big "execute ... run particle" carpet).
+        // CommandParser is stateless (each call builds its own StringCommandReader)
+        // and DiagnosticCollector.addDiagnosticSafe is synchronized, so it is safe
+        // to run every parseCommand concurrently with the same lookup.
+        try(var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            for(var entry : functionSources.entrySet()) {
+                final var key = entry.getKey();
+                final var values = entry.getValue();
+                final var arr = resultArrays.get(key);
+                for(int i = 0; i < values.size(); i++) {
+                    final int idx = i;
+                    final String value = values.get(i);
+                    executor.execute(() -> {
+                        DiagnosticResult<CommandParams> res;
+                        if(value.startsWith("$")) {
+                            res = CommandParser.parseCommand(value.substring(1), key, true, lookup);
+                        }else {
+                            res = CommandParser.parseCommand(value, key, false, lookup);
+                        }
+                        if(res.isError()) {
+                            var diag = res.getError();
+                            assert diag != null;
+                            diagnostics.addDiagnosticSafe(diag);
+                            String rawCommand = value.startsWith("$") ? value.substring(1) : value;
+                            arr[idx] = new CommandFallbackVanilla(rawCommand);
+                            totalFailures.incrementAndGet();
+                            parseFailures
+                                .computeIfAbsent(diag.message(), k -> new java.util.concurrent.ConcurrentHashMap<>())
+                                .computeIfAbsent(key.namespace(), k -> new java.util.concurrent.atomic.AtomicInteger(0))
+                                .incrementAndGet();
+                        }else {
+                            arr[idx] = Objects.requireNonNull(res.getResult());
+                        }
+                    });
                 }
             }
-            definedFunctions.put(key, parsed);
+        } // ExecutorService.close() blocks until every task finishes
+
+        HashMap<DataLocation, List<CommandParams>> definedFunctions = new HashMap<>(resultArrays.size());
+        for(var entry : resultArrays.entrySet()) {
+            var arr = entry.getValue();
+            ArrayList<CommandParams> parsed = new ArrayList<>(arr.length);
+            for(var item : arr) parsed.add(item);
+            definedFunctions.put(entry.getKey(), parsed);
         }
-        if(totalFailures > 0) {
+
+        int totalFailuresCount = totalFailures.get();
+        if(totalFailuresCount > 0) {
             var summary = new StringBuilder();
-            summary.append("Partially compiled ").append(totalFailures).append(" command(s) with vanilla fallback. Reasons:");
+            summary.append("Partially compiled ").append(totalFailuresCount).append(" command(s) with vanilla fallback. Reasons:");
             var sortedEntries = new ArrayList<>(parseFailures.entrySet());
             sortedEntries.sort((a, b) -> {
-                int countA = a.getValue().values().stream().mapToInt(Integer::intValue).sum();
-                int countB = b.getValue().values().stream().mapToInt(Integer::intValue).sum();
+                int countA = a.getValue().values().stream().mapToInt(java.util.concurrent.atomic.AtomicInteger::get).sum();
+                int countB = b.getValue().values().stream().mapToInt(java.util.concurrent.atomic.AtomicInteger::get).sum();
                 return Integer.compare(countB, countA);
             });
             for(var reasonEntry : sortedEntries) {
-                int reasonTotal = reasonEntry.getValue().values().stream().mapToInt(Integer::intValue).sum();
+                int reasonTotal = reasonEntry.getValue().values().stream().mapToInt(java.util.concurrent.atomic.AtomicInteger::get).sum();
                 summary.append("\n  ").append(reasonEntry.getKey()).append(": ").append(reasonTotal).append(" command(s)");
                 var namespaces = new ArrayList<>(reasonEntry.getValue().entrySet());
-                namespaces.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
+                namespaces.sort((a, b) -> Integer.compare(b.getValue().get(), a.getValue().get()));
                 summary.append(" (");
                 for(int i = 0; i < namespaces.size(); i++) {
                     if(i > 0) summary.append(", ");
-                    summary.append(namespaces.get(i).getKey()).append(": ").append(namespaces.get(i).getValue());
+                    summary.append(namespaces.get(i).getKey()).append(": ").append(namespaces.get(i).getValue().get());
                 }
                 summary.append(")");
             }
@@ -137,22 +169,29 @@ public class FunctionCodeGenerator {
     public static HashMap<DataLocation, List<Instruction>> compileFunctionsHighLevel(HashMap<DataLocation, List<CommandParams>> definedFunctions, DiagnosticCollector diagnostics, int @Nullable [] instructionCounts, boolean addReq) {
         var compiledFunctions = new java.util.concurrent.ConcurrentHashMap<DataLocation, List<Instruction>>();
         var counter = new java.util.concurrent.atomic.AtomicInteger(0);
-        definedFunctions.entrySet().parallelStream().forEach(func -> {
-            var key = func.getKey();
-            var value = func.getValue();
-            try {
-                var compiled = CommandCompiler.compile(key, value);
-                if(instructionCounts != null) counter.addAndGet(compiled.size());
-                if(addReq) compiled = Instructions.addStaticRequirements(compiled);
-                compiledFunctions.put(key, compiled);
-            }catch(DiagnosticException e) {
-                LOGGER.warn("Failed to compile function {} / {}", key, e.getMessage());
-                diagnostics.addDiagnosticSafe(e.toDiagnostic());
-            }catch(Throwable e) {
-                LOGGER.error("Failed to compile function {}", key, e);
-                diagnostics.addDiagnosticSafe(Diagnostic.compileError(UNSPECIFIED_COMMAND_ERROR, key, e.getMessage(), e));
+        // One virtual thread per function. parallelStream was unreliable here —
+        // it always dispatches to commonPool regardless of enclosing pool, and
+        // commonPool in the target runtime did not scale past 1 active worker.
+        try(var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            for(var func : definedFunctions.entrySet()) {
+                final var key = func.getKey();
+                final var value = func.getValue();
+                executor.execute(() -> {
+                    try {
+                        var compiled = CommandCompiler.compile(key, value);
+                        if(instructionCounts != null) counter.addAndGet(compiled.size());
+                        if(addReq) compiled = Instructions.addStaticRequirements(compiled);
+                        compiledFunctions.put(key, compiled);
+                    }catch(DiagnosticException e) {
+                        LOGGER.warn("Failed to compile function {} / {}", key, e.getMessage());
+                        diagnostics.addDiagnosticSafe(e.toDiagnostic());
+                    }catch(Throwable e) {
+                        LOGGER.error("Failed to compile function {}", key, e);
+                        diagnostics.addDiagnosticSafe(Diagnostic.compileError(UNSPECIFIED_COMMAND_ERROR, key, e.getMessage(), e));
+                    }
+                });
             }
-        });
+        }
         if(instructionCounts != null) instructionCounts[0] = counter.get();
         return new HashMap<>(compiledFunctions);
     }
@@ -160,24 +199,29 @@ public class FunctionCodeGenerator {
     public static HashMap<DataLocation, List<Instruction>> optimizeFunctionsHighLevel(HashMap<DataLocation, List<Instruction>> compiled, DiagnosticCollector diagnostics, int @Nullable [] instructionCounts, boolean addReq) {
         var compiledFunctions = new java.util.concurrent.ConcurrentHashMap<DataLocation, List<Instruction>>();
         var counter = new java.util.concurrent.atomic.AtomicInteger(0);
-        compiled.entrySet().parallelStream().forEach(func -> {
-            // LengauerTarjan is stateful — create a new instance per thread
-            var tarjan = new LengauerTarjan();
-            var key = func.getKey();
-            var value = func.getValue();
-            try {
-                var optimized = Optimizer.optimize(value, tarjan);
-                if(instructionCounts != null) counter.addAndGet(optimized.size());
-                if(addReq) optimized = Instructions.addStaticRequirements(optimized);
-                compiledFunctions.put(key, optimized);
-            }catch(DiagnosticException e) {
-                LOGGER.warn("Failed to optimize function {} / {}", key, e.getMessage());
-                diagnostics.addDiagnosticSafe(e.toDiagnostic());
-            }catch(Throwable e) {
-                LOGGER.error("Failed to optimize function {}", key, e);
-                diagnostics.addDiagnosticSafe(Diagnostic.compileError(UNSPECIFIED_COMMAND_ERROR, key, e.getMessage(), e));
+        // Same VT executor pattern as compileFunctionsHighLevel above — see note.
+        try(var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            for(var func : compiled.entrySet()) {
+                final var key = func.getKey();
+                final var value = func.getValue();
+                executor.execute(() -> {
+                    // LengauerTarjan is stateful — create a new instance per task
+                    var tarjan = new LengauerTarjan();
+                    try {
+                        var optimized = Optimizer.optimize(value, tarjan);
+                        if(instructionCounts != null) counter.addAndGet(optimized.size());
+                        var finalOptimized = addReq ? Instructions.addStaticRequirements(optimized) : optimized;
+                        compiledFunctions.put(key, finalOptimized);
+                    }catch(DiagnosticException e) {
+                        LOGGER.warn("Failed to optimize function {} / {}", key, e.getMessage());
+                        diagnostics.addDiagnosticSafe(e.toDiagnostic());
+                    }catch(Throwable e) {
+                        LOGGER.error("Failed to optimize function {}", key, e);
+                        diagnostics.addDiagnosticSafe(Diagnostic.compileError(UNSPECIFIED_COMMAND_ERROR, key, e.getMessage(), e));
+                    }
+                });
             }
-        });
+        }
         if(instructionCounts != null) instructionCounts[1] = counter.get();
         return new HashMap<>(compiledFunctions);
     }
@@ -188,7 +232,7 @@ public class FunctionCodeGenerator {
 
     private record MacroInput(String source, MacroType<?> type) {}
 
-    private static void writeMacroInstanceCreation(NbtTagBytecodeStringGenerator nbtStringGenerator, ClassDesc className, BytecodeLabel errorLabel, EmitterContext context, List<Instruction> macroInstructions, List<MacroInput> macroInputs, ClassDesc commandSourceStackType) {
+    private static void writeMacroInstanceCreation(NbtTagBytecodeStringGenerator nbtStringGenerator, ClassDesc className, String instancedMethodName, BytecodeLabel errorLabel, EmitterContext context, List<Instruction> macroInstructions, List<MacroInput> macroInputs, ClassDesc commandSourceStackType) {
         context.codeWriter().conditionalJump(JumpCondition.EQ, context.getStatic("FunctionCompound"), new BytecodeValue.NullValue(), errorLabel);
 
         HashMap<String, HashSet<MacroValidator>> generatedValidators = new HashMap<>();
@@ -228,7 +272,7 @@ public class FunctionCodeGenerator {
             targetArgs.add(macro.type.getType().describeConstable().orElseThrow());
         }
 
-        var target = new InstructionTarget.FunctionTarget(className, "runInstanced",  MethodTypeDesc.of(ConstantDescs.CD_long, targetArgs), true, false, false, true);
+        var target = new InstructionTarget.FunctionTarget(className, instancedMethodName,  MethodTypeDesc.of(ConstantDescs.CD_long, targetArgs), true, false, false, true);
         context.codeWriter().returnValue(context.codeWriter().writeTarget(target, arguments));
     }
 
@@ -239,7 +283,53 @@ public class FunctionCodeGenerator {
     private static final int MAX_INSTRUCTIONS_PER_METHOD = 4000;
     private static final long NO_RETURN_SENTINEL = 0x2L << 32;
 
+    @FunctionalInterface
+    private interface MethodSink {
+        void add(String name, List<BytecodeInstruction> instructions, MethodTypeDesc type);
+    }
+
+    /** Legacy API: 1 class per function. Preserved during the batching transition.
+     * New code should use {@link #emitFunctionMethods}. */
     public static byte[] generateFunctionClass(CompilationParams params, DataLocation funcId, List<Instruction> instructions, Set<DataLocation> compiledFunctions, java.util.Map<String, List<BytecodeInstruction>> lowLevelFunctions) {
+        var className = ClassDesc.ofInternalName(("mcfc/function/" + funcId.namespace() + "/" + funcId.path()).replace('.', '$'));
+        return ClassGenerator.createClassGenerator(className, gen -> {
+            MethodSink sink = gen::addFunction;
+            emitInto(params, funcId, instructions, compiledFunctions, null, className, className.displayName(), "run", "runInstanced", sink, lowLevelFunctions);
+        });
+    }
+
+    /** Batching API: emits all methods for one function (run + chunks + optional
+     * macro-instanced body) as a {@link FunctionEmissionResult} to be assembled
+     * later into a shared batch class. Cross-function invokestatic and chunk
+     * dispatch resolve through {@code resolver} and {@code batchClass}. */
+    public static FunctionEmissionResult emitFunctionMethods(
+        CompilationParams params, DataLocation funcId, List<Instruction> instructions,
+        Set<DataLocation> compiledFunctions, FunctionResolver resolver,
+        BatchClassPlanner.PlacedFunction placement, ClassDesc batchClass,
+        java.util.Map<String, List<BytecodeInstruction>> lowLevelFunctions
+    ) {
+        var emitted = new ArrayList<MethodEmission>();
+        MethodSink sink = (name, instr, type) -> emitted.add(new MethodEmission(name, instr, type));
+        String base = placement.baseName();
+        String instancedName = BatchClassPlanner.instancedMethodName(base);
+        emitInto(params, funcId, instructions, compiledFunctions, resolver, batchClass, base, base, instancedName, sink, lowLevelFunctions);
+        return new FunctionEmissionResult(funcId, placement.batchIndex(), emitted);
+    }
+
+    /** Core emit path shared by legacy and batching APIs.
+     *
+     * @param ownerClass     class that will own the emitted methods (for chunk invokestatic)
+     * @param displayPrefix  prefix used when keying {@code lowLevelFunctions} entries
+     * @param runName        name of the primary entry method
+     * @param instancedName  name of the macro instanced method (unused if no macros)
+     */
+    private static void emitInto(
+        CompilationParams params, DataLocation funcId, List<Instruction> instructions,
+        Set<DataLocation> compiledFunctions,
+        @Nullable FunctionResolver resolver,
+        ClassDesc ownerClass, String displayPrefix, String runName, String instancedName,
+        MethodSink sink, java.util.Map<String, List<BytecodeInstruction>> lowLevelFunctions
+    ) {
         var macroInstructions = Instruction.findTyped(instructions, InstructionTypes.LOAD_MACRO);
         var macroInputs = new ArrayList<MacroInput>();
         for(var macroInstr : macroInstructions) {
@@ -253,76 +343,75 @@ public class FunctionCodeGenerator {
             }
         }
 
-        var className = ClassDesc.ofInternalName(("mcfc/function/" + funcId.namespace() + "/" + funcId.path()).replace('.', '$'));
         var nbtType = params.codeFieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND);
         var methodType = MethodTypeDesc.of(ConstantDescs.CD_long, params.commandSourceStackType(), nbtType);
 
-        return ClassGenerator.createClassGenerator(className, gen -> {
-            if(macroInstructions.isEmpty()) {
-                // Check instruction count upfront to avoid expensive full bytecode generation for huge functions
-                if(instructions.size() <= MAX_INSTRUCTIONS_PER_METHOD) {
-                    generateSingleFunction(gen, params, funcId, compiledFunctions, instructions, lowLevelFunctions, className, nbtType, methodType);
-                } else {
-                    generateSplitFunction(gen, params, funcId, compiledFunctions, instructions, lowLevelFunctions, className, methodType);
-                }
+        if(macroInstructions.isEmpty()) {
+            if(instructions.size() <= MAX_INSTRUCTIONS_PER_METHOD) {
+                emitSingleFunction(sink, params, funcId, compiledFunctions, resolver, instructions, lowLevelFunctions, displayPrefix, runName, nbtType, methodType);
             } else {
-                // Macro entry point — generates a trampoline that validates macros then calls runInstanced
-                var entryWriter = new CodeWriter();
-                var staticCommandSourceStack = entryWriter.createRegister();
-                entryWriter.setValue(staticCommandSourceStack, new BytecodeValue.Parameter(0, params.commandSourceStackType()));
-                var staticFunctionCompound = entryWriter.createRegister();
-                entryWriter.setValue(staticFunctionCompound, new BytecodeValue.Parameter(1, nbtType));
-                Map<String, BytecodeValue> staticArguments = Map.of("CommandSourceStack", staticCommandSourceStack, "FunctionCompound", staticFunctionCompound);
-
-                var returnValue = entryWriter.createRegister();
-                var instr = List.of(Instructions2.callFunctionsWithResult(LocationData.ofLocal(-3), List.of(funcId), LocationData.ofLocal(-1), LocationData.ofLocal(-2)));
-                var entryContext = new EmitterContext(funcId, params.codeFieldStorage(), entryWriter, Collections.emptySet(), new HashMap<>(staticArguments), null, instr);
-                entryContext.setTransform(-1, staticCommandSourceStack);
-                entryContext.setTransform(-2, staticFunctionCompound);
-                entryContext.setTransform(-3, returnValue);
-
-                var errorLabel = entryWriter.createLabel();
-                writeMacroInstanceCreation(params.stringGenerator(), className, errorLabel, entryContext, macroInstructions, macroInputs, params.commandSourceStackType());
-                entryWriter.label(errorLabel);
-                entryContext.emitForEach();
-                entryWriter.returnValue(returnValue);
-
-                var entryBytecode = BytecodeOptimizer.optimizeInstructions(entryWriter.getInstructions());
-                lowLevelFunctions.put(className.displayName() + "#run", entryBytecode);
-                gen.addFunction("run", entryBytecode, methodType);
-
-                // runInstanced — may also need splitting
-                var writer = new CodeWriter();
-                var staticCommandSourceStack2 = writer.createRegister();
-                writer.setValue(staticCommandSourceStack2, new BytecodeValue.Parameter(0, params.commandSourceStackType()));
-                HashMap<String, BytecodeRegister> macroLocations = new HashMap<>();
-                int i = 1;
-                for(var macro : macroInputs) {
-                    var macroRegister = writer.createRegister();
-                    macroLocations.put(macro.source, macroRegister);
-                    writer.setValue(macroRegister, new BytecodeValue.Parameter(i, macro.type.getType().describeConstable().orElseThrow()));
-                    i++;
-                }
-                new EmitterContext(funcId, params.codeFieldStorage(), writer, compiledFunctions, new HashMap<>(Map.of("CommandSourceStack", staticCommandSourceStack2)), macroLocations, instructions).emitForEach();
-                writer.returnValue(new BytecodeValue.LongValue(NO_RETURN_SENTINEL));
-
-                var macroedBytecode = BytecodeOptimizer.optimizeInstructions(writer.getInstructions());
-                lowLevelFunctions.put(className.displayName() + "#runInstanced", macroedBytecode);
-                List<ClassDesc> funcParams = new ArrayList<>();
-                funcParams.add(params.commandSourceStackType());
-                for(MacroInput macroInput : macroInputs) {
-                    funcParams.add(macroInput.type.getType().describeConstable().orElseThrow());
-                }
-                gen.addFunction("runInstanced", macroedBytecode, MethodTypeDesc.of(ConstantDescs.CD_long, funcParams));
+                emitSplitFunction(sink, params, funcId, compiledFunctions, resolver, instructions, lowLevelFunctions, ownerClass, displayPrefix, runName, methodType);
             }
-        });
+            return;
+        }
+
+        // Macro entry trampoline — validates macros then invokes instancedName on ownerClass
+        var entryWriter = new CodeWriter();
+        var staticCommandSourceStack = entryWriter.createRegister();
+        entryWriter.setValue(staticCommandSourceStack, new BytecodeValue.Parameter(0, params.commandSourceStackType()));
+        var staticFunctionCompound = entryWriter.createRegister();
+        entryWriter.setValue(staticFunctionCompound, new BytecodeValue.Parameter(1, nbtType));
+        Map<String, BytecodeValue> staticArguments = Map.of("CommandSourceStack", staticCommandSourceStack, "FunctionCompound", staticFunctionCompound);
+
+        var returnValue = entryWriter.createRegister();
+        var instr = List.of(Instructions2.callFunctionsWithResult(LocationData.ofLocal(-3), List.of(funcId), LocationData.ofLocal(-1), LocationData.ofLocal(-2)));
+        var entryContext = new EmitterContext(funcId, params.codeFieldStorage(), entryWriter, Collections.emptySet(), new HashMap<>(staticArguments), null, instr, resolver);
+        entryContext.setTransform(-1, staticCommandSourceStack);
+        entryContext.setTransform(-2, staticFunctionCompound);
+        entryContext.setTransform(-3, returnValue);
+
+        var errorLabel = entryWriter.createLabel();
+        writeMacroInstanceCreation(params.stringGenerator(), ownerClass, instancedName, errorLabel, entryContext, macroInstructions, macroInputs, params.commandSourceStackType());
+        entryWriter.label(errorLabel);
+        entryContext.emitForEach();
+        entryWriter.returnValue(returnValue);
+
+        var entryBytecode = BytecodeOptimizer.optimizeInstructions(entryWriter.getInstructions());
+        lowLevelFunctions.put(displayPrefix + "#" + runName, entryBytecode);
+        sink.add(runName, entryBytecode, methodType);
+
+        // Instanced body
+        var writer = new CodeWriter();
+        var staticCommandSourceStack2 = writer.createRegister();
+        writer.setValue(staticCommandSourceStack2, new BytecodeValue.Parameter(0, params.commandSourceStackType()));
+        HashMap<String, BytecodeRegister> macroLocations = new HashMap<>();
+        int i = 1;
+        for(var macro : macroInputs) {
+            var macroRegister = writer.createRegister();
+            macroLocations.put(macro.source, macroRegister);
+            writer.setValue(macroRegister, new BytecodeValue.Parameter(i, macro.type.getType().describeConstable().orElseThrow()));
+            i++;
+        }
+        new EmitterContext(funcId, params.codeFieldStorage(), writer, compiledFunctions, new HashMap<>(Map.of("CommandSourceStack", staticCommandSourceStack2)), macroLocations, instructions, resolver).emitForEach();
+        writer.returnValue(new BytecodeValue.LongValue(NO_RETURN_SENTINEL));
+
+        var macroedBytecode = BytecodeOptimizer.optimizeInstructions(writer.getInstructions());
+        lowLevelFunctions.put(displayPrefix + "#" + instancedName, macroedBytecode);
+        List<ClassDesc> funcParams = new ArrayList<>();
+        funcParams.add(params.commandSourceStackType());
+        for(MacroInput macroInput : macroInputs) {
+            funcParams.add(macroInput.type.getType().describeConstable().orElseThrow());
+        }
+        sink.add(instancedName, macroedBytecode, MethodTypeDesc.of(ConstantDescs.CD_long, funcParams));
     }
 
-    private static void generateSingleFunction(
-        ClassGenerator gen, CompilationParams params, DataLocation funcId,
-        Set<DataLocation> compiledFunctions, List<Instruction> instructions,
+    private static void emitSingleFunction(
+        MethodSink sink, CompilationParams params, DataLocation funcId,
+        Set<DataLocation> compiledFunctions,
+        @Nullable FunctionResolver resolver,
+        List<Instruction> instructions,
         java.util.Map<String, List<BytecodeInstruction>> lowLevelFunctions,
-        ClassDesc className, ClassDesc nbtType, MethodTypeDesc methodType
+        String displayPrefix, String runName, ClassDesc nbtType, MethodTypeDesc methodType
     ) {
         var entryWriter = new CodeWriter();
         var staticCommandSourceStack = entryWriter.createRegister();
@@ -330,20 +419,22 @@ public class FunctionCodeGenerator {
         var staticFunctionCompound = entryWriter.createRegister();
         entryWriter.setValue(staticFunctionCompound, new BytecodeValue.Parameter(1, nbtType));
         Map<String, BytecodeValue> staticArguments = Map.of("CommandSourceStack", staticCommandSourceStack, "FunctionCompound", staticFunctionCompound);
-        var entryContext = new EmitterContext(funcId, params.codeFieldStorage(), entryWriter, compiledFunctions, new HashMap<>(staticArguments), null, instructions);
+        var entryContext = new EmitterContext(funcId, params.codeFieldStorage(), entryWriter, compiledFunctions, new HashMap<>(staticArguments), null, instructions, resolver);
         entryContext.emitForEach();
         entryWriter.returnValue(new BytecodeValue.LongValue(NO_RETURN_SENTINEL));
 
         var entryBytecode = BytecodeOptimizer.optimizeInstructions(entryWriter.getInstructions());
-        lowLevelFunctions.put(className.displayName() + "#run", entryBytecode);
-        gen.addFunction("run", entryBytecode, methodType);
+        lowLevelFunctions.put(displayPrefix + "#" + runName, entryBytecode);
+        sink.add(runName, entryBytecode, methodType);
     }
 
-    private static void generateSplitFunction(
-        ClassGenerator gen, CompilationParams params, DataLocation funcId,
-        Set<DataLocation> compiledFunctions, List<Instruction> instructions,
+    private static void emitSplitFunction(
+        MethodSink sink, CompilationParams params, DataLocation funcId,
+        Set<DataLocation> compiledFunctions,
+        @Nullable FunctionResolver resolver,
+        List<Instruction> instructions,
         java.util.Map<String, List<BytecodeInstruction>> lowLevelFunctions,
-        ClassDesc className, MethodTypeDesc methodType
+        ClassDesc ownerClass, String displayPrefix, String runName, MethodTypeDesc methodType
     ) {
         var nbtType = params.codeFieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND);
 
@@ -406,27 +497,28 @@ public class FunctionCodeGenerator {
             writer.setValue(nbt, new BytecodeValue.Parameter(1, nbtType));
             Map<String, BytecodeValue> args = Map.of("CommandSourceStack", css, "FunctionCompound", nbt);
 
-            var context = new EmitterContext(funcId, params.codeFieldStorage(), writer, compiledFunctions, new HashMap<>(args), null, effectiveInstructions);
+            var context = new EmitterContext(funcId, params.codeFieldStorage(), writer, compiledFunctions, new HashMap<>(args), null, effectiveInstructions, resolver);
             context.emitForEach();
             writer.returnValue(new BytecodeValue.LongValue(NO_RETURN_SENTINEL));
 
             chunkBytecodes[i] = BytecodeOptimizer.optimizeInstructions(writer.getInstructions());
         });
 
-        // Sequential pass: register in lowLevelFunctions and add to gen (ClassBuilder not thread-safe)
+        // Sequential pass: register in lowLevelFunctions and add to sink (ClassBuilder not thread-safe)
         for(int i = 0; i < chunks.size(); i++) {
-            lowLevelFunctions.put(className.displayName() + "#run$chunk" + i, chunkBytecodes[i]);
-            gen.addFunction("run$chunk" + i, chunkBytecodes[i], methodType);
+            String chunkName = runName + "$chunk" + i;
+            lowLevelFunctions.put(displayPrefix + "#" + chunkName, chunkBytecodes[i]);
+            sink.add(chunkName, chunkBytecodes[i], methodType);
         }
 
-        // Generate dispatch method that calls each chunk
+        // Generate dispatch method that calls each chunk on ownerClass
         var dispatchWriter = new CodeWriter();
         var param0 = new BytecodeValue.Parameter(0, params.commandSourceStackType());
         var param1 = new BytecodeValue.Parameter(1, nbtType);
 
         for(int i = 0; i < chunks.size(); i++) {
             var chunkTarget = new InstructionTarget.FunctionTarget(
-                className, "run$chunk" + i, methodType, true, false, false, true
+                ownerClass, runName + "$chunk" + i, methodType, true, false, false, true
             );
             var result = dispatchWriter.writeTarget(chunkTarget, List.of(param0, param1));
 
@@ -443,8 +535,8 @@ public class FunctionCodeGenerator {
         }
 
         var dispatchBytecode = BytecodeOptimizer.optimizeInstructions(dispatchWriter.getInstructions());
-        lowLevelFunctions.put(className.displayName() + "#run", dispatchBytecode);
-        gen.addFunction("run", dispatchBytecode, methodType);
+        lowLevelFunctions.put(displayPrefix + "#" + runName, dispatchBytecode);
+        sink.add(runName, dispatchBytecode, methodType);
     }
 
     /**

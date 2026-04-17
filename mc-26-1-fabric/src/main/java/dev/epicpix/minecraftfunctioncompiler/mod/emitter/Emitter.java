@@ -44,8 +44,19 @@ public final class Emitter {
                         var commandSourceStack = context.load("stack");
                         if(context.compiledFunctions().contains(func)) {
                             var nbtArgs = context.instruction().get("arguments") != null ? codeWriter.castType(context.load("arguments"), CompoundTag.class.describeConstable().orElseThrow()) : new BytecodeValue.NullValue();
-                            var className = ("mcfc/function/" + func.namespace() + "/" + func.path()).replace('.', '$');
-                            var target = new InstructionTarget.FunctionTarget(ClassDesc.ofInternalName(className), "run", MethodTypeDesc.of(ConstantDescs.CD_long, CommandSourceStack.class.describeConstable().orElseThrow(), context.fieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND)), true, false, false, true);
+                            var methodType = MethodTypeDesc.of(ConstantDescs.CD_long, CommandSourceStack.class.describeConstable().orElseThrow(), context.fieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND));
+                            ClassDesc targetClass;
+                            String targetMethod;
+                            var resolver = context.resolver();
+                            if(resolver != null) {
+                                var resolved = Objects.requireNonNull(resolver.resolveRun(func));
+                                targetClass = resolved.batchClass();
+                                targetMethod = resolved.methodName();
+                            } else {
+                                targetClass = ClassDesc.ofInternalName(("mcfc/function/" + func.namespace() + "/" + func.path()).replace('.', '$'));
+                                targetMethod = "run";
+                            }
+                            var target = new InstructionTarget.FunctionTarget(targetClass, targetMethod, methodType, true, false, false, true);
                             codeWriter.writeTarget(target, commandSourceStack, nbtArgs);
                         }else {
                             var mctxtl = loadCommands_CURRENT_EXECUTION_CONTEXT(codeWriter);
@@ -78,8 +89,19 @@ public final class Emitter {
                         BytecodeRegister returnValue;
                         if(context.compiledFunctions().contains(func)) {
                             var nbtArgs = context.instruction().get("arguments") != null ? codeWriter.castType(context.load("arguments"), CompoundTag.class.describeConstable().orElseThrow()) : new BytecodeValue.NullValue();
-                            var className = ("mcfc/function/" + func.namespace() + "/" + func.path()).replace('.', '$');
-                            var target = new InstructionTarget.FunctionTarget(ClassDesc.ofInternalName(className), "run", MethodTypeDesc.of(ConstantDescs.CD_long, CommandSourceStack.class.describeConstable().orElseThrow(), context.fieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND)), true, false, false, true);
+                            var methodType = MethodTypeDesc.of(ConstantDescs.CD_long, CommandSourceStack.class.describeConstable().orElseThrow(), context.fieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND));
+                            ClassDesc targetClass;
+                            String targetMethod;
+                            var resolver = context.resolver();
+                            if(resolver != null) {
+                                var resolved = Objects.requireNonNull(resolver.resolveRun(func));
+                                targetClass = resolved.batchClass();
+                                targetMethod = resolved.methodName();
+                            } else {
+                                targetClass = ClassDesc.ofInternalName(("mcfc/function/" + func.namespace() + "/" + func.path()).replace('.', '$'));
+                                targetMethod = "run";
+                            }
+                            var target = new InstructionTarget.FunctionTarget(targetClass, targetMethod, methodType, true, false, false, true);
                             returnValue = codeWriter.writeTarget(target, commandSourceStack, nbtArgs);
                         }else {
                             var mctxtl = loadCommands_CURRENT_EXECUTION_CONTEXT(codeWriter);

@@ -42,6 +42,73 @@ public class OptimizationContext {
     // than n.  Invalidated on any structural change (add / remove / replace).
     @Nullable HashMap<InstructionType, IntArrayList> typeIndex = null;
 
+    // ── Per-(type, argIndex) value-index cache ─────────────────────────────────
+    // For a given InstructionType and argument position, maps argument value to
+    // the sorted list of instruction indices whose data[argIndex] equals that
+    // value.  Turns single-predicate findInstructions() queries from O(k) (where
+    // k = # of instructions with the requested type) to O(m) (where m = # of
+    // instructions that actually match the argument value, typically 1).
+    //
+    // Without this index, removeDuplicateChecks on a .mcfunction with ~50k
+    // IF_NULL_JUMP instructions with unique locals scans all 50k for every one
+    // of them — 2.5 billion Objects.equals calls per optimization round — and
+    // a single pathological config-style datapack pins a CPU core for minutes.
+    //
+    // Built lazily per (type, argIndex) on first query; invalidated wholesale on
+    // any structural mutation.
+    @Nullable HashMap<DataIndexKey, HashMap<@Nullable Object, IntArrayList>> dataIndex = null;
+
+    record DataIndexKey(InstructionType type, int argIndex) {}
+
+    // ── O(n) result-slot value-frequency cache ─────────────────────────────────
+    // Like globalValueCounts but ONLY counts occurrences of values stored as
+    // an instruction's "result" output.  Used by isUnstoredLocal() in
+    // removeDeadComparisons to answer "is this local ever written by anyone?"
+    // in O(1) instead of O(n).  On the user's 18 k-command waterfall pack
+    // that turned a 744 s CPU loop into a constant.
+    //
+    // Maintained incrementally on add/remove/replace alongside
+    // globalValueCounts so it never needs full rebuilding once seeded.
+    @Nullable HashMap<Object, Integer> resultValueCounts = null;
+
+    // Per-type cached "result" argument index.  -1 means the type has no
+    // "result" arg (it doesn't return a value).  Computed on first need;
+    // values never change since InstructionType is immutable.
+    private final HashMap<InstructionType, Integer> typeResultArgIdx = new HashMap<>();
+
+    private int resultArgIdxOf(InstructionType type) {
+        Integer cached = typeResultArgIdx.get(type);
+        if(cached != null) return cached;
+        int idx = -1;
+        String[] names = type.argumentNames();
+        for(int i = 0; i < names.length; i++) {
+            if("result".equals(names[i])) { idx = i; break; }
+        }
+        typeResultArgIdx.put(type, idx);
+        return idx;
+    }
+
+    private void incResult(Instruction instr) {
+        if(resultValueCounts == null) return;
+        int idx = resultArgIdxOf(instr.type());
+        if(idx < 0) return;
+        Object v = instr.data()[idx];
+        if(v == null) return;
+        resultValueCounts.merge(v, 1, Integer::sum);
+    }
+
+    private void decResult(Instruction instr) {
+        if(resultValueCounts == null) return;
+        int idx = resultArgIdxOf(instr.type());
+        if(idx < 0) return;
+        Object v = instr.data()[idx];
+        if(v == null) return;
+        Integer c = resultValueCounts.get(v);
+        if(c == null) return;
+        if(c <= 1) resultValueCounts.remove(v);
+        else resultValueCounts.put(v, c - 1);
+    }
+
     OptimizationContext(ArrayList<Instruction> instructions, int nextLocalId, LengauerTarjan tarjan) {
         this.instructions = instructions;
         this.nextLocalId = nextLocalId;
@@ -75,6 +142,8 @@ public class OptimizationContext {
     void invalidateCaches() {
         globalValueCounts = null;
         typeIndex = null;
+        dataIndex = null;
+        resultValueCounts = null;
     }
 
     /** Increment globalValueCounts for every non-null value in {@code data}. */
@@ -104,7 +173,9 @@ public class OptimizationContext {
      */
     void onInstructionAdded(int index, Instruction instr) {
         incCounts(instr.data());
+        incResult(instr);
         typeIndex = null;
+        dataIndex = null;
     }
 
     /**
@@ -114,7 +185,9 @@ public class OptimizationContext {
      */
     void onInstructionRemoved(int index, Instruction removed) {
         decCounts(removed.data());
+        decResult(removed);
         typeIndex = null;
+        dataIndex = null;
     }
 
     /**
@@ -126,6 +199,10 @@ public class OptimizationContext {
         if(globalValueCounts != null) {
             decCounts(oldInstr.data());
             incCounts(newInstr.data());
+        }
+        if(resultValueCounts != null) {
+            decResult(oldInstr);
+            incResult(newInstr);
         }
         if(typeIndex != null && oldInstr.type() != newInstr.type()) {
             var oldList = typeIndex.get(oldInstr.type());
@@ -140,6 +217,36 @@ public class OptimizationContext {
             if(ins < 0) ins = -ins - 1;
             newList.add(ins, index);
         }
+        // Data values and/or type may have changed; the incremental patching of
+        // dataIndex across an arbitrary data rewrite is fiddly enough that full
+        // invalidation is the safer default.  Rebuilding is O(n) per queried
+        // (type, argIndex) on next access, still vastly cheaper than the O(k²)
+        // scan it replaces.
+        dataIndex = null;
+    }
+
+    /**
+     * Returns (and lazily builds) a value → count-of-result-stores map.
+     * Each entry is: value → number of instructions whose "result" arg slot
+     * holds that value.  Use this to ask "is this local ever written?"
+     * without scanning every instruction.
+     */
+    HashMap<Object, Integer> getResultValueCounts() {
+        if(resultValueCounts == null) {
+            resultValueCounts = new HashMap<>();
+            for(var instr : instructions) {
+                int idx = resultArgIdxOf(instr.type());
+                if(idx < 0) continue;
+                Object v = instr.data()[idx];
+                if(v != null) resultValueCounts.merge(v, 1, Integer::sum);
+            }
+        }
+        return resultValueCounts;
+    }
+
+    /** Public view of {@link #resultArgIdxOf} for callers in this package. */
+    int resultArgIndex(InstructionType type) {
+        return resultArgIdxOf(type);
     }
 
     /**
@@ -171,6 +278,34 @@ public class OptimizationContext {
             }
         }
         return typeIndex;
+    }
+
+    /**
+     * Returns (and lazily builds) a value → indices map for the given
+     * ({@code type}, {@code argIndex}) pair.  An entry {@code v → [i1, i2, ...]}
+     * means instructions {@code i1, i2, ...} all have {@code type} and
+     * {@code data[argIndex].equals(v)}.
+     *
+     * <p>Index lists are in ascending order.  Returned map may contain a
+     * {@code null} key if any instruction of the given type stores
+     * {@code null} at {@code argIndex}.
+     */
+    HashMap<@Nullable Object, IntArrayList> getDataIndex(InstructionType type, int argIndex) {
+        if(dataIndex == null) dataIndex = new HashMap<>();
+        var key = new DataIndexKey(type, argIndex);
+        var cached = dataIndex.get(key);
+        if(cached != null) return cached;
+        var map = new HashMap<@Nullable Object, IntArrayList>();
+        var typed = getTypeIndex().get(type);
+        if(typed != null) {
+            for(var it = typed.intIterator(); it.hasNext(); ) {
+                int i = it.nextInt();
+                Object v = instructions.get(i).data()[argIndex];
+                map.computeIfAbsent(v, k -> new IntArrayList()).add(i);
+            }
+        }
+        dataIndex.put(key, map);
+        return map;
     }
 
     public Instruction getInstruction(int index) {
