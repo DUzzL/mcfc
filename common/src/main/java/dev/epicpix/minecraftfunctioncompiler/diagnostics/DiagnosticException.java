@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.diagnostics;
 
+@SuppressWarnings("serial")
 public class DiagnosticException extends RuntimeException {
     private final Diagnostic diagnostic;
 

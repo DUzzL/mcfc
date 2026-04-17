@@ -999,7 +999,7 @@ public class ExtensionFunctions {
             }
         }
         if (!futures.isEmpty()) {
-            java.util.concurrent.CompletableFuture.allOf(futures.toArray(new java.util.concurrent.CompletableFuture[0])).join();
+            java.util.concurrent.CompletableFuture.allOf(futures.toArray(new java.util.concurrent.CompletableFuture<?>[0])).join();
             entityNbtTickCache.putAll(tempResults);
         }
     }

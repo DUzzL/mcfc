@@ -476,7 +476,7 @@ public class FunctionCodeGenerator {
         // Generate bytecode for each chunk in parallel — EmitterContext and BytecodeOptimizer
         // are fully stateless/thread-local, so this is safe. ClassBuilder (gen.addFunction) is
         // NOT thread-safe, so results are collected first and added to gen sequentially.
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings({"unchecked", "rawtypes"})
         List<BytecodeInstruction>[] chunkBytecodes = new List[chunks.size()];
         java.util.stream.IntStream.range(0, chunks.size()).parallel().forEach(i -> {
             var chunkInstructions = chunks.get(i);

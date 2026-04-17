@@ -57,6 +57,7 @@ public class CompilationContext {
     private final UniqueIdTracker idTracker = new UniqueIdTracker();
     public final InstructionWriter instructionWriter = new InstructionWriter();
 
+    @SuppressWarnings("this-escape")
     public CompilationContext(DataLocation source) {
         this.source = source;
         var commandStack = this.<TCommandSourceStack>createLocal();
@@ -562,7 +563,7 @@ public class CompilationContext {
 
             var selectorCodeLocation = data.writeLabel(instructionWriter);
 
-            try(var ignored = enterWithoutValue(data.withContextLabel(selectorCodeLocation))) {
+            try(var _ =enterWithoutValue(data.withContextLabel(selectorCodeLocation))) {
                 if(selector.worldLimited()) {
                     try(var world = getWorld()) {
                         try(var selectorData = forSelectorSelect(selector, realPosition, world.content(), volumeBox, selectBox, resultContext)) {

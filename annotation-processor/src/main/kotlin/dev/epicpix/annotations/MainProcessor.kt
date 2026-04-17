@@ -281,6 +281,7 @@ class MainProcessor(
         map.appendText("import java.lang.constant.ConstantDescs;\n")
         map.appendText("import java.lang.constant.MethodTypeDesc;\n")
         map.appendText("import static ${resultPackage}.EmitterTargets.TARGETS;\n")
+        map.appendText("@SuppressWarnings({\"rawtypes\", \"unchecked\"})\n")
         map.appendText("public class $resultName {\n")
 
         val info = mutableMapOf<String, List<AccessorStatistics>>()
@@ -392,6 +393,7 @@ class MainProcessor(
         val impl = codeGenerator.createNewFile(Dependencies.ALL_FILES, generatorResultPackage, generatorResultClass, "java")
         impl.appendText("package $generatorResultPackage;\n")
         impl.appendText("import java.util.*;\n")
+        impl.appendText("@SuppressWarnings({\"rawtypes\", \"unchecked\"})\n")
         impl.appendText("public final class $generatorResultClass {\n")
 
         val types = codeGenerator.createNewFile(Dependencies.ALL_FILES, enumResultPackage, enumResultClass, "java")
@@ -555,6 +557,7 @@ class MainProcessor(
             val impl = codeGenerator.createNewFile(Dependencies(true, (it as KSClassDeclaration).containingFile!!), generatorResultPackage, generatorResultClass, "java")
             impl.appendText("package $generatorResultPackage;\n")
             impl.appendText("import java.util.*;\n")
+            impl.appendText("@SuppressWarnings({\"rawtypes\", \"unchecked\"})\n")
             impl.appendText("public final class $generatorResultClass {\n")
 
             val types = codeGenerator.createNewFile(Dependencies(true, it.containingFile!!), enumResultPackage, enumResultClass, "java")

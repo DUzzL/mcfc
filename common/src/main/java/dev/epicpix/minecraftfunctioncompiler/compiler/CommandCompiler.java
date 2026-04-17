@@ -74,7 +74,7 @@ public final class CommandCompiler {
         var context = new CompilationContext(source);
         for(var command : commands) {
             var commandLabel = context.current().writeLabel(context.instructionWriter);
-            try(var ignored = context.enterWithoutValue(context.current().withContextLabel(commandLabel))) {
+            try(var _ =context.enterWithoutValue(context.current().withContextLabel(commandLabel))) {
                 try(var resultContext = ResultContext.create(context, false, false)) {
                     compile(context, null, command, resultContext);
                 }
@@ -125,7 +125,7 @@ public final class CommandCompiler {
                     try(var pos = context.getPosition()) {
                         var newPosition = context.<TVec3>createLocal();
                         pos.writeInstruction(Instructions.alignPosition(newPosition, pos.content(), swizzle));
-                        try(var ignored = context.enterWithoutValue(pos.data().withCurrentPosition(newPosition))) {
+                        try(var _ =context.enterWithoutValue(pos.data().withCurrentPosition(newPosition))) {
                             compile(context, fContext.content(), command, result);
                         }
                     }
@@ -133,7 +133,7 @@ public final class CommandCompiler {
             }
             case CommandExecuteAnchored(LocationAnchor anchor, CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext)) {
-                    try(var ignored = context.enterWithoutValue(context.current().withCurrentAnchor(anchor))) {
+                    try(var _ =context.enterWithoutValue(context.current().withCurrentAnchor(anchor))) {
                         compile(context, fContext.content(), command, result);
                     }
                 }
@@ -141,7 +141,7 @@ public final class CommandCompiler {
             case CommandExecuteAs(SelectorArgument targets, CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext)) {
                     try(var selector = context.forSelector(targets, result)) {
-                        try(var ignored = context.enterWithoutValue(selector.data().withCurrentEntity(selector.content()))) {
+                        try(var _ =context.enterWithoutValue(selector.data().withCurrentEntity(selector.content()))) {
                             compile(context, fContext.content(), command, result);
                         }
                     }
@@ -156,7 +156,7 @@ public final class CommandCompiler {
                         selector.writeInstruction(Instructions.getEntityWorld(world, selector.content()));
                         selector.writeInstruction(Instructions.getEntityPosition(position, selector.content()));
                         selector.writeInstruction(Instructions.getEntityRotation(rotation, selector.content()));
-                        try(var ignored = context.enterWithoutValue(selector.data().withCurrentPosition(position).withCurrentRotation(rotation).withCurrentWorld(world))) {
+                        try(var _ =context.enterWithoutValue(selector.data().withCurrentPosition(position).withCurrentRotation(rotation).withCurrentWorld(world))) {
                             compile(context, fContext.content(), command, result);
                         }
                     }
@@ -164,7 +164,7 @@ public final class CommandCompiler {
             }
             case CommandExecuteIfEntity(SelectorArgument entities, CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext)) {
-                    try(var ignored = context.forSelector(entities.limit(1), result)) {
+                    try(var _ =context.forSelector(entities.limit(1), result)) {
                         compile(context, fContext.content(), command, result);
                     }
                 }
@@ -218,7 +218,7 @@ public final class CommandCompiler {
                         var origin = context.<TEntity>createLocal();
                         currentEntity.writeInstruction(Instructions.getEntityOrigin(origin, traceableEntity));
                         currentEntity.writeInstruction(Instructions.ifNullJump(origin, currentEntity.endLabel()));
-                        try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(origin))) {
+                        try(var _ =context.enterWithoutValue(currentEntity.data().withCurrentEntity(origin))) {
                             compile(context, fContext.content(), command, result);
                         }
                     }
@@ -232,7 +232,7 @@ public final class CommandCompiler {
                         var target = context.<TLivingEntity>createLocal();
                         currentEntity.writeInstruction(Instructions.getEntityTarget(target, targetingEntity));
                         currentEntity.writeInstruction(Instructions.ifNullJump(target, currentEntity.endLabel()));
-                        try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(target))) {
+                        try(var _ =context.enterWithoutValue(currentEntity.data().withCurrentEntity(target))) {
                             compile(context, fContext.content(), command, result);
                         }
                     }
@@ -244,7 +244,7 @@ public final class CommandCompiler {
                         var vehicle = context.<TEntity>createLocal();
                         currentEntity.writeInstruction(Instructions.getEntityVehicle(vehicle, currentEntity.content()));
                         currentEntity.writeInstruction(Instructions.ifNullJump(vehicle, currentEntity.endLabel()));
-                        try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(vehicle))) {
+                        try(var _ =context.enterWithoutValue(currentEntity.data().withCurrentEntity(vehicle))) {
                             compile(context, fContext.content(), command, result);
                         }
                     }
@@ -255,7 +255,7 @@ public final class CommandCompiler {
                     try(var targets = context.forSelector(targetsArg, result)) {
                         var position = context.<TVec3>createLocal();
                         targets.writeInstruction(Instructions.getEntityPosition(position, targets.content()));
-                        try(var ignored = context.enterWithoutValue(targets.data().withCurrentPosition(position))) {
+                        try(var _ =context.enterWithoutValue(targets.data().withCurrentPosition(position))) {
                             compile(context, fContext.content(), command, result);
                         }
                     }
@@ -264,7 +264,7 @@ public final class CommandCompiler {
             case CommandExecutePositionedPos(WorldCoordinates pos, CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext)) {
                     try(var position = context.applyPosition(pos)) {
-                        try(var ignored = context.enterWithoutValue(position.data().withCurrentPosition(position.content()).withCurrentAnchor(LocationAnchor.FEET))) {
+                        try(var _ =context.enterWithoutValue(position.data().withCurrentPosition(position.content()).withCurrentAnchor(LocationAnchor.FEET))) {
                             compile(context, fContext.content(), command, result);
                         }
                     }
@@ -275,7 +275,7 @@ public final class CommandCompiler {
                     try(var targets = context.forSelector(targetsArg, result)) {
                         var rotation = context.<TVec2>createLocal();
                         targets.writeInstruction(Instructions.getEntityRotation(rotation, targets.content()));
-                        try(var ignored = context.enterWithoutValue(targets.data().withCurrentRotation(rotation))) {
+                        try(var _ =context.enterWithoutValue(targets.data().withCurrentRotation(rotation))) {
                             compile(context, fContext.content(), command, result);
                         }
                     }
@@ -284,19 +284,19 @@ public final class CommandCompiler {
             case CommandExecuteRotatedRot(RotationCoordinates rot, CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext)) {
                     try(var rotation = context.applyRotation(rot)) {
-                        try(var ignored = context.enterWithoutValue(rotation.data().withCurrentRotation(rotation.content()))) {
+                        try(var _ =context.enterWithoutValue(rotation.data().withCurrentRotation(rotation.content()))) {
                             compile(context, fContext.content(), command, result);
                         }
                     }
                 }
             }
             case CommandExecuteRun(CommandParams command) -> {
-                try(var ignored = context.generateForkExecCode(forkingContext)) {
+                try(var _ =context.generateForkExecCode(forkingContext)) {
                     compile(context, forkingContext, command, result);
                 }
             }
             case CommandExecuteStoreScore(ResultStoreLocationType storeLocation, ScoreAccessorArgument targets, CommandParams command) -> {
-                try(var ignored = context.generateForkExecCode(forkingContext)) {
+                try(var _ =context.generateForkExecCode(forkingContext)) {
                     var localResult = ResultContext.create(context, storeLocation == ResultStoreLocationType.SUCCESS, storeLocation == ResultStoreLocationType.RESULT);
                     compile(context, null, command, localResult);
                     localResult.endGeneration();
@@ -308,7 +308,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteStoreStorage(ResultStoreLocationType storeLocation, DataLocation storage, NbtPath path, ResultStoreType storeType, double scale, CommandParams command) -> {
-                try(var ignored = context.generateForkExecCode(forkingContext)) {
+                try(var _ =context.generateForkExecCode(forkingContext)) {
                     var localResult = ResultContext.create(context, storeLocation == ResultStoreLocationType.SUCCESS, storeLocation == ResultStoreLocationType.RESULT);
                     compile(context, null, command, localResult);
                     localResult.endGeneration();
@@ -403,7 +403,7 @@ public final class CommandCompiler {
                 try(var fContext = context.withForkingContext(forkingContext)) {
                     var contextLabel = context.current().contextEndLabel();
                     var codeLocation = context.current().writeLabel(context.instructionWriter);
-                    try(var ignored = context.enterWithoutValue(context.current().withContextLabel(codeLocation))) {
+                    try(var _ =context.enterWithoutValue(context.current().withContextLabel(codeLocation))) {
                         try(var selector = context.forSelector(entities.limit(1), result)) {
                             selector.writeInstruction(Instructions.jump(contextLabel));
                         }
@@ -1105,7 +1105,7 @@ public final class CommandCompiler {
             case CommandExecuteUnlessEntityOnly(SelectorArgument entities) -> {
                 result.markImplemented();
                 var codeLocation = context.current().writeLabel(context.instructionWriter);
-                try(var ignored = context.enterWithoutValue(context.current().withContextLabel(codeLocation))) {
+                try(var _ =context.enterWithoutValue(context.current().withContextLabel(codeLocation))) {
                     try(var selector = context.forSelector(entities.limit(1), result)) {
                         selector.writeInstruction(Instructions.jump(result.markAndGetErrorLabel()));
                     }
@@ -1140,7 +1140,7 @@ public final class CommandCompiler {
                     // vanilla execute summon runs inner command as the summoned entity at its position
                     var entityPos = context.<TVec3>createLocal();
                     context.writeInstruction(Instructions.getEntityPosition(entityPos, summonedEntity));
-                    try(var ignored = context.enterWithoutValue(context.current().withCurrentEntity(summonedEntity).withCurrentPosition(entityPos))) {
+                    try(var _ =context.enterWithoutValue(context.current().withCurrentEntity(summonedEntity).withCurrentPosition(entityPos))) {
                         compile(context, fContext.content(), command, result);
                     }
                 }
@@ -1152,7 +1152,7 @@ public final class CommandCompiler {
                         try(var currentPos = context.getPosition()) {
                             var newPos = context.<TVec3>createLocal();
                             context.writeInstruction(Instructions.positionedOver(newPos, world.content(), currentPos.content(), heightmap));
-                            try(var ignored = context.enterWithoutValue(context.current().withCurrentPosition(newPos))) {
+                            try(var _ =context.enterWithoutValue(context.current().withCurrentPosition(newPos))) {
                                 compile(context, fContext.content(), command, result);
                             }
                         }
@@ -1235,7 +1235,7 @@ public final class CommandCompiler {
                     var worldLocal = context.<TServerLevel>createLocal();
                     context.writeInstruction(Instructions.getDimensionLevel(worldLocal, dimension.toString()));
                     context.writeInstruction(Instructions.ifNullJump(worldLocal, context.current().contextEndLabel()));
-                    try(var ignored = context.enterWithoutValue(context.current().withCurrentWorld(worldLocal))) {
+                    try(var _ =context.enterWithoutValue(context.current().withCurrentWorld(worldLocal))) {
                         compile(context, fContext.content(), command, result);
                     }
                 }
@@ -1318,7 +1318,7 @@ public final class CommandCompiler {
                         var holder = context.<TEntity>createLocal();
                         currentEntity.writeInstruction(Instructions.getEntityLeashHolder(holder, currentEntity.content()));
                         currentEntity.writeInstruction(Instructions.ifNullJump(holder, currentEntity.endLabel()));
-                        try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(holder))) {
+                        try(var _ =context.enterWithoutValue(currentEntity.data().withCurrentEntity(holder))) {
                             compile(context, fContext.content(), command, result);
                         }
                     }
@@ -1330,7 +1330,7 @@ public final class CommandCompiler {
                         var attacker = context.<TEntity>createLocal();
                         currentEntity.writeInstruction(Instructions.getEntityLastAttacker(attacker, currentEntity.content()));
                         currentEntity.writeInstruction(Instructions.ifNullJump(attacker, currentEntity.endLabel()));
-                        try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(attacker))) {
+                        try(var _ =context.enterWithoutValue(currentEntity.data().withCurrentEntity(attacker))) {
                             compile(context, fContext.content(), command, result);
                         }
                     }
@@ -1342,7 +1342,7 @@ public final class CommandCompiler {
                         var controller = context.<TEntity>createLocal();
                         currentEntity.writeInstruction(Instructions.getEntityController(controller, currentEntity.content()));
                         currentEntity.writeInstruction(Instructions.ifNullJump(controller, currentEntity.endLabel()));
-                        try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(controller))) {
+                        try(var _ =context.enterWithoutValue(currentEntity.data().withCurrentEntity(controller))) {
                             compile(context, fContext.content(), command, result);
                         }
                     }
@@ -1354,7 +1354,7 @@ public final class CommandCompiler {
                         var owner = context.<TEntity>createLocal();
                         currentEntity.writeInstruction(Instructions.getEntityOwner(owner, currentEntity.content()));
                         currentEntity.writeInstruction(Instructions.ifNullJump(owner, currentEntity.endLabel()));
-                        try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(owner))) {
+                        try(var _ =context.enterWithoutValue(currentEntity.data().withCurrentEntity(owner))) {
                             compile(context, fContext.content(), command, result);
                         }
                     }
@@ -1378,7 +1378,7 @@ public final class CommandCompiler {
                         var codeLocation = currentEntity.data().writeLabel(context.instructionWriter);
                         currentEntity.writeInstruction(Instructions.valueAdd(index, index, LocationData.ofInteger(1)));
                         currentEntity.writeInstruction(Instructions.jump(iterStart));
-                        try(var ignored = context.enterWithoutValue(currentEntity.data().withCurrentEntity(passenger).withContextLabel(codeLocation))) {
+                        try(var _ =context.enterWithoutValue(currentEntity.data().withCurrentEntity(passenger).withContextLabel(codeLocation))) {
                             compile(context, fContext.content(), command, result);
                         }
                     }
