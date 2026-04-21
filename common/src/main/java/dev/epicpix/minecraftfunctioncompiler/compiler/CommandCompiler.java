@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.compiler;
 
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
+import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroType;
 import dev.epicpix.minecraftfunctioncompiler.commands.params.*;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.Difficulty;
@@ -1028,7 +1029,7 @@ public final class CommandCompiler {
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: block entity NBT access),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandExecuteIfDataBlock(WorldCoordinates pos, NbtPath path, CommandParams command) ->
-                emitVanillaFallback(context, "execute if data block " + worldCoordsToString(pos) + " " + nbtPathToString(path) + " run " + getRawCommand(command));
+                emitVanillaFallback(context, "execute if data block " + worldCoordsToString(pos) + " " + nbtPathToString(path) + " run " + getRawCommand(context, command));
             case CommandExecuteUnlessDataEntity(SelectorArgument target, NbtPath path, CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext)) {
                     var contextLabel = context.current().contextEndLabel();
@@ -1056,18 +1057,18 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteUnlessDataBlock(WorldCoordinates pos, NbtPath path, CommandParams command) ->
-                emitVanillaFallback(context, "execute unless data block " + worldCoordsToString(pos) + " " + nbtPathToString(path) + " run " + getRawCommand(command));
+                emitVanillaFallback(context, "execute unless data block " + worldCoordsToString(pos) + " " + nbtPathToString(path) + " run " + getRawCommand(context, command));
 
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: block region comparison + block entity serialization),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandExecuteIfBlocks(WorldCoordinates start, WorldCoordinates end, WorldCoordinates destination, CommandParams command) ->
-                emitVanillaFallback(context, "execute if blocks " + worldCoordsToString(start) + " " + worldCoordsToString(end) + " " + worldCoordsToString(destination) + " all run " + getRawCommand(command));
+                emitVanillaFallback(context, "execute if blocks " + worldCoordsToString(start) + " " + worldCoordsToString(end) + " " + worldCoordsToString(destination) + " all run " + getRawCommand(context, command));
             case CommandExecuteIfBlocksMasked(WorldCoordinates start, WorldCoordinates end, WorldCoordinates destination, CommandParams command) ->
-                emitVanillaFallback(context, "execute if blocks " + worldCoordsToString(start) + " " + worldCoordsToString(end) + " " + worldCoordsToString(destination) + " masked run " + getRawCommand(command));
+                emitVanillaFallback(context, "execute if blocks " + worldCoordsToString(start) + " " + worldCoordsToString(end) + " " + worldCoordsToString(destination) + " masked run " + getRawCommand(context, command));
             case CommandExecuteUnlessBlocks(WorldCoordinates start, WorldCoordinates end, WorldCoordinates destination, CommandParams command) ->
-                emitVanillaFallback(context, "execute unless blocks " + worldCoordsToString(start) + " " + worldCoordsToString(end) + " " + worldCoordsToString(destination) + " all run " + getRawCommand(command));
+                emitVanillaFallback(context, "execute unless blocks " + worldCoordsToString(start) + " " + worldCoordsToString(end) + " " + worldCoordsToString(destination) + " all run " + getRawCommand(context, command));
             case CommandExecuteUnlessBlocksMasked(WorldCoordinates start, WorldCoordinates end, WorldCoordinates destination, CommandParams command) ->
-                emitVanillaFallback(context, "execute unless blocks " + worldCoordsToString(start) + " " + worldCoordsToString(end) + " " + worldCoordsToString(destination) + " masked run " + getRawCommand(command));
+                emitVanillaFallback(context, "execute unless blocks " + worldCoordsToString(start) + " " + worldCoordsToString(end) + " " + worldCoordsToString(destination) + " masked run " + getRawCommand(context, command));
 
             // execute if/unless без sub-command (result/success context)
             case CommandExecuteIfScoreRangeOnly(ScoreAccessorArgument target, IntRangeArgument range) -> {
@@ -1280,13 +1281,13 @@ public final class CommandCompiler {
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: item predicate parsing + slot iteration),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandExecuteIfItemsEntity(SelectorArgument targets, String slot, String predicate, CommandParams command) ->
-                emitVanillaFallback(context, "execute if items entity " + selectorToString(targets) + " " + slot + " " + predicate + " run " + getRawCommand(command));
+                emitVanillaFallback(context, "execute if items entity " + selectorToString(targets) + " " + slot + " " + predicate + " run " + getRawCommand(context, command));
             case CommandExecuteUnlessItemsEntity(SelectorArgument targets, String slot, String predicate, CommandParams command) ->
-                emitVanillaFallback(context, "execute unless items entity " + selectorToString(targets) + " " + slot + " " + predicate + " run " + getRawCommand(command));
+                emitVanillaFallback(context, "execute unless items entity " + selectorToString(targets) + " " + slot + " " + predicate + " run " + getRawCommand(context, command));
             case CommandExecuteIfItemsBlock(WorldCoordinates pos, String slot, String predicate, CommandParams command) ->
-                emitVanillaFallback(context, "execute if items block " + worldCoordsToString(pos) + " " + slot + " " + predicate + " run " + getRawCommand(command));
+                emitVanillaFallback(context, "execute if items block " + worldCoordsToString(pos) + " " + slot + " " + predicate + " run " + getRawCommand(context, command));
             case CommandExecuteUnlessItemsBlock(WorldCoordinates pos, String slot, String predicate, CommandParams command) ->
-                emitVanillaFallback(context, "execute unless items block " + worldCoordsToString(pos) + " " + slot + " " + predicate + " run " + getRawCommand(command));
+                emitVanillaFallback(context, "execute unless items block " + worldCoordsToString(pos) + " " + slot + " " + predicate + " run " + getRawCommand(context, command));
 
             // execute if/unless items standalone — для execute store result ... if items ...
             case CommandExecuteIfItemsEntityOnly(SelectorArgument targets, String slot, String predicate) -> {
@@ -1309,7 +1310,7 @@ public final class CommandCompiler {
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: entity NBT load/save + path resolution),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandExecuteStoreEntity(ResultStoreLocationType storeLocation, SelectorArgument target, NbtPath path, ResultStoreType storeType, double scale, CommandParams command) ->
-                emitVanillaFallback(context, "execute store " + storeLocation.name().toLowerCase() + " entity " + selectorToString(target) + " " + nbtPathToString(path) + " " + storeType.name().toLowerCase() + " " + scale + " run " + getRawCommand(command));
+                emitVanillaFallback(context, "execute store " + storeLocation.name().toLowerCase() + " entity " + selectorToString(target) + " " + nbtPathToString(path) + " " + storeType.name().toLowerCase() + " " + scale + " run " + getRawCommand(context, command));
 
             // execute on leasher / attacker / controller / owner / passengers
             case CommandExecuteOnLeasher(CommandParams command) -> {
@@ -1899,21 +1900,21 @@ public final class CommandCompiler {
             }
 
             // particle — native compilation
-            case CommandParticleName(DataLocation name) -> {
+            case CommandParticleName(String name) -> {
                 try(var world = context.getWorld()) {
                     try(var position = context.getPosition()) {
                         context.writeInstruction(Instructions.spawnParticleSimple(world.content(), name.toString(), position.content()));
                     }
                 }
             }
-            case CommandParticle(DataLocation name, WorldCoordinates pos) -> {
+            case CommandParticle(String name, WorldCoordinates pos) -> {
                 try(var world = context.getWorld()) {
                     try(var position = context.applyPosition(pos)) {
                         context.writeInstruction(Instructions.spawnParticleSimple(world.content(), name.toString(), position.content()));
                     }
                 }
             }
-            case CommandParticleViewers(DataLocation name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count) -> {
+            case CommandParticleViewers(String name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count) -> {
                 try(var world = context.getWorld()) {
                     try(var position = context.applyPosition(pos)) {
                         try(var deltaPos = context.applyPosition(delta)) {
@@ -1922,7 +1923,7 @@ public final class CommandCompiler {
                     }
                 }
             }
-            case CommandParticleViewersForce(DataLocation name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count) -> {
+            case CommandParticleViewersForce(String name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count) -> {
                 try(var world = context.getWorld()) {
                     try(var position = context.applyPosition(pos)) {
                         try(var deltaPos = context.applyPosition(delta)) {
@@ -1931,7 +1932,7 @@ public final class CommandCompiler {
                     }
                 }
             }
-            case CommandParticleViewersNormal(DataLocation name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count) -> {
+            case CommandParticleViewersNormal(String name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count) -> {
                 try(var world = context.getWorld()) {
                     try(var position = context.applyPosition(pos)) {
                         try(var deltaPos = context.applyPosition(delta)) {
@@ -1940,7 +1941,7 @@ public final class CommandCompiler {
                     }
                 }
             }
-            case CommandParticleViewersParams(DataLocation name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count, SelectorArgument viewers) -> {
+            case CommandParticleViewersParams(String name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count, SelectorArgument viewers) -> {
                 try(var world = context.getWorld()) {
                     try(var position = context.applyPosition(pos)) {
                         try(var deltaPos = context.applyPosition(delta)) {
@@ -1950,7 +1951,7 @@ public final class CommandCompiler {
                     }
                 }
             }
-            case CommandParticleViewersForceParams(DataLocation name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count, SelectorArgument viewers) -> {
+            case CommandParticleViewersForceParams(String name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count, SelectorArgument viewers) -> {
                 try(var world = context.getWorld()) {
                     try(var position = context.applyPosition(pos)) {
                         try(var deltaPos = context.applyPosition(delta)) {
@@ -1960,7 +1961,7 @@ public final class CommandCompiler {
                     }
                 }
             }
-            case CommandParticleViewersNormalParams(DataLocation name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count, SelectorArgument viewers) -> {
+            case CommandParticleViewersNormalParams(String name, WorldCoordinates pos, WorldCoordinates delta, double speed, int count, SelectorArgument viewers) -> {
                 try(var world = context.getWorld()) {
                     try(var position = context.applyPosition(pos)) {
                         try(var deltaPos = context.applyPosition(delta)) {
@@ -2088,7 +2089,18 @@ public final class CommandCompiler {
                 var current = context.current();
                 var stack = context.<TCommandSourceStack>createLocal();
                 context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
-                context.writeInstruction(Instructions.executeVanillaCommand(stack, rawCommand));
+                // If the raw fallback still carries macro placeholders (e.g. `$damage @s
+                // $(damage)`), vanilla can't parse them — macro substitution happens at
+                // function-instantiation time, and our executeVanillaCommand path calls
+                // performPrefixedCommand directly. Build the string at runtime from the
+                // function's CompoundTag macro args via LOAD_MACRO + the _DYNAMIC variant.
+                if(rawCommand.indexOf("$(") >= 0) {
+                    var template = parseVanillaMacroTemplate(rawCommand);
+                    var resolved = context.getResolvedStringMacro(template);
+                    context.writeInstruction(Instructions.executeVanillaCommandDynamic(stack, resolved));
+                } else {
+                    context.writeInstruction(Instructions.executeVanillaCommand(stack, rawCommand));
+                }
             }
             case CommandAdvancementGrantOnly(SelectorArgument targets, DataLocation advancement) -> {
                 try(var players = context.forSelector(targets, result)) {
@@ -2412,10 +2424,78 @@ public final class CommandCompiler {
         }
     }
 
-    // Извлечь raw строку из CommandParams (только для CommandFallbackVanilla — остальные ≈ unreachable в if/unless items контексте)
-    private static String getRawCommand(CommandParams cmd) {
-        if(cmd instanceof CommandFallbackVanilla(String raw)) return raw;
-        return "true"; // safe no-op
+    // Split a raw fallback string like `damage @s $(damage) gbg:bullet_standard` into
+    // a MacroTemplate<String> of alternating literal / MacroKind parts so LOAD_MACRO
+    // can emit the string concat at runtime. Unterminated `$(` is treated as literal.
+    private static MacroTemplate<String> parseVanillaMacroTemplate(String raw) {
+        var parts = new java.util.ArrayList<MacroTemplate.MacroPart>();
+        int i = 0;
+        int literalStart = 0;
+        while(i < raw.length()) {
+            if(raw.charAt(i) == '$' && i + 1 < raw.length() && raw.charAt(i + 1) == '(') {
+                int end = raw.indexOf(')', i + 2);
+                if(end < 0) break;
+                if(i > literalStart) {
+                    parts.add(new MacroTemplate.LiteralKind<>(raw.substring(literalStart, i)));
+                }
+                parts.add(new MacroTemplate.MacroKind(raw.substring(i + 2, end), List.of()));
+                i = end + 1;
+                literalStart = i;
+            } else {
+                i++;
+            }
+        }
+        if(literalStart < raw.length()) {
+            parts.add(new MacroTemplate.LiteralKind<>(raw.substring(literalStart)));
+        }
+        return new MacroTemplate<>(parts, MacroType.STRING_MACRO_TYPE);
+    }
+
+    // Reconstruct the raw command string for a nested command inside an
+    // `execute <mod> run X` vanilla fallback. Until we had this, non-fallback
+    // inner commands were silently replaced with a `true` no-op — so e.g.
+    // `execute as @p if items entity @s weapon.mainhand *[...] run item modify ...`
+    // compiled down to `execute if items entity ... run true`, dropping the
+    // item-modify and breaking datapacks that rely on that pattern (gbg guns
+    // reset their charged_projectiles this way).
+    //
+    // We reconstruct the common commands people actually put in that slot;
+    // for anything we don't yet know how to format, we throw — that bubbles
+    // up to FunctionCodeGenerator / FunctionCompilerClassLoader, which drop
+    // the enclosing function from the compiled set so vanilla dispatches it
+    // correctly. Slower for that one function, but correct.
+    private static String getRawCommand(CompilationContext context, CommandParams cmd) {
+        return switch(cmd) {
+            case CommandFallbackVanilla(String raw) -> raw;
+            // `execute <mods> run X` parses as CommandExecute*(..., CommandExecuteRun(X));
+            // from a raw-text perspective it's just a transparent wrapper around X.
+            case CommandExecuteRun(CommandParams inner) -> getRawCommand(context, inner);
+            case CommandFunction(List<DataLocation> fns) when fns.size() == 1 -> "function " + fns.getFirst();
+            case CommandReturnFail __ -> "return fail";
+            case CommandReturnValue(int value) -> "return " + value;
+            case CommandReturnRun(CommandParams inner) -> "return run " + getRawCommand(context, inner);
+            case CommandKill(SelectorArgument targets) -> "kill " + selectorToString(targets);
+            case CommandItemModifyEntity(SelectorArgument targets, String slot, String modifier) ->
+                "item modify entity " + selectorToString(targets) + " " + slot + " " + modifier;
+            case CommandItemModifyBlock(WorldCoordinates pos, String slot, String modifier) ->
+                "item modify block " + worldCoordsToString(pos) + " " + slot + " " + modifier;
+            case CommandTagAdd(SelectorArgument targets, String name) ->
+                "tag " + selectorToString(targets) + " add " + name;
+            case CommandTagRemove(SelectorArgument targets, String name) ->
+                "tag " + selectorToString(targets) + " remove " + name;
+            case CommandDataGetPath(NbtDataLocation source, NbtPath path) ->
+                "data get " + nbtDataLocationToString(source) + " " + nbtPathToString(path);
+            case CommandDataGetPathScale(NbtDataLocation source, NbtPath path, double scale) ->
+                "data get " + nbtDataLocationToString(source) + " " + nbtPathToString(path) + " " + scale;
+            case CommandScoreboardPlayersGet(ScoreAccessorArgument targets) ->
+                "scoreboard players get " + scoreHolderToString(targets.scoreHolder()) + " " + targets.objective();
+            case CommandRandomValue(IntRangeArgument range) ->
+                "random value " + rangeToString(range);
+            default -> throw new DiagnosticException(Diagnostic.compileError(
+                COMMAND_COMPILE_RESULT_NOT_IMPLEMENTED, context.getSource(),
+                "Cannot reconstruct raw text for nested `run " + cmd.getClass().getSimpleName()
+                    + "` inside a vanilla-fallback execute modifier; falling back the whole function"));
+        };
     }
 
     // Вспомогательный метод — vanilla fallback через executeVanillaCommand с текущим стеком
@@ -2423,7 +2503,19 @@ public final class CommandCompiler {
         var current = context.current();
         var stack = context.<TCommandSourceStack>createLocal();
         context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
-        context.writeInstruction(Instructions.executeVanillaCommand(stack, command));
+        // Same `$(...)` substitution as the CommandFallbackVanilla case. Parsers
+        // that accept greedy_string/macro arguments (item modify, tellraw, data
+        // modify value, etc.) funnel their raw text through here, and without
+        // this branch macro placeholders survived into the vanilla dispatch and
+        // broke macro functions that relied on us resolving them (e.g.
+        // gbg:misc/update_model → no scope model swap).
+        if(command.indexOf("$(") >= 0) {
+            var template = parseVanillaMacroTemplate(command);
+            var resolved = context.getResolvedStringMacro(template);
+            context.writeInstruction(Instructions.executeVanillaCommandDynamic(stack, resolved));
+        } else {
+            context.writeInstruction(Instructions.executeVanillaCommand(stack, command));
+        }
     }
 
     // Реконструкция строки nbt_path для vanilla fallback

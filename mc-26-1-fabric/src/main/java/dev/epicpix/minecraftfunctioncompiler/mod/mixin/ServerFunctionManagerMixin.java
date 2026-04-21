@@ -17,6 +17,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import dev.epicpix.minecraftfunctioncompiler.mod.FunctionCompilerRecursionGuard;
 import dev.epicpix.minecraftfunctioncompiler.mod.FunctionDebugLogger;
 
 @Mixin(ServerFunctionManager.class)
@@ -41,10 +42,15 @@ public class ServerFunctionManagerMixin implements FunctionCompilationStarter {
     @Inject(method = "execute", at = @At("HEAD"), cancellable = true)
     public void run(CommandFunction<CommandSourceStack> commandFunction, CommandSourceStack commandSourceStack, CallbackInfo ci) {
         if(classLoader != null && classLoader.isUseReady()) {
-            if(classLoader.hasFunctionLoaded(commandFunction.id())) {
+            if(classLoader.hasFunctionLoaded(commandFunction.id()) && !FunctionCompilerRecursionGuard.atLimit()) {
                 FunctionDebugLogger.setMcfcState(true);
                 FunctionDebugLogger.recordCompiledCall(commandFunction.id());
-                classLoader.runFunction(commandFunction.id(), commandSourceStack, null);
+                FunctionCompilerRecursionGuard.enter();
+                try {
+                    classLoader.runFunction(commandFunction.id(), commandSourceStack, null);
+                } finally {
+                    FunctionCompilerRecursionGuard.exit();
+                }
                 ci.cancel();
                 return;
             }

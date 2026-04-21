@@ -237,14 +237,14 @@ SETBLOCK_REPLACE/setblock <pos:vec3> <block:block_predicate>
 SETBLOCK_KEEP/setblock <pos:vec3> <block:block_predicate> keep
 SETBLOCK_DESTROY/setblock <pos:vec3> <block:block_predicate> destroy
 
-PARTICLE_NAME/particle <name:resource_location>
-PARTICLE/particle <name:resource_location> <pos:vec3>
-PARTICLE_VIEWERS/particle <name:resource_location> <pos:vec3> <delta:vec3> <speed:double> <count:int>
-PARTICLE_VIEWERS_FORCE/particle <name:resource_location> <pos:vec3> <delta:vec3> <speed:double> <count:int> force
-PARTICLE_VIEWERS_NORMAL/particle <name:resource_location> <pos:vec3> <delta:vec3> <speed:double> <count:int> normal
-PARTICLE_VIEWERS_PARAMS/particle <name:resource_location> <pos:vec3> <delta:vec3> <speed:double> <count:int> <viewers:entity_selector[players]>
-PARTICLE_VIEWERS_FORCE_PARAMS/particle <name:resource_location> <pos:vec3> <delta:vec3> <speed:double> <count:int> force <viewers:entity_selector[players]>
-PARTICLE_VIEWERS_NORMAL_PARAMS/particle <name:resource_location> <pos:vec3> <delta:vec3> <speed:double> <count:int> normal <viewers:entity_selector[players]>
+PARTICLE_NAME/particle <name:particle_options>
+PARTICLE/particle <name:particle_options> <pos:vec3>
+PARTICLE_VIEWERS/particle <name:particle_options> <pos:vec3> <delta:vec3_uncentered> <speed:double> <count:int>
+PARTICLE_VIEWERS_FORCE/particle <name:particle_options> <pos:vec3> <delta:vec3_uncentered> <speed:double> <count:int> force
+PARTICLE_VIEWERS_NORMAL/particle <name:particle_options> <pos:vec3> <delta:vec3_uncentered> <speed:double> <count:int> normal
+PARTICLE_VIEWERS_PARAMS/particle <name:particle_options> <pos:vec3> <delta:vec3_uncentered> <speed:double> <count:int> <viewers:entity_selector[players]>
+PARTICLE_VIEWERS_FORCE_PARAMS/particle <name:particle_options> <pos:vec3> <delta:vec3_uncentered> <speed:double> <count:int> force <viewers:entity_selector[players]>
+PARTICLE_VIEWERS_NORMAL_PARAMS/particle <name:particle_options> <pos:vec3> <delta:vec3_uncentered> <speed:double> <count:int> normal <viewers:entity_selector[players]>
 
 RANDOM_VALUE/random value <range:int_range>
 RANDOM_ROLL/random roll <range:int_range> <sequence:resource_location>

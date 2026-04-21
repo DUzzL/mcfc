@@ -863,6 +863,17 @@ public class ExtensionFunctions {
         try (var reporter = new net.minecraft.util.ProblemReporter.ScopedCollector(entity.problemPath(), LOGGER)) {
             var output = net.minecraft.world.level.storage.TagValueOutput.createWithContext(reporter, entity.registryAccess());
             entity.saveWithoutId(output);
+            // Vanilla's NbtPredicate.getEntityTagToCompare (used by selectors like
+            // @s[nbt={SelectedItem:{...}}]) synthesizes a SelectedItem field for
+            // players from inventory.getSelectedItem(). saveWithoutId doesn't include
+            // it, so without this the gbg sneak handler's `unless entity @s[nbt=
+            // {SelectedItem:...}]` never matched and aiming silently failed.
+            if (entity instanceof net.minecraft.world.entity.player.Player player) {
+                var selected = player.getInventory().getSelectedItem();
+                if (!selected.isEmpty()) {
+                    output.store("SelectedItem", net.minecraft.world.item.ItemStack.CODEC, selected);
+                }
+            }
             return output.buildResult();
         }
     }
@@ -1305,23 +1316,30 @@ public class ExtensionFunctions {
         // running `gamerule command_block_output false` in bacap/root.mcfunction
         // on every advancement) were spamming
         // `[Server: Gamerule X is now set to: Y]` to every player on 26.1+.
+        // Game rule ids in 26.1+ are unnamespaced (e.g. "mob_griefing"), but datapacks
+        // often write `gamerule minecraft:mob_griefing false` and vanilla's command
+        // parser accepts that form. Strip the default `minecraft:` namespace so we
+        // compare against the rule's actual id — otherwise the set silently no-ops
+        // and safe_explosion fails to suppress terrain damage.
+        var normalizedRule = rule.startsWith("minecraft:") ? rule.substring("minecraft:".length()) : rule;
         var gameRules = server.getGameRules();
         gameRules.visitGameRuleTypes(new net.minecraft.world.level.gamerules.GameRuleTypeVisitor() {
             @Override
             public <T> void visit(net.minecraft.world.level.gamerules.GameRule<T> gameRule) {
-                if (!rule.equals(gameRule.id())) return;
+                if (!normalizedRule.equals(gameRule.id())) return;
                 gameRule.deserialize(value).result().ifPresent(v -> gameRules.set(gameRule, v, server));
             }
         });
     }
 
     public static int queryGamerule(MinecraftServer server, String rule) {
+        var normalizedRule = rule.startsWith("minecraft:") ? rule.substring("minecraft:".length()) : rule;
         var gameRules = server.overworld().getGameRules();
         int[] result = {0};
         gameRules.visitGameRuleTypes(new net.minecraft.world.level.gamerules.GameRuleTypeVisitor() {
             @Override
             public <T> void visit(net.minecraft.world.level.gamerules.GameRule<T> gameRule) {
-                if (rule.equals(gameRule.id())) {
+                if (normalizedRule.equals(gameRule.id())) {
                     T val = gameRules.get(gameRule);
                     result[0] = gameRule.getCommandResult(val);
                 }
@@ -1355,7 +1373,26 @@ public class ExtensionFunctions {
     // Vanilla fallback for partial compilation
 
     public static void executeVanillaCommand(CommandSourceStack stack, String command) {
-        stack.getServer().getCommands().performPrefixedCommand(stack, command);
+        // Vanilla's Commands.executeCommandInContext checks the thread-local
+        // CURRENT_EXECUTION_CONTEXT: if non-null (we're already inside a
+        // running command's ExecutionContext), it just queues the command in
+        // the existing context's queue instead of running it synchronously.
+        // Compiled code reads state RIGHT AFTER each executeVanillaCommand
+        // call and expects its effects to be visible (e.g. gbg_no_sneak writes
+        // `storage.new_model = idle_model` then reads storage to pass into
+        // update_model). With queuing, the read sees stale data and the scope
+        // model never reverts. Null out the thread-local so vanilla builds a
+        // fresh context, runs the command, and tears it down — then restore
+        // the outer context so further mixin-dispatched compiled calls still
+        // see it.
+        var ctxField = net.minecraft.commands.Commands.CURRENT_EXECUTION_CONTEXT;
+        var saved = ctxField.get();
+        if (saved != null) ctxField.set(null);
+        try {
+            stack.getServer().getCommands().performPrefixedCommand(stack, command);
+        } finally {
+            if (saved != null) ctxField.set(saved);
+        }
         // Vanilla commands can summon/kill entities or modify entity NBT,
         // so invalidate both caches to prevent stale data in subsequent selectors
         allEntitiesCache.clear();

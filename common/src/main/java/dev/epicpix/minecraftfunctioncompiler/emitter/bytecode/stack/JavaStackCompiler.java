@@ -443,7 +443,10 @@ public class JavaStackCompiler {
                 }
                 ClassDesc[] paramsDescs = new ClassDesc[dynamicCount];
                 Arrays.fill(paramsDescs, ConstantDescs.CD_String);
-                var handle = MethodHandleDesc.ofMethod(DirectMethodHandleDesc.Kind.STATIC, ClassDesc.of("java/lang/invoke/StringConcatFactory"), "makeConcatWithConstants", MethodTypeDesc.of(ConstantDescs.CD_CallSite, ConstantDescs.CD_MethodHandles_Lookup, ConstantDescs.CD_String, ConstantDescs.CD_MethodType, ConstantDescs.CD_String, ConstantDescs.CD_Object.arrayType()));
+                // ClassDesc.of() expects a binary name (dot-separated); using slashes here
+                // produces a malformed class reference that fails classloading with
+                // "Invalid class name: java/lang/invoke/StringConcatFactory".
+                var handle = MethodHandleDesc.ofMethod(DirectMethodHandleDesc.Kind.STATIC, ClassDesc.ofInternalName("java/lang/invoke/StringConcatFactory"), "makeConcatWithConstants", MethodTypeDesc.of(ConstantDescs.CD_CallSite, ConstantDescs.CD_MethodHandles_Lookup, ConstantDescs.CD_String, ConstantDescs.CD_MethodType, ConstantDescs.CD_String, ConstantDescs.CD_Object.arrayType()));
                 var invocationType = MethodTypeDesc.of(ConstantDescs.CD_String, paramsDescs);
                 cb.invokedynamic(DynamicCallSiteDesc.of(handle, "makeConcatWithConstants", invocationType, res));
             }

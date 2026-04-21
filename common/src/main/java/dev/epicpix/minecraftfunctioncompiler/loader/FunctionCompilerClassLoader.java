@@ -875,12 +875,20 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     public long runFunction(TIdentifier location, TCommandSourceStack stack, @Nullable TCompoundTag compound) {
         try {
             return (long) handles.get(location).invoke(stack, compound);
+        } catch(StackOverflowError e) {
+            // The recursion guard in the mixins should normally catch this before
+            // we get here; if it didn't (e.g. a compiled self-call escaping the
+            // guard, or an unrelated deep stack consumer), fail just this call so
+            // the caller — or vanilla on a later tick — can run the function
+            // iteratively. Disabling the whole compiler on one deep stack would
+            // kill every other function too.
+            LOGGER.warn("Stack overflow while running compiled function ({}) — failing this call only", location);
+            return 1L << 32;
         } catch(Throwable e) {
-            LOGGER.error("Failed to run function ({}), disabling mcfc, report this bug to authors", location, e);
+            LOGGER.error("Failed to run function ({}), report this bug to authors", location, e);
             diagnostics.addDiagnostic(new Diagnostic(DiagnosticKind.EXECUTION_ERROR, FUNCTION_EXECUTION_FAILED,
                 "Failed to run function (" + location + ")", null, new DataLocation(location.toString()), null, e));
-            setState(State.EXECUTION_FAILED);
-            return 3L << 32;
+            return 1L << 32;
         }
     }
 

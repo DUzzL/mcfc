@@ -301,6 +301,12 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 builder.append("    var a$argumentIndex = reader.readDataLocation();\n")
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.DataLocation")
             }
+            "particle_options" -> {
+                // Particle name with optional inline `{NBT}` — e.g. `dust{color:[1,0,0],scale:1}`.
+                // Kept as a single String so vanilla's ParticleArgument can re-parse it unchanged.
+                builder.append("    var a$argumentIndex = reader.readParticleOptions();\n")
+                newTypedArguments.add(data.argName!! to "java.lang.String")
+            }
             "result_store_location_type" -> {
                 builder.append("    var a$argumentIndex = reader.readResultStoreLocationType();\n")
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.ResultStoreLocationType")
@@ -369,6 +375,14 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
             }
             "vec3" -> {
                 builder.append("    var a$argumentIndex = reader.readVec3();\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates")
+            }
+            // For args that are scalar vectors (particle delta, spread, etc.) rather than
+            // positions. Vanilla parses these with centerIntegers=false — integer `0 0 0`
+            // stays (0,0,0), not (0.5,0.5,0.5). Centring the delta turned ash/laser trails
+            // into scattered clouds so the bullet line wasn't visible.
+            "vec3_uncentered" -> {
+                builder.append("    var a$argumentIndex = reader.readVec3Uncentered();\n")
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates")
             }
             else -> {

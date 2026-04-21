@@ -917,6 +917,12 @@
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.executeVanillaCommand([ctx:stack], [instr:command]);
 }
 
+// vanilla fallback where the command string is built at runtime (e.g. to
+// resolve $(...) macro placeholders in a raw fallback).
+@EXECUTE_VANILLA_COMMAND_DYNAMIC(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <java.lang.String> [ctx:command]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.executeVanillaCommand([ctx:stack], [ctx:command]);
+}
+
 // scoreboard objectives
 @REMOVE_OBJECTIVE(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [instr:objective]) {
   [local:obj] = [static:Scoreboard].getObjective([instr:objective]);

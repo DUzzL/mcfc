@@ -513,6 +513,44 @@ public class StringCommandReader {
         }
     }
 
+    // Particle name with an optional inline `{NBT}` tail — vanilla's particle
+    // command parses this as one token (e.g. `dust{color:[1,0,0],scale:1}`).
+    // We keep the entire form as a String so ExtensionFunctions.parseParticle
+    // (which delegates to vanilla's ParticleArgument) can hand it back the
+    // exact syntax it understands. Without this, laser-style particles with
+    // NBT options fell back to vanilla command dispatch, which silently ate
+    // them when invoked via the compiled raycast's executeVanillaCommand.
+    public String readParticleOptions() {
+        int start = index;
+        // namespace:path scan — same char set as readDataLocation
+        while(canRead()) {
+            char c = peek();
+            if ((c < '0' || c > '9') && (c < 'a' || c > 'z') && c != '_' && c != ':' && c != '/' && c != '.' && c != '-') {
+                break;
+            }
+            skip();
+        }
+        // Optional NBT tail directly attached (no space).
+        if(canRead() && peek() == '{') {
+            int depth = 0;
+            boolean inString = false;
+            boolean escape = false;
+            while(canRead()) {
+                char c = read();
+                if(escape) { escape = false; continue; }
+                if(c == '\\' && inString) { escape = true; continue; }
+                if(c == '"') { inString = !inString; continue; }
+                if(inString) continue;
+                if(c == '{') depth++;
+                else if(c == '}') {
+                    depth--;
+                    if(depth == 0) break;
+                }
+            }
+        }
+        return command.substring(start, index);
+    }
+
     public DataLocation readDataLocation() {
         int start = index;
         while(canRead()) {
@@ -551,6 +589,27 @@ public class StringCommandReader {
             }
         }
         return new SwizzleArgument(x, y, z);
+    }
+
+    // Scalar-vector variant — integer coords are NOT block-centered. Matches
+    // vanilla's Vec3Argument.vec3(false), used for things like particle delta
+    // where `0 0 0` is literally the zero vector, not "center of block 0,0,0".
+    public WorldCoordinates readVec3Uncentered() {
+        if(peek() == '^') {
+            return readVec3();
+        }
+        boolean relativeX = skipIfNext('~');
+        String x = readNumberBase();
+        if(relativeX && x.isEmpty()) x = "0";
+        if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_VEC3, "Invalid vec3, expected space for next argument");
+        boolean relativeY = skipIfNext('~');
+        String y = readNumberBase();
+        if(relativeY && y.isEmpty()) y = "0";
+        if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_VEC3, "Invalid vec3, expected space for next argument");
+        boolean relativeZ = skipIfNext('~');
+        String z = readNumberBase();
+        if(relativeZ && z.isEmpty()) z = "0";
+        return new WorldCoordinates(parseDouble(x), relativeX, parseDouble(y), relativeY, parseDouble(z), relativeZ, false);
     }
 
     public WorldCoordinates readVec3() {

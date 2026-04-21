@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import dev.epicpix.minecraftfunctioncompiler.mod.FunctionCompilerRecursionGuard;
 import dev.epicpix.minecraftfunctioncompiler.mod.FunctionDebugLogger;
 
 import static dev.epicpix.minecraftfunctioncompiler.mod.FunctionCompilerMain.functionClassLoader;
@@ -29,10 +30,16 @@ public class CallFunctionMixin<T extends ExecutionCommandSource<T>> {
     public void execute(T source, ExecutionContext<T> executionContext, Frame frame, CallbackInfo ci) {
         if(source instanceof CommandSourceStack stack && functionClassLoader != null && functionClassLoader.isUseReady()) {
             var id = ((CallFunction<?>) (Object) this).function.id();
-            if(functionClassLoader.hasFunctionLoaded(id)) {
+            if(functionClassLoader.hasFunctionLoaded(id) && !FunctionCompilerRecursionGuard.atLimit()) {
                 FunctionDebugLogger.setMcfcState(true);
                 FunctionDebugLogger.recordCompiledCall(id);
-                long res = functionClassLoader.runFunction(id, stack, null);
+                long res;
+                FunctionCompilerRecursionGuard.enter();
+                try {
+                    res = functionClassLoader.runFunction(id, stack, null);
+                } finally {
+                    FunctionCompilerRecursionGuard.exit();
+                }
                 if(res >> 32 < 2) {
                     if (res >> 32 == 1) resultCallback.onFailure();
                     else resultCallback.onSuccess((int) res);
