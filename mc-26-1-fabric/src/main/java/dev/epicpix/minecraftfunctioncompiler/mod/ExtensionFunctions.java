@@ -971,6 +971,48 @@ public class ExtensionFunctions {
                 if (!(value instanceof ByteTag expected)) yield null;
                 yield entity.hasGlowingTag() == (expected.byteValue() != 0);
             }
+            // BAC's check_paintings.mcfunction issues 47 distinct
+            // `@e[type=painting,distance=..8,nbt={variant:"…"}]` selectors every
+            // tick a player has placed a painting, hammering full-NBT
+            // serialization. Comparing the painting's variant key directly is
+            // ~50ns vs ~1ms for saveWithoutId + walk.
+            case "variant" -> {
+                if (!(value instanceof StringTag expected)) yield null;
+                String expectedStr = expected.asString().orElse("");
+                if (entity instanceof net.minecraft.world.entity.decoration.painting.Painting painting) {
+                    var keyOpt = painting.getVariant().unwrapKey();
+                    if (keyOpt.isEmpty()) yield Boolean.FALSE;
+                    yield Boolean.valueOf(keyOpt.get().identifier().toString().equals(expectedStr));
+                }
+                yield null; // other entity types — let full path handle
+            }
+            // BAC checks `nbt={Item:{id:"minecraft:…"}}` on ItemEntities to
+            // detect specific dropped items (eggs in splatfest etc). Compare
+            // the item's registry id directly when the pattern is the simple
+            // `{id:"…"}` shape.
+            case "Item" -> {
+                if (!(entity instanceof net.minecraft.world.entity.item.ItemEntity itemEntity)) yield null;
+                if (!(value instanceof CompoundTag compound)) yield null;
+                var idTag = compound.get("id");
+                if (idTag == null || compound.size() != 1) yield null;
+                if (!(idTag instanceof StringTag idStr)) yield null;
+                String expectedId = idStr.asString().orElse("");
+                var actual = net.minecraft.core.registries.BuiltInRegistries.ITEM
+                    .getKey(itemEntity.getItem().getItem()).toString();
+                yield actual.equals(expectedId);
+            }
+            // `full_stomach` uses `@a[nbt={foodLevel:20,foodSaturationLevel:20.0f}]`.
+            // Player.getFoodData() exposes both without serialization.
+            case "foodLevel" -> {
+                if (!(entity instanceof net.minecraft.world.entity.player.Player player)) yield Boolean.FALSE;
+                if (!(value instanceof IntTag expected)) yield null;
+                yield player.getFoodData().getFoodLevel() == expected.intValue();
+            }
+            case "foodSaturationLevel" -> {
+                if (!(entity instanceof net.minecraft.world.entity.player.Player player)) yield Boolean.FALSE;
+                if (!(value instanceof FloatTag expected)) yield null;
+                yield player.getFoodData().getSaturationLevel() == expected.floatValue();
+            }
             default -> null; // complex key — fall back to full serialization
         };
     }

@@ -184,7 +184,10 @@ public final class CommandCompiler {
             case CommandExecuteIfScoreRange(ScoreAccessorArgument target, IntRangeArgument range, CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext)) {
                     try(var scoreAccessor = context.forScoreAccessors(target.selectSingle(), result)) {
-                        try(var scoreData = context.getScoreData(scoreAccessor.content(), result.markAndGetErrorLabel(), false)) {
+                        // Skip-on-null jumps to the local context end (continue iteration in
+                        // `as @a` etc.), not to the function-level error label — vanilla treats
+                        // a missing score entry as predicate-false, not as fatal.
+                        try(var scoreData = context.getScoreData(scoreAccessor.content(), context.current().contextEndLabel(), false)) {
                             var scoreValue = context.<Integer>createLocal();
                             scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
                             context.jumpIfNotMatchesRange(scoreData.data(), scoreValue, range, scoreData.data().contextEndLabel());
@@ -197,8 +200,8 @@ public final class CommandCompiler {
                 try(var fContext = context.withForkingContext(forkingContext)) {
                     try(var target = context.forScoreAccessors(targetArg.selectSingle(), result)) {
                         try(var source = context.forScoreAccessors(sourceArg.selectSingle(), result)) {
-                            try(var targetScore = context.getScoreData(target.content(), result.markAndGetErrorLabel(), false)) {
-                                try(var sourceScore = context.getScoreData(source.content(), result.markAndGetErrorLabel(), false)) {
+                            try(var targetScore = context.getScoreData(target.content(), context.current().contextEndLabel(), false)) {
+                                try(var sourceScore = context.getScoreData(source.content(), context.current().contextEndLabel(), false)) {
                                     var targetValue = context.<Integer>createLocal();
                                     var sourceValue = context.<Integer>createLocal();
                                     sourceScore.writeInstruction(Instructions.getScoreValue(targetValue, targetScore.content()));
@@ -297,6 +300,25 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteStoreScore(ResultStoreLocationType storeLocation, ScoreAccessorArgument targets, CommandParams command) -> {
+                // When the inner is a vanilla-fallback "Only" terminal (e.g.
+                // `if items block`), the recursive compile() path runs the
+                // command via executeVanillaCommand but discards vanilla's
+                // return — localResult.result stays 0, the target score gets
+                // set to 0, and predicate-driven counts (chestful_of_cobblestone,
+                // etc.) never accumulate. Vanilla natively supports
+                // `execute store result score X run execute if items …`, so
+                // when we can rebuild the inner as a string we emit the whole
+                // thing as one vanilla command and let vanilla do the capture.
+                String vanillaInnerClause = vanillaOnlyExecuteInnerClause(command);
+                if(vanillaInnerClause != null) {
+                    var storeMode = storeLocation == ResultStoreLocationType.SUCCESS ? "success" : "result";
+                    var accessor = scoreHolderToString(targets.scoreHolder()) + " " + targets.objective();
+                    // Note: clause appended WITHOUT `run` — vanilla evaluates `if items …`
+                    // as a terminal predicate clause and returns the match count. With
+                    // `run execute if …` instead it would store 0/1 only.
+                    emitVanillaFallback(context, "execute store " + storeMode + " score " + accessor + " " + vanillaInnerClause);
+                    break;
+                }
                 try(var _ =context.generateForkExecCode(forkingContext)) {
                     var localResult = ResultContext.create(context, storeLocation == ResultStoreLocationType.SUCCESS, storeLocation == ResultStoreLocationType.RESULT);
                     compile(context, null, command, localResult);
@@ -2495,6 +2517,28 @@ public final class CommandCompiler {
                 COMMAND_COMPILE_RESULT_NOT_IMPLEMENTED, context.getSource(),
                 "Cannot reconstruct raw text for nested `run " + cmd.getClass().getSimpleName()
                     + "` inside a vanilla-fallback execute modifier; falling back the whole function"));
+        };
+    }
+
+    /** Reconstructs the EXECUTE CLAUSE (no leading `execute`/`run`) for an inner command of
+     * `execute store …` iff that inner can ONLY compile via {@link #emitVanillaFallback}
+     * — meaning its return value is otherwise unreachable for our store-result machinery.
+     * The clause is appended directly to `execute store <mode> score <accessor> ` so the
+     * whole statement becomes one normal vanilla execute (e.g.
+     * `execute store result score @s X if items block POS SLOT PRED`). Using `run execute if …`
+     * instead would change semantics: vanilla's `if X` returns the count when used as a
+     * terminal clause, but stores 0/1 when wrapped behind `run`. */
+    private static @Nullable String vanillaOnlyExecuteInnerClause(CommandParams cmd) {
+        return switch(cmd) {
+            case CommandExecuteIfItemsBlockOnly(WorldCoordinates pos, String slot, String predicate) ->
+                "if items block " + worldCoordsToString(pos) + " " + slot + " " + predicate;
+            case CommandExecuteUnlessItemsBlockOnly(WorldCoordinates pos, String slot, String predicate) ->
+                "unless items block " + worldCoordsToString(pos) + " " + slot + " " + predicate;
+            case CommandExecuteIfItemsEntityOnly(SelectorArgument targets, String slot, String predicate) ->
+                "if items entity " + selectorToString(targets) + " " + slot + " " + predicate;
+            case CommandExecuteUnlessItemsEntityOnly(SelectorArgument targets, String slot, String predicate) ->
+                "unless items entity " + selectorToString(targets) + " " + slot + " " + predicate;
+            default -> null;
         };
     }
 

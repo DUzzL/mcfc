@@ -90,14 +90,7 @@ public class FunctionCodeGenerator {
         var totalFailures = new java.util.concurrent.atomic.AtomicInteger(0);
         var parseFailures = new java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicInteger>>();
 
-        // Fan every individual command out to a virtual thread. The inner per-command
-        // loop used to be sequential, which pinned one CPU core for minutes on
-        // datapacks whose single .mcfunction file contains tens of thousands of
-        // near-identical commands (e.g. a big "execute ... run particle" carpet).
-        // CommandParser is stateless (each call builds its own StringCommandReader)
-        // and DiagnosticCollector.addDiagnosticSafe is synchronized, so it is safe
-        // to run every parseCommand concurrently with the same lookup.
-        try(var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+        try(var executor = LowPriorityCompileExecutor.newScope()) {
             for(var entry : functionSources.entrySet()) {
                 final var key = entry.getKey();
                 final var values = entry.getValue();
@@ -169,10 +162,7 @@ public class FunctionCodeGenerator {
     public static HashMap<DataLocation, List<Instruction>> compileFunctionsHighLevel(HashMap<DataLocation, List<CommandParams>> definedFunctions, DiagnosticCollector diagnostics, int @Nullable [] instructionCounts, boolean addReq) {
         var compiledFunctions = new java.util.concurrent.ConcurrentHashMap<DataLocation, List<Instruction>>();
         var counter = new java.util.concurrent.atomic.AtomicInteger(0);
-        // One virtual thread per function. parallelStream was unreliable here —
-        // it always dispatches to commonPool regardless of enclosing pool, and
-        // commonPool in the target runtime did not scale past 1 active worker.
-        try(var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+        try(var executor = LowPriorityCompileExecutor.newScope()) {
             for(var func : definedFunctions.entrySet()) {
                 final var key = func.getKey();
                 final var value = func.getValue();
@@ -199,8 +189,8 @@ public class FunctionCodeGenerator {
     public static HashMap<DataLocation, List<Instruction>> optimizeFunctionsHighLevel(HashMap<DataLocation, List<Instruction>> compiled, DiagnosticCollector diagnostics, int @Nullable [] instructionCounts, boolean addReq) {
         var compiledFunctions = new java.util.concurrent.ConcurrentHashMap<DataLocation, List<Instruction>>();
         var counter = new java.util.concurrent.atomic.AtomicInteger(0);
-        // Same VT executor pattern as compileFunctionsHighLevel above — see note.
-        try(var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+        // Same low-priority pool pattern as compileFunctionsHighLevel above.
+        try(var executor = LowPriorityCompileExecutor.newScope()) {
             for(var func : compiled.entrySet()) {
                 final var key = func.getKey();
                 final var value = func.getValue();

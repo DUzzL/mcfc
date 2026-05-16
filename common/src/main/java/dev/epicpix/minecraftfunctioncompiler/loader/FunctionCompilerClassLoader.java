@@ -40,6 +40,7 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -74,8 +75,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     private static final HexFormat HEX = HexFormat.of();
 
     // ── Cache constants ────────────────────────────────────────────────────────
-    /** Incremented whenever the on-disk cache format changes. v2 = batch-class layout. */
-    private static final String CACHE_VERSION      = "v2.1";
+    private static final String CACHE_VERSION      = "v2.6";
     private static final String CACHE_MANIFEST     = "manifest.json";
     private static final String CACHE_DATA_CLASS   = "data.class";
     private static final String CACHE_BATCH_PREFIX = "batch/";
@@ -192,8 +192,12 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         if(backgroundThread == Thread.currentThread()) return false;
         if(state != State.NOTHING_LOADED) return true;
         setState(State.PARSING);
-        backgroundThread = new Thread(run);
+        backgroundThread = new Thread(() -> {
+            LowPriorityCompileExecutor.applyCompileNiceToCurrentThread();
+            run.run();
+        });
         backgroundThread.setName("Function Compiler");
+        backgroundThread.setPriority(LowPriorityCompileExecutor.COMPILE_THREAD_PRIORITY);
         backgroundThread.setUncaughtExceptionHandler((t, e) -> {
             if(e instanceof DiagnosticException de) diagnostics.addDiagnostic(de.toDiagnostic());
             else diagnostics.addDiagnostic(new Diagnostic(DiagnosticKind.EXECUTION_ERROR, COMPILER_UNCAUGHT_EXCEPTION,
@@ -211,7 +215,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
      * Computes a global hash that encodes the compiler version plus the complete
      * content of every function source.  If any source changes — or the compiler
      * is updated — the hash changes and the cache is invalidated.
-     *
+
      * The hash also covers the set of compiled function IDs, because that set is
      * passed to generateFunctionClass and affects which call sites get a fast JVM
      * dispatch vs. vanilla fallback.
@@ -249,7 +253,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     /**
      * Attempts to load all compiled batch classes from the on-disk cache.
      * Returns a populated result if the cache is valid, or {@code null} on any miss.
-     *
+
      * Under the v2 batch layout, the manifest contains:
      *   - "hash"     — global compilation hash (must match)
      *   - "batches"  — list of relative class-file paths, one per batch
@@ -258,39 +262,72 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     @Nullable
     private CacheLoadResult tryLoadFromCache(String globalHash, Set<DataLocation> functionIds) throws Exception {
         var manifestPath = cacheDir.resolve(CACHE_MANIFEST);
-        if(!Files.exists(manifestPath)) return null;
+        if(!Files.exists(manifestPath)) {
+            LOGGER.info("Cache miss: {} not found", manifestPath);
+            return null;
+        }
 
         var manifest = GSON.fromJson(Files.readString(manifestPath), JsonObject.class);
-        if(manifest == null || !manifest.has("hash") || !manifest.has("batches") || !manifest.has("functions")) return null;
-        if(!globalHash.equals(manifest.get("hash").getAsString())) return null;
+        if(manifest == null || !manifest.has("hash") || !manifest.has("batches") || !manifest.has("functions")) {
+            LOGGER.info("Cache miss: manifest missing required fields (hash/batches/functions)");
+            return null;
+        }
+        var cachedHash = manifest.get("hash").getAsString();
+        if(!globalHash.equals(cachedHash)) {
+            LOGGER.info("Cache miss: hash mismatch (cached={}, current={}) — sources or compiler version changed",
+                cachedHash, globalHash);
+            return null;
+        }
 
         var dataClassPath = cacheDir.resolve(CACHE_DATA_CLASS);
-        if(!Files.exists(dataClassPath)) return null;
+        if(!Files.exists(dataClassPath)) {
+            LOGGER.info("Cache miss: {} not found", dataClassPath);
+            return null;
+        }
 
         // Load batch class files
         var batchArr = manifest.getAsJsonArray("batches");
         var batchPaths = new ArrayList<Path>(batchArr.size());
         for(int i = 0; i < batchArr.size(); i++) {
             var p = cacheDir.resolve(batchArr.get(i).getAsString());
-            if(!Files.exists(p)) return null;
+            if(!Files.exists(p)) {
+                LOGGER.info("Cache miss: batch class {} missing", p);
+                return null;
+            }
             batchPaths.add(p);
+        }
+
+        // Functions that parsed but compiled to vanilla fallback last time —
+        // they have no batch class. Treat as "expected absent from placements"
+        // so they don't trigger cache miss. Older manifests without this field
+        // are treated as empty (everything must be in placements).
+        var fallbackSet = new HashSet<String>();
+        if(manifest.has("fallback")) {
+            for(var el : manifest.getAsJsonArray("fallback")) fallbackSet.add(el.getAsString());
         }
 
         var fnEntries = manifest.getAsJsonObject("functions");
         var placements = new HashMap<DataLocation, BatchClassPlanner.PlacedFunction>(functionIds.size());
         for(var loc : functionIds) {
             var key = loc.toString();
-            if(!fnEntries.has(key)) return null;
+            if(!fnEntries.has(key)) {
+                if(fallbackSet.contains(key)) continue; // known vanilla-fallback, no batch class expected
+                LOGGER.info("Cache miss: function '{}' missing from manifest (datapack added a function?)", key);
+                return null;
+            }
             var obj = fnEntries.getAsJsonObject(key);
             int batch = obj.get("batch").getAsInt();
-            if(batch < 0 || batch >= batchPaths.size()) return null;
+            if(batch < 0 || batch >= batchPaths.size()) {
+                LOGGER.info("Cache miss: function '{}' has invalid batch index {} (batches={})",
+                    key, batch, batchPaths.size());
+                return null;
+            }
             String base = obj.get("base").getAsString();
             boolean hasMacros = obj.has("hasMacros") && obj.get("hasMacros").getAsBoolean();
             placements.put(loc, new BatchClassPlanner.PlacedFunction(batch, base, hasMacros));
         }
 
         // Read bytes in parallel
-        @SuppressWarnings("unchecked")
         byte[][] batchBytes = new byte[batchPaths.size()][];
         java.util.stream.IntStream.range(0, batchPaths.size()).parallel().forEach(i -> {
             try {
@@ -315,6 +352,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
      */
     private void saveToCache(String globalHash, List<byte[]> batchBytes,
                               Map<DataLocation, BatchClassPlanner.PlacedFunction> placements,
+                              Set<DataLocation> fallbackFunctions,
                               byte[] dataClassBytes) throws Exception {
         Files.createDirectories(cacheDir);
         Files.createDirectories(cacheDir.resolve(CACHE_BATCH_PREFIX));
@@ -329,6 +367,18 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
             batchArr.add(relPath);
         }
         manifest.add("batches", batchArr);
+
+        // Functions that parsed but could not be compiled (e.g. unsupported
+        // command shapes — armor_statues uses raw-text reconstruction tricks
+        // we don't model). They have no batch class and run via vanilla
+        // fallback at runtime; we list them so cache-load can distinguish
+        // "function known to need fallback" from "function genuinely missing"
+        // (which would mean the datapack actually changed).
+        var fallbackArr = new JsonArray();
+        var sortedFallback = new ArrayList<>(fallbackFunctions);
+        sortedFallback.sort(Comparator.comparing(DataLocation::toString));
+        for(var loc : sortedFallback) fallbackArr.add(loc.toString());
+        manifest.add("fallback", fallbackArr);
 
         var functions = new JsonObject();
         for(var entry : placements.entrySet()) {
@@ -422,6 +472,10 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
 
         int parsedFunctionCount  = definedFunctions.size();
         int compiledCommandCount = definedFunctions.values().stream().mapToInt(List::size).sum();
+        // Snapshot now — definedFunctions gets cleared mid-pipeline before
+        // saveToCache runs, but we still need the full parsed set to compute
+        // which functions ended up in vanilla fallback.
+        var allParsedIds = Set.copyOf(definedFunctions.keySet());
 
         // Only use cache when debug dumps are disabled (cache stores production bytecode only)
         if(!DEBUG_DUMP_INSTRUCTIONS) {
@@ -444,7 +498,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
                     return;
                 }
             } catch(Throwable e) {
-                LOGGER.warn("Cache read failed ({}), falling back to full compilation", e.getMessage());
+                LOGGER.warn("Cache read failed, falling back to full compilation", e);
             }
         }
 
@@ -477,17 +531,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         int phase1Total = definedFunctions.size();
         int phase1Step = Math.max(100, phase1Total / 20);
         var optimizedFunctions = new ConcurrentHashMap<DataLocation, List<Instruction>>();
-        // One virtual thread per function. We previously tried parallelStream
-        // wrapped in commonPool().submit(...), but since JDK 10+ parallelStream
-        // always dispatches to commonPool regardless of the enclosing pool, and
-        // in this environment commonPool stubbornly refuses to scale past 1
-        // active worker (observed via thread dump: 31/32 workers parked on
-        // awaitWork while one worker chewed through everything at 99.5% CPU).
-        // The virtual-thread scheduler uses its own dedicated FJP sized to
-        // availableProcessors, so every carrier thread participates and the
-        // usual CommonPool pathology is sidestepped. `ExecutorService.close()`
-        // via try-with-resources waits for every submitted task.
-        try(var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+        try(var executor = LowPriorityCompileExecutor.newScope()) {
             for(var entry : definedFunctions.entrySet()) {
                 final var key      = entry.getKey();
                 final var commands = entry.getValue();
@@ -539,7 +583,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
 
         // Identify which functions have macros (need a runInstanced method in their batch slot)
         var macroFunctions = ConcurrentHashMap.<DataLocation>newKeySet();
-        try(var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+        try(var executor = LowPriorityCompileExecutor.newScope()) {
             for(var e : optimizedFunctions.entrySet()) {
                 final var key   = e.getKey();
                 final var value = e.getValue();
@@ -577,11 +621,11 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         var successfulPlacements = new ConcurrentHashMap<DataLocation, BatchClassPlanner.PlacedFunction>();
 
         LOGGER.info("[Phase 2] emit+assemble starting — {} batch(es), parallelism={}",
-            batchCount, java.util.concurrent.ForkJoinPool.commonPool().getParallelism());
+            batchCount, LowPriorityCompileExecutor.parallelism());
         var phase2Start = System.nanoTime();
         var batchesDone = new AtomicInteger(0);
 
-        try(var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+        try(var executor = LowPriorityCompileExecutor.newScope()) {
         for(int bi0 = 0; bi0 < batchCount; bi0++) {
             final int bi = bi0;
             executor.execute(() -> {
@@ -682,11 +726,13 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
         // Persist to cache before defineClass (while we still have all bytes)
         if(!DEBUG_DUMP_INSTRUCTIONS) {
             try {
-                saveToCache(globalHash, batchBytes, successfulPlacements, dataClassBytes);
-                LOGGER.info("Saved {} compiled functions across {} batch class(es) to cache",
-                    successfulPlacements.size(), batchBytes.size());
+                var fallbackFunctions = new HashSet<>(allParsedIds);
+                fallbackFunctions.removeAll(successfulPlacements.keySet());
+                saveToCache(globalHash, batchBytes, successfulPlacements, fallbackFunctions, dataClassBytes);
+                LOGGER.info("Saved {} compiled functions across {} batch class(es) to cache ({} vanilla-fallback)",
+                    successfulPlacements.size(), batchBytes.size(), fallbackFunctions.size());
             } catch(Exception e) {
-                LOGGER.warn("Failed to save compilation cache ({}), compilation will continue", e.getMessage());
+                LOGGER.warn("Failed to save compilation cache, compilation will continue", e);
             }
         }
 

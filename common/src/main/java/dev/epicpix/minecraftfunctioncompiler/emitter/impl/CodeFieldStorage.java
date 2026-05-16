@@ -3,6 +3,7 @@ package dev.epicpix.minecraftfunctioncompiler.emitter.impl;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue;
 import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
+import dev.epicpix.minecraftfunctioncompiler.data.text.TextHoverEvent;
 import dev.epicpix.minecraftfunctioncompiler.data.text.TextStyle;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeInstruction;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeOptimizer;
@@ -117,6 +118,31 @@ public final class CodeFieldStorage {
     }
 
     public BytecodeRegister loadTextStyle(CodeWriter cw, TextStyle value) {
+        // Pre-register transitively-referenced sub-styles before this style itself.
+        // The data class splits load() into chunked load$N methods that run
+        // sequentially, and the per-kind iteration in CodeFieldStorage.generate()
+        // emits PUTSTATICs in registration order. This style's writeCode (in
+        // CodeFieldStorageMapImpl.TEXT_STYLE) inlines a writeTextValue(hoverText)
+        // for SHOW_TEXT hover events, which emits GETSTATIC against each child
+        // text's style field. Without this pre-walk those sub-styles would only
+        // get registered AT writeCode time — past this style's PUTSTATIC — and
+        // the GETSTATICs would fire against still-uninitialised fields,
+        // producing a NullPointerException inside MutableComponent.withStyle.
+        // forEachComponent walks deepest-first so children land at lower
+        // indices than the outer style and are emitted in earlier load$N chunks.
+        if(!value.isEmpty()
+                && value.hoverEvent() != null
+                && value.hoverEvent().action() == TextHoverEvent.Action.SHOW_TEXT
+                && value.hoverEvent().value() instanceof Text hoverText) {
+            hoverText.forEachComponent(text -> {
+                if(!text.style().isEmpty()) {
+                    map.writeValue(CodeFieldStorageMapKind.TEXT_STYLE, text.style());
+                    if(text.style().font() != null) {
+                        map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, text.style().font());
+                    }
+                }
+            });
+        }
         map.writeValue(CodeFieldStorageMapKind.TEXT_STYLE, value);
         if(value.font() != null) {
             map.writeValue(CodeFieldStorageMapKind.RESOURCE_LOCATION, value.font());

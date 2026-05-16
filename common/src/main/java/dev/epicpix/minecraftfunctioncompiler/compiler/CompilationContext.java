@@ -395,7 +395,13 @@ public class CompilationContext {
 
         LocationData<TObjective> objective = createLocal();
         data.writeInstruction(instructionWriter, Instructions.getObjective(objective, LocationData.ofString(objectiveName)));
-        data.writeInstruction(instructionWriter, Instructions.ifNullJump(objective, resultContext.markAndGetErrorLabel()));
+        // Use the LOCAL contextEndLabel, not resultContext.errorLabel: in an
+        // `as @a` iteration body the local label is "continue to next player",
+        // while resultContext.errorLabel is the function exit. Vanilla MC
+        // treats a missing objective as predicate-false (skip this clause's
+        // body), not as fatal — so we must not abort the whole function when
+        // ONE iterated player happens to lack a score entry.
+        data.writeInstruction(instructionWriter, Instructions.ifNullJump(objective, data.contextEndLabel()));
 
         var codeLocation = data.writeLabel(instructionWriter);
 
@@ -439,7 +445,9 @@ public class CompilationContext {
         data.writeInstruction(instructionWriter, Instructions.getScoreboardHolders(scoreHolders));
         var listLength = this.<Integer>createLocal();
         data.writeInstruction(instructionWriter, Instructions.getListLength(listLength, scoreHolders));
-        data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, listLength, LocationData.ofInteger(0), resultContext.markAndGetErrorLabel()));
+        // Same reasoning as getObjective: an empty score-holder list inside an
+        // `as @a` iteration must skip just this player, not abort the function.
+        data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, listLength, LocationData.ofInteger(0), data.contextEndLabel()));
         if(single) {
             var scoreHolderObj = this.createLocal();
             var scoreHolderStr = this.<String>createLocal();
