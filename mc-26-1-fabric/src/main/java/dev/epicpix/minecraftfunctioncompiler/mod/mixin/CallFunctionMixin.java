@@ -3,6 +3,7 @@ package dev.epicpix.minecraftfunctioncompiler.mod.mixin;
 import dev.epicpix.minecraftfunctioncompiler.mod.CompiledDispatchCache;
 import dev.epicpix.minecraftfunctioncompiler.mod.FunctionCompilerRecursionGuard;
 import dev.epicpix.minecraftfunctioncompiler.mod.FunctionDebugLogger;
+import dev.epicpix.minecraftfunctioncompiler.mod.ServerThreadGate;
 import net.minecraft.commands.CommandResultCallback;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.ExecutionCommandSource;
@@ -28,6 +29,8 @@ public class CallFunctionMixin<T extends ExecutionCommandSource<T>> {
 
     @Inject(method = "execute(Lnet/minecraft/commands/ExecutionCommandSource;Lnet/minecraft/commands/execution/ExecutionContext;Lnet/minecraft/commands/execution/Frame;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/commands/execution/ExecutionContext;incrementCost()V", shift = At.Shift.AFTER), cancellable = true)
     public void execute(T source, ExecutionContext<T> executionContext, Frame frame, CallbackInfo ci) {
+        // Compiled bodies use server-thread-only state; any other thread runs vanilla's interpreter.
+        if(!ServerThreadGate.onServerThread()) return;
         var loader = functionClassLoader;
         if(loader != null && source instanceof CommandSourceStack stack && function instanceof CompiledDispatchCache cache && loader.isUseReady()) {
             var entry = cache.mcfc$entry(loader);

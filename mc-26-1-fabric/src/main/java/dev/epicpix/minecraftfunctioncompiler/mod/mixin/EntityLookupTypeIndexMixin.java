@@ -23,6 +23,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * never indexed) and leaves when {@code remove} drops whatever byId holds under its id. PersistentEntitySectionManager
  * calls add/remove from startTracking/stopTracking, so section visibility changes, unloads and dimension changes are
  * covered, and the per-type order is byId's insertion order.
+ *
+ * <p>Mutations are serialized on the index map: server mods may add/remove entities of one level from several
+ * threads at once (Fabrolia islands). Compiled selectors read it only on the server thread.
  */
 @Mixin(EntityLookup.class)
 public abstract class EntityLookupTypeIndexMixin<T extends EntityAccess> implements EntityTypeIndex {
@@ -34,20 +37,24 @@ public abstract class EntityLookupTypeIndexMixin<T extends EntityAccess> impleme
     @Inject(method = "add", at = @At("TAIL"))
     private void mcfc$indexAdd(T entityAccess, CallbackInfo ci) {
         if(entityAccess instanceof Entity entity && this.byId.get(entity.getId()) == entityAccess) {
-            var set = this.mcfc$byType.get(entity.getType());
-            if(set == null) {
-                set = new ObjectLinkedOpenHashSet<>();
-                this.mcfc$byType.put(entity.getType(), set);
+            synchronized(this.mcfc$byType) {
+                var set = this.mcfc$byType.get(entity.getType());
+                if(set == null) {
+                    set = new ObjectLinkedOpenHashSet<>();
+                    this.mcfc$byType.put(entity.getType(), set);
+                }
+                set.add(entity);
             }
-            set.add(entity);
         }
     }
 
     @Inject(method = "remove", at = @At("HEAD"))
     private void mcfc$indexRemove(T entityAccess, CallbackInfo ci) {
         if(this.byId.get(entityAccess.getId()) instanceof Entity current) {
-            var set = this.mcfc$byType.get(current.getType());
-            if(set != null) set.remove(current);
+            synchronized(this.mcfc$byType) {
+                var set = this.mcfc$byType.get(current.getType());
+                if(set != null) set.remove(current);
+            }
         }
     }
 

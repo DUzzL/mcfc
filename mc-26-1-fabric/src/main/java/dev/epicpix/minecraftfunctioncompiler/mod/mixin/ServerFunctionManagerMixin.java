@@ -6,6 +6,7 @@ import dev.epicpix.minecraftfunctioncompiler.mod.FunctionClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.mod.FunctionCompilerMain;
 import dev.epicpix.minecraftfunctioncompiler.mod.FunctionCompilerRecursionGuard;
 import dev.epicpix.minecraftfunctioncompiler.mod.FunctionDebugLogger;
+import dev.epicpix.minecraftfunctioncompiler.mod.ServerThreadGate;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.functions.CommandFunction;
 import net.minecraft.server.MinecraftServer;
@@ -44,6 +45,8 @@ public class ServerFunctionManagerMixin implements FunctionCompilationStarter {
 
     @Inject(method = "execute", at = @At("HEAD"), cancellable = true)
     public void run(CommandFunction<CommandSourceStack> commandFunction, CommandSourceStack commandSourceStack, CallbackInfo ci) {
+        // Compiled bodies use server-thread-only state; any other thread runs vanilla's interpreter.
+        if(!ServerThreadGate.onServerThread()) return;
         var loader = FunctionCompilerMain.functionClassLoader;
         // Only plain functions: a macro function called without arguments fails to instantiate in vanilla.
         if(loader != null && commandFunction instanceof CompiledDispatchCache cache && loader.isUseReady()) {

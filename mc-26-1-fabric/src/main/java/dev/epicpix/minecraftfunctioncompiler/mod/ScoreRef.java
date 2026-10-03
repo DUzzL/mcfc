@@ -26,10 +26,14 @@ import org.jspecify.annotations.Nullable;
  * (see {@link ExtensionFunctions#setScore}); they return false where vanilla throws a CommandSyntaxException.
  */
 public final class ScoreRef {
-    /** Bumped whenever a Score or an Objective may have been detached from its scoreboard. */
-    public static int epoch;
+    /**
+     * Bumped whenever a Score or an Objective may have been detached from its scoreboard. Volatile and bumped
+     * under a lock: scores of entities can be reset from non-server threads (server mods with threaded entity
+     * ticking), and a lost or invisible bump would leave the server thread's caches pointing at a detached Score.
+     */
+    public static volatile int epoch;
 
-    public static void invalidateAll() {
+    public static synchronized void invalidateAll() {
         epoch++;
     }
 
