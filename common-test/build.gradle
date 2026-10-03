@@ -31,6 +31,11 @@ ksp {
     arg("tests", file("../tests").absolutePath)
 }
 
+// The KSP "tests" option is only a path string; declare the .mctest files as real inputs so edits regenerate the tests
+tasks.matching { it.name == "kspKotlin" }.configureEach {
+    it.inputs.dir(file("../tests")).withPathSensitivity(PathSensitivity.RELATIVE).withPropertyName("mctestFiles")
+}
+
 apply from: "../common-ksp.gradle"
 
 tasks.withType(JavaCompile).configureEach {

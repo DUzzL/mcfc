@@ -14,6 +14,9 @@ public class FunctionCompilerTestMain implements ModInitializer {
         for(var provided : GameTestMethodProvider.getTests()) {
             Registry.register(BuiltInRegistries.TEST_FUNCTION, provided.identifier(), provided.runner());
         }
+        AdvancementRegressionTests.registerFunction();
+        PlayerNameSelectorTests.registerFunction();
+        ScoreSyncTests.registerFunction();
 
     }
 }

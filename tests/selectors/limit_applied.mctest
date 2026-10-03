@@ -1,0 +1,32 @@
+; `limit` caps every selector result, including the list consumers (execute if entity count, give, text...),
+; after sort=nearest|furthest|random, and arbitrary order stops after the first `limit` matches.
+@setup
+objective create t dummy
+
+@function run
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_lim","mcfc_lim_a"]}
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_lim","mcfc_lim_b"]}
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_lim","mcfc_lim_c"]}
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_lim","mcfc_lim_d"]}
+execute store result score arbitrary t if entity @e[tag=mcfc_lim,limit=2]
+execute store result score typed t if entity @e[type=minecraft:armor_stand,tag=mcfc_lim,limit=3]
+execute store result score nearest t if entity @e[tag=mcfc_lim,sort=nearest,limit=3]
+execute store result score furthest t if entity @e[tag=mcfc_lim,sort=furthest,limit=1]
+execute store result score random t if entity @e[tag=mcfc_lim,sort=random,limit=2]
+execute store result score nearest_one t if entity @n[tag=mcfc_lim]
+execute as @e[tag=mcfc_lim,limit=2] run tag @s add mcfc_lim_picked
+execute store result score picked t if entity @e[tag=mcfc_lim_picked]
+execute store result score picked_first t if entity @e[tag=mcfc_lim_a,tag=mcfc_lim_picked]
+execute store result score picked_second t if entity @e[tag=mcfc_lim_b,tag=mcfc_lim_picked]
+kill @e[tag=mcfc_lim]
+
+@validate
+score arbitrary t is 2
+score typed t is 3
+score nearest t is 3
+score furthest t is 1
+score random t is 2
+score nearest_one t is 1
+score picked t is 2
+score picked_first t is 1
+score picked_second t is 1

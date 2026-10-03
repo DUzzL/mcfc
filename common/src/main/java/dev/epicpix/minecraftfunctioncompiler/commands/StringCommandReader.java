@@ -63,7 +63,9 @@ import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.CO
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_INVALID_VEC3;
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_INVALID_VEC3_LOCAL;
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_MISSING_RANGE;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_INVALID_SLOT_SOURCE;
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_UNSUPPORTED_MACRO_LOCATION;
+import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.NBT_INVALID_SYNTAX;
 
 public class StringCommandReader {
     private static final Gson GSON = new Gson();
@@ -72,11 +74,23 @@ public class StringCommandReader {
     private final DataLocation source;
     private final boolean allowMacros;
     private int index;
+    private final CommandSourceMap sources;
 
     public StringCommandReader(String command, DataLocation source, boolean allowMacros) {
         this.command = command;
         this.source = source;
         this.allowMacros = allowMacros;
+        this.sources = new CommandSourceMap(command, allowMacros);
+    }
+
+    /** Side table of verbatim source spans for every node parsed from this line. */
+    public CommandSourceMap getSources() {
+        return sources;
+    }
+
+    /** Records that {@code node} was parsed by {@code parseCommand_<root>} starting at {@code start}. */
+    public <T extends dev.epicpix.minecraftfunctioncompiler.commands.params.CommandParams> T recordSource(T node, String root, int start) {
+        return sources.record(node, root, start);
     }
 
     private DiagnosticException createError(String diagnosticId, String message) {
@@ -171,7 +185,7 @@ public class StringCommandReader {
     }
 
     public boolean skipIfNext(char c) {
-        if(peek() == c) {
+        if(canRead() && peek() == c) {
             skip();
             return true;
         }
@@ -188,17 +202,39 @@ public class StringCommandReader {
     }
 
     public boolean skipArgumentWhitespace() {
-        if(canRead() && Character.isWhitespace(peek())) {
+        if(canRead() && peek() == ' ') {
             skip();
             return true;
         }
         return !canRead();
     }
 
+    /** Raw text of the line between two reader indices. */
+    public String substring(int start, int end) {
+        return command.substring(start, end);
+    }
+
+    /** Consumes {@code literal} if it is next and followed by a space or the end (brigadier literal
+     * matching; works for non-word literals such as {@code *}, PAR-17). Never throws. */
+    public boolean readLiteral(String literal) {
+        if(!command.startsWith(literal, index)) return false;
+        int end = index + literal.length();
+        if(end < command.length() && command.charAt(end) != ' ') return false;
+        index = end;
+        return true;
+    }
+
+    /** Reads up to the next space. Macro placeholders are rejected (PAR-07): the text is used natively. */
     public String readUntilSpace() {
+        return readUntilSpace(false);
+    }
+
+    /** Reads up to the next space; {@code allowMacroPlaceholders} keeps {@code $(x)} verbatim, for
+     * arguments that only ever reach vanilla through the (macro-substituting) source-text fallback. */
+    public String readUntilSpace(boolean allowMacroPlaceholders) {
         int start = index;
         while(canRead() && peek() != ' ') {
-            if(allowMacros && canRead(2) && peek(0) == '$' && peek(1) == '(') {
+            if(allowMacroPlaceholders && allowMacros && canRead(2) && peek(0) == '$' && peek(1) == '(') {
                 index += 2;
                 while(canRead() && peek() != ')') index++;
                 if(canRead()) index++;
@@ -212,16 +248,7 @@ public class StringCommandReader {
     // Читает block predicate: #namespace:tag, namespace:block[states]{nbt}
     // Обрабатывает вложенные [] и {} чтобы не обрезать block states
     public String readBlockPredicate() {
-        int start = index;
-        int depth = 0;
-        while(canRead()) {
-            char c = peek();
-            if(c == '[' || c == '{') { depth++; skip(); }
-            else if(c == ']' || c == '}') { depth--; skip(); }
-            else if(c == ' ' && depth == 0) break;
-            else skip();
-        }
-        return command.substring(start, index);
+        return readBracketBalancedToken();
     }
 
     /**
@@ -232,15 +259,70 @@ public class StringCommandReader {
      * per-version ItemParser downstream.
      */
     public String readItemStackString() {
+        return readBracketBalancedToken();
+    }
+
+    /** Reads up to the first space outside {@code []}/{@code {}}. Inside brackets, quoted SNBT
+     * strings are skipped as a unit so a quoted bracket or space does not end the token. */
+    private String readBracketBalancedToken() {
         int start = index;
         int depth = 0;
         while(canRead()) {
             char c = peek();
             if(c == '[' || c == '{') { depth++; skip(); }
             else if(c == ']' || c == '}') { depth--; skip(); }
+            else if(depth > 0 && (c == '"' || c == '\'')) skipQuoted(false);
             else if(c == ' ' && depth == 0) break;
             else skip();
         }
+        return command.substring(start, index);
+    }
+
+    /** Skips a quoted SNBT string starting at the current quote character; backslash escapes the next character.
+     * {@code macroPlaceholders}: keep {@code $(name)} verbatim (the text only reaches the vanilla fallback, which substitutes it)
+     * instead of rejecting it like {@link #read()} does. */
+    private void skipQuoted(boolean macroPlaceholders) {
+        char quote = read();
+        while(canRead()) {
+            char c = macroPlaceholders ? command.charAt(index++) : read();
+            if(c == '\\') {
+                if(canRead()) index++;
+            }else if(c == quote) {
+                return;
+            }
+        }
+        throw createError(NBT_INVALID_SYNTAX, "Unterminated quoted string");
+    }
+
+    /**
+     * Reads a 26.3 slot source argument ({@code SlotSourceArgument}) verbatim, for vanilla to re-parse.
+     * Vanilla first tries a slot-range name read up to the first space ({@code SlotRanges.tryRead}),
+     * then a {@code ResourceOrId} of {@code minecraft:slot_source}: an identifier, or an inline SNBT
+     * value that may contain spaces ({@code {type:"minecraft:slot_range", slots:"hotbar.4"}}).
+     * Only an SNBT literal can start with a bracket or quote, so those are read as one balanced value.
+     */
+    public String readSlotSource() {
+        if(!canRead() || peek() == ' ') throw createError(COMMAND_INVALID_SLOT_SOURCE, "Expected a slot source");
+        char first = peek();
+        if(first != '{' && first != '[' && first != '"' && first != '\'') return readUntilSpace(true);
+        int start = index;
+        int depth = 0;
+        do {
+            if(!canRead()) throw createError(COMMAND_INVALID_SLOT_SOURCE, "Unterminated SNBT slot source");
+            if(allowMacros && canRead(2) && peek(0) == '$' && peek(1) == '(') {
+                index += 2;
+                while(canRead() && peek() != ')') index++;
+                if(canRead()) index++;
+                continue;
+            }
+            char c = peek();
+            if(c == '"' || c == '\'') skipQuoted(allowMacros);
+            else {
+                index++;
+                if(c == '{' || c == '[') depth++;
+                else if(c == '}' || c == ']') depth--;
+            }
+        } while(depth > 0);
         return command.substring(start, index);
     }
 
@@ -308,7 +390,7 @@ public class StringCommandReader {
             while(canRead()) {
                 char c = read();
                 if(c == quoteChar && !escaping) {
-                    break;
+                    return builder.toString();
                 }else if(c == '\\' && !escaping) {
                     escaping = true;
                     continue;
@@ -320,21 +402,26 @@ public class StringCommandReader {
                 builder.append(c);
                 escaping = false;
             }
-            return builder.toString();
+            throw createError(COMMAND_INVALID_STRING_QUOTE, "Unclosed quoted string");
         }else {
             return readWord();
         }
     }
 
+    /** Reads the rest of the line. Macro placeholders are rejected (PAR-07): the text is used natively. */
     public String readRemainder() {
+        return readRemainder(false);
+    }
+
+    /** Reads the rest of the line; see {@link #readUntilSpace(boolean)} for {@code allowMacroPlaceholders}. */
+    public String readRemainder(boolean allowMacroPlaceholders) {
         int start = index;
         while(canRead()) {
-            if(allowMacros && canRead(2) && peek(0) == '$' && peek(1) == '(') {
+            if(allowMacroPlaceholders && allowMacros && canRead(2) && peek(0) == '$' && peek(1) == '(') {
                 index += 2;
                 while(canRead() && peek() != ')') index++;
                 if(canRead()) index++;
             } else {
-                checkMacro(false);
                 skip();
             }
         }
@@ -362,7 +449,7 @@ public class StringCommandReader {
         String str = readString();
         if(str.equals("true")) {
             return true;
-        }else if(str.equalsIgnoreCase("false")) {
+        }else if(str.equals("false")) {
             return false;
         }else {
             throw createError(COMMAND_INVALID_BOOLEAN, "Invalid boolean");
@@ -439,10 +526,12 @@ public class StringCommandReader {
             }
             return new DoubleRangeArgument(min, max);
         }else {
+            if(min == null) throw createError(COMMAND_MISSING_RANGE, "Missing range");
             return new DoubleRangeArgument(min, min);
         }
     }
 
+    /** MinMaxBounds.FloatDegrees syntax (x_rotation / y_rotation): unlike the other ranges, min > max is allowed. */
     public FloatRangeArgument readFloatRange() {
         var base1 = readNumberBase();
         Float min = null;
@@ -461,9 +550,6 @@ public class StringCommandReader {
             if(!base2.isEmpty()) {
                 try {
                     max = Float.parseFloat(base2);
-                    if(min != null && min > max) {
-                        throw createError(COMMAND_INVALID_RANGE, "Invalid range, the minimum is bigger than than maximum");
-                    }
                 }catch(NumberFormatException e) {
                     throw createError(COMMAND_INVALID_FLOAT, "Invalid float");
                 }
@@ -509,6 +595,7 @@ public class StringCommandReader {
             }
             return new IntRangeArgument(min, max);
         }else {
+            if(min == null) throw createError(COMMAND_MISSING_RANGE, "Missing range");
             return new IntRangeArgument(min, min);
         }
     }
@@ -586,75 +673,88 @@ public class StringCommandReader {
             }else if(c == 'z') {
                 if(z) throw createError(COMMAND_INVALID_SWIZZLE, "Invalid swizzle, 'z' can only be written once");
                 z = true;
+            }else {
+                throw createError(COMMAND_INVALID_SWIZZLE, "Invalid swizzle, expected combination of 'x', 'y' and 'z'");
             }
         }
+        if(!x && !y && !z) throw createError(COMMAND_INVALID_SWIZZLE, "Invalid swizzle, expected combination of 'x', 'y' and 'z'");
         return new SwizzleArgument(x, y, z);
     }
 
-    // Scalar-vector variant — integer coords are NOT block-centered. Matches
-    // vanilla's Vec3Argument.vec3(false), used for things like particle delta
-    // where `0 0 0` is literally the zero vector, not "center of block 0,0,0".
+    // Coordinate readers mirror vanilla WorldCoordinate / LocalCoordinates / RotationArgument.
+
+    /** Vec3Argument.vec3(false): no centering (particle delta etc.). */
     public WorldCoordinates readVec3Uncentered() {
-        if(peek() == '^') {
-            return readVec3();
-        }
-        boolean relativeX = skipIfNext('~');
-        String x = readNumberBase();
-        if(relativeX && x.isEmpty()) x = "0";
-        if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_VEC3, "Invalid vec3, expected space for next argument");
-        boolean relativeY = skipIfNext('~');
-        String y = readNumberBase();
-        if(relativeY && y.isEmpty()) y = "0";
-        if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_VEC3, "Invalid vec3, expected space for next argument");
-        boolean relativeZ = skipIfNext('~');
-        String z = readNumberBase();
-        if(relativeZ && z.isEmpty()) z = "0";
-        return new WorldCoordinates(parseDouble(x), relativeX, parseDouble(y), relativeY, parseDouble(z), relativeZ, false);
+        return readCoordinates(false, false, COMMAND_INVALID_VEC3);
     }
 
+    /** Vec3Argument.vec3(): absolute integer X/Z (written without '.') are centered by +0.5; Y never (PAR-01). */
     public WorldCoordinates readVec3() {
-        if(peek() == '^') {
-            if(!skipIfNext('^')) throw createError(COMMAND_INVALID_VEC3_LOCAL, "Invalid vec3, expected ^ for local coordinates");
-            String x = readNumberBase();
-            if(x.isEmpty()) x = "0";
-            if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_VEC3_LOCAL, "Invalid vec3, expected space for next argument");
-            if(!skipIfNext('^')) throw createError(COMMAND_INVALID_VEC3_LOCAL, "Invalid vec3, expected ^ for local coordinates");
-            String y = readNumberBase();
-            if(y.isEmpty()) y = "0";
-            if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_VEC3_LOCAL, "Invalid vec3, expected space for next argument");
-            if(!skipIfNext('^')) throw createError(COMMAND_INVALID_VEC3_LOCAL, "Invalid vec3, expected ^ for local coordinates");
-            String z = readNumberBase();
-            if(z.isEmpty()) z = "0";
-            return new WorldCoordinates(parseDouble(x), true, parseDouble(y), true, parseDouble(z), true, true);
-        }
-        boolean relativeX = skipIfNext('~');
-        String x = readNumberBase();
-        if(!relativeX && !x.contains(".")) x += ".5";
-        else if(relativeX && x.isEmpty()) x = "0";
-        if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_VEC3, "Invalid vec3, expected space for next argument");
-        boolean relativeY = skipIfNext('~');
-        String y = readNumberBase();
-        if(!relativeY && !y.contains(".")) y += ".5";
-        else if(relativeY && y.isEmpty()) y = "0";
-        if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_VEC3, "Invalid vec3, expected space for next argument");
-        boolean relativeZ = skipIfNext('~');
-        String z = readNumberBase();
-        if(!relativeZ && !z.contains(".")) z += ".5";
-        else if(relativeZ && z.isEmpty()) z = "0";
-        return new WorldCoordinates(parseDouble(x), relativeX, parseDouble(y), relativeY, parseDouble(z), relativeZ, false);
+        return readCoordinates(true, false, COMMAND_INVALID_VEC3);
     }
 
+    /** BlockPosArgument: absolute values must be integers, relative/local values may be decimals,
+     * no centering (PAR-02). Consumers floor the resolved position (BlockPos.containing). */
+    public WorldCoordinates readBlockPos() {
+        return readCoordinates(false, true, COMMAND_INVALID_VEC3);
+    }
+
+    private WorldCoordinates readCoordinates(boolean centerXZ, boolean blockPos, String errorId) {
+        if(canRead() && peek() == '^') {
+            double x = readLocalCoordinate();
+            if(!canRead() || peek() != ' ') throw createError(COMMAND_INVALID_VEC3_LOCAL, "Invalid vec3, expected space for next argument");
+            skip();
+            double y = readLocalCoordinate();
+            if(!canRead() || peek() != ' ') throw createError(COMMAND_INVALID_VEC3_LOCAL, "Invalid vec3, expected space for next argument");
+            skip();
+            double z = readLocalCoordinate();
+            return new WorldCoordinates(x, true, y, true, z, true, true);
+        }
+        boolean relativeX = canRead() && peek() == '~';
+        double x = readWorldCoordinate(centerXZ, blockPos, errorId);
+        if(!canRead() || peek() != ' ') throw createError(errorId, "Invalid vec3, expected space for next argument");
+        skip();
+        boolean relativeY = canRead() && peek() == '~';
+        double y = readWorldCoordinate(false, blockPos, errorId);
+        if(!canRead() || peek() != ' ') throw createError(errorId, "Invalid vec3, expected space for next argument");
+        skip();
+        boolean relativeZ = canRead() && peek() == '~';
+        double z = readWorldCoordinate(centerXZ, blockPos, errorId);
+        return new WorldCoordinates(x, relativeX, y, relativeY, z, relativeZ, false);
+    }
+
+    /** LocalCoordinates.readDouble: '^' then an optional double. */
+    private double readLocalCoordinate() {
+        if(!canRead() || peek() != '^') throw createError(COMMAND_INVALID_VEC3_LOCAL, "Invalid vec3, cannot mix world & local coordinates");
+        skip();
+        if(!canRead() || peek() == ' ') return 0;
+        return parseDouble(readNumberBase());
+    }
+
+    /** WorldCoordinate.parseDouble / parseInt. */
+    private double readWorldCoordinate(boolean center, boolean integer, String errorId) {
+        if(canRead() && peek() == '^') throw createError(COMMAND_INVALID_VEC3_LOCAL, "Invalid vec3, cannot mix world & local coordinates");
+        if(!canRead()) throw createError(errorId, "Expected a coordinate");
+        if(peek() == '~') {
+            skip();
+            if(!canRead() || peek() == ' ') return 0;
+            return parseDouble(readNumberBase());
+        }
+        if(integer) return readInt();
+        String number = readNumberBase();
+        double value = parseDouble(number);
+        return center && number.indexOf('.') < 0 ? value + 0.5 : value;
+    }
+
+    /** RotationArgument: two WorldCoordinate.parseDouble(reader, false); never centered (PAR-03). */
     public RotationCoordinates readRotation() {
-        boolean relativeYaw = skipIfNext('~');
-        String yaw = readNumberBase();
-        if(!relativeYaw && !yaw.contains(".")) yaw += ".5";
-        else if(relativeYaw && yaw.isEmpty()) yaw = "0";
-        if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_ROTATION, "Invalid rotation, expected space for next argument");
-        boolean relativePitch = skipIfNext('~');
-        String pitch = readNumberBase();
-        if(!relativePitch && !pitch.contains(".")) pitch += ".5";
-        else if(relativePitch && pitch.isEmpty()) pitch = "0";
-        return new RotationCoordinates(parseDouble(yaw), relativeYaw, parseDouble(pitch), relativePitch);
+        boolean relativeYaw = canRead() && peek() == '~';
+        double yaw = readWorldCoordinate(false, false, COMMAND_INVALID_ROTATION);
+        if(!canRead() || peek() != ' ') throw createError(COMMAND_INVALID_ROTATION, "Invalid rotation, expected space for next argument");
+        skip();
+        boolean relativePitch = canRead() && peek() == '~';
+        double pitch = readWorldCoordinate(false, false, COMMAND_INVALID_ROTATION);
+        return new RotationCoordinates(yaw, relativeYaw, pitch, relativePitch);
     }
 
     public Gamemode readGamemode() {
@@ -851,8 +951,8 @@ public class StringCommandReader {
         }
     }
 
-    public ScoreAccessorArgument readScoreAccessor() {
-        ScoreHolderArgument scoreHolder = SelectorParser.parseScoreHolder(this, true);
+    public ScoreAccessorArgument readScoreAccessor(boolean allowMultiple) {
+        ScoreHolderArgument scoreHolder = SelectorParser.parseScoreHolder(this, allowMultiple);
         if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_SCORE_ACCESSOR, "Invalid score accessor, expected space for next argument");
         String objective = readWord();
         return new ScoreAccessorArgument(objective, scoreHolder);
@@ -863,7 +963,7 @@ public class StringCommandReader {
         if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_NBT_DATA_LOCATION, "Invalid nbt data location, expected space for next argument");
         switch(kind) {
             case "block" -> {
-                var coords = readVec3();
+                var coords = readBlockPos();
                 return new NbtDataLocation.Block(coords);
             }
             case "entity" -> {

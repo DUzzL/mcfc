@@ -66,6 +66,7 @@ fun generateTests(codeGenerator: CodeGenerator, tests: List<TestInfo>) {
             }
             map.appendText("    }\n")
             map.appendText("}\n")
+            map.close()
         }
     }
 

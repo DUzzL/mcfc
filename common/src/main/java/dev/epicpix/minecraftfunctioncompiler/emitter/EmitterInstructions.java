@@ -3,6 +3,7 @@ package dev.epicpix.minecraftfunctioncompiler.emitter;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes;
+import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2;
 import dev.epicpix.minecraftfunctioncompiler.il.LabelData;
 
 import java.util.ArrayList;
@@ -23,6 +24,10 @@ public final class EmitterInstructions {
     public static void emitInstruction(EmitterContext context) {
         if(context.instruction().type() == InstructionTypes.LABEL) {
             context.codeWriter().label(context.mapLabel(Objects.requireNonNull(context.instruction().<LabelData>get("label"))));
+            return;
+        }
+        if(context.instruction().type() == InstructionTypes2.CALL_OUTLINED) {
+            OutlinedCall.emit(context);
             return;
         }
         for(var emitter : instructionEmitters) {

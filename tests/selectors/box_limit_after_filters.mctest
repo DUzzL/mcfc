@@ -1,0 +1,19 @@
+; `if entity @e[...,dx=..]` must not truncate the box query to `limit` before the other filters run: the first
+; entity in the box does not match here, the second one does.
+@setup
+objective create t dummy
+
+@function run
+scoreboard players set found t 0
+scoreboard players set missing t 0
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_box"]}
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_box","mcfc_box_hit"]}
+execute positioned ~ ~10 ~ if entity @e[tag=mcfc_box_hit,dx=0,dy=0,dz=0] run scoreboard players set found t 1
+execute positioned ~ ~10 ~ unless entity @e[tag=mcfc_box_hit,dx=0,dy=0,dz=0] run scoreboard players set missing t 1
+execute positioned ~ ~10 ~ store result score in_range t if entity @e[tag=mcfc_box,distance=..2,limit=1]
+kill @e[tag=mcfc_box]
+
+@validate
+score found t is 1
+score missing t is 0
+score in_range t is 1

@@ -1,0 +1,27 @@
+; ReviewCompiler[1]: `data modify storage … set value` that changes nothing fails (ERROR_MERGE_UNCHANGED).
+@setup
+objective create t dummy
+
+@function run
+data remove storage mcfc:unchanged v
+data modify storage mcfc:unchanged l set value [1,2]
+execute store success score first t run data modify storage mcfc:unchanged v set value 5
+execute store success score same t run data modify storage mcfc:unchanged v set value 5
+scoreboard players set same_result t 9
+execute store result score same_result t run data modify storage mcfc:unchanged v set value 5
+execute store success score other t run data modify storage mcfc:unchanged v set value 6
+execute store success score list_same t run data modify storage mcfc:unchanged l[0] set value 1
+execute store success score list_other t run data modify storage mcfc:unchanged l[-1] set value 3
+execute store success score ret t run function mcfc-test:ret
+
+@function ret
+return run data modify storage mcfc:unchanged v set value 6
+
+@validate
+score first t is 1
+score same t is 0
+score same_result t is 0
+score other t is 1
+score list_same t is 0
+score list_other t is 1
+score ret t is 0

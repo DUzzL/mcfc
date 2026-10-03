@@ -27,8 +27,9 @@
  *
  * <h2>Architecture</h2>
  *
- * <p>The compiler walks the {@code List<LootItemCondition>} from a
- * {@link net.minecraft.advancements.criterion.ContextAwarePredicate}. For
+ * <p>The compiler walks the {@code List<LootItemCondition>} of a criterion
+ * predicate (26.2 {@code ContextAwarePredicate}; removed in 26.3, where triggers hold
+ * {@code Optional<Holder<LootItemCondition>>} directly). For
  * each condition it dispatches to a {@link ConditionEmitter} keyed by the
  * condition's runtime class. The emitter writes JVM bytecode that performs
  * the same check as the condition's {@code test()} method, but inlined and
@@ -43,12 +44,10 @@
  *
  * <h2>Hook</h2>
  *
- * <p>Mixin into the {@code ContextAwarePredicate(List<LootItemCondition>)}
- * constructor at TAIL replaces the {@code compositePredicates} field with
- * a compiled version when compilation succeeds; falls back to the vanilla
- * {@code Util.allOf(conditions)} otherwise. Per-condition emitter is opt-in
- * — unsupported types short-circuit to vanilla evaluation, so the compiler
- * progressively improves as more emitters are added.
+ * <p>Not wired: the planned {@code ContextAwarePredicate(List<LootItemCondition>)}
+ * constructor hook no longer exists in 26.3. A hook must instead target the
+ * {@code Holder<LootItemCondition>} trigger fields. Per-condition emitters are opt-in
+ * — unsupported types short-circuit to vanilla evaluation.
  *
  * <h2>Status</h2>
  *

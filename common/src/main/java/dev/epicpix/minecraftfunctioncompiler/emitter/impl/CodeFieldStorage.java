@@ -5,6 +5,8 @@ import dev.epicpix.minecraftfunctioncompiler.data.nbt.NbtValue;
 import dev.epicpix.minecraftfunctioncompiler.data.text.Text;
 import dev.epicpix.minecraftfunctioncompiler.data.text.TextHoverEvent;
 import dev.epicpix.minecraftfunctioncompiler.data.text.TextStyle;
+import dev.epicpix.minecraftfunctioncompiler.emitter.ExtensionFunctions;
+import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeInstruction;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeOptimizer;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister;
@@ -14,6 +16,7 @@ import dev.epicpix.minecraftfunctioncompiler.loader.ClassGenerator;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
 import java.lang.constant.MethodTypeDesc;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -21,7 +24,6 @@ import java.util.UUID;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.DATA_CLASS;
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.EMIT_SERVER_FUNCTION_MANAGER_NAME;
-import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.RUN_RESULT_FIELD;
 
 public final class CodeFieldStorage {
 
@@ -104,6 +106,30 @@ public final class CodeFieldStorage {
         return cw.getDataField(CodeFieldStorageMapKind.SCOREBOARD_CRITERION.generateName(map, value), map.getValueType(CodeFieldStorageMapKind.SCOREBOARD_CRITERION));
     }
 
+    public BytecodeRegister loadObjectiveRef(CodeWriter cw, String objective) {
+        return loadArrayElement(cw, CodeFieldStorageMapKind.OBJECTIVE_REF, objective);
+    }
+
+    public BytecodeRegister loadScoreHolder(CodeWriter cw, String holder) {
+        return loadArrayElement(cw, CodeFieldStorageMapKind.SCORE_HOLDER, holder);
+    }
+
+    public BytecodeRegister loadScoreRef(CodeWriter cw, String holder, String objective) {
+        return loadArrayElement(cw, CodeFieldStorageMapKind.SCORE_REF, new ScoreRefKey(holder, objective));
+    }
+
+    private static final InstructionTarget ARRAY_ELEMENT = InstructionTarget.FunctionTarget.staticFunction(ExtensionFunctions.class, "arrayElement", Object.class, Object[].class, int.class);
+
+    private <T> BytecodeRegister loadArrayElement(CodeWriter cw, CodeFieldStorageMapKind<T> kind, T value) {
+        map.writeValue(kind, value);
+        var type = map.getValueType(kind);
+        var array = cw.getDataField(kind.generateName(map, value), type.arrayType());
+        var index = new BytecodeValue.IntegerValue(map.checkIndex(kind, value));
+        var accessor = map.getValue(kind).elementAccessor();
+        if(accessor != null) return cw.writeTarget(accessor, array, index);
+        return cw.castType(cw.writeTarget(ARRAY_ELEMENT, array, index), type);
+    }
+
     public BytecodeRegister loadText(CodeWriter cw, Text value) {
         value.forEachComponent(text -> {
             if(!text.style().isEmpty()) {
@@ -161,8 +187,8 @@ public final class CodeFieldStorage {
 
     // Flushes current CodeWriter as a sub-method if it exceeds estimated size.
     // Returns a fresh CodeWriter if flushed, otherwise the same one.
-    private CodeWriter maybeFlushSubMethod(CodeWriter cw, ClassGenerator classGenerator, MethodTypeDesc loadMethodType, java.util.List<String> subMethodNames, HashMap<String, List<BytecodeInstruction>> lowLevelInstructions, int threshold) {
-        if(cw.getInstructions().size() < threshold) return cw;
+    private CodeWriter maybeFlushSubMethod(CodeWriter cw, ClassGenerator classGenerator, MethodTypeDesc loadMethodType, List<String> subMethodNames, HashMap<String, List<BytecodeInstruction>> lowLevelInstructions) {
+        if(cw.size() < INSTRUCTION_CHUNK_THRESHOLD) return cw;
         cw.returnVoid();
         var subName = "load$" + subMethodNames.size();
         var optimized = BytecodeOptimizer.optimizeInstructions(cw.getInstructions());
@@ -172,52 +198,69 @@ public final class CodeFieldStorage {
         return new CodeWriter();
     }
 
-    private <T> CodeWriter writeFromStorageChunked(HashSet<CodeFieldStorageMapKind<?>> written, CodeWriter cw, ClassGenerator classGenerator, CodeFieldStorageMapKind<T> kind, MethodTypeDesc loadMethodType, java.util.List<String> subMethodNames, HashMap<String, List<BytecodeInstruction>> lowLevelInstructions, int threshold, HashMap<CodeFieldStorageMapKind<?>, java.util.HashSet<Object>> processed) {
-        if(written.contains(kind)) return cw;
-        written.add(kind);
-        for(var dep : kind.getDependencies()) {
-            cw = writeFromStorageChunked(written, cw, classGenerator, dep, loadMethodType, subMethodNames, lowLevelInstructions, threshold, processed);
-        }
-        // Process values; writeCode may register new values in storage (e.g. nested TextStyle for hover events).
-        // Loop until storage stabilizes.
-        var kindProcessed = processed.computeIfAbsent(kind, k -> new java.util.HashSet<>());
-        while(true) {
-            var storage = map.getStorage(kind);
-            boolean addedAny = false;
-            for(var value : storage) {
-                if(!kindProcessed.add(value)) continue;
-                addedAny = true;
-                // Process dependencies that might have been registered newly
-                for(var dep : kind.getDependencies()) {
-                    cw = processNewValues(written, cw, classGenerator, dep, loadMethodType, subMethodNames, lowLevelInstructions, threshold, processed);
-                }
-                var name = kind.generateName(map, value);
-                var writtenValue = map.writeCode(kind, this, cw, value);
-                cw.setDataField(name, map.getValueType(kind), writtenValue);
-                classGenerator.addFinalField(name, map.getValueType(kind));
-                cw = maybeFlushSubMethod(cw, classGenerator, loadMethodType, subMethodNames, lowLevelInstructions, threshold);
-            }
-            if(!addedAny) break;
-        }
-        return cw;
-    }
+    /** Per-kind generation state: values with insertion index below {@code processed.get(kind)} are written. */
+    private final class Generation {
+        final HashSet<CodeFieldStorageMapKind<?>> written = new HashSet<>();
+        final HashMap<CodeFieldStorageMapKind<?>, Integer> processed = new HashMap<>();
+        final ClassGenerator classGenerator;
+        final HashMap<CodeFieldStorageMapKind<?>, Integer> arrayLengths = new HashMap<>();
+        final MethodTypeDesc loadMethodType;
+        final List<String> subMethodNames = new ArrayList<>();
+        final HashMap<String, List<BytecodeInstruction>> lowLevelInstructions;
+        CodeWriter cw = new CodeWriter();
 
-    private <T> CodeWriter processNewValues(HashSet<CodeFieldStorageMapKind<?>> written, CodeWriter cw, ClassGenerator classGenerator, CodeFieldStorageMapKind<T> kind, MethodTypeDesc loadMethodType, java.util.List<String> subMethodNames, HashMap<String, List<BytecodeInstruction>> lowLevelInstructions, int threshold, HashMap<CodeFieldStorageMapKind<?>, java.util.HashSet<Object>> processed) {
-        if(!written.contains(kind)) return cw; // not yet processed at all — will be handled later
-        var kindProcessed = processed.computeIfAbsent(kind, k -> new java.util.HashSet<>());
-        for(var dep : kind.getDependencies()) {
-            cw = processNewValues(written, cw, classGenerator, dep, loadMethodType, subMethodNames, lowLevelInstructions, threshold, processed);
+        Generation(ClassGenerator classGenerator, MethodTypeDesc loadMethodType, HashMap<String, List<BytecodeInstruction>> lowLevelInstructions) {
+            this.classGenerator = classGenerator;
+            this.loadMethodType = loadMethodType;
+            this.lowLevelInstructions = lowLevelInstructions;
         }
-        var storage = map.getStorage(kind);
-        for(var value : storage) {
-            if(!kindProcessed.add(value)) continue;
+
+        boolean hasPending(CodeFieldStorageMapKind<?> kind) {
+            return processed.getOrDefault(kind, 0) < map.storageSize(kind);
+        }
+
+        /** Writes the next unwritten value of {@code kind}. */
+        <T> void writeNext(CodeFieldStorageMapKind<T> kind) {
+            int index = processed.getOrDefault(kind, 0);
+            processed.put(kind, index + 1);
+            var value = map.valueAt(kind, index);
             var name = kind.generateName(map, value);
-            var writtenValue = map.writeCode(kind, this, cw, value);
-            cw.setDataField(name, map.getValueType(kind), writtenValue);
-            classGenerator.addFinalField(name, map.getValueType(kind));
-            cw = maybeFlushSubMethod(cw, classGenerator, loadMethodType, subMethodNames, lowLevelInstructions, threshold);
+            var writtenValue = map.writeCode(kind, CodeFieldStorage.this, cw, value);
+            var type = map.getValueType(kind);
+            if(kind.isArrayBacked()) {
+                if(index == 0) {
+                    int length = map.storageSize(kind);
+                    arrayLengths.put(kind, length);
+                    cw.setDataField(name, type.arrayType(), cw.newArray(new BytecodeValue.IntegerValue(length), type));
+                    classGenerator.addFinalField(name, type.arrayType());
+                }else if(index >= arrayLengths.get(kind)) {
+                    throw new IllegalStateException(kind + " value registered after its array was sized: " + value);
+                }
+                cw.setArrayValue(cw.getDataField(name, type.arrayType()), new BytecodeValue.IntegerValue(index), writtenValue);
+            }else {
+                cw.setDataField(name, type, writtenValue);
+                classGenerator.addFinalField(name, type);
+            }
+            cw = maybeFlushSubMethod(cw, classGenerator, loadMethodType, subMethodNames, lowLevelInstructions);
         }
-        return cw;
+
+        /** Writes all values of {@code kind} after its dependencies; writeCode may register new values (loops until stable). */
+        void writeKind(CodeFieldStorageMapKind<?> kind) {
+            if(!written.add(kind)) return;
+            for(var dep : kind.getDependencies()) writeKind(dep);
+            while(hasPending(kind)) {
+                // Values of dependencies registered while writing earlier values must be written first.
+                for(var dep : kind.getDependencies()) writeNewValues(dep);
+                writeNext(kind);
+            }
+        }
+
+        /** Writes values registered after {@code kind} was written (dependencies first). */
+        void writeNewValues(CodeFieldStorageMapKind<?> kind) {
+            if(!written.contains(kind)) return; // not yet processed at all — will be handled later
+            for(var dep : kind.getDependencies()) writeNewValues(dep);
+            while(hasPending(kind)) writeNext(kind);
+        }
     }
 
     public BytecodeValue getGeneratorMinecraftServer() {
@@ -228,43 +271,30 @@ public final class CodeFieldStorage {
     // Actual bytecode size varies per instruction (~5-20 bytes avg), so 2000 instructions ≈ 20-40KB.
     private static final int INSTRUCTION_CHUNK_THRESHOLD = 2000;
 
-    private <T> CodeWriter processRemainingValues(CodeFieldStorageMapKind<T> kind, CodeWriter cw, ClassGenerator classGenerator, MethodTypeDesc loadMethodType, java.util.List<String> subMethodNames, HashMap<String, List<BytecodeInstruction>> lowLevelInstructions, HashMap<CodeFieldStorageMapKind<?>, java.util.HashSet<Object>> processed, boolean[] anyNewBox) {
-        var kindProcessed = processed.computeIfAbsent(kind, k -> new java.util.HashSet<>());
-        for(var value : map.getStorage(kind)) {
-            if(!kindProcessed.add(value)) continue;
-            anyNewBox[0] = true;
-            var name = kind.generateName(map, value);
-            var writtenValue = map.writeCode(kind, this, cw, value);
-            cw.setDataField(name, map.getValueType(kind), writtenValue);
-            classGenerator.addFinalField(name, map.getValueType(kind));
-            cw = maybeFlushSubMethod(cw, classGenerator, loadMethodType, subMethodNames, lowLevelInstructions, INSTRUCTION_CHUNK_THRESHOLD);
-        }
-        return cw;
-    }
-
     public byte[] generate(HashMap<String, List<BytecodeInstruction>> lowLevelInstructions) {
         return ClassGenerator.createClassGenerator(DATA_CLASS, true, classGenerator -> {
             // Split initialization across multiple load$N methods to stay under JVM 65535 byte/method limit.
-            HashSet<CodeFieldStorageMapKind<?>> written = new HashSet<>();
-            var processed = new HashMap<CodeFieldStorageMapKind<?>, java.util.HashSet<Object>>();
             var loadMethodType = MethodTypeDesc.of(ConstantDescs.CD_void, minecraftServerType, serverFunctionManagerType);
-            var subMethodNames = new java.util.ArrayList<String>();
+            var gen = new Generation(classGenerator, loadMethodType, lowLevelInstructions);
+            var subMethodNames = gen.subMethodNames;
 
-            var currentCw = new CodeWriter();
             for(var kind : CodeFieldStorageMapKind.values()) {
-                currentCw = writeFromStorageChunked(written, currentCw, classGenerator, kind, loadMethodType, subMethodNames, lowLevelInstructions, INSTRUCTION_CHUNK_THRESHOLD, processed);
+                gen.writeKind(kind);
             }
             // Final pass to catch any values added during last iteration
             boolean anyNew = true;
             while(anyNew) {
-                boolean[] anyNewBox = {false};
+                anyNew = false;
                 for(var kind : CodeFieldStorageMapKind.values()) {
-                    currentCw = processRemainingValues(kind, currentCw, classGenerator, loadMethodType, subMethodNames, lowLevelInstructions, processed, anyNewBox);
+                    while(gen.hasPending(kind)) {
+                        anyNew = true;
+                        gen.writeNext(kind);
+                    }
                 }
-                anyNew = anyNewBox[0];
             }
+            var currentCw = gen.cw;
             // Flush final chunk
-            if(!currentCw.getInstructions().isEmpty()) {
+            if(currentCw.size() != 0) {
                 currentCw.returnVoid();
                 var subName = "load$" + subMethodNames.size();
                 var optimized = BytecodeOptimizer.optimizeInstructions(currentCw.getInstructions());
@@ -287,7 +317,6 @@ public final class CodeFieldStorage {
             classGenerator.addFunction("load", mainInstructions, loadMethodType);
 
             classGenerator.addFinalField(EMIT_SERVER_FUNCTION_MANAGER_NAME, serverFunctionManagerType);
-            classGenerator.addField(RUN_RESULT_FIELD, ConstantDescs.CD_long, 0L);
         });
     }
 

@@ -1,0 +1,27 @@
+; Vec3Argument centers only absolute integer X/Z by +0.5 (numerically, so -3 -> -2.5); Y is never centered.
+@setup
+objective create t dummy
+
+@function run
+execute positioned -3 64 7 summon minecraft:marker run function mcfc-test:read
+execute positioned -3.0 -12 0.25 summon minecraft:marker run function mcfc-test:read_decimal
+
+@function read
+execute store result score x t run data get entity @s Pos[0] 10
+execute store result score y t run data get entity @s Pos[1] 10
+execute store result score z t run data get entity @s Pos[2] 10
+kill @s
+
+@function read_decimal
+execute store result score dx t run data get entity @s Pos[0] 100
+execute store result score dy t run data get entity @s Pos[1] 100
+execute store result score dz t run data get entity @s Pos[2] 100
+kill @s
+
+@validate
+score x t is -25
+score y t is 640
+score z t is 75
+score dx t is -300
+score dy t is -1200
+score dz t is 25

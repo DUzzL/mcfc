@@ -4,6 +4,8 @@ import org.jspecify.annotations.Nullable;
 
 public enum MinecraftVersion {
     MC_26_1("26.1"),
+    MC_26_2("26.2"),
+    MC_26_3("26.3"),
     ;
 
     private final String name;

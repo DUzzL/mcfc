@@ -1,0 +1,17 @@
+; `execute in` scales X/Z by the dimensions' teleportation scale (vanilla CommandSourceStack.withLevel):
+; overworld -> nether divides by 8, nether -> overworld multiplies by 8.
+@setup
+objective create t dummy
+
+@function run
+execute positioned ~ 100 ~ align xz run summon minecraft:marker ~ ~ ~ {Tags:["mcfc_in_ref"]}
+execute positioned ~ 100 ~ align xz in minecraft:the_nether positioned ~1 ~ ~ in minecraft:overworld run summon minecraft:marker ~ ~ ~ {Tags:["mcfc_in_scaled"]}
+execute store result score #ref t run data get entity @e[tag=mcfc_in_ref,limit=1] Pos[0]
+execute store result score #scaled t run data get entity @e[tag=mcfc_in_scaled,limit=1] Pos[0]
+scoreboard players operation #scaled t -= #ref t
+scoreboard players operation offset t = #scaled t
+kill @e[tag=mcfc_in_ref]
+kill @e[tag=mcfc_in_scaled]
+
+@validate
+score offset t is 8

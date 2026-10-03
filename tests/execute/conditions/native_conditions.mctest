@@ -1,0 +1,30 @@
+; C21: `unless score` with an empty holder selection or a missing objective does not run its body
+; (vanilla aborts); a missing score does. P2: if/unless dimension and loaded compile natively.
+; `clear` without a player source fails (api-diff).
+@setup
+objective create t dummy
+
+@function run
+scoreboard players set c21_empty t 0
+execute unless score @e[tag=mcfc_cond_none,limit=1] t matches 1 run scoreboard players set c21_empty t 1
+scoreboard players set c21_objective t 0
+execute unless score #x mcfc_no_objective matches 1 run scoreboard players set c21_objective t 1
+scoreboard players set c21_missing t 0
+execute unless score #mcfc_missing t matches 1 run scoreboard players set c21_missing t 1
+scoreboard players set c21_compare t 0
+execute unless score #mcfc_missing t = #mcfc_missing2 t run scoreboard players set c21_compare t 1
+execute store success score dim_if t if dimension minecraft:overworld run scoreboard players set dim_ran t 1
+execute store success score dim_unless t unless dimension minecraft:overworld run scoreboard players set dim_unless_ran t 1
+execute store success score dim_nether t if dimension minecraft:the_nether run scoreboard players set dim_nether_ran t 1
+execute store success score loaded t if loaded ~ ~ ~ run scoreboard players set loaded_ran t 1
+execute store success score unloaded t unless loaded ~ ~ ~ run scoreboard players set unloaded_ran t 1
+execute store success score clear_server t run clear
+
+@validate
+score c21_empty t is 0
+score c21_objective t is 0
+score c21_missing t is 1
+score c21_compare t is 1
+score dim_if t is 1
+score dim_ran t is 1
+score clear_server t is 0

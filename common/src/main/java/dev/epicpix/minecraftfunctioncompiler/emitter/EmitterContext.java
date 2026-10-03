@@ -14,8 +14,6 @@ import dev.epicpix.minecraftfunctioncompiler.il.LocationData;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -26,7 +24,6 @@ import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.EM
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.EMITTER_INVALID_STORE_LOCATION;
 
 public final class EmitterContext {
-    private static final Logger LOGGER = LoggerFactory.getLogger("minecraftfunctioncompiler");
     private final DataLocation location;
     private final CodeFieldStorage fieldStorage;
     private final CodeWriter codeWriter;
@@ -150,14 +147,14 @@ public final class EmitterContext {
     public BytecodeValue load(int instructionIndexField) {
         var location = Objects.requireNonNull(instruction().<LocationData<?>>get(instructionIndexField));
         if(location.local() != null) {
-            if(!transforms.containsKey((int)location.local())) {
-                // The store instruction for this local was eliminated by the optimizer as dead code,
-                // but the load instruction survived. This means the code path that would have written
-                // a non-null value is unreachable at runtime, so the value is effectively always null.
-                LOGGER.warn("Loading undefined local {} in {} — store was likely removed by optimizer, treating as null", location, this.location);
-                return new BytecodeValue.NullValue();
+            var value = transforms.get((int) location.local());
+            if(value == null) {
+                // No instruction of this function defines the local (emitForEach pre-creates a register for every
+                // defined one). An untyped null would be unverifiable in primitive contexts, so fail the emission
+                // and let the function run through vanilla instead.
+                throw new DiagnosticException(Diagnostic.emitterError(EMITTER_INVALID_LOAD_LOCATION, this.location, "Load of undefined local " + location + " in " + instruction().type()));
             }
-            return transforms.get((int)location.local());
+            return value;
         }else if(location.object() instanceof String str) {
             return new BytecodeValue.StringValue(str);
         }else if(location.object() instanceof Integer intVal) {

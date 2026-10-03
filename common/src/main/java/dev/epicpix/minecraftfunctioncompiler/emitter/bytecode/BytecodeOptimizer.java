@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter.bytecode;
 
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -16,33 +17,49 @@ import java.util.List;
 
 public class BytecodeOptimizer {
 
-    private static final class RegisterTracker {
-        private final HashSet<BytecodeValue> readWith = new HashSet<>();
-        private int read = 0;
-        private int write = 0;
-        private boolean requiresEvaluation = false;
-    }
-
-    private static void countRegisterRead(Int2ObjectMap<RegisterTracker> registerUseCount, BytecodeValue value) {
-        countRegisterRead(registerUseCount, value, null);
-    }
-
-    private static void countRegisterRead(Int2ObjectMap<RegisterTracker> registerUseCount, BytecodeValue value, @Nullable BytecodeValue by) {
-        if(value instanceof BytecodeRegister(int reg)) {
-            var tracker = registerUseCount.computeIfAbsent(reg, _ -> new RegisterTracker());
-            if(by != null) {
-                tracker.readWith.add(by);
+    /** Registers read by {@code instruction}. */
+    private static void forEachRead(BytecodeInstruction instruction, java.util.function.IntConsumer consumer) {
+        java.util.function.Consumer<BytecodeValue> read = v -> {
+            if(v instanceof BytecodeRegister(int reg)) consumer.accept(reg);
+        };
+        switch(instruction) {
+            case BytecodeInstruction.RegisterValue v -> read.accept(v.source());
+            case BytecodeInstruction.RegisterValueValue v -> {
+                read.accept(v.sourceA());
+                read.accept(v.sourceB());
             }
-            tracker.read++;
+            case BytecodeInstruction.CreateArray v -> read.accept(v.length());
+            case BytecodeInstruction.SetArrayValue v -> {
+                read.accept(v.array());
+                read.accept(v.index());
+                read.accept(v.value());
+            }
+            case BytecodeInstruction.InstanceCheckJump v -> read.accept(v.a());
+            case BytecodeInstruction.ConditionalJump v -> {
+                read.accept(v.a());
+                read.accept(v.b());
+            }
+            case BytecodeInstruction.CallTarget v -> v.arguments().forEach(read);
+            case BytecodeInstruction.New v -> v.arguments().forEach(read);
+            case BytecodeInstruction.Cast v -> read.accept(v.source());
+            case BytecodeInstruction.StringConcat v -> v.values().forEach(read);
+            case BytecodeInstruction.Return v -> read.accept(v.value());
+            case BytecodeInstruction.Jump _, BytecodeInstruction.Label _, BytecodeInstruction.ReturnVoid _ -> {}
         }
     }
 
-    private static void countRegisterWrite(Int2ObjectMap<RegisterTracker> registerUseCount, BytecodeValue value, boolean requiresEvaluation) {
-        if(value instanceof BytecodeRegister(int reg)) {
-            var tracker = registerUseCount.computeIfAbsent(reg, _ -> new RegisterTracker());
-            tracker.write++;
-            tracker.requiresEvaluation |= requiresEvaluation;
-        }
+    /** Register written by {@code instruction}, or -1. */
+    private static int writtenRegister(BytecodeInstruction instruction) {
+        return switch(instruction) {
+            case BytecodeInstruction.RegisterValue v -> v.result().reg();
+            case BytecodeInstruction.RegisterValueValue v -> v.result().reg();
+            case BytecodeInstruction.CreateArray v -> v.result().reg();
+            case BytecodeInstruction.CallTarget v -> v.result().reg();
+            case BytecodeInstruction.New v -> v.result().reg();
+            case BytecodeInstruction.Cast v -> v.result().reg();
+            case BytecodeInstruction.StringConcat v -> v.result().reg();
+            default -> -1;
+        };
     }
 
     private static BytecodeValue remapValue(Int2ObjectMap<@Nullable BytecodeValue> registerDefinitionTracker, BytecodeValue value) {
@@ -64,95 +81,30 @@ public class BytecodeOptimizer {
         }
     }
 
-    // merges registers and does dead code elimination on code that uses registers that are not used
+    /**
+     * Copy propagation: {@code r := s} is removed and reads of {@code r} read {@code s} directly. {@code r} must be
+     * written only by the copy, and every read of {@code r} must see the value {@code s} had at the copy (see
+     * {@link #dropUnsafeCopies}).
+     */
     private static List<BytecodeInstruction> cleanUpRegisterValues(List<BytecodeInstruction> instructions) {
-        var registerUseCount = new Int2ObjectOpenHashMap<RegisterTracker>();
+        var writeCounts = new Int2IntOpenHashMap();
         var registerDefinitionTracker = new Int2ObjectOpenHashMap<BytecodeValue>();
         for(BytecodeInstruction instruction : instructions) {
-            switch(instruction) {
-                case BytecodeInstruction.RegisterValue v -> {
-                    countRegisterWrite(registerUseCount, v.result(), false);
-                    countRegisterRead(registerUseCount, v.source(), v.result());
-                    registerDefinitionTracker.put(v.result().reg(), v.source());
-                }
-                case BytecodeInstruction.RegisterValueValue v -> {
-                    countRegisterWrite(registerUseCount, v.result(), false);
-                    countRegisterRead(registerUseCount, v.sourceA(), v.result());
-                    countRegisterRead(registerUseCount, v.sourceB(), v.result());
-                    registerDefinitionTracker.remove(v.result().reg());
-                }
-                case BytecodeInstruction.CreateArray v -> {
-                    countRegisterWrite(registerUseCount, v.result(), false);
-                    countRegisterRead(registerUseCount, v.length(), v.result());
-                    registerDefinitionTracker.remove(v.result().reg());
-                }
-                case BytecodeInstruction.SetArrayValue(BytecodeValue array, BytecodeValue index, BytecodeValue value) -> {
-                    countRegisterRead(registerUseCount, array);
-                    countRegisterRead(registerUseCount, value);
-                    countRegisterRead(registerUseCount, index);
-                }
-                case BytecodeInstruction.InstanceCheckJump v -> countRegisterRead(registerUseCount, v.a());
-                case BytecodeInstruction.ConditionalJump v -> {
-                    countRegisterRead(registerUseCount, v.a());
-                    countRegisterRead(registerUseCount, v.b());
-                }
-                case BytecodeInstruction.CallTarget v -> {
-                    countRegisterWrite(registerUseCount, v.result(), true);
-                    for(var arg : v.arguments()) {
-                        countRegisterRead(registerUseCount, arg, v.result());
-                    }
-                    registerDefinitionTracker.remove(v.result().reg());
-                }
-                case BytecodeInstruction.New v -> {
-                    countRegisterWrite(registerUseCount, v.result(), true);
-                    for(var arg : v.arguments()) {
-                        countRegisterRead(registerUseCount, arg, v.result());
-                    }
-                    registerDefinitionTracker.remove(v.result().reg());
-                }
-                case BytecodeInstruction.Cast v -> {
-                    countRegisterWrite(registerUseCount, v.result(), false);
-                    countRegisterRead(registerUseCount, v.source(), v.result());
-                    registerDefinitionTracker.remove(v.result().reg());
-                }
-                case BytecodeInstruction.StringConcat(BytecodeRegister result, List<BytecodeValue> values) -> {
-                    countRegisterWrite(registerUseCount, result, false);
-                    for(var arg : values) {
-                        countRegisterRead(registerUseCount, arg, result);
-                    }
-                    registerDefinitionTracker.remove(result.reg());
-                }
-                case BytecodeInstruction.Return(BytecodeValue value) -> countRegisterRead(registerUseCount, value);
-                case BytecodeInstruction.Jump _, BytecodeInstruction.Label _, BytecodeInstruction.ReturnVoid _ -> {}
+            int written = writtenRegister(instruction);
+            if(written >= 0) writeCounts.addTo(written, 1);
+            if(instruction instanceof BytecodeInstruction.RegisterValue v) {
+                registerDefinitionTracker.put(v.result().reg(), v.source());
+            }else if(written >= 0) {
+                registerDefinitionTracker.remove(written);
             }
         }
 
-        for(var entry : registerUseCount.int2ObjectEntrySet()) {
-            if(entry.getValue().write > 1) {
+        for(var entry : writeCounts.int2IntEntrySet()) {
+            if(entry.getIntValue() > 1) {
                 registerDefinitionTracker.remove(entry.getIntKey());
             }
         }
-
-        var markedEvaluated = new IntOpenHashSet();
-        var markEvaluationStack = new IntArrayList();
-        for(var entry : registerUseCount.int2ObjectEntrySet()) {
-            if(entry.getValue().requiresEvaluation || entry.getValue().read != entry.getValue().readWith.size()) {
-                markEvaluationStack.push(entry.getIntKey());
-            }
-        }
-        while(!markEvaluationStack.isEmpty()) {
-            var reg = markEvaluationStack.popInt();
-            if(!markedEvaluated.add(reg)) {
-                continue;
-            }
-            var tracker = registerUseCount.get(reg);
-            tracker.requiresEvaluation = true;
-            for(var read : tracker.readWith) {
-                if(read instanceof BytecodeRegister(int readReg)) {
-                    markEvaluationStack.push(readReg);
-                }
-            }
-        }
+        if(!registerDefinitionTracker.isEmpty()) dropUnsafeCopies(instructions, registerDefinitionTracker);
 
         ArrayList<BytecodeInstruction> newInstructions = new ArrayList<>();
 
@@ -199,6 +151,77 @@ public class BytecodeOptimizer {
         }
 
         return newInstructions;
+    }
+
+    /**
+     * Removes copies {@code r := s} from {@code copies} unless every read of {@code r} sees the value {@code s} had at
+     * the copy. Scanning in order, a copy stays valid until {@code s} (or, for chains, a source further up) is written,
+     * or until a label that control can reach without passing the copy since the last time it ran: the target of a
+     * backward jump (a loop head), or a label jumped to from before the copy.
+     */
+    private static void dropUnsafeCopies(List<BytecodeInstruction> instructions, Int2ObjectOpenHashMap<BytecodeValue> copies) {
+        // label -> smallest index of a jump to it; labels that are targets of backward jumps get -1 (kill everything)
+        var labelIndex = new Object2IntOpenHashMap<BytecodeLabel>();
+        for(int i = 0; i < instructions.size(); i++) {
+            if(instructions.get(i) instanceof BytecodeInstruction.Label(BytecodeLabel label)) labelIndex.put(label, i);
+        }
+        var firstJumpSource = new Object2IntOpenHashMap<BytecodeLabel>();
+        firstJumpSource.defaultReturnValue(Integer.MAX_VALUE);
+        for(int i = 0; i < instructions.size(); i++) {
+            BytecodeLabel target = switch(instructions.get(i)) {
+                case BytecodeInstruction.Jump(BytecodeLabel label) -> label;
+                case BytecodeInstruction.ConditionalJump v -> v.label();
+                case BytecodeInstruction.InstanceCheckJump v -> v.label();
+                default -> null;
+            };
+            if(target == null) continue;
+            int source = labelIndex.getOrDefault(target, -1) <= i ? -1 : i;
+            firstJumpSource.put(target, Math.min(firstJumpSource.getInt(target), source));
+        }
+
+        var alive = new Int2IntOpenHashMap();                          // live copy register -> index of the copy
+        alive.defaultReturnValue(-1);
+        var registerCopies = new IntArrayList();                       // register-sourced copies, ascending copy index
+        var dependents = new Int2ObjectOpenHashMap<IntArrayList>();    // source register -> copies reading it
+        var unsafe = new IntOpenHashSet();
+        for(int i = 0; i < instructions.size(); i++) {
+            var instruction = instructions.get(i);
+            forEachRead(instruction, reg -> {
+                if(copies.containsKey(reg) && !alive.containsKey(reg)) unsafe.add(reg);
+            });
+            if(instruction instanceof BytecodeInstruction.Label(BytecodeLabel label)) {
+                // Register-sourced copies made after the first jump here are not valid on that jump's path.
+                int firstSource = firstJumpSource.getInt(label);
+                while(!registerCopies.isEmpty()) {
+                    int reg = registerCopies.getInt(registerCopies.size() - 1);
+                    int copyIndex = alive.get(reg);
+                    if(copyIndex >= 0 && copyIndex <= firstSource) break;
+                    alive.remove(reg);
+                    registerCopies.popInt();
+                }
+                continue;
+            }
+            int written = writtenRegister(instruction);
+            if(written < 0) continue;
+            kill(written, alive, dependents);
+            if(copies.containsKey(written)) {
+                alive.put(written, i);
+                if(copies.get(written) instanceof BytecodeRegister(int source)) {
+                    dependents.computeIfAbsent(source, _ -> new IntArrayList()).add(written);
+                    registerCopies.add(written);
+                }
+            }
+        }
+        for(var it = unsafe.iterator(); it.hasNext(); ) copies.remove(it.nextInt());
+    }
+
+    private static void kill(int register, Int2IntOpenHashMap alive, Int2ObjectOpenHashMap<IntArrayList> dependents) {
+        var deps = dependents.remove(register);
+        if(deps == null) return;
+        for(int i = 0; i < deps.size(); i++) {
+            int dep = deps.getInt(i);
+            if(alive.remove(dep) >= 0) kill(dep, alive, dependents);
+        }
     }
 
     private static BytecodeLabel getLabel(HashMap<BytecodeLabel, BytecodeLabel> labelMap, BytecodeLabel label) {

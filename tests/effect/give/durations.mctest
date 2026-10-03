@@ -1,0 +1,20 @@
+; C4: `effect give` without seconds lasts 30 s (600 ticks); instantaneous effects last 1 tick when
+; omitted and `seconds` ticks (not seconds*20) when given.
+@setup
+objective create t dummy
+
+@function run
+summon minecraft:pig ~ ~10 ~ {NoAI:1b,NoGravity:1b,Invulnerable:1b,Tags:["mcfc_c4a"]}
+summon minecraft:pig ~ ~10 ~ {NoAI:1b,NoGravity:1b,Invulnerable:1b,Tags:["mcfc_c4b"]}
+summon minecraft:pig ~ ~10 ~ {NoAI:1b,NoGravity:1b,Invulnerable:1b,Tags:["mcfc_c4c"]}
+effect give @e[tag=mcfc_c4a] minecraft:glowing
+effect give @e[tag=mcfc_c4b] minecraft:speed 3
+effect give @e[tag=mcfc_c4c] minecraft:instant_health 2 1
+execute store result score default_ticks t run data get entity @e[tag=mcfc_c4a,limit=1] active_effects[0].duration
+execute store result score seconds_ticks t run data get entity @e[tag=mcfc_c4b,limit=1] active_effects[0].duration
+execute store result score instant_ticks t run data get entity @e[tag=mcfc_c4c,limit=1] active_effects[0].duration
+
+@validate
+score default_ticks t is 600
+score seconds_ticks t is 60
+score instant_ticks t is 2

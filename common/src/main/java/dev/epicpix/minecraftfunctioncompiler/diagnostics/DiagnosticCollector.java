@@ -16,7 +16,7 @@ public class DiagnosticCollector {
         addDiagnostic(diagnostic);
     }
 
-    public List<Diagnostic> getDiagnostics() {
+    public synchronized List<Diagnostic> getDiagnostics() {
         return List.copyOf(diagnostics);
     }
 }

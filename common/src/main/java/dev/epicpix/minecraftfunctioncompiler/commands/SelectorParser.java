@@ -30,14 +30,30 @@ public final class SelectorParser {
     private SelectorParser() {}
 
     public static ScoreHolderArgument parseScoreHolder(StringCommandReader scoreHolder, boolean allowMultiple) {
-        if(scoreHolder.peek() == '@') {
+        if(scoreHolder.canRead() && scoreHolder.peek() == '@') {
             return ScoreHolderArgument.selectSelector(parseSelector(scoreHolder, true, allowMultiple));
         }
-        MacroTemplate<String> name = scoreHolder.readUntilSpaceWithTemplate(List.of(MacroValidators.NO_STAR));
+        MacroTemplate<String> name = scoreHolder.readUntilSpaceWithTemplate(List.of(MacroValidators.NO_STAR, MacroValidators.IS_PLAIN_SCORE_HOLDER_NAME));
         if(name.isExact("*")) {
             return ScoreHolderArgument.selectAll();
         }
+        if(name.isStatic()) {
+            String text = name.getStaticValue();
+            if(text.isEmpty()) throwError(scoreHolder, SELECTOR_INVALID_SYNTAX, "Expected a score holder");
+            // Vanilla resolves UUID-shaped names to entities; leave those to vanilla.
+            if(text.charAt(0) != '#' && looksLikeUuid(text)) throwError(scoreHolder, SELECTOR_INVALID_ENTITY, "UUID score holders are resolved by vanilla");
+        }
         return ScoreHolderArgument.selectNamed(name);
+    }
+
+    private static boolean looksLikeUuid(String text) {
+        if(text.indexOf('-') < 0) return false;
+        try {
+            UUID.fromString(text);
+            return true;
+        }catch(IllegalArgumentException e) {
+            return false;
+        }
     }
 
     private static void throwError(StringCommandReader reader, String diagnosticId, String message) {
@@ -45,45 +61,50 @@ public final class SelectorParser {
     }
 
     public static SelectorArgument parseSelector(StringCommandReader reader, boolean allowEntities, boolean allowMultiple) {
+        if(!reader.canRead()) throwError(reader, SELECTOR_INVALID_SYNTAX, "Expected a selector");
         if(reader.peek() != '@') {
-            var word = reader.readWord();
-            try {
+            // EntitySelectorParser.parseNameOrUUID: brigadier readString (quoted or [0-9A-Za-z_.+-]*).
+            var word = reader.readString();
+            if(looksLikeUuid(word)) {
+                // A UUID selector includes non-player entities (players-only rejects it).
+                if(!allowEntities) throwError(reader, SELECTOR_EXPECTED_PLAYER_TARGETS, "Only players may be affected by this command");
                 return SelectorArgument.ofUuid(UUID.fromString(word));
-            }catch(IllegalArgumentException e) {
-                return SelectorArgument.ofPlayer(word);
             }
+            if(word.isEmpty() || word.length() > 16) throwError(reader, SELECTOR_INVALID_ENTITY, "Invalid name or UUID");
+            return SelectorArgument.ofPlayer(word);
         }
 
         reader.skip();
+        if(!reader.canRead()) throwError(reader, SELECTOR_INVALID_TARGET, "Missing selector type");
         var selectorType = reader.read();
 
         var data = new SelectorGeneratorBuilderData();
         switch (selectorType) {
-            case 'e' -> {
-                if(!allowEntities) throwError(reader, SELECTOR_EXPECTED_PLAYER_TARGETS, "Unable to use @e with a player-only selector");
-                data.requireAlive = true;
-                // @e с limit=1 допускается в single-only контексте - проверим после парсинга опций
-            }
+            case 'e' -> data.requireAlive = true;
             case 's' -> {
                 data.self = true;
                 data.limit = 1;
             }
             case 'a' -> {
-                if(!allowMultiple) throwError(reader, SELECTOR_EXPECTED_SINGULAR_TARGET, "Unable to use @a with a single-only selector");
                 data.requirePlayer = true;
+                data.includesEntities = false;
+                data.typeLimited = true;
             }
             case 'p' -> {
                 data.requirePlayer = true;
+                data.includesEntities = false;
+                data.typeLimited = true;
                 data.sort = SelectorSort.NEAREST;
                 data.limit = 1;
             }
             case 'r' -> {
                 data.requirePlayer = true;
+                data.includesEntities = false;
+                data.typeLimited = true;
                 data.sort = SelectorSort.RANDOM;
                 data.limit = 1;
             }
             case 'n' -> {
-                if(!allowEntities) throwError(reader, SELECTOR_EXPECTED_PLAYER_TARGETS, "Unable to use @n with a player-only selector");
                 data.requireAlive = true;
                 data.sort = SelectorSort.NEAREST;
                 data.limit = 1;
@@ -121,9 +142,13 @@ public final class SelectorParser {
             }
         }
 
-        // @e допускается в single-only контексте если limit=1
-        if(!allowMultiple && selectorType == 'e' && (data.limit == null || data.limit != 1)) {
-            throwError(reader, SELECTOR_EXPECTED_SINGULAR_TARGET, "Unable to use @e with a single-only selector");
+        // EntityArgument: single-only rejects getMaxResults() > 1; players-only rejects
+        // selectors that include entities unless it is @s (PAR-14, PAR-16).
+        if(!allowMultiple && (data.limit == null || data.limit > 1)) {
+            throwError(reader, SELECTOR_EXPECTED_SINGULAR_TARGET, "Only one entity is allowed, but the provided selector allows more than one");
+        }
+        if(!allowEntities && data.includesEntities && !data.self) {
+            throwError(reader, SELECTOR_EXPECTED_PLAYER_TARGETS, "Only players may be affected by this command, but the provided selector includes entities");
         }
 
         return data.build();
@@ -178,26 +203,52 @@ public final class SelectorParser {
             reader.skip();
         });
         registerSelectorOption("type", (reader, data) -> {
-            if(data.entityTypes != null) throwError(reader, SELECTOR_OPTION_CANNOT_REPEAT, "type selector cannot be repeated");
+            // EntitySelectorOptions "type": not applicable once a positive concrete type is set (or @a/@p/@r);
+            // a positive type may not follow a negated one; negations accumulate.
+            if(data.typeLimited) throwError(reader, SELECTOR_OPTION_CANNOT_REPEAT, "type selector option isn't applicable here");
             var negated = reader.skipIfNext('!');
+            if(data.typeLimitedInversely && !negated) throwError(reader, SELECTOR_OPTION_INVALID, "type selector option isn't applicable here");
             var tag = reader.skipIfNext('#');
             var type = reader.readDataLocation();
             List<DataLocation> types;
             if(!tag) {
+                if(DataRegistries.ENTITY_TYPE.getElement(type).isEmpty()) throwError(reader, SELECTOR_INVALID_ENTITY, "Unsupported entity type: " + type);
                 types = List.of(type);
             }else {
                 types = DataRegistries.ENTITY_TYPE.getTag(type);
             }
-            for(var it : types) {
-                if(DataRegistries.ENTITY_TYPE.getElement(it).isEmpty()) throwError(reader, SELECTOR_INVALID_ENTITY, "Unsupported entity type: " + it);
+            if(negated) {
+                data.typeLimitedInversely = true;
+                if(data.entityTypes == null) {
+                    data.entityTypes = new NegatableData<>(types, true);
+                }else if(data.entityTypes.negated()) {
+                    var union = new java.util.ArrayList<>(data.entityTypes.data());
+                    for(var it : types) if(!union.contains(it)) union.add(it);
+                    data.entityTypes = new NegatableData<>(union, true);
+                }else {
+                    // positive tag followed by negations: not representable as one set; leave to vanilla
+                    throwError(reader, SELECTOR_OPTION_INVALID, "Mixed positive and negated type options are resolved by vanilla");
+                }
+            }else if(!tag) {
+                if(data.entityTypes != null) {
+                    // positive tag(s) then a concrete type: intersection; leave to vanilla
+                    throwError(reader, SELECTOR_OPTION_INVALID, "Combined type options are resolved by vanilla");
+                }
+                data.typeLimited = true;
+                if(type.equals(new DataLocation("minecraft", "player"))) data.includesEntities = false;
+                data.entityTypes = new NegatableData<>(types, false);
+            }else {
+                if(data.entityTypes != null) throwError(reader, SELECTOR_OPTION_INVALID, "Combined type options are resolved by vanilla");
+                data.entityTypes = new NegatableData<>(types, false);
             }
-            data.entityTypes = new NegatableData<>(types, negated);
         });
         registerSelectorOption("tag", (reader, data) -> {
+            // EntitySelectorOptions: `tag=` matches entities with no tags, `tag=!` entities with any tag.
             var negated = reader.skipIfNext('!');
             var tag = reader.readMacroWord(List.of(MacroValidators.NOT_EMPTY));
-            if(tag.parts().isEmpty()) {
-                data.hasTags = !negated;
+            if(tag.parts().isEmpty() || tag.isExact("")) {
+                if(data.hasTags != null && data.hasTags != negated) throwError(reader, SELECTOR_OPTION_INVALID, "Contradicting empty tag options are resolved by vanilla");
+                data.hasTags = negated;
             }else {
                 data.tags.add(new NegatableData<>(tag, negated));
             }
@@ -215,14 +266,30 @@ public final class SelectorParser {
             }
             data.gamemodes.add(new NegatableData<>(gamemode, negated));
         });
-        registerSelectorOption("sort", (reader, data) -> data.sort = reader.readSelectorSort());
+        registerSelectorOption("sort", (reader, data) -> {
+            if(data.self || data.sortSet) throwError(reader, SELECTOR_OPTION_CANNOT_REPEAT, "sort selector option isn't applicable here");
+            data.sortSet = true;
+            data.sort = reader.readSelectorSort();
+        });
         registerSelectorOption("name", (reader, data) -> {
             var negated = reader.skipIfNext('!');
             var name = reader.readString();
+            // InvertableSetOptionState: one positive name, never mixed with negated ones.
+            boolean anyPositive = false;
+            for(var it : data.names) anyPositive |= !it.negated();
+            if(anyPositive || (!negated && !data.names.isEmpty())) throwError(reader, SELECTOR_OPTION_CANNOT_REPEAT, "name selector option isn't applicable here");
             data.names.add(new NegatableData<>(name, negated));
         });
-        registerSelectorOption("limit", (reader, data) -> data.limit = reader.readInt());
+        registerSelectorOption("limit", (reader, data) -> {
+            if(data.self || data.limitSet) throwError(reader, SELECTOR_OPTION_CANNOT_REPEAT, "limit selector option isn't applicable here");
+            data.limitSet = true;
+            int limit = reader.readInt();
+            if(limit < 1) throwError(reader, SELECTOR_OPTION_INVALID, "Limit must be at least 1");
+            data.limit = limit;
+        });
         registerSelectorOption("level", (reader, data) -> {
+            if(data.level != null) throwError(reader, SELECTOR_OPTION_CANNOT_REPEAT, "level selector cannot be repeated");
+            data.includesEntities = false;
             data.level = reader.readIntRange();
             if((data.level.minimum() != null && data.level.minimum() < 0) || (data.level.maximum() != null && data.level.maximum() < 0)) {
                 throwError(reader, SELECTOR_OPTION_INVALID, "Minimum/maximum level cannot be negative: " + data.level);
@@ -237,6 +304,8 @@ public final class SelectorParser {
             }
         });
         registerSelectorOption("scores", (reader, data) -> {
+            if(data.scoresSet) throwError(reader, SELECTOR_OPTION_CANNOT_REPEAT, "scores selector cannot be repeated");
+            data.scoresSet = true;
             reader.skip();
             reader.skipWhitespace();
             while(reader.peek() != '}') {
@@ -251,21 +320,28 @@ public final class SelectorParser {
             reader.read();
         });
         registerSelectorOption("team", (reader, data) -> {
+            // EntitySelectorOptions: `team=` matches entities without a team, `team=!` entities on any team.
             var negated = reader.skipIfNext('!');
             var team = reader.readWord();
+            // InvertableSetOptionState: one positive team, never mixed with negated ones.
+            boolean anyPositive = Boolean.FALSE.equals(data.hasTeam);
+            for(var it : data.teams) anyPositive |= !it.negated();
+            boolean any = data.hasTeam != null || !data.teams.isEmpty();
+            if(anyPositive || (!negated && any)) throwError(reader, SELECTOR_OPTION_CANNOT_REPEAT, "team selector option isn't applicable here");
             if(team.isEmpty()) {
-                data.hasTeam = !negated;
+                if(data.hasTeam != null && data.hasTeam != negated) throwError(reader, SELECTOR_OPTION_INVALID, "Contradicting empty team options are resolved by vanilla");
+                data.hasTeam = negated;
             }else {
                 data.teams.add(new NegatableData<>(team, negated));
             }
         });
         registerSelectorOption("x_rotation", (reader, data) -> {
-            var bounds = reader.readFloatRange();
-            data.pitch = new FloatRangeArgument(bounds.minimum() != null ? wrapDegrees(bounds.minimum()) : null, bounds.maximum() != null ? wrapDegrees(bounds.maximum()) : null);
+            if(data.pitch != null) throwError(reader, SELECTOR_OPTION_CANNOT_REPEAT, "x_rotation selector cannot be repeated");
+            data.pitch = readRotationRange(reader);
         });
         registerSelectorOption("y_rotation", (reader, data) -> {
-            var bounds = reader.readFloatRange();
-            data.yaw = new FloatRangeArgument(bounds.minimum() != null ? wrapDegrees(bounds.minimum()) : null, bounds.maximum() != null ? wrapDegrees(bounds.maximum()) : null);
+            if(data.yaw != null) throwError(reader, SELECTOR_OPTION_CANNOT_REPEAT, "y_rotation selector cannot be repeated");
+            data.yaw = readRotationRange(reader);
         });
         registerSelectorOption("x", (reader, data) -> {
             if(data.x != null) throwError(reader, SELECTOR_OPTION_CANNOT_REPEAT, "x selector cannot be repeated");
@@ -310,6 +386,19 @@ public final class SelectorParser {
     }
 
 
+    /**
+     * MinMaxBounds.FloatDegrees as used by EntitySelectorParser.createRotationPredicate: bounds default to 0 and 359,
+     * both are wrapped to [-180, 180), and min > max (a range across ±180) is allowed.
+     */
+    private static FloatRangeArgument readRotationRange(StringCommandReader reader) {
+        var bounds = reader.readFloatRange();
+        if(bounds.minimum() == null && bounds.maximum() == null) throwError(reader, SELECTOR_OPTION_INVALID, "Expected a rotation range");
+        float min = bounds.minimum() != null ? bounds.minimum() : 0.0F;
+        float max = bounds.maximum() != null ? bounds.maximum() : 359.0F;
+        return new FloatRangeArgument(wrapDegrees(min), wrapDegrees(max));
+    }
+
+    // Mth.wrapDegrees(float)
     private static float wrapDegrees(float angle) {
         angle %= 360.0F;
         if(angle >= 180.0F) angle -= 360.0F;

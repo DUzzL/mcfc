@@ -13,7 +13,6 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
@@ -35,7 +34,7 @@ public final class FunctionCompilerReporter {
         ENABLED,
     }
 
-    private static ReportingStatus dataReportingStatus = ENABLE_REPORTING ? ReportingStatus.ENABLED : ReportingStatus.DISABLED_BY_COMPILE_CONSTANTS;
+    private static volatile ReportingStatus dataReportingStatus = ENABLE_REPORTING ? ReportingStatus.ENABLED : ReportingStatus.DISABLED_BY_COMPILE_CONSTANTS;
 
     public static void setReportingEnabled(boolean enable) {
         if(dataReportingStatus == ReportingStatus.ENABLED && !enable) {
@@ -47,7 +46,16 @@ public final class FunctionCompilerReporter {
 
     private static final UUID runUuid = UUID.randomUUID();
     private static final URI REPORT_URI = URI.create("https://mcfc.mods.epicpix.dev/api/v1/send_reports");
-    private static final HttpClient httpClient = HttpClient.newHttpClient();
+    private static final java.time.Duration HTTP_TIMEOUT = java.time.Duration.ofSeconds(10);
+    private static final java.util.concurrent.ExecutorService SENDER = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+        var t = new Thread(r, "Function Compiler Data Reporter");
+        t.setDaemon(true);
+        return t;
+    });
+    // SENDER only serializes submissions. It must not also be the client's executor: the synchronous send()
+    // below runs on SENDER and waits for exchange stages the client schedules on its executor, which would
+    // deadlock the single thread. The default executor uses its own daemon threads.
+    private static final HttpClient httpClient = HttpClient.newBuilder().connectTimeout(HTTP_TIMEOUT).build();
 
     @Nullable
     private static String minecraftVersionName = null;
@@ -73,7 +81,7 @@ public final class FunctionCompilerReporter {
         return isTesting;
     }
 
-    private static final ArrayList<JsonObject> reportQueue = new ArrayList<>();
+    private static final java.util.concurrent.ConcurrentLinkedQueue<JsonObject> reportQueue = new java.util.concurrent.ConcurrentLinkedQueue<>();
 
     @SuppressWarnings("ConstantValue")
     public static void reportRawData(String type, JsonElement data) {
@@ -111,7 +119,6 @@ public final class FunctionCompilerReporter {
     private static void writeExceptionJson(Throwable exception, JsonObject json) {
         if(!ENABLE_REPORTING) return;
         json.addProperty("exception_type", exception.getClass().getName());
-        json.addProperty("exception_message", exception.getMessage());
         var trace = new StringBuilder();
         for(var element : exception.getStackTrace()) {
             trace.append(element).append("\n");
@@ -136,18 +143,16 @@ public final class FunctionCompilerReporter {
     public static void reportExceptionWithInstructions(String step, Throwable exception, List<Instruction> instructions) {
         if(!ENABLE_REPORTING) return;
         JsonObject json = new JsonObject();
-        var instructionResult = new StringBuilder();
-        Instruction.printInstructions(instructions, (it) -> instructionResult.append("┗━ ").append(it).append("\n"));
-        json.addProperty("instructions", instructionResult.toString());
+        // Datapack content is never sent; only its size.
+        json.addProperty("instruction_count", instructions.size());
         reportException(step, exception, json);
     }
 
     public static void reportExceptionWithCommands(String step, Throwable exception, List<String> commands) {
         if(!ENABLE_REPORTING) return;
         JsonObject json = new JsonObject();
-        var commandResult = new StringBuilder();
-        for(var command : commands) commandResult.append(command).append("\n");
-        json.addProperty("commands", commandResult.toString());
+        // Datapack content is never sent; only its size.
+        json.addProperty("command_count", commands.size());
         reportException(step, exception, json);
     }
 
@@ -190,9 +195,6 @@ public final class FunctionCompilerReporter {
             obj.addProperty("id", diagnostic.diagnosticId());
             obj.addProperty("severity", diagnostic.severity().toString().toLowerCase(Locale.ROOT));
             obj.addProperty("kind", diagnostic.kind().toString().toLowerCase(Locale.ROOT));
-            obj.addProperty("message", diagnostic.message());
-
-            if(diagnostic.extra() != null) obj.addProperty("extra", diagnostic.extra());
             if(diagnostic.cause() != null) {
                 JsonObject exception = new JsonObject();
                 writeExceptionJson(diagnostic.cause(), exception);
@@ -208,16 +210,17 @@ public final class FunctionCompilerReporter {
     public static void sendReports() {
         if(!ENABLE_REPORTING || dataReportingStatus != ReportingStatus.ENABLED || reportQueue.isEmpty()) return;
         var sendData = new JsonArray();
-        reportQueue.forEach(sendData::add);
-        reportQueue.clear();
+        for(JsonObject report; (report = reportQueue.poll()) != null; ) sendData.add(report);
+        if(sendData.isEmpty()) return;
 
-        Thread t = new Thread(() -> {
+        SENDER.execute(() -> {
             try {
                 var response = httpClient.send(
                         HttpRequest.newBuilder()
                                 .uri(REPORT_URI)
                                 .POST(HttpRequest.BodyPublishers.ofString(new Gson().toJson(sendData)))
                                 .setHeader("Content-Type", "application/json")
+                                .timeout(HTTP_TIMEOUT)
                                 .build(),
                         HttpResponse.BodyHandlers.ofString()
                 );
@@ -232,7 +235,5 @@ public final class FunctionCompilerReporter {
                 }
             }catch(Exception ignored) {}
         });
-        t.setName("Function Compiler Data Reporter");
-        t.start();
     }
 }

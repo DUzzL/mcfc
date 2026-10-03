@@ -145,8 +145,9 @@ public final class GraphGenerator {
         int jIndex = 0;
         for(var child : instructions) {
             if(child.type() == InstructionTypes.LABEL) {
-                labels.put(Objects.requireNonNull(child.<LabelData>get("label")).id(), "x" + (uid + jIndex));
-                builder.append("    x").append(uid + jIndex).append("[label=\"").append((String) Objects.requireNonNull(child.get("label"))).append("\"];\n");
+                int labelId = Objects.requireNonNull(child.<LabelData>get("label")).id();
+                labels.put(labelId, "x" + (uid + jIndex));
+                builder.append("    x").append(uid + jIndex).append("[label=\"label<").append(labelId).append(">\"];\n");
             }
             jIndex++;
         }

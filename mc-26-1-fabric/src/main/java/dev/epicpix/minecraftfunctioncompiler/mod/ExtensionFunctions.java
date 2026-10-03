@@ -46,6 +46,7 @@ import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.clock.ClockTimeMarkers;
 import net.minecraft.world.clock.ServerClockManager;
 import net.minecraft.world.clock.WorldClock;
+import net.minecraft.world.timeline.Timeline;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootParams;
@@ -56,8 +57,11 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerScores;
 import net.minecraft.world.scores.ReadOnlyScoreInfo;
+import net.minecraft.world.scores.Score;
 import net.minecraft.world.scores.ScoreAccess;
 import net.minecraft.world.scores.ScoreHolder;
+import net.minecraft.world.scores.Scoreboard;
+import dev.epicpix.minecraftfunctioncompiler.mod.mixin.ScoreboardInvoker;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -78,37 +82,131 @@ public class ExtensionFunctions {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public static @Nullable ScoreAccess getScore(ServerScoreboard scoreboard, ScoreHolder player, Objective objective) {
-        PlayerScores map = scoreboard.playerScores.get(player.getScoreboardName());
-        if (map == null) return null;
-        return map.get(objective) == null ? null : scoreboard.getOrCreatePlayerScore(player, objective);
+    // Score read/write path. Mirrors one vanilla Scoreboard.getOrCreatePlayerScore ScoreAccess per command and
+    // target, but works on the live Score objects directly (no ScoreAccess / lambda / MutableBoolean allocation).
+    // Constant holders go through ScoreRef (link-time cached lookup); these helpers serve every holder.
+
+    /** The live score of {@code holder} in {@code objective}, or null (vanilla getPlayerScoreInfo; never creates). */
+    public static @Nullable Score findScore(Scoreboard scoreboard, Objective objective, ScoreHolder holder) {
+        PlayerScores scores = scoreboard.playerScores.get(holder.getScoreboardName());
+        return scores == null ? null : scores.get(objective);
     }
 
-    // Vanilla's /scoreboard players set|add|remove|operation on a read-only criterion
-    // (deathCount, playerKillCount, custom:*, etc.) fails with a command syntax error,
-    // leaving the score untouched. Mirror that: no-op instead of letting ScoreAccess.set
-    // throw IllegalStateException and kill the whole compiled function.
-    public static void setScoreSafe(ServerScoreboard scoreboard, Objective objective, ScoreHolder holder, int value) {
+    /** {@code found}, or the score vanilla getOrCreatePlayerScore creates for it (value 0, locked). The creation is
+     * synced by the following {@link #setScore} call with {@code found == null}, as the creating ScoreAccess does. */
+    public static Score ensureScore(ServerScoreboard scoreboard, Objective objective, ScoreHolder holder, @Nullable Score found) {
+        if (found != null) return found;
+        scoreboard.getOrCreatePlayerScore(holder, objective, true);
+        return scoreboard.playerScores.get(holder.getScoreboardName()).get(objective);
+    }
+
+    /**
+     * Vanilla ScoreAccess.set on the access that looked {@code score} up; {@code found == null} means that access
+     * created it (requiresSync), so the score is synced even when the value does not change.
+     * A read-only criterion is left untouched: scoreboard set/add/remove/operation reject it before reaching here
+     * (getWritableObjective), and for `execute store` vanilla's set would throw IllegalStateException instead.
+     */
+    public static void setScore(ServerScoreboard scoreboard, Objective objective, ScoreHolder holder, Score score, @Nullable Score found, int value) {
         if (objective.getCriteria().isReadOnly()) return;
-        scoreboard.getOrCreatePlayerScore(holder, objective).set(value);
+        if (dev.epicpix.minecraftfunctioncompiler.GlobalConfig.enableParallelDatapacks) {
+            bufferOrRun(() -> scoreboard.getOrCreatePlayerScore(holder, objective).set(value));
+            return;
+        }
+        boolean changed = found == null;
+        if (objective.displayAutoUpdate()) {
+            Component display = holder.getDisplayName();
+            if (display != null && !display.equals(score.display())) {
+                score.display(display);
+                changed = true;
+            }
+        }
+        if (value != score.value()) {
+            score.value(value);
+            changed = true;
+        }
+        if (changed) ((ScoreboardInvoker) scoreboard).mcfc$onScoreChanged(holder, objective, score);
     }
 
-    public static void executeFunction(ServerFunctionManager manager, CommandFunction<CommandSourceStack> commandFunction, CommandSourceStack commandSourceStack, CompoundTag arguments) {
-        ProfilerFiller profilerFiller = Profiler.get();
-        profilerFiller.push(() -> "function " + commandFunction.id());
+    /** One target of vanilla ScoreboardCommand.enableTrigger: unlocks a locked score; returns whether it did. */
+    public static boolean enableTrigger(ServerScoreboard scoreboard, Objective objective, ScoreHolder holder) {
+        ScoreAccess access = scoreboard.getOrCreatePlayerScore(holder, objective);
+        if (!access.locked()) return false;
+        access.unlock();
+        return true;
+    }
 
-        try {
-            InstantiatedFunction<CommandSourceStack> instantiatedFunction = commandFunction.instantiate(arguments, manager.getDispatcher());
-            Commands.executeCommandInContext(
-                    commandSourceStack,
-                    executionContext -> ExecutionContext.queueInitialFunctionCall(executionContext, instantiatedFunction, commandSourceStack, CommandResultCallback.EMPTY)
-            );
-        } catch (FunctionInstantiationException ignored) {
-        } catch (Exception e) {
-            LOGGER.warn("Failed to execute function {}", commandFunction.id(), e);
-        } finally {
-            profilerFiller.pop();
+    // ===================== Parallel datapack execution (gated) =====================
+    // Deferred-mutation model: inside a parallel fan-out worker, mutations are recorded
+    // into a per-thread buffer instead of applied; the main thread applies all buffers in
+    // element order after the join (cross-element writes are visible next tick). Reads go
+    // straight to live world state: there are no per-tick snapshots or read caches.
+    // Gated by GlobalConfig.enableParallelDatapacks (hard-disabled).
+    // See PARALLEL_DATAPACK_DESIGN.md.
+    private static final ThreadLocal<java.util.List<Runnable>> MUTATION_BUFFER = new ThreadLocal<>();
+    private static void bufferOrRun(Runnable apply) {
+        java.util.List<Runnable> buf = MUTATION_BUFFER.get();
+        if (buf != null) buf.add(apply); else apply.run();
+    }
+
+    private static final java.util.concurrent.ForkJoinPool DATAPACK_FANOUT_POOL =
+            new java.util.concurrent.ForkJoinPool(Math.max(2, Runtime.getRuntime().availableProcessors() - 2));
+
+    /** Run {@code body} for each item across the fan-out pool in buffered mode, then apply
+     *  all buffered mutations serially on the calling (server) thread in element order. */
+    public static void parallelFanout(java.util.List<? extends Entity> items, java.util.function.Consumer<Entity> body) {
+        int n = items.size();
+        if (n == 0) return;
+        int pool = Math.max(1, DATAPACK_FANOUT_POOL.getParallelism());
+        int chunk = Math.max(1, (n + pool - 1) / pool);
+        int batches = (n + chunk - 1) / chunk;
+        @SuppressWarnings("unchecked")
+        java.util.List<Runnable>[] buffers = new java.util.List[batches];
+        var futures = new java.util.concurrent.Future<?>[batches];
+        for (int b = 0, s = 0; b < batches; b++, s += chunk) {
+            final int from = s, to = Math.min(s + chunk, n), bi = b;
+            futures[bi] = DATAPACK_FANOUT_POOL.submit(() -> {
+                var localBuf = new ArrayList<Runnable>();
+                MUTATION_BUFFER.set(localBuf);
+                try {
+                    for (int i = from; i < to; i++) body.accept(items.get(i));
+                } finally {
+                    MUTATION_BUFFER.remove();
+                }
+                buffers[bi] = localBuf;
+            });
         }
+        for (var f : futures) {
+            try { f.get(); } catch (Exception e) { LOGGER.error("parallel datapack fan-out failed", e); }
+        }
+        // deterministic apply: batches are contiguous element ranges → batch order = element order
+        for (var buf : buffers) if (buf != null) for (Runnable r : buf) r.run();
+    }
+
+    /** Backs the parallel `execute as <sel> at @s run function <fn>` codegen path: run the
+     *  (classified-safe) compiled function once per matched entity, at-self, across the
+     *  fan-out pool in buffered mode; mutations apply serially after the join. Falls back to
+     *  serial if the function classloader isn't ready. fn id passed as the MFC DataLocation. */
+    @SuppressWarnings("unchecked")
+    public static void parallelRunFunctionAtSelf(java.util.List entities,
+                                                 net.minecraft.commands.CommandSourceStack baseStack,
+                                                 String fn) {
+        if (entities.isEmpty()) return;
+        java.util.List<? extends Entity> ents = (java.util.List<? extends Entity>) entities;
+        var loader = dev.epicpix.minecraftfunctioncompiler.mod.FunctionCompilerMain.functionClassLoader;
+        net.minecraft.resources.Identifier id = cachedId(fn);
+        if (loader == null || !loader.isUseReady() || !loader.hasFunctionLoaded(id)) return;
+        if (!(baseStack.getLevel() instanceof ServerLevel)) return;
+        // body re-reads the classloader from the static field rather than capturing it, so
+        // the synthetic lambda's descriptor stays free of the mod's loader type.
+        parallelFanout(ents, e -> {
+            if (!(e.level() instanceof ServerLevel lvl)) return;
+            net.minecraft.commands.CommandSourceStack s = baseStack
+                    .withEntity(e).withLevel(lvl)
+                    .withPosition(e.position())
+                    .withRotation(new net.minecraft.world.phys.Vec2(e.getYRot(), e.getXRot()));
+            var fcl = dev.epicpix.minecraftfunctioncompiler.mod.FunctionCompilerMain.functionClassLoader;
+            if (fcl != null) fcl.runFunction(id, s, null);
+        });
     }
 
     // Tag creation helpers for execute store byte/short/long
@@ -121,12 +219,24 @@ public class ExtensionFunctions {
     // Effect commands — native compilation helpers
     // -------------------------------------------------------------------------
 
-    public static void effectGive(Entity entity, @Nullable Entity sourceEntity, MinecraftServer server, String effectId, int durationTicks, int amplifier, boolean hideParticles) {
-        if (!(entity instanceof net.minecraft.world.entity.LivingEntity living)) return;
-        var effectKey = ResourceKey.create(Registries.MOB_EFFECT, cachedId(effectId));
-        server.registryAccess().lookup(Registries.MOB_EFFECT)
-            .flatMap(lookup -> lookup.get(effectKey))
-            .ifPresent(effect -> living.addEffect(new net.minecraft.world.effect.MobEffectInstance(effect, durationTicks, amplifier, false, !hideParticles), sourceEntity));
+    /** {@code seconds} argument value meaning "omitted" ({@code effect give <targets> <effect>}). */
+    public static final int EFFECT_SECONDS_OMITTED = -1;
+
+    /**
+     * {@code effect give}: {@code seconds} is the raw command argument or
+     * {@link #EFFECT_SECONDS_OMITTED}. Duration follows 26.3 EffectCommands.computeDurationInTicks:
+     * omitted → 600 ticks (1 for instantaneous effects), otherwise seconds*20 (seconds as ticks
+     * for instantaneous effects). Returns 1 when the effect was applied, like vanilla's per-entity count.
+     */
+    public static int effectGive(Entity entity, @Nullable Entity sourceEntity, MinecraftServer server, String effectId, int seconds, int amplifier, boolean hideParticles) {
+        if (!(entity instanceof net.minecraft.world.entity.LivingEntity living)) return 0;
+        var effect = mobEffect(server, effectId);
+        if (effect == null) return 0;
+        boolean instantaneous = effect.value().isInstantaneous();
+        int durationTicks = seconds == EFFECT_SECONDS_OMITTED
+                ? (instantaneous ? 1 : 600)
+                : (instantaneous ? seconds : seconds * 20);
+        return living.addEffect(new net.minecraft.world.effect.MobEffectInstance(effect, durationTicks, amplifier, false, !hideParticles), sourceEntity) ? 1 : 0;
     }
 
     public static void effectClearAll(Entity entity) {
@@ -137,10 +247,28 @@ public class ExtensionFunctions {
 
     public static void effectClearEffect(Entity entity, MinecraftServer server, String effectId) {
         if (!(entity instanceof net.minecraft.world.entity.LivingEntity living)) return;
-        var effectKey = ResourceKey.create(Registries.MOB_EFFECT, cachedId(effectId));
-        server.registryAccess().lookup(Registries.MOB_EFFECT)
-            .flatMap(lookup -> lookup.get(effectKey))
-            .ifPresent(living::removeEffect);
+        var effect = mobEffect(server, effectId);
+        if (effect != null) living.removeEffect(effect);
+    }
+
+    private static final java.util.concurrent.ConcurrentHashMap<String, Object> MOB_EFFECT_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Registry holder for a compile-time effect id, resolved once (vanilla ResourceArgument); null = unknown. */
+    private static @Nullable Holder<net.minecraft.world.effect.MobEffect> mobEffect(MinecraftServer server, String effectId) {
+        Object cached = MOB_EFFECT_CACHE.get(effectId);
+        if (cached == null) {
+            var id = Identifier.tryParse(effectId);
+            cached = id == null ? null : commandBuildContext(server).lookupOrThrow(Registries.MOB_EFFECT)
+                    .get(ResourceKey.create(Registries.MOB_EFFECT, id)).orElse(null);
+            if (cached == null) {
+                LOGGER.warn("MCFC: unknown mob effect '{}' (the command will fail)", effectId);
+                cached = PARSE_FAILED;
+            }
+            MOB_EFFECT_CACHE.put(effectId, cached);
+        }
+        @SuppressWarnings("unchecked")
+        var effect = cached == PARSE_FAILED ? null : (Holder<net.minecraft.world.effect.MobEffect>) cached;
+        return effect;
     }
 
     // -------------------------------------------------------------------------
@@ -149,22 +277,67 @@ public class ExtensionFunctions {
 
     public static void teleportToEntity(Entity target, Entity destination) {
         if (!(destination.level() instanceof ServerLevel destLevel)) return;
-        if (target.teleportTo(destLevel, destination.getX(), destination.getY(), destination.getZ(),
-                java.util.Set.of(), destination.getYRot(), destination.getXRot(), true)) {
-            postTeleportCleanup(target);
+        performTeleport(target, destLevel, destination.getX(), destination.getY(), destination.getZ(),
+                java.util.Set.of(), destination.getYRot(), destination.getXRot());
+    }
+
+    // `relFlags` for tp <pos> [<rot>]: which destination components were written relative (~ or ^),
+    // exactly vanilla Coordinates.isX/Y/ZRelative (local ^ coordinates are relative on all axes).
+    public static final int TP_REL_X = 1;
+    public static final int TP_REL_Y = 2;
+    public static final int TP_REL_Z = 4;
+    public static final int TP_REL_YAW = 8;
+    public static final int TP_REL_PITCH = 16;
+    /** Set when a rotation argument is present (otherwise vanilla keeps the rotation: Relative.ROTATION). */
+    public static final int TP_HAS_ROTATION = 32;
+    private static final int TP_SAME_DIMENSION = 64;
+
+    /** Vanilla TeleportCommand.getRelatives for every (relFlags, sameDimension) combination, built once. */
+    private static final java.util.Set<?>[] TP_RELATIVES = new java.util.Set<?>[128];
+    static {
+        for (int flags = 0; flags < TP_RELATIVES.length; flags++) {
+            boolean x = (flags & TP_REL_X) != 0, y = (flags & TP_REL_Y) != 0, z = (flags & TP_REL_Z) != 0;
+            var relatives = net.minecraft.world.entity.Relative.union(
+                    net.minecraft.world.entity.Relative.direction(x, y, z),
+                    (flags & TP_SAME_DIMENSION) != 0 ? net.minecraft.world.entity.Relative.position(x, y, z) : java.util.Set.of(),
+                    (flags & TP_HAS_ROTATION) == 0
+                            ? net.minecraft.world.entity.Relative.ROTATION
+                            : net.minecraft.world.entity.Relative.rotation((flags & TP_REL_YAW) != 0, (flags & TP_REL_PITCH) != 0));
+            TP_RELATIVES[flags] = relatives.isEmpty()
+                    ? java.util.Set.of()
+                    : java.util.Collections.unmodifiableSet(java.util.EnumSet.copyOf(relatives));
         }
     }
 
-    public static void teleportToPos(Entity target, ServerLevel world, Vec3 pos) {
-        if (target.teleportTo(world, pos.x, pos.y, pos.z, java.util.Set.of(), target.getYRot(), target.getXRot(), true)) {
-            postTeleportCleanup(target);
+    @SuppressWarnings("unchecked")
+    private static java.util.Set<net.minecraft.world.entity.Relative> tpRelatives(Entity target, ServerLevel world, int relFlags) {
+        return (java.util.Set<net.minecraft.world.entity.Relative>) TP_RELATIVES[relFlags | (target.level().dimension() == world.dimension() ? TP_SAME_DIMENSION : 0)];
+    }
+
+    public static void teleportToPos(Entity target, ServerLevel world, Vec3 pos, int relFlags) {
+        performTeleport(target, world, pos.x, pos.y, pos.z, tpRelatives(target, world, relFlags & ~TP_HAS_ROTATION), target.getYRot(), target.getXRot());
+    }
+
+    public static void teleportToPosRot(Entity target, ServerLevel world, Vec3 pos, float yaw, float pitch, int relFlags) {
+        performTeleport(target, world, pos.x, pos.y, pos.z, tpRelatives(target, world, relFlags | TP_HAS_ROTATION), yaw, pitch);
+    }
+
+    /** Mirrors 26.3 TeleportCommand.performTeleport (without lookAt). Out-of-bounds destinations fail. */
+    private static void performTeleport(Entity victim, ServerLevel level, double x, double y, double z, java.util.Set<net.minecraft.world.entity.Relative> relatives, float yRot, float xRot) {
+        if (teleportVictim(victim, level, x, y, z, relatives, yRot, xRot)) {
+            postTeleportCleanup(victim);
         }
     }
 
-    public static void teleportToPosRot(Entity target, ServerLevel world, Vec3 pos, float yaw, float pitch) {
-        if (target.teleportTo(world, pos.x, pos.y, pos.z, java.util.Set.of(), Mth.wrapDegrees(yaw), Mth.wrapDegrees(pitch), true)) {
-            postTeleportCleanup(target);
-        }
+    /** The teleport part of performTeleport; the caller applies lookAt (if any) and then {@link #postTeleportCleanup}. */
+    private static boolean teleportVictim(Entity victim, ServerLevel level, double x, double y, double z, java.util.Set<net.minecraft.world.entity.Relative> relatives, float yRot, float xRot) {
+        if (!net.minecraft.world.level.Level.isInSpawnableBounds(net.minecraft.core.BlockPos.containing(x, y, z))) return false;
+        double relX = relatives.contains(net.minecraft.world.entity.Relative.X) ? x - victim.getX() : x;
+        double relY = relatives.contains(net.minecraft.world.entity.Relative.Y) ? y - victim.getY() : y;
+        double relZ = relatives.contains(net.minecraft.world.entity.Relative.Z) ? z - victim.getZ() : z;
+        float relYRot = relatives.contains(net.minecraft.world.entity.Relative.Y_ROT) ? yRot - victim.getYRot() : yRot;
+        float relXRot = relatives.contains(net.minecraft.world.entity.Relative.X_ROT) ? xRot - victim.getXRot() : xRot;
+        return victim.teleportTo(level, relX, relY, relZ, relatives, Mth.wrapDegrees(relYRot), Mth.wrapDegrees(relXRot), true);
     }
 
     private static void postTeleportCleanup(Entity entity) {
@@ -182,37 +355,40 @@ public class ExtensionFunctions {
     // -------------------------------------------------------------------------
 
     public static int clearPlayerInventory(ServerPlayer player) {
-        int count = player.getInventory().clearOrCountMatchingItems(stack -> true, -1, player.inventoryMenu.getCraftSlots());
-        player.inventoryMenu.broadcastChanges();
-        player.containerMenu.slotsChanged(player.getInventory());
+        // Mirrors vanilla ClearInventoryCommands.clearInventory with maxCount -1 (never counting-only).
+        int count = player.getInventory().clearOrCountMatchingItems(stack -> true, false, -1, player.inventoryMenu.getCraftSlots());
+        player.containerMenu.broadcastChanges();
+        player.inventoryMenu.slotsChanged(player.getInventory());
         return count;
     }
 
     public static int clearPlayerItem(ServerPlayer player, MinecraftServer server, String itemPredicate, int maxCount) {
         var parsed = parseItemPredicate(server, itemPredicate);
         if (parsed == null) return 0;
-        int count = player.getInventory().clearOrCountMatchingItems(parsed, maxCount, player.inventoryMenu.getCraftSlots());
-        player.inventoryMenu.broadcastChanges();
-        player.containerMenu.slotsChanged(player.getInventory());
+        // Mirrors vanilla ClearInventoryCommands.clearInventory: maxCount 0 counts only and skips the menu sync.
+        boolean countingOnly = maxCount == 0;
+        int count = player.getInventory().clearOrCountMatchingItems(parsed, countingOnly, maxCount, player.inventoryMenu.getCraftSlots());
+        if (!countingOnly) {
+            player.containerMenu.broadcastChanges();
+            player.inventoryMenu.slotsChanged(player.getInventory());
+        }
         return count;
     }
 
-    private static final java.util.concurrent.ConcurrentHashMap<String, java.util.function.Predicate<net.minecraft.world.item.ItemStack>> ITEM_PREDICATE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.concurrent.ConcurrentHashMap<String, Object> ITEM_PREDICATE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
+    /** Vanilla ItemPredicateArgument (tags, `*`, component `=`/`~` predicates, `!`, `|`), or null when it does not parse. */
     private static java.util.function.@Nullable Predicate<net.minecraft.world.item.ItemStack> parseItemPredicate(MinecraftServer server, String itemString) {
-        var cached = ITEM_PREDICATE_CACHE.get(itemString);
-        if (cached != null) return cached;
-        try {
-            var input = parseItemInput(server, itemString);
-            if (input == null) return null;
-            var holder = input.item();
-            java.util.function.Predicate<net.minecraft.world.item.ItemStack> predicate = stack -> stack.is(holder);
-            ITEM_PREDICATE_CACHE.put(itemString, predicate);
-            return predicate;
-        } catch (Exception e) {
-            LOGGER.warn("Failed to parse item predicate '{}': {}", itemString, e.getMessage());
-            return null;
+        Object cached = ITEM_PREDICATE_CACHE.get(itemString);
+        if (cached == null || (cached == PARSE_FAILED && failedParsesStale(server))) {
+            var argument = net.minecraft.commands.arguments.item.ItemPredicateArgument.itemPredicate(commandBuildContext(server));
+            cached = parseWhole("item predicate", itemString, argument::parse);
+            if (cached == PARSE_FAILED) failedParsesStale(server);
+            ITEM_PREDICATE_CACHE.put(itemString, cached);
         }
+        @SuppressWarnings("unchecked")
+        var predicate = cached == PARSE_FAILED ? null : (java.util.function.Predicate<net.minecraft.world.item.ItemStack>) cached;
+        return predicate;
     }
 
     // -------------------------------------------------------------------------
@@ -235,26 +411,21 @@ public class ExtensionFunctions {
     // Particle commands — native compilation helpers
     // -------------------------------------------------------------------------
 
-    private static final java.util.concurrent.ConcurrentHashMap<String, net.minecraft.core.particles.ParticleOptions> PARTICLE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.concurrent.ConcurrentHashMap<String, Object> PARTICLE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static net.minecraft.core.particles.@Nullable ParticleOptions parseParticle(MinecraftServer server, String particleName) {
-        var cached = PARTICLE_CACHE.get(particleName);
-        if (cached != null) return cached;
-        try {
-            var reader = new com.mojang.brigadier.StringReader(particleName);
-            var result = net.minecraft.commands.arguments.ParticleArgument.readParticle(reader, server.registryAccess());
-            PARTICLE_CACHE.put(particleName, result);
-            return result;
-        } catch (Exception e) {
-            LOGGER.warn("Failed to parse particle '{}': {}", particleName, e.getMessage());
-            return null;
+        Object cached = PARTICLE_CACHE.get(particleName);
+        if (cached == null) {
+            var registries = commandBuildContext(server);
+            cached = parseWhole("particle", particleName, reader -> net.minecraft.commands.arguments.ParticleArgument.readParticle(reader, registries));
+            PARTICLE_CACHE.put(particleName, cached);
         }
+        return cached == PARSE_FAILED ? null : (net.minecraft.core.particles.ParticleOptions) cached;
     }
 
+    /** `particle <name> [<pos>]`: vanilla sends to every player of the level, count 0, not forced. */
     public static void spawnParticleSimple(MinecraftServer server, ServerLevel level, String particleName, Vec3 pos) {
-        var particle = parseParticle(server, particleName);
-        if (particle == null) return;
-        level.sendParticles(particle, pos.x, pos.y, pos.z, 0, 0, 0, 0, 0);
+        spawnParticle(server, level, particleName, pos, Vec3.ZERO, 0.0, 0, false);
     }
 
     // -------------------------------------------------------------------------
@@ -299,65 +470,61 @@ public class ExtensionFunctions {
     }
 
     public static void teamModify(MinecraftServer server, String teamName, String option, String value) {
-        var team = server.getScoreboard().getPlayerTeam(teamName);
-        if (team == null) return;
-        switch (option) {
-            case "color" -> {
-                var color = net.minecraft.ChatFormatting.getByName(value);
-                if (color != null) team.setColor(color);
-            }
-            case "friendlyFire" -> team.setAllowFriendlyFire(Boolean.parseBoolean(value));
-            case "seeFriendlyInvisibles" -> team.setSeeFriendlyInvisibles(Boolean.parseBoolean(value));
-            default -> {}
-        }
+        teamModifyFull(server, teamName, option, value);
     }
 
     // -------------------------------------------------------------------------
     // Recipe commands — native compilation helpers
     // -------------------------------------------------------------------------
 
-    public static void recipeGive(MinecraftServer server, ServerPlayer player, String recipeId) {
+    // 26.3 RecipeCommand: single ids go through ResourceKeyArgument.key(RECIPE, r -> !r.isSpecial()),
+    // so unknown AND special (incl. brewing) recipes fail without side effects; `*` uses
+    // getLearnableRecipes(). Return values mirror vanilla's per-player awardRecipes/resetRecipes count.
+    private static java.util.@Nullable List<net.minecraft.world.item.crafting.RecipeHolder<?>> learnableRecipe(MinecraftServer server, String recipeId) {
         var key = ResourceKey.create(Registries.RECIPE, cachedId(recipeId));
-        server.getRecipeManager().byKey(key).ifPresent(recipe -> player.awardRecipes(java.util.List.of(recipe)));
+        var recipe = server.getRecipeManager().byKey(key);
+        if (recipe.isEmpty() || recipe.get().value().isSpecial()) return null;
+        return java.util.List.of(recipe.get());
     }
 
-    public static void recipeTake(MinecraftServer server, ServerPlayer player, String recipeId) {
-        var key = ResourceKey.create(Registries.RECIPE, cachedId(recipeId));
-        server.getRecipeManager().byKey(key).ifPresent(recipe -> player.resetRecipes(java.util.List.of(recipe)));
+    public static int recipeGive(MinecraftServer server, ServerPlayer player, String recipeId) {
+        var recipes = learnableRecipe(server, recipeId);
+        return recipes == null ? 0 : player.awardRecipes(recipes);
     }
 
-    public static void recipeGiveAll(MinecraftServer server, ServerPlayer player) {
-        player.awardRecipes(server.getRecipeManager().getRecipes());
+    public static int recipeTake(MinecraftServer server, ServerPlayer player, String recipeId) {
+        var recipes = learnableRecipe(server, recipeId);
+        return recipes == null ? 0 : player.resetRecipes(recipes);
     }
 
-    public static void recipeTakeAll(MinecraftServer server, ServerPlayer player) {
-        player.resetRecipes(server.getRecipeManager().getRecipes());
+    public static int recipeGiveAll(MinecraftServer server, ServerPlayer player) {
+        return player.awardRecipes(server.getRecipeManager().getLearnableRecipes());
     }
 
-    // Random commands — kept as vanilla fallback (complex random sequence API)
+    public static int recipeTakeAll(MinecraftServer server, ServerPlayer player) {
+        return player.resetRecipes(server.getRecipeManager().getLearnableRecipes());
+    }
 
-    public static void spawnParticle(MinecraftServer server, ServerLevel level, String particleName, Vec3 pos, Vec3 delta, double speed, int count) {
+    /**
+     * Vanilla ParticleCommand.sendParticles: {@code force} (`force` mode) raises the view distance to
+     * 512 blocks; alwaysShow is always false. Without viewers vanilla targets every player, and the
+     * per-player send keeps only those in this level; ServerLevel's broadcast overload does the same
+     * over this level's players with one shared packet (speed on all axes, DEFAULT randomization).
+     */
+    public static void spawnParticle(MinecraftServer server, ServerLevel level, String particleName, Vec3 pos, Vec3 delta, double speed, int count, boolean force) {
         var particle = parseParticle(server, particleName);
         if (particle == null) return;
-        level.sendParticles(particle, pos.x, pos.y, pos.z, count, delta.x, delta.y, delta.z, speed);
+        level.sendParticles(particle, force, false, pos.x, pos.y, pos.z, count, delta.x, delta.y, delta.z, speed);
     }
 
-    public static void spawnParticleForPlayers(MinecraftServer server, ServerLevel level, String particleName, Vec3 pos, Vec3 delta, double speed, int count, List<? extends Entity> viewers) {
+    public static void spawnParticleForPlayers(MinecraftServer server, ServerLevel level, String particleName, Vec3 pos, Vec3 delta, double speed, int count, boolean force, List<? extends Entity> viewers) {
         var particle = parseParticle(server, particleName);
         if (particle == null) return;
         for (var entity : viewers) {
             if (entity instanceof ServerPlayer player) {
-                level.sendParticles(player, particle, true, true, pos.x, pos.y, pos.z, count, delta.x, delta.y, delta.z, speed);
+                level.sendParticles(player, particle, force, false, pos.x, pos.y, pos.z, count, delta.x, delta.y, delta.z, speed);
             }
         }
-    }
-
-    public static void sortEntitiesClosest(Vec3 origin, List<Entity> list) {
-        list.sort(Comparator.comparingDouble(a -> a.distanceToSqr(origin)));
-    }
-
-    public static void sortEntitiesFurthest(Vec3 origin, List<Entity> list) {
-        list.sort(Comparator.comparingDouble(a -> -a.distanceToSqr(origin)));
     }
 
     public static Vec3 calculateLocalCoordinates(float yaw, float pitch, double x, double y, double z, double left, double up, double forwards) {
@@ -497,139 +664,16 @@ public class ExtensionFunctions {
         return null;
     }
 
+    private static net.minecraft.world.scores.TeamColor teamColorByName(String name) {
+        return net.minecraft.world.scores.TeamColor.byName(name);
+    }
+
     private static final Pattern STRING_SIMPLE_VALUE = Pattern.compile("[A-Za-z0-9._+-]+");
     private static final DecimalFormat TAG_DECIMAL_FORMAT = Util.make(new DecimalFormat("#"), format -> {
         format.setMaximumFractionDigits(15);
         format.setDecimalFormatSymbols(DecimalFormatSymbols.getInstance(Locale.US));
     });
 
-
-    // -------------------------------------------------------------------------
-    // getAllEntities optimization — per-tick cache + direct section iteration
-    //
-    // Vanilla ServerLevel.getAllEntities() creates a lazy Iterable that walks
-    // PersistentEntitySectionManager → LevelEntityGetter → all EntitySections.
-    // Every call re-walks the full section graph.
-    //
-    // Datapacks using @e compile to GET_ENTITIES which invokes getAllEntities()
-    // potentially many times per tick across multiple functions. The per-tick
-    // cache ensures the section graph is walked at most once per world per tick.
-    //
-    // Direct section storage access via entityManager.sectionStorage bypasses
-    // the LevelEntityGetter interface chain. For worlds with many loaded
-    // entity sections (>PARALLEL_SECTION_THRESHOLD), collection is split
-    // across a dedicated ForkJoinPool so multiple cores contribute to the
-    // snapshot — safe because the server thread is blocked on Future.get()
-    // during that window, so no entity state mutations can race.
-    // -------------------------------------------------------------------------
-
-    private static final java.util.IdentityHashMap<ServerLevel, List<Entity>> allEntitiesCache = new java.util.IdentityHashMap<>();
-    private static int allEntitiesCacheTick = Integer.MIN_VALUE;
-    private static int lastEntityCountHint = 256;
-
-    private static final int PARALLEL_SECTION_THRESHOLD = 256;
-    private static final java.util.concurrent.ForkJoinPool ENTITY_COLLECT_POOL =
-            new java.util.concurrent.ForkJoinPool(Math.max(2, Runtime.getRuntime().availableProcessors() / 2));
-
-    public static java.util.Iterator<Entity> getAllEntitiesFast(ServerLevel level) {
-        int currentTick = level.getServer().getTickCount();
-        if (currentTick != allEntitiesCacheTick) {
-            allEntitiesCache.clear();
-            allEntitiesCacheTick = currentTick;
-        }
-
-        List<Entity> cached = allEntitiesCache.get(level);
-        if (cached != null) return cached.iterator();
-
-        var sectionStorage = level.entityManager.sectionStorage;
-        long[] ids = sectionStorage.sectionIds.toLongArray();
-
-        List<Entity> result;
-        if (ids.length > PARALLEL_SECTION_THRESHOLD) {
-            int parallelism = ENTITY_COLLECT_POOL.getParallelism();
-            int chunkSize = Math.max(1, (ids.length + parallelism - 1) / parallelism);
-
-            var futures = new ArrayList<java.util.concurrent.Future<List<Entity>>>(parallelism);
-            for (int i = 0; i < ids.length; i += chunkSize) {
-                final int start = i;
-                final int end = Math.min(i + chunkSize, ids.length);
-                futures.add(ENTITY_COLLECT_POOL.submit(() -> {
-                    var partial = new ArrayList<Entity>();
-                    for (int j = start; j < end; j++) {
-                        var section = sectionStorage.getSection(ids[j]);
-                        if (section == null || section.isEmpty() || !section.getStatus().isAccessible()) continue;
-                        partial.addAll(section.storage.find(Entity.class));
-                    }
-                    return partial;
-                }));
-            }
-
-            result = new ArrayList<>(lastEntityCountHint);
-            for (var future : futures) {
-                try {
-                    result.addAll(future.get());
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                } catch (java.util.concurrent.ExecutionException e) {
-                    LOGGER.warn("Parallel entity collection failed", e.getCause());
-                }
-            }
-        } else {
-            result = new ArrayList<>(lastEntityCountHint);
-            for (long id : ids) {
-                var section = sectionStorage.getSection(id);
-                if (section == null || section.isEmpty() || !section.getStatus().isAccessible()) continue;
-                result.addAll(section.storage.find(Entity.class));
-            }
-        }
-
-        lastEntityCountHint = Math.max(result.size(), 64);
-        allEntitiesCache.put(level, result);
-        return result.iterator();
-    }
-
-    public static List<Entity> getEntitiesInside(ServerLevel level, double minX, double minY, double minZ, double maxX, double maxY, double maxZ, int limit) {
-        // Direct 3D lookup: for every (chunkX, chunkY, chunkZ) in the bounding
-        // box volume, call sectionStorage.getSection(asLong(x, y, z)) once.
-        // Non-existent sections return null and cost one ConcurrentHashMap miss.
-        //
-        // Previous implementation used sectionIds.subSet(chunksStart, chunksEnd + 1L)
-        // inside a per-chunkX loop, which on the Async mod's
-        // ConcurrentLongSortedSet allocates a fresh backing set and addAll-copies
-        // the subrange every call — profiler showed ~0.1ms of that per
-        // getEntitiesInside on a 50-player server. Direct lookup is
-        // allocation-free; for a typical BB of 5x5x5 chunks it's 125 ConcurrentHashMap.get
-        // calls each ≈50ns, well under the amortized subSet cost.
-        var result = new ArrayList<Entity>();
-        var sectionStorage = level.entityManager.sectionStorage;
-
-        int chunkMinX = Mth.floor(minX - 2) >> 4;
-        int chunkMinY = Mth.floor(minY - 4) >> 4;
-        int chunkMinZ = Mth.floor(minZ - 2) >> 4;
-        int chunkMaxX = Mth.floor(maxX + 2) >> 4;
-        int chunkMaxY = Mth.floor(maxY) >> 4;
-        int chunkMaxZ = Mth.floor(maxZ + 2) >> 4;
-
-        for (int cx = chunkMinX; cx <= chunkMaxX; cx++) {
-            for (int cy = chunkMinY; cy <= chunkMaxY; cy++) {
-                for (int cz = chunkMinZ; cz <= chunkMaxZ; cz++) {
-                    var section = sectionStorage.getSection(SectionPos.asLong(cx, cy, cz));
-                    if (section == null || section.isEmpty() || !section.getStatus().isAccessible()) continue;
-                    var entities = section.storage.find(Entity.class);
-                    if (entities.isEmpty()) continue;
-                    for (var entity : entities) {
-                        if (entity.getBoundingBox().intersects(minX, minY, minZ, maxX, maxY, maxZ)) {
-                            result.add(entity);
-                            if (result.size() >= limit) return result;
-                        }
-                    }
-                }
-            }
-        }
-
-        return result;
-    }
 
     public static MutableComponent formatEntityTextList(List<? extends Entity> entities, Component separator) {
         if(entities.isEmpty()) {
@@ -788,116 +832,87 @@ public class ExtensionFunctions {
         }
     }
 
-    // Selector advancement checks
+    // Selector advancement checks (vanilla EntitySelectorOptions `advancements=`): an unknown
+    // advancement or criterion fails the check whatever the expected value.
 
-    public static boolean isAdvancementDone(MinecraftServer server, ServerPlayer player, String id) {
+    public static boolean checkAdvancementDone(MinecraftServer server, ServerPlayer player, String id, boolean expected) {
         AdvancementHolder holder = server.getAdvancements().get(cachedId(id));
-        if (holder == null) return false;
-        return player.getAdvancements().getOrStartProgress(holder).isDone();
+        return holder != null && player.getAdvancements().getOrStartProgress(holder).isDone() == expected;
     }
 
-    public static boolean isAdvancementCriterionDone(MinecraftServer server, ServerPlayer player, String id, String criterion) {
+    public static boolean checkAdvancementCriterionDone(MinecraftServer server, ServerPlayer player, String id, String criterion, boolean expected) {
         AdvancementHolder holder = server.getAdvancements().get(cachedId(id));
         if (holder == null) return false;
         CriterionProgress progress = player.getAdvancements().getOrStartProgress(holder).getCriterion(criterion);
-        return progress != null && progress.isDone();
+        return progress != null && progress.isDone() == expected;
     }
 
-    // Selector predicate check (used by @e[predicate=...] selector filters)
+    // Loot predicates by id, resolved once per reload (the reloadable registry lookup is replaced on /reload).
+    private static final java.util.concurrent.ConcurrentHashMap<String, Object> PREDICATE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static volatile net.minecraft.core.HolderLookup.@Nullable Provider predicateLookup;
 
-    public static boolean testEntityPredicate(MinecraftServer server, Entity entity, String predicateId) {
-        var lookupOpt = server.reloadableRegistries().lookup().lookup(Registries.PREDICATE);
-        if (lookupOpt.isEmpty()) return false;
-        var holderOpt = lookupOpt.orElseThrow().get(ResourceKey.create(Registries.PREDICATE, cachedId(predicateId)));
-        if (holderOpt.isEmpty()) return false;
-        LootItemCondition condition = holderOpt.orElseThrow().value();
+    private static @Nullable LootItemCondition lootPredicate(MinecraftServer server, String predicateId) {
+        var lookup = server.reloadableRegistries().lookup();
+        if (lookup != predicateLookup) {
+            PREDICATE_CACHE.clear();
+            predicateLookup = lookup;
+        }
+        Object cached = PREDICATE_CACHE.get(predicateId);
+        if (cached == null) {
+            cached = lookup.get(ResourceKey.create(Registries.PREDICATE, cachedId(predicateId)))
+                    .<Object>map(Holder::value).orElse(PARSE_FAILED);
+            PREDICATE_CACHE.put(predicateId, cached);
+        }
+        return cached == PARSE_FAILED ? null : (LootItemCondition) cached;
+    }
+
+    /** Selector `predicate=` / `predicate=!`: an unknown predicate never matches, even negated. */
+    public static boolean checkEntityPredicate(MinecraftServer server, Entity entity, String predicateId, boolean expected) {
         if (!(entity.level() instanceof ServerLevel level)) return false;
+        var condition = lootPredicate(server, predicateId);
+        if (condition == null) return false;
         LootParams params = new LootParams.Builder(level)
                 .withParameter(LootContextParams.THIS_ENTITY, entity)
                 .withParameter(LootContextParams.ORIGIN, entity.position())
                 .create(LootContextParamSets.SELECTOR);
         LootContext ctx = new LootContext.Builder(params).create(Optional.empty());
-        return condition.test(ctx);
+        ctx.pushVisitedElement(LootContext.createVisitedEntry(condition));
+        return condition.test(ctx) == expected;
     }
 
-    // Execute if predicate check (uses COMMAND param set with position context, entity optional)
-
-    public static boolean testCommandPredicate(MinecraftServer server, @Nullable Entity entity, ServerLevel level, Vec3 position, String predicateId) {
-        var lookupOpt = server.reloadableRegistries().lookup().lookup(Registries.PREDICATE);
-        if (lookupOpt.isEmpty()) return false;
-        var holderOpt = lookupOpt.orElseThrow().get(ResourceKey.create(Registries.PREDICATE, cachedId(predicateId)));
-        if (holderOpt.isEmpty()) return false;
-        var holder = holderOpt.orElseThrow();
-        LootParams.Builder builder = new LootParams.Builder(level)
-                .withParameter(LootContextParams.ORIGIN, position);
-        if (entity != null) {
-            builder.withOptionalParameter(LootContextParams.THIS_ENTITY, entity);
-        }
-        LootParams params = builder.create(LootContextParamSets.COMMAND);
+    /** `execute if|unless predicate`: an unknown predicate fails both (vanilla ResourceOrIdArgument throws). */
+    public static boolean checkCommandPredicate(MinecraftServer server, @Nullable Entity entity, ServerLevel level, Vec3 position, String predicateId, boolean expected) {
+        var condition = lootPredicate(server, predicateId);
+        if (condition == null) return false;
+        LootParams params = new LootParams.Builder(level)
+                .withParameter(LootContextParams.ORIGIN, position)
+                .withOptionalParameter(LootContextParams.THIS_ENTITY, entity)
+                .create(LootContextParamSets.COMMAND);
         LootContext ctx = new LootContext.Builder(params).create(Optional.empty());
-        ctx.pushVisitedElement(LootContext.createVisitedEntry(holder.value()));
-        return holder.value().test(ctx);
+        ctx.pushVisitedElement(LootContext.createVisitedEntry(condition));
+        return condition.test(ctx) == expected;
     }
 
     // Selector NBT check
 
     // -------------------------------------------------------------------------
-    // Entity NBT matching — fast-path + per-tick cache
+    // Entity NBT matching
     //
-    // Entity.saveWithoutId() is very expensive for players (full DFU pipeline:
-    // RecipeBook, inventory, advancements...). Two-tier strategy:
-    //   1. Fast-path: resolve common NBT keys directly via entity API —
-    //      zero serialization cost, covers the vast majority of datapack patterns.
-    //   2. Cache: if full serialization IS needed, cache the result so the same
-    //      entity is only serialized once per tick even across multiple functions.
-    //
-    // precomputeEntityNbtAsync() can be called by the async mod (or a pre-tick
-    // mixin) to warm the cache in parallel threads while entity state is stable.
+    // Entity.saveWithoutId() is expensive (players especially), so patterns made only of
+    // keys in matchSingleKey are answered from the entity API. Anything else serializes
+    // fresh on every check, exactly like vanilla: no cross-command cache, so tp/tag/
+    // effect/clear/... in the same tick are always visible.
     // -------------------------------------------------------------------------
-
-    private static final java.util.IdentityHashMap<Entity, CompoundTag> entityNbtTickCache = new java.util.IdentityHashMap<>();
-    private static int entityNbtCacheTick = Integer.MIN_VALUE;
-
-    /** Full serialization, always accurate but expensive for players. */
-    private static CompoundTag computeEntityNbt(Entity entity) {
-        try (var reporter = new net.minecraft.util.ProblemReporter.ScopedCollector(entity.problemPath(), LOGGER)) {
-            var output = net.minecraft.world.level.storage.TagValueOutput.createWithContext(reporter, entity.registryAccess());
-            entity.saveWithoutId(output);
-            // Vanilla's NbtPredicate.getEntityTagToCompare (used by selectors like
-            // @s[nbt={SelectedItem:{...}}]) synthesizes a SelectedItem field for
-            // players from inventory.getSelectedItem(). saveWithoutId doesn't include
-            // it, so without this the gbg sneak handler's `unless entity @s[nbt=
-            // {SelectedItem:...}]` never matched and aiming silently failed.
-            if (entity instanceof net.minecraft.world.entity.player.Player player) {
-                var selected = player.getInventory().getSelectedItem();
-                if (!selected.isEmpty()) {
-                    output.store("SelectedItem", net.minecraft.world.item.ItemStack.CODEC, selected);
-                }
-            }
-            return output.buildResult();
-        }
-    }
-
-    /** Returns cached NBT, computing it on first access within the current tick. */
-    private static CompoundTag getCachedEntityNbt(Entity entity) {
-        var level = entity.level();
-        var server = level instanceof ServerLevel sl ? sl.getServer() : null;
-        int currentTick = server != null ? server.getTickCount() : 0;
-        if (currentTick != entityNbtCacheTick) {
-            entityNbtTickCache.clear();
-            entityNbtCacheTick = currentTick;
-        }
-        return entityNbtTickCache.computeIfAbsent(entity, ExtensionFunctions::computeEntityNbt);
-    }
 
     /**
      * Try to evaluate an NBT pattern against an entity WITHOUT serialization.
      * Returns {@code null} if the pattern contains keys not in the fast-path set
      * (caller should fall back to full serialization).
-
-     * Supported keys: Tags, CustomName, CustomNameVisible, Health, MaxHealth,
-     * Air, MaxAir, Fire, FallDistance, OnGround, NoGravity, Invulnerable,
-     * Silent, Glowing.
+     *
+     * <p>Every answer MUST equal {@code NbtUtils.compareNbt(pattern, saveWithoutId())}: keys the
+     * entity does not write (26.3 {@code Entity.saveWithoutId} omits Tags when empty,
+     * CustomNameVisible/Silent/NoGravity/Glowing when false, never writes MaxAir/MaxHealth/
+     * FallDistance) never match, and tag types must match exactly.
      */
     private static @Nullable Boolean tryMatchEntityNbtFast(Entity entity, CompoundTag pattern) {
         for (var entry : pattern.entrySet()) {
@@ -912,6 +927,9 @@ public class ExtensionFunctions {
         return switch (key) {
             case "Tags" -> {
                 if (!(value instanceof ListTag tagList)) yield null;
+                // Tags is only saved when non-empty; an empty expected list only matches an
+                // empty actual list, so it can never match.
+                if (tagList.isEmpty()) yield Boolean.FALSE;
                 var entityTags = entity.entityTags();
                 for (Tag t : tagList) {
                     if (!(t instanceof StringTag st)) yield null;
@@ -923,53 +941,46 @@ public class ExtensionFunctions {
             case "CustomName" -> null;
             case "CustomNameVisible" -> {
                 if (!(value instanceof ByteTag expected)) yield null;
-                yield entity.isCustomNameVisible() == (expected.byteValue() != 0);
+                yield savedOnlyWhenTrue(entity.isCustomNameVisible(), expected);
             }
             case "Health" -> {
-                if (!(entity instanceof net.minecraft.world.entity.LivingEntity living)) yield Boolean.FALSE;
                 if (!(value instanceof FloatTag expected)) yield null;
-                yield living.getHealth() == expected.floatValue();
-            }
-            case "MaxHealth" -> {
+                // Only LivingEntity saves a float Health (ItemEntity saves a short).
                 if (!(entity instanceof net.minecraft.world.entity.LivingEntity living)) yield Boolean.FALSE;
-                if (!(value instanceof FloatTag expected)) yield null;
-                yield living.getMaxHealth() == expected.floatValue();
+                yield Float.floatToIntBits(living.getHealth()) == Float.floatToIntBits(expected.floatValue());
             }
+            // Never written by saveWithoutId (MaxHealth is an attribute, fall distance is
+            // saved as `fall_distance`), so vanilla never matches these keys.
+            case "MaxHealth", "MaxAir", "FallDistance" -> Boolean.FALSE;
             case "Air" -> {
                 if (!(value instanceof ShortTag expected)) yield null;
-                yield entity.getAirSupply() == expected.shortValue();
-            }
-            case "MaxAir" -> {
-                if (!(value instanceof ShortTag expected)) yield null;
-                yield entity.getMaxAirSupply() == expected.shortValue();
+                yield (short) entity.getAirSupply() == expected.shortValue();
             }
             case "Fire" -> {
                 if (!(value instanceof ShortTag expected)) yield null;
-                yield entity.getRemainingFireTicks() == expected.shortValue();
-            }
-            case "FallDistance" -> {
-                if (!(value instanceof FloatTag expected)) yield null;
-                yield (float) entity.fallDistance == expected.floatValue();
+                yield (short) entity.getRemainingFireTicks() == expected.shortValue();
             }
             case "OnGround" -> {
                 if (!(value instanceof ByteTag expected)) yield null;
-                yield entity.onGround() == (expected.byteValue() != 0);
+                yield expected.byteValue() == (entity.onGround() ? 1 : 0);
             }
             case "NoGravity" -> {
                 if (!(value instanceof ByteTag expected)) yield null;
-                yield entity.isNoGravity() == (expected.byteValue() != 0);
+                yield savedOnlyWhenTrue(entity.isNoGravity(), expected);
             }
             case "Invulnerable" -> {
                 if (!(value instanceof ByteTag expected)) yield null;
-                yield entity.isInvulnerable() == (expected.byteValue() != 0);
+                // NBT `Invulnerable` stores only the permanent flag; 26.3 isInvulnerable() also
+                // counts temporary invulnerable_time.
+                yield expected.byteValue() == (entity.isPermanentlyInvulnerable() ? 1 : 0);
             }
             case "Silent" -> {
                 if (!(value instanceof ByteTag expected)) yield null;
-                yield entity.isSilent() == (expected.byteValue() != 0);
+                yield savedOnlyWhenTrue(entity.isSilent(), expected);
             }
             case "Glowing" -> {
                 if (!(value instanceof ByteTag expected)) yield null;
-                yield entity.hasGlowingTag() == (expected.byteValue() != 0);
+                yield savedOnlyWhenTrue(entity.hasGlowingTag(), expected);
             }
             // BAC's check_paintings.mcfunction issues 47 distinct
             // `@e[type=painting,distance=..8,nbt={variant:"…"}]` selectors every
@@ -996,6 +1007,8 @@ public class ExtensionFunctions {
                 var idTag = compound.get("id");
                 if (idTag == null || compound.size() != 1) yield null;
                 if (!(idTag instanceof StringTag idStr)) yield null;
+                // ItemEntity omits `Item` when its stack is empty.
+                if (itemEntity.getItem().isEmpty()) yield Boolean.FALSE;
                 String expectedId = idStr.asString().orElse("");
                 var actual = net.minecraft.core.registries.BuiltInRegistries.ITEM
                     .getKey(itemEntity.getItem().getItem()).toString();
@@ -1011,50 +1024,26 @@ public class ExtensionFunctions {
             case "foodSaturationLevel" -> {
                 if (!(entity instanceof net.minecraft.world.entity.player.Player player)) yield Boolean.FALSE;
                 if (!(value instanceof FloatTag expected)) yield null;
-                yield player.getFoodData().getSaturationLevel() == expected.floatValue();
+                yield Float.floatToIntBits(player.getFoodData().getSaturationLevel()) == Float.floatToIntBits(expected.floatValue());
             }
             default -> null; // complex key — fall back to full serialization
         };
     }
 
+    /** Flags written as {@code putBoolean(key, true)} only when set: only {@code 1b} can match. */
+    private static boolean savedOnlyWhenTrue(boolean flag, ByteTag expected) {
+        return flag && expected.byteValue() == 1;
+    }
+
     public static CompoundTag getEntityNbt(Entity entity) {
-        return getCachedEntityNbt(entity);
+        return net.minecraft.advancements.predicates.NbtPredicate.getEntityTagToCompare(entity);
     }
 
     public static boolean matchesEntityNbt(Entity entity, CompoundTag pattern) {
         // Fast-path: avoid saveWithoutId() for patterns using only known keys
         Boolean fast = tryMatchEntityNbtFast(entity, pattern);
         if (fast != null) return fast;
-        // Fall back to full serialization (cached per tick)
-        return NbtUtils.compareNbt(pattern, getCachedEntityNbt(entity), true);
-    }
-
-    /**
-     * Pre-warm the entity NBT cache for a collection of entities in parallel.
-     * Call this from the async mod (or a pre-tick mixin) when entity state is
-     * stable (between ticks) to amortize serialization cost across CPU cores.
-     * NOT safe to call while entity state may be mutated concurrently.
-     */
-    public static void precomputeEntityNbtAsync(java.util.List<? extends Entity> entities, MinecraftServer server) {
-        int currentTick = server.getTickCount();
-        if (currentTick != entityNbtCacheTick) {
-            entityNbtTickCache.clear();
-            entityNbtCacheTick = currentTick;
-        }
-        var futures = new java.util.ArrayList<java.util.concurrent.CompletableFuture<Void>>(entities.size());
-        // Temp per-thread results to avoid ConcurrentModificationException on IdentityHashMap
-        var tempResults = new java.util.concurrent.ConcurrentHashMap<Entity, CompoundTag>(entities.size());
-        for (var entity : entities) {
-            if (!entityNbtTickCache.containsKey(entity)) {
-                futures.add(java.util.concurrent.CompletableFuture.runAsync(
-                    () -> tempResults.put(entity, computeEntityNbt(entity))
-                ));
-            }
-        }
-        if (!futures.isEmpty()) {
-            java.util.concurrent.CompletableFuture.allOf(futures.toArray(new java.util.concurrent.CompletableFuture<?>[0])).join();
-            entityNbtTickCache.putAll(tempResults);
-        }
+        return NbtUtils.compareNbt(pattern, getEntityNbt(entity), true);
     }
 
 
@@ -1071,54 +1060,36 @@ public class ExtensionFunctions {
         text.setStyle(text.getStyle().withHoverEvent(new net.minecraft.network.chat.HoverEvent.ShowText(hoverText)));
     }
 
-    public static Component getScoreText(MinecraftServer server, List<Entity> entities, String objective) {
-        if (entities.isEmpty()) return Component.empty();
-        Entity entity = entities.getFirst();
+    /**
+     * Vanilla ScoreContents.resolve for a selector holder: no match → the selector source text as a name-only
+     * holder; more than one → null (ERROR_NOT_SINGLE_ENTITY, the caller skips the command).
+     */
+    public static @Nullable Component getScoreText(MinecraftServer server, List<Entity> entities, String objective, String holderSource) {
+        if (entities.size() > 1) return null;
+        ScoreHolder holder = entities.isEmpty() ? ScoreHolder.forNameOnly(holderSource) : entities.getFirst();
         ServerScoreboard scoreboard = server.getScoreboard();
         Objective obj = scoreboard.getObjective(objective);
         if (obj == null) return Component.empty();
-        ReadOnlyScoreInfo info = scoreboard.getPlayerScoreInfo(entity, obj);
+        ReadOnlyScoreInfo info = scoreboard.getPlayerScoreInfo(holder, obj);
         if (info == null) return Component.empty();
         return info.formatValue(obj.numberFormatOrDefault(net.minecraft.network.chat.numbers.StyledFormat.NO_STYLE));
     }
 
     // Give
 
-    /**
-     * Cache of parsed item strings. Datapacks reference a bounded set of items
-     * (hundreds at most for even the largest packs), so an unbounded ConcurrentHashMap
-     * is fine — we pay the ItemParser cost exactly once per unique string, for
-     * the lifetime of the server. Each subsequent `give @a X` with the same string
-     * is a single map lookup plus inventory.add() per player.
-     */
-    private static final java.util.concurrent.ConcurrentHashMap<String, net.minecraft.commands.arguments.item.ItemInput> ITEM_PARSE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    /** Parsed item strings (vanilla ItemArgument), including failures; dropped in onServerStopped(). */
+    private static final java.util.concurrent.ConcurrentHashMap<String, Object> ITEM_PARSE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
-    /**
-     * Parse an item string using vanilla's ItemParser — supports the full
-     * `id[component=value,...]` syntax with enchantments, custom names, lore,
-     * attribute modifiers, and anything else the game command dispatcher
-     * accepts. Cached so repeated `give` calls with the same string don't
-     * reparse.
-
-     * The input is expected to be just the item descriptor — count is now a
-     * separate argument passed explicitly to giveItemsToAll, so no trailing
-     * space/number splitting is needed here.
-
-     * Returns null on malformed input (logged once per string at WARN).
-     */
+    /** Vanilla ItemParser over the command build context (full `id[component=value,...]` syntax), or null when it does not parse. */
     private static net.minecraft.commands.arguments.item.@Nullable ItemInput parseItemInput(MinecraftServer server, String itemString) {
-        var cached = ITEM_PARSE_CACHE.get(itemString);
-        if (cached != null) return cached;
-
-        var parser = new net.minecraft.commands.arguments.item.ItemParser(server.registryAccess());
-        try {
-            var input = parser.parse(new com.mojang.brigadier.StringReader(itemString));
-            ITEM_PARSE_CACHE.put(itemString, input);
-            return input;
-        } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
-            LOGGER.warn("Failed to parse item string '{}': {}", itemString, e.getMessage());
-            return null;
+        Object cached = ITEM_PARSE_CACHE.get(itemString);
+        if (cached == null || (cached == PARSE_FAILED && failedParsesStale(server))) {
+            var parser = new net.minecraft.commands.arguments.item.ItemParser(commandBuildContext(server));
+            cached = parseWhole("item", itemString, parser::parse);
+            if (cached == PARSE_FAILED) failedParsesStale(server);
+            ITEM_PARSE_CACHE.put(itemString, cached);
         }
+        return cached == PARSE_FAILED ? null : (net.minecraft.commands.arguments.item.ItemInput) cached;
     }
 
     /**
@@ -1143,91 +1114,100 @@ public class ExtensionFunctions {
             return;
         }
         int maxStackSize = prototype.getMaxStackSize();
+        // Vanilla GiveCommand fails (TOO_MANY_ITEMS) before giving anything above 100 stacks.
+        if (count > maxStackSize * 100) return;
 
+        // Mirrors vanilla GiveCommand.giveItem per-player loop.
         for (var entity : entities) {
             if (!(entity instanceof ServerPlayer player)) continue;
             int remaining = count;
             while (remaining > 0) {
-                int stackSize = Math.min(remaining, maxStackSize);
-                var stack = prototype.copyWithCount(stackSize);
-                if (!player.getInventory().add(stack)) {
-                    player.drop(stack, false);
+                int size = Math.min(maxStackSize, remaining);
+                remaining -= size;
+                var copyToDrop = prototype.copyWithCount(size);
+                boolean added = player.getInventory().add(copyToDrop);
+                if (added && copyToDrop.isEmpty()) {
+                    var drop = player.createItemStackToDrop(prototype.copy(), false, false);
+                    if (drop != null) {
+                        drop.makeFakeItem();
+                        drop.level().addFreshEntity(drop);
+                    }
+                    player.level().playSound(
+                            null,
+                            player.getX(),
+                            player.getY(),
+                            player.getZ(),
+                            net.minecraft.sounds.SoundEvents.ITEM_PICKUP,
+                            net.minecraft.sounds.SoundSource.PLAYERS,
+                            0.2F,
+                            ((player.getRandom().nextFloat() - player.getRandom().nextFloat()) * 0.7F + 1.0F) * 2.0F
+                    );
+                    player.containerMenu.broadcastChanges();
+                } else {
+                    var drop = player.createItemStackToDrop(copyToDrop, false, false);
+                    if (drop != null) {
+                        drop.setNoPickUpDelay();
+                        drop.setTarget(player.getUUID());
+                        drop.level().addFreshEntity(drop);
+                    }
                 }
-                remaining -= stackSize;
             }
         }
     }
 
     // Playsound
 
-    /** Cached sound-event holder + source-enum pair per (sound-id, source-name) input. */
-    private record SoundParsed(net.minecraft.core.Holder<net.minecraft.sounds.SoundEvent> holder, net.minecraft.sounds.SoundSource source) {}
+    /** Direct sound-event holders per compile-time sound id (vanilla builds the same Holder.direct per call). */
+    private static final java.util.concurrent.ConcurrentHashMap<String, Holder<net.minecraft.sounds.SoundEvent>> SOUND_PARSE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.concurrent.ConcurrentHashMap<String, net.minecraft.sounds.SoundSource> SOUND_SOURCE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
-    /**
-     * Cross-call cache of parsed (sound, source) pairs. Same sizing logic as
-     * ITEM_PARSE_CACHE — datapacks use a bounded set of sounds, unbounded map
-     * is fine. Key is `sound + '\0' + source` because either part alone can
-     * repeat across different pairs.
-     */
-    private static final java.util.concurrent.ConcurrentHashMap<String, SoundParsed> SOUND_PARSE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
-
-    /**
-     * Play a sound to a list of entities (players only). Sound identifier and
-     * source-category string are parsed at most once per unique pair for the
-     * lifetime of the server — subsequent calls hit a ConcurrentHashMap and
-     * go straight to per-player distance checks and packet dispatch.
-
-     * Previously every call paid for Identifier.parse + SoundEvent.
-     * createVariableRangeEvent + Holder.direct + String.toUpperCase +
-     * SoundSource.valueOf, even when the same playsound ran thousands of
-     * times from a tick function.
-     */
     // Vanilla command parser accepts sound-source names like "player"/"block" (via
     // SoundSource.getName()), not the enum constant names ("PLAYERS"/"BLOCKS").
     // Match both forms so datapack strings stay valid at runtime.
     private static net.minecraft.sounds.SoundSource parseSoundSource(String name) {
+        var cached = SOUND_SOURCE_CACHE.get(name);
+        if (cached != null) return cached;
+        net.minecraft.sounds.SoundSource found = null;
         for (var s : net.minecraft.sounds.SoundSource.values()) {
-            if (s.getName().equalsIgnoreCase(name)) return s;
+            if (s.getName().equalsIgnoreCase(name)) {
+                found = s;
+                break;
+            }
         }
-        return net.minecraft.sounds.SoundSource.valueOf(name.toUpperCase(java.util.Locale.ROOT));
+        if (found == null) found = net.minecraft.sounds.SoundSource.valueOf(name.toUpperCase(java.util.Locale.ROOT));
+        SOUND_SOURCE_CACHE.put(name, found);
+        return found;
     }
 
-    public static void playSoundToAll(List<? extends Entity> entities, String sound, String source, net.minecraft.world.phys.Vec3 pos, double volume, double pitch, double minVolume) {
+    /**
+     * Mirrors 26.3 PlaySoundCommand.playSound: one seed per command from the source level's
+     * random, and only players in the source level hear it.
+     */
+    public static void playSoundToAll(ServerLevel level, List<? extends Entity> entities, String sound, String source, net.minecraft.world.phys.Vec3 pos, double volume, double pitch, double minVolume) {
         if (entities.isEmpty()) return;
-
-        String cacheKey = sound + '\0' + source;
-        var parsed = SOUND_PARSE_CACHE.get(cacheKey);
-        if (parsed == null) {
-            var soundEvent = net.minecraft.sounds.SoundEvent.createVariableRangeEvent(Identifier.parse(sound));
-            var holder = net.minecraft.core.Holder.direct(soundEvent);
-            var soundSource = parseSoundSource(source);
-            parsed = new SoundParsed(holder, soundSource);
-            SOUND_PARSE_CACHE.put(cacheKey, parsed);
+        var soundHolder = SOUND_PARSE_CACHE.get(sound);
+        if (soundHolder == null) {
+            soundHolder = Holder.direct(net.minecraft.sounds.SoundEvent.createVariableRangeEvent(Identifier.parse(sound)));
+            SOUND_PARSE_CACHE.put(sound, soundHolder);
         }
-        var soundHolder = parsed.holder();
-        var soundSource = parsed.source();
-
-        float dist = Math.max((float) volume, 1.0f) * 16.0f;
-        float distSqThreshold = dist * dist;
+        var soundSource = parseSoundSource(source);
         float vol = (float) volume;
         float pit = (float) pitch;
         float minVol = (float) minVolume;
+        double maxDistSqr = Mth.square(soundHolder.value().getRange(vol));
+        long seed = level.getRandom().nextLong();
 
         for (var entity : entities) {
-            if (!(entity instanceof ServerPlayer player)) continue;
+            if (!(entity instanceof ServerPlayer player) || player.level() != level) continue;
             double dx = pos.x - player.getX();
             double dy = pos.y - player.getY();
             double dz = pos.z - player.getZ();
             double distSq = dx * dx + dy * dy + dz * dz;
-            long seed = player.level().getRandom().nextLong();
-            if (distSq > distSqThreshold) {
+            if (distSq > maxDistSqr) {
                 if (minVol <= 0.0f) continue;
                 double d = Math.sqrt(distSq);
-                double nx = player.getX() + dx / d * 2.0;
-                double ny = player.getY() + dy / d * 2.0;
-                double nz = player.getZ() + dz / d * 2.0;
                 player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
-                    soundHolder, soundSource, nx, ny, nz, minVol, pit, seed
+                    soundHolder, soundSource, player.getX() + dx / d * 2.0, player.getY() + dy / d * 2.0, player.getZ() + dz / d * 2.0, minVol, pit, seed
                 ));
             } else {
                 player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
@@ -1240,85 +1220,155 @@ public class ExtensionFunctions {
     // Summon
 
     public static void summonEntity(MinecraftServer server, ServerLevel world, String entityType, net.minecraft.world.phys.Vec3 pos) {
-        summonEntityNbt(server, world, entityType, pos, new CompoundTag());
+        // Vanilla `summon <entity> [pos]`: finalize = true.
+        createEntity(world, entityType, pos, new CompoundTag(), true);
     }
 
     public static void summonEntityNbt(MinecraftServer server, ServerLevel world, String entityType, Vec3 pos, CompoundTag nbt) {
-        nbt.putString("id", entityType);
-        Entity entity = net.minecraft.world.entity.EntityType.loadEntityRecursive(nbt, world, net.minecraft.world.entity.EntitySpawnReason.COMMAND, e -> {
+        // Vanilla `summon <entity> <pos> <nbt>`: finalize = false, so the NBT is not overridden.
+        // `nbt` is a shared, value-deduplicated compile-time constant: copy before createEntity adds `id`.
+        createEntity(world, entityType, pos, nbt.copy(), false);
+    }
+
+    private static final java.util.concurrent.ConcurrentHashMap<String, Object> ENTITY_TYPE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Vanilla ResourceArgument.getSummonableEntityType for a compile-time id, or null (unknown / not summonable). */
+    private static net.minecraft.core.Holder.@Nullable Reference<net.minecraft.world.entity.EntityType<?>> summonableEntityType(MinecraftServer server, String entityType) {
+        Object cached = ENTITY_TYPE_CACHE.get(entityType);
+        if (cached == null) {
+            var id = Identifier.tryParse(entityType);
+            var type = id == null ? null : commandBuildContext(server).lookupOrThrow(Registries.ENTITY_TYPE)
+                    .get(ResourceKey.create(Registries.ENTITY_TYPE, id)).orElse(null);
+            if (type == null || !type.value().canSummon()) {
+                LOGGER.warn("MCFC: '{}' is not a summonable entity type (the command will fail)", entityType);
+                cached = PARSE_FAILED;
+            } else {
+                cached = type;
+            }
+            ENTITY_TYPE_CACHE.put(entityType, cached);
+        }
+        @SuppressWarnings("unchecked")
+        var type = cached == PARSE_FAILED ? null : (net.minecraft.core.Holder.Reference<net.minecraft.world.entity.EntityType<?>>) cached;
+        return type;
+    }
+
+    /**
+     * Mirrors 26.3 SummonCommand.createEntity; {@code entityTag} is owned by this call (mutated).
+     * Returns null where vanilla throws (unknown type, outside spawnable bounds, peaceful, load failure, duplicate UUID).
+     */
+    private static @Nullable Entity createEntity(ServerLevel level, String entityType, Vec3 pos, CompoundTag entityTag, boolean finalize) {
+        var type = summonableEntityType(level.getServer(), entityType);
+        if (type == null) return null;
+        if (!net.minecraft.world.level.Level.isInSpawnableBounds(net.minecraft.core.BlockPos.containing(pos))) return null;
+        if (level.getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL && !type.value().isAllowedInPeaceful()) return null;
+        entityTag.putString("id", type.key().identifier().toString());
+        Entity entity = net.minecraft.world.entity.EntityType.loadEntityRecursive(
+                entityTag,
+                level,
+                new net.minecraft.world.entity.EntitySpawnRequest(net.minecraft.world.entity.EntitySpawnReason.COMMAND, false),
+                e -> {
             e.snapTo(pos.x, pos.y, pos.z, e.getYRot(), e.getXRot());
             return e;
         });
-        if (entity != null) {
-            // TODO: Add finalize boolean check
-            if (entity instanceof net.minecraft.world.entity.Mob mob) {
-                mob.finalizeSpawn(world, world.getCurrentDifficultyAt(entity.blockPosition()), net.minecraft.world.entity.EntitySpawnReason.COMMAND, null);
-            }
-            if (world.tryAddFreshEntityWithPassengers(entity)) {
-                // Invalidate the per-tick entity cache so subsequent @e sees the new entity
-                allEntitiesCache.remove(world);
-            }
+        if (entity == null) return null;
+        if (finalize && entity instanceof net.minecraft.world.entity.Mob mob) {
+            mob.finalizeSpawn(level, level.getCurrentDifficultyAt(entity.blockPosition()), net.minecraft.world.entity.EntitySpawnReason.COMMAND, null);
         }
+        return level.tryAddFreshEntityWithPassengers(entity) ? entity : null;
     }
 
     // Time
 
-    public static void setTime(MinecraftServer server, ServerLevel world, int time) {
-        ServerClockManager clockManager = server.clockManager();
-        Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
+    // Mutating time helpers mirror 26.3 TimeCommand: a no-op (already at that time/marker,
+    // already paused/running, same rate), an unknown time marker, or a dimension without a
+    // default clock throws in vanilla (MC-305707), i.e. the command fails without touching the
+    // clock. Skipping the no-op matters: ServerClockManager.setTotalTicks resets partialTick and
+    // every modifyClock broadcasts a time packet. Results use the compiled-function return
+    // encoding (COMMAND_FAILED, or the vanilla result in the low 32 bits) so `time set 0` stays
+    // distinguishable from a failure.
 
+    private static @Nullable Holder<WorldClock> defaultClock(ServerLevel world) {
+        return world.dimensionTypeRegistration().value().defaultClock().orElse(null);
+    }
+
+    private static long commandSuccess(int result) {
+        return Integer.toUnsignedLong(result);
+    }
+
+    public static long setTime(MinecraftServer server, ServerLevel world, int time) {
+        Holder<WorldClock> clock = defaultClock(world);
+        if (clock == null) return COMMAND_FAILED;
+        ServerClockManager clockManager = server.clockManager();
+        if (clockManager.getInstance(clock).totalTicks() == time) return COMMAND_FAILED;
         clockManager.setTotalTicks(clock, time);
+        return commandSuccess(time);
     }
 
-    public static void setTimeToMarker(MinecraftServer server, ServerLevel world, String timeMarkerId) {
-        Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
-
-        server.clockManager().moveToTimeMarker(clock, ResourceKey.create(ClockTimeMarkers.ROOT_ID, Identifier.parse(timeMarkerId)));
-    }
-
-    public static void addTime(MinecraftServer server, ServerLevel world, int time) {
-        Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
-
-        server.clockManager().addTicks(clock, time);
-    }
-
-    public static void setTimeRate(MinecraftServer server, ServerLevel world, float rate) {
-        Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
-
-        server.clockManager().setRate(clock, rate);
-    }
-
-    public static void setTimePaused(MinecraftServer server, ServerLevel world, boolean paused) {
-        Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
-
-        server.clockManager().setPaused(clock, paused);
-    }
-
-    public static int queryTime(MinecraftServer server, ServerLevel world) {
-        Holder<WorldClock> clock = world.dimensionTypeRegistration().value().defaultClock().get();
-
-        long totalTicks = server.clockManager().getTotalTicks(clock);
-        return TimeCommand.wrapTime(totalTicks);
-    }
-
-    public static int queryTimelineTicks(MinecraftServer server, ServerLevel world, String timelineId) {
+    public static long setTimeToMarker(MinecraftServer server, ServerLevel world, String timeMarkerId) {
+        Holder<WorldClock> clock = defaultClock(world);
+        if (clock == null) return COMMAND_FAILED;
         ServerClockManager clockManager = server.clockManager();
-        var timelineOpt = world.registryAccess().get(
-                ResourceKey.create(Registries.TIMELINE, Identifier.parse(timelineId))
-        );
-        if (timelineOpt.isEmpty()) return 0;
-        long currentTicks = timelineOpt.orElseThrow().value().getCurrentTicks(clockManager);
-        return TimeCommand.wrapTime(currentTicks);
+        return switch (clockManager.moveToTimeMarker(clock, ResourceKey.create(ClockTimeMarkers.ROOT_ID, cachedId(timeMarkerId)))) {
+            case NO_TIME_MARKER_FOUND, NOT_MOVED -> COMMAND_FAILED;
+            case MOVED -> commandSuccess(TimeCommand.wrapTime(clockManager.getInstance(clock).totalTicks()));
+        };
     }
 
-    public static int queryTimelineRepetitions(MinecraftServer server, ServerLevel world, String timelineId) {
+    public static long addTime(MinecraftServer server, ServerLevel world, int time) {
+        Holder<WorldClock> clock = defaultClock(world);
+        if (clock == null) return COMMAND_FAILED;
         ServerClockManager clockManager = server.clockManager();
-        var timelineOpt = world.registryAccess().get(
-                ResourceKey.create(Registries.TIMELINE, Identifier.parse(timelineId))
-        );
-        if (timelineOpt.isEmpty()) return 0;
-        long repetitions = timelineOpt.orElseThrow().value().getPeriodCount(clockManager);
-        return TimeCommand.wrapTime(repetitions);
+        clockManager.addTicks(clock, time);
+        return commandSuccess(TimeCommand.wrapTime(clockManager.getInstance(clock).totalTicks()));
+    }
+
+    public static long setTimeRate(MinecraftServer server, ServerLevel world, float rate) {
+        Holder<WorldClock> clock = defaultClock(world);
+        if (clock == null) return COMMAND_FAILED;
+        ServerClockManager clockManager = server.clockManager();
+        if (clockManager.getInstance(clock).rate() == rate) return COMMAND_FAILED;
+        clockManager.setRate(clock, rate);
+        return commandSuccess(1);
+    }
+
+    public static long setTimePaused(MinecraftServer server, ServerLevel world, boolean paused) {
+        Holder<WorldClock> clock = defaultClock(world);
+        if (clock == null) return COMMAND_FAILED;
+        ServerClockManager clockManager = server.clockManager();
+        if (clockManager.getInstance(clock).isPaused() == paused) return COMMAND_FAILED;
+        clockManager.setPaused(clock, paused);
+        return commandSuccess(1);
+    }
+
+    /** `time query time`: vanilla getDefaultClock fails (COMMAND_FAILED) in a dimension without a default clock. */
+    public static long queryTime(MinecraftServer server, ServerLevel world) {
+        Holder<WorldClock> clock = defaultClock(world);
+        if (clock == null) return COMMAND_FAILED;
+        return commandSuccess(TimeCommand.wrapTime(server.clockManager().getInstance(clock).totalTicks()));
+    }
+
+    /**
+     * Vanilla TimeCommand timeline queries: fail (COMMAND_FAILED) when the dimension has no default clock,
+     * the timeline is unknown, or it belongs to a different clock (ERROR_WRONG_TIMELINE_FOR_CLOCK).
+     */
+    private static @Nullable Timeline queryableTimeline(ServerLevel world, String timelineId) {
+        Holder<WorldClock> clock = defaultClock(world);
+        if (clock == null) return null;
+        var timeline = world.registryAccess().get(ResourceKey.create(Registries.TIMELINE, cachedId(timelineId)));
+        if (timeline.isEmpty() || !clock.equals(timeline.get().value().clock())) return null;
+        return timeline.get().value();
+    }
+
+    public static long queryTimelineTicks(MinecraftServer server, ServerLevel world, String timelineId) {
+        Timeline timeline = queryableTimeline(world, timelineId);
+        if (timeline == null) return COMMAND_FAILED;
+        return commandSuccess(TimeCommand.wrapTime(timeline.getCurrentTicks(server.clockManager())));
+    }
+
+    public static long queryTimelineRepetitions(MinecraftServer server, ServerLevel world, String timelineId) {
+        Timeline timeline = queryableTimeline(world, timelineId);
+        if (timeline == null) return COMMAND_FAILED;
+        return commandSuccess(TimeCommand.wrapTime(timeline.getPeriodCount(server.clockManager())));
     }
 
     public static int queryGameTime(MinecraftServer server, ServerLevel world) {
@@ -1329,21 +1379,23 @@ public class ExtensionFunctions {
     // Schedule
 
     public static void scheduleFunction(MinecraftServer server, String function, int time, boolean append) {
+        // vanilla ScheduleCommand.schedule throws ERROR_SAME_TICK before removing or scheduling anything
+        if (time == 0) return;
         var timerQueue = server.getScheduledEvents();
         long targetTime = server.overworld().getGameTime() + time;
         if (!append) {
             timerQueue.remove(function);
         }
-        timerQueue.schedule(function, targetTime, new net.minecraft.world.level.timers.FunctionCallback(Identifier.parse(function)));
+        timerQueue.schedule(function, targetTime, new net.minecraft.world.level.timers.FunctionCallback(cachedId(function)));
     }
 
-    public static void scheduleClear(MinecraftServer server, String function) {
-        server.getScheduledEvents().remove(function);
+    public static int scheduleClear(MinecraftServer server, String function) {
+        return server.getScheduledEvents().remove(function);
     }
 
     // Gamerule
 
-    public static void setGamerule(MinecraftServer server, String rule, String value) {
+    public static long setGamerule(MinecraftServer server, String rule, String value) {
         // Direct API path: parse the value via the rule's own deserialize(),
         // then call GameRules.set(rule, value, server). This is exactly what
         // GameRuleCommand.setRule() does internally, minus the chat broadcast
@@ -1363,15 +1415,37 @@ public class ExtensionFunctions {
         // parser accepts that form. Strip the default `minecraft:` namespace so we
         // compare against the rule's actual id — otherwise the set silently no-ops
         // and safe_explosion fails to suppress terrain damage.
-        var normalizedRule = rule.startsWith("minecraft:") ? rule.substring("minecraft:".length()) : rule;
+        var byValue = GAMERULE_SET_CACHE.computeIfAbsent(rule, r -> new java.util.concurrent.ConcurrentHashMap<>());
+        Object cached = byValue.get(value);
+        if (cached == null) {
+            var normalizedRule = rule.startsWith("minecraft:") ? rule.substring("minecraft:".length()) : rule;
+            Object[] found = { PARSE_FAILED };
+            server.getGameRules().visitGameRuleTypes(new net.minecraft.world.level.gamerules.GameRuleTypeVisitor() {
+                @Override
+                public <T> void visit(net.minecraft.world.level.gamerules.GameRule<T> gameRule) {
+                    if (!normalizedRule.equals(gameRule.id())) return;
+                    gameRule.deserialize(value).result().ifPresent(v -> found[0] = new GameruleAssignment<>(gameRule, v));
+                }
+            });
+            cached = found[0];
+            byValue.put(value, cached);
+        }
+        return cached == PARSE_FAILED ? COMMAND_FAILED : applyGamerule(server, (GameruleAssignment<?>) cached);
+    }
+
+    /** A parsed `gamerule <rule> <value>`: the rule and its deserialized (immutable) value. */
+    private record GameruleAssignment<T>(net.minecraft.world.level.gamerules.GameRule<T> rule, T value) {}
+
+    /** rule → value → GameruleAssignment, or PARSE_FAILED for an unknown rule or invalid value. */
+    private static final java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.ConcurrentHashMap<String, Object>> GAMERULE_SET_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static <T> long applyGamerule(MinecraftServer server, GameruleAssignment<T> assignment) {
         var gameRules = server.getGameRules();
-        gameRules.visitGameRuleTypes(new net.minecraft.world.level.gamerules.GameRuleTypeVisitor() {
-            @Override
-            public <T> void visit(net.minecraft.world.level.gamerules.GameRule<T> gameRule) {
-                if (!normalizedRule.equals(gameRule.id())) return;
-                gameRule.deserialize(value).result().ifPresent(v -> gameRules.set(gameRule, v, server));
-            }
-        });
+        // 26.3 GameRuleCommand.setRule throws ERROR_GAME_RULE_NOT_SET (no set, no
+        // onGameRuleChanged side effects) when the value is unchanged (MC-174958).
+        if (gameRules.get(assignment.rule()).equals(assignment.value())) return COMMAND_FAILED;
+        gameRules.set(assignment.rule(), assignment.value(), server);
+        return commandSuccess(assignment.rule().getCommandResult(assignment.value()));
     }
 
     public static int queryGamerule(MinecraftServer server, String rule) {
@@ -1414,31 +1488,138 @@ public class ExtensionFunctions {
 
     // Vanilla fallback for partial compilation
 
+    /** Compiled-function return encoding of a failed command (success = 0, result = 0). */
+    public static final long COMMAND_FAILED = 1L << 32;
+
+    /**
+     * Runs a vanilla command and returns its brigadier result in the compiled-function return
+     * encoding: {@link #COMMAND_FAILED} on failure (parse error / thrown CommandSyntaxException,
+     * i.e. vanilla's (false, 0) callback), otherwise the result in the low 32 bits.
+     * {@code withCallback} replaces the inherited callback, as vanilla's ExecuteCommand task
+     * reports through {@code source.callback().onResult(success, result)}.
+     */
+    public static long executeVanillaCommandWithResult(CommandSourceStack stack, String command) {
+        var chain = fallbackChain(stack.getServer(), command, false);
+        return chain == null ? COMMAND_FAILED : runFallbackWithResult(stack, command, chain);
+    }
+
+    public static long executeVanillaCommandWithResultDynamic(CommandSourceStack stack, String command) {
+        var chain = fallbackChain(stack.getServer(), command, true);
+        return chain == null ? COMMAND_FAILED : runFallbackWithResult(stack, command, chain);
+    }
+
     public static void executeVanillaCommand(CommandSourceStack stack, String command) {
+        var chain = fallbackChain(stack.getServer(), command, false);
+        if (chain != null) runFallback(stack, command, chain);
+    }
+
+    public static void executeVanillaCommandDynamic(CommandSourceStack stack, String command) {
+        var chain = fallbackChain(stack.getServer(), command, true);
+        if (chain != null) runFallback(stack, command, chain);
+    }
+
+    // Fallback lines are parsed ONCE, like vanilla parses function lines at load:
+    // CommandFunction.parseCommand with a compilation source at the function-compilation
+    // permission level (Commands.createCompilationContext), then the flattened ContextChain is
+    // executed with the runtime source (BuildContexts.TopLevel) as Commands.performCommand does.
+    // Constant command strings are cached for the dispatcher's lifetime (a /reload rebuilds the
+    // dispatcher and drops the cache). Macro-substituted strings use a bounded LRU, the analogue
+    // of vanilla MacroFunction's per-function instantiation cache.
+    private static final java.util.concurrent.ConcurrentHashMap<String, Object> FALLBACK_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final int DYNAMIC_FALLBACK_CACHE_SIZE = 512;
+    private static final java.util.LinkedHashMap<String, Object> DYNAMIC_FALLBACK_CACHE = new java.util.LinkedHashMap<>(64, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(java.util.Map.Entry<String, Object> eldest) {
+            return size() > DYNAMIC_FALLBACK_CACHE_SIZE;
+        }
+    };
+    private static volatile com.mojang.brigadier.@Nullable CommandDispatcher<CommandSourceStack> fallbackDispatcher;
+    /** Distinct failing fallback strings logged at WARN; later ones go to DEBUG (bounded log volume). */
+    private static final int MAX_LOGGED_FALLBACK_FAILURES = 32;
+    private static final java.util.concurrent.atomic.AtomicInteger loggedFallbackFailures = new java.util.concurrent.atomic.AtomicInteger();
+
+    @SuppressWarnings("unchecked")
+    private static com.mojang.brigadier.context.@Nullable ContextChain<CommandSourceStack> fallbackChain(MinecraftServer server, String command, boolean dynamic) {
+        var dispatcher = server.getCommands().getDispatcher();
+        if (dispatcher != fallbackDispatcher) {
+            FALLBACK_CACHE.clear();
+            synchronized (DYNAMIC_FALLBACK_CACHE) {
+                DYNAMIC_FALLBACK_CACHE.clear();
+            }
+            fallbackDispatcher = dispatcher;
+        }
+        Object cached;
+        if (dynamic) {
+            synchronized (DYNAMIC_FALLBACK_CACHE) {
+                cached = DYNAMIC_FALLBACK_CACHE.get(command);
+                if (cached == null) {
+                    cached = parseFallback(server, dispatcher, command);
+                    DYNAMIC_FALLBACK_CACHE.put(command, cached);
+                }
+            }
+        } else {
+            cached = FALLBACK_CACHE.get(command);
+            if (cached == null) {
+                cached = parseFallback(server, dispatcher, command);
+                FALLBACK_CACHE.put(command, cached);
+            }
+        }
+        return cached == PARSE_FAILED ? null : (com.mojang.brigadier.context.ContextChain<CommandSourceStack>) cached;
+    }
+
+    private static void logFallbackFailure(String message, String command, Object detail) {
+        if (loggedFallbackFailures.incrementAndGet() <= MAX_LOGGED_FALLBACK_FAILURES) {
+            LOGGER.warn(message, command, detail);
+        } else {
+            LOGGER.debug(message, command, detail);
+        }
+    }
+
+    private static Object parseFallback(MinecraftServer server, com.mojang.brigadier.CommandDispatcher<CommandSourceStack> dispatcher, String command) {
+        String input = Commands.trimOptionalPrefix(command);
+        var compilationSource = Commands.createCompilationContext(server.getFunctionCompilationPermissions());
+        try {
+            var parse = dispatcher.parse(input, compilationSource);
+            Commands.validateParseResults(parse);
+            Object chain = com.mojang.brigadier.context.ContextChain.tryFlatten(parse.getContext().build(input)).orElse(null);
+            if (chain == null) {
+                throw com.mojang.brigadier.exceptions.CommandSyntaxException.BUILT_IN_EXCEPTIONS.dispatcherUnknownCommand().createWithContext(parse.getReader());
+            }
+            return chain;
+        } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
+            // Vanilla would have refused to load the function; the line is a no-op failure here.
+            logFallbackFailure("MCFC: vanilla fallback `{}` does not parse (the command fails): {}", command, e.getMessage());
+            return PARSE_FAILED;
+        }
+    }
+
+    private static long runFallbackWithResult(CommandSourceStack stack, String command, com.mojang.brigadier.context.ContextChain<CommandSourceStack> chain) {
+        long[] out = { COMMAND_FAILED };
+        runFallback(stack.withCallback((success, result) -> out[0] = success ? Integer.toUnsignedLong(result) : COMMAND_FAILED), command, chain);
+        return out[0];
+    }
+
+    private static void runFallback(CommandSourceStack stack, String command, com.mojang.brigadier.context.ContextChain<CommandSourceStack> chain) {
         // Vanilla's Commands.executeCommandInContext checks the thread-local
         // CURRENT_EXECUTION_CONTEXT: if non-null (we're already inside a
         // running command's ExecutionContext), it just queues the command in
         // the existing context's queue instead of running it synchronously.
-        // Compiled code reads state RIGHT AFTER each executeVanillaCommand
-        // call and expects its effects to be visible (e.g. gbg_no_sneak writes
-        // `storage.new_model = idle_model` then reads storage to pass into
-        // update_model). With queuing, the read sees stale data and the scope
-        // model never reverts. Null out the thread-local so vanilla builds a
-        // fresh context, runs the command, and tears it down — then restore
-        // the outer context so further mixin-dispatched compiled calls still
-        // see it.
-        var ctxField = net.minecraft.commands.Commands.CURRENT_EXECUTION_CONTEXT;
+        // Compiled code reads state RIGHT AFTER each fallback and expects its
+        // effects to be visible, so null out the thread-local: vanilla builds a
+        // fresh context, runs the command and tears it down; then restore the
+        // outer context so further mixin-dispatched compiled calls still see it.
+        var ctxField = Commands.CURRENT_EXECUTION_CONTEXT;
         var saved = ctxField.get();
         if (saved != null) ctxField.set(null);
         try {
-            stack.getServer().getCommands().performPrefixedCommand(stack, command);
+            Commands.executeCommandInContext(stack, context -> ExecutionContext.queueInitialCommandExecution(context, command, chain, stack, CommandResultCallback.EMPTY));
+        } catch (Exception e) {
+            // Same handling as Commands.performCommand.
+            logFallbackFailure("MCFC: vanilla fallback `{}` threw: {}", command, e.toString());
+            stack.sendFailure(Component.translatable("command.failed"));
         } finally {
             if (saved != null) ctxField.set(saved);
         }
-        // Vanilla commands can summon/kill entities or modify entity NBT,
-        // so invalidate both caches to prevent stale data in subsequent selectors
-        allEntitiesCache.clear();
-        entityNbtTickCache.clear();
     }
 
     // ScoreText с именованным score holder
@@ -1470,50 +1651,102 @@ public class ExtensionFunctions {
         return false;
     }
 
-    // NbtText — получить NBT из storage как Component
-    public static Component getNbtText(net.minecraft.world.level.storage.CommandStorage storage,
-            String storageName, String path) {
-        var compound = storage.get(Identifier.parse(storageName));
-        return walkNbtPathAsText(compound, path);
+    // NBT text components: 26.3 NbtContents.resolve. Every tag the path selects in every
+    // source (storage / each entity) is rendered with TextComponentTagVisitor (rich or plain),
+    // or parsed as a component and resolved when `interpret` is set; results are joined with the
+    // separator (vanilla default ", " without style, passed in by the compiler).
+
+    public static Component getNbtText(net.minecraft.world.level.storage.CommandStorage storage, String storageName, String path, boolean plain, Component separator) {
+        var nbtPath = nbtPath(path);
+        if (nbtPath == null) return Component.empty();
+        var tags = new ArrayList<Tag>();
+        collectNbtTextTags(nbtPath, storage.get(cachedId(storageName)), tags);
+        return renderNbtText(tags, plain, separator);
     }
 
-    // NbtText — получить NBT из первой подходящей entity как Component
-    public static Component getEntityNbtText(List<? extends Entity> entities, String path) {
-        if (entities.isEmpty()) return Component.empty();
-        return walkNbtPathAsText(getEntityNbt(entities.getFirst()), path);
+    public static Component getNbtTextInterpreted(CommandSourceStack stack, net.minecraft.world.level.storage.CommandStorage storage, String storageName, String path, Component separator) {
+        var nbtPath = nbtPath(path);
+        if (nbtPath == null) return Component.empty();
+        var tags = new ArrayList<Tag>();
+        collectNbtTextTags(nbtPath, storage.get(cachedId(storageName)), tags);
+        return interpretNbtText(stack, tags, separator);
     }
 
-    private static Component walkNbtPathAsText(net.minecraft.nbt.@Nullable Tag root, String path) {
-        net.minecraft.nbt.Tag current = root;
-        if (current == null) return Component.empty();
-        for (String part : path.split("\\.")) {
-            if (part.isEmpty()) continue;
-            if (current instanceof CompoundTag ct) {
-                current = ct.get(part);
-            } else {
-                return Component.empty();
+    public static Component getEntityNbtText(List<? extends Entity> entities, String path, boolean plain, Component separator) {
+        var nbtPath = nbtPath(path);
+        if (nbtPath == null || entities.isEmpty()) return Component.empty();
+        var tags = new ArrayList<Tag>();
+        for (var entity : entities) collectNbtTextTags(nbtPath, net.minecraft.advancements.predicates.NbtPredicate.getEntityTagToCompare(entity), tags);
+        return renderNbtText(tags, plain, separator);
+    }
+
+    public static Component getEntityNbtTextInterpreted(CommandSourceStack stack, List<? extends Entity> entities, String path, Component separator) {
+        var nbtPath = nbtPath(path);
+        if (nbtPath == null || entities.isEmpty()) return Component.empty();
+        var tags = new ArrayList<Tag>();
+        for (var entity : entities) collectNbtTextTags(nbtPath, net.minecraft.advancements.predicates.NbtPredicate.getEntityTagToCompare(entity), tags);
+        return interpretNbtText(stack, tags, separator);
+    }
+
+    private static void collectNbtTextTags(net.minecraft.commands.arguments.NbtPathArgument.NbtPath path, Tag root, List<Tag> out) {
+        try {
+            out.addAll(path.get(root));
+        } catch (com.mojang.brigadier.exceptions.CommandSyntaxException ignored) {
+            // vanilla: a source where the path matches nothing contributes no elements
+        }
+    }
+
+    private static Component renderNbtText(List<Tag> tags, boolean plain, Component separator) {
+        MutableComponent result = null;
+        for (var tag : tags) {
+            var visitor = new net.minecraft.nbt.TextComponentTagVisitor("", plain
+                    ? net.minecraft.nbt.TextComponentTagVisitor.PlainStyling.INSTANCE
+                    : net.minecraft.nbt.TextComponentTagVisitor.RichStyling.INSTANCE);
+            var rendered = (MutableComponent) visitor.visit(tag);
+            result = result == null ? rendered : result.append(separator).append(rendered);
+        }
+        return result == null ? Component.empty() : result;
+    }
+
+    private static Component interpretNbtText(CommandSourceStack stack, List<Tag> tags, Component separator) {
+        if (tags.isEmpty()) return Component.empty();
+        var registryOps = stack.registryAccess().createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);
+        var context = net.minecraft.network.chat.ResolutionContext.create(stack);
+        MutableComponent result = null;
+        for (var tag : tags) {
+            MutableComponent resolved;
+            try {
+                var component = net.minecraft.network.chat.ComponentSerialization.CODEC.parse(registryOps, tag).getOrThrow();
+                resolved = net.minecraft.network.chat.ComponentUtils.resolve(context, component);
+            } catch (Exception e) {
+                LOGGER.warn("Failed to parse component: {}", tag, e);
+                continue;
             }
-            if (current == null) return Component.empty();
+            result = result == null ? resolved : result.append(separator).append(resolved);
         }
-        return Component.literal(stringifyTag(current));
+        return result == null ? Component.empty() : result;
     }
 
-    // data get — конвертация NBT Tag в int с масштабом
+    // data get — vanilla DataCommands.getData / getNumeric
 
-    public static int nbtTagToInt(Tag tag, double scale) {
-        if (tag instanceof net.minecraft.nbt.NumericTag numeric) {
-            return (int)(numeric.doubleValue() * scale);
-        }
-        if (tag instanceof net.minecraft.nbt.CollectionTag collection) {
-            return (int)(collection.size() * scale);
-        }
-        if (tag instanceof CompoundTag compound) {
-            return (int)(compound.size() * scale);
-        }
-        if (tag instanceof net.minecraft.nbt.StringTag str) {
-            return (int)(str.asString().orElse("").length() * scale);
-        }
-        return 0;
+    /** `data get <target> <path>`: numbers are floored, collections/compounds give their size, strings their length. */
+    public static int nbtTagToInt(Tag tag) {
+        return switch (tag) {
+            case net.minecraft.nbt.NumericTag numeric -> Mth.floor(numeric.doubleValue());
+            case net.minecraft.nbt.CollectionTag collection -> collection.size();
+            case CompoundTag compound -> compound.size();
+            case StringTag(String value) -> value.length();
+            default -> 0;
+        };
+    }
+
+    public static boolean isNumericTag(Tag tag) {
+        return tag instanceof net.minecraft.nbt.NumericTag;
+    }
+
+    /** `data get <target> <path> <scale>`: only numeric tags (callers jump to the failure path otherwise). */
+    public static int nbtNumericToIntScaled(Tag tag, double scale) {
+        return Mth.floor(((net.minecraft.nbt.NumericTag) tag).doubleValue() * scale);
     }
 
     // Scoreboard objectives
@@ -1544,116 +1777,168 @@ public class ExtensionFunctions {
 
     // Dimension level
 
+    private static final java.util.concurrent.ConcurrentHashMap<String, ResourceKey<net.minecraft.world.level.Level>> DIMENSION_KEY_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** `execute in`: one cached key + one map lookup (vanilla DimensionArgument.getDimension); null = unknown dimension. */
     public static net.minecraft.server.level.@Nullable ServerLevel getDimensionLevel(MinecraftServer server, String dimension) {
-        for (var level : server.getAllLevels()) {
-            if (level.dimension().identifier().toString().equals(dimension)) {
-                return level;
-            }
+        var key = DIMENSION_KEY_CACHE.get(dimension);
+        if (key == null) {
+            key = ResourceKey.create(Registries.DIMENSION, Identifier.parse(dimension));
+            DIMENSION_KEY_CACHE.put(dimension, key);
         }
-        return null;
+        return server.getLevel(key);
+    }
+
+    /** `execute in`: vanilla CommandSourceStack.withLevel scales X/Z by the dimensions' teleportation scale. */
+    public static net.minecraft.world.phys.Vec3 scalePositionForLevel(net.minecraft.server.level.ServerLevel from, net.minecraft.server.level.ServerLevel to, net.minecraft.world.phys.Vec3 pos) {
+        if (from == to) return pos;
+        double scale = net.minecraft.world.level.dimension.DimensionType.getTeleportationScale(from.dimensionType(), to.dimensionType());
+        return new net.minecraft.world.phys.Vec3(pos.x * scale, pos.y, pos.z * scale);
+    }
+
+    /** `execute if|unless loaded` (vanilla ExecuteCommand.isChunkLoaded). */
+    public static boolean isBlockLoaded(net.minecraft.server.level.ServerLevel level, net.minecraft.world.phys.Vec3 pos) {
+        var chunkPos = net.minecraft.world.level.ChunkPos.containing(net.minecraft.core.BlockPos.containing(pos));
+        var chunk = level.getChunkSource().getChunkNow(chunkPos.x(), chunkPos.z());
+        return chunk != null && chunk.getFullStatus() == net.minecraft.server.level.FullChunkStatus.ENTITY_TICKING && level.areEntitiesLoaded(chunkPos.pack());
+    }
+
+    /** Biome id → its ResourceKey, or PARSE_FAILED when the biome registry has no such entry (registry is fixed per server). */
+    private static final java.util.concurrent.ConcurrentHashMap<String, Object> BIOME_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** `execute if|unless biome`: 1 = biome matches, 0 = it does not, -1 = vanilla error so neither branch runs:
+     * unknown biome id (ResourceOrTagArgument ERROR_UNKNOWN_RESOURCE), or position not loaded / outside the world
+     * (BlockPosArgument.getLoadedBlockPos throws). */
+    public static int checkBiome(net.minecraft.server.level.ServerLevel level, net.minecraft.world.phys.Vec3 pos, String biome) {
+        Object key = BIOME_CACHE.get(biome);
+        if (key == null) {
+            var id = Identifier.tryParse(biome);
+            var resourceKey = id == null ? null : ResourceKey.create(Registries.BIOME, id);
+            key = resourceKey != null && level.registryAccess().lookupOrThrow(Registries.BIOME).get(resourceKey).isPresent() ? resourceKey : PARSE_FAILED;
+            if (key == PARSE_FAILED) LOGGER.warn("MCFC: unknown biome '{}' (the command will fail)", biome);
+            BIOME_CACHE.put(biome, key);
+        }
+        if (key == PARSE_FAILED) return -1;
+        var blockPos = net.minecraft.core.BlockPos.containing(pos);
+        if (!level.hasChunkAt(blockPos) || !level.isInWorldBounds(blockPos)) return -1;
+        @SuppressWarnings("unchecked")
+        var biomeKey = (ResourceKey<net.minecraft.world.level.biome.Biome>) key;
+        return level.getBiome(blockPos).is(biomeKey) ? 1 : 0;
+    }
+
+    // -------------------------------------------------------------------------
+    // Parse caches. Every compile-time constant string (block/item/particle/predicate) is parsed
+    // once with vanilla's argument parser and cached, including failures (PARSE_FAILED, warned
+    // once). Item/block failures are retried once after a reload (failedParsesStale). Holders
+    // inside the results belong to the running server's registries, so every cache is dropped
+    // in onServerStopped().
+    // -------------------------------------------------------------------------
+
+    private static final Object PARSE_FAILED = new Object();
+
+    /** Same lookup vanilla builds the command dispatcher with (feature-filtered registries). */
+    private static net.minecraft.commands.CommandBuildContext commandBuildContext(MinecraftServer server) {
+        return net.minecraft.commands.CommandBuildContext.simple(server.registryAccess(), server.getWorldData().enabledFeatures());
+    }
+
+    @FunctionalInterface
+    private interface StringParser {
+        Object parse(com.mojang.brigadier.StringReader reader) throws com.mojang.brigadier.exceptions.CommandSyntaxException;
+    }
+
+    /** Parses the whole string (trailing input is an error, as for a command argument) or returns PARSE_FAILED. */
+    private static Object parseWhole(String kind, String input, StringParser parser) {
+        try {
+            var reader = new com.mojang.brigadier.StringReader(input);
+            Object result = parser.parse(reader);
+            if (reader.canRead()) {
+                throw com.mojang.brigadier.exceptions.CommandSyntaxException.BUILT_IN_EXCEPTIONS.dispatcherExpectedArgumentSeparator().createWithContext(reader);
+            }
+            return result;
+        } catch (Exception e) {
+            LOGGER.warn("MCFC: failed to parse {} '{}' (the command will fail): {}", kind, input, e.getMessage());
+            return PARSE_FAILED;
+        }
+    }
+
+    /** Reload generation the cached PARSE_FAILED entries were recorded in (the reloadable registry lookup is replaced on reload). */
+    private static volatile @Nullable Object parseFailureGeneration;
+
+    /**
+     * Cached parse failures may become valid after `/reload` or `/datapack enable` (e.g. a `#pack:tag` that now
+     * exists), where vanilla re-parses the functions. Only consulted on the failure path, so cached successes
+     * (whose tag holder sets follow rebinding by key) cost nothing. Returns true, after dropping every cached
+     * failure, when a reload happened since the failures were recorded.
+     */
+    private static synchronized boolean failedParsesStale(MinecraftServer server) {
+        Object generation = server.reloadableRegistries().lookup();
+        if (generation == parseFailureGeneration) return false;
+        boolean hadGeneration = parseFailureGeneration != null;
+        parseFailureGeneration = generation;
+        if (!hadGeneration) return false;
+        ITEM_PREDICATE_CACHE.values().removeIf(v -> v == PARSE_FAILED);
+        ITEM_PARSE_CACHE.values().removeIf(v -> v == PARSE_FAILED);
+        BLOCK_PREDICATE_CACHE.values().removeIf(v -> v == PARSE_FAILED);
+        BLOCK_INPUT_CACHE.values().removeIf(v -> v == PARSE_FAILED);
+        return true;
+    }
+
+    /** Called when the server stops: parse results hold that server's registry holders. */
+    public static void onServerStopped() {
+        BLOCK_PREDICATE_CACHE.clear();
+        BLOCK_INPUT_CACHE.clear();
+        ITEM_PARSE_CACHE.clear();
+        ITEM_PREDICATE_CACHE.clear();
+        PARTICLE_CACHE.clear();
+        SOUND_PARSE_CACHE.clear();
+        ENTITY_TYPE_CACHE.clear();
+        NBT_PATH_CACHE.clear();
+        FALLBACK_CACHE.clear();
+        synchronized (DYNAMIC_FALLBACK_CACHE) {
+            DYNAMIC_FALLBACK_CACHE.clear();
+        }
+        fallbackDispatcher = null;
+        MOB_EFFECT_CACHE.clear();
+        PREDICATE_CACHE.clear();
+        predicateLookup = null;
+        parseFailureGeneration = null;
+        BIOME_CACHE.clear();
+        GAMERULE_SET_CACHE.clear();
     }
 
     // Block checking для execute if block
 
-    private static final java.util.concurrent.ConcurrentHashMap<String, java.util.function.Predicate<net.minecraft.world.level.block.state.BlockState>> BLOCK_PREDICATE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.concurrent.ConcurrentHashMap<String, Object> BLOCK_PREDICATE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
-    public static boolean checkBlock(net.minecraft.server.level.ServerLevel level, Vec3 position, String predicate) {
+    /** Vanilla BlockPredicateArgument result for {@code predicate}, or null when it does not parse. */
+    private static net.minecraft.commands.arguments.blocks.BlockPredicateArgument.@Nullable Result blockPredicate(MinecraftServer server, String predicate) {
+        Object cached = BLOCK_PREDICATE_CACHE.get(predicate);
+        if (cached == null || (cached == PARSE_FAILED && failedParsesStale(server))) {
+            var blocks = commandBuildContext(server).lookupOrThrow(Registries.BLOCK);
+            cached = parseWhole("block predicate", predicate, reader -> net.minecraft.commands.arguments.blocks.BlockPredicateArgument.parse(blocks, reader));
+            if (cached == PARSE_FAILED) failedParsesStale(server);
+            BLOCK_PREDICATE_CACHE.put(predicate, cached);
+        }
+        return cached == PARSE_FAILED ? null : (net.minecraft.commands.arguments.blocks.BlockPredicateArgument.Result) cached;
+    }
+
+    /** Vanilla BlockPosArgument.getLoadedBlockPos: the chunk must be loaded and the position inside the build height. */
+    private static boolean isLoadedBlockPos(ServerLevel level, net.minecraft.core.BlockPos pos) {
+        return level.hasChunkAt(pos) && level.isInWorldBounds(pos);
+    }
+
+    /** {@code execute if|unless block} result: 1 matches, 0 does not match. */
+    public static final int CHECK_BLOCK_MATCH = 1;
+    public static final int CHECK_BLOCK_NO_MATCH = 0;
+    /** Vanilla throws (unloaded chunk, outside the world, unparsable predicate): both `if` and `unless` fail. */
+    public static final int CHECK_BLOCK_ERROR = -1;
+
+    public static int checkBlock(net.minecraft.server.level.ServerLevel level, Vec3 position, String predicate) {
         var blockPos = net.minecraft.core.BlockPos.containing(position);
-        var state = level.getBlockState(blockPos);
-        // Fast path: cached predicates without NBT
-        var cached = BLOCK_PREDICATE_CACHE.get(predicate);
-        if (cached != null) return cached.test(state);
-        try {
-            var blockLookup = level.registryAccess().lookupOrThrow(Registries.BLOCK);
-            var parsed = net.minecraft.commands.arguments.blocks.BlockStateParser.parseForTesting(blockLookup, predicate, true);
-            return parsed.map(
-                blockResult -> {
-                    var targetState = blockResult.blockState();
-                    var props = blockResult.properties();
-                    var nbt = blockResult.nbt();
-                    // Check block type + specified properties
-                    if (!state.is(targetState.getBlock())) return false;
-                    for (var prop : props.entrySet()) {
-                        if (!Objects.equals(state.getValue(prop.getKey()), prop.getValue())) return false;
-                    }
-                    // Check NBT if specified
-                    if (nbt != null) {
-                        var blockEntity = level.getBlockEntity(blockPos);
-                        if (blockEntity == null) return false;
-                        var beTag = blockEntity.saveWithFullMetadata(level.registryAccess());
-                        if (!NbtUtils.compareNbt(nbt, beTag, true)) return false;
-                    } else {
-                        // Cache only predicates without NBT (state-only checks are position-independent)
-                        java.util.function.Predicate<net.minecraft.world.level.block.state.BlockState> cacheable = s -> {
-                            if (!s.is(targetState.getBlock())) return false;
-                            for (var p : props.entrySet()) {
-                                if (!Objects.equals(s.getValue(p.getKey()), p.getValue())) return false;
-                            }
-                            return true;
-                        };
-                        BLOCK_PREDICATE_CACHE.put(predicate, cacheable);
-                    }
-                    return true;
-                },
-                tagResult -> {
-                    var tag = tagResult.tag();
-                    var vagueProps = tagResult.vagueProperties();
-                    if (!state.is(tag)) return false;
-                    for (var entry : vagueProps.entrySet()) {
-                        var prop = state.getBlock().getStateDefinition().getProperty(entry.getKey());
-                        if (prop == null) return false;
-                        var val = prop.getValue(entry.getValue());
-                        if (val.isEmpty() || !Objects.equals(state.getValue(prop), val.get())) return false;
-                    }
-                    // Tags without NBT can be cached
-                    if (tagResult.nbt() == null) {
-                        java.util.function.Predicate<net.minecraft.world.level.block.state.BlockState> cacheable = s -> {
-                            if (!s.is(tag)) return false;
-                            for (var e : vagueProps.entrySet()) {
-                                var p = s.getBlock().getStateDefinition().getProperty(e.getKey());
-                                if (p == null) return false;
-                                var v = p.getValue(e.getValue());
-                                if (v.isEmpty() || !Objects.equals(s.getValue(p), v.get())) return false;
-                            }
-                            return true;
-                        };
-                        BLOCK_PREDICATE_CACHE.put(predicate, cacheable);
-                    } else {
-                        var blockEntity = level.getBlockEntity(blockPos);
-                        if (blockEntity == null) return false;
-                        var beTag = blockEntity.saveWithFullMetadata(level.registryAccess());
-                        if (!NbtUtils.compareNbt(tagResult.nbt(), beTag, true)) return false;
-                    }
-                    return true;
-                }
-            );
-        } catch (Exception e) {
-            LOGGER.warn("Failed to parse block predicate '{}': {}", predicate, e.getMessage());
-            return false;
-        }
-    }
-
-    // Entity relations для execute on leasher / attacker / owner
-
-    public static @Nullable Entity getEntityLeashHolder(Entity entity) {
-        if (entity instanceof net.minecraft.world.entity.Mob mob) {
-            return mob.getLeashHolder();
-        }
-        return null;
-    }
-
-    public static @Nullable Entity getEntityLastAttacker(Entity entity) {
-        if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
-            return living.getLastHurtByMob();
-        }
-        return null;
-    }
-
-    public static @Nullable Entity getEntityOwner(Entity entity) {
-        if (entity instanceof net.minecraft.world.entity.OwnableEntity ownable) {
-            return ownable.getOwner();
-        }
-        return null;
+        if (!isLoadedBlockPos(level, blockPos)) return CHECK_BLOCK_ERROR;
+        var parsed = blockPredicate(level.getServer(), predicate);
+        if (parsed == null) return CHECK_BLOCK_ERROR;
+        return parsed.test(new net.minecraft.world.level.block.state.pattern.BlockInWorld(level, blockPos, true)) ? CHECK_BLOCK_MATCH : CHECK_BLOCK_NO_MATCH;
     }
 
     // -------------------------------------------------------------------------
@@ -1708,13 +1993,23 @@ public class ExtensionFunctions {
     // Team modify — visibility, collision, prefix, suffix, displayName
     // -------------------------------------------------------------------------
 
+    /**
+     * Native `team modify` for the options the compiler validated (color incl. reset, friendlyFire,
+     * seeFriendlyInvisibles, nametagVisibility, deathMessageVisibility, collisionRule). Component
+     * options (displayName, prefix, suffix) need vanilla ComponentArgument resolution and are
+     * compiled as vanilla fallbacks.
+     */
     public static void teamModifyFull(MinecraftServer server, String teamName, String option, String value) {
         var team = server.getScoreboard().getPlayerTeam(teamName);
         if (team == null) return;
         switch (option) {
             case "color" -> {
-                var color = net.minecraft.ChatFormatting.getByName(value);
-                if (color != null) team.setColor(color);
+                if (value.equals("reset")) {
+                    team.setColor(Optional.empty());
+                } else {
+                    var color = teamColorByName(value);
+                    if (color != null) team.setColor(Optional.of(color));
+                }
             }
             case "friendlyFire" -> team.setAllowFriendlyFire(Boolean.parseBoolean(value));
             case "seeFriendlyInvisibles" -> team.setSeeFriendlyInvisibles(Boolean.parseBoolean(value));
@@ -1730,39 +2025,25 @@ public class ExtensionFunctions {
                 var rule = findBySerializedName(net.minecraft.world.scores.Team.CollisionRule.values(), value);
                 if (rule != null) team.setCollisionRule(rule);
             }
-            case "prefix" -> {
-                try {
-                    var component = net.minecraft.network.chat.ComponentSerialization.CODEC.parse(
-                        server.registryAccess().createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE),
-                        com.google.gson.JsonParser.parseString(value)
-                    ).getOrThrow();
-                    team.setPlayerPrefix(component);
-                } catch (Exception ignored) {}
-            }
-            case "suffix" -> {
-                try {
-                    var component = net.minecraft.network.chat.ComponentSerialization.CODEC.parse(
-                        server.registryAccess().createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE),
-                        com.google.gson.JsonParser.parseString(value)
-                    ).getOrThrow();
-                    team.setPlayerSuffix(component);
-                } catch (Exception ignored) {}
-            }
-            default -> {}
+            default -> LOGGER.warn("MCFC: team modify option '{}' has no native implementation", option);
         }
     }
 
     // -------------------------------------------------------------------------
-    // Random commands — value, roll, reset
+    // Random commands — value, roll, reset (vanilla RandomCommand.randomSample; the compiler
+    // rejects span 0 and span ≥ Integer.MAX_VALUE ranges, which vanilla fails)
     // -------------------------------------------------------------------------
 
     public static int randomValue(ServerLevel level, int min, int max) {
         return Mth.randomBetweenInclusive(level.getRandom(), min, max);
     }
 
-    public static int randomValueSequence(MinecraftServer server, int min, int max, String sequenceId) {
-        var source = server.getRandomSequence(cachedId(sequenceId));
-        return Mth.randomBetweenInclusive(source, min, max);
+    /** `random roll <range> <sequence>`: the result is announced to every player like vanilla. */
+    public static int randomRollSequence(CommandSourceStack source, int min, int max, String sequenceId) {
+        var server = source.getServer();
+        int value = Mth.randomBetweenInclusive(server.getRandomSequence(cachedId(sequenceId)), min, max);
+        server.getPlayerList().broadcastSystemMessage(Component.translatable("commands.random.roll", source.getDisplayName(), value, min, max), false);
+        return value;
     }
 
     public static void randomResetSequence(MinecraftServer server, ServerLevel level, String sequenceId) {
@@ -1777,104 +2058,101 @@ public class ExtensionFunctions {
     // Setblock / Fill — native block placement
     // -------------------------------------------------------------------------
 
-    private static final java.util.concurrent.ConcurrentHashMap<String, net.minecraft.commands.arguments.blocks.BlockInput> BLOCK_INPUT_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.concurrent.ConcurrentHashMap<String, Object> BLOCK_INPUT_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
+    /** Vanilla BlockStateArgument (parseForBlock with NBT allowed), or null when it does not parse. */
     private static net.minecraft.commands.arguments.blocks.@Nullable BlockInput parseBlockInput(MinecraftServer server, String blockString) {
-        var cached = BLOCK_INPUT_CACHE.get(blockString);
-        if (cached != null) return cached;
-        try {
-            var result = net.minecraft.commands.arguments.blocks.BlockStateParser.parseForBlock(
-                server.registryAccess().lookupOrThrow(Registries.BLOCK), blockString, true);
-            var input = new net.minecraft.commands.arguments.blocks.BlockInput(result.blockState(), result.properties().keySet(), result.nbt());
-            BLOCK_INPUT_CACHE.put(blockString, input);
-            return input;
-        } catch (Exception e) {
-            LOGGER.warn("Failed to parse block state '{}': {}", blockString, e.getMessage());
-            return null;
+        Object cached = BLOCK_INPUT_CACHE.get(blockString);
+        if (cached == null || (cached == PARSE_FAILED && failedParsesStale(server))) {
+            var blocks = commandBuildContext(server).lookupOrThrow(Registries.BLOCK);
+            cached = parseWhole("block state", blockString, reader -> {
+                var result = net.minecraft.commands.arguments.blocks.BlockStateParser.parseForBlock(blocks, reader, true);
+                return new net.minecraft.commands.arguments.blocks.BlockInput(result.blockState(), result.properties().keySet(), result.nbt());
+            });
+            if (cached == PARSE_FAILED) failedParsesStale(server);
+            BLOCK_INPUT_CACHE.put(blockString, cached);
         }
+        return cached == PARSE_FAILED ? null : (net.minecraft.commands.arguments.blocks.BlockInput) cached;
     }
 
+    /**
+     * Mirrors 26.3 SetBlockCommand.setBlock; mode 0 = replace, 1 = keep, 2 = destroy.
+     * Returns 1 on success, 0 where vanilla throws (unloaded/out of world, keep on non-air, unchanged block).
+     */
     public static int setBlock(MinecraftServer server, ServerLevel level, Vec3 pos, String blockString, int mode) {
-        var input = parseBlockInput(server, blockString);
-        if (input == null) return 0;
         var blockPos = net.minecraft.core.BlockPos.containing(pos);
-        if (!level.isInWorldBounds(blockPos)) return 0;
-        switch (mode) {
-            case 1 -> { // keep — only place if current block is air
-                if (!level.getBlockState(blockPos).isAir()) return 0;
-            }
-            case 2 -> // destroy — break the block first
-                level.destroyBlock(blockPos, true);
-            default -> {} // replace — no pre-processing
+        if (!isLoadedBlockPos(level, blockPos)) return 0;
+        var input = parseBlockInput(server, blockString);
+        if (input == null || level.isDebug()) return 0;
+        if (mode == 1 && !level.isEmptyBlock(blockPos)) return 0;
+        boolean placeNeeded = true;
+        if (mode == 2) {
+            level.destroyBlock(blockPos, true);
+            placeNeeded = !input.getState().isAir() || !level.getBlockState(blockPos).isAir();
         }
-        if (!input.place(level, blockPos, 2 | 256)) return 0;
-        level.updateNeighboursOnBlockSet(blockPos, level.getBlockState(blockPos));
+        var oldState = level.getBlockState(blockPos);
+        if (placeNeeded && !input.place(level, blockPos, 2 | 256)) return 0;
+        level.updateNeighboursOnBlockSet(blockPos, oldState);
         return 1;
     }
 
+    private static final net.minecraft.commands.arguments.blocks.BlockInput HOLLOW_CORE =
+            new net.minecraft.commands.arguments.blocks.BlockInput(net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), java.util.Collections.emptySet(), null);
+
+    public static final int FILL_REPLACE = 0;
+    public static final int FILL_REPLACE_FILTER = 1;
+    public static final int FILL_KEEP = 2;
+    public static final int FILL_DESTROY = 3;
+    public static final int FILL_HOLLOW = 4;
+    public static final int FILL_OUTLINE = 5;
+
+    /**
+     * Mirrors 26.3 FillCommand.fillBlocks (non-strict). Returns the vanilla count; 0 where vanilla
+     * throws (unloaded/out-of-world corner, area above max_block_modifications, unparsable
+     * block or filter, nothing changed).
+     */
     public static int fillBlocks(MinecraftServer server, ServerLevel level, Vec3 from, Vec3 to, String blockString, int mode, @Nullable String filterString) {
-        var input = parseBlockInput(server, blockString);
-        if (input == null) return 0;
-        java.util.function.@Nullable Predicate<net.minecraft.world.level.block.state.BlockState> filterPredicate = null;
-        if (filterString != null) {
-            var cached = BLOCK_PREDICATE_CACHE.get(filterString);
-            if (cached != null) {
-                filterPredicate = cached;
-            } else {
-                // trigger cache population via checkBlock
-                checkBlock(level, from, filterString);
-                filterPredicate = BLOCK_PREDICATE_CACHE.get(filterString);
-            }
-        }
         var fromPos = net.minecraft.core.BlockPos.containing(from);
         var toPos = net.minecraft.core.BlockPos.containing(to);
+        if (!isLoadedBlockPos(level, fromPos) || !isLoadedBlockPos(level, toPos)) return 0;
+        var input = parseBlockInput(server, blockString);
+        if (input == null) return 0;
+        net.minecraft.commands.arguments.blocks.BlockPredicateArgument.@Nullable Result filter = null;
+        if (filterString != null) {
+            filter = blockPredicate(server, filterString);
+            if (filter == null) return 0;
+        }
         var region = net.minecraft.world.level.levelgen.structure.BoundingBox.fromCorners(fromPos, toPos);
-        int count = 0;
-        var updatePositions = new java.util.ArrayList<net.minecraft.core.BlockPos>();
+        long area = (long) region.getXSpan() * region.getYSpan() * region.getZSpan();
+        if (area > level.getGameRules().get(net.minecraft.world.level.gamerules.GameRules.MAX_BLOCK_MODIFICATIONS)) return 0;
+        if (level.isDebug()) return 0;
 
+        record UpdatedPosition(net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState oldState) {}
+        var updatePositions = new java.util.ArrayList<UpdatedPosition>();
+        int count = 0;
         for (var blockPos : net.minecraft.core.BlockPos.betweenClosed(
                 region.minX(), region.minY(), region.minZ(),
                 region.maxX(), region.maxY(), region.maxZ())) {
-            // mode: 0=replace, 1=replace_filter, 2=keep, 3=destroy, 4=hollow, 5=outline
-            switch (mode) {
-                case 1 -> { // replace with filter — only replace blocks matching filter predicate
-                    if (filterPredicate != null && !filterPredicate.test(level.getBlockState(blockPos))) continue;
-                }
-                case 2 -> { // keep
-                    if (!level.getBlockState(blockPos).isAir()) continue;
-                }
-                case 3 -> { // destroy
-                    level.destroyBlock(blockPos, true);
-                }
-                case 4 -> { // hollow
-                    boolean isEdge = blockPos.getX() == region.minX() || blockPos.getX() == region.maxX()
-                            || blockPos.getY() == region.minY() || blockPos.getY() == region.maxY()
-                            || blockPos.getZ() == region.minZ() || blockPos.getZ() == region.maxZ();
-                    if (!isEdge) {
-                        // interior — set to air
-                        var airState = net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
-                        if (!level.getBlockState(blockPos).equals(airState)) {
-                            level.setBlock(blockPos, airState, 2 | 256);
-                            updatePositions.add(blockPos.immutable());
-                            count++;
-                        }
-                        continue;
-                    }
-                }
-                case 5 -> { // outline
-                    boolean isEdge = blockPos.getX() == region.minX() || blockPos.getX() == region.maxX()
-                            || blockPos.getY() == region.minY() || blockPos.getY() == region.maxY()
-                            || blockPos.getZ() == region.minZ() || blockPos.getZ() == region.maxZ();
-                    if (!isEdge) continue;
-                }
+            if (filter != null && !filter.test(new net.minecraft.world.level.block.state.pattern.BlockInWorld(level, blockPos, true))) continue;
+            if (mode == FILL_KEEP && !level.isEmptyBlock(blockPos)) continue;
+            var oldState = level.getBlockState(blockPos);
+            boolean affected = mode == FILL_DESTROY && level.destroyBlock(blockPos, true);
+            net.minecraft.commands.arguments.blocks.@Nullable BlockInput block = input;
+            if (mode == FILL_HOLLOW || mode == FILL_OUTLINE) {
+                boolean interior = blockPos.getX() != region.minX() && blockPos.getX() != region.maxX()
+                        && blockPos.getY() != region.minY() && blockPos.getY() != region.maxY()
+                        && blockPos.getZ() != region.minZ() && blockPos.getZ() != region.maxZ();
+                if (interior) block = mode == FILL_HOLLOW ? HOLLOW_CORE : null;
             }
-            if (input.place(level, blockPos, 2 | 256)) {
-                updatePositions.add(blockPos.immutable());
+            if (block != null && block.place(level, blockPos, 2 | 256)) {
+                updatePositions.add(new UpdatedPosition(blockPos.immutable(), oldState));
+                count++;
+            } else if (affected) {
                 count++;
             }
         }
-        for (var pos2 : updatePositions) {
-            level.updateNeighboursOnBlockSet(pos2, level.getBlockState(pos2));
+        for (var updated : updatePositions) {
+            level.updateNeighboursOnBlockSet(updated.pos(), updated.oldState());
         }
         return count;
     }
@@ -1883,68 +2161,93 @@ public class ExtensionFunctions {
     // Teleport facing — tp with facing entity / coordinates
     // -------------------------------------------------------------------------
 
-    public static void teleportFacingPos(Entity target, ServerLevel world, Vec3 pos, Vec3 facingPos) {
-        double dx = facingPos.x - pos.x;
-        double dy = facingPos.y - pos.y;
-        double dz = facingPos.z - pos.z;
-        double dist = Math.sqrt(dx * dx + dz * dz);
-        float xRot = Mth.wrapDegrees((float)(-(Mth.atan2(dy, dist) * (180.0 / Math.PI))));
-        float yRot = Mth.wrapDegrees((float)(Mth.atan2(dz, dx) * (180.0 / Math.PI)) - 90.0f);
-        if (target.teleportTo(world, pos.x, pos.y, pos.z, java.util.Set.of(), yRot, xRot, true)) {
+    /** `sourceAnchor` for the tp-facing helpers: the source stack's anchor known at compile time, or read from the stack. */
+    public static final int TP_SOURCE_ANCHOR_FEET = 0;
+    public static final int TP_SOURCE_ANCHOR_EYES = 1;
+    public static final int TP_SOURCE_ANCHOR_FROM_STACK = 2;
+
+    private static net.minecraft.commands.arguments.EntityAnchorArgument.Anchor sourceAnchor(CommandSourceStack stack, int sourceAnchor) {
+        return switch (sourceAnchor) {
+            case TP_SOURCE_ANCHOR_FEET -> net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.FEET;
+            case TP_SOURCE_ANCHOR_EYES -> net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES;
+            default -> stack.getAnchor();
+        };
+    }
+
+    /** Vanilla TeleportCommand.teleportToPos with LookAtPosition: keep rotation, teleport, then lookAt from the source anchor. */
+    public static void teleportFacingPos(Entity target, ServerLevel world, Vec3 pos, int relFlags, CommandSourceStack stack, int sourceAnchor, Vec3 facingPos) {
+        if (teleportVictim(target, world, pos.x, pos.y, pos.z, tpRelatives(target, world, relFlags & ~TP_HAS_ROTATION), target.getYRot(), target.getXRot())) {
+            target.lookAt(sourceAnchor(stack, sourceAnchor), facingPos);
             postTeleportCleanup(target);
         }
     }
 
-    public static void teleportFacingEntity(Entity target, ServerLevel world, Vec3 pos, Entity facingEntity, boolean useEyes) {
-        double ey = useEyes && facingEntity instanceof net.minecraft.world.entity.LivingEntity living
-                ? living.getY() + living.getEyeHeight()
-                : facingEntity.getY();
-        teleportFacingPos(target, world, pos, new Vec3(facingEntity.getX(), ey, facingEntity.getZ()));
+    /** Vanilla TeleportCommand.teleportToPos with LookAtEntity (players track the entity through ServerPlayer.lookAt). */
+    public static void teleportFacingEntity(Entity target, ServerLevel world, Vec3 pos, int relFlags, CommandSourceStack stack, int sourceAnchor, Entity facingEntity, boolean useEyes) {
+        if (teleportVictim(target, world, pos.x, pos.y, pos.z, tpRelatives(target, world, relFlags & ~TP_HAS_ROTATION), target.getYRot(), target.getXRot())) {
+            var anchor = sourceAnchor(stack, sourceAnchor);
+            var facingAnchor = useEyes ? net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES : net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.FEET;
+            if (target instanceof ServerPlayer player) {
+                player.lookAt(anchor, facingEntity, facingAnchor);
+            } else {
+                target.lookAt(anchor, facingAnchor.apply(facingEntity));
+            }
+            postTeleportCleanup(target);
+        }
     }
 
     // -------------------------------------------------------------------------
     // Data operations — merge entity, remove storage/entity, modify from/string
     // -------------------------------------------------------------------------
 
-    public static void dataMergeEntity(Entity entity, MinecraftServer server, CompoundTag patch) {
-        if (entity instanceof net.minecraft.world.entity.player.Player) return;
-        var uuid = entity.getUUID();
-        var current = net.minecraft.advancements.criterion.NbtPredicate.getEntityTagToCompare(entity);
-        current.merge(patch);
+    /** Vanilla EntityDataAccessor.setData: reload the entity from {@code tag}, keeping its UUID. */
+    private static void setEntityData(Entity entity, CompoundTag tag) {
+        java.util.UUID uuid = entity.getUUID();
         try (var reporter = new net.minecraft.util.ProblemReporter.ScopedCollector(entity.problemPath(), LOGGER)) {
-            entity.load(net.minecraft.world.level.storage.TagValueInput.create(reporter, server.registryAccess(), current));
+            entity.load(net.minecraft.world.level.storage.TagValueInput.create(reporter, entity.registryAccess(), tag));
             entity.setUUID(uuid);
+            entity.postDataManipulated();
         }
-        entityNbtTickCache.remove(entity);
     }
 
-    public static void dataRemoveStorage(net.minecraft.world.level.storage.CommandStorage storage, String storageName, String path) {
-        var id = cachedId(storageName);
-        try {
-            var nbtPath = net.minecraft.commands.arguments.NbtPathArgument.NbtPath.of(path);
-            var data = storage.get(id);
-            nbtPath.remove(data);
-            storage.set(id, data);
-        } catch (Exception e) {
-            LOGGER.warn("Failed to remove data from storage {}: {}", storageName, e.getMessage());
+    /** Vanilla DataCommands.mergeData: an unchanged merge fails without reloading the entity. */
+    public static void dataMergeEntity(Entity entity, MinecraftServer server, CompoundTag patch) {
+        if (entity instanceof net.minecraft.world.entity.player.Player) return;
+        var old = net.minecraft.advancements.predicates.NbtPredicate.getEntityTagToCompare(entity);
+        var merged = old.copy().merge(patch);
+        if (old.equals(merged)) return;
+        setEntityData(entity, merged);
+    }
+
+    private static final java.util.concurrent.ConcurrentHashMap<String, Object> NBT_PATH_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Vanilla NbtPathArgument for a compile-time constant path, or null when it does not parse. */
+    private static net.minecraft.commands.arguments.NbtPathArgument.@Nullable NbtPath nbtPath(String path) {
+        Object cached = NBT_PATH_CACHE.get(path);
+        if (cached == null) {
+            cached = parseWhole("NBT path", path, reader -> new net.minecraft.commands.arguments.NbtPathArgument().parse(reader));
+            NBT_PATH_CACHE.put(path, cached);
         }
+        return cached == PARSE_FAILED ? null : (net.minecraft.commands.arguments.NbtPathArgument.NbtPath) cached;
+    }
+
+    /** Vanilla DataCommands.removeData: nothing removed → the command fails and the target is not written back. */
+    public static void dataRemoveStorage(net.minecraft.world.level.storage.CommandStorage storage, String storageName, String path) {
+        var nbtPath = nbtPath(path);
+        if (nbtPath == null) return;
+        var id = cachedId(storageName);
+        var data = storage.get(id);
+        if (nbtPath.remove(data) == 0) return;
+        storage.set(id, data);
     }
 
     public static void dataRemoveEntity(Entity entity, MinecraftServer server, String path) {
         if (entity instanceof net.minecraft.world.entity.player.Player) return;
-        var compound = net.minecraft.advancements.criterion.NbtPredicate.getEntityTagToCompare(entity);
-        try {
-            var nbtPath = net.minecraft.commands.arguments.NbtPathArgument.NbtPath.of(path);
-            nbtPath.remove(compound);
-            var uuid = entity.getUUID();
-            try (var reporter = new net.minecraft.util.ProblemReporter.ScopedCollector(entity.problemPath(), LOGGER)) {
-                entity.load(net.minecraft.world.level.storage.TagValueInput.create(reporter, server.registryAccess(), compound));
-                entity.setUUID(uuid);
-            }
-            entityNbtTickCache.remove(entity);
-        } catch (Exception e) {
-            LOGGER.warn("Failed to remove data from entity: {}", e.getMessage());
-        }
+        var nbtPath = nbtPath(path);
+        if (nbtPath == null) return;
+        var compound = net.minecraft.advancements.predicates.NbtPredicate.getEntityTagToCompare(entity);
+        if (nbtPath.remove(compound) == 0) return;
+        setEntityData(entity, compound);
     }
 
     // -------------------------------------------------------------------------
@@ -1952,25 +2255,20 @@ public class ExtensionFunctions {
     // -------------------------------------------------------------------------
 
     public static @Nullable Entity executeSummon(CommandSourceStack source, String entityTypeId) {
-        try {
-            var entityTypeOpt = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(cachedId(entityTypeId));
-            if (entityTypeOpt.isEmpty()) return null;
-            var level = source.getLevel();
-            var entity = entityTypeOpt.get().value().create(level, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
-            if (entity == null) return null;
-            var pos = source.getPosition();
-            entity.snapTo(pos.x, pos.y, pos.z, entity.getYRot(), entity.getXRot());
-            if (!level.tryAddFreshEntityWithPassengers(entity)) return null;
-            allEntitiesCache.clear();
-            return entity;
-        } catch (Exception e) {
-            LOGGER.warn("Failed to summon entity '{}': {}", entityTypeId, e.getMessage());
-            return null;
-        }
+        // Vanilla ExecuteCommand.spawnEntityAndRedirect → SummonCommand.createEntity(..., new CompoundTag(), finalize = true)
+        return createEntity(source.getLevel(), entityTypeId, source.getPosition(), new CompoundTag(), true);
     }
 
-    public static Vec3 positionedOver(ServerLevel level, Vec3 pos, String heightmapType) {
-        var heightmap = net.minecraft.world.level.levelgen.Heightmap.Types.valueOf(heightmapType.toUpperCase(Locale.ROOT));
+    private static final java.util.concurrent.ConcurrentHashMap<String, net.minecraft.world.level.levelgen.Heightmap.Types> HEIGHTMAP_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Vanilla `positioned over`: null (the branch fails) when the column's chunk is not loaded. */
+    public static @Nullable Vec3 positionedOver(ServerLevel level, Vec3 pos, String heightmapType) {
+        if (!level.hasChunk(SectionPos.blockToSectionCoord(pos.x), SectionPos.blockToSectionCoord(pos.z))) return null;
+        var heightmap = HEIGHTMAP_CACHE.get(heightmapType);
+        if (heightmap == null) {
+            heightmap = net.minecraft.world.level.levelgen.Heightmap.Types.valueOf(heightmapType.toUpperCase(Locale.ROOT));
+            HEIGHTMAP_CACHE.put(heightmapType, heightmap);
+        }
         int height = level.getHeight(heightmap, Mth.floor(pos.x), Mth.floor(pos.z));
         return new Vec3(pos.x, height, pos.z);
     }

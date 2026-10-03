@@ -1,0 +1,74 @@
+; Every `scoreboard players operation` with negatives, zero divisors and int overflow
+; (vanilla OperationArgument: a = target, b = source; /= Math.floorDiv, %= Math.floorMod, division by 0 fails).
+@setup
+objective create t dummy
+
+@function run
+scoreboard players set #zero t 0
+scoreboard players set #one t 1
+scoreboard players set #two t 2
+scoreboard players set #neg2 t -2
+scoreboard players set #neg1 t -1
+scoreboard players set #sub t 10
+scoreboard players set #three t 3
+scoreboard players operation #sub t -= #three t
+scoreboard players set #subneg t -3
+scoreboard players operation #subneg t -= #sub t
+scoreboard players set #div t -7
+scoreboard players operation #div t /= #two t
+scoreboard players set #divneg t 7
+scoreboard players operation #divneg t /= #neg2 t
+scoreboard players set #mod t -7
+scoreboard players operation #mod t %= #two t
+scoreboard players set #modneg t 7
+scoreboard players operation #modneg t %= #neg2 t
+scoreboard players set #divzero t 5
+scoreboard players operation #divzero t /= #zero t
+scoreboard players set #modzero t 5
+scoreboard players operation #modzero t %= #zero t
+scoreboard players set #minover t -2147483648
+scoreboard players operation #minover t /= #neg1 t
+scoreboard players set #addover t 2147483647
+scoreboard players operation #addover t += #one t
+scoreboard players set #subover t -2147483648
+scoreboard players operation #subover t -= #one t
+scoreboard players set #mulover t 65536
+scoreboard players operation #mulover t *= #mulover t
+scoreboard players set #mulneg t -3
+scoreboard players operation #mulneg t *= #neg2 t
+scoreboard players set #min t 4
+scoreboard players operation #min t < #neg2 t
+scoreboard players set #max t -4
+scoreboard players operation #max t > #two t
+scoreboard players set #swapa t 1
+scoreboard players set #swapb t -9
+scoreboard players operation #swapa t >< #swapb t
+scoreboard players operation #assign t = #div t
+scoreboard players operation #created t += #three t
+scoreboard players set #self t -5
+scoreboard players operation #self t -= #self t
+scoreboard players set #selfdiv t -5
+scoreboard players operation #selfdiv t /= #selfdiv t
+
+@validate
+score #sub t is 7
+score #subneg t is -10
+score #div t is -4
+score #divneg t is -4
+score #mod t is 1
+score #modneg t is -1
+score #divzero t is 5
+score #modzero t is 5
+score #minover t is -2147483648
+score #addover t is -2147483648
+score #subover t is 2147483647
+score #mulover t is 0
+score #mulneg t is 6
+score #min t is -2
+score #max t is 2
+score #swapa t is -9
+score #swapb t is 1
+score #assign t is -4
+score #created t is 3
+score #self t is 0
+score #selfdiv t is 1

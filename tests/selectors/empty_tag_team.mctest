@@ -1,0 +1,23 @@
+; `tag=` selects entities without tags and `tag=!` entities with any tag; `team=` selects entities without a team
+; and `team=!` entities on any team (EntitySelectorOptions).
+@setup
+objective create t dummy
+
+@function run
+team add mcfc_tt
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,CustomName:"mcfc_tt"}
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,CustomName:"mcfc_tt",Tags:["mcfc_tt_team"]}
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,CustomName:"mcfc_tt",Tags:["mcfc_tt_other"]}
+team join mcfc_tt @e[tag=mcfc_tt_team]
+execute store result score notags t if entity @e[name=mcfc_tt,tag=]
+execute store result score anytags t if entity @e[name=mcfc_tt,tag=!]
+execute store result score noteam t if entity @e[name=mcfc_tt,team=]
+execute store result score anyteam t if entity @e[name=mcfc_tt,team=!]
+kill @e[name=mcfc_tt]
+team remove mcfc_tt
+
+@validate
+score notags t is 1
+score anytags t is 2
+score noteam t is 2
+score anyteam t is 1

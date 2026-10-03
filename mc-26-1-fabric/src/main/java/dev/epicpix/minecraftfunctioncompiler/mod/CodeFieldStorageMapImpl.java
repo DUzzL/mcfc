@@ -94,6 +94,11 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
     private static final InstructionTarget COMPOUND_TAG_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(CompoundTag.class);
     private static final InstructionTarget INT_ARRAY_TAG_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(IntArrayTag.class, int[].class);
     private static final InstructionTarget LONG_ARRAY_TAG_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(LongArrayTag.class, long[].class);
+    private static final InstructionTarget OBJECTIVE_REF_INIT = InstructionTarget.FunctionTarget.initFunction(ObjectiveRef.class, String.class);
+    private static final InstructionTarget SCORE_REF_INIT = InstructionTarget.FunctionTarget.initFunction(ScoreRef.class, String.class, String.class);
+    private static final InstructionTarget SCORE_HOLDER_FOR_NAME_ONLY = new InstructionTarget.FunctionTarget(net.minecraft.world.scores.ScoreHolder.class.describeConstable().orElseThrow(), "forNameOnly", java.lang.constant.MethodTypeDesc.of(net.minecraft.world.scores.ScoreHolder.class.describeConstable().orElseThrow(), String.class.describeConstable().orElseThrow()), true, true, false, true);
+    private static final InstructionTarget OBJECTIVE_REF_AT = InstructionTarget.FunctionTarget.staticFunction(ObjectiveRef.class, "at", ObjectiveRef.class, ObjectiveRef[].class, int.class);
+    private static final InstructionTarget SCORE_REF_AT = InstructionTarget.FunctionTarget.staticFunction(ScoreRef.class, "at", ScoreRef.class, ScoreRef[].class, int.class);
 
     CodeFieldStorageMapImpl() {
         set(CodeFieldStorageMapKind.ADVANCEMENT, new CodeFieldStorageMapValue<>(AdvancementHolder.class, (cf, cw, value) -> {
@@ -114,6 +119,7 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
         }));
         set(CodeFieldStorageMapKind.NBT_COMPOUND, new CodeFieldStorageMapValue<>(CompoundTag.class, (cf, cw, value) -> writeNbtValue(value, cw)));
         set(CodeFieldStorageMapKind.NBT_VALUE, new CodeFieldStorageMapValue<>(Tag.class, (cf, cw, value) -> writeNbtValue(value, cw)));
+        set(CodeFieldStorageMapKind.OBJECTIVE_REF, new CodeFieldStorageMapValue<>(ObjectiveRef.class, (cf, cw, value) -> cw.newObjectCreate(OBJECTIVE_REF_INIT, new BytecodeValue.StringValue(value)), OBJECTIVE_REF_AT));
         set(CodeFieldStorageMapKind.PREDICATE, new CodeFieldStorageMapValue<>(LootItemCondition.class, (cf, cw, value) -> {
             var resourceKey = callResourceKey_create(cw, loadRegistries_PREDICATE(cw), cf.loadIdentifier(cw, value));
             return cw.castType(callHolder_value(cw, callOptional_get(cw, callHolderLookupProvider_get(cw, callReloadableServerRegistriesHolder_lookup(cw, callMinecraftServer_reloadableRegistries(cw, cf.getGeneratorMinecraftServer())), resourceKey))), LootItemCondition.class.describeConstable().orElseThrow());
@@ -124,6 +130,8 @@ public final class CodeFieldStorageMapImpl extends CodeFieldStorageMap {
         set(CodeFieldStorageMapKind.SCOREBOARD_CRITERION, new CodeFieldStorageMapValue<>(ObjectiveCriteria.class, (cf, cw, value) -> {
             return cw.castType(callOptional_get(cw, callObjectiveCriteria_byName(cw, new BytecodeValue.StringValue(value))), ObjectiveCriteria.class.describeConstable().orElseThrow());
         }));
+        set(CodeFieldStorageMapKind.SCORE_HOLDER, new CodeFieldStorageMapValue<>(net.minecraft.world.scores.ScoreHolder.class, (cf, cw, value) -> cw.writeTarget(SCORE_HOLDER_FOR_NAME_ONLY, new BytecodeValue.StringValue(value))));
+        set(CodeFieldStorageMapKind.SCORE_REF, new CodeFieldStorageMapValue<>(ScoreRef.class, (cf, cw, value) -> cw.newObjectCreate(SCORE_REF_INIT, new BytecodeValue.StringValue(value.holder()), new BytecodeValue.StringValue(value.objective())), SCORE_REF_AT));
         set(CodeFieldStorageMapKind.TEXT, new CodeFieldStorageMapValue<>(Component.class, (cf, cw, value) -> writeTextValue(value, cw, cf)));
         set(CodeFieldStorageMapKind.TEXT_STYLE, new CodeFieldStorageMapValue<>(Style.class, (cf, cw, value) -> {
             ArrayList<BytecodeValue> args = new ArrayList<>();

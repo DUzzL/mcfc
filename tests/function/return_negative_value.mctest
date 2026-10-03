@@ -1,0 +1,22 @@
+; A compiled function returning a negative value must still count as a success for a compiled caller
+; (the result is packed zero-extended into the low 32 bits of the success/result long).
+@setup
+objective create t dummy
+
+@function run
+execute store success score success t run function mcfc-test:negative
+execute store result score result t run function mcfc-test:negative
+execute store success score min_success t run function mcfc-test:min
+execute store result score min_result t run function mcfc-test:min
+
+@function negative
+return -1
+
+@function min
+return -2147483648
+
+@validate
+score success t is 1
+score result t is -1
+score min_success t is 1
+score min_result t is -2147483648

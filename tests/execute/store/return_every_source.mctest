@@ -1,0 +1,37 @@
+; ReviewCompiler[2]: `execute as <multi> store … run return <v>|fail` stores for every source before the frame returns.
+@setup
+objective create t dummy
+
+@function run
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_rs"]}
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_rs"]}
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_rs"]}
+scoreboard players set @e[tag=mcfc_rs] t 5
+execute store result score value t run function mcfc-test:ret_value
+scoreboard players set #sum t 0
+execute as @e[tag=mcfc_rs] run scoreboard players operation #sum t += @s t
+scoreboard players set @e[tag=mcfc_rs] t 5
+execute store success score fail t run function mcfc-test:ret_fail
+scoreboard players set #fail_sum t 0
+execute as @e[tag=mcfc_rs] run scoreboard players operation #fail_sum t += @s t
+scoreboard players set #rr t 0
+execute store result score run_value t run function mcfc-test:ret_run
+kill @e[tag=mcfc_rs]
+
+@function ret_value
+execute as @e[tag=mcfc_rs] store result score @s t run return 7
+scoreboard players set value_after t 1
+
+@function ret_fail
+execute as @e[tag=mcfc_rs] store success score @s t run return fail
+
+@function ret_run
+return run execute as @e[tag=mcfc_rs] store result score #rr t run scoreboard players add #rr t 3
+
+@validate
+score value t is 7
+score #sum t is 21
+score fail t is 0
+score #fail_sum t is 0
+score run_value t is 3
+score #rr t is 3

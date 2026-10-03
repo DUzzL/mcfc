@@ -25,6 +25,9 @@ private fun parseCommandPart(parts: List<String>, current: ParsedCommandArgument
         current.versionRange = null
     }
     if(parts.isEmpty()) {
+        if(current.executableCommand != null && current.executableCommand != commandId) {
+            throw IllegalStateException("Command syntax of '$commandId' duplicates '${current.executableCommand}' (distinct version ranges on one path are not supported)")
+        }
         current.versionRange = range
         current.executableCommand = commandId
     }else {
@@ -65,11 +68,7 @@ private fun parseCommandLine(command: String, tree: MutableMap<String, ParsedCom
         if(range.size == 1) {
             range[0] to range[0]
         }else {
-            if(range[0].isEmpty()) {
-                null to range[1]
-            }else {
-                range[0] to null
-            }
+            range[0].ifEmpty { null } to range[1].ifEmpty { null }
         }
     }else null
     parseCommandPart(parts.subList(1, parts.size), argument, split[0], range)
@@ -105,6 +104,10 @@ fun parseCommandsData(file: String): ParsedCommandData {
     return ParsedCommandData(commandRedirects, commands, commandTree)
 }
 
+// Root command name of the parseCommand_<root> method currently being generated; every
+// returned node is recorded in the reader's CommandSourceMap under this root.
+private var currentRoot: String = ""
+
 private fun generateCommandReturn(builder: StringBuilder, commandTypes: MutableMap<String, List<Pair<String, String>>>, executableCommand: String, arguments: Map<String, String>, typedArguments: List<Pair<String, String>>, forced: Boolean = false) {
     commandTypes[executableCommand] = typedArguments
     val paramsClassName = "_COMMAND_$executableCommand".snakeToLowerCamelCase()
@@ -112,7 +115,7 @@ private fun generateCommandReturn(builder: StringBuilder, commandTypes: MutableM
         builder.append("    if(!reader.canRead()) {\n")
         builder.append("    ")
     }
-    builder.append("    return DiagnosticResult.result(new dev.epicpix.minecraftfunctioncompiler.commands.params.$paramsClassName(")
+    builder.append("    return DiagnosticResult.result(reader.recordSource(new dev.epicpix.minecraftfunctioncompiler.commands.params.$paramsClassName(")
     var index = 0
     for((t, _) in typedArguments) {
         index++
@@ -121,7 +124,7 @@ private fun generateCommandReturn(builder: StringBuilder, commandTypes: MutableM
             builder.append(",")
         }
     }
-    builder.append("));\n")
+    builder.append("), \"$currentRoot\", sourceStart));\n")
     if(!forced) {
         builder.append("    }\n")
     }
@@ -179,7 +182,7 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
         if(data.executableCommand != null) {
             commandTypes[data.executableCommand!!] = typedArguments
             val paramsClassName = "_COMMAND_${data.executableCommand}".snakeToLowerCamelCase()
-            builder.append("if(!reader.canRead()) return DiagnosticResult.result(new dev.epicpix.minecraftfunctioncompiler.commands.params.$paramsClassName());\n")
+            builder.append("if(!reader.canRead()) return DiagnosticResult.result(reader.recordSource(new dev.epicpix.minecraftfunctioncompiler.commands.params.$paramsClassName(), \"$currentRoot\", sourceStart));\n")
         }
         generateArgumentReaderChildren(name, data, builder, commandTypes, uniqueId, argumentPath, argumentDPath, arguments, typedArguments, "", catchBlock)
         return true
@@ -228,7 +231,7 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 newTypedArguments.add(data.argName!! to "double")
             }
             "entity_selector" -> {
-                val allowMultiple = data.kindOptions.getOrDefault("multiple", "true").toBoolean()
+                val allowMultiple = data.kindOptions.getOrDefault("multiple", "true").toBoolean() && !data.kindOptions.getOrDefault("single", "false").toBoolean()
                 val playersOnly = data.kindOptions.getOrDefault("players", "false").toBoolean()
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.SelectorArgument")
                 if(data.executableCommand != null && data.kindDefaults == "self") {
@@ -245,7 +248,9 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.Gamemode")
             }
             "greedy_string" -> {
-                builder.append("    var a$argumentIndex = reader.readRemainder();\n")
+                // [macros]: argument only reaches vanilla via the source-text fallback, which substitutes $(x).
+                val allowMacros = data.kindOptions.getOrDefault("macros", "false").toBoolean()
+                builder.append("    var a$argumentIndex = reader.readRemainder($allowMacros);\n")
                 newTypedArguments.add(data.argName!! to "java.lang.String")
             }
             "int" -> {
@@ -328,7 +333,9 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.ScoreHolderArgument")
             }
             "score_accessor" -> {
-                builder.append("    var a$argumentIndex = reader.readScoreAccessor();\n")
+                // [single]: ScoreHolderArgument.scoreHolder() (selector max results must be 1).
+                val allowMultiple = !data.kindOptions.getOrDefault("single", "false").toBoolean()
+                builder.append("    var a$argumentIndex = reader.readScoreAccessor($allowMultiple);\n")
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.ScoreAccessorArgument")
             }
             "scoreboard_operation" -> {
@@ -361,6 +368,12 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 builder.append("    var a$argumentIndex = reader.readUntilSpace();\n")
                 newTypedArguments.add(data.argName!! to "java.lang.String")
             }
+            // 26.3 SlotSourceArgument: slot-range name, identifier, or inline SNBT (may contain spaces).
+            // Kept verbatim for the vanilla fallback.
+            "slot_source" -> {
+                builder.append("    var a$argumentIndex = reader.readSlotSource();\n")
+                newTypedArguments.add(data.argName!! to "java.lang.String")
+            }
             "block_predicate" -> {
                 builder.append("    var a$argumentIndex = reader.readBlockPredicate();\n")
                 newTypedArguments.add(data.argName!! to "java.lang.String")
@@ -372,6 +385,11 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 // (e.g. quoted custom_name) don't terminate the read early.
                 builder.append("    var a$argumentIndex = reader.readItemStackString();\n")
                 newTypedArguments.add(data.argName!! to "java.lang.String")
+            }
+            // BlockPosArgument: integer absolute coordinates, no centering.
+            "block_pos" -> {
+                builder.append("    var a$argumentIndex = reader.readBlockPos();\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates")
             }
             "vec3" -> {
                 builder.append("    var a$argumentIndex = reader.readVec3();\n")
@@ -411,7 +429,7 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
         val locationIndex = uniqueId.getAndIncrement()
         builder.append("{ // $name\n")
         builder.append("    var z$locationIndex = reader.getIndex();\n")
-        builder.append("    if(reader.canRead() && reader.readWord().equals(\"$name\")) {\n")
+        builder.append("    if(reader.readLiteral(\"$name\")) {\n")
         if(data.executableCommand != null) {
             generateCommandReturn(builder, commandTypes, data.executableCommand!!, arguments, typedArguments)
         }
@@ -456,7 +474,9 @@ fun generateCommandsDataReader(data: ParsedCommandData): Pair<String, Map<String
     builder.append("\n")
     val commandTypes = mutableMapOf<String, List<Pair<String, String>>>()
     for((k, v) in data.commandTree) {
+        currentRoot = k
         builder.append("public static DiagnosticResult<dev.epicpix.minecraftfunctioncompiler.commands.params.CommandParams> parseCommand_$k(StringCommandReader reader, IArgumentLookup lookup) {\n")
+        builder.append("    int sourceStart = reader.getIndex();\n")
         val innerBuilder = StringBuilder()
         generateArgumentReaderVersionCheck(k, v, innerBuilder, commandTypes, uid, "", k, mapOf(), listOf(), null, true)
         builder.append(innerBuilder.toString().substringBeforeLast('\n').prependIndent("    ") + "\n")

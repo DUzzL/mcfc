@@ -38,13 +38,23 @@ public final class TextParser {
         return new DiagnosticException(Diagnostic.parseError(diagnosticId, reader.getSource(), reader.getString(), message, e));
     }
 
-    private static @Nullable Integer stringToColor(String str) {
-        if(str.length() == 7 && str.charAt(0) == '#') {
+    // `interpret` / `plain` of an nbt component. Only a real boolean is accepted here; any other
+    // spelling (e.g. SNBT 1b) is rejected so the command goes through the vanilla codec instead.
+    private static boolean readNbtTextFlag(JsonObject obj, String key, StringCommandReader reader) {
+        if(!obj.has(key)) return false;
+        var value = obj.get(key);
+        if(value.isJsonPrimitive() && value.getAsJsonPrimitive().isBoolean()) return value.getAsBoolean();
+        throw createError(reader, TEXT_INVALID, "Unsupported '" + key + "' value in nbt text component: " + value);
+    }
+
+    /** TextColor.parseColor: "#hex" of any length in [0, 0xFFFFFF], or a named colour; anything else is invalid (PAR-21). */
+    private static Integer stringToColor(String str, StringCommandReader reader) {
+        if(str.startsWith("#")) {
             try {
-                return Integer.parseInt(str.substring(1), 16);
-            }catch(NumberFormatException ignored) {
-                return null;
-            }
+                int value = Integer.parseInt(str.substring(1), 16);
+                if(value >= 0 && value <= 0xFFFFFF) return value;
+            }catch(NumberFormatException ignored) {}
+            throw createError(reader, TEXT_INVALID_COLOR, "Invalid color: " + str);
         }
         return switch(str) {
             case "black" -> 0x000000;
@@ -63,21 +73,50 @@ public final class TextParser {
             case "light_purple" -> 0xFF55FF;
             case "yellow" -> 0xFFFF55;
             case "white" -> 0xFFFFFF;
-            default -> null;
+            default -> throw createError(reader, TEXT_INVALID_COLOR, "Unknown color name: " + str);
         };
     }
 
+    /** ExtraCodecs.ARGB_COLOR_CODEC: an int, or [r, g, b, a] floats packed with ARGB.colorFromFloat (PAR-11). */
     private static Integer contentToColor(JsonElement element, StringCommandReader reader) {
-        if(element instanceof JsonArray array && array.size() == 4) {
-            int r = array.get(0).getAsInt();
-            int g = array.get(1).getAsInt();
-            int b = array.get(2).getAsInt();
-            int a = array.get(3).getAsInt();
-            return a << 24 | r << 16 | g << 8 | b;
-        }else if(element instanceof JsonPrimitive prim && prim.isNumber()) {
-            return prim.getAsInt();
+        try {
+            if(element instanceof JsonArray array && array.size() == 4) {
+                float r = parseColorChannel(array.get(0));
+                float g = parseColorChannel(array.get(1));
+                float b = parseColorChannel(array.get(2));
+                float a = parseColorChannel(array.get(3));
+                return as8BitChannel(a) << 24 | as8BitChannel(r) << 16 | as8BitChannel(g) << 8 | as8BitChannel(b);
+            }else if(element instanceof JsonPrimitive prim && prim.isNumber()) {
+                return prim.getAsInt();
+            }
+        }catch(NumberFormatException | UnsupportedOperationException | IllegalStateException ignored) {}
+        throw createError(reader, TEXT_INVALID_COLOR, "Invalid color specification: " + element + " (expected [R,G,B,A] floats or integer ARGB)");
+    }
+
+    private static float parseColorChannel(JsonElement element) {
+        String s = element.getAsString();
+        char last = s.isEmpty() ? ' ' : Character.toLowerCase(s.charAt(s.length() - 1));
+        if(last == 'f' || last == 'd') s = s.substring(0, s.length() - 1);
+        return Float.parseFloat(s);
+    }
+
+    private static int as8BitChannel(float value) {
+        return (int) Math.floor(value * 255.0F) & 0xFF;
+    }
+
+    /** Style boolean: JSON boolean, a number (!= 0), or an SNBT byte/int token like "1b" (PAR-10). */
+    private static @Nullable Boolean readStyleBoolean(JsonObject obj, String key, StringCommandReader reader) {
+        if(!obj.has(key)) return null;
+        var value = obj.get(key);
+        if(value instanceof JsonPrimitive prim) {
+            if(prim.isBoolean()) return prim.getAsBoolean();
+            if(prim.isNumber()) return prim.getAsDouble() != 0;
+            String s = prim.getAsString();
+            if(s.equals("true")) return true;
+            if(s.equals("false")) return false;
+            if(s.matches("[+-]?\\d+[bBsSiIlL]?")) return Long.parseLong(s.replaceAll("[bBsSiIlL]$", "")) != 0;
         }
-        throw createError(reader, TEXT_INVALID_COLOR, "Invalid color specification: " + element + " (expected [R,G,B,A] or integer ARGB)");
+        throw createError(reader, TEXT_INVALID, "Invalid boolean '" + key + "' in text component: " + value);
     }
 
     private static Text jsonToText(JsonElement element, StringCommandReader reader) {
@@ -118,24 +157,31 @@ public final class TextParser {
                     } catch(Exception e) {
                         throw createError(reader, TEXT_INVALID, "Failed to parse text score holder: " + e.getMessage() + " | " + rawHolder, e);
                     }
-                    content = new TextContent.ScoreText(holder, objective);
+                    content = new TextContent.ScoreText(holder, objective, rawHolder);
                 }else if(obj.has("selector")) {
                     var selector = SelectorParser.parseSelector(new StringCommandReader(obj.get("selector").getAsString(), reader.getSource(), reader.allowsMacros()), true, true);
                     var separator = obj.has("separator") ? jsonToText(obj.get("separator"), reader) : null;
                     content = new TextContent.SelectorText(selector, separator);
                 }else if(obj.has("nbt")) {
                     var separator = obj.has("separator") ? jsonToText(obj.get("separator"), reader) : null;
-                    var nbtReader = new StringCommandReader(obj.get("nbt").getAsString(), reader.getSource(), reader.allowsMacros());
+                    var rawPath = obj.get("nbt").getAsString();
+                    var nbtReader = new StringCommandReader(rawPath, reader.getSource(), reader.allowsMacros());
                     var nbt = NbtParser.readNbtPath(nbtReader);
+                    boolean interpret = readNbtTextFlag(obj, "interpret", reader);
+                    boolean plain = readNbtTextFlag(obj, "plain", reader);
+                    if(interpret && plain) {
+                        // vanilla NbtContents codec: "'interpret' and 'plain' flags can't be both on"
+                        throw createError(reader, TEXT_INVALID, "'interpret' and 'plain' flags can't be both on");
+                    }
                     if(obj.has("block")) {
-                        var block = new StringCommandReader(obj.get("block").getAsString(), reader.getSource(), reader.allowsMacros()).readVec3();
-                        content = new TextContent.NbtText(nbt, separator, new NbtDataLocation.Block(block));
+                        var block = new StringCommandReader(obj.get("block").getAsString(), reader.getSource(), reader.allowsMacros()).readBlockPos();
+                        content = new TextContent.NbtText(nbt, rawPath, interpret, plain, separator, new NbtDataLocation.Block(block));
                     }else if(obj.has("entity")) {
                         var selector = SelectorParser.parseSelector(new StringCommandReader(obj.get("entity").getAsString(), reader.getSource(), reader.allowsMacros()), true, true);
-                        content = new TextContent.NbtText(nbt, separator, new NbtDataLocation.Entity(selector));
+                        content = new TextContent.NbtText(nbt, rawPath, interpret, plain, separator, new NbtDataLocation.Entity(selector));
                     }else if(obj.has("storage")) {
                         var storage = new StringCommandReader(obj.get("storage").getAsString(), reader.getSource(), reader.allowsMacros()).readDataLocation();
-                        content = new TextContent.NbtText(nbt, separator, new NbtDataLocation.Storage(storage));
+                        content = new TextContent.NbtText(nbt, rawPath, interpret, plain, separator, new NbtDataLocation.Storage(storage));
                     }else {
                         throw createError(reader, TEXT_INVALID, "Cannot turn \"" + element + "\" into Text");
                     }
@@ -150,23 +196,19 @@ public final class TextParser {
                     }
                 }
 
-                Integer color = obj.has("color") ? stringToColor(obj.get("color").getAsString()) : null;
+                Integer color = obj.has("color") ? stringToColor(obj.get("color").getAsString(), reader) : null;
                 Integer shadowColor = obj.has("shadow_color") ? contentToColor(obj.get("shadow_color"), reader) : null;
-                Boolean bold = obj.has("bold") ? obj.get("bold").getAsBoolean() : null;
-                Boolean italic = obj.has("italic") ? obj.get("italic").getAsBoolean() : null;
-                Boolean underlined = obj.has("underlined") ? obj.get("underlined").getAsBoolean() : null;
-                Boolean strikethrough = obj.has("strikethrough") ? obj.get("strikethrough").getAsBoolean() : null;
-                Boolean obfuscated = obj.has("obfuscated") ? obj.get("obfuscated").getAsBoolean() : null;
+                Boolean bold = readStyleBoolean(obj, "bold", reader);
+                Boolean italic = readStyleBoolean(obj, "italic", reader);
+                Boolean underlined = readStyleBoolean(obj, "underlined", reader);
+                Boolean strikethrough = readStyleBoolean(obj, "strikethrough", reader);
+                Boolean obfuscated = readStyleBoolean(obj, "obfuscated", reader);
                 String insertion = obj.has("insertion") ? obj.get("insertion").getAsString() : null;
                 DataLocation font = obj.has("font") ? new DataLocation(obj.get("font").getAsString()) : null;
 
-                TextClickEvent clickEvent = null;
-                if(obj.has("click_event")) clickEvent = parseClickEvent(obj.getAsJsonObject("click_event"), reader);
-                else if(obj.has("clickEvent")) clickEvent = parseClickEventLegacy(obj.getAsJsonObject("clickEvent"), reader);
-
-                TextHoverEvent<?> hoverEvent = null;
-                if(obj.has("hover_event")) hoverEvent = parseHoverEvent(obj.get("hover_event"), reader);
-                else if(obj.has("hoverEvent")) hoverEvent = parseHoverEventLegacy(obj.getAsJsonObject("hoverEvent"), reader);
+                // Legacy clickEvent/hoverEvent keys are ignored by the 26.3 codec (PAR-12).
+                TextClickEvent clickEvent = obj.has("click_event") ? parseClickEvent(obj.get("click_event"), reader) : null;
+                TextHoverEvent<?> hoverEvent = obj.has("hover_event") ? parseHoverEvent(obj.get("hover_event"), reader) : null;
 
                 return new Text(siblings, new TextStyle(color, shadowColor, bold, italic, underlined, strikethrough, obfuscated, clickEvent, hoverEvent, insertion, font), content);
             }
@@ -182,56 +224,36 @@ public final class TextParser {
         }
     }
 
-    // New format (MC 1.21.5+): click_event with action + action-specific fields
-    private static @Nullable TextClickEvent parseClickEvent(JsonObject obj, StringCommandReader reader) {
-        if(!obj.has("action")) return null;
+    // click_event (26.3 codec). Actions the compiled Text cannot represent (open_file, show_dialog,
+    // custom) or malformed events throw, so the command is left to vanilla (PAR-12).
+    private static TextClickEvent parseClickEvent(JsonElement element, StringCommandReader reader) {
+        if(!(element instanceof JsonObject obj) || !obj.has("action")) throw createError(reader, TEXT_INVALID, "Invalid click_event: " + element);
         String action = obj.get("action").getAsString();
-        return switch(action) {
-            case "open_url" -> obj.has("url") ? new TextClickEvent(TextClickEvent.Action.OPEN_URL, obj.get("url").getAsString()) : null;
-            case "run_command" -> obj.has("command") ? new TextClickEvent(TextClickEvent.Action.RUN_COMMAND, obj.get("command").getAsString()) : null;
-            case "suggest_command" -> obj.has("command") ? new TextClickEvent(TextClickEvent.Action.SUGGEST_COMMAND, obj.get("command").getAsString()) : null;
-            case "change_page" -> obj.has("page") ? new TextClickEvent(TextClickEvent.Action.CHANGE_PAGE, obj.get("page").getAsString()) : null;
-            case "copy_to_clipboard" -> obj.has("value") ? new TextClickEvent(TextClickEvent.Action.COPY_TO_CLIPBOARD, obj.get("value").getAsString()) : null;
-            default -> null;
+        String field = switch(action) {
+            case "open_url" -> "url";
+            case "run_command", "suggest_command" -> "command";
+            case "change_page" -> "page";
+            case "copy_to_clipboard" -> "value";
+            default -> throw createError(reader, TEXT_INVALID, "Unsupported click_event action: " + action);
         };
+        if(!obj.has(field)) throw createError(reader, TEXT_INVALID, "click_event " + action + " is missing '" + field + "'");
+        var value = obj.get(field).getAsString();
+        return new TextClickEvent(switch(action) {
+            case "open_url" -> TextClickEvent.Action.OPEN_URL;
+            case "run_command" -> TextClickEvent.Action.RUN_COMMAND;
+            case "suggest_command" -> TextClickEvent.Action.SUGGEST_COMMAND;
+            case "change_page" -> TextClickEvent.Action.CHANGE_PAGE;
+            default -> TextClickEvent.Action.COPY_TO_CLIPBOARD;
+        }, value);
     }
 
-    // Legacy format (pre-1.21.5): clickEvent with action + value
-    private static @Nullable TextClickEvent parseClickEventLegacy(JsonObject obj, StringCommandReader reader) {
-        if(!obj.has("action") || !obj.has("value")) return null;
+    // hover_event (26.3 codec): only show_text is representable; show_item/show_entity throw (PAR-12).
+    private static TextHoverEvent<?> parseHoverEvent(JsonElement element, StringCommandReader reader) {
+        if(!(element instanceof JsonObject obj) || !obj.has("action")) throw createError(reader, TEXT_INVALID, "Invalid hover_event: " + element);
         String action = obj.get("action").getAsString();
-        String value = obj.get("value").getAsString();
-        return switch(action) {
-            case "open_url" -> new TextClickEvent(TextClickEvent.Action.OPEN_URL, value);
-            case "run_command" -> new TextClickEvent(TextClickEvent.Action.RUN_COMMAND, value);
-            case "suggest_command" -> new TextClickEvent(TextClickEvent.Action.SUGGEST_COMMAND, value);
-            case "change_page" -> new TextClickEvent(TextClickEvent.Action.CHANGE_PAGE, value);
-            case "copy_to_clipboard" -> new TextClickEvent(TextClickEvent.Action.COPY_TO_CLIPBOARD, value);
-            default -> null;
-        };
-    }
-
-    // New format (MC 1.21.5+): hover_event can be an object OR array; for show_text, value is nested Text
-    private static @Nullable TextHoverEvent<?> parseHoverEvent(JsonElement element, StringCommandReader reader) {
-        if(!(element instanceof JsonObject obj)) return null;
-        if(!obj.has("action")) return null;
-        String action = obj.get("action").getAsString();
-        if("show_text".equals(action) && obj.has("value")) {
-            Text text = jsonToText(obj.get("value"), reader);
-            return new TextHoverEvent<>(TextHoverEvent.Action.SHOW_TEXT, text);
-        }
-        return null;
-    }
-
-    // Legacy format (pre-1.21.5): hoverEvent with action + value
-    private static @Nullable TextHoverEvent<?> parseHoverEventLegacy(JsonObject obj, StringCommandReader reader) {
-        if(!obj.has("action") || !obj.has("value")) return null;
-        String action = obj.get("action").getAsString();
-        if("show_text".equals(action)) {
-            Text text = jsonToText(obj.get("value"), reader);
-            return new TextHoverEvent<>(TextHoverEvent.Action.SHOW_TEXT, text);
-        }
-        return null;
+        if(!"show_text".equals(action)) throw createError(reader, TEXT_INVALID, "Unsupported hover_event action: " + action);
+        if(!obj.has("value")) throw createError(reader, TEXT_INVALID, "hover_event show_text is missing 'value'");
+        return new TextHoverEvent<>(TextHoverEvent.Action.SHOW_TEXT, jsonToText(obj.get("value"), reader));
     }
 
 }

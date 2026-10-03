@@ -1,0 +1,14 @@
+; W2 ReviewRuntime[7]: `gamerule <rule> <value>` result is the rule's command result and an unchanged
+; value fails (ERROR_GAME_RULE_NOT_SET).
+@setup
+objective create t dummy
+
+@function run
+execute store result score first t run gamerule max_command_sequence_length 12345
+execute store success score same t run gamerule max_command_sequence_length 12345
+execute store result score back t run gamerule max_command_sequence_length 65536
+
+@validate
+score first t is 12345
+score same t is 0
+score back t is 65536

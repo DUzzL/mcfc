@@ -1,5 +1,77 @@
 # 0.4.0-alpha.1
 
+Updates to Minecraft 26.3 (Fabric Loader 0.19.5, Fabric API 0.161.0+26.3).
+
+Minecraft 26.3 changes:
+- The lazy `execute as` display-name mixin is removed: 26.3 resolves source names lazily itself (the mixin no longer applied and crashed startup).
+- `time set|pause|resume|rate` and `gamerule` fail without side effects when nothing would change, like 26.3; `give` above 100 stacks fails and drops items like 26.3's `give`; `clear … 0` only counts.
+- `recipe give|take` skip special recipes (including the new data-driven brewing recipes), like 26.3.
+- `data merge|remove entity` run 26.3's post-load hook (villager trade prices).
+- `@e[nbt={Invulnerable:…}]` only looks at permanent invulnerability (26.3 added temporary invulnerability).
+- `random_chance` predicates read 26.3 float providers.
+- The client version mixin targets a field that exists (it already crashed the client on 26.2).
+
+Fixes bugs:
+- `execute on leasher` ignores leashed boats on Minecraft 26.2, preventing BlazeandCave's Lead Zeppelin advancement from being awarded by compiled functions.
+- `execute store result|success storage …`, `return run execute if|unless items …` and other result contexts always got result `0` / success `1` from `execute if|unless items`, regardless of whether items matched.
+- `execute if|unless items` and `item replace|modify` mis-tokenized 26.3 inline SNBT slot sources containing spaces; `item replace … from entity` rejected the multi-entity sources that 26.3 accepts.
+- Deep recursion between compiled functions overflowed the Java stack and aborted the call chain halfway; compiled calls now hand off to vanilla's iterative executor past a stack budget that charges each call by the calling function's frame size, so large function bodies hand off early enough too.
+- Past that budget, `execute store … run function`, `execute if function` and `return run function` captured the last command's result of the callee instead of its `return` value; the hand-off now runs the callee like vanilla's `function` command.
+- The compiler compiled and hashed a fresh read of every function file instead of the text vanilla had loaded, so editing a folder datapack and running `/mcfc recompile` (without `/reload`) ran different code compiled than through vanilla.
+- `/mcfc recompile` kept the previous compilation's classes alive through functions that weren't called again.
+- Development builds could load bytecode cached by an older build of the compiler.
+- Vanilla-to-compiled function calls are faster when many different functions are called (function tags, advancement rewards): compiled functions are bound through generated dispatchers instead of method-handle proxies.
+- Very long `execute` chains (a few dozen clauses) made the compiler run out of stack and send the whole function to vanilla.
+- `/reload` (or `/mcfc recompile`) during a running compilation started overlapping compiles over shared state; compiles are now serialized, superseded ones are abandoned, and results are published on the server thread. `/stop` cancels a running compile.
+- The compilation cache ignored function tags, advancements, predicates, entity tags and which functions vanilla loaded, reusing stale code; cache entries are now keyed by all of them, written atomically, checksummed, and a hit skips parsing.
+- A compiled function that throws at runtime now logs once and runs through vanilla afterwards instead of logging on every call.
+- A function ending in a line continuation no longer fails the whole compilation.
+- A malformed `mcfc.json` is moved to `mcfc.json.bak` instead of being overwritten; `enable_parallel_datapacks` is ignored.
+- `/mcfc show_diagnostics` printed the version instead of the count and flooded chat.
+- `fill … replace <filter>` replaced the whole region unless the from-corner matched the filter; filters (block, tag, properties, NBT) are now tested on every position with vanilla's block predicate.
+- `execute if|unless block`, `setblock`, `fill` and `execute positioned over` loaded or generated unloaded chunks; they now fail like vanilla, `fill` enforces `max_block_modifications`, and neighbours see the replaced block (levers, redstone, rails).
+- `data get … <path>` truncated instead of flooring negative numbers; the scaled form now fails on non-numeric tags.
+- `summon <entity> <pos> <nbt>` ran spawn finalization (random size, equipment, variant) over the given NBT and wrote `id` into the shared NBT constant; `execute summon` did not finalize mobs.
+- `tp <targets> <pos>` with relative coordinates reset velocity and snapped the player's view; relative axes are now kept like vanilla and out-of-world destinations fail.
+- `clear <targets> <item>` ignored item components, tags and `*`; it now uses vanilla's item predicate.
+- NBT text components (`{"nbt":…}`) now honour `interpret`, `plain` and `separator`, use the full NBT path grammar and all selected entities.
+- Vanilla-fallback commands are parsed once instead of on every execution.
+- `playsound` reached players in other dimensions and drew a sound seed per player; `particle … force|normal` ignored the mode; `random roll` did not announce; invalid `random` ranges threw; `team modify … color reset` and component options were ignored; `data merge|remove entity` reloaded unchanged entities; `time query daytime` threw in dimensions without a default clock; unknown predicates matched when negated.
+- Vanilla-fallback commands re-serialized their parsed arguments, losing `^` local coordinates, selector filters (rotations, advancements, multiple scores, entity type tags), quoting and integer block positions; fallbacks now run the original source text.
+- `execute if|unless data block|blocks|items …` evaluate their condition through vanilla and compile the body natively, so a `return` in the body returns from the function instead of being swallowed.
+- Absolute whole-number coordinates were centered wrongly: Y was centered and negative values moved the wrong way; rotations got +0.5°. Block-position arguments (`setblock`, `fill`, `if block`, `loot`, `item … block`, …) are now integers without centering.
+- `recipe give|take` with anything other than `*` granted or revoked every recipe; `random reset *` never matched; `time of <clock>` ignored the clock.
+- Macro placeholders in natively compiled string arguments (team modify, criteria, …) reached the command literally; macro score holders that expand to a selector or UUID were treated as fake-player names; `$(` in a non-macro line was substituted.
+- SNBT numbers vanilla rejects (`01`, `200b`, `3000000000`, `1a`) or reads differently (`1e5`, `1i`) no longer silently become strings.
+- Text components: SNBT booleans (`bold:1b`), `#RGB` / unknown colours, float `shadow_color`, and unsupported click/hover actions now behave like vanilla; legacy `clickEvent`/`hoverEvent` are ignored.
+- Valid selectors such as `@e[type=!a,type=!b]` or `@e[type=player]` in player-only arguments were rejected (running through vanilla every time); `[single]` arguments and `limit`/`sort` rules now match vanilla.
+- Grammar now enforces vanilla argument bounds (effect duration/amplifier, give count, playsound, particle, schedule, time set).
+- Large functions were compiled into methods of 30–60 KB that the JVM never JIT-compiles (limit 8000 bytes) and `@s`-heavy or macro functions could exceed the 64 KB method limit; functions are now compiled in command chunks of at most ~6 KB each (macro functions included), which also bounds optimizer time per chunk.
+- A single long `execute` chain (e.g. BlazeandCave's 42-clause `advancement/check/animal_kingdom`, 12.6 KB) still produced a method the JVM never JIT-compiles; the tail of such a chain is now compiled as a separate method that receives the chain's current source, splitting it into methods of at most ~7 KB.
+- Split functions re-ran their leading side-effecting commands (`scoreboard objectives remove/add`, `data remove storage`, …) at the start of every chunk.
+- One function that failed to build or verify disabled every function in its batch (and, through the cache, on every restart), or left compiled callers linked to a missing method; it now alone falls back to vanilla, classes are verified before they are defined, and the cache is written only after everything linked. A cache entry that fails to load now falls back to a full compile instead of failing.
+- A function with two or more `@s` commands run without an entity (console, command blocks, `schedule`, `#load`/`#tick`) threw from the second command on instead of letting each command fail on its own; the optimizer no longer drops a null check that only an earlier command's failure path reaches.
+- The optimizer took seconds to minutes on large functions (2,000 `@s` commands: 6 s; 4,000: 30 s); it now keeps indices stable while optimizing and answers dominance queries in O(1) (under 0.1 s for 4,000 commands).
+- Functions using `@s[nbt=…]`/`@s[predicate=…]` or other boolean helper results failed to build ("invalid operation on type boolean").
+- The bytecode emitter could reorder side-effecting calls or read a register after its source was overwritten; loading an undefined local now makes the function fall back to vanilla instead of producing unverifiable code.
+- Rarely, the first compilation after startup failed until restart because two compile threads created instruction types at the same time.
+- `execute if|unless entity …` and `limit=1` selectors (e.g. `data get entity @e[…,limit=1] …`) no longer allocate a result list on every execution.
+- Data reporting (when enabled) could block forever on its first report.
+- `scoreboard players add|remove|operation` used two score accesses, so a newly created score (e.g. `scoreboard players add @a kills 0`) was never sent to clients or saved; on read-only criteria (`health`, `xp`, …) they created the score and succeeded instead of failing like vanilla.
+- `*` with no tracked score holders succeeded with result 0 instead of failing; `scoreboard players get *` and `execute if|unless score * …` resolved `*` instead of failing.
+- Score commands on constant holders (`#fake` players) resolve their objective and score through link-time caches and run as one call without allocating; other holders read and write existing scores without allocating `ScoreAccess` objects.
+- `scoreboard players operation A -= B` computed `B - A`; all operations now follow vanilla (floor division/modulo, division by zero fails, overflow wraps).
+- `data modify storage … append|prepend|insert … value` did not modify the list; `data modify … set value` with an unchanged value now fails like vanilla.
+- `effect give` without a duration was infinite instead of 30 seconds, and instant effects were applied 20 times.
+- `execute store`, `return run` and `execute if|unless score|entity` as the last clause reported wrong results: `unless entity … run` skipped its body when success was stored, one failing source stopped the remaining sources, `store` wrote when nothing ran and summed across sources, `return run` with several sources ran later sources, and `store … run function #tag` stopped at the first function instead of summing like vanilla.
+- `tag … add|remove` and `clear` always succeeded; they now report the number changed and fail on 0.
+- `execute in <dimension>` did not scale X/Z by the dimension's coordinate scale.
+- Selector `limit` was never applied (`give @p` gave to every player); box selectors (`dx`/`dy`/`dz`) applied `limit` before other filters; `x_rotation`/`y_rotation` ignored wrap-around ranges and defaults; empty `tag=`/`team=` were inverted; quoted or UUID targets (`kill "Name"`) and repeated selector options now behave like vanilla.
+- Selectors iterate entities in vanilla order without per-tick snapshots, so entities moved, tagged or changed earlier in the same tick are seen correctly; `@e[type=…]` uses a per-type index kept in sync with vanilla's entity lookup; `execute on attacker` finds interaction entities and relations skip removed entities; `@e[distance=..30000000]` no longer hangs the server.
+- `@e[nbt=…]` shortcuts for `Silent`, `NoGravity`, `Glowing`, `CustomNameVisible`, `MaxAir`, `MaxHealth`, `FallDistance` and empty `Tags` matched where vanilla does not.
+- `tp … facing` reset velocity on relative axes, ignored world bounds and the source anchor; `time query <timeline>` succeeded for a timeline of another clock; `schedule function … 0t` ran the function; unknown biomes in `execute if biome` matched; particles for all players are sent as one packet; score text components with a selector matching several entities resolved instead of failing.
+- Parse failures of runtime item/block predicates are re-checked after `/reload`.
+
 ## Details
 - **Released:** In Development
 - **Supported Versions:** None

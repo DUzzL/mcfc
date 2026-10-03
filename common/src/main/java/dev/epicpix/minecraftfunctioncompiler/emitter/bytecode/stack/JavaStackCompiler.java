@@ -4,6 +4,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
@@ -35,6 +36,8 @@ public class JavaStackCompiler {
     private final Int2ObjectOpenHashMap<Stack<ClassDesc>> instructionTypeStackMap;
     private final HashMap<BytecodeLabel, Stack<ClassDesc>> labelTypeStackMap;
     private final HashMap<BytecodeLabel, Label> labelMap;
+    // label id -> index of the first LABEL of the consecutive run of labels containing it
+    private final Int2IntOpenHashMap labelRunStart;
 
     private JavaStackCompiler(CodeBuilder cb, List<StackInstruction> instructions) {
         this.cb = cb;
@@ -44,6 +47,23 @@ public class JavaStackCompiler {
         this.instructionTypeStackMap = new Int2ObjectOpenHashMap<>();
         this.labelTypeStackMap = new HashMap<>();
         this.labelMap = new HashMap<>();
+        this.labelRunStart = new Int2IntOpenHashMap();
+        this.labelRunStart.defaultReturnValue(-1);
+        int runStart = -1;
+        for(int i = 0; i < instructions.size(); i++) {
+            if(instructions.get(i) instanceof StackInstruction.Label(BytecodeLabel label)) {
+                if(runStart < 0) runStart = i;
+                labelRunStart.put(label.id(), runStart);
+            }else {
+                runStart = -1;
+            }
+        }
+    }
+
+    private int jumpTargetIndex(BytecodeLabel label) {
+        int index = labelRunStart.get(label.id());
+        if(index < 0) throw new IllegalArgumentException("Jump to unbound label " + label);
+        return index;
     }
 
     private static boolean isIntegerLike(ClassDesc t) {
@@ -158,7 +178,8 @@ public class JavaStackCompiler {
             case StackInstruction.Cast(ClassDesc type) -> {
                 var op = currentTypeStack.pop();
                 if((!op.isClassOrInterface() && !op.isArray() && !type.isClassOrInterface() && !type.isArray()) && ((isIntegerLike(op) && isIntegerLike(type)) || TypeKind.from(op) == TypeKind.from(type))) {
-                    currentTypeStack.push(op);
+                    // No conversion bytecode; the value now has the target type (e.g. boolean -> int).
+                    currentTypeStack.push(type);
                     return true;
                 }
                 if(isIntegerLike(op)) {
@@ -212,21 +233,7 @@ public class JavaStackCompiler {
                 return true;
             }
             case StackInstruction.Jump(StackJumpType jumpType, BytecodeLabel jumpLabel) -> {
-                int labelLocation;
-                for(labelLocation = 0; labelLocation < instructions.size(); labelLocation++) {
-                    if(instructions.get(labelLocation) instanceof StackInstruction.Label(BytecodeLabel label)) {
-                        if(label.id() == jumpLabel.id()) {
-                            break;
-                        }
-                    }
-                }
-                while(labelLocation >= 0) {
-                    if(!(instructions.get(labelLocation) instanceof StackInstruction.Label)) {
-                        labelLocation++;
-                        break;
-                    }
-                    labelLocation--;
-                }
+                int labelLocation = jumpTargetIndex(jumpLabel);
                 if(jumpType == StackJumpType.GOTO) {
                     toTraverse.push(labelLocation);
                     return false;
@@ -269,21 +276,7 @@ public class JavaStackCompiler {
                 }
             }
             case StackInstruction.JumpTyped jump -> {
-                int labelLocation;
-                for(labelLocation = 0; labelLocation < instructions.size(); labelLocation++) {
-                    if(instructions.get(labelLocation) instanceof StackInstruction.Label(BytecodeLabel label)) {
-                        if(label.id() == jump.label().id()) {
-                            break;
-                        }
-                    }
-                }
-                while(labelLocation >= 0) {
-                    if(!(instructions.get(labelLocation) instanceof StackInstruction.Label)) {
-                        labelLocation++;
-                        break;
-                    }
-                    labelLocation--;
-                }
+                int labelLocation = jumpTargetIndex(jump.label());
                 toTraverse.push(labelLocation);
                 currentTypeStack.pop();
                 switch(jump.jumpType()) {
@@ -319,14 +312,14 @@ public class JavaStackCompiler {
                     case BytecodeValue.FloatValue(float value) -> cb.loadConstant(value);
                     case BytecodeValue.DoubleValue(double value) -> cb.loadConstant(value);
                     case BytecodeValue.StringValue(String value) -> cb.loadConstant(value);
-                    case BytecodeValue.Parameter va -> cb.loadLocal(TypeKind.from(loadType), va.index());
-                    case BytecodeRegister(int reg) -> cb.loadLocal(TypeKind.from(loadType), reg);
+                    case BytecodeValue.Parameter va -> cb.loadLocal(TypeKind.from(loadType).asLoadable(), va.index());
+                    case BytecodeRegister(int reg) -> cb.loadLocal(TypeKind.from(loadType).asLoadable(), reg);
                     default -> throw new IllegalArgumentException("Unknown value: " + bValue);
                 }
             }
             case StackInstruction.Store(BytecodeRegister register) -> {
                 var type = get(currentTypeStack, -1);
-                cb.storeLocal(TypeKind.from(type), register.reg());
+                cb.storeLocal(TypeKind.from(type).asLoadable(), register.reg());
             }
             case StackInstruction.Call(InstructionTarget target) -> {
                 switch(target) {
@@ -358,7 +351,7 @@ public class JavaStackCompiler {
             }
             case StackInstruction.ReturnValue _ -> {
                 var type = get(currentTypeStack, -1);
-                cb.return_(TypeKind.from(type));
+                cb.return_(TypeKind.from(type).asLoadable());
             }
             case StackInstruction.Return _ -> cb.return_();
             case StackInstruction.Pop _ -> {
@@ -452,7 +445,7 @@ public class JavaStackCompiler {
             }
             case StackInstruction.Cast(ClassDesc type) -> {
                 var op = get(currentTypeStack, -1);
-                if((!op.isClassOrInterface() && !op.isArray() && !op.isClassOrInterface() && !op.isArray()) && ((isIntegerLike(op) && isIntegerLike(type)) || TypeKind.from(op) == TypeKind.from(type))) {
+                if((!op.isClassOrInterface() && !op.isArray() && !type.isClassOrInterface() && !type.isArray()) && ((isIntegerLike(op) && isIntegerLike(type)) || TypeKind.from(op) == TypeKind.from(type))) {
                     return;
                 }
                 if(isIntegerLike(op)) {
@@ -518,6 +511,9 @@ public class JavaStackCompiler {
                     cb.ifnonnull(labelMap.get(label));
                     return;
                 }
+                // float/double relational jumps are "relation OR unordered": they are taken when an operand is NaN
+                // (fcmpl/dcmpl before </<=, fcmpg/dcmpg before >/>=). Their only producers are range checks that jump
+                // to the failure label on "value < min" / "value > max", and vanilla MinMaxBounds rejects NaN.
                 var a = get(currentTypeStack, -1);
                 switch(jumpType) {
                     case IF_EQUAL_ZERO -> {

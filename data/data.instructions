@@ -5,22 +5,18 @@
 #definitions("common,minecraft")
 
 // Common
-##CONDITIONAL_JUMP
 @IF_FALSE_JUMP(boolean [ctx:local], label [ctx:label]) {
   _jumpIfEqual([ctx:local], false, [ctx:label]);
 }
 
-##CONDITIONAL_JUMP
 @IF_NULL_JUMP(<java.lang.Object> [ctx:local], label [ctx:label]) {
   _jumpIfEqual([ctx:local], null, [ctx:label]);
 }
 
-##CONDITIONAL_JUMP
 @IF_NOT_NULL_JUMP(<java.lang.Object> [ctx:local], label [ctx:label]) {
   _jumpIfNotEqual([ctx:local], null, [ctx:label]);
 }
 
-##CONDITIONAL_JUMP
 @IF_OBJECT_COMPARE_JUMP(<dev.epicpix.minecraftfunctioncompiler.emitter.types.ObjectComparisonType> [instr:compare], <java.lang.Object> [ctx:a], <java.lang.Object> [ctx:b], label [ctx:label]) {
   compile_match([instr:compare]) {
     EQUAL { _jumpIfNotEqual(<java.util.Objects>.equals([ctx:a], [ctx:b]), false, [ctx:label], false, [ctx:label]); }
@@ -30,7 +26,6 @@
   }
 }
 
-##CONDITIONAL_JUMP
 @IF_NUMBER_COMPARE_JUMP(<dev.epicpix.minecraftfunctioncompiler.emitter.types.NumberComparisonType> [instr:compare], number<T> [ctx:a], number<T> [ctx:b], label [ctx:label]) {
   compile_match([instr:compare]) {
     EQUAL { _jumpIfEqual([ctx:a], [ctx:b], [ctx:label]); }
@@ -94,40 +89,30 @@
 ##PURE
 @GET_SET_LENGTH(<java.util.Set> [ctx:set]) -> int = [ctx:set].size();
 
-##CONDITIONAL_JUMP
 @JUMP_IF_LIST_CONTAINS(<java.util.List<T> > [ctx:list], generic<T:%java.lang.Object> [ctx:element], label [ctx:label]) {
   _jumpIfNotEqual([ctx:list].contains([ctx:element]), false, [ctx:label]);
 }
 
-##CONDITIONAL_JUMP
 @JUMP_IF_LIST_NOT_CONTAINS(<java.util.List<T> > [ctx:list], generic<T:%java.lang.Object> [ctx:element], label [ctx:label]) {
   _jumpIfEqual([ctx:list].contains([ctx:element]), false, [ctx:label]);
 }
 
-##CONDITIONAL_JUMP
 @JUMP_IF_SET_CONTAINS(<java.util.Set<T> > [ctx:set], generic<T:%java.lang.Object> [ctx:element], label [ctx:label]) {
   _jumpIfNotEqual([ctx:set].contains([ctx:element]), false, [ctx:label]);
 }
 
-##CONDITIONAL_JUMP
 @JUMP_IF_SET_NOT_CONTAINS(<java.util.Set<T> > [ctx:set], generic<T:%java.lang.Object> [ctx:element], label [ctx:label]) {
   _jumpIfEqual([ctx:set].contains([ctx:element]), false, [ctx:label]);
 }
 
 @ITERATOR_NEXT(mut <java.util.Iterator<T> > [ctx:iterator]) -> generic<T:%java.lang.Object> = [ctx:iterator].next();
 
-##CONDITIONAL_JUMP
 @JUMP_IF_ITERATOR_HAS_NEXT(<java.util.Iterator> [ctx:iterator], label [ctx:label]) {
   _jumpIfNotEqual([ctx:iterator].hasNext(), false, [ctx:label]);
 }
 
-##CONDITIONAL_JUMP
 @JUMP_IF_ITERATOR_HAS_NO_NEXT(<java.util.Iterator> [ctx:iterator], label [ctx:label]) {
   _jumpIfEqual([ctx:iterator].hasNext(), false, [ctx:label]);
-}
-
-@SHUFFLE_LIST(mut <java.util.List> [ctx:list]) {
-  <java.util.Collections>.shuffle([ctx:list]);
 }
 
 @RETURN_FAIL() {
@@ -143,22 +128,18 @@
 ##PURE
 @EXTRACT_RETURN_RESULT(long [ctx:from]) -> int = to_integer([ctx:from]);
 
-##CONDITIONAL_JUMP
 @JUMP_IF_VOID_RETURN_VALUE(long [ctx:return_value], label [ctx:label]) {
   _jumpIfEqual(to_integer([ctx:return_value] >> 32), 2, [ctx:label]);
 }
 
-##CONDITIONAL_JUMP
 @JUMP_IF_NOT_VOID_RETURN_VALUE(long [ctx:return_value], label [ctx:label]) {
   _jumpIfNotEqual(to_integer([ctx:return_value] >> 32), 2, [ctx:label]);
 }
 
-##CONDITIONAL_JUMP
 @JUMP_IF_NULL_RETURN_VALUE(long [ctx:return_value], label [ctx:label]) {
   _jumpIfEqual(to_integer([ctx:return_value]), 0, [ctx:label]);
 }
 
-##CONDITIONAL_JUMP
 @JUMP_IF_NOT_NULL_RETURN_VALUE(long [ctx:return_value], label [ctx:label]) {
   _jumpIfNotEqual(to_integer([ctx:return_value]), 0, [ctx:label]);
 }
@@ -260,12 +241,13 @@
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.revokeAdvancementTree([static:MinecraftServer], [ctx:player], [ctx:id], [ctx:mode]);
 }
 
-@ADD_ENTITY_TAG(mut <net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [ctx:tag]) {
-  [ctx:entity].addTag([ctx:tag]);
+// tag add|remove: jumps to unchanged_label when the entity's tags did not change (vanilla counts changes)
+@ADD_ENTITY_TAG(mut <net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [ctx:tag], label [ctx:unchanged_label]) {
+  _jumpIfEqual([ctx:entity].addTag([ctx:tag]), false, [ctx:unchanged_label]);
 }
 
-@REMOVE_ENTITY_TAG(mut <net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [ctx:tag]) {
-  [ctx:entity].removeTag([ctx:tag]);
+@REMOVE_ENTITY_TAG(mut <net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [ctx:tag], label [ctx:unchanged_label]) {
+  _jumpIfEqual([ctx:entity].removeTag([ctx:tag]), false, [ctx:unchanged_label]);
 }
 
 ##PURE
@@ -275,14 +257,24 @@
 @GET_PLAYERS(<net.minecraft.server.players.PlayerList> [static:PlayerList]) -> <java.util.List<net.minecraft.server.level.ServerPlayer> > = [static:PlayerList].getPlayers();
 
 ##PURE
+@GET_LEVEL_PLAYERS(<net.minecraft.server.level.ServerLevel> [ctx:world]) -> <java.util.List<net.minecraft.server.level.ServerPlayer> > = [ctx:world].players();
+
+##PURE
 @GET_WORLDS_ITERATOR(<java.lang.Iterable> [static:AllWorlds]) -> <java.util.Iterator<net.minecraft.server.level.ServerLevel> > = [static:AllWorlds].iterator();
 
 ##PURE
-@GET_ENTITIES(<net.minecraft.server.level.ServerLevel> [ctx:world]) -> <java.util.Iterator<net.minecraft.world.entity.Entity> > = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getAllEntitiesFast([ctx:world]);
+@GET_ENTITIES(<net.minecraft.server.level.ServerLevel> [ctx:world]) -> <java.util.Iterator<net.minecraft.world.entity.Entity> > = <dev.epicpix.minecraftfunctioncompiler.mod.EntitySelection>.all([ctx:world]);
 
 ##PURE
-@GET_ENTITIES_INSIDE(<net.minecraft.server.level.ServerLevel> [ctx:world], double [ctx:min_x], double [ctx:min_y], double [ctx:min_z], double [ctx:max_x], double [ctx:max_y], double [ctx:max_z], int [ctx:limit]) -> <java.util.List<net.minecraft.world.entity.Entity> >
-  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getEntitiesInside([ctx:world], [ctx:min_x], [ctx:min_y], [ctx:min_z], [ctx:max_x], [ctx:max_y], [ctx:max_z], [ctx:limit]);
+@GET_ENTITIES_OF_TYPE(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.entity.EntityType> [ctx:entity_type]) -> <java.util.Iterator<net.minecraft.world.entity.Entity> > = <dev.epicpix.minecraftfunctioncompiler.mod.EntitySelection>.ofType([ctx:world], [ctx:entity_type]);
+
+@PARALLEL_RUN_FUNCTION_AT_SELF(<java.util.List> [ctx:entities], <net.minecraft.commands.CommandSourceStack> [ctx:base_stack], <java.lang.String> [instr:fn]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.parallelRunFunctionAtSelf([ctx:entities], [ctx:base_stack], [instr:fn]);
+}
+
+##PURE
+@GET_ENTITIES_INSIDE(<net.minecraft.server.level.ServerLevel> [ctx:world], double [ctx:min_x], double [ctx:min_y], double [ctx:min_z], double [ctx:max_x], double [ctx:max_y], double [ctx:max_z]) -> <java.util.List<net.minecraft.world.entity.Entity> >
+  = <dev.epicpix.minecraftfunctioncompiler.mod.EntitySelection>.inside([ctx:world], [ctx:min_x], [ctx:min_y], [ctx:min_z], [ctx:max_x], [ctx:max_y], [ctx:max_z]);
 
 ##PURE
 @GET_PLAYER(<net.minecraft.server.players.PlayerList> [static:PlayerList], <java.lang.String> [ctx:name]) -> <net.minecraft.server.level.ServerPlayer> = [static:PlayerList].getPlayerByName([ctx:name]);
@@ -299,13 +291,86 @@
 ##PURE
 @GET_SCOREBOARD_NAME(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <java.lang.String> = [ctx:entity].getScoreboardName();
 
+// Score read/write path (vanilla ScoreAccess semantics on live Score objects, see ExtensionFunctions.setScore).
+// Constant objective/holder names resolve through link-time data-class fields (ObjectiveRef, ScoreHolder, ScoreRef).
 ##PURE
-@GET_SCORE_VALUE(<net.minecraft.world.scores.ScoreAccess> [ctx:score]) -> int = [ctx:score].get();
+@GET_OBJECTIVE_REF(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [instr:name]) -> <net.minecraft.world.scores.Objective> = map_objective_ref([instr:name]).get([static:Scoreboard]);
 
-@SET_SCORE(mut <net.minecraft.world.scores.ScoreAccess> [ctx:score], int [ctx:value]) { [ctx:score].set([ctx:value]); }
+// ObjectiveArgument.getWritableObjective: scoreboard players set/add/remove/operation reject read-only criteria
+@IF_OBJECTIVE_READ_ONLY_JUMP(<net.minecraft.world.scores.Objective> [ctx:objective], label [ctx:label]) {
+  _jumpIfNotEqual([ctx:objective].getCriteria().isReadOnly(), false, [ctx:label]);
+}
 
-@SET_SCORE_SAFE(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <net.minecraft.world.scores.ScoreHolder> [ctx:holder], int [ctx:value]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setScoreSafe([static:Scoreboard], [ctx:objective], [ctx:holder], [ctx:value]);
+##PURE
+@CONST_SCORE_HOLDER(<java.lang.String> [instr:name]) -> <net.minecraft.world.scores.ScoreHolder> = map_score_holder([instr:name]);
+
+// The live score or null (vanilla getPlayerScoreInfo); never creates.
+##PURE
+@FIND_SCORE(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <net.minecraft.world.scores.ScoreHolder> [ctx:holder]) -> <net.minecraft.world.scores.Score>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.findScore([static:Scoreboard], [ctx:objective], [ctx:holder]);
+
+##PURE
+@FIND_SCORE_REF(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [instr:holder], <java.lang.String> [instr:objective_name]) -> <net.minecraft.world.scores.Score>
+  = map_score_ref([instr:holder], [instr:objective_name]).find([static:Scoreboard], [ctx:objective]);
+
+// found, or the score vanilla getOrCreatePlayerScore creates (synced by the next SET_SCORE with found == null)
+@ENSURE_SCORE(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <net.minecraft.world.scores.ScoreHolder> [ctx:holder], <net.minecraft.world.scores.Score> [ctx:found]) -> <net.minecraft.world.scores.Score>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.ensureScore([static:Scoreboard], [ctx:objective], [ctx:holder], [ctx:found]);
+
+##PURE
+@GET_SCORE_VALUE(<net.minecraft.world.scores.Score> [ctx:score]) -> int = [ctx:score].value();
+
+// ScoreAccess.set of the access that looked the score up (found == null: that access created it)
+@SET_SCORE(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <net.minecraft.world.scores.ScoreHolder> [ctx:holder], mut <net.minecraft.world.scores.Score> [ctx:score], <net.minecraft.world.scores.Score> [ctx:found], int [ctx:value]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setScore([static:Scoreboard], [ctx:objective], [ctx:holder], [ctx:score], [ctx:found], [ctx:value]);
+}
+
+// Constant holder + constant objective: one fused ScoreRef call per command (see ScoreRef). Each jumps to
+// [ctx:fail] / [ctx:skip] where vanilla throws (missing/read-only objective, division by zero) or the
+// condition does not pass.
+@SCORE_REF_SET(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [instr:holder], <java.lang.String> [instr:objective_name], int [ctx:value], label [ctx:fail]) {
+  _jumpIfEqual(map_score_ref([instr:holder], [instr:objective_name]).set([static:Scoreboard], [ctx:value]), false, [ctx:fail]);
+}
+
+@SCORE_REF_ADD(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [instr:holder], <java.lang.String> [instr:objective_name], int [ctx:amount], label [ctx:fail]) {
+  _jumpIfEqual(map_score_ref([instr:holder], [instr:objective_name]).add([static:Scoreboard], [ctx:amount]), false, [ctx:fail]);
+}
+
+@SCORE_REF_REMOVE(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [instr:holder], <java.lang.String> [instr:objective_name], int [ctx:amount], label [ctx:fail]) {
+  _jumpIfEqual(map_score_ref([instr:holder], [instr:objective_name]).remove([static:Scoreboard], [ctx:amount]), false, [ctx:fail]);
+}
+
+// [ctx:operation]: ScoreboardOperation ordinal
+@SCORE_REF_OPERATION(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [instr:target_holder], <java.lang.String> [instr:target_objective], int [ctx:operation], <java.lang.String> [instr:source_holder], <java.lang.String> [instr:source_objective], label [ctx:fail]) {
+  _jumpIfEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ScoreRef>.operation([static:Scoreboard], map_score_ref([instr:target_holder], [instr:target_objective]), [ctx:operation], map_score_ref([instr:source_holder], [instr:source_objective])), false, [ctx:fail]);
+}
+
+// result of the last SCORE_REF_SET/ADD/REMOVE/OPERATION on this ref (its new value)
+@SCORE_REF_LAST_VALUE(<java.lang.String> [instr:holder], <java.lang.String> [instr:objective_name]) -> int = map_score_ref([instr:holder], [instr:objective_name]).lastValue();
+
+##PURE
+@SCORE_REF_SCORE(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [instr:holder], <java.lang.String> [instr:objective_name]) -> <net.minecraft.world.scores.Score>
+  = map_score_ref([instr:holder], [instr:objective_name]).score([static:Scoreboard]);
+
+@SCORE_REF_IF_MATCHES_ELSE_JUMP(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [instr:holder], <java.lang.String> [instr:objective_name], int [ctx:min], int [ctx:max], label [ctx:skip]) {
+  _jumpIfEqual(map_score_ref([instr:holder], [instr:objective_name]).matches([static:Scoreboard], [ctx:min], [ctx:max]), false, [ctx:skip]);
+}
+
+@SCORE_REF_UNLESS_MATCHES_ELSE_JUMP(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [instr:holder], <java.lang.String> [instr:objective_name], int [ctx:min], int [ctx:max], label [ctx:skip]) {
+  _jumpIfEqual(map_score_ref([instr:holder], [instr:objective_name]).unlessMatches([static:Scoreboard], [ctx:min], [ctx:max]), false, [ctx:skip]);
+}
+
+// [ctx:comparison]: ScoreboardCompareOperation ordinal
+@SCORE_REF_IF_COMPARE_ELSE_JUMP(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [instr:a_holder], <java.lang.String> [instr:a_objective], int [ctx:comparison], <java.lang.String> [instr:b_holder], <java.lang.String> [instr:b_objective], label [ctx:skip]) {
+  _jumpIfEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ScoreRef>.compare([static:Scoreboard], map_score_ref([instr:a_holder], [instr:a_objective]), [ctx:comparison], map_score_ref([instr:b_holder], [instr:b_objective])), false, [ctx:skip]);
+}
+
+@SCORE_REF_UNLESS_COMPARE_ELSE_JUMP(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [instr:a_holder], <java.lang.String> [instr:a_objective], int [ctx:comparison], <java.lang.String> [instr:b_holder], <java.lang.String> [instr:b_objective], label [ctx:skip]) {
+  _jumpIfEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ScoreRef>.unlessCompare([static:Scoreboard], map_score_ref([instr:a_holder], [instr:a_objective]), [ctx:comparison], map_score_ref([instr:b_holder], [instr:b_objective])), false, [ctx:skip]);
+}
+
+@SCORE_REF_STORE(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <java.lang.String> [instr:holder], <java.lang.String> [instr:objective_name], int [ctx:value]) {
+  map_score_ref([instr:holder], [instr:objective_name]).store([static:Scoreboard], [ctx:objective], [ctx:value]);
 }
 
 @KILL_ENTITY(mut <net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.server.level.ServerLevel> [ctx:world]) {
@@ -330,6 +395,15 @@
 ##PURE
 @GET_ROTATION_YAW(<net.minecraft.world.phys.Vec2> [ctx:rotation]) -> float = [ctx:rotation].y;
 
+// x_rotation / y_rotation selector options; min/max are pre-wrapped constants (EntitySelectorParser.createRotationPredicate)
+@JUMP_IF_X_ROTATION_NOT_IN_RANGE(<net.minecraft.world.entity.Entity> [ctx:entity], float [ctx:min], float [ctx:max], label [ctx:label]) {
+  _jumpIfEqual(<dev.epicpix.minecraftfunctioncompiler.mod.EntitySelection>.rotationInRange([ctx:entity].getXRot(), [ctx:min], [ctx:max]), false, [ctx:label]);
+}
+
+@JUMP_IF_Y_ROTATION_NOT_IN_RANGE(<net.minecraft.world.entity.Entity> [ctx:entity], float [ctx:min], float [ctx:max], label [ctx:label]) {
+  _jumpIfEqual(<dev.epicpix.minecraftfunctioncompiler.mod.EntitySelection>.rotationInRange([ctx:entity].getYRot(), [ctx:min], [ctx:max]), false, [ctx:label]);
+}
+
 ##PURE
 @GET_ENTITY_TEAM(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.world.scores.Team> = [ctx:entity].getTeam();
 
@@ -349,13 +423,16 @@
 
 
 
-@SCORE_DATA_AUTO_CREATE(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <net.minecraft.world.scores.ScoreHolder> [ctx:holder]) -> <net.minecraft.world.scores.ScoreAccess>
-  = [static:Scoreboard].getOrCreatePlayerScore([ctx:holder], [ctx:objective]);
+@ENABLE_TRIGGER(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <net.minecraft.world.scores.ScoreHolder> [ctx:holder]) -> boolean
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.enableTrigger([static:Scoreboard], [ctx:objective], [ctx:holder]);
 
+// selector scores={...}: read-only lookup like EntitySelectorOptions (no ScoreAccess allocation)
+##PURE
+@GET_SELECTOR_SCORE_INFO(<net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <net.minecraft.world.scores.ScoreHolder> [ctx:holder]) -> <net.minecraft.world.scores.ReadOnlyScoreInfo>
+  = [static:Scoreboard].getPlayerScoreInfo([ctx:holder], [ctx:objective]);
 
 ##PURE
-@SCORE_DATA_NO_AUTO_CREATE(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <net.minecraft.world.scores.Objective> [ctx:objective], <net.minecraft.world.scores.ScoreHolder> [ctx:holder]) -> <net.minecraft.world.scores.ScoreAccess>
-  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getScore([static:Scoreboard], [ctx:holder], [ctx:objective]);
+@GET_SELECTOR_SCORE_INFO_VALUE(<net.minecraft.world.scores.ReadOnlyScoreInfo> [ctx:info]) -> int = [ctx:info].value();
 
 
 ##PURE
@@ -432,38 +509,33 @@
 ##PURE
 @GET_EXPERIENCE_LEVEL(<net.minecraft.server.level.ServerPlayer> [ctx:player]) -> int = [ctx:player].experienceLevel;
 
-##CONDITIONAL_JUMP
 @TRY_AS_ENTITY(<java.lang.Object> [ctx:object], label [ctx:fail_label]) -> <net.minecraft.world.entity.Entity> {
   _jumpIfNotInstanceOf([ctx:object], <net.minecraft.world.entity.Entity>, [ctx:fail_label]);
   return cast([ctx:object], <net.minecraft.world.entity.Entity>);
 }
 
-##CONDITIONAL_JUMP
 @TRY_AS_LIVING_ENTITY(<net.minecraft.world.entity.Entity> [ctx:entity], label [ctx:fail_label]) -> <net.minecraft.world.entity.LivingEntity> {
   _jumpIfNotInstanceOf([ctx:entity], <net.minecraft.world.entity.LivingEntity>, [ctx:fail_label]);
   return cast([ctx:entity], <net.minecraft.world.entity.LivingEntity>);
 }
 
-##CONDITIONAL_JUMP
 @TRY_AS_PLAYER(<net.minecraft.world.entity.Entity> [ctx:entity], label [ctx:fail_label]) -> <net.minecraft.server.level.ServerPlayer>{
   _jumpIfNotInstanceOf([ctx:entity], <net.minecraft.server.level.ServerPlayer>, [ctx:fail_label]);
   return cast([ctx:entity], <net.minecraft.server.level.ServerPlayer>);
 }
 
-##CONDITIONAL_JUMP
 @TRY_AS_TRACEABLE_ENTITY(<net.minecraft.world.entity.Entity> [ctx:entity], label [ctx:fail_label]) -> <net.minecraft.world.entity.TraceableEntity> {
   _jumpIfNotInstanceOf([ctx:entity], <net.minecraft.world.entity.TraceableEntity>, [ctx:fail_label]);
   return cast([ctx:entity], <net.minecraft.world.entity.TraceableEntity>);
 }
 
-##CONDITIONAL_JUMP
 @TRY_AS_TARGETING_ENTITY(<net.minecraft.world.entity.Entity> [ctx:entity], label [ctx:fail_label]) -> <net.minecraft.world.entity.Targeting> {
   _jumpIfNotInstanceOf([ctx:entity], <net.minecraft.world.entity.Targeting>, [ctx:fail_label]);
   return cast([ctx:entity], <net.minecraft.world.entity.Targeting>);
 }
 
 ##PURE
-@GET_ENTITY_NAME(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <java.lang.String> = [ctx:entity].getName().getString();
+@GET_ENTITY_NAME(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <java.lang.String> = [ctx:entity].getPlainTextName();
 
 ##PURE
 @GET_VEC3_X(<net.minecraft.world.phys.Vec3> [ctx:position]) -> double = [ctx:position].x;
@@ -556,13 +628,11 @@
 ##PURE
 @CLONE_NBT_VALUE(<net.minecraft.nbt.Tag> [ctx:input]) -> <net.minecraft.nbt.Tag> = [ctx:input].copy();
 
-##CONDITIONAL_JUMP
 @TRY_AS_NBT_COMPOUND(<net.minecraft.nbt.Tag> [ctx:tag], label [ctx:fail_label]) -> <net.minecraft.nbt.CompoundTag> {
   _jumpIfNotInstanceOf([ctx:tag], <net.minecraft.nbt.CompoundTag>, [ctx:fail_label]);
   return cast([ctx:tag], <net.minecraft.nbt.CompoundTag>);
 }
 
-##CONDITIONAL_JUMP
 @TRY_AS_NBT_LIST(<net.minecraft.nbt.Tag> [ctx:tag], label [ctx:fail_label]) -> <net.minecraft.nbt.ListTag> {
   _jumpIfNotInstanceOf([ctx:tag], <net.minecraft.nbt.ListTag>, [ctx:fail_label]);
   return cast([ctx:tag], <net.minecraft.nbt.ListTag>);
@@ -576,6 +646,16 @@
   [local:value] = [ctx:from].get([ctx:name]);
   if([local:value] == null) {
     [local:value] = new <net.minecraft.nbt.CompoundTag>();
+    [ctx:from].put([ctx:name], [local:value]);
+  }
+  return [local:value];
+}
+
+// `data modify … append|prepend|insert`: vanilla NbtPath.getOrCreate(tag, ListTag::new) for the last node
+@GET_NBT_LIST_FROM_COMPOUND_OR_CREATE(mut <net.minecraft.nbt.CompoundTag> [ctx:from], <java.lang.String> [ctx:name]) -> <net.minecraft.nbt.Tag> {
+  [local:value] = [ctx:from].get([ctx:name]);
+  if([local:value] == null) {
+    [local:value] = new <net.minecraft.nbt.ListTag>();
     [ctx:from].put([ctx:name], [local:value]);
   }
   return [local:value];
@@ -606,20 +686,26 @@
 ##PURE
 @CREATE_LONG_TAG_FROM_DOUBLE(double [ctx:value]) -> <net.minecraft.nbt.Tag> = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.createLongTagFromDouble([ctx:value]);
 
-@SORT_LIST_ENTITY_NEAREST(<net.minecraft.world.phys.Vec3> [ctx:position], mut <java.util.List> [ctx:list]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.sortEntitiesClosest([ctx:position], [ctx:list]);
+// sort=nearest|furthest|random then keep the first [limit] (EntitySelector.sortAndLimit)
+@SORT_LIST_ENTITY_NEAREST(<net.minecraft.world.phys.Vec3> [ctx:position], mut <java.util.List> [ctx:list], int [instr:limit]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.EntitySelection>.sortNearest([ctx:position], [ctx:list], [instr:limit]);
 }
 
-@SORT_LIST_ENTITY_FURTHEST(<net.minecraft.world.phys.Vec3> [ctx:position], mut <java.util.List> [ctx:list]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.sortEntitiesFurthest([ctx:position], [ctx:list]);
+@SORT_LIST_ENTITY_FURTHEST(<net.minecraft.world.phys.Vec3> [ctx:position], mut <java.util.List> [ctx:list], int [instr:limit]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.EntitySelection>.sortFurthest([ctx:position], [ctx:list], [instr:limit]);
 }
 
+@SHUFFLE_LIST(mut <java.util.List> [ctx:list], int [instr:limit]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.EntitySelection>.shuffle([ctx:list], [instr:limit]);
+}
+
+// execute on vehicle / target / origin: removed entities are dropped, like vanilla
 ##PURE
-@GET_ENTITY_VEHICLE(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.world.entity.Entity> = [ctx:entity].getVehicle();
+@GET_ENTITY_VEHICLE(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.world.entity.Entity> = <dev.epicpix.minecraftfunctioncompiler.mod.EntitySelection>.vehicle([ctx:entity]);
 ##PURE
-@GET_ENTITY_TARGET(<net.minecraft.world.entity.Targeting> [ctx:targeting_entity]) -> <net.minecraft.world.entity.LivingEntity> = [ctx:targeting_entity].getTarget();
+@GET_ENTITY_TARGET(<net.minecraft.world.entity.Targeting> [ctx:targeting_entity]) -> <net.minecraft.world.entity.LivingEntity> = <dev.epicpix.minecraftfunctioncompiler.mod.EntitySelection>.target([ctx:targeting_entity]);
 ##PURE
-@GET_ENTITY_ORIGIN(<net.minecraft.world.entity.TraceableEntity> [ctx:traceable_entity]) -> <net.minecraft.world.entity.Entity> = [ctx:traceable_entity].getOwner();
+@GET_ENTITY_ORIGIN(<net.minecraft.world.entity.TraceableEntity> [ctx:traceable_entity]) -> <net.minecraft.world.entity.Entity> = <dev.epicpix.minecraftfunctioncompiler.mod.EntitySelection>.origin([ctx:traceable_entity]);
 
 ##PURE
 @GET_ANCHOR_OFFSET(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <net.minecraft.world.entity.Entity> [ctx:entity]) -> double {
@@ -638,10 +724,6 @@
 
 ##PURE
 @MAP_OBJECTIVE_CRITERION(<dev.epicpix.minecraftfunctioncompiler.data.ScoreboardCriterionData> [instr:from]) -> <net.minecraft.world.scores.criteria.ObjectiveCriteria> = map_scoreboard_criterion([instr:from]);
-
-@SCORE_UNLOCK(mut <net.minecraft.world.scores.ScoreAccess> [ctx:target]) {
-  [ctx:target].unlock();
-}
 
 ##PURE
 @LOAD_TEXT(<dev.epicpix.minecraftfunctioncompiler.data.text.Text> [instr:in_text]) -> <net.minecraft.network.chat.Component> = map_text([instr:in_text]).copy();
@@ -692,32 +774,26 @@
   [ctx:player].connection.send(new <net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket>([ctx:fade_in], [ctx:stay], [ctx:fade_out]));
 }
 
-##CONDITIONAL_JUMP
 @CHECK_ENTITY_INTERSECTION(<net.minecraft.world.entity.Entity> [ctx:entity], double [ctx:min_x], double [ctx:min_y], double [ctx:min_z], double [ctx:max_x], double [ctx:max_y], double [ctx:max_z], label [ctx:fail_label]) {
   _jumpIfEqual([ctx:entity].getBoundingBox().intersects([ctx:min_x], [ctx:min_y], [ctx:min_z], [ctx:max_x], [ctx:max_y], [ctx:max_z]), false, [ctx:fail_label]);
 }
 
-##CONDITIONAL_JUMP
 @CHECK_ADVANCEMENT_DONE(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:id], boolean [instr:expected], label [ctx:fail_label]) {
-  _jumpIfNotEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.isAdvancementDone([static:MinecraftServer], [ctx:player], [instr:id]), [instr:expected], [ctx:fail_label]);
+  _jumpIfEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.checkAdvancementDone([static:MinecraftServer], [ctx:player], [instr:id], [instr:expected]), false, [ctx:fail_label]);
 }
 
-##CONDITIONAL_JUMP
 @CHECK_ADVANCEMENT_CRITERION_DONE(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:id], <java.lang.String> [instr:criterion], boolean [instr:expected], label [ctx:fail_label]) {
-  _jumpIfNotEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.isAdvancementCriterionDone([static:MinecraftServer], [ctx:player], [instr:id], [instr:criterion]), [instr:expected], [ctx:fail_label]);
+  _jumpIfEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.checkAdvancementCriterionDone([static:MinecraftServer], [ctx:player], [instr:id], [instr:criterion], [instr:expected]), false, [ctx:fail_label]);
 }
 
-##CONDITIONAL_JUMP
 @CHECK_ENTITY_PREDICATE(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.world.entity.Entity> [ctx:entity], <java.lang.String> [instr:predicate_id], boolean [instr:expected], label [ctx:fail_label]) {
-  _jumpIfNotEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.testEntityPredicate([static:MinecraftServer], [ctx:entity], [instr:predicate_id]), [instr:expected], [ctx:fail_label]);
+  _jumpIfEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.checkEntityPredicate([static:MinecraftServer], [ctx:entity], [instr:predicate_id], [instr:expected]), false, [ctx:fail_label]);
 }
 
-##CONDITIONAL_JUMP
 @CHECK_COMMAND_PREDICATE(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:position], <java.lang.String> [instr:predicate_id], boolean [instr:expected], label [ctx:fail_label]) {
-  _jumpIfNotEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.testCommandPredicate([static:MinecraftServer], [ctx:entity], [ctx:world], [ctx:position], [instr:predicate_id]), [instr:expected], [ctx:fail_label]);
+  _jumpIfEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.checkCommandPredicate([static:MinecraftServer], [ctx:entity], [ctx:world], [ctx:position], [instr:predicate_id], [instr:expected]), false, [ctx:fail_label]);
 }
 
-##CONDITIONAL_JUMP
 @CHECK_ENTITY_NBT(<net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.nbt.Tag> [ctx:pattern], boolean [instr:expected], label [ctx:fail_label]) {
   _jumpIfNotEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.matchesEntityNbt([ctx:entity], cast([ctx:pattern], <net.minecraft.nbt.CompoundTag>)), [instr:expected], [ctx:fail_label]);
 }
@@ -726,9 +802,10 @@
 @CREATE_TRANSLATABLE_COMPONENT(<java.lang.String> [instr:key], <java.util.List> [ctx:args]) -> <net.minecraft.network.chat.MutableComponent>
   = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.createTranslatableComponent([instr:key], [ctx:args]);
 
+// null when the selector matched more than one entity (vanilla ERROR_NOT_SINGLE_ENTITY)
 ##PURE
-@LOAD_SCORE_TEXT(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.util.List> [ctx:entities], <java.lang.String> [instr:objective]) -> <net.minecraft.network.chat.Component>
-  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getScoreText([static:MinecraftServer], [ctx:entities], [instr:objective]);
+@LOAD_SCORE_TEXT(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.util.List> [ctx:entities], <java.lang.String> [instr:objective], <java.lang.String> [instr:holder_source]) -> <net.minecraft.network.chat.Component>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getScoreText([static:MinecraftServer], [ctx:entities], [instr:objective], [instr:holder_source]);
 
 ##PURE
 @COPY_TEXT(<net.minecraft.network.chat.Component> [ctx:text]) -> <net.minecraft.network.chat.MutableComponent> = [ctx:text].copy();
@@ -739,8 +816,8 @@
 }
 
 // playsound
-@PLAY_SOUND_TO_ALL(<java.util.List<net.minecraft.world.entity.Entity> > [ctx:entities], <java.lang.String> [instr:sound], <java.lang.String> [instr:source], <net.minecraft.world.phys.Vec3> [ctx:pos], double [ctx:volume], double [ctx:pitch], double [ctx:min_volume]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.playSoundToAll([ctx:entities], [instr:sound], [instr:source], [ctx:pos], [ctx:volume], [ctx:pitch], [ctx:min_volume]);
+@PLAY_SOUND_TO_ALL(<net.minecraft.server.level.ServerLevel> [ctx:world], <java.util.List<net.minecraft.world.entity.Entity> > [ctx:entities], <java.lang.String> [instr:sound], <java.lang.String> [instr:source], <net.minecraft.world.phys.Vec3> [ctx:pos], double [ctx:volume], double [ctx:pitch], double [ctx:min_volume]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.playSoundToAll([ctx:world], [ctx:entities], [instr:sound], [instr:source], [ctx:pos], [ctx:volume], [ctx:pitch], [ctx:min_volume]);
 }
 
 // summon
@@ -753,9 +830,9 @@
 }
 
 // effect
-@EFFECT_GIVE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.entity.Entity> [ctx:source_entity], <java.lang.String> [instr:effect_id], int [instr:duration_ticks], int [instr:amplifier], boolean [instr:hide_particles]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.effectGive([ctx:entity], [ctx:source_entity], [static:MinecraftServer], [instr:effect_id], [instr:duration_ticks], [instr:amplifier], [instr:hide_particles]);
-}
+// 1 when the effect was applied (vanilla counts these per target)
+@EFFECT_GIVE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.world.entity.Entity> [ctx:entity], <net.minecraft.world.entity.Entity> [ctx:source_entity], <java.lang.String> [instr:effect_id], int [instr:seconds], int [instr:amplifier], boolean [instr:hide_particles]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.effectGive([ctx:entity], [ctx:source_entity], [static:MinecraftServer], [instr:effect_id], [instr:seconds], [instr:amplifier], [instr:hide_particles]);
 @EFFECT_CLEAR_ALL(<net.minecraft.world.entity.Entity> [ctx:entity]) {
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.effectClearAll([ctx:entity]);
 }
@@ -767,11 +844,12 @@
 @TELEPORT_TO_ENTITY(mut <net.minecraft.world.entity.Entity> [ctx:target], <net.minecraft.world.entity.Entity> [ctx:destination]) {
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teleportToEntity([ctx:target], [ctx:destination]);
 }
-@TELEPORT_TO_POS(mut <net.minecraft.world.entity.Entity> [ctx:target], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:pos]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teleportToPos([ctx:target], [ctx:world], [ctx:pos]);
+// rel_flags: ExtensionFunctions.TP_REL_* bits (which destination/rotation components were relative)
+@TELEPORT_TO_POS(mut <net.minecraft.world.entity.Entity> [ctx:target], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:pos], int [instr:rel_flags]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teleportToPos([ctx:target], [ctx:world], [ctx:pos], [instr:rel_flags]);
 }
-@TELEPORT_TO_POS_ROT(mut <net.minecraft.world.entity.Entity> [ctx:target], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:pos], float [ctx:yaw], float [ctx:pitch]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teleportToPosRot([ctx:target], [ctx:world], [ctx:pos], [ctx:yaw], [ctx:pitch]);
+@TELEPORT_TO_POS_ROT(mut <net.minecraft.world.entity.Entity> [ctx:target], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:pos], float [ctx:yaw], float [ctx:pitch], int [instr:rel_flags]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teleportToPosRot([ctx:target], [ctx:world], [ctx:pos], [ctx:yaw], [ctx:pitch], [instr:rel_flags]);
 }
 
 // clear
@@ -795,11 +873,11 @@
 @SPAWN_PARTICLE_SIMPLE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:particle], <net.minecraft.world.phys.Vec3> [ctx:pos]) {
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.spawnParticleSimple([static:MinecraftServer], [ctx:world], [instr:particle], [ctx:pos]);
 }
-@SPAWN_PARTICLE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:particle], <net.minecraft.world.phys.Vec3> [ctx:pos], <net.minecraft.world.phys.Vec3> [ctx:delta], double [ctx:speed], int [ctx:count]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.spawnParticle([static:MinecraftServer], [ctx:world], [instr:particle], [ctx:pos], [ctx:delta], [ctx:speed], [ctx:count]);
+@SPAWN_PARTICLE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:particle], <net.minecraft.world.phys.Vec3> [ctx:pos], <net.minecraft.world.phys.Vec3> [ctx:delta], double [ctx:speed], int [ctx:count], boolean [instr:force]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.spawnParticle([static:MinecraftServer], [ctx:world], [instr:particle], [ctx:pos], [ctx:delta], [ctx:speed], [ctx:count], [instr:force]);
 }
-@SPAWN_PARTICLE_FOR_PLAYERS(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:particle], <net.minecraft.world.phys.Vec3> [ctx:pos], <net.minecraft.world.phys.Vec3> [ctx:delta], double [ctx:speed], int [ctx:count], <java.util.List<net.minecraft.world.entity.Entity> > [ctx:viewers]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.spawnParticleForPlayers([static:MinecraftServer], [ctx:world], [instr:particle], [ctx:pos], [ctx:delta], [ctx:speed], [ctx:count], [ctx:viewers]);
+@SPAWN_PARTICLE_FOR_PLAYERS(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:particle], <net.minecraft.world.phys.Vec3> [ctx:pos], <net.minecraft.world.phys.Vec3> [ctx:delta], double [ctx:speed], int [ctx:count], boolean [instr:force], <java.util.List<net.minecraft.world.entity.Entity> > [ctx:viewers]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.spawnParticleForPlayers([static:MinecraftServer], [ctx:world], [instr:particle], [ctx:pos], [ctx:delta], [ctx:speed], [ctx:count], [instr:force], [ctx:viewers]);
 }
 
 // team
@@ -834,51 +912,41 @@
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teamModify([static:MinecraftServer], [instr:team], [instr:option], [instr:value]);
 }
 
-// recipe
-@RECIPE_GIVE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:recipe]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.recipeGive([static:MinecraftServer], [ctx:player], [instr:recipe]);
-}
-@RECIPE_TAKE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:recipe]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.recipeTake([static:MinecraftServer], [ctx:player], [instr:recipe]);
-}
-@RECIPE_GIVE_ALL(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.recipeGiveAll([static:MinecraftServer], [ctx:player]);
-}
-@RECIPE_TAKE_ALL(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.recipeTakeAll([static:MinecraftServer], [ctx:player]);
-}
+// recipe: per-player number of recipes awarded/reset (vanilla sums these)
+@RECIPE_GIVE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:recipe]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.recipeGive([static:MinecraftServer], [ctx:player], [instr:recipe]);
+@RECIPE_TAKE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player], <java.lang.String> [instr:recipe]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.recipeTake([static:MinecraftServer], [ctx:player], [instr:recipe]);
+@RECIPE_GIVE_ALL(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.recipeGiveAll([static:MinecraftServer], [ctx:player]);
+@RECIPE_TAKE_ALL(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerPlayer> [ctx:player]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.recipeTakeAll([static:MinecraftServer], [ctx:player]);
 
-// time
-@SET_TIME(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], int [ctx:time]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setTime([static:MinecraftServer], [ctx:world], [ctx:time]);
-}
+// time: compiled-function return encoding (1L << 32 = vanilla failure, else the result in the low 32 bits)
+@SET_TIME(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], int [ctx:time]) -> long
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setTime([static:MinecraftServer], [ctx:world], [ctx:time]);
 
-@SET_TIME_TO_MARKER(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:time_marker_id]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setTimeToMarker([static:MinecraftServer], [ctx:world], [instr:time_marker_id]);
-}
+@SET_TIME_TO_MARKER(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:time_marker_id]) -> long
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setTimeToMarker([static:MinecraftServer], [ctx:world], [instr:time_marker_id]);
 
-@ADD_TIME(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], int [ctx:time]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.addTime([static:MinecraftServer], [ctx:world], [ctx:time]);
-}
+@ADD_TIME(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], int [ctx:time]) -> long
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.addTime([static:MinecraftServer], [ctx:world], [ctx:time]);
 
-@SET_TIME_RATE(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], float [ctx:rate]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setTimeRate([static:MinecraftServer], [ctx:world], [ctx:rate]);
-}
+@SET_TIME_RATE(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], float [ctx:rate]) -> long
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setTimeRate([static:MinecraftServer], [ctx:world], [ctx:rate]);
 
-@SET_TIME_PAUSED(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], boolean [instr:paused]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setTimePaused([static:MinecraftServer], [ctx:world], [instr:paused]);
-}
+@SET_TIME_PAUSED(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], boolean [instr:paused]) -> long
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setTimePaused([static:MinecraftServer], [ctx:world], [instr:paused]);
 
+// compiled-function return encoding: 1L << 32 = failure (no default clock), else the time in the low 32 bits
 ##PURE
-@QUERY_TIME(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world]) -> int
+@QUERY_TIME(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world]) -> long
   = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.queryTime([static:MinecraftServer], [ctx:world]);
 
-##PURE
-@QUERY_TIMELINE_TICKS(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:timeline_id]) -> int
+@QUERY_TIMELINE_TICKS(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:timeline_id]) -> long
   = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.queryTimelineTicks([static:MinecraftServer], [ctx:world], [instr:timeline_id]);
 
-##PURE
-@QUERY_TIMELINE_REPETITIONS(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:timeline_id]) -> int
+@QUERY_TIMELINE_REPETITIONS(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:timeline_id]) -> long
   = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.queryTimelineRepetitions([static:MinecraftServer], [ctx:world], [instr:timeline_id]);
 
 ##PURE
@@ -890,14 +958,12 @@
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.scheduleFunction([static:MinecraftServer], [instr:function], [ctx:time], [instr:append]);
 }
 
-@SCHEDULE_CLEAR_FUNCTION(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:function]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.scheduleClear([static:MinecraftServer], [instr:function]);
-}
+@SCHEDULE_CLEAR_FUNCTION(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:function]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.scheduleClear([static:MinecraftServer], [instr:function]);
 
-// gamerule
-@SET_GAMERULE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:rule], <java.lang.String> [instr:value]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setGamerule([static:MinecraftServer], [instr:rule], [instr:value]);
-}
+// gamerule: compiled-function return encoding (failure = unknown rule, bad value or unchanged value)
+@SET_GAMERULE(mut <net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:rule], <java.lang.String> [instr:value]) -> long
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.setGamerule([static:MinecraftServer], [instr:rule], [instr:value]);
 
 ##PURE
 @QUERY_GAMERULE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:rule]) -> int
@@ -920,8 +986,16 @@
 // vanilla fallback where the command string is built at runtime (e.g. to
 // resolve $(...) macro placeholders in a raw fallback).
 @EXECUTE_VANILLA_COMMAND_DYNAMIC(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <java.lang.String> [ctx:command]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.executeVanillaCommand([ctx:stack], [ctx:command]);
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.executeVanillaCommandDynamic([ctx:stack], [ctx:command]);
 }
+
+// vanilla fallback whose brigadier result is needed (store/return contexts).
+// Returns the compiled-function return encoding: failure = 1L << 32, success = result in the low 32 bits.
+@EXECUTE_VANILLA_COMMAND_WITH_RESULT(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <java.lang.String> [instr:command]) -> long
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.executeVanillaCommandWithResult([ctx:stack], [instr:command]);
+
+@EXECUTE_VANILLA_COMMAND_WITH_RESULT_DYNAMIC(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <java.lang.String> [ctx:command]) -> long
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.executeVanillaCommandWithResultDynamic([ctx:stack], [ctx:command]);
 
 // scoreboard objectives
 @REMOVE_OBJECTIVE(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [instr:objective]) {
@@ -950,17 +1024,14 @@
 }
 
 // NBT list prepend / append (используют CollectionTag.addTag)
-##CONDITIONAL_JUMP
 @NBT_LIST_PREPEND(mut <net.minecraft.nbt.ListTag> [ctx:list], <net.minecraft.nbt.Tag> [ctx:value], label [ctx:fail_label]) {
   _jumpIfEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.nbtListPrepend([ctx:list], [ctx:value]), false, [ctx:fail_label]);
 }
 
-##CONDITIONAL_JUMP
 @NBT_LIST_APPEND(mut <net.minecraft.nbt.ListTag> [ctx:list], <net.minecraft.nbt.Tag> [ctx:value], label [ctx:fail_label]) {
   _jumpIfEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.nbtListAppend([ctx:list], [ctx:value]), false, [ctx:fail_label]);
 }
 
-##CONDITIONAL_JUMP
 @NBT_LIST_INSERT(mut <net.minecraft.nbt.ListTag> [ctx:list], int [ctx:index], <net.minecraft.nbt.Tag> [ctx:value], label [ctx:fail_label]) {
   _jumpIfEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.nbtListInsert([ctx:list], [ctx:index], [ctx:value]), false, [ctx:fail_label]);
 }
@@ -970,36 +1041,56 @@
 @GET_DIMENSION_LEVEL(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:dimension]) -> <net.minecraft.server.level.ServerLevel>
   = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getDimensionLevel([static:MinecraftServer], [instr:dimension]);
 
-// execute if block / block tag check
+// execute in <dimension>: vanilla CommandSourceStack.withLevel scales X/Z by the teleportation scale
 ##PURE
-@CHECK_BLOCK(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:position], <java.lang.String> [instr:block]) -> boolean
+@SCALE_POSITION_FOR_LEVEL(<net.minecraft.server.level.ServerLevel> [ctx:from], <net.minecraft.server.level.ServerLevel> [ctx:to], <net.minecraft.world.phys.Vec3> [ctx:position]) -> <net.minecraft.world.phys.Vec3>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.scalePositionForLevel([ctx:from], [ctx:to], [ctx:position]);
+
+// execute if|unless loaded <pos>: 1 = chunk entity-ticking, 0 = not
+@IS_BLOCK_LOADED(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:position]) -> int
+  = to_integer(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.isBlockLoaded([ctx:world], [ctx:position]));
+
+// execute if|unless biome <pos> <biome>: 1 = match, 0 = no match, -1 = not loaded / outside the world (both fail)
+@CHECK_BIOME(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:position], <java.lang.String> [instr:biome]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.checkBiome([ctx:world], [ctx:position], [instr:biome]);
+
+// execute if block / block tag check: 1 = match, 0 = no match, -1 = vanilla error
+// (unloaded chunk / outside the world / bad predicate): both `if` and `unless` fail.
+##PURE
+@CHECK_BLOCK(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:position], <java.lang.String> [instr:block]) -> int
   = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.checkBlock([ctx:world], [ctx:position], [instr:block]);
 
-// execute on leasher / attacker / controller / owner
+// execute on leasher / attacker / controller / owner / passengers (removed entities dropped, like vanilla)
 ##PURE
 @GET_ENTITY_LEASH_HOLDER(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.world.entity.Entity>
-  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getEntityLeashHolder([ctx:entity]);
+  = <dev.epicpix.minecraftfunctioncompiler.mod.EntitySelection>.leasher([ctx:entity]);
 
 ##PURE
 @GET_ENTITY_LAST_ATTACKER(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.world.entity.Entity>
-  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getEntityLastAttacker([ctx:entity]);
+  = <dev.epicpix.minecraftfunctioncompiler.mod.EntitySelection>.attacker([ctx:entity]);
 
 ##PURE
 @GET_ENTITY_CONTROLLER(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.world.entity.Entity>
-  = [ctx:entity].getControllingPassenger();
+  = <dev.epicpix.minecraftfunctioncompiler.mod.EntitySelection>.controller([ctx:entity]);
 
 ##PURE
 @GET_ENTITY_OWNER(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.world.entity.Entity>
-  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getEntityOwner([ctx:entity]);
+  = <dev.epicpix.minecraftfunctioncompiler.mod.EntitySelection>.owner([ctx:entity]);
 
 ##PURE
 @GET_ENTITY_PASSENGERS(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <java.util.List<net.minecraft.world.entity.Entity> >
-  = [ctx:entity].getPassengers();
+  = <dev.epicpix.minecraftfunctioncompiler.mod.EntitySelection>.passengers([ctx:entity]);
 
-// data get entity/storage — конвертация Tag в число с масштабом
+// data get entity/storage <path> — vanilla getData (numbers floored; sizes; string length)
 ##PURE
-@NBT_TAG_TO_INT(<net.minecraft.nbt.Tag> [ctx:tag], double [instr:scale]) -> int
-  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.nbtTagToInt([ctx:tag], [instr:scale]);
+@NBT_TAG_TO_INT(<net.minecraft.nbt.Tag> [ctx:tag]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.nbtTagToInt([ctx:tag]);
+
+// data get entity/storage <path> <scale> — vanilla getNumeric: non-numeric tags fail
+@NBT_NUMERIC_TO_INT_SCALED(<net.minecraft.nbt.Tag> [ctx:tag], double [instr:scale], label [ctx:fail_label]) -> int {
+  _jumpIfEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.isNumericTag([ctx:tag]), false, [ctx:fail_label]);
+  return <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.nbtNumericToIntScaled([ctx:tag], [instr:scale]);
+}
 
 // ScoreText с именованным score holder (не selector)
 ##PURE
@@ -1007,7 +1098,6 @@
   = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getScoreTextNamed([static:MinecraftServer], [instr:holder_name], [instr:objective]);
 
 // Поиск первого NBT элемента в списке по compound-фильтру (для ArrayIndexCompound NBT path)
-##CONDITIONAL_JUMP
 @FIND_FIRST_NBT_MATCHING_COMPOUND(<net.minecraft.nbt.ListTag> [ctx:list], <net.minecraft.nbt.CompoundTag> [ctx:filter], label [ctx:fail_label]) -> <net.minecraft.nbt.Tag> {
   [local:result] = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.findFirstNbtMatchingCompound([ctx:list], [ctx:filter]);
   if([local:result] == null) _jump([ctx:fail_label]);
@@ -1015,19 +1105,26 @@
 }
 
 // CompoundCheck фильтр — проверяет что текущий тег совпадает с фильтром
-##CONDITIONAL_JUMP
 @CHECK_NBT_COMPOUND_FILTER(<net.minecraft.nbt.Tag> [ctx:tag], <net.minecraft.nbt.CompoundTag> [ctx:filter], label [ctx:fail_label]) {
   _jumpIfEqual(<dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.matchesNbtFilter([ctx:tag], [ctx:filter]), false, [ctx:fail_label]);
 }
 
-// NbtText — получить NBT значение из storage как Component
+// NbtText (vanilla NbtContents): storage / entity sources, plain or rich rendering, or interpreted
 ##PURE
-@GET_NBT_TEXT(<net.minecraft.world.level.storage.CommandStorage> [static:CommandStorage], <java.lang.String> [instr:storage_name], <java.lang.String> [instr:path]) -> <net.minecraft.network.chat.Component>
-  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getNbtText([static:CommandStorage], [instr:storage_name], [instr:path]);
+@GET_NBT_TEXT(<net.minecraft.world.level.storage.CommandStorage> [static:CommandStorage], <java.lang.String> [instr:storage_name], <java.lang.String> [instr:path], boolean [instr:plain], <net.minecraft.network.chat.Component> [ctx:separator]) -> <net.minecraft.network.chat.Component>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getNbtText([static:CommandStorage], [instr:storage_name], [instr:path], [instr:plain], [ctx:separator]);
 
 ##PURE
-@GET_ENTITY_NBT_TEXT(<java.util.List> [ctx:entities], <java.lang.String> [instr:path]) -> <net.minecraft.network.chat.Component>
-  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getEntityNbtText([ctx:entities], [instr:path]);
+@GET_NBT_TEXT_INTERPRETED(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <net.minecraft.world.level.storage.CommandStorage> [static:CommandStorage], <java.lang.String> [instr:storage_name], <java.lang.String> [instr:path], <net.minecraft.network.chat.Component> [ctx:separator]) -> <net.minecraft.network.chat.Component>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getNbtTextInterpreted([ctx:stack], [static:CommandStorage], [instr:storage_name], [instr:path], [ctx:separator]);
+
+##PURE
+@GET_ENTITY_NBT_TEXT(<java.util.List> [ctx:entities], <java.lang.String> [instr:path], boolean [instr:plain], <net.minecraft.network.chat.Component> [ctx:separator]) -> <net.minecraft.network.chat.Component>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getEntityNbtText([ctx:entities], [instr:path], [instr:plain], [ctx:separator]);
+
+##PURE
+@GET_ENTITY_NBT_TEXT_INTERPRETED(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <java.util.List> [ctx:entities], <java.lang.String> [instr:path], <net.minecraft.network.chat.Component> [ctx:separator]) -> <net.minecraft.network.chat.Component>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getEntityNbtTextInterpreted([ctx:stack], [ctx:entities], [instr:path], [ctx:separator]);
 
 // scoreboard objectives setdisplay
 @SCOREBOARD_SETDISPLAY_CLEAR(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <java.lang.String> [instr:slot]) {
@@ -1066,13 +1163,12 @@
 }
 
 // random commands
-##PURE
 @RANDOM_VALUE(<net.minecraft.server.level.ServerLevel> [ctx:world], int [instr:min], int [instr:max]) -> int
   = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.randomValue([ctx:world], [instr:min], [instr:max]);
 
-##PURE
-@RANDOM_VALUE_SEQUENCE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], int [instr:min], int [instr:max], <java.lang.String> [instr:sequence]) -> int
-  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.randomValueSequence([static:MinecraftServer], [instr:min], [instr:max], [instr:sequence]);
+// random roll <range> <sequence>: announced to every player (not PURE: consumes the sequence and broadcasts)
+@RANDOM_ROLL_SEQUENCE(<net.minecraft.commands.CommandSourceStack> [ctx:stack], int [instr:min], int [instr:max], <java.lang.String> [instr:sequence]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.randomRollSequence([ctx:stack], [instr:min], [instr:max], [instr:sequence]);
 
 @RANDOM_RESET_SEQUENCE(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <java.lang.String> [instr:sequence]) {
   <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.randomResetSequence([static:MinecraftServer], [ctx:world], [instr:sequence]);
@@ -1094,13 +1190,13 @@
 @FILL_BLOCKS_FILTER(<net.minecraft.server.MinecraftServer> [static:MinecraftServer], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:from], <net.minecraft.world.phys.Vec3> [ctx:to], <java.lang.String> [instr:block], <java.lang.String> [instr:filter]) -> int
   = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.fillBlocks([static:MinecraftServer], [ctx:world], [ctx:from], [ctx:to], [instr:block], 1, [instr:filter]);
 
-// teleport facing
-@TELEPORT_FACING_POS(mut <net.minecraft.world.entity.Entity> [ctx:target], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:pos], <net.minecraft.world.phys.Vec3> [ctx:facing_pos]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teleportFacingPos([ctx:target], [ctx:world], [ctx:pos], [ctx:facing_pos]);
+// teleport facing: rel_flags = ExtensionFunctions.TP_REL_* bits; source_anchor = ExtensionFunctions.TP_SOURCE_ANCHOR_*
+@TELEPORT_FACING_POS(mut <net.minecraft.world.entity.Entity> [ctx:target], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:pos], int [instr:rel_flags], <net.minecraft.commands.CommandSourceStack> [ctx:stack], int [instr:source_anchor], <net.minecraft.world.phys.Vec3> [ctx:facing_pos]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teleportFacingPos([ctx:target], [ctx:world], [ctx:pos], [instr:rel_flags], [ctx:stack], [instr:source_anchor], [ctx:facing_pos]);
 }
 
-@TELEPORT_FACING_ENTITY(mut <net.minecraft.world.entity.Entity> [ctx:target], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:pos], <net.minecraft.world.entity.Entity> [ctx:facing_entity], boolean [instr:use_eyes]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teleportFacingEntity([ctx:target], [ctx:world], [ctx:pos], [ctx:facing_entity], [instr:use_eyes]);
+@TELEPORT_FACING_ENTITY(mut <net.minecraft.world.entity.Entity> [ctx:target], <net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:pos], int [instr:rel_flags], <net.minecraft.commands.CommandSourceStack> [ctx:stack], int [instr:source_anchor], <net.minecraft.world.entity.Entity> [ctx:facing_entity], boolean [instr:use_eyes]) {
+  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.teleportFacingEntity([ctx:target], [ctx:world], [ctx:pos], [instr:rel_flags], [ctx:stack], [instr:source_anchor], [ctx:facing_entity], [instr:use_eyes]);
 }
 
 // data merge entity
@@ -1118,7 +1214,6 @@
 }
 
 // execute summon
-##PURE
 @EXECUTE_SUMMON(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <java.lang.String> [instr:entity_type]) -> <net.minecraft.world.entity.Entity>
   = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.executeSummon([ctx:stack], [instr:entity_type]);
 

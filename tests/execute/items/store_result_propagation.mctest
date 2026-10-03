@@ -1,0 +1,36 @@
+; `execute if|unless items` terminal clauses run through the vanilla fallback; their vanilla
+; result/success must reach `execute store` and `return run`.
+@setup
+objective create t dummy
+
+@function run
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_items"],equipment:{mainhand:{id:"minecraft:stone",count:5}}}
+execute store result score if_result t if items entity @e[tag=mcfc_items] weapon.mainhand minecraft:stone
+execute store success score if_success t if items entity @e[tag=mcfc_items] weapon.mainhand minecraft:stone
+execute store result score miss_result t if items entity @e[tag=mcfc_items] weapon.mainhand minecraft:dirt
+execute store success score miss_success t if items entity @e[tag=mcfc_items] weapon.mainhand minecraft:dirt
+execute store result score unless_result t unless items entity @e[tag=mcfc_items] weapon.mainhand minecraft:dirt
+execute store success score unless_success t unless items entity @e[tag=mcfc_items] weapon.mainhand minecraft:stone
+execute store success score no_entity_success t unless items entity @e[tag=mcfc_absent] weapon.mainhand minecraft:stone
+execute store result storage mcfc:test count int 1 if items entity @e[tag=mcfc_items] weapon.mainhand minecraft:stone
+execute if data storage mcfc:test {count:5} run scoreboard players set storage_result t 1
+execute store result score return_result t run function mcfc-test:count_stone
+execute store success score return_fail t run function mcfc-test:count_dirt
+
+@function count_stone
+return run execute if items entity @e[tag=mcfc_items] weapon.mainhand minecraft:stone
+
+@function count_dirt
+return run execute if items entity @e[tag=mcfc_items] weapon.mainhand minecraft:dirt
+
+@validate
+score if_result t is 5
+score if_success t is 1
+score miss_result t is 0
+score miss_success t is 0
+score unless_result t is 1
+score unless_success t is 0
+score no_entity_success t is 0
+score storage_result t is 1
+score return_result t is 5
+score return_fail t is 0

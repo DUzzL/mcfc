@@ -1,0 +1,57 @@
+; C10/C6/C7: `execute store` writes once per execution of the final command (last execution wins),
+; never when nothing executed, 0 on failure; terminal if/unless score|entity report vanilla values.
+@setup
+objective create t dummy
+
+@function run
+scoreboard players set #cnt t 0
+scoreboard players set #cnt2 t 0
+scoreboard players set #sum t 0
+scoreboard players set #cond t 0
+scoreboard players set #v t 5
+scoreboard players set #zero t 0
+scoreboard players set #k t 5
+scoreboard players set not_run_cond t 42
+execute store success score not_run_cond t if score #cond t matches 1 run scoreboard players set #x t 1
+scoreboard players set not_run_as t 42
+execute store result score not_run_as t as @e[tag=mcfc_store_none] run scoreboard players set #x t 1
+scoreboard players set not_run_void t 42
+execute store result score not_run_void t run function mcfc-test:no_return
+execute store result score if_score_result t if score #v t matches 5
+execute store result score if_score_zero t if score #cond t matches 0
+execute store result score unless_score_result t unless score #v t matches 4
+execute store success score unless_missing t unless score #missing t matches 4
+execute store success score unless_hit t unless score #v t matches 5
+execute store result score if_entity_none t if entity @e[tag=mcfc_store_none]
+execute store success score unless_entity_none t unless entity @e[tag=mcfc_store_none]
+execute store result score unless_entity_result t unless entity @e[tag=mcfc_store_none]
+execute store success score unless_run t unless entity @e[tag=mcfc_store_none] run scoreboard players set unless_ran t 1
+execute store success score failed_op t run scoreboard players operation #k t /= #zero t
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_store_m"]}
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_store_m"]}
+execute store result score last_wins t as @e[tag=mcfc_store_m] run scoreboard players add #cnt t 1
+execute as @e[tag=mcfc_store_m] store result score @s t run scoreboard players add #cnt2 t 1
+execute store result score per_entity_sum t run scoreboard players operation #sum t += @e[tag=mcfc_store_m] t
+kill @e[tag=mcfc_store_m]
+
+@function no_return
+scoreboard players set #nr t 1
+
+@validate
+score not_run_cond t is 42
+score not_run_as t is 42
+score not_run_void t is 42
+score if_score_result t is 1
+score if_score_zero t is 1
+score unless_score_result t is 1
+score unless_missing t is 1
+score unless_hit t is 0
+score if_entity_none t is 0
+score unless_entity_none t is 1
+score unless_entity_result t is 1
+score unless_run t is 1
+score unless_ran t is 1
+score failed_op t is 0
+score last_wins t is 2
+score #cnt t is 2
+score per_entity_sum t is 3

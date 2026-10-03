@@ -1,0 +1,16 @@
+; W2 ReviewRuntime[7]: `effect give` result = number of entities the effect was applied to; 0 = failure.
+@setup
+objective create t dummy
+
+@function run
+summon minecraft:pig ~ ~10 ~ {NoAI:1b,NoGravity:1b,Invulnerable:1b,Tags:["mcfc_eff_cnt"]}
+summon minecraft:pig ~ ~10 ~ {NoAI:1b,NoGravity:1b,Invulnerable:1b,Tags:["mcfc_eff_cnt"]}
+summon minecraft:marker ~ ~10 ~ {Tags:["mcfc_eff_cnt_m"]}
+execute store result score given t run effect give @e[tag=mcfc_eff_cnt] minecraft:glowing 10
+execute store success score marker t run effect give @e[tag=mcfc_eff_cnt_m] minecraft:glowing 10
+kill @e[tag=mcfc_eff_cnt]
+kill @e[tag=mcfc_eff_cnt_m]
+
+@validate
+score given t is 2
+score marker t is 0

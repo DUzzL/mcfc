@@ -9,7 +9,6 @@ data class ProcessorOptions(
     val project: String,
     val sourceSet: String,
     val minecraftVersion: MinecraftVersion?,
-    val isJarTask: Boolean,
     val commit: String,
     val version: String,
     val tests: List<TestInfo>?,
@@ -22,7 +21,6 @@ data class ProcessorOptions(
                 project = map["project"]!!,
                 sourceSet = map["source_set"]!!,
                 minecraftVersion = map["minecraft_version"]?.let { MinecraftVersion.parse(it) },
-                isJarTask = map["isJarTask"]!! == "true",
                 commit = map["commit"]!!,
                 version = map["version"]!!,
                 tests = map["tests"]?.let {
@@ -37,6 +35,7 @@ data class ProcessorOptions(
                                 File(it)
                             )
                         }
+                        .sortedBy { it.id }
                 },
             )
         }

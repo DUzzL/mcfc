@@ -1,0 +1,21 @@
+; Selector options must reach vanilla fallbacks verbatim (rotation filters were dropped and multi-objective
+; `scores` were written back as a repeated, invalid option by the old re-serialization).
+@setup
+objective create t dummy
+objective create a dummy
+objective create b dummy
+
+@function run
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_sel","mcfc_rot"],Rotation:[90f,0f]}
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_sel"],Rotation:[0f,0f]}
+scoreboard players set @e[tag=mcfc_rot] a 1
+scoreboard players set @e[tag=mcfc_sel] b 1
+item replace entity @e[tag=mcfc_sel,y_rotation=80..100] armor.head with minecraft:stone
+item replace entity @e[tag=mcfc_sel,scores={a=1,b=1}] weapon.mainhand with minecraft:dirt
+execute store result score rot t if items entity @e[tag=mcfc_sel] armor.head minecraft:stone
+execute store result score scores t if items entity @e[tag=mcfc_sel] weapon.mainhand minecraft:dirt
+kill @e[tag=mcfc_sel]
+
+@validate
+score rot t is 1
+score scores t is 1

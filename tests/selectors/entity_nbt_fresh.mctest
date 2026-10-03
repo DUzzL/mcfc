@@ -1,0 +1,17 @@
+; Entity NBT reads are never served from a stale cache: a native tp in the same tick is visible to data get.
+@setup
+objective create t dummy
+
+@function run
+execute summon minecraft:armor_stand run function mcfc-test:nbt_fresh
+
+@function nbt_fresh
+data merge entity @s {NoGravity:1b}
+execute store result score before t run data get entity @s Pos[1]
+tp @s ~ ~5 ~
+execute store result score after t run data get entity @s Pos[1]
+scoreboard players operation after t -= before t
+kill @s
+
+@validate
+score after t is 5

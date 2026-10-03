@@ -18,6 +18,5 @@ public final class CommonConstants {
     public static final ClassDesc DATA_CLASS = ClassDesc.ofInternalName("mcfc/function/data");
 
     public static final String EMIT_SERVER_FUNCTION_MANAGER_NAME = "_ServerFunctionManager";
-    public static final String RUN_RESULT_FIELD = "_FunctionResult";
 
 }

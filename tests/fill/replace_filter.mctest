@@ -1,0 +1,23 @@
+; RT-01: `fill ... replace <filter>` must test the filter on every position, not only when the
+; from-corner matches (it used to replace the whole region when the from-corner did not match).
+@setup
+objective create t dummy
+
+@function run
+fill ~ ~20 ~ ~2 ~20 ~2 minecraft:stone
+setblock ~1 ~20 ~1 minecraft:dirt
+execute store result score filled t run fill ~ ~20 ~ ~2 ~20 ~2 minecraft:glass replace minecraft:dirt
+execute if block ~1 ~20 ~1 minecraft:glass run scoreboard players set center_glass t 1
+execute if block ~ ~20 ~ minecraft:stone run scoreboard players set corner_stone t 1
+execute if block ~2 ~20 ~2 minecraft:stone run scoreboard players set far_corner_stone t 1
+execute store result score tag_filtered t run fill ~ ~20 ~ ~2 ~20 ~2 minecraft:dirt replace #minecraft:impermeable
+execute store success score none_matched t run fill ~ ~20 ~ ~2 ~20 ~2 minecraft:glass replace minecraft:diamond_block
+fill ~ ~20 ~ ~2 ~20 ~2 minecraft:air
+
+@validate
+score filled t is 1
+score center_glass t is 1
+score corner_stone t is 1
+score far_corner_stone t is 1
+score tag_filtered t is 1
+score none_matched t is 0

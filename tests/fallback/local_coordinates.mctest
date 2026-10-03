@@ -1,0 +1,15 @@
+; `^` local coordinates inside a vanilla-fallback condition must stay local (they were re-serialized as `~`).
+@setup
+objective create t dummy
+
+@function run
+scoreboard players set local_hit t 0
+scoreboard players set local_miss t 0
+setblock ~ 100 ~ minecraft:chest{Items:[{Slot:0b,id:"minecraft:stone",count:1}]}
+execute positioned ~2 100 ~ rotated 90 0 if data block ^ ^ ^2 Items[0] run scoreboard players set local_hit t 1
+execute positioned ~2 100 ~ rotated 90 0 unless data block ^ ^ ^2 Items[0] run scoreboard players set local_miss t 1
+setblock ~ 100 ~ minecraft:air
+
+@validate
+score local_hit t is 1
+score local_miss t is 0

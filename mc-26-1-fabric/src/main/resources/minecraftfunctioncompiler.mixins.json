@@ -6,7 +6,12 @@
   "mixins": [
     "CallFunctionMixin",
     "CommandsMixin",
+    "EntityLookupTypeIndexMixin",
     "MinecraftServerMixin",
+    "PlainTextFunctionMixin",
+    "PlayerScoresMixin",
+    "ScoreboardInvoker",
+    "ScoreboardMixin",
     "ServerFunctionLibraryMixin",
     "ServerFunctionManagerMixin"
   ],

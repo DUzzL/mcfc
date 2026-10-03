@@ -1,0 +1,31 @@
+; Once deep compiled recursion uses up the stack budget, a with-result call (`execute if function`,
+; `execute store … run function`) is handed to vanilla. Only the callee's own `return` may reach the caller,
+; like vanilla's function command: a callee that falls through is a failed condition and stores nothing,
+; whatever its last command returned.
+@setup
+objective create t dummy
+
+@function run
+scoreboard players set #n t 0
+scoreboard players set #hit t 0
+scoreboard players set #s t -1
+function mcfc-test:rec
+
+@function rec
+scoreboard players add #n t 1
+execute if function mcfc-test:no_return run scoreboard players add #hit t 1
+execute store result score #s t run function mcfc-test:no_return
+execute if function mcfc-test:returns run scoreboard players add #ret t 1
+execute if score #n t matches ..2999 run function mcfc-test:rec
+
+@function no_return
+scoreboard players add #c t 5
+
+@function returns
+scoreboard players add #c t 1
+return 1
+
+@validate
+score #n t is 3000
+score #hit t is 0
+score #ret t is 3000

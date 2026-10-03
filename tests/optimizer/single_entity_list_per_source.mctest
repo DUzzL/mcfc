@@ -1,0 +1,24 @@
+; Single-entity selector results (`limit=1` first-match scans, `if|unless entity`) are inlined without a list. Inside
+; an `as` fork loop the scan runs once per source, so every source must see its own fresh result.
+@setup
+objective create t dummy
+
+@function run
+scoreboard players set per_source t 0
+scoreboard players set per_source_none t 0
+scoreboard players set sum t 0
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_li_a"]}
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_li_a"]}
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_li_a","mcfc_li_b"],Rotation:[90f,0f]}
+execute as @e[tag=mcfc_li_a] if entity @e[tag=mcfc_li_b,limit=1] run scoreboard players add per_source t 1
+execute as @e[tag=mcfc_li_a] unless entity @e[tag=mcfc_li_none,limit=1] run scoreboard players add per_source_none t 1
+execute as @e[tag=mcfc_li_a] store result score @s t run data get entity @e[tag=mcfc_li_b,limit=1] Rotation[0]
+scoreboard players operation sum t += @e[tag=mcfc_li_a] t
+execute store result score yaw t run data get entity @e[tag=mcfc_li_b,limit=1] Rotation[0] 10
+kill @e[tag=mcfc_li_a]
+
+@validate
+score per_source t is 3
+score per_source_none t is 3
+score sum t is 270
+score yaw t is 900

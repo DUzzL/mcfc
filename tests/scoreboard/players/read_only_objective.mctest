@@ -1,0 +1,27 @@
+; RT-26: set/add/remove/operation on a read-only criterion (health) fail in ObjectiveArgument.getWritableObjective
+; before any score is created; `scoreboard players add <new> obj 0` creates the score (value 0) through one
+; access; `operation` reads and creates its source score.
+@setup
+objective create t dummy
+objective create d health
+
+@function run
+execute store success score ro_add t run scoreboard players add #ro d 1
+execute store success score ro_set t run scoreboard players set #ro d 1
+execute store success score ro_op t run scoreboard players operation #ro d += #one t
+execute store result score ro_created t if score #ro d matches ..2147483647
+scoreboard players add #new t 0
+execute store result score new_created t if score #new t matches 0
+scoreboard players operation #new t += #src t
+execute store result score src_created t if score #src t matches 0
+scoreboard players operation #self t += #self t
+execute store result score self_created t if score #self t matches 0
+
+@validate
+score ro_add t is 0
+score ro_set t is 0
+score ro_op t is 0
+score ro_created t is 0
+score new_created t is 1
+score src_created t is 1
+score self_created t is 1

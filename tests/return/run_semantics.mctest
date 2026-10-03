@@ -1,0 +1,45 @@
+; C22/C7/C6: `return run` returns the first execution's outcome (only the first source runs a plain command),
+; fails when nothing executed, and `unless entity` bodies run under result tracking.
+@setup
+objective create t dummy
+
+@function run
+scoreboard players set #cnt t 0
+scoreboard players set #cond t 0
+execute store success score cond_false_success t run function mcfc-test:ret_cond_false
+scoreboard players set cond_false_result t 42
+execute store result score cond_false_result t run function mcfc-test:ret_cond_false
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_ret_m"]}
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_ret_m"]}
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_ret_m"]}
+execute store result score multi_result t run function mcfc-test:ret_multi
+kill @e[tag=mcfc_ret_m]
+execute store result score unless_result t run function mcfc-test:ret_unless_entity
+execute store success score if_score_success t run function mcfc-test:ret_if_score
+execute store result score set_result t run function mcfc-test:ret_set
+
+@function ret_cond_false
+return run execute if score #cond t matches 1 run scoreboard players set #x t 1
+scoreboard players set after_return t 1
+
+@function ret_multi
+return run execute as @e[tag=mcfc_ret_m] run scoreboard players add #cnt t 1
+
+@function ret_unless_entity
+return run execute unless entity @e[tag=mcfc_ret_none] run scoreboard players set #ue t 7
+
+@function ret_if_score
+return run execute if score #cond t matches ..0
+
+@function ret_set
+return run scoreboard players set #rs t 4
+
+@validate
+score cond_false_success t is 0
+score cond_false_result t is 0
+score multi_result t is 1
+score #cnt t is 1
+score unless_result t is 7
+score #ue t is 7
+score if_score_success t is 1
+score set_result t is 4

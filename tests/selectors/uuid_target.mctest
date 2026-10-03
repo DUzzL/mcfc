@@ -1,0 +1,17 @@
+; UUID entity targets (plain and quoted) compile natively (they used to NPE on the null selector sort).
+@setup
+objective create t dummy
+
+@function run
+summon minecraft:marker ~ ~ ~ {UUID:[I;1,2,3,4]}
+tag 00000001-0000-0002-0000-000300000004 add mcfc_uuid
+tag "00000001-0000-0002-0000-000300000004" add mcfc_uuid_quoted
+execute store result score plain t if entity @e[type=minecraft:marker,tag=mcfc_uuid]
+execute store result score quoted t if entity @e[type=minecraft:marker,tag=mcfc_uuid_quoted]
+execute store success score missing t run tag 00000009-0000-0002-0000-000300000004 add mcfc_uuid
+kill 00000001-0000-0002-0000-000300000004
+
+@validate
+score plain t is 1
+score quoted t is 1
+score missing t is 0

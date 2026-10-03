@@ -1,0 +1,23 @@
+; x_rotation / y_rotation: bounds default to 0 and 359, are wrapped to [-180, 180), a wrapped min > max matches
+; across ±180, and the entity's rotation is wrapped too (EntitySelectorParser.createRotationPredicate).
+@setup
+objective create t dummy
+
+@function run
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_rot"],Rotation:[180f,0f]}
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_rot"],Rotation:[-170f,50f]}
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_rot"],Rotation:[10f,-30f]}
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_rot"],Rotation:[540f,20f]}
+execute store result score north t if entity @e[tag=mcfc_rot,y_rotation=135..225]
+execute store result score across t if entity @e[tag=mcfc_rot,y_rotation=170..190]
+execute store result score to45 t if entity @e[tag=mcfc_rot,y_rotation=..45]
+execute store result score pitch_from45 t if entity @e[tag=mcfc_rot,x_rotation=45..]
+execute store result score pitch_range t if entity @e[tag=mcfc_rot,x_rotation=-40..25]
+kill @e[tag=mcfc_rot]
+
+@validate
+score north t is 3
+score across t is 3
+score to45 t is 1
+score pitch_from45 t is 2
+score pitch_range t is 3

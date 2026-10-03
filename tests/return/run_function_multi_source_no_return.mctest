@@ -1,0 +1,29 @@
+;ReviewCompiler[0]: `return run execute as <multi> run function f` where f does not `return`:
+; vanilla's FallthroughTask after the first source's call fails the frame and discards the other calls.
+@setup
+objective create t dummy
+
+@function run
+scoreboard players set #calls t 0
+scoreboard players set #after t 0
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_rf"]}
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_rf"]}
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_rf"]}
+scoreboard players set success t 7
+execute store success score success t run function mcfc-test:outer
+scoreboard players set result t 7
+execute store result score result t run function mcfc-test:outer
+kill @e[tag=mcfc_rf]
+
+@function outer
+return run execute as @e[tag=mcfc_rf] run function mcfc-test:count
+scoreboard players set #after t 1
+
+@function count
+scoreboard players add #calls t 1
+
+@validate
+score #calls t is 2
+score #after t is 0
+score success t is 0
+score result t is 0

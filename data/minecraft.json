@@ -2,8 +2,6 @@
   "definition_file": "dev.epicpix.minecraftfunctioncompiler.mod.emitter.MappedUsageDefinitionsExtensions",
 
   "definitions_functions": {
-    "CommandSourceStack_withCallback": "net/minecraft/commands/CommandSourceStack:withCallback(Lnet/minecraft/commands/CommandResultCallback;)Lnet/minecraft/commands/CommandSourceStack;",
-
     "CollectionTag_addTag": "net/minecraft/nbt/CollectionTag:addTag(ILnet/minecraft/nbt/Tag;)Z",
     "ByteTag_valueOf": "net/minecraft/nbt/ByteTag:valueOf(B)Lnet/minecraft/nbt/ByteTag;",
     "CompoundTag_put": "net/minecraft/nbt/CompoundTag:put(Ljava/lang/String;Lnet/minecraft/nbt/Tag;)Lnet/minecraft/nbt/Tag;",
@@ -31,10 +29,6 @@
 
     "Registry_getValue": "net/minecraft/core/Registry:getValue(Lnet/minecraft/resources/Identifier;)Ljava/lang/Object;",
     "Registry_get": "net/minecraft/core/Registry:get(Lnet/minecraft/resources/Identifier;)Ljava/util/Optional;",
-
-    "ServerFunctionManager_execute": "net/minecraft/server/ServerFunctionManager:execute(Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;)V",
-
-    "ExtensionFunctions_executeFunction": "dev/epicpix/minecraftfunctioncompiler/mod/ExtensionFunctions:executeFunction(Lnet/minecraft/server/ServerFunctionManager;Lnet/minecraft/commands/functions/CommandFunction;Lnet/minecraft/commands/CommandSourceStack;Lnet/minecraft/nbt/CompoundTag;)V@N",
 
     "Identifier_fromNamespaceAndPath": "net/minecraft/resources/Identifier:fromNamespaceAndPath(Ljava/lang/String;Ljava/lang/String;)Lnet/minecraft/resources/Identifier;",
 

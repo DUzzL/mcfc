@@ -51,13 +51,13 @@ public class SimpleFunctionCompiler {
             results.add("function_low_level_instructions_txt", new JsonObject());
             results.add("class_files", new JsonArray());
 
-            var sources = FunctionCodeGenerator.loadFunctionSources(rawSources);
+            var diagnostics = new DiagnosticCollector();
+            var sources = FunctionCodeGenerator.loadFunctionSources(rawSources, diagnostics);
             for(var source : sources.entrySet()) {
                 var lines = jsonData(results, "function_sources", source.getKey(), JsonArray::new);
                 for(var line : source.getValue()) lines.add(line);
             }
-            var diagnostics = new DiagnosticCollector();
-            var parsed = FunctionCodeGenerator.parseFunctions(sources, functions -> List.of(), diagnostics);
+            var parsed = FunctionCodeGenerator.parseFunctions(sources, functions -> List.of(), diagnostics, () -> false);
             for(var parseRes : parsed.entrySet()) {
                 var commands = jsonData(results, "function_commands", parseRes.getKey(), JsonArray::new);
                 for(var command : parseRes.getValue()) {
@@ -66,26 +66,26 @@ public class SimpleFunctionCompiler {
                     commands.add(tree);
                 }
             }
-            var highLevel = FunctionCodeGenerator.compileFunctionsHighLevel(parsed, diagnostics, null, false);
-            var optimizedHighLevel = FunctionCodeGenerator.optimizeFunctionsHighLevel(highLevel, diagnostics, null, true);
+            var commandCounts = new HashMap<DataLocation, Integer>();
+            for(var entry : parsed.entrySet()) commandCounts.put(entry.getKey(), entry.getValue().size());
+            var planner = BatchClassPlanner.plan(commandCounts, 1);
+            var llFunctions = new java.util.concurrent.ConcurrentHashMap<String, List<BytecodeInstruction>>();
+            var optimizedHighLevel = new java.util.concurrent.ConcurrentHashMap<DataLocation, List<Instruction>>();
+            var env = new FunctionCodeGenerator.Environment(params, planner, planner.functions(),
+                new java.util.concurrent.atomic.LongAdder(), new java.util.concurrent.atomic.LongAdder(),
+                llFunctions, null, optimizedHighLevel);
+            var batchCompiler = new BatchCompiler(env, planner, parsed, diagnostics, null);
+            var classBytes = new ArrayList<byte[]>();
+            for(int i = 0; i < planner.batchClasses().size(); i++) {
+                classBytes.add(java.util.Objects.requireNonNull(batchCompiler.build(i, () -> false)).bytes());
+            }
             for(var compRes : optimizedHighLevel.entrySet()) {
                 var instructionsJson = jsonData(results, "function_high_level_instructions_json", compRes.getKey(), JsonArray::new);
                 instructionsJson.addAll(Instruction.generateInstructionsJson(compRes.getValue()));
                 var instructionsText = jsonData(results, "function_high_level_instructions_txt", compRes.getKey(), JsonArray::new);
                 Instruction.printInstructions(compRes.getValue(), instructionsText::add);
             }
-            var llFunctions = new HashMap<String, List<BytecodeInstruction>>();
-            var classBytes = new ArrayList<byte[]>();
-            for(var key : optimizedHighLevel.keySet()) {
-                classBytes.add(FunctionCodeGenerator.generateFunctionClass(
-                    params,
-                    key,
-                    optimizedHighLevel.get(key),
-                    optimizedHighLevel.keySet(),
-                    llFunctions
-                ));
-            }
-            classBytes.add(params.codeFieldStorage().generate(llFunctions));
+            classBytes.add(params.codeFieldStorage().generate(new HashMap<>(llFunctions)));
             for(var f : llFunctions.entrySet()) {
                 var instructionsJson = jsonData(results, "function_low_level_instructions_json", f.getKey(), JsonArray::new);
                 var instructionsText = jsonData(results, "function_low_level_instructions_txt", f.getKey(), JsonArray::new);

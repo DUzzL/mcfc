@@ -3,7 +3,6 @@ package dev.epicpix.minecraftfunctioncompiler.emitter.impl;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 
 import java.lang.constant.ClassDesc;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -12,8 +11,9 @@ public final class CodeFieldStorageStorageMap {
 
     private final Map<CodeFieldStorageMapKind<?>, CodeFieldStorageMapValue<?>> map;
 
-    // Per-kind: value -> stable insertion index (O(1) lookup, naturally thread-safe)
+    // Per-kind: value -> stable insertion index, and index -> value (O(1) both ways, naturally thread-safe)
     private final ConcurrentHashMap<CodeFieldStorageMapKind<?>, ConcurrentHashMap<Object, Integer>> storageMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<CodeFieldStorageMapKind<?>, ConcurrentHashMap<Integer, Object>> reverseMap = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<CodeFieldStorageMapKind<?>, AtomicInteger> counterMap = new ConcurrentHashMap<>();
 
     CodeFieldStorageStorageMap(Map<CodeFieldStorageMapKind<?>, CodeFieldStorageMapValue<?>> from) {
@@ -37,6 +37,10 @@ public final class CodeFieldStorageStorageMap {
         return storageMap.computeIfAbsent(key, _ -> new ConcurrentHashMap<>());
     }
 
+    private ConcurrentHashMap<Integer, Object> getReverseMap(CodeFieldStorageMapKind<?> key) {
+        return reverseMap.computeIfAbsent(key, _ -> new ConcurrentHashMap<>());
+    }
+
     private AtomicInteger getCounter(CodeFieldStorageMapKind<?> key) {
         return counterMap.computeIfAbsent(key, _ -> new AtomicInteger(0));
     }
@@ -51,24 +55,23 @@ public final class CodeFieldStorageStorageMap {
         var indexMap = getIndexMap(key);
         if(!indexMap.containsKey(value)) {
             // computeIfAbsent is atomic — only one thread assigns the index
-            indexMap.computeIfAbsent(value, _ -> getCounter(key).getAndIncrement());
+            indexMap.computeIfAbsent(value, _ -> {
+                int index = getCounter(key).getAndIncrement();
+                getReverseMap(key).put(index, value);
+                return index;
+            });
         }
     }
 
-    /**
-     * Returns values in stable insertion order for use during generate().
-     * Called single-threaded after all parallel compilation is complete.
-     */
-    @SuppressWarnings({"unchecked", "DataFlowIssue"})
-    public <T> ArrayList<T> getStorage(CodeFieldStorageMapKind<T> key) {
-        var indexMap = getIndexMap(key);
-        var result = new ArrayList<T>(indexMap.size());
-        // fill slots (overwritten below; every index is covered by indexMap values 0..size-1)
-        for(int i = 0; i < indexMap.size(); i++) result.add(null);
-        for(var entry : indexMap.entrySet()) {
-            result.set(entry.getValue(), (T) entry.getKey());
-        }
-        return result;
+    /** Number of registered values of this kind. Called single-threaded during generate(). */
+    public int storageSize(CodeFieldStorageMapKind<?> key) {
+        return getIndexMap(key).size();
+    }
+
+    /** Value with insertion index {@code index}. Called single-threaded during generate(). */
+    @SuppressWarnings("unchecked")
+    public <T> T valueAt(CodeFieldStorageMapKind<T> key, int index) {
+        return (T) java.util.Objects.requireNonNull(getReverseMap(key).get(index));
     }
 
 }

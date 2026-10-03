@@ -34,6 +34,11 @@ public final class MacroValidators {
         var matches = callExtensionFunctions_isValidCommandDouble(cw, source);
         cw.conditionalJump(JumpCondition.EQ, matches, new BytecodeValue.IntegerValue(0), failureLabel);
     };
+    /** Macro score holder must resolve to a plain name: selectors ('@…') and UUIDs resolve to entities in vanilla (PAR-08). */
+    public static final MacroValidator IS_PLAIN_SCORE_HOLDER_NAME = (source, cw, cf, failureLabel) -> {
+        var matches = dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callExtensionFunctions_isPlainScoreHolderName(cw, source);
+        cw.conditionalJump(JumpCondition.EQ, matches, new BytecodeValue.IntegerValue(0), failureLabel);
+    };
 
     public static MacroValidator checkIfNotContains(String check) {
         return (source, cw, cf, failureLabel) -> cw.conditionalJump(JumpCondition.NE, callString_contains(cw, source, new BytecodeValue.StringValue(check)), new BytecodeValue.IntegerValue(0), failureLabel);

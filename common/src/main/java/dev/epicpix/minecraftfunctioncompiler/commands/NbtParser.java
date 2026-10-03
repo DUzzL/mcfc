@@ -37,12 +37,17 @@ public final class NbtParser {
         return new DiagnosticException(Diagnostic.parseError(diagnosticId, reader.getSource(), reader.getString(), message));
     }
 
+    private static char peekOrEof(StringCommandReader reader, String what) {
+        if(!reader.canRead()) throw createError(reader, NBT_INVALID_SYNTAX, "Reached EOF while reading " + what);
+        return reader.peek();
+    }
+
     public static NbtValue.Compound readNbtCompound(StringCommandReader reader) {
         reader.skipWhitespace();
         if(!reader.canRead()) throw createError(reader, NBT_INVALID_SYNTAX, "Reached EOF while reading nbt list");
         if(!reader.skipIfNext('{')) throw createError(reader, NBT_INVALID_SYNTAX, "Expected '{' while reading nbt compound, but got '" + reader.peek() + "'");
         HashMap<String, NbtValue> valueMap = new HashMap<>();
-        while(reader.peek() != '}') {
+        while(peekOrEof(reader, "nbt compound") != '}') {
             reader.skipWhitespace();
             var key = reader.readString();
             if(key.isEmpty()) throw createError(reader, NBT_EMPTY_KEY, "Expected a non-empty nbt compound key while reading nbt compound");
@@ -52,7 +57,7 @@ public final class NbtParser {
             valueMap.put(key, value);
             reader.skipWhitespace();
             if(!reader.skipIfNext(',')) {
-                if(reader.peek() != '}') {
+                if(peekOrEof(reader, "nbt compound") != '}') {
                     throw createError(reader, NBT_INVALID_SYNTAX, "Expected ',' or '}' while reading nbt compound, but got '" + reader.peek() + "'");
                 }
             }
@@ -67,7 +72,7 @@ public final class NbtParser {
         if(!reader.canRead()) throw createError(reader, NBT_INVALID_SYNTAX, "Reached EOF while reading nbt list");
         if(!reader.skipIfNext('[')) throw createError(reader, NBT_INVALID_SYNTAX, "Expected '[' while reading nbt list, but got '" + reader.peek() + "'");
         ArrayList<NbtValue> valueList = new ArrayList<>();
-        while(reader.peek() != ']') {
+        while(peekOrEof(reader, "nbt list") != ']') {
             var value = readNbtValue(reader);
             if(!valueList.isEmpty() && value.getClass() != valueList.getFirst().getClass()) {
                 throw createError(reader, NBT_MISMATCHED_TYPE, "Expected " + valueList.getFirst().getClass().getSimpleName() + " nbt value, but got " + value.getClass().getSimpleName());
@@ -76,7 +81,7 @@ public final class NbtParser {
             }
             reader.skipWhitespace();
             if(!reader.skipIfNext(',')) {
-                if(reader.peek() != ']') {
+                if(peekOrEof(reader, "nbt list") != ']') {
                     throw createError(reader, NBT_INVALID_SYNTAX, "Expected ',' or ']' while reading nbt list, but got '" + reader.peek() + "'");
                 }
             }
@@ -98,7 +103,7 @@ public final class NbtParser {
         return switch(kind) {
             case 'B' -> {
                 ArrayList<Byte> byteList = new ArrayList<>();
-                while(reader.peek() != ']') {
+                while(peekOrEof(reader, "nbt byte array") != ']') {
                     var value = readNbtValue(reader);
                     if(value instanceof NbtValue.ByteLiteral(byte bValue)) {
                         byteList.add(bValue);
@@ -107,7 +112,7 @@ public final class NbtParser {
                     }
                     reader.skipWhitespace();
                     if(!reader.skipIfNext(',')) {
-                        if(reader.peek() != ']') {
+                        if(peekOrEof(reader, "nbt byte array") != ']') {
                             throw createError(reader, NBT_INVALID_SYNTAX, "Expected ',' or ']' while reading nbt byte array, but got '" + reader.peek() + "'");
                         }
                     }
@@ -120,7 +125,7 @@ public final class NbtParser {
             }
             case 'I' -> {
                 IntList intList = new IntArrayList();
-                while(reader.peek() != ']') {
+                while(peekOrEof(reader, "nbt int array") != ']') {
                     var value = readNbtValue(reader);
                     if(value instanceof NbtValue.IntegerLiteral(int iValue)) {
                         intList.add(iValue);
@@ -129,7 +134,7 @@ public final class NbtParser {
                     }
                     reader.skipWhitespace();
                     if(!reader.skipIfNext(',')) {
-                        if(reader.peek() != ']') {
+                        if(peekOrEof(reader, "nbt int array") != ']') {
                             throw createError(reader, NBT_INVALID_SYNTAX, "Expected ',' or ']' while reading nbt integer array, but got '" + reader.peek() + "'");
                         }
                     }
@@ -142,7 +147,7 @@ public final class NbtParser {
             }
             case 'L' -> {
                 LongList longList = new LongArrayList();
-                while(reader.peek() != ']') {
+                while(peekOrEof(reader, "nbt long array") != ']') {
                     var value = readNbtValue(reader);
                     if(value instanceof NbtValue.LongLiteral(long lValue)) {
                         longList.add(lValue);
@@ -151,7 +156,7 @@ public final class NbtParser {
                     }
                     reader.skipWhitespace();
                     if(!reader.skipIfNext(',')) {
-                        if(reader.peek() != ']') {
+                        if(peekOrEof(reader, "nbt long array") != ']') {
                             throw createError(reader, NBT_INVALID_SYNTAX, "Expected ',' or ']' while reading nbt long array, but got '" + reader.peek() + "'");
                         }
                     }
@@ -166,6 +171,7 @@ public final class NbtParser {
         };
     }
 
+    /** Decimal integer digits without leading zeros (vanilla rejects "01"). */
     private static boolean isIntegerLike(String str) {
         int index = 0;
         if(str.isEmpty()) return false;
@@ -182,6 +188,7 @@ public final class NbtParser {
         return true;
     }
 
+    /** Vanilla float literal: digits with optional '.', at least one digit, optional exponent with optional sign. */
     private static boolean isFloatLike(String str) {
         int index = 0;
         if(str.isEmpty()) return false;
@@ -203,21 +210,25 @@ public final class NbtParser {
         if(!wroteNumber) return false;
         if(index < str.length() && (str.charAt(index) == 'e' || str.charAt(index) == 'E')) {
             index++;
-            if(index >= str.length() || (str.charAt(index) != '-' && str.charAt(index) != '+')) return false;
-            index++;
+            if(index < str.length() && (str.charAt(index) == '-' || str.charAt(index) == '+')) index++;
+            int digitsStart = index;
             while(index < str.length()) {
                 char c = str.charAt(index);
-                if(c < '0' || c > '9') {
-                    return false;
-                }
+                if(c < '0' || c > '9') return false;
                 index++;
             }
+            if(index == digitsStart) return false;
         }
-        return true;
+        return index == str.length();
+    }
+
+    private static boolean startsNumber(char c) {
+        return c == '+' || c == '-' || c == '.' || (c >= '0' && c <= '9');
     }
 
     public static NbtValue readNbtValue(StringCommandReader reader) {
         reader.skipWhitespace();
+        if(!reader.canRead()) throw createError(reader, NBT_INVALID_SYNTAX, "Expected an nbt value");
         var peek = reader.peek();
         if(peek == '{') {
             return readNbtCompound(reader);
@@ -234,41 +245,45 @@ public final class NbtParser {
             }else if(testCase.equalsIgnoreCase("false")) {
                 return new NbtValue.ByteLiteral((byte) 0);
             }
-            char suffix = testCase.charAt(testCase.length() - 1);
-            try {
-                if(suffix == 'b' || suffix == 'B') {
-                    String check = testCase.substring(0, testCase.length() - 1);
-                    if(isIntegerLike(check)) {
-                        return new NbtValue.ByteLiteral(Byte.parseByte(check));
-                    }
-                }else if(suffix == 's' || suffix == 'S') {
-                    String check = testCase.substring(0, testCase.length() - 1);
-                    if(isIntegerLike(check)) {
-                        return new NbtValue.ShortLiteral(Short.parseShort(check));
-                    }
-                }else if(suffix == 'l' || suffix == 'L') {
-                    String check = testCase.substring(0, testCase.length() - 1);
-                    if(isIntegerLike(check)) {
-                        return new NbtValue.LongLiteral(Long.parseLong(check));
-                    }
-                }else if(isIntegerLike(testCase)) {
-                    return new NbtValue.IntegerLiteral(Integer.parseInt(testCase));
-                }else if(suffix == 'f' || suffix == 'F') {
-                    String check = testCase.substring(0, testCase.length() - 1);
-                    if(isFloatLike(check)) {
-                        return new NbtValue.FloatLiteral(Float.parseFloat(check));
-                    }
-                }else if(suffix == 'd' || suffix == 'D') {
-                    String check = testCase.substring(0, testCase.length() - 1);
-                    if(isFloatLike(check)) {
-                        return new NbtValue.DoubleLiteral(Double.parseDouble(check));
-                    }
-                }else if(isFloatLike(testCase)) {
-                    return new NbtValue.DoubleLiteral(Double.parseDouble(testCase));
-                }
-            }catch(NumberFormatException ignored) {}
-            return new NbtValue.StringLiteral(testCase);
+            // Vanilla: an unquoted token starting with [+-.0-9] must be a number (PAR-09/PAR-15).
+            if(!startsNumber(testCase.charAt(0))) return new NbtValue.StringLiteral(testCase);
+            var number = parseNumber(testCase);
+            if(number == null) throw createError(reader, NBT_INVALID_SYNTAX, "Unsupported or invalid nbt number: " + testCase);
+            return number;
         }
+    }
+
+    /** Plain decimal SNBT numbers; null for anything else (hex/binary/underscores/unsigned suffixes,
+     * out-of-range values, malformed tokens) so the command is left to vanilla. */
+    private static NbtValue parseNumber(String token) {
+        char suffix = Character.toLowerCase(token.charAt(token.length() - 1));
+        String body = token.substring(0, token.length() - 1);
+        try {
+            switch(suffix) {
+                case 'b' -> { if(isIntegerLike(body)) return new NbtValue.ByteLiteral(Byte.parseByte(body)); return null; }
+                case 's' -> { if(isIntegerLike(body)) return new NbtValue.ShortLiteral(Short.parseShort(body)); return null; }
+                case 'i' -> { if(isIntegerLike(body)) return new NbtValue.IntegerLiteral(Integer.parseInt(body)); return null; }
+                case 'l' -> { if(isIntegerLike(body)) return new NbtValue.LongLiteral(Long.parseLong(body)); return null; }
+                case 'f' -> {
+                    if(!isFloatLike(body)) return null;
+                    float f = Float.parseFloat(body);
+                    return Float.isFinite(f) ? new NbtValue.FloatLiteral(f) : null;
+                }
+                case 'd' -> {
+                    if(!isFloatLike(body)) return null;
+                    double d = Double.parseDouble(body);
+                    return Double.isFinite(d) ? new NbtValue.DoubleLiteral(d) : null;
+                }
+                default -> {}
+            }
+            if(isIntegerLike(token)) return new NbtValue.IntegerLiteral(Integer.parseInt(token));
+            // An unsuffixed float needs a '.' or an exponent; "01" is a (rejected) leading-zero integer.
+            if(isFloatLike(token) && (token.indexOf('.') >= 0 || token.indexOf('e') >= 0 || token.indexOf('E') >= 0)) {
+                double d = Double.parseDouble(token);
+                return Double.isFinite(d) ? new NbtValue.DoubleLiteral(d) : null;
+            }
+        }catch(NumberFormatException ignored) {}
+        return null;
     }
 
     private static NbtPathPart readNbtPathNode(StringCommandReader reader, boolean first) {
@@ -287,11 +302,11 @@ public final class NbtParser {
                     if(reader.peek() == '{') {
                         var compound = readNbtCompound(reader);
                         if(!reader.canRead()) throw createError(reader, NBT_INVALID_SYNTAX, "Reached EOF after compound array indexer while reading nbt path");
-                        if(reader.read() != ']' && !reader.canRead()) throw createError(reader, NBT_INVALID_SYNTAX, "Expected ']' after compound array indexer while reading nbt path");
+                        if(reader.read() != ']') throw createError(reader, NBT_INVALID_SYNTAX, "Expected ']' after compound array indexer while reading nbt path");
                         yield new NbtPathPart.ArrayIndexCompound(compound);
                     }else {
                         int index = reader.readInt();
-                        if(reader.read() != ']' && !reader.canRead()) throw createError(reader, NBT_INVALID_SYNTAX, "Expected ']' after integer array indexer while reading nbt path");
+                        if(!reader.canRead() || reader.read() != ']') throw createError(reader, NBT_INVALID_SYNTAX, "Expected ']' after integer array indexer while reading nbt path");
                         yield new NbtPathPart.ArrayIndexInteger(index);
                     }
                 }

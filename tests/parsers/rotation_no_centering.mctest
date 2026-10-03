@@ -1,0 +1,14 @@
+; RotationArgument never centers whole-number yaw/pitch.
+@setup
+objective create t dummy
+
+@function run
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_rot"]}
+execute as @e[tag=mcfc_rot] rotated 90 45 run tp @s ~ ~ ~ ~ ~
+execute store result score yaw t run data get entity @e[tag=mcfc_rot,limit=1] Rotation[0] 10
+execute store result score pitch t run data get entity @e[tag=mcfc_rot,limit=1] Rotation[1] 10
+kill @e[tag=mcfc_rot]
+
+@validate
+score yaw t is 900
+score pitch t is 450

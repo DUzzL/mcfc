@@ -213,17 +213,17 @@ private fun parseExpression(iter: ListIterator<LexToken>, valueDefinitions: List
 }
 
 private fun parseExpression1(iter: ListIterator<LexToken>, valueDefinitions: List<ParsedTokenValueAccessor>, usesObf: AtomicBoolean): ParsedTokenExpression {
-    var exp1 = parseExpression2(iter, valueDefinitions, usesObf)
+    var exp1 = parseExpression4(iter, valueDefinitions, usesObf)
     if(!iter.hasNext()) return exp1
     while(true) {
         exp1 = if(iter.tryNextTokenType(LexTokenSimpleType.LE)) {
-            ParsedTokenExpressionBinary(exp1, parseExpression2(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.LE)
+            ParsedTokenExpressionBinary(exp1, parseExpression4(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.LE)
         } else if(iter.tryNextTokenType(LexTokenSimpleType.OPEN_ANGLE_BRACKET)) {
-            ParsedTokenExpressionBinary(exp1, parseExpression2(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.LT)
+            ParsedTokenExpressionBinary(exp1, parseExpression4(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.LT)
         } else if(iter.tryNextTokenType(LexTokenSimpleType.GE)) {
-            ParsedTokenExpressionBinary(exp1, parseExpression2(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.GE)
+            ParsedTokenExpressionBinary(exp1, parseExpression4(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.GE)
         } else if(iter.tryNextTokenType(LexTokenSimpleType.CLOSE_ANGLE_BRACKET)) {
-            ParsedTokenExpressionBinary(exp1, parseExpression2(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.GT)
+            ParsedTokenExpressionBinary(exp1, parseExpression4(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.GT)
         }else {
             break
         }
@@ -247,15 +247,15 @@ private fun parseExpression2(iter: ListIterator<LexToken>, valueDefinitions: Lis
 }
 
 private fun parseExpression3(iter: ListIterator<LexToken>, valueDefinitions: List<ParsedTokenValueAccessor>, usesObf: AtomicBoolean): ParsedTokenExpression {
-    var exp1 = parseExpression4(iter, valueDefinitions, usesObf)
+    var exp1 = parseExpressionBase(iter, valueDefinitions, usesObf)
     if(!iter.hasNext()) return exp1
     while(true) {
         exp1 = if(iter.tryNextTokenType(LexTokenSimpleType.STAR)) {
-            ParsedTokenExpressionBinary(exp1, parseExpression4(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.MUL)
+            ParsedTokenExpressionBinary(exp1, parseExpressionBase(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.MUL)
         }else if(iter.tryNextTokenType(LexTokenSimpleType.SLASH)) {
-            ParsedTokenExpressionBinary(exp1, parseExpression4(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.DIV)
+            ParsedTokenExpressionBinary(exp1, parseExpressionBase(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.DIV)
         }else if(iter.tryNextTokenType(LexTokenSimpleType.PERCENT)) {
-            ParsedTokenExpressionBinary(exp1, parseExpression4(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.MOD)
+            ParsedTokenExpressionBinary(exp1, parseExpressionBase(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.MOD)
         }else {
             break
         }
@@ -263,14 +263,15 @@ private fun parseExpression3(iter: ListIterator<LexToken>, valueDefinitions: Lis
     return exp1
 }
 
+// Java precedence: relational < shift < additive < multiplicative
 private fun parseExpression4(iter: ListIterator<LexToken>, valueDefinitions: List<ParsedTokenValueAccessor>, usesObf: AtomicBoolean): ParsedTokenExpression {
-    var exp1 = parseExpressionBase(iter, valueDefinitions, usesObf)
+    var exp1 = parseExpression2(iter, valueDefinitions, usesObf)
     if(!iter.hasNext()) return exp1
     while(true) {
         exp1 = if(iter.tryNextTokenType(LexTokenSimpleType.SHR)) {
-            ParsedTokenExpressionBinary(exp1, parseExpressionBase(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.SHR)
+            ParsedTokenExpressionBinary(exp1, parseExpression2(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.SHR)
         }else if(iter.tryNextTokenType(LexTokenSimpleType.SHL)) {
-            ParsedTokenExpressionBinary(exp1, parseExpressionBase(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.SHL)
+            ParsedTokenExpressionBinary(exp1, parseExpression2(iter, valueDefinitions, usesObf), ParsedTokenExpressionOperator.SHL)
         }else {
             break
         }
@@ -297,7 +298,9 @@ private fun parseExpressionBase(iter: ListIterator<LexToken>, valueDefinitions: 
 private fun parseExpressionLowerBase(iter: ListIterator<LexToken>, valueDefinitions: List<ParsedTokenValueAccessor>, usesObf: AtomicBoolean): ParsedTokenExpression {
     if(!iter.hasNext()) throw IllegalStateException("Expected expression base, got EOF")
     iter.tryNextToken<LexTokenNumber> {
-        return ParsedTokenExpressionNumber(it.number.toLong())
+        val value = it.number.toLong()
+        if(value < Int.MIN_VALUE || value > Int.MAX_VALUE) throw IllegalStateException("Integer literal out of int range: ${it.number}")
+        return ParsedTokenExpressionNumber(value)
     }
     iter.tryNextTokenType(LexTokenSimpleType.KW_NULL) {
         return ParsedTokenExpressionTyped(ParsedTokenExpressionSimpleType.NULL)
@@ -310,6 +313,7 @@ private fun parseExpressionLowerBase(iter: ListIterator<LexToken>, valueDefiniti
     }
     iter.tryNextTokenType(LexTokenSimpleType.KW_NEW) {
         val instanceOf = ParsedTokenInstanceStatic.fromDisplayName((parseExpressionTypeWord(iter) as ParsedTokenExpressionTypeComplex).displayName)
+        if(isMinecraftOnlyClass(instanceOf.displayName)) usesObf.set(true)
         iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
         val params = parseFunctionCallParams(iter, valueDefinitions, usesObf)
         iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
@@ -324,6 +328,7 @@ private fun parseExpressionLowerBase(iter: ListIterator<LexToken>, valueDefiniti
         val type = parseExpressionTypeWord(iter)
         if(iter.tryNextTokenType(LexTokenSimpleType.DOT)) {
             val classOf = ParsedTokenInstanceStatic.fromDisplayName((type as ParsedTokenExpressionTypeComplex).displayName)
+            if(isMinecraftOnlyClass(classOf.displayName)) usesObf.set(true)
             val name = iter.expectToken<LexTokenWord>()
             if(iter.tryNextTokenType(LexTokenSimpleType.OPEN_PAREN)) {
                 val params = parseFunctionCallParams(iter, valueDefinitions, usesObf)
@@ -444,20 +449,18 @@ private fun parseCode(iter: ListIterator<LexToken>, valueDefinitions: List<Parse
                 iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
                 val params = parseFunctionCallParams(iter, valueDefinitions, usesObf)
                 iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
-                val code = if(iter.peekNextTokenType(LexTokenSimpleType.SEMICOLON) || iter.peekNextTokenType(LexTokenSimpleType.DOT)) null else parseCode(iter, valueDefinitions, usesObf)
+                if(!iter.peekNextTokenType(LexTokenSimpleType.SEMICOLON) && !iter.peekNextTokenType(LexTokenSimpleType.DOT)) {
+                    throw IllegalStateException("Expected ';' or '.' after call to '${name.word}', a block cannot follow a function call")
+                }
                 var expr = ParsedTokenStatementFunctionCall(name.word, null, params)
-                var readMore = false
                 while(iter.tryNextTokenType(LexTokenSimpleType.DOT)) {
                     val name2 = iter.expectToken<LexTokenWord>()
                     iter.expectTokenType(LexTokenSimpleType.OPEN_PAREN)
                     val params2 = parseFunctionCallParams(iter, valueDefinitions, usesObf)
                     iter.expectTokenType(LexTokenSimpleType.CLOSE_PAREN)
                     expr = ParsedTokenStatementFunctionCall(name2.word, ParsedTokenInstanceValue(expr), params2)
-                    readMore = true
                 }
-                if(code == null || readMore) {
-                    iter.expectTokenType(LexTokenSimpleType.SEMICOLON)
-                }
+                iter.expectTokenType(LexTokenSimpleType.SEMICOLON)
                 res.add(expr)
             }
         }
@@ -481,6 +484,10 @@ private fun parseVersionNumber(iter: ListIterator<LexToken>): MinecraftVersion {
     }
     return MinecraftVersion.parse(res.toString())
 }
+
+/** Classes only available to the Minecraft module: a definition referencing them is emitted there, not in common. */
+private fun isMinecraftOnlyClass(displayName: String) =
+    displayName.startsWith("net.minecraft.") || displayName.startsWith("dev.epicpix.minecraftfunctioncompiler.mod.")
 
 fun parseTokens(iter: ListIterator<LexToken>): ParsedFile {
     val fileInfo = mutableMapOf<String, String>()

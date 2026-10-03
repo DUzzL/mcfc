@@ -58,7 +58,7 @@ public record SelectorArgument(
                 List.of(),
                 null,
                 null,
-                null,
+                SelectorSort.ARBITRARY,
                 null,
                 null,
                 false,

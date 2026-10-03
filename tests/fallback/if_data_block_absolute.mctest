@@ -1,0 +1,19 @@
+; `execute if|unless data block` with absolute integer (block_pos) coordinates: the condition runs through
+; vanilla with the verbatim source text (absolute ints were re-serialized as unparsable "100.5").
+@setup
+objective create t dummy
+
+@function run
+scoreboard players set if_miss t 0
+setblock ~ 100 ~ minecraft:chest{Items:[{Slot:0b,id:"minecraft:stone",count:1}]}
+execute if data block ~ 100 ~ Items[0] run scoreboard players set if_hit t 1
+execute unless data block ~ 100 ~ Items[1] run scoreboard players set unless_hit t 1
+execute if data block ~ 100 ~ Items[1] run scoreboard players set if_miss t 1
+execute store result score count t if data block ~ 100 ~ Items[]
+setblock ~ 100 ~ minecraft:air
+
+@validate
+score if_hit t is 1
+score unless_hit t is 1
+score if_miss t is 0
+score count t is 1

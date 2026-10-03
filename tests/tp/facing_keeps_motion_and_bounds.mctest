@@ -1,0 +1,27 @@
+; W2 ReviewRuntime[1]: `tp <targets> <pos> facing …` goes through vanilla performTeleport: relative
+; coordinates keep the velocity (Relative.DELTA_*), out-of-bounds destinations fail, and the facing
+; rotation is applied after the teleport from the source anchor (`anchored eyes` looks from the eyes).
+@setup
+objective create t dummy
+
+@function run
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_tpf_rel"],Motion:[0.25d,0.0d,0.5d]}
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_tpf_oob"]}
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_tpf_eyes"]}
+tp @e[tag=mcfc_tpf_rel] ~ ~10 ~ facing ~10 ~20 ~
+tp @e[tag=mcfc_tpf_oob] 30000001 100 0 facing 0 100 0
+execute as @e[tag=mcfc_tpf_eyes] at @s anchored eyes run tp @s ~ ~ ~ facing ~ ~ ~10
+execute store result score rel_mx t run data get entity @e[tag=mcfc_tpf_rel,limit=1] Motion[0] 1000
+execute store result score rel_mz t run data get entity @e[tag=mcfc_tpf_rel,limit=1] Motion[2] 1000
+execute store result score rel_yaw t run data get entity @e[tag=mcfc_tpf_rel,limit=1] Rotation[0]
+execute positioned 30000001 100 0 store result score oob_far t if entity @e[tag=mcfc_tpf_oob,distance=..2]
+execute store result score eyes_pitch t run data get entity @e[tag=mcfc_tpf_eyes,limit=1] Rotation[1] 10
+kill @e[tag=mcfc_tpf_rel]
+kill @e[tag=mcfc_tpf_oob]
+kill @e[tag=mcfc_tpf_eyes]
+
+@validate
+score rel_mx t is 250
+score rel_mz t is 500
+score rel_yaw t is -90
+score oob_far t is 0

@@ -33,7 +33,8 @@ public class McfcTestHelper {
         for(var objective : List.copyOf(server.getScoreboard().getObjectives())) server.getScoreboard().removeObjective(objective);
 
         for(var level : server.getAllLevels()) {
-            for(var entity : level.getAllEntities()) {
+            // copy: remove() drops the entity from the live EntityLookup map being iterated
+            for(var entity : com.google.common.collect.Lists.newArrayList(level.getAllEntities())) {
                 entity.remove(Entity.RemovalReason.DISCARDED);
             }
         }

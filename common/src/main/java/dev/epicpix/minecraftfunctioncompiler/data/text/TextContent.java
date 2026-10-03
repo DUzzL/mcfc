@@ -43,7 +43,8 @@ public sealed interface TextContent permits TextContent.KeybindText, TextContent
         }
     }
 
-    record ScoreText(ScoreHolderArgument scoreHolder, String objective) implements TextContent {
+    /** {@code holderSource}: the raw "name" text; vanilla uses it as a name-only holder when the selector matches nothing. */
+    record ScoreText(ScoreHolderArgument scoreHolder, String objective, String holderSource) implements TextContent {
         public boolean isCompilationSupported() {
             return true;
         }
@@ -63,9 +64,12 @@ public sealed interface TextContent permits TextContent.KeybindText, TextContent
         }
     }
 
-    record NbtText(NbtPath path, @Nullable Text separator, NbtDataLocation source) implements TextContent {
+    /** {@code rawPath} is the source text of {@code path}; the runtime evaluates it with vanilla's NbtPathArgument. */
+    record NbtText(NbtPath path, String rawPath, boolean interpret, boolean plain, @Nullable Text separator, NbtDataLocation source) implements TextContent {
         public boolean isCompilationSupported() {
-            return source instanceof NbtDataLocation.Storage || source instanceof NbtDataLocation.Entity;
+            return (source instanceof NbtDataLocation.Storage || source instanceof NbtDataLocation.Entity)
+                    && !rawPath.contains("$(")
+                    && (separator == null || separator.isCompilationSupported());
         }
         public boolean isConstant() {
             return false;

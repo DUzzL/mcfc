@@ -1,0 +1,24 @@
+; Deep compiled->compiled recursion must behave like vanilla's iterative executor: no stack overflow,
+; no partially executed chain, and results still propagate once the depth budget hands off to vanilla.
+@setup
+objective create t dummy
+
+@function run
+scoreboard players set #n t 0
+function mcfc-test:rec
+scoreboard players set #m t 0
+execute store result score r t run function mcfc-test:rec_result
+
+@function rec
+scoreboard players add #n t 1
+execute if score #n t matches ..4999 run function mcfc-test:rec
+
+@function rec_result
+scoreboard players add #m t 1
+execute if score #m t matches ..2999 run return run function mcfc-test:rec_result
+return 7
+
+@validate
+score #n t is 5000
+score #m t is 3000
+score r t is 7

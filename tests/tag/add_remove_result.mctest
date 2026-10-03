@@ -1,0 +1,18 @@
+; C12: `tag add|remove` returns the number of entities whose tags changed and fails when none changed.
+@setup
+objective create t dummy
+
+@function run
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_tag"]}
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_tag"]}
+execute store result score first t run tag @e[tag=mcfc_tag] add mcfc_seen
+execute store success score again t run tag @e[tag=mcfc_tag] add mcfc_seen
+execute store result score removed t run tag @e[tag=mcfc_tag] remove mcfc_seen
+execute store success score removed_again t run tag @e[tag=mcfc_tag] remove mcfc_seen
+kill @e[tag=mcfc_tag]
+
+@validate
+score first t is 2
+score again t is 0
+score removed t is 2
+score removed_again t is 0

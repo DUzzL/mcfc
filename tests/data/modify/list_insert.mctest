@@ -1,0 +1,36 @@
+; C3: storage append/prepend/insert navigate the full path, create the missing list, support negative
+; indices, and fail when nothing changed. P2: `data get storage` under `execute store` compiles natively.
+@setup
+objective create t dummy
+
+@function run
+data remove storage mcfc:list_test a
+data remove storage mcfc:list_test top
+data modify storage mcfc:list_test a.list append value 1
+data modify storage mcfc:list_test a.list append value 2
+data modify storage mcfc:list_test a.list prepend value 0
+data modify storage mcfc:list_test a.list insert 1 value 5
+data modify storage mcfc:list_test a.list insert -1 value 9
+data modify storage mcfc:list_test a.list insert -2 value 8
+execute store result score len t run data get storage mcfc:list_test a.list
+execute store result score e0 t run data get storage mcfc:list_test a.list[0]
+execute store result score e1 t run data get storage mcfc:list_test a.list[1]
+execute store result score e4 t run data get storage mcfc:list_test a.list[4]
+execute store result score e5 t run data get storage mcfc:list_test a.list[5]
+execute store success score out_of_range t run data modify storage mcfc:list_test a.list insert 10 value 1
+execute store result score appended t run data modify storage mcfc:list_test top append value 3
+execute store result score top0 t run data get storage mcfc:list_test top[0]
+execute store success score not_list t run data modify storage mcfc:list_test a append value 1
+execute store success score missing_get t run data get storage mcfc:list_test nothing.here
+
+@validate
+score len t is 6
+score e0 t is 0
+score e1 t is 5
+score e4 t is 8
+score e5 t is 9
+score out_of_range t is 0
+score appended t is 1
+score top0 t is 3
+score not_list t is 0
+score missing_get t is 0

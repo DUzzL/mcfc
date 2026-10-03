@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.stack;
 
+import dev.epicpix.minecraftfunctioncompiler.CommonConstants;
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeInstruction;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel;
@@ -17,11 +18,12 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.jspecify.annotations.Nullable;
 
+import java.lang.classfile.TypeKind;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 public class StackCompiler {
 
@@ -281,50 +283,7 @@ public class StackCompiler {
             tempInstructions.add(instr);
         }
 
-        for(int c = 0; c<tempInstructions.size(); c++) {
-            var temp = tempInstructions.get(c);
-            if(temp instanceof StackInstruction.Load load && load.value() instanceof BytecodeRegister register) {
-                int w;
-                InlineEvalStore found = null;
-                for(w = 0; w<c; w++) {
-                    if(tempInstructions.get(w) instanceof InlineEvalStore i && i.reg.equals(register)) {
-                        found = i;
-                        break;
-                    }
-                }
-                if(found != null) {
-                    if(isValidInline(tempInstructions.subList(w + 1, c), found)) {
-                        tempInstructions.addAll(c + 1, found.instructions);
-                        tempInstructions.remove(c);
-                        tempInstructions.remove(w);
-                        c = w;
-                    }
-                }
-            }else if(temp instanceof InlineEvalStore store) {
-                for(var in = 0; in<store.instructions.size(); in++) {
-                    var t = store.instructions.get(in);
-                    if(t instanceof StackInstruction.Load load && load.value() instanceof BytecodeRegister register) {
-                        int w;
-                        InlineEvalStore found = null;
-                        for(w = 0; w<c; w++) {
-                            if(tempInstructions.get(w) instanceof InlineEvalStore i && i.reg.equals(register)) {
-                                found = i;
-                                break;
-                            }
-                        }
-                        if(found != null) {
-                            if(isValidInline(tempInstructions.subList(w + 1, c), found)) {
-                                store.instructions.addAll(in + 1, found.instructions);
-                                store.instructions.remove(in);
-                                tempInstructions.remove(w);
-                                c = w;
-                                in--;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        tempInstructions = new Inliner().run(tempInstructions);
 
         ArrayList<StackInstruction> output = new ArrayList<>();
         for(var temp : tempInstructions) {
@@ -364,7 +323,11 @@ public class StackCompiler {
                 usedRegisters.add(register.reg());
             }
         }
-        var baseReg = params.stream().max(Comparator.comparingInt(BytecodeValue.Parameter::index)).map(BytecodeValue.Parameter::index).orElse(-1) + 1;
+        // Parameter.index is the JVM slot; long/double parameters take two slots.
+        int baseReg = 0;
+        for(var param : params) {
+            baseReg = Math.max(baseReg, param.index() + TypeKind.from(param.type()).slotSize());
+        }
         var mappedRegisters = new Int2IntOpenHashMap();
         int regIndex = baseReg;
         for(var it = usedRegisters.intStream().sorted().iterator(); it.hasNext(); ) {
@@ -390,25 +353,195 @@ public class StackCompiler {
         return output;
     }
 
-    private static boolean isValidInline(List<StackInstruction> instructionsBetween, InlineEvalStore store) {
-        var uses = new IntOpenHashSet();
-        for(var i : store.instructions) {
-            if(i instanceof StackInstruction.Load load && load.value() instanceof BytecodeRegister(int reg)) {
-                uses.add(reg);
-            }else if(i instanceof StackInstruction.Call(InstructionTarget target) && target instanceof InstructionTarget.FunctionTarget functionTarget && functionTarget.noReordering()) {
-                return false;
+    /** Longest stretch an expression may be moved over; keeps inlining linear in the method size. */
+    private static final int MAX_INLINE_DISTANCE = 256;
+    /** How many recent failed loads are retried when a later inline removes an expression in between. */
+    private static final int MAX_RETRIED_LOADS = 32;
+
+    /**
+     * Moves each single-use expression ({@link InlineEvalStore}) to its only load, keeping the evaluation order of
+     * order-sensitive operations. Works in one forward pass; a load that could not take its expression because
+     * another pending expression sat in between is retried once that one has been moved away (the typical case is
+     * call arguments: {@code a = f(); b = g(); h(a, b)} becomes {@code h(f(), g())}).
+     *
+     * <p>Sequence entries are a {@link StackInstruction} (including a pending {@link InlineEvalStore}), a spliced
+     * {@code List<StackInstruction>}, or {@code null} for an expression that was moved away.
+     */
+    private static final class Inliner {
+        private final ArrayList<@Nullable Object> top = new ArrayList<>();
+        private final Int2IntOpenHashMap pending = new Int2IntOpenHashMap(); // register -> index in top
+        private final IntArrayList topFailed = new IntArrayList(); // indices in top of loads that failed
+        private @Nullable ArrayList<@Nullable Object> body; // body of the InlineEvalStore being built
+        private final IntArrayList bodyFailed = new IntArrayList();
+
+        Inliner() {
+            pending.defaultReturnValue(-1);
+        }
+
+        ArrayList<StackInstruction> run(List<StackInstruction> instructions) {
+            for(var instr : instructions) {
+                if(instr instanceof InlineEvalStore store) {
+                    body = new ArrayList<>(store.instructions.size());
+                    bodyFailed.clear();
+                    for(var t : store.instructions) {
+                        if(t instanceof StackInstruction.Load) appendLoad(body, bodyFailed, true, t);
+                        else body.add(t);
+                    }
+                    var closed = new InlineEvalStore(store.reg, flatten(body));
+                    body = null;
+                    pending.put(store.reg.reg(), top.size());
+                    top.add(closed);
+                }else if(instr instanceof StackInstruction.Load) {
+                    appendLoad(top, topFailed, false, instr);
+                }else {
+                    top.add(instr);
+                }
+            }
+            return flatten(top);
+        }
+
+        private void appendLoad(ArrayList<@Nullable Object> seq, IntArrayList failed, boolean isBody, StackInstruction load) {
+            int position = seq.size();
+            if(tryInline(seq, position, isBody, load)) return;
+            seq.add(load);
+            if(pendingIndex(load) >= 0) {
+                failed.add(position);
+                if(failed.size() > MAX_RETRIED_LOADS) failed.removeInt(0);
             }
         }
-        for(var i : instructionsBetween) {
-            if(i instanceof StackInstruction.Store(BytecodeRegister register) && uses.contains(register.reg())) {
-                return false;
-            }else if(i instanceof StackInstruction.Load l && l.value() instanceof BytecodeRegister(int reg) && uses.contains(reg)) {
-                return false;
-            }else if(i instanceof StackInstruction.Label || i instanceof StackInstruction.Jump || i instanceof StackInstruction.JumpTyped || i instanceof StackInstruction.Return || i instanceof StackInstruction.ReturnValue) {
-                return false;
+
+        private int pendingIndex(Object load) {
+            if(load instanceof StackInstruction.Load(BytecodeValue value, ClassDesc _) && value instanceof BytecodeRegister(int reg)) {
+                return pending.get(reg);
+            }
+            return -1;
+        }
+
+        /** Inlines the pending expression of {@code load} at {@code seq[position]} (appending if position == size). */
+        private boolean tryInline(ArrayList<@Nullable Object> seq, int position, boolean isBody, Object load) {
+            int w = pendingIndex(load);
+            if(w < 0 || (!isBody && w >= position)) return false; // never move an expression before its own position
+            var store = (InlineEvalStore) Objects.requireNonNull(top.get(w));
+            int topEnd = isBody ? top.size() : position;
+            int distance = topEnd - w - 1 + (isBody ? position : 0);
+            if(distance > MAX_INLINE_DISTANCE) return false;
+            var uses = new IntOpenHashSet();
+            boolean storeImpure = false;
+            for(var i : store.instructions) {
+                if(i instanceof StackInstruction.Load l && l.value() instanceof BytecodeRegister(int reg)) {
+                    uses.add(reg);
+                }else if(i instanceof StackInstruction.Call(InstructionTarget target) && target instanceof InstructionTarget.FunctionTarget functionTarget && functionTarget.noReordering()) {
+                    return false;
+                }
+                storeImpure |= isOrderSensitive(i);
+            }
+            for(int k = w + 1; k < topEnd; k++) {
+                if(!canMovePast(top.get(k), uses, storeImpure)) return false;
+            }
+            if(isBody) {
+                for(int k = 0; k < position; k++) {
+                    if(!canMovePast(seq.get(k), uses, storeImpure)) return false;
+                }
+            }
+            top.set(w, null);
+            pending.remove(store.reg.reg());
+            var spliced = store.instructions;
+            if(position == seq.size()) seq.add(spliced);
+            else seq.set(position, spliced);
+            retryFailed(w);
+            return true;
+        }
+
+        /** An expression at top[w] moved away: loads after it that failed may succeed now. */
+        private void retryFailed(int w) {
+            boolean progress = true;
+            while(progress) {
+                progress = false;
+                for(int k = 0; k < topFailed.size(); k++) {
+                    int position = topFailed.getInt(k);
+                    if(position <= w) continue;
+                    var load = top.get(position);
+                    if(!(load instanceof StackInstruction) || pendingIndex(load) < 0) {
+                        topFailed.removeInt(k--);
+                        continue;
+                    }
+                    if(tryInline(top, position, false, load)) {
+                        topFailed.rem(position);
+                        progress = true;
+                        break;
+                    }
+                }
+                if(progress || body == null) continue;
+                for(int k = 0; k < bodyFailed.size(); k++) {
+                    int position = bodyFailed.getInt(k);
+                    var load = body.get(position);
+                    if(!(load instanceof StackInstruction) || pendingIndex(load) < 0) {
+                        bodyFailed.removeInt(k--);
+                        continue;
+                    }
+                    if(tryInline(body, position, true, load)) {
+                        bodyFailed.rem(position);
+                        progress = true;
+                        break;
+                    }
+                }
             }
         }
-        return true;
+
+        @SuppressWarnings("unchecked")
+        private static ArrayList<StackInstruction> flatten(List<@Nullable Object> seq) {
+            var out = new ArrayList<StackInstruction>(seq.size());
+            for(var entry : seq) {
+                if(entry instanceof StackInstruction instr) out.add(instr);
+                else if(entry instanceof List<?> list) out.addAll((List<StackInstruction>) list);
+            }
+            return out;
+        }
+
+        @SuppressWarnings("unchecked")
+        private static boolean canMovePast(@Nullable Object entry, IntSet uses, boolean storeImpure) {
+            if(entry == null) return true;
+            if(entry instanceof List<?> list) {
+                for(var inner : (List<StackInstruction>) list) {
+                    if(!canMovePast(inner, uses, storeImpure)) return false;
+                }
+                return true;
+            }
+            var i = (StackInstruction) entry;
+            if(i instanceof InlineEvalStore other) {
+                // Not moved (yet): it executes here, then stores its register.
+                if(uses.contains(other.reg.reg())) return false;
+                for(var inner : other.instructions) {
+                    if(!canMovePast(inner, uses, storeImpure)) return false;
+                }
+                return true;
+            }
+            if(i instanceof StackInstruction.Store(BytecodeRegister register) && uses.contains(register.reg())) return false;
+            if(i instanceof StackInstruction.Load l && l.value() instanceof BytecodeRegister(int reg) && uses.contains(reg)) return false;
+            if(i instanceof StackInstruction.Label || i instanceof StackInstruction.Jump || i instanceof StackInstruction.JumpTyped || i instanceof StackInstruction.Return || i instanceof StackInstruction.ReturnValue) return false;
+            return !(storeImpure && isOrderSensitive(i));
+        }
+    }
+
+    /**
+     * Whether the instruction reads or writes mutable state or may throw, so it must keep its order relative to
+     * other such instructions. Casts are treated as order-free: they only ever narrow values the IL already knows
+     * the type of. Reads of data-class constants (static final, written once before any function runs) are free.
+     */
+    private static boolean isOrderSensitive(StackInstruction i) {
+        return switch(i) {
+            case StackInstruction.Call(InstructionTarget target) -> switch(target) {
+                case InstructionTarget.FunctionTarget _ -> true;
+                case InstructionTarget.FieldTarget f -> f.isWrite() || !isDataClassConstant(f);
+            };
+            case StackInstruction.New _, StackInstruction.ArrayStore _, StackInstruction.EvaluateString _ -> true;
+            case StackInstruction.Evaluate(StackEvaluationType type) -> type == StackEvaluationType.DIV || type == StackEvaluationType.MOD;
+            default -> false;
+        };
+    }
+
+    private static boolean isDataClassConstant(InstructionTarget.FieldTarget f) {
+        return f.isStatic() && f.classType().equals(CommonConstants.DATA_CLASS);
     }
 
     private static class DependencyGenerator {

@@ -1,0 +1,15 @@
+; RT-08 / C13 / PROC-02: summon with NBT does not run finalizeSpawn (which would randomise the
+; horse variant) and must not mutate the shared, value-deduplicated NBT constant (adding `id`).
+@setup
+objective create t dummy
+
+@function run
+summon minecraft:horse ~ ~10 ~ {Variant:3,NoAI:1b,Tags:["mcfc_s8"]}
+summon minecraft:horse ~ ~10 ~ {Variant:3,NoAI:1b,Tags:["mcfc_s8"]}
+execute store result score variant_ok t if entity @e[tag=mcfc_s8,nbt={Variant:3}]
+data merge storage mcfc:summon {Variant:3,NoAI:1b,Tags:["mcfc_s8"]}
+execute store success score const_has_id t if data storage mcfc:summon id
+
+@validate
+score variant_ok t is 2
+score const_has_id t is 0

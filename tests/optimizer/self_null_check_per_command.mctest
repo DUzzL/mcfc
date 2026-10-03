@@ -1,0 +1,14 @@
+; Without an entity every `@s` command fails on its own and the function continues (vanilla).
+; The optimizer must keep each command's null check even after merging the shared `@s` lookup.
+@setup
+objective create t dummy
+
+@function run
+tag @s add a
+tag @s add b
+scoreboard players add @s t 1
+execute as @s run tag @s add c
+scoreboard players set done t 1
+
+@validate
+score done t is 1

@@ -73,7 +73,7 @@ public final class RegistryMapping {
 
 
         DataRegistries.MOB_EFFECT.reset();
-        mapRegistry(DataRegistries.MOB_EFFECT, BuiltInRegistries.MOB_EFFECT, (location, value) -> new MobEffectData(location, value.isInstantenous()));
+        mapRegistry(DataRegistries.MOB_EFFECT, BuiltInRegistries.MOB_EFFECT, (location, value) -> new MobEffectData(location, value.isInstantaneous()));
         DataRegistries.MOB_EFFECT.freeze();
 
 

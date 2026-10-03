@@ -24,6 +24,9 @@ public class FabricGameTestModInitializerMixin {
             Registry.register(testEnvironments, provided.identifier(), new TestEnvironmentDefinition.AllOf());
             Registry.register(testInstances, provided.identifier(), provided.instantiate(testEnvironments));
         }
+        dev.epicpix.minecraftfunctioncompiler.mod.test.AdvancementRegressionTests.registerInstance(testInstances, testEnvironments);
+        dev.epicpix.minecraftfunctioncompiler.mod.test.PlayerNameSelectorTests.registerInstance(testInstances, testEnvironments);
+        dev.epicpix.minecraftfunctioncompiler.mod.test.ScoreSyncTests.registerInstance(testInstances, testEnvironments);
     }
 
 }

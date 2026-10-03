@@ -3,7 +3,6 @@ package dev.epicpix.minecraftfunctioncompiler.compiler;
 import dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.DoubleRangeArgument;
-import dev.epicpix.minecraftfunctioncompiler.data.FloatRangeArgument;
 import dev.epicpix.minecraftfunctioncompiler.data.IntRangeArgument;
 import dev.epicpix.minecraftfunctioncompiler.data.LocationAnchor;
 import dev.epicpix.minecraftfunctioncompiler.data.RotationCoordinates;
@@ -27,7 +26,8 @@ import dev.epicpix.minecraftfunctioncompiler.il.locations.TEntityType;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TTag;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TGameType;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TObjective;
-import dev.epicpix.minecraftfunctioncompiler.il.locations.TScoreAccess;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TReadOnlyScoreInfo;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TScore;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TScoreHolder;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TServerLevel;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TServerPlayer;
@@ -39,12 +39,13 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.NullUnmarked;
 import org.jspecify.annotations.Nullable;
 
+import dev.epicpix.minecraftfunctioncompiler.commands.params.CommandParams;
+import java.util.ArrayDeque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.Stack;
 import java.util.UUID;
 
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_COMPILE_UNEXPECTED_CONTEXT_END;
@@ -53,7 +54,7 @@ import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.CO
 public class CompilationContext {
 
     private final DataLocation source;
-    private final Stack<CompilationContextData> stack = new Stack<>();
+    private final ArrayDeque<CompilationContextData> stack = new ArrayDeque<>();
     private final UniqueIdTracker idTracker = new UniqueIdTracker();
     public final InstructionWriter instructionWriter = new InstructionWriter();
 
@@ -67,6 +68,30 @@ public class CompilationContext {
 
     public DataLocation getSource() {
         return source;
+    }
+
+    // Verbatim source side table of the top-level command being compiled (owned by the
+    // raw-text vanilla fallback code in CommandCompiler); null when compiling commands
+    // that did not come from the parser.
+    private dev.epicpix.minecraftfunctioncompiler.commands.@org.jspecify.annotations.Nullable CommandSourceMap commandSource;
+
+    public dev.epicpix.minecraftfunctioncompiler.commands.@org.jspecify.annotations.Nullable CommandSourceMap getCommandSource() {
+        return commandSource;
+    }
+
+    public void setCommandSource(dev.epicpix.minecraftfunctioncompiler.commands.@org.jspecify.annotations.Nullable CommandSourceMap commandSource) {
+        this.commandSource = commandSource;
+    }
+
+    // Splits oversized execute chains into separate methods; null when compiling normally.
+    private @org.jspecify.annotations.Nullable ChainOutliner outliner;
+
+    public @org.jspecify.annotations.Nullable ChainOutliner getOutliner() {
+        return outliner;
+    }
+
+    public void setOutliner(@org.jspecify.annotations.Nullable ChainOutliner outliner) {
+        this.outliner = outliner;
     }
 
     @NullUnmarked
@@ -155,6 +180,8 @@ public class CompilationContext {
         }
     }
 
+    /** The executing entity, or null (a server/console source). Never published as {@code currentEntity}:
+     * later {@link #getCurrentEntity()} calls must still null-check it. */
     public CompilationData<@Nullable LocationData<? extends TEntity>> getCurrentNullableEntity() {
         var data = current();
         if(data.currentEntity() != null) {
@@ -162,8 +189,7 @@ public class CompilationContext {
         }else {
             LocationData<TEntity> entity = createLocal();
             data.writeInstruction(instructionWriter, Instructions.getStackEntity(entity, data.commandSourceStack()));
-            var codeLocation = data.writeLabel(instructionWriter);
-            return enterWithValue(data.withContextLabel(codeLocation).withCurrentEntity(entity), entity);
+            return new CompilationData<>(this, data, entity, 0);
         }
     }
 
@@ -299,7 +325,53 @@ public class CompilationContext {
         }
     }
 
-    private CompilationData<LocationData<? extends TEntity>> forEachEntityInside(@Nullable LocationData<TServerLevel> inWorld, SelectorBox box, int limit) {
+    // Fast path for unbounded `@e[type=X]` (single concrete type, not negated):
+    // iterate the live EntityLookup type index for that type instead of scanning every
+    // entity and filtering by getType(). forSelectorBase still applies the type filter as
+    // a (now cheap) recheck over the already-narrowed set, so semantics are unchanged.
+    public CompilationData<LocationData<? extends TEntity>> forEachEntityOfType(@Nullable LocationData<TServerLevel> inWorld, DataLocation entityType) {
+        var data = current();
+        var type = this.<TEntityType>createLocal();
+        data.writeInstruction(instructionWriter, Instructions.mapEntityType(type, entityType));
+        if(inWorld == null) {
+            var worldIter = this.<Iterator<? extends TServerLevel>>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.getWorldsIterator(worldIter));
+            var iterWorldStart = data.writeLabel(instructionWriter);
+            data.writeInstruction(instructionWriter, Instructions.jumpIfIteratorHasNoNext(worldIter, data.contextEndLabel()));
+            var worldObj = this.createLocal();
+            var world = this.<TServerLevel>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.iteratorNext(worldObj, worldIter));
+            data.writeInstruction(instructionWriter, Instructions.assumeWorld(world, worldObj));
+
+            var entityIter = this.<Iterator<? extends TEntity>>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.getEntitiesOfType(entityIter, world, type));
+            var iterEntityStart = data.writeLabel(instructionWriter);
+            data.writeInstruction(instructionWriter, Instructions.jumpIfIteratorHasNoNext(entityIter, iterWorldStart));
+            var entityObj = this.createLocal();
+            var entity = this.<TEntity>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.iteratorNext(entityObj, entityIter));
+            data.writeInstruction(instructionWriter, Instructions.assumeEntity(entity, entityObj));
+
+            var codeLocation = data.writeLabel(instructionWriter);
+            data.writeInstruction(instructionWriter, Instructions.jump(iterEntityStart));
+            return enterWithValue(data.withContextLabel(codeLocation), entity);
+        }else {
+            var entityIter = this.<Iterator<? extends TEntity>>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.getEntitiesOfType(entityIter, inWorld, type));
+            var iterEntityStart = data.writeLabel(instructionWriter);
+            data.writeInstruction(instructionWriter, Instructions.jumpIfIteratorHasNoNext(entityIter, data.contextEndLabel()));
+            var entityObj = this.createLocal();
+            var entity = this.<TEntity>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.iteratorNext(entityObj, entityIter));
+            data.writeInstruction(instructionWriter, Instructions.assumeEntity(entity, entityObj));
+
+            var codeLocation = data.writeLabel(instructionWriter);
+            data.writeInstruction(instructionWriter, Instructions.jump(iterEntityStart));
+            return enterWithValue(data.withContextLabel(codeLocation), entity);
+        }
+    }
+
+    private CompilationData<LocationData<? extends TEntity>> forEachEntityInside(@Nullable LocationData<TServerLevel> inWorld, SelectorBox box) {
         var data = current();
         if(inWorld == null) {
             var worldIter = this.<Iterator<? extends TServerLevel>>createLocal();
@@ -311,7 +383,7 @@ public class CompilationContext {
             data.writeInstruction(instructionWriter, Instructions.iteratorNext(worldObj, worldIter));
             data.writeInstruction(instructionWriter, Instructions.assumeWorld(world, worldObj));
             var entities = this.<List<? extends TEntity>>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.getEntitiesInside(entities, world, box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ, LocationData.ofInteger(limit)));
+            data.writeInstruction(instructionWriter, Instructions.getEntitiesInside(entities, world, box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ));
             var listLength = this.<Integer>createLocal();
             data.writeInstruction(instructionWriter, Instructions.getListLength(listLength, entities));
 
@@ -331,7 +403,7 @@ public class CompilationContext {
             return enterWithValue(data.withContextLabel(codeLocation), entity);
         }else {
             var entities = this.<List<? extends TEntity>>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.getEntitiesInside(entities, inWorld, box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ, LocationData.ofInteger(limit)));
+            data.writeInstruction(instructionWriter, Instructions.getEntitiesInside(entities, inWorld, box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ));
             var listLength = this.<Integer>createLocal();
             data.writeInstruction(instructionWriter, Instructions.getListLength(listLength, entities));
 
@@ -363,14 +435,19 @@ public class CompilationContext {
         return enterWithValue(data.withContextLabel(codeLocation), player);
     }
 
-    public CompilationData<LocationData<TServerPlayer>> forEachPlayer() {
+    /** Players in PlayerList order, or in {@code inWorld.players()} order when world-limited (EntitySelector.findPlayers). */
+    public CompilationData<LocationData<TServerPlayer>> forEachPlayer(@Nullable LocationData<TServerLevel> inWorld) {
         var data = current();
 
         var index = this.<Integer>createLocal();
         var length = this.<Integer>createLocal();
         var playerList = this.<List<? extends TServerPlayer>>createLocal();
         data.writeInstruction(instructionWriter, Instructions.dup(index, LocationData.ofInteger(0)));
-        data.writeInstruction(instructionWriter, Instructions.getPlayers(playerList));
+        if(inWorld != null) {
+            data.writeInstruction(instructionWriter, Instructions.getLevelPlayers(playerList, inWorld));
+        }else {
+            data.writeInstruction(instructionWriter, Instructions.getPlayers(playerList));
+        }
         data.writeInstruction(instructionWriter, Instructions.getListLength(length, playerList));
 
         var iterStart = data.writeLabel(instructionWriter);
@@ -391,27 +468,53 @@ public class CompilationContext {
     }
 
     public CompilationData<LocationData<TObjective>> getObjective(String objectiveName, ResultContext resultContext) {
+        return getObjective(objectiveName, resultContext, false);
+    }
+
+    /** {@code writable}: ObjectiveArgument.getWritableObjective, a read-only criterion fails like a missing objective. */
+    public CompilationData<LocationData<TObjective>> getObjective(String objectiveName, ResultContext resultContext, boolean writable) {
         var data = current();
 
         LocationData<TObjective> objective = createLocal();
-        data.writeInstruction(instructionWriter, Instructions.getObjective(objective, LocationData.ofString(objectiveName)));
+        data.writeInstruction(instructionWriter, Instructions.getObjectiveRef(objective, objectiveName));
         // Use the LOCAL contextEndLabel, not resultContext.errorLabel: in an
         // `as @a` iteration body the local label is "continue to next player",
         // while resultContext.errorLabel is the function exit. Vanilla MC
         // treats a missing objective as predicate-false (skip this clause's
         // body), not as fatal — so we must not abort the whole function when
         // ONE iterated player happens to lack a score entry.
-        data.writeInstruction(instructionWriter, Instructions.ifNullJump(objective, data.contextEndLabel()));
+        // In an execute modifier (or a selector filter) a missing objective skips this source;
+        // a terminal command whose result is observed fails instead (vanilla throws).
+        var missingLabel = failureLabel(resultContext);
+        data.writeInstruction(instructionWriter, Instructions.ifNullJump(objective, missingLabel));
+        if(writable) data.writeInstruction(instructionWriter, Instructions.ifObjectiveReadOnlyJump(objective, missingLabel));
 
         var codeLocation = data.writeLabel(instructionWriter);
 
         return enterWithValue(data.withContextLabel(codeLocation), objective);
     }
 
+    /** Where a failing argument (vanilla CommandSyntaxException) goes: the command's failure when its result is
+     * observed, otherwise the end of the current source context. */
+    public LabelData failureLabel(@Nullable ResultContext resultContext) {
+        return resultContext != null && resultContext.generatingSuccess() ? resultContext.markAndGetErrorLabel() : current().contextEndLabel();
+    }
+
     public CompilationData<ScoreAccessor> forScoreAccessors(ScoreAccessorArgument accessor, ResultContext resultContext) {
-        var objectiveName = getObjective(accessor.objective(), resultContext);
+        return forScoreAccessors(accessor, resultContext, false);
+    }
+
+    /** {@code writable}: scoreboard players set/add/remove/operation (getWritableObjective). */
+    public CompilationData<ScoreAccessor> forScoreAccessors(ScoreAccessorArgument accessor, ResultContext resultContext, boolean writable) {
+        var objective = getObjective(accessor.objective(), resultContext, writable);
         var scoreHolder = forScoreHolder(accessor.scoreHolder(), resultContext);
-        return enterWithValue(scoreHolder.data(), new ScoreAccessor(objectiveName.content(), scoreHolder.content()), objectiveName.stackCount() + scoreHolder.stackCount() + 1);
+        var scoreAccessor = new ScoreAccessor(objective.content(), accessor.objective(), scoreHolder.content(), constantScoreHolderName(accessor.scoreHolder()));
+        return enterWithValue(scoreHolder.data(), scoreAccessor, objective.stackCount() + scoreHolder.stackCount() + 1);
+    }
+
+    /** The holder name when it is a compile-time constant (resolved through link-time fields), else null. */
+    public static @Nullable String constantScoreHolderName(ScoreHolderArgument holder) {
+        return holder.name() != null && holder.name().isStatic() ? holder.name().getStaticValue() : null;
     }
 
     public LocationData<String> getScoreboardName(LocationData<? extends TEntity> entity) {
@@ -421,67 +524,97 @@ public class CompilationContext {
         return name;
     }
 
-    public CompilationData<LocationData<TScoreAccess>> getScoreDataAutoCreate(ScoreAccessor accessor) {
-        return getScoreData(accessor, null, true);
-    }
-
-    public CompilationData<LocationData<TScoreAccess>> getScoreData(ScoreAccessor accessor, @Nullable LabelData failLabel, boolean autoCreate) {
-        var data = current();
-        LocationData<TScoreAccess> score = createLocal();
-        if(autoCreate) {
-            data.writeInstruction(instructionWriter, Instructions.scoreDataAutoCreate(score, accessor.objective(), accessor.scoreHolder()));
-            return new CompilationData<>(this, data, score, 0);
+    /** The live score of the accessor, or null when it has none (never creates). */
+    public LocationData<TScore> findScore(ScoreAccessor accessor) {
+        LocationData<TScore> score = createLocal();
+        if(accessor.holderName() != null) {
+            writeInstruction(Instructions.findScoreRef(score, accessor.objective(), accessor.holderName(), accessor.objectiveName()));
         }else {
-            data.writeInstruction(instructionWriter, Instructions.scoreDataNoAutoCreate(score, accessor.objective(), accessor.scoreHolder()));
-            data.writeInstruction(instructionWriter, Instructions.ifNullJump(score, failLabel));
-            var codeLocation = data.writeLabel(instructionWriter);
-            return enterWithValue(data.withContextLabel(codeLocation), score);
+            writeInstruction(Instructions.findScore(score, accessor.objective(), accessor.scoreHolder()));
         }
+        return score;
     }
 
+    /** Reads an existing score; jumps to {@code failLabel} when there is none. */
+    public CompilationData<LocationData<TScore>> getScoreData(ScoreAccessor accessor, LabelData failLabel) {
+        var data = current();
+        var score = findScore(accessor);
+        data.writeInstruction(instructionWriter, Instructions.ifNullJump(score, failLabel));
+        var codeLocation = data.writeLabel(instructionWriter);
+        return enterWithValue(data.withContextLabel(codeLocation), score);
+    }
+
+    /**
+     * One vanilla {@code Scoreboard.getOrCreatePlayerScore} access: {@code score} is the live score (created when
+     * missing), {@code found} the score before the access (null: this access created it, so its first
+     * {@link #setScore} syncs the score even when the value is unchanged).
+     */
+    public record ScoreSlot(ScoreAccessor accessor, LocationData<TScore> found, LocationData<TScore> score) {}
+
+    public ScoreSlot getOrCreateScore(ScoreAccessor accessor) {
+        var found = findScore(accessor);
+        LocationData<TScore> score = createLocal();
+        writeInstruction(Instructions.ensureScore(score, accessor.objective(), accessor.scoreHolder(), found));
+        return new ScoreSlot(accessor, found, score);
+    }
+
+    public LocationData<Integer> getScoreValue(LocationData<TScore> score) {
+        LocationData<Integer> value = createLocal();
+        writeInstruction(Instructions.getScoreValue(value, score));
+        return value;
+    }
+
+    /** ScoreAccess.set through the slot's access; later sets on the same access no longer force a sync. */
+    public void setScore(ScoreSlot slot, LocationData<Integer> value) {
+        writeInstruction(Instructions.setScore(slot.accessor().objective(), slot.accessor().scoreHolder(), slot.score(), slot.found(), value));
+        writeInstruction(Instructions.dup(slot.found(), slot.score()));
+    }
+
+    /** {@code *}: the tracked score holders (ScoreHolderArgument with getNamesWithDefaultWildcard). A single-holder
+     * argument ({@code getName}) never resolves {@code *}, and an empty wildcard fails like NO_ENTITIES_FOUND. */
     public CompilationData<LocationData<? extends TScoreHolder>> forEachScoreHolder(boolean single, ResultContext resultContext) {
         var data = current();
+        var emptyLabel = failureLabel(resultContext);
+        if(single) {
+            // Always fails at runtime (the holder is non-null); the body stays well-formed for the optimizer.
+            var scoreHolder = this.<TScoreHolder>createLocal();
+            data.writeInstruction(instructionWriter, Instructions.constScoreHolder(scoreHolder, "*"));
+            data.writeInstruction(instructionWriter, Instructions.ifNotNullJump(scoreHolder, emptyLabel));
+            var codeLocation = data.writeLabel(instructionWriter);
+            return enterWithValue(data.withContextLabel(codeLocation), scoreHolder);
+        }
         var scoreHolders = this.<List<? extends String>>createLocal();
         data.writeInstruction(instructionWriter, Instructions.getScoreboardHolders(scoreHolders));
         var listLength = this.<Integer>createLocal();
         data.writeInstruction(instructionWriter, Instructions.getListLength(listLength, scoreHolders));
-        // Same reasoning as getObjective: an empty score-holder list inside an
-        // `as @a` iteration must skip just this player, not abort the function.
-        data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, listLength, LocationData.ofInteger(0), data.contextEndLabel()));
-        if(single) {
-            var scoreHolderObj = this.createLocal();
-            var scoreHolderStr = this.<String>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.getListElement(scoreHolderObj, scoreHolders, LocationData.ofInteger(0)));
-            data.writeInstruction(instructionWriter, Instructions.assumeString(scoreHolderStr, scoreHolderObj));
-            var scoreHolder = this.<TScoreHolder>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.namedScoreHolder(scoreHolder, scoreHolderStr));
-            var codeLocation = data.writeLabel(instructionWriter);
-            return enterWithValue(data.withContextLabel(codeLocation), scoreHolder);
-        }else {
-            var index = this.<Integer>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.dup(index, LocationData.ofInteger(0)));
-            var iterStart = data.writeLabel(instructionWriter);
-            data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, listLength, data.contextEndLabel()));
-            var scoreHolderObj = this.createLocal();
-            var scoreHolderStr = this.<String>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.getListElement(scoreHolderObj, scoreHolders, index));
-            data.writeInstruction(instructionWriter, Instructions.assumeString(scoreHolderStr, scoreHolderObj));
-            var scoreHolder = this.<TScoreHolder>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.namedScoreHolder(scoreHolder, scoreHolderStr));
-            var codeLocation = data.writeLabel(instructionWriter);
-            data.writeInstruction(instructionWriter, Instructions.valueAdd(index, index, LocationData.ofInteger(1)));
-            data.writeInstruction(instructionWriter, Instructions.jump(iterStart));
-            return enterWithValue(data.withContextLabel(codeLocation), scoreHolder);
-        }
+        data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, listLength, LocationData.ofInteger(0), emptyLabel));
+        var index = this.<Integer>createLocal();
+        data.writeInstruction(instructionWriter, Instructions.dup(index, LocationData.ofInteger(0)));
+        var iterStart = data.writeLabel(instructionWriter);
+        data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, listLength, data.contextEndLabel()));
+        var scoreHolderObj = this.createLocal();
+        var scoreHolderStr = this.<String>createLocal();
+        data.writeInstruction(instructionWriter, Instructions.getListElement(scoreHolderObj, scoreHolders, index));
+        data.writeInstruction(instructionWriter, Instructions.assumeString(scoreHolderStr, scoreHolderObj));
+        var scoreHolder = this.<TScoreHolder>createLocal();
+        data.writeInstruction(instructionWriter, Instructions.namedScoreHolder(scoreHolder, scoreHolderStr));
+        var codeLocation = data.writeLabel(instructionWriter);
+        data.writeInstruction(instructionWriter, Instructions.valueAdd(index, index, LocationData.ofInteger(1)));
+        data.writeInstruction(instructionWriter, Instructions.jump(iterStart));
+        return enterWithValue(data.withContextLabel(codeLocation), scoreHolder);
     }
 
     public CompilationData<LocationData<? extends TScoreHolder>> forScoreHolder(ScoreHolderArgument holder, ResultContext resultContext) {
         if(holder.all()) {
             return forEachScoreHolder(holder.single(), resultContext);
         }else if(holder.name() != null) {
-            var macro = getResolvedStringMacro(holder.name());
             var scoreHolder = this.<TScoreHolder>createLocal();
-            writeInstruction(Instructions.namedScoreHolder(scoreHolder, macro));
+            var constantName = constantScoreHolderName(holder);
+            if(constantName != null) {
+                writeInstruction(Instructions.constScoreHolder(scoreHolder, constantName));
+            }else {
+                writeInstruction(Instructions.namedScoreHolder(scoreHolder, getResolvedStringMacro(holder.name())));
+            }
             return new CompilationData<>(this, current(), scoreHolder, 0);
         }else if(holder.selector() != null) {
             var selector = holder.single() ? holder.selector().limit(1) : holder.selector();
@@ -492,27 +625,41 @@ public class CompilationContext {
         throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNREACHABLE_CODE, source, "Unreachable code reached"));
     }
 
-    public LocationData<List<? extends TEntity>> getSelectorList(SelectorArgument selector, @Nullable ResultContext resultContext) {
+    /** Statically empty selections: players-only selectors that exclude players, or a predicate= that does not exist. */
+    private static boolean selectsNothing(SelectorArgument selector) {
+        if(selector.requirePlayer() && selector.excludesPlayers()) return true;
+        for(var predicate : selector.predicates()) {
+            if(DataRegistries.PREDICATE.getElement(predicate.data()).isEmpty()) return true;
+        }
+        return false;
+    }
+
+    /** EntitySelector.includesEntities() == false: @a/@p/@r, and @e/@n with type=player, gamemode=, level= or advancements=. */
+    private static boolean playersOnly(SelectorArgument selector) {
+        if(selector.requirePlayer()) return true;
+        var types = selector.entityTypes();
+        if(types != null && !types.negated() && types.data().size() == 1 && types.data().getFirst().equals(PLAYER_ENTITY_TYPE)) return true;
+        return !selector.gamemodes().isEmpty() || selector.level() != null || selector.advancements() != null;
+    }
+
+    private static final DataLocation PLAYER_ENTITY_TYPE = new DataLocation("minecraft", "player");
+
+    /** Whether candidates come from a scan (more than one possible), so an arbitrary-order limit can stop it early. */
+    private static boolean scansCandidates(SelectorArgument selector) {
+        return selector.playerName() == null && selector.entityUuid() == null && !selector.self();
+    }
+
+    public LocationData<List<? extends TEntity>> getSelectorList(SelectorArgument selector) {
         var data = current();
 
         LocationData<List<? extends TEntity>> entityList = createLocal();
         data.writeInstruction(instructionWriter, Instructions.createMutableList(entityList));
 
-        if(selector.requirePlayer() && selector.excludesPlayers()) {
+        if(selectsNothing(selector)) {
             return entityList;
-        }
-        for(var predicate : selector.predicates()) {
-            var predicateData = DataRegistries.PREDICATE.getElement(predicate.data());
-            if(predicateData.isEmpty()) {
-                return entityList;
-            }
         }
 
         try(var position = getPosition()) {
-            if(resultContext == null) {
-                //noinspection resource
-                resultContext = ResultContext.create(this, position.endLabel());
-            }
 
             LocationData<TVec3> realPosition;
             if(selector.x() != null || selector.y() != null || selector.z() != null) {
@@ -570,85 +717,108 @@ public class CompilationContext {
             }
 
             var selectorCodeLocation = data.writeLabel(instructionWriter);
+            var objectives = lookupObjectives(selector, selectorCodeLocation);
 
             try(var _ =enterWithoutValue(data.withContextLabel(selectorCodeLocation))) {
                 if(selector.worldLimited()) {
                     try(var world = getWorld()) {
-                        try(var selectorData = forSelectorSelect(selector, realPosition, world.content(), volumeBox, selectBox, resultContext)) {
-                            selectorData.writeInstruction(Instructions.addListElement(entityList, selectorData.content()));
-                        }
+                        collectSelector(selector, entityList, realPosition, world.content(), volumeBox, selectBox, objectives, selectorCodeLocation);
                     }
                 }else {
-                    try(var selectorData = forSelectorSelect(selector, realPosition, null, volumeBox, selectBox, resultContext)) {
-                        selectorData.writeInstruction(Instructions.addListElement(entityList, selectorData.content()));
-                    }
+                    collectSelector(selector, entityList, realPosition, null, volumeBox, selectBox, objectives, selectorCodeLocation);
                 }
             }
 
-            if(selector.sort() == SelectorSort.NEAREST || selector.sort() == SelectorSort.FURTHEST) {
-                switch(selector.sort()) {
-                    case FURTHEST -> position.writeInstruction(Instructions.sortListEntityFurthest(realPosition, entityList));
-                    case NEAREST -> position.writeInstruction(Instructions.sortListEntityNearest(realPosition, entityList));
-                }
-            }else if(selector.sort() == SelectorSort.RANDOM) {
-                data.writeInstruction(instructionWriter, Instructions.shuffleList(entityList));
+            // EntitySelector.sortAndLimit. Arbitrary order needs no truncation: collection stopped at the limit.
+            int limit = selector.limit() != null ? selector.limit() : Integer.MAX_VALUE;
+            switch(selector.sort()) {
+                case NEAREST -> position.writeInstruction(Instructions.sortListEntityNearest(realPosition, entityList, limit));
+                case FURTHEST -> position.writeInstruction(Instructions.sortListEntityFurthest(realPosition, entityList, limit));
+                case RANDOM -> position.writeInstruction(Instructions.shuffleList(entityList, limit));
+                case ARBITRARY -> {}
             }
         }
         return entityList;
     }
 
-    public CompilationData<LocationData<? extends TEntity>> forSelector(SelectorArgument selector, ResultContext resultContext) {
+    private void collectSelector(SelectorArgument selector, LocationData<List<? extends TEntity>> entityList, LocationData<TVec3> position, @Nullable LocationData<TServerLevel> world, @Nullable SelectorBox volumeBox, @Nullable SelectorBox selectBox, @Nullable Map<String, LocationData<TObjective>> objectives, LabelData collectionEnd) {
+        try(var selectorData = forSelectorSelect(selector, position, world, volumeBox, selectBox, objectives)) {
+            selectorData.writeInstruction(Instructions.addListElement(entityList, selectorData.content()));
+            // EntitySelector.addEntities: with arbitrary order the scan stops once `limit` entities matched.
+            if(selector.sort() == SelectorSort.ARBITRARY && selector.limit() != null && scansCandidates(selector)) {
+                if(selector.limit() == 1) {
+                    selectorData.writeInstruction(Instructions.jump(collectionEnd));
+                }else {
+                    var size = this.<Integer>createLocal();
+                    selectorData.writeInstruction(Instructions.getListLength(size, entityList));
+                    selectorData.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, size, LocationData.ofInteger(selector.limit()), collectionEnd));
+                }
+            }
+        }
+    }
+
+    /**
+     * scores= objectives, looked up once before the scan (the scan cannot change objectives). A missing objective makes
+     * the scores predicate false for every entity, so it skips the whole collection.
+     */
+    private @Nullable Map<String, LocationData<TObjective>> lookupObjectives(SelectorArgument selector, LabelData noMatch) {
+        if(selector.scores().isEmpty()) return null;
+        var objectives = new java.util.HashMap<String, LocationData<TObjective>>();
+        for(var name : selector.scores().keySet()) {
+            LocationData<TObjective> objective = createLocal();
+            instructionWriter.addInstructionBefore(Instructions.getObjective(objective, LocationData.ofString(name)), noMatch);
+            instructionWriter.addInstructionBefore(Instructions.ifNullJump(objective, noMatch), noMatch);
+            objectives.put(name, objective);
+        }
+        return objectives;
+    }
+
+    public CompilationData<LocationData<? extends TEntity>> forSelector(SelectorArgument selector, @Nullable ResultContext resultContext) {
+        boolean trackSuccess = resultContext != null && resultContext.generatingSuccess();
+        if(selector.self() && !trackSuccess && !selectsNothing(selector) && selector.distance() == null
+                && selector.x() == null && selector.y() == null && selector.z() == null
+                && selector.dx() == null && selector.dy() == null && selector.dz() == null) {
+            // @s: test the executing entity directly, no list (EntitySelector.findEntities currentEntity branch).
+            return forSelectorBase(getCurrentEntity(), selector, null, null, null);
+        }
         var data = current();
-        var entityList = getSelectorList(selector, resultContext);
+        var entityList = getSelectorList(selector);
         var length = this.<Integer>createLocal();
         data.writeInstruction(instructionWriter, Instructions.getListLength(length, entityList));
-        if(resultContext.generatingSuccess()) data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, length, LocationData.ofInteger(0), resultContext.markAndGetErrorLabel()));
-        if(selector.limit() != null) {
-            if(selector.limit() == 1) {
-                data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, length, LocationData.ofInteger(0), data.contextEndLabel()));
-                var entityObj = this.createLocal();
-                var entity = this.<TEntity>createLocal();
-                data.writeInstruction(instructionWriter, Instructions.getListElement(entityObj, entityList, LocationData.ofInteger(0)));
-                data.writeInstruction(instructionWriter, Instructions.assumeEntity(entity, entityObj));
-                var codeLocation = data.writeLabel(instructionWriter);
-                return enterWithValue(data.withContextLabel(codeLocation), entity);
-            }else {
-                var index = this.<Integer>createLocal();
-                data.writeInstruction(instructionWriter, Instructions.dup(index, LocationData.ofInteger(0)));
-                var iterStart = data.writeLabel(instructionWriter);
-                data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, length, data.contextEndLabel()));
-                data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, LocationData.ofInteger(selector.limit()), data.contextEndLabel()));
-                var entityObj = this.createLocal();
-                var entity = this.<TEntity>createLocal();
-                data.writeInstruction(instructionWriter, Instructions.getListElement(entityObj, entityList, index));
-                data.writeInstruction(instructionWriter, Instructions.assumeEntity(entity, entityObj));
-                var codeLocation = data.writeLabel(instructionWriter);
-                data.writeInstruction(instructionWriter, Instructions.valueAdd(index, index, LocationData.ofInteger(1)));
-                data.writeInstruction(instructionWriter, Instructions.jump(iterStart));
-
-                return enterWithValue(data.withContextLabel(codeLocation), entity);
-            }
-        }else {
-            var index = this.<Integer>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.dup(index, LocationData.ofInteger(0)));
-            var iterStart = data.writeLabel(instructionWriter);
-            data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, length, data.contextEndLabel()));
+        if(trackSuccess) data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, length, LocationData.ofInteger(0), resultContext.markAndGetErrorLabel()));
+        if(selector.limit() != null && selector.limit() == 1) {
+            data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, length, LocationData.ofInteger(0), data.contextEndLabel()));
             var entityObj = this.createLocal();
             var entity = this.<TEntity>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.getListElement(entityObj, entityList, index));
+            data.writeInstruction(instructionWriter, Instructions.getListElement(entityObj, entityList, LocationData.ofInteger(0)));
             data.writeInstruction(instructionWriter, Instructions.assumeEntity(entity, entityObj));
             var codeLocation = data.writeLabel(instructionWriter);
-            data.writeInstruction(instructionWriter, Instructions.valueAdd(index, index, LocationData.ofInteger(1)));
-            data.writeInstruction(instructionWriter, Instructions.jump(iterStart));
-
             return enterWithValue(data.withContextLabel(codeLocation), entity);
         }
+        // The list already holds at most `limit` entities (getSelectorList applies it).
+        var index = this.<Integer>createLocal();
+        data.writeInstruction(instructionWriter, Instructions.dup(index, LocationData.ofInteger(0)));
+        var iterStart = data.writeLabel(instructionWriter);
+        data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, length, data.contextEndLabel()));
+        var entityObj = this.createLocal();
+        var entity = this.<TEntity>createLocal();
+        data.writeInstruction(instructionWriter, Instructions.getListElement(entityObj, entityList, index));
+        data.writeInstruction(instructionWriter, Instructions.assumeEntity(entity, entityObj));
+        var codeLocation = data.writeLabel(instructionWriter);
+        data.writeInstruction(instructionWriter, Instructions.valueAdd(index, index, LocationData.ofInteger(1)));
+        data.writeInstruction(instructionWriter, Instructions.jump(iterStart));
+
+        return enterWithValue(data.withContextLabel(codeLocation), entity);
     }
 
     private record SelectorBox(LocationData<Double> minX, LocationData<Double> minY, LocationData<Double> minZ, LocationData<Double> maxX, LocationData<Double> maxY, LocationData<Double> maxZ) {}
 
+    /**
+     * Candidate source, mirroring EntitySelector.findEntities/findPlayers. Every scan reads one level's own structures
+     * (or the player list), so no per-entity dimension check is needed; @s is never dimension-checked in vanilla.
+     */
     @SuppressWarnings("resource")
-    private CompilationData<LocationData<? extends TEntity>> forSelectorSelect(SelectorArgument selector, LocationData<TVec3> position, @Nullable LocationData<TServerLevel> world, @Nullable SelectorBox volumeBox, @Nullable SelectorBox selectBox, ResultContext resultContext) {
+    private CompilationData<LocationData<? extends TEntity>> forSelectorSelect(SelectorArgument selector, LocationData<TVec3> position, @Nullable LocationData<TServerLevel> world, @Nullable SelectorBox volumeBox, @Nullable SelectorBox selectBox, @Nullable Map<String, LocationData<TObjective>> objectives) {
         CompilationData<LocationData<? extends TEntity>> entityData;
         if(selector.playerName() != null) {
             entityData = forPlayer(selector.playerName()).changeType();
@@ -656,31 +826,28 @@ public class CompilationContext {
             entityData = forEntity(selector.entityUuid());
         }else if(selector.self()) {
             entityData = getCurrentEntity();
-        }else if(selector.requirePlayer()) {
-            entityData = forEachPlayer().changeType();
+        }else if(playersOnly(selector)) {
+            entityData = forEachPlayer(world).changeType();
+        }else if(selectBox != null) {
+            entityData = forEachEntityInside(world, selectBox);
+            if(selectBox.equals(volumeBox)) volumeBox = null;
         }else {
-            if(selectBox != null) {
-                int limit = Integer.MAX_VALUE;
-                if(selector.sort() == SelectorSort.ARBITRARY && selector.distance() == null && selector.limit() != null) limit = selector.limit();
-                entityData = forEachEntityInside(world, selectBox, limit);
-                if(selectBox.equals(volumeBox)) volumeBox = null;
+            var types = selector.entityTypes();
+            if(types != null && !types.negated() && types.data().size() == 1) {
+                entityData = forEachEntityOfType(world, types.data().getFirst());
             }else {
                 entityData = forEachEntity(world);
             }
         }
-        return forSelectorBase(entityData, selector, position, world, volumeBox, resultContext);
+        return forSelectorBase(entityData, selector, position, volumeBox, objectives);
     }
 
-    private CompilationData<LocationData<? extends TEntity>> forSelectorBase(CompilationData<LocationData<? extends TEntity>> entityData, SelectorArgument selector, LocationData<TVec3> position, @Nullable LocationData<TServerLevel> world, @Nullable SelectorBox volumeBox, ResultContext resultContext) {
+    /** Applies the selector's filters to one candidate; failing candidates jump to the scope end. {@code position} is only read for distance=. */
+    private CompilationData<LocationData<? extends TEntity>> forSelectorBase(CompilationData<LocationData<? extends TEntity>> entityData, SelectorArgument selector, @Nullable LocationData<TVec3> position, @Nullable SelectorBox volumeBox, @Nullable Map<String, LocationData<TObjective>> objectives) {
         var data = entityData.data();
         int stackCount = entityData.stackCount();
         int stackStart = stack.size();
         data.writeInstruction(instructionWriter, Instructions.ifNullJump(entityData.content(), data.contextEndLabel()));
-        if(world != null) {
-            LocationData<TServerLevel> thisWorld = createLocal();
-            data.writeInstruction(instructionWriter, Instructions.getEntityWorld(thisWorld, entityData.content()));
-            data.writeInstruction(instructionWriter, Instructions.ifObjectCompareJump(ObjectComparisonType.NOT_IDENTITY_EQUAL, thisWorld, world, data.contextEndLabel()));
-        }
         if(selector.entityTypes() != null) {
             var entityType = this.<TEntityType>createLocal();
             data.writeInstruction(instructionWriter, Instructions.getEntityType(entityType, entityData.content()));
@@ -791,19 +958,12 @@ public class CompilationContext {
                 }
             }
         }
-        if(selector.yaw() != null || selector.pitch() != null) {
-            var rotationLocal = this.<TVec2>createLocal();
-            data.writeInstruction(instructionWriter, Instructions.getEntityRotation(rotationLocal, entityData.content()));
-            if(selector.yaw() != null) {
-                var yaw = this.<Float>createLocal();
-                data.writeInstruction(instructionWriter, Instructions.getRotationYaw(yaw, rotationLocal));
-                jumpIfNotMatchesRange(data, yaw, selector.yaw(), data.contextEndLabel());
-            }
-            if(selector.pitch() != null) {
-                var pitch = this.<Float>createLocal();
-                data.writeInstruction(instructionWriter, Instructions.getRotationPitch(pitch, rotationLocal));
-                jumpIfNotMatchesRange(data, pitch, selector.pitch(), data.contextEndLabel());
-            }
+        // EntitySelectorParser.createRotationPredicate; the parser stored wrapped bounds with the 0/359 defaults.
+        if(selector.pitch() != null) {
+            data.writeInstruction(instructionWriter, Instructions.jumpIfXRotationNotInRange(entityData.content(), LocationData.ofFloat(Objects.requireNonNull(selector.pitch().minimum())), LocationData.ofFloat(Objects.requireNonNull(selector.pitch().maximum())), data.contextEndLabel()));
+        }
+        if(selector.yaw() != null) {
+            data.writeInstruction(instructionWriter, Instructions.jumpIfYRotationNotInRange(entityData.content(), LocationData.ofFloat(Objects.requireNonNull(selector.yaw().minimum())), LocationData.ofFloat(Objects.requireNonNull(selector.yaw().maximum())), data.contextEndLabel()));
         }
         for(var team : selector.teams()) {
             var entityTeam = this.<TTeam>createLocal();
@@ -841,13 +1001,21 @@ public class CompilationContext {
             data.writeInstruction(instructionWriter, Instructions.checkEntityIntersection(entityData.content(), volumeBox.minX, volumeBox.minY, volumeBox.minZ, volumeBox.maxX, volumeBox.maxY, volumeBox.maxZ, data.contextEndLabel()));
         }
         if(!selector.scores().isEmpty()) {
+            // EntitySelectorOptions scores: missing objective or missing score => no match; read-only lookup.
             for(var entry : selector.scores().entrySet()) {
-                var objectiveData = getObjective(entry.getKey(), resultContext);
-                var scoreData = getScoreData(new ScoreAccessor(objectiveData.content(), entityData.content()), data.contextEndLabel(), false);
-                data = current();
-
+                LocationData<TObjective> objective;
+                if(objectives != null) {
+                    objective = Objects.requireNonNull(objectives.get(entry.getKey()));
+                }else {
+                    objective = createLocal();
+                    data.writeInstruction(instructionWriter, Instructions.getObjective(objective, LocationData.ofString(entry.getKey())));
+                    data.writeInstruction(instructionWriter, Instructions.ifNullJump(objective, data.contextEndLabel()));
+                }
+                var scoreInfo = this.<TReadOnlyScoreInfo>createLocal();
+                data.writeInstruction(instructionWriter, Instructions.getSelectorScoreInfo(scoreInfo, objective, entityData.content()));
+                data.writeInstruction(instructionWriter, Instructions.ifNullJump(scoreInfo, data.contextEndLabel()));
                 var scoreValue = this.<Integer>createLocal();
-                data.writeInstruction(instructionWriter, Instructions.getScoreValue(scoreValue, scoreData.content()));
+                data.writeInstruction(instructionWriter, Instructions.getSelectorScoreInfoValue(scoreValue, scoreInfo));
                 jumpIfNotMatchesRange(data, scoreValue, entry.getValue(), data.contextEndLabel());
             }
         }
@@ -865,6 +1033,15 @@ public class CompilationContext {
         }
         stackCount += stack.size() - stackStart;
         return enterWithValue(data, entityData.content(), stackCount + 1);
+    }
+
+    /** Starts the fork for the execute chain beginning at {@code chain}; chains that can only yield a single
+     * source compile their body inline (no fork list, no CommandSourceStack). */
+    public CompilationData<@Nullable ForkingContext> withForkingContext(@Nullable ForkingContext forkingContext, CommandParams chain) {
+        if(forkingContext == null && ExecuteChains.isSingleSource(chain)) {
+            return new CompilationData<>(this, current(), null, 0);
+        }
+        return withForkingContext(forkingContext);
     }
 
     public CompilationData<@Nullable ForkingContext> withForkingContext(@Nullable ForkingContext forkingContext) {
@@ -934,20 +1111,6 @@ public class CompilationContext {
         }
         if(range.maximum() != null) {
             data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN, value, LocationData.ofInteger(range.maximum()), label));
-        }
-    }
-
-    public void jumpIfNotMatchesRange(CompilationContextData data, LocationData<Float> value, FloatRangeArgument range, LabelData label) {
-        if(Objects.equals(range.minimum(), range.maximum())) {
-            if(range.minimum() == null) throw new IllegalArgumentException("range does not have minimum nor maximum");
-            data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, value, LocationData.ofFloat(range.minimum()), label));
-            return;
-        }
-        if(range.minimum() != null) {
-            data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.LESS_THAN, value, LocationData.ofFloat(range.minimum()), label));
-        }
-        if(range.maximum() != null) {
-            data.writeInstruction(instructionWriter, Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN, value, LocationData.ofFloat(range.maximum()), label));
         }
     }
 

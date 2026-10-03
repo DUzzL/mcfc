@@ -1,0 +1,29 @@
+; C9: a failing command for one source of `execute as` must not abort the remaining sources.
+@setup
+objective create a dummy
+objective create d dummy
+objective create t dummy
+
+@function run
+scoreboard players set #sum t 0
+scoreboard players set #ok t 0
+scoreboard players set #count t 0
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_fork"]}
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_fork"]}
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_fork","mcfc_fork_zero"]}
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_fork"]}
+scoreboard players set @e[tag=mcfc_fork] a 10
+scoreboard players set @e[tag=mcfc_fork] d 2
+scoreboard players set @e[tag=mcfc_fork_zero] d 0
+execute as @e[tag=mcfc_fork] run scoreboard players operation @s a /= @s d
+scoreboard players operation #sum t += @e[tag=mcfc_fork] a
+execute as @e[tag=mcfc_fork] store success score @s t run scoreboard players operation @s a /= @s d
+scoreboard players operation #ok t += @e[tag=mcfc_fork] t
+execute store result score #ran t as @e[tag=mcfc_fork] if entity @s[tag=!mcfc_fork_zero] run scoreboard players add #count t 1
+kill @e[tag=mcfc_fork]
+
+@validate
+score #sum t is 25
+score #ok t is 3
+score #count t is 3
+score #ran t is 3

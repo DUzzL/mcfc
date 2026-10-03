@@ -11,6 +11,8 @@ import net.minecraft.gametest.framework.GameTestInstance;
 import net.minecraft.gametest.framework.TestData;
 import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.network.chat.Component;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 
@@ -35,7 +37,12 @@ public record TestInfo(CompiledTest compiledTest) {
             var functions = helper.getLevel().getServer().getFunctions();
             var runFunction = functions.get(Identifier.fromNamespaceAndPath("mcfc-test", "run")).orElseThrow(() -> helper.assertionException(Component.literal("mcfc-test:run function not found")));
 
-            var cmdStack = helper.getLevel().getServer().createCommandSourceStack();
+            // Anchor at the test structure: the framework guarantees only its chunks are entity-ticking,
+            // while the server source sits at the respawn point whose chunk may be unloaded (entities
+            // summoned there are invisible to @e, making both vanilla and compiled runs flaky).
+            var cmdStack = helper.getLevel().getServer().createCommandSourceStack()
+                .withLevel(helper.getLevel())
+                .withPosition(Vec3.atLowerCornerOf(helper.absolutePos(BlockPos.ZERO)));
             var mcfcData = FunctionCompilerMain.functionClassLoader;
 
             assert mcfcData != null;

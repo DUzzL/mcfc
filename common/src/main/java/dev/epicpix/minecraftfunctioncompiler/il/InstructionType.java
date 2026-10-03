@@ -2,20 +2,37 @@ package dev.epicpix.minecraftfunctioncompiler.il;
 
 import org.jetbrains.annotations.Nullable;
 
+import java.util.BitSet;
+
 public record InstructionType(String name, String[] argumentNames, int flags, int id) {
 
-    private static int NEXT_ID;
+    // Types are created from several class initializers (generated tables, the optimizer's placeholder) that can run
+    // concurrently on compile workers, so id allocation and the claim check below share one lock.
+    private static final Object ID_LOCK = new Object();
+    private static int nextId;
+    private static final BitSet UNCLAIMED_IDS = new BitSet();
 
     public InstructionType {
-        if(id != NEXT_ID) throw new IllegalArgumentException("Don't provide the id argument manually");
+        synchronized(ID_LOCK) {
+            if(!UNCLAIMED_IDS.get(id)) throw new IllegalArgumentException("Don't provide the id argument manually");
+            UNCLAIMED_IDS.clear(id);
+        }
     }
 
     public InstructionType(String name, String[] argumentNames, int flags) {
-        this(name, argumentNames, flags, ++NEXT_ID);
+        this(name, argumentNames, flags, allocateId());
     }
 
     public InstructionType(String name, String[] argumentNames) {
         this(name, argumentNames, 0);
+    }
+
+    private static int allocateId() {
+        synchronized(ID_LOCK) {
+            int id = ++nextId;
+            UNCLAIMED_IDS.set(id);
+            return id;
+        }
     }
 
     public boolean equals(@Nullable Object o) {
@@ -27,8 +44,7 @@ public record InstructionType(String name, String[] argumentNames, int flags, in
         return id;
     }
 
-    public static final int CONDITIONAL_JUMP = 1 << 0;
-    public static final int PURE = 1 << 1;
+    public static final int PURE = 1 << 0;
 
     public String toString() {
         return name;
@@ -41,10 +57,6 @@ public record InstructionType(String name, String[] argumentNames, int flags, in
             }
         }
         throw new IllegalArgumentException("Invalid argument name: " + argumentName);
-    }
-
-    public boolean isConditionJump() {
-        return (flags & CONDITIONAL_JUMP) != 0;
     }
 
     public boolean isPure() {

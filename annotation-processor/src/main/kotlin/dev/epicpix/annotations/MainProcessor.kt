@@ -60,50 +60,40 @@ class MainProcessor(
         invoked = true
         dataDir = options.dataDir
 
-        val jarFiles = mutableListOf<JarFile>()
-        val jarFileMappings = mutableMapOf<String, Int>()
-        if(options.jars != null) {
-            for(jarName in options.jars) {
-                val jar = JarFile(File(jarName))
-                val index = jarFiles.size
-                jarFiles.add(jar)
-                for(entry in jar.entries()) {
-                    if(!entry.isDirectory) {
-                        jarFileMappings[entry.name] = index
+        setJars(options.jars?.map { JarFile(File(it)) } ?: emptyList())
+        try {
+            setResolver(resolver)
+            logger.info("Running KSP for ${options.project} - ${options.sourceSet}")
+            if(options.sourceSet == "main") {
+                generateInstructionData(resolver)
+                val targets = mutableListOf<String>()
+                val file = parseCode(loadDataFile("data.instructions"))
+
+                if(options.project == "common" || options.project == "minecraft") {
+                    val emitterClass = file.headers["emitter_${options.project}_file"]!!
+                    val emitterPackage = emitterClass.substring(0, emitterClass.lastIndexOf('.'))
+                    val definitions = loadJson(options.project)
+                    if(definitions["definition_file"] != null) {
+                        generateFunctionMapping(definitions, options.minecraftVersion, "$emitterPackage.EmitterTargets", targets)
+                    }
+                }
+
+                when(options.project) {
+                    "common" -> {
+                        generateInstructionData(file, true, options.minecraftVersion, targets)
+                        generateConstantsData()
+                        generateCommandsData()
+                    }
+                    "common-test" -> {
+                        generateTests(codeGenerator, options.tests!!)
+                    }
+                    "minecraft" -> {
+                        generateInstructionData(file, false, options.minecraftVersion, targets)
                     }
                 }
             }
-            setJarInfo(jarFiles to jarFileMappings)
-        }
-        setResolver(resolver)
-        logger.info("Running KSP for ${options.project} - ${options.sourceSet}")
-        if(options.sourceSet == "main") {
-            generateInstructionData(resolver)
-            val targets = mutableListOf<String>()
-            val file = parseCode(loadDataFile("data.instructions"))
-
-            if(options.project == "common" || options.project == "minecraft") {
-                val emitterClass = file.headers["emitter_${options.project}_file"]!!
-                val emitterPackage = emitterClass.substring(0, emitterClass.lastIndexOf('.'))
-                val definitions = loadJson(options.project)
-                if(definitions["definition_file"] != null) {
-                    generateFunctionMapping(definitions, options.minecraftVersion, "$emitterPackage.EmitterTargets", targets)
-                }
-            }
-
-            when(options.project) {
-                "common" -> {
-                    generateInstructionData(file, true, options.minecraftVersion, targets)
-                    generateConstantsData()
-                    generateCommandsData()
-                }
-                "common-test" -> {
-                    generateTests(codeGenerator, options.tests!!)
-                }
-                "minecraft" -> {
-                    generateInstructionData(file, false, options.minecraftVersion, targets)
-                }
-            }
+        } finally {
+            closeClassInfo()
         }
         return listOf()
     }
@@ -115,7 +105,8 @@ class MainProcessor(
         map.appendText("package $resultPackage;\n")
         map.appendText("public final class $resultName {\n")
         map.appendText("    private $resultName() {}\n")
-        map.appendText("    public static final boolean isDevelopmentEnvironment = ${!options.isJarTask};\n")
+        // Resolved at runtime: Loom dev runs set -Dfabric.development=true; must not be a KSP option (it would invalidate KSP outputs per task graph)
+        map.appendText("    public static final boolean isDevelopmentEnvironment = Boolean.getBoolean(\"fabric.development\");\n")
         map.appendText("    public static final String versionCommit = \"${options.commit}\";\n")
         map.appendText("    public static final String versionName = \"${options.version}\";\n")
         map.appendText("}\n")
@@ -269,6 +260,7 @@ class MainProcessor(
             }
         }
         mapExtensions.appendText("}\n")
+        mapExtensions.close()
     }
 
     fun generateInstructionData(file: ParsedFile, common: Boolean, minecraftVersion: MinecraftVersion?, targets: MutableList<String>) {
@@ -319,6 +311,25 @@ class MainProcessor(
                 }
             }
         }
+        allEntries.groupBy { it.name.uppercase() }.filter { it.value.size > 1 }.keys.firstOrNull()?.let {
+            throw IllegalArgumentException("Instruction $it has several definitions matching Minecraft version $minecraftVersion")
+        }
+
+        // Dispatch: InstructionType.id() -> 1-based local index (0 = not handled here), then a switch per chunk.
+        // Ids are assigned at runtime, so the table is built in the static initializer.
+        map.appendText("    private static final int[] LOCAL_INDEX = buildLocalIndex();\n")
+        map.appendText("    private static int[] buildLocalIndex() {\n")
+        map.appendText("        dev.epicpix.minecraftfunctioncompiler.il.InstructionType[] types = {\n")
+        for(entry in allEntries) {
+            map.appendText("            $enumFile.${entry.name.uppercase()},\n")
+        }
+        map.appendText("        };\n")
+        map.appendText("        int max = 0;\n")
+        map.appendText("        for(var t : types) max = Math.max(max, t.id());\n")
+        map.appendText("        int[] result = new int[max + 1];\n")
+        map.appendText("        for(int i = 0; i < types.length; i++) result[types[i].id()] = i + 1;\n")
+        map.appendText("        return result;\n")
+        map.appendText("    }\n")
 
         // Split definitions into chunks to avoid JVM method size limit (64KB bytecode)
         val maxChunkSize = 15
@@ -326,9 +337,10 @@ class MainProcessor(
 
         // Generate a private static method for each chunk
         for((chunkIndex, chunk) in chunks.withIndex()) {
-            map.appendText("    private static boolean emitChunk$chunkIndex(dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext context, dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter cw, dev.epicpix.minecraftfunctioncompiler.il.InstructionType type) {\n")
-            for(entry in chunk) {
-                map.appendText("        if(type == $enumFile.${entry.name.uppercase()}) {\n")
+            map.appendText("    private static boolean emitChunk$chunkIndex(dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext context, dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeWriter cw, int local) {\n")
+            map.appendText("        switch(local) {\n")
+            for((entryIndex, entry) in chunk.withIndex()) {
+                map.appendText("        case ${chunkIndex * maxChunkSize + entryIndex + 1} -> { // ${entry.name.uppercase()}\n")
                 map.appendText(entry.generatedCode.trimEnd().prependIndent("            "))
                 map.appendText("\n")
                 if(entry.writeReturn) {
@@ -336,6 +348,8 @@ class MainProcessor(
                 }
                 map.appendText("        }\n")
             }
+            map.appendText("        default -> {}\n")
+            map.appendText("        }\n")
             map.appendText("        return false;\n")
             map.appendText("    }\n")
         }
@@ -344,14 +358,16 @@ class MainProcessor(
         map.appendText("    public static void registerInstructionEmitters() {\n")
         map.appendText("        dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructions.registerEmitterInstruction((context) -> {\n")
         map.appendText("            var cw = context.codeWriter();\n")
-        map.appendText("            var type = context.instruction().type();\n")
+        map.appendText("            int id = context.instruction().type().id();\n")
+        map.appendText("            int local = id < LOCAL_INDEX.length ? LOCAL_INDEX[id] : 0;\n")
+        map.appendText("            return switch((local - 1) / $maxChunkSize) {\n")
         for(chunkIndex in chunks.indices) {
-            map.appendText("            if(emitChunk$chunkIndex(context, cw, type)) return true;\n")
+            map.appendText("                case $chunkIndex -> local != 0 && emitChunk$chunkIndex(context, cw, local);\n")
         }
-        map.appendText("            return false;\n")
+        map.appendText("                default -> false;\n")
+        map.appendText("            };\n")
         map.appendText("        });\n")
         map.appendText("    }\n")
-        map.appendText("\n")
         map.appendText("}\n")
 
         val mapTargets = codeGenerator.createNewFile(Dependencies.ALL_FILES, resultPackage, "EmitterTargets", "java")
@@ -400,6 +416,8 @@ class MainProcessor(
         types.appendText("package $enumResultPackage;\n")
         types.appendText("public class $enumResultClass {\n")
         val instructionType = "dev.epicpix.minecraftfunctioncompiler.il.Instruction"
+
+        validateDefinitions(file)
 
         val writtenDefinitions = mutableListOf<String>()
         file.definitions.forEach {
@@ -519,20 +537,31 @@ class MainProcessor(
         impl.appendText("        return resultInstructions;\n")
         impl.appendText("    }\n")
         impl.appendText("    private static void addStaticRequirementsInternal($instructionType instruction, HashSet<$instructionEnumType> mutableSet) {\n")
-        file.definitions.forEach {
+        impl.appendText("        int id = instruction.type().id();\n")
+        impl.appendText("        if(id >= STATIC_REQS.length) return;\n")
+        impl.appendText("        var reqs = STATIC_REQS[id];\n")
+        impl.appendText("        if(reqs != null) Collections.addAll(mutableSet, reqs);\n")
+        impl.appendText("    }\n")
+        // Indexed by InstructionType.id(); ids are assigned at runtime, so the table is built in the static initializer
+        impl.appendText("    private static final $instructionEnumType[][] STATIC_REQS = buildStaticRequirements();\n")
+        impl.appendText("    private static $instructionEnumType[][] buildStaticRequirements() {\n")
+        impl.appendText("        var byType = new HashMap<$instructionEnumType, $instructionEnumType[]>();\n")
+        file.definitions.distinctBy { it.name.uppercase() }.forEach {
             val staticParams = it.params.filter { (param, _) -> param.scope == ParsedTokenValueAccessorScope.STATIC && param.name != "CommandSourceStack" && it.name.uppercase() != "static${param.name}".toUpperSnakeCase() }
             if(staticParams.isNotEmpty()) {
-                impl.appendText("        if(instruction.type() == $enumClass.${it.name.uppercase()}) {\n")
+                val reqs = LinkedHashSet<String>()
                 for(param in staticParams) {
                     val paramName = "static${param.first.name}".toUpperSnakeCase()
-                    val reqs = defs.find { it.def.name.uppercase() == paramName }!!.getAll()
-                    for(req in reqs) {
-                        impl.appendText("            mutableSet.add($enumClass.${req.def.name.uppercase()});\n")
-                    }
+                    defs.find { it.def.name.uppercase() == paramName }!!.getAll().forEach { req -> reqs.add(req.def.name.uppercase()) }
                 }
-                impl.appendText("        }\n")
+                impl.appendText("        byType.put($enumClass.${it.name.uppercase()}, new $instructionEnumType[] {${reqs.joinToString { req -> "$enumClass.$req" }}});\n")
             }
         }
+        impl.appendText("        int max = 0;\n")
+        impl.appendText("        for(var t : byType.keySet()) max = Math.max(max, t.id());\n")
+        impl.appendText("        var result = new $instructionEnumType[max + 1][];\n")
+        impl.appendText("        for(var e : byType.entrySet()) result[e.getKey().id()] = e.getValue();\n")
+        impl.appendText("        return result;\n")
         impl.appendText("    }\n")
 
         impl.appendText("}\n")
@@ -603,6 +632,21 @@ class MainProcessor(
             types.close()
         }
         return instructionMappings
+    }
+}
+
+/**
+ * Versioned variants of one instruction share a single InstructionType/factory, so their parameters and flags must match.
+ * (Jump edges need no flag: the optimizer's CFG treats every label operand of a non-LABEL instruction as an edge.)
+ */
+private fun validateDefinitions(file: ParsedFile) {
+    for((name, variants) in file.definitions.groupBy { it.name.uppercase() }) {
+        val first = variants.first()
+        for(other in variants.drop(1)) {
+            if(other.params != first.params || other.instructionFlags.toSet() != first.instructionFlags.toSet()) {
+                throw IllegalArgumentException("Versioned variants of instruction $name must have identical parameters and flags")
+            }
+        }
     }
 }
 

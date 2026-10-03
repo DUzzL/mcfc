@@ -19,6 +19,8 @@ import java.util.Locale;
 import static net.minecraft.server.commands.FunctionCommand.SUGGEST_FUNCTION;
 
 public class McfcCommand {
+    private static final int MAX_SHOWN_DIAGNOSTICS = 20;
+
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         var base = Commands.literal("mcfc").requires(Commands.hasPermission(Commands.LEVEL_ADMINS));
 
@@ -42,8 +44,14 @@ public class McfcCommand {
                 return 0;
             }
             var diagnostics = loader.getDiagnostics();
-            context.getSource().sendSuccess(() -> Component.literal("Total diagnostics: ").withStyle(ChatFormatting.GREEN).append(Component.literal(CompileConstants.versionName).withStyle(ChatFormatting.GOLD)), false);
-            for(var diagnostic : diagnostics) {
+            var byKind = new java.util.TreeMap<String, Integer>();
+            for(var diagnostic : diagnostics) byKind.merge(diagnostic.kind().toString().toLowerCase(Locale.ROOT), 1, Integer::sum);
+            context.getSource().sendSuccess(() -> Component.literal("Total diagnostics: ").withStyle(ChatFormatting.GREEN).append(Component.literal(Integer.toString(diagnostics.size())).withStyle(ChatFormatting.GOLD)), false);
+            for(var kind : byKind.entrySet()) {
+                context.getSource().sendSuccess(() -> Component.literal("  " + kind.getKey() + ": ").withStyle(ChatFormatting.GREEN).append(Component.literal(Integer.toString(kind.getValue())).withStyle(ChatFormatting.GOLD)), false);
+            }
+            int shown = Math.min(diagnostics.size(), MAX_SHOWN_DIAGNOSTICS);
+            for(var diagnostic : diagnostics.subList(0, shown)) {
                 var tooltip = Component.empty();
                 tooltip.append(Component.literal("Id: ").withStyle(ChatFormatting.GREEN));
                 tooltip.append(Component.literal(diagnostic.diagnosticId()).withStyle(ChatFormatting.GOLD));
@@ -64,6 +72,10 @@ public class McfcCommand {
                     tooltip.append(Component.literal(diagnostic.extra()).withStyle(ChatFormatting.GOLD));
                 }
                 context.getSource().sendSuccess(() -> Component.literal(diagnostic.kind() + " - " + diagnostic.source()).withStyle(Style.EMPTY.applyFormat(ChatFormatting.GREEN).withHoverEvent(new HoverEvent.ShowText(tooltip))), false);
+            }
+            if(shown < diagnostics.size()) {
+                int hidden = diagnostics.size() - shown;
+                context.getSource().sendSuccess(() -> Component.literal("… and " + hidden + " more (see the server log)").withStyle(ChatFormatting.GRAY), false);
             }
             return diagnostics.size();
         }));
@@ -92,9 +104,14 @@ public class McfcCommand {
                 context.getSource().sendFailure(Component.literal("Function Compiler is not loaded"));
                 return 0;
             }
-            context.getSource().sendSuccess(() -> Component.literal("Started function recompilation"), true);
-            ((FunctionCompilationStarter) context.getSource().getServer().getFunctions()).mcfc$loadFunctions(true, () -> {
-                context.getSource().sendSuccess(() -> Component.literal("Finished function recompilation"), true);
+            var source = context.getSource();
+            source.sendSuccess(() -> Component.literal("Started function recompilation"), true);
+            // onComplete runs on the server thread once this compile finished, failed or was superseded.
+            ((FunctionCompilationStarter) source.getServer().getFunctions()).mcfc$loadFunctions(true, () -> {
+                var current = FunctionCompilerMain.functionClassLoader;
+                if(current == null) return;
+                source.sendSuccess(() -> Component.literal("Finished function recompilation: ").withStyle(ChatFormatting.GREEN)
+                    .append(Component.literal(current.getState() + " (" + current.loadedFunctionCount() + "/" + current.totalFunctionCount() + " compiled)").withStyle(ChatFormatting.GOLD)), true);
             });
             return 1;
         }));

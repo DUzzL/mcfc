@@ -113,6 +113,15 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
             if(expression.name == "map_scoreboard_criterion") {
                 return ParsedTokenExpressionTypeComplex.fromInternalName("net/minecraft/world/scores/criteria/ObjectiveCriteria")
             }
+            if(expression.name == "map_objective_ref") {
+                return ParsedTokenExpressionTypeComplex.fromInternalName("dev/epicpix/minecraftfunctioncompiler/mod/ObjectiveRef")
+            }
+            if(expression.name == "map_score_holder") {
+                return ParsedTokenExpressionTypeComplex.fromInternalName("net/minecraft/world/scores/ScoreHolder")
+            }
+            if(expression.name == "map_score_ref") {
+                return ParsedTokenExpressionTypeComplex.fromInternalName("dev/epicpix/minecraftfunctioncompiler/mod/ScoreRef")
+            }
             if(expression.name == "map_text") {
                 return ParsedTokenExpressionTypeComplex.fromInternalName("net/minecraft/network/chat/Component")
             }
@@ -149,40 +158,16 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
         }
         val paramTypes = expression.arguments.map { evaluateExpressionType(writerData, it) }
         val instance = expression.instance
-        val functionMatches = if(instance is ParsedTokenInstanceValue) {
-            val instanceType = evaluateExpressionType(writerData, instance.expression).let { if(it is ParsedTokenExpressionTypeGeneric && it.lowerBound.typeName != "java/lang/Number") ParsedTokenExpressionTypeComplex.fromInternalName(it.lowerBound.typeName) else it }
-            if(instanceType !is ParsedTokenExpressionTypeComplex) {
-                throw IllegalArgumentException("Cannot run functions on a primitive type: $instanceType")
-            }
-            val matches = getClassAccessibleMethods(instanceType.typeName).filter { !it.isStatic && it.name == expression.name && it.descriptor.parameterCount() == paramTypes.size && it.descriptor.parameterList().mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }.toMutableList()
-            if(matches.size < 1) {
-                throw IllegalArgumentException("Failed to find function [${instanceType.typeName}].${expression.name}(${paramTypes.joinToString()})")
-            }
-            if(matches.size > 1) {
-                val closest = matches.map { it to checkClassDistance(it.owner, instanceType.typeName) }.reduce { a, b -> if(a.second == null || a.second!! > b.second!!) b else a }
-                matches.clear()
-                matches.add(closest.first)
-            }
-            matches
-        }else if(instance is ParsedTokenInstanceStatic) {
-            val checkStatic = expression.name != "<init>"
-            val matches = getClassAccessibleMethods(instance.className).filter { it.isStatic == checkStatic && it.name == expression.name && it.descriptor.parameterCount() == paramTypes.size && it.descriptor.parameterList().mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }
-            if(matches.size < 1) {
-                throw IllegalArgumentException("Failed to find function <${instance.className}>.${expression.name}(${paramTypes.joinToString()})")
-            }
-            if(matches.size > 1) {
-                throw IllegalArgumentException("Found too many functions matching <${instance.className}>.${expression.name}(${paramTypes.joinToString()}): $matches")
-            }
-            matches
-        }else {
-            throw IllegalArgumentException("Cannot run function on unknown instance: $instance | ${expression.name}")
-        }
+        val functionMatches = listOf(resolveMethod(writerData, expression, paramTypes))
         val def = functionMatches[0].descriptor.returnType()
         if(def == ConstantDescs.CD_boolean) {
             return ParsedTokenExpressionSimpleType.BOOLEAN
         }
         if(def == ConstantDescs.CD_int) {
             return ParsedTokenExpressionSimpleType.INTEGER
+        }
+        if(def == ConstantDescs.CD_long) {
+            return ParsedTokenExpressionSimpleType.LONG
         }
         if(def == ConstantDescs.CD_float) {
             return ParsedTokenExpressionSimpleType.FLOAT
@@ -227,6 +212,9 @@ private fun evaluateExpressionType(writerData: WriterData, expression: ParsedTok
         }
         if(def == ConstantDescs.CD_int) {
             return ParsedTokenExpressionSimpleType.INTEGER
+        }
+        if(def == ConstantDescs.CD_long) {
+            return ParsedTokenExpressionSimpleType.LONG
         }
         if(def == ConstantDescs.CD_float) {
             return ParsedTokenExpressionSimpleType.FLOAT
@@ -316,9 +304,52 @@ private fun doesTypeMatch(matchType: ParsedTokenExpressionType, expectedType: Pa
         if(matchType == ParsedTokenExpressionSimpleType.NULL) return true
         val matchClassName = matchType.getClassName()
         if(matchClassName == null) return false
-        return getClassLowerBounds(expectedClassName).any { matchClassName == it } || getClassLowerBounds(matchClassName).any { expectedClassName == it }
+        // Only an argument whose type is a subtype of the parameter can be passed without a checkcast
+        return getClassLowerBounds(matchClassName).contains(expectedClassName)
     }
     return false
+}
+
+private fun isParameterAssignable(from: ClassDesc, to: ClassDesc): Boolean {
+    if(from == to) return true
+    if(!from.isClassOrInterface || !to.isClassOrInterface) return false
+    val fromName = from.descriptorString().let { it.substring(1, it.length - 1) }
+    val toName = to.descriptorString().let { it.substring(1, it.length - 1) }
+    return getClassLowerBounds(fromName).contains(toName)
+}
+
+private fun isMoreSpecific(a: ClassMethodInfo, b: ClassMethodInfo): Boolean {
+    return a.descriptor.parameterList().zip(b.descriptor.parameterList()).all { (pa, pb) -> isParameterAssignable(pa, pb) }
+}
+
+/** Resolves the method called by [expression] like javac does: applicable by subtyping, then the most specific one. */
+private fun resolveMethod(writerData: WriterData, expression: ParsedTokenStatementFunctionCall, paramTypes: List<ParsedTokenExpressionType>): ClassMethodInfo {
+    val instance = expression.instance
+    val (className, checkStatic, display) = when(instance) {
+        is ParsedTokenInstanceValue -> {
+            val instanceType = evaluateExpressionType(writerData, instance.expression).let { if(it is ParsedTokenExpressionTypeGeneric && it.lowerBound.typeName != "java/lang/Number") ParsedTokenExpressionTypeComplex.fromInternalName(it.lowerBound.typeName) else it }
+            if(instanceType !is ParsedTokenExpressionTypeComplex) {
+                throw IllegalArgumentException("Cannot run functions on a primitive type: $instanceType")
+            }
+            Triple(instanceType.typeName, false, "[${instanceType.typeName}]")
+        }
+        is ParsedTokenInstanceStatic -> Triple(instance.className, expression.name != "<init>", "<${instance.className}>")
+        else -> throw IllegalArgumentException("Cannot run function on unknown instance: $instance | ${expression.name}")
+    }
+    val matches = getClassAccessibleMethods(className).filter { it.isStatic == checkStatic && it.name == expression.name && it.descriptor.parameterCount() == paramTypes.size && it.descriptor.parameterList().withIndex().all { (index, type) -> doesArgumentTypeMatch(paramTypes[index], type) } }
+    if(matches.isEmpty()) {
+        throw IllegalArgumentException("Failed to find function $display.${expression.name}(${paramTypes.joinToString()})")
+    }
+    var mostSpecific = matches.filter { a -> matches.all { b -> a === b || isMoreSpecific(a, b) } }
+    if(mostSpecific.size > 1 && mostSpecific.all { it.descriptor.parameterList() == mostSpecific[0].descriptor.parameterList() }) {
+        // Same parameter list (covariant override / bridge): the declaration closest to the receiver wins
+        val nearest = mostSpecific.minOf { checkClassDistance(className, it.owner) ?: Int.MAX_VALUE }
+        mostSpecific = mostSpecific.filter { (checkClassDistance(className, it.owner) ?: Int.MAX_VALUE) == nearest }
+    }
+    if(mostSpecific.size != 1) {
+        throw IllegalArgumentException("Ambiguous call $display.${expression.name}(${paramTypes.joinToString()}): $matches")
+    }
+    return mostSpecific[0]
 }
 
 private fun getNextLabel(uniqId: AtomicInteger): String {
@@ -360,6 +391,10 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 return writeNextRegister(uniqId, output, "new dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue.IntegerValue(context.instruction().<Boolean>get(${writerData.getParamIndex(expression)}) ? 1 : 0)")
             }else if(type == ParsedTokenExpressionSimpleType.DOUBLE) {
                 return writeNextRegister(uniqId, output, "new dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue.DoubleValue(context.instruction().<Double>get(${writerData.getParamIndex(expression)}))")
+            }else if(type == ParsedTokenExpressionSimpleType.LONG) {
+                return writeNextRegister(uniqId, output, "new dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue.LongValue(context.instruction().<Long>get(${writerData.getParamIndex(expression)}))")
+            }else if(type == ParsedTokenExpressionSimpleType.FLOAT) {
+                return writeNextRegister(uniqId, output, "new dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue.FloatValue(context.instruction().<Float>get(${writerData.getParamIndex(expression)}))")
             }else if(type is ParsedTokenExpressionTypeComplex && type.typeName == "java/lang/String") {
                 return writeNextRegister(uniqId, output, "new dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue.StringValue(context.instruction().<String>get(${writerData.getParamIndex(expression)}))")
             }else if(type is ParsedTokenExpressionTypeComplex && type.typeName == "java/util/UUID") {
@@ -423,34 +458,7 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
         if(expression.instance != null) {
             val paramTypes = expression.arguments.map { evaluateExpressionType(writerData, it) }
             val instance = expression.instance
-            val functionMatches = if(instance is ParsedTokenInstanceValue) {
-                val instanceType = evaluateExpressionType(writerData, instance.expression).let { if(it is ParsedTokenExpressionTypeGeneric && it.lowerBound.typeName != "java/lang/Number") ParsedTokenExpressionTypeComplex.fromInternalName(it.lowerBound.typeName) else it }
-                if(instanceType !is ParsedTokenExpressionTypeComplex) {
-                    throw IllegalArgumentException("Cannot run functions on a primitive type: $instanceType")
-                }
-                val matches = getClassAccessibleMethods(instanceType.typeName).filter { !it.isStatic && it.name == expression.name && it.descriptor.parameterCount() == paramTypes.size && it.descriptor.parameterList().mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }.toMutableList()
-                if(matches.size < 1) {
-                    throw IllegalArgumentException("Failed to find function [${instanceType.typeName}].${expression.name}(${paramTypes.joinToString()})")
-                }
-                if(matches.size > 1) {
-                    val closest = matches.map { it to checkClassDistance(it.owner, instanceType.typeName) }.reduce { a, b -> if(a.second == null || a.second!! > b.second!!) b else a }
-                    matches.clear()
-                    matches.add(closest.first)
-                }
-                matches
-            }else if(instance is ParsedTokenInstanceStatic) {
-                val checkStatic = expression.name != "<init>"
-                val matches = getClassAccessibleMethods(instance.className).filter { it.isStatic == checkStatic && it.name == expression.name && it.descriptor.parameterCount() == paramTypes.size && it.descriptor.parameterList().mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }
-                if(matches.size < 1) {
-                    throw IllegalArgumentException("Failed to find function <${instance.className}>.${expression.name}(${paramTypes.joinToString()}): $checkStatic ${getClassAccessibleMethods(instance.className)}")
-                }
-                if(matches.size > 1) {
-                    throw IllegalArgumentException("Found too many functions matching <${instance.className}>.${expression.name}(${paramTypes.joinToString()}): $matches")
-                }
-                matches
-            }else {
-                throw IllegalArgumentException("Cannot run function on unknown instance: $instance")
-            }
+            val functionMatches = listOf(resolveMethod(writerData, expression, paramTypes))
             val def = functionMatches[0].run { if(owner == "java/lang/Object" && name == "<init>" && descriptor == MethodTypeDesc.of(ConstantDescs.CD_void)) ClassMethodInfo((instance as ParsedTokenInstanceStatic).className, "<init>", MethodTypeDesc.of(ConstantDescs.CD_void), isPublic = true, isStatic = false) else this }.checkPublic()
             val classOwner = loadClassInfo(def.owner)
             val className = def.owner
@@ -536,6 +544,18 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                     }
                 }
             }
+            // Link-time scoreboard constants (instruction-scope strings): one data-class field per distinct value.
+            if(expression.name == "map_objective_ref" || expression.name == "map_score_holder" || expression.name == "map_score_ref") {
+                val sources = expression.arguments.map { it as ParsedTokenValueAccessor }
+                if(sources.any { it.scope != ParsedTokenValueAccessorScope.INSTRUCTION }) throw IllegalArgumentException("${expression.name} expects [instr:...] string arguments")
+                val args = sources.joinToString(", ") { "context.instruction().<String>get(${writerData.getParamIndex(it)})" }
+                val loader = when(expression.name) {
+                    "map_objective_ref" -> "loadObjectiveRef"
+                    "map_score_holder" -> "loadScoreHolder"
+                    else -> "loadScoreRef"
+                }
+                return writeNextRegister(uniqId, output, "context.fieldStorage().$loader(cw, $args)")
+            }
             if(expression.name == "map_text") {
                 val source = expression.arguments[0] as ParsedTokenValueAccessor
                 if(source.scope == ParsedTokenValueAccessorScope.INSTRUCTION) {
@@ -581,10 +601,6 @@ private fun writeExpression(writerData: WriterData, expression: ParsedTokenExpre
                 return writeNextRegister(uniqId, output, "cw.castType($expr, ${boxDescriptor("F")})")
             }
             if(expression.name == "to_integer") {
-                val exprType = evaluateExpressionType(writerData, expression.arguments[0])
-                if(exprType == ParsedTokenExpressionSimpleType.BOOLEAN) {
-                    return writeExpression(writerData, expression.arguments[0], output, uniqId)
-                }
                 val expr = writeExpression(writerData, expression.arguments[0], output, uniqId)
                 return writeNextRegister(uniqId, output, "cw.castType($expr, ${boxDescriptor("I")})")
             }
@@ -684,6 +700,12 @@ enum class CompileTimeExpressionComparisonOperator {
 }
 data class CompileTimeExpressionComparison(val comparison: CompileTimeExpressionComparisonOperator, val a: CompileTimeExpression, val b: CompileTimeExpression) : CompileTimeExpression {
     override fun toCompileString(writerData: WriterData): String {
+        // Compile-time operands are boxed/reference values (instruction arguments are read through Object get()),
+        // so equality must be value equality; only null checks can use ==.
+        if((comparison == CompileTimeExpressionComparisonOperator.EQ || comparison == CompileTimeExpressionComparisonOperator.NE) && a != CompileTimeExpressionNull && b != CompileTimeExpressionNull) {
+            val equals = "java.util.Objects.equals(${a.toCompileString(writerData)}, ${b.toCompileString(writerData)})"
+            return if(comparison == CompileTimeExpressionComparisonOperator.EQ) "($equals)" else "(!$equals)"
+        }
         val stringForm = when(comparison) {
             CompileTimeExpressionComparisonOperator.EQ -> "=="
             CompileTimeExpressionComparisonOperator.NE -> "!="
@@ -791,34 +813,7 @@ private fun createCompileExpression(writerData: WriterData, expression: ParsedTo
         if(expression.instance != null) {
             val paramTypes = expression.arguments.map { evaluateExpressionType(writerData, it) }
             val instance = expression.instance
-            val functionMatches = if(instance is ParsedTokenInstanceValue) {
-                val instanceType = evaluateExpressionType(writerData, instance.expression).let { if(it is ParsedTokenExpressionTypeGeneric && it.lowerBound.typeName != "java/lang/Number") ParsedTokenExpressionTypeComplex.fromInternalName(it.lowerBound.typeName) else it }
-                if(instanceType !is ParsedTokenExpressionTypeComplex) {
-                    throw IllegalArgumentException("Cannot run functions on a primitive type: $instanceType")
-                }
-                val matches = getClassAccessibleMethods(instanceType.typeName).filter { !it.isStatic && it.name == expression.name && it.descriptor.parameterCount() == paramTypes.size && it.descriptor.parameterList().mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }.toMutableList()
-                if(matches.size < 1) {
-                    throw IllegalArgumentException("Failed to find function [${instanceType.typeName}].${expression.name}(${paramTypes.joinToString()})")
-                }
-                if(matches.size > 1) {
-                    val closest = matches.map { it to checkClassDistance(it.owner, instanceType.typeName) }.reduce { a, b -> if(a.second == null || a.second!! > b.second!!) b else a }
-                    matches.clear()
-                    matches.add(closest.first)
-                }
-                matches
-            }else if(instance is ParsedTokenInstanceStatic) {
-                val checkStatic = expression.name != "<init>"
-                val matches = getClassAccessibleMethods(instance.className).filter { it.isStatic == checkStatic && it.name == expression.name && it.descriptor.parameterCount() == paramTypes.size && it.descriptor.parameterList().mapIndexed { index, type -> doesArgumentTypeMatch(paramTypes[index], type) }.none { !it } }
-                if(matches.size < 1) {
-                    throw IllegalArgumentException("Failed to find function <${instance.className}>.${expression.name}(${paramTypes.joinToString()}): $checkStatic ${getClassAccessibleMethods(instance.className)}")
-                }
-                if(matches.size > 1) {
-                    throw IllegalArgumentException("Found too many functions matching <${instance.className}>.${expression.name}(${paramTypes.joinToString()}): $matches")
-                }
-                matches
-            }else {
-                throw IllegalArgumentException("Cannot run function on unknown instance: $instance")
-            }
+            val functionMatches = listOf(resolveMethod(writerData, expression, paramTypes))
             val def = functionMatches[0]
 
             val allArguments = mutableListOf<CompileTimeExpression>()
@@ -891,19 +886,36 @@ enum class ReturnTypeResult {
     RETURN,
 }
 
-private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, output: OutputStream, uniqId: AtomicInteger, insideCompileBlock: Boolean): ReturnTypeResult {
+/**
+ * Bytecode label placed at the end of an instruction. A value/void `return` inside a runtime branch stores the result
+ * and jumps here, so the code following the branch is skipped.
+ */
+private class CodeEnd(val name: String) {
+    var used = false
+}
+
+private fun writeCompileReturn(output: OutputStream, end: CodeEnd) {
+    if(end.used) {
+        output.appendText("cw.label(${end.name});\n")
+    }
+    output.appendText("return true;\n")
+}
+
+private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, output: OutputStream, uniqId: AtomicInteger, insideCompileBlock: Boolean, end: CodeEnd, inRuntimeBranch: Boolean): ReturnTypeResult {
     for(el in code) {
         if(el is ParsedTokenStatementIf) {
             val failureLabel = getNextLabel(uniqId)
             output.appendText("dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel $failureLabel = cw.createLabel();\n")
             doComparison(writerData.copyLocalTypes(), el.expression, output, failureLabel, uniqId)
-            val baseReturn = writeCode(writerData.copyLocalTypes(), el.code, output, uniqId, insideCompileBlock)
+            val baseReturn = writeCode(writerData.copyLocalTypes(), el.code, output, uniqId, insideCompileBlock, end, true)
             if(el.elseCode != null) {
                 val jumpLabel = getNextLabel(uniqId)
                 output.appendText("dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel $jumpLabel = cw.createLabel();\n")
-                output.appendText("cw.jump($jumpLabel);\n")
+                if(baseReturn == ReturnTypeResult.CONTINUE) {
+                    output.appendText("cw.jump($jumpLabel);\n")
+                }
                 output.appendText("cw.label($failureLabel);\n")
-                val otherReturn = writeCode(writerData.copyLocalTypes(), el.elseCode, output, uniqId, insideCompileBlock)
+                val otherReturn = writeCode(writerData.copyLocalTypes(), el.elseCode, output, uniqId, insideCompileBlock, end, true)
                 output.appendText("cw.label($jumpLabel);\n")
                 if(baseReturn == ReturnTypeResult.RETURN && otherReturn == ReturnTypeResult.RETURN) {
                     output.appendText("return true;\n")
@@ -920,22 +932,22 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
             val comparisonString = createCompileExpression(writerData.copyLocalTypes(), el.expression)
             output.appendText("if(${comparisonString.toCompileString(writerData)}) {\n")
             val bout = ByteArrayOutputStream()
-            val baseReturn = writeCode(writerData.copyLocalTypes(), el.code, bout, uniqId, true)
+            val baseReturn = writeCode(writerData.copyLocalTypes(), el.code, bout, uniqId, true, end, inRuntimeBranch)
             output.appendText(bout.toByteArray().decodeToString().trimEnd().prependIndent("    ") + "\n")
             output.appendText("}")
             if(el.elseCode != null) {
                 output.appendText("else {\n")
                 bout.reset()
-                val otherReturn = writeCode(writerData.copyLocalTypes(), el.elseCode, bout, uniqId, true)
+                val otherReturn = writeCode(writerData.copyLocalTypes(), el.elseCode, bout, uniqId, true, end, inRuntimeBranch)
                 output.appendText(bout.toByteArray().decodeToString().trimEnd().prependIndent("    ") + "\n")
+                output.appendText("}\n")
                 if(baseReturn == ReturnTypeResult.RETURN && otherReturn == ReturnTypeResult.RETURN) {
-                    output.appendText("return true;\n")
                     return ReturnTypeResult.RETURN
                 }
                 if(baseReturn != ReturnTypeResult.CONTINUE && otherReturn != ReturnTypeResult.CONTINUE) {
                     return ReturnTypeResult.BREAK
                 }
-                output.appendText("}")
+                continue
             }
             output.appendText("\n")
             continue
@@ -947,7 +959,7 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                 for((case, code) in el.matches) {
                     output.appendText("    case $case -> {\n")
                     val bout = ByteArrayOutputStream()
-                    writeCode(writerData.copyLocalTypes(), code, bout, uniqId, true)
+                    writeCode(writerData.copyLocalTypes(), code, bout, uniqId, true, end, inRuntimeBranch)
                     output.appendText(bout.toByteArray().decodeToString().trimEnd().prependIndent("        ") + "\n")
                     output.appendText("    }\n")
                 }
@@ -960,7 +972,7 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                     val (case, code) = entries[i]
                     output.appendText("if(java.util.Objects.equals($comparisonReg, $casePrefix$case)) {\n")
                     val bout = ByteArrayOutputStream()
-                    writeCode(writerData.copyLocalTypes(), code, bout, uniqId, true)
+                    writeCode(writerData.copyLocalTypes(), code, bout, uniqId, true, end, inRuntimeBranch)
                     output.appendText(bout.toByteArray().decodeToString().trimEnd().prependIndent("    ") + "\n")
                     output.appendText("}")
                     if(i != entries.size - 1) {
@@ -1032,7 +1044,14 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                 val sourceType = evaluateExpressionType(writerData, el.arguments[0])
                 if(sourceType == ParsedTokenExpressionSimpleType.INTEGER) {
                     val expr = writeExpression(writerData, el.arguments[0], output, uniqId)
-                    output.appendText("cw.returnValue(cw.castType($expr, ${boxDescriptor("J")}));\n")
+                    // success = the result zero-extended into the low 32 bits, like every other producer
+                    val target = "new InstructionTarget.FunctionTarget(ConstantDescs.CD_Integer, \"toUnsignedLong\", MethodTypeDesc.of(ConstantDescs.CD_long, ConstantDescs.CD_int), true, false, false, false)"
+                    var index = writerData.targets.indexOf(target)
+                    if(index == -1) {
+                        index = writerData.targets.size
+                        writerData.targets.add(target)
+                    }
+                    output.appendText("cw.returnValue(cw.writeTarget(TARGETS[$index], $expr));\n")
                     return ReturnTypeResult.BREAK
                 }else {
                     throw IllegalArgumentException("Invalid return type: $sourceType")
@@ -1077,8 +1096,13 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
                 if(writerData.params.any { it.first.scope == ParsedTokenValueAccessorScope.RETURN }) {
                     throw IllegalArgumentException("Tried to return with no value, when there's a return type in the instruction definition")
                 }
+                if(inRuntimeBranch) {
+                    end.used = true
+                    output.appendText("cw.jump(${end.name});\n")
+                    return ReturnTypeResult.BREAK
+                }
                 if(insideCompileBlock) {
-                    output.appendText("return true;\n")
+                    writeCompileReturn(output, end)
                     return ReturnTypeResult.RETURN
                 }
                 return ReturnTypeResult.BREAK
@@ -1091,8 +1115,13 @@ private fun writeCode(writerData: WriterData, code: List<ParsedTokenStatement>, 
             }
             val expr = writeExpression(writerData, el.value, output, uniqId)
             output.appendText("context.store(${writerData.getParamIndex(returnAccessor.first)}, $expr);\n")
+            if(inRuntimeBranch) {
+                end.used = true
+                output.appendText("cw.jump(${end.name});\n")
+                return ReturnTypeResult.BREAK
+            }
             if(insideCompileBlock) {
-                output.appendText("return true;\n")
+                writeCompileReturn(output, end)
                 return ReturnTypeResult.RETURN
             }
             return ReturnTypeResult.BREAK
@@ -1108,9 +1137,24 @@ fun generateCode(definition: ParsedTokenInstructionDefinition, file: ParsedFile,
     if(definition.code.isNotEmpty()) {
         try {
             val hasReturnType = writerData.params.any { it.first.scope == ParsedTokenValueAccessorScope.RETURN }
-            val returnKind = writeCode(writerData, definition.code, output, AtomicInteger(0), false)
+            val end = CodeEnd("lend")
+            val body = ByteArrayOutputStream()
+            val returnKind = writeCode(writerData, definition.code, body, AtomicInteger(0), false, end, false)
             if(hasReturnType && returnKind == ReturnTypeResult.CONTINUE) {
                 throw IllegalArgumentException("Not all branches return a value, required since the instruction definition has a return type")
+            }
+            var bodyText = body.toByteArray().decodeToString()
+            if(end.used && returnKind != ReturnTypeResult.RETURN) {
+                // A jump to the end that is only followed by label placements falls through to the end anyway
+                bodyText = bodyText.replace(Regex("cw\\.jump\\(${end.name}\\);\\n((?:cw\\.label\\(l\\d+\\);\\n)*)$"), "$1")
+                end.used = bodyText.contains("(${end.name})")
+            }
+            if(end.used) {
+                output.appendText("dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel ${end.name} = cw.createLabel();\n")
+            }
+            output.appendText(bodyText)
+            if(end.used && returnKind != ReturnTypeResult.RETURN) {
+                output.appendText("cw.label(${end.name});\n")
             }
             writeNormalReturn = returnKind != ReturnTypeResult.RETURN
         }catch(e: Exception) {

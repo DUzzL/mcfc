@@ -19,6 +19,7 @@ public final class CodeFieldStorageMapKind<T> {
     private final String kind;
     private final BiFunction<CodeFieldStorageStorageMap, T, String> nameGetter;
     private List<CodeFieldStorageMapKind<?>> dependencies = List.of();
+    private final boolean arrayBacked;
 
     private void setDependencies(CodeFieldStorageMapKind<?>... dependencies) {
         this.dependencies = List.of(dependencies);
@@ -27,7 +28,22 @@ public final class CodeFieldStorageMapKind<T> {
     private CodeFieldStorageMapKind(String kind, BiFunction<CodeFieldStorageStorageMap, T, String> nameGetter) {
         this.kind = kind;
         this.nameGetter = nameGetter;
+        this.arrayBacked = false;
         VALUES.add(this);
+    }
+
+    /** An array-backed kind: all values live in one static array field (named by {@link #generateName} for every
+     * value) at their insertion index, instead of one field per value. Such kinds can have tens of thousands of
+     * values, which as separate fields would overflow the data class constant pool. */
+    private CodeFieldStorageMapKind(String kind) {
+        this.kind = kind;
+        this.nameGetter = (map, value) -> kind + "$values";
+        this.arrayBacked = true;
+        VALUES.add(this);
+    }
+
+    public boolean isArrayBacked() {
+        return arrayBacked;
     }
 
     public String getKind() {
@@ -45,10 +61,13 @@ public final class CodeFieldStorageMapKind<T> {
     public static final CodeFieldStorageMapKind<DataLocation> FUNCTION = new CodeFieldStorageMapKind<>("FUNCTION", CodeFieldStorageMapKind::getFunctionName);
     public static final CodeFieldStorageMapKind<NbtValue.Compound> NBT_COMPOUND = new CodeFieldStorageMapKind<>("NBT_COMPOUND", CodeFieldStorageMapKind::getNbtCompoundValueName);
     public static final CodeFieldStorageMapKind<NbtValue> NBT_VALUE = new CodeFieldStorageMapKind<>("NBT_VALUE", CodeFieldStorageMapKind::getNbtValueName);
+    public static final CodeFieldStorageMapKind<String> OBJECTIVE_REF = new CodeFieldStorageMapKind<>("OBJECTIVE_REF");
     public static final CodeFieldStorageMapKind<DataLocation> PREDICATE = new CodeFieldStorageMapKind<>("REGEX_PATTERN", CodeFieldStorageMapKind::getPredicateName);
     public static final CodeFieldStorageMapKind<String> REGEX_PATTERN = new CodeFieldStorageMapKind<>("REGEX_PATTERN", CodeFieldStorageMapKind::getRegexPatternName);
     public static final CodeFieldStorageMapKind<DataLocation> RESOURCE_LOCATION = new CodeFieldStorageMapKind<>("RESOURCE_LOCATION", CodeFieldStorageMapKind::getIdentifierName);
     public static final CodeFieldStorageMapKind<String> SCOREBOARD_CRITERION = new CodeFieldStorageMapKind<>("SCOREBOARD_CRITERION", CodeFieldStorageMapKind::getScoreboardCriterionName);
+    public static final CodeFieldStorageMapKind<String> SCORE_HOLDER = new CodeFieldStorageMapKind<>("SCORE_HOLDER");
+    public static final CodeFieldStorageMapKind<ScoreRefKey> SCORE_REF = new CodeFieldStorageMapKind<>("SCORE_REF");
     public static final CodeFieldStorageMapKind<Text> TEXT = new CodeFieldStorageMapKind<>("TEXT", CodeFieldStorageMapKind::getTextName);
     public static final CodeFieldStorageMapKind<TextStyle> TEXT_STYLE = new CodeFieldStorageMapKind<>("TEXT_STYLE", CodeFieldStorageMapKind::getTextStyleName);
     public static final CodeFieldStorageMapKind<UUID> UUID = new CodeFieldStorageMapKind<>("UUID", CodeFieldStorageMapKind::getUuidName);

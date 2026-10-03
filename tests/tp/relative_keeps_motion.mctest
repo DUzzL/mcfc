@@ -1,0 +1,18 @@
+; RT-13: `tp <targets> <pos>` with relative coordinates keeps the velocity on relative axes
+; (vanilla Relative.DELTA_*); absolute coordinates reset it.
+@setup
+objective create t dummy
+
+@function run
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_tp_rel"],Motion:[0.25d,0.0d,0.5d]}
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_tp_abs"],Motion:[0.25d,0.0d,0.5d]}
+tp @e[tag=mcfc_tp_rel] ~ ~10 ~
+execute as @e[tag=mcfc_tp_abs] run tp @s 0 200 0
+execute store result score rel_mx t run data get entity @e[tag=mcfc_tp_rel,limit=1] Motion[0] 1000
+execute store result score rel_mz t run data get entity @e[tag=mcfc_tp_rel,limit=1] Motion[2] 1000
+execute store result score abs_mz t run data get entity @e[tag=mcfc_tp_abs,limit=1] Motion[2] 1000
+
+@validate
+score rel_mx t is 250
+score rel_mz t is 500
+score abs_mz t is 0

@@ -7,8 +7,9 @@ import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
 import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.ForkJoinWorkerThread;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -48,6 +49,13 @@ public final class LowPriorityCompileExecutor {
 
     public static final int COMPILE_THREAD_PRIORITY = Thread.NORM_PRIORITY - 2; // 3
     public static final int COMPILE_NICE = 10;
+    /**
+     * Stack of every compile thread. The command compiler recurses per command-tree node (an {@code execute}
+     * chain of a few dozen clauses already overflows the default 1 MiB stack, which made the whole function
+     * fall back to vanilla); vanilla parses and runs such chains fine. Only touched pages are committed, so
+     * the reservation costs address space, not memory.
+     */
+    public static final long COMPILE_STACK_SIZE = 64L * 1024 * 1024;
 
     private static final int PRIO_PROCESS = 0;
     // Linux scheduling policy. SCHED_BATCH (3): kernel skips wakeup-preemption
@@ -64,7 +72,7 @@ public final class LowPriorityCompileExecutor {
     private static final AtomicBoolean BATCH_FAILURE_LOGGED = new AtomicBoolean();
     private static final AtomicBoolean APPLIED_LOGGED = new AtomicBoolean();
 
-    private static final ForkJoinPool POOL = createPool();
+    private static final ThreadPoolExecutor POOL = createPool();
 
     private LowPriorityCompileExecutor() {}
 
@@ -152,33 +160,27 @@ public final class LowPriorityCompileExecutor {
         }
     }
 
-    private static ForkJoinPool createPool() {
-        int parallelism = Math.max(1, Runtime.getRuntime().availableProcessors());
+    private static ThreadPoolExecutor createPool() {
+        // Leave one core to the server thread; override with -Dmcfc.compileThreads=N.
+        int parallelism = Math.max(1, Integer.getInteger("mcfc.compileThreads", Runtime.getRuntime().availableProcessors() - 1));
         AtomicInteger seq = new AtomicInteger();
-        ForkJoinPool.ForkJoinWorkerThreadFactory factory = pool -> {
-            CompileWorkerThread w = new CompileWorkerThread(pool);
-            w.setDaemon(true);
-            w.setPriority(COMPILE_THREAD_PRIORITY);
-            w.setName("mcfc-compile-" + seq.incrementAndGet());
-            return w;
-        };
-        return new ForkJoinPool(parallelism, factory, null, true);
-    }
-
-    private static final class CompileWorkerThread extends ForkJoinWorkerThread {
-        CompileWorkerThread(ForkJoinPool pool) {
-            super(pool);
-        }
-
-        @Override
-        protected void onStart() {
-            super.onStart();
-            applyCompileNiceToCurrentThread();
-        }
+        // Platform threads we create ourselves: ForkJoinWorkerThread can't be given a stack size.
+        var pool = new ThreadPoolExecutor(parallelism, parallelism, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), task -> {
+            var thread = new Thread(null, () -> {
+                applyCompileNiceToCurrentThread();
+                task.run();
+            }, "mcfc-compile-" + seq.incrementAndGet(), COMPILE_STACK_SIZE);
+            thread.setDaemon(true);
+            thread.setPriority(COMPILE_THREAD_PRIORITY);
+            return thread;
+        });
+        // Idle workers exit between compiles.
+        pool.allowCoreThreadTimeOut(true);
+        return pool;
     }
 
     public static int parallelism() {
-        return POOL.getParallelism();
+        return POOL.getMaximumPoolSize();
     }
 
     /** Drop-in replacement for the {@code try-with-resources} virtual-thread

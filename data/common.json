@@ -15,6 +15,7 @@
     "ExtensionFunctions_isValidCommandFloat": "dev/epicpix/minecraftfunctioncompiler/emitter/ExtensionFunctions:isValidCommandFloat(Ljava/lang/String;)Z",
     "Float_parseFloat": "java/lang/Float:parseFloat(Ljava/lang/String;)F",
     "ExtensionFunctions_isValidCommandDouble": "dev/epicpix/minecraftfunctioncompiler/emitter/ExtensionFunctions:isValidCommandDouble(Ljava/lang/String;)Z",
+    "ExtensionFunctions_isPlainScoreHolderName": "dev/epicpix/minecraftfunctioncompiler/emitter/ExtensionFunctions:isPlainScoreHolderName(Ljava/lang/String;)Z",
     "Double_parseDouble": "java/lang/Double:parseDouble(Ljava/lang/String;)D",
 
     "ThreadLocal_get": "java/lang/ThreadLocal:get()Ljava/lang/Object;@N",

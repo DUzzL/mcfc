@@ -14,4 +14,6 @@ interface InstructionDefinitions {
     // Minecraft specific instructions that have not been converted into data.instructions yet
     Instruction callFunctions(List<DataLocation> functions, LocationData<TCommandSourceStack> stack, @Nullable LocationData<TCompoundTag> arguments);
     Instruction callFunctionsWithResult(LocationData<Long> result, List<DataLocation> functions, LocationData<TCommandSourceStack> stack, @Nullable LocationData<TCompoundTag> arguments);
+    /** Runs an execute-chain tail outlined into a sibling method, with {@code stack} as its source (see OutlinedCall). */
+    Instruction callOutlined(dev.epicpix.minecraftfunctioncompiler.emitter.OutlinedCall call, LocationData<TCommandSourceStack> stack);
 }

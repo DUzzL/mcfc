@@ -46,6 +46,9 @@ import dev.epicpix.minecraftfunctioncompiler.il.locations.TGameType;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TListTag;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TLivingEntity;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TMutableComponent;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TObjective;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TScore;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TScoreHolder;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TObjectiveCriteria;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TServerLevel;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TServerPlayer;
@@ -58,6 +61,7 @@ import dev.epicpix.minecraftfunctioncompiler.il.locations.TVec3;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 import org.jspecify.annotations.Nullable;
 
+import dev.epicpix.minecraftfunctioncompiler.commands.ParsedCommandList;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -72,19 +76,86 @@ public final class CommandCompiler {
     private CommandCompiler() {}
 
     public static List<Instruction> compile(DataLocation source, List<CommandParams> commands) {
+        return compile(source, commands, null);
+    }
+
+    /** Compiles {@code commands}; {@code outliner} (null: none) may move execute-chain tails into separate methods. */
+    public static List<Instruction> compile(DataLocation source, List<CommandParams> commands, @Nullable ChainOutliner outliner) {
         var context = new CompilationContext(source);
-        for(var command : commands) {
+        context.setOutliner(outliner);
+        var parsed = commands instanceof ParsedCommandList p ? p : null;
+        for(int commandIndex = 0; commandIndex < commands.size(); commandIndex++) {
+            var command = commands.get(commandIndex);
+            context.setCommandSource(parsed != null ? parsed.sourceOf(commandIndex) : null);
             var commandLabel = context.current().writeLabel(context.instructionWriter);
+            ResultContext root;
             try(var _ =context.enterWithoutValue(context.current().withContextLabel(commandLabel))) {
-                try(var resultContext = ResultContext.create(context, false, false)) {
-                    compile(context, null, command, resultContext);
-                }
+                root = ResultContext.root(context, context.current().writeLabel(context.instructionWriter));
+                compile(context, null, command, root);
             }
+            root.emitPendingReturn();
         }
         return context.end();
     }
 
+    // Returns the function to run in parallel for `execute as <sel> at @s run function <fn>`,
+    // or null if not eligible (then the normal serial path is used). Gated by config; only
+    // multi-entity `as` (not @s), only when the result value isn't captured, only a single
+    // function classified parallel-safe. See PARALLEL_DATAPACK_DESIGN.md.
+    private static DataLocation parallelEligibleFunction(SelectorArgument as, CommandParams body, ResultContext result) {
+        if(!dev.epicpix.minecraftfunctioncompiler.GlobalConfig.enableParallelDatapacks) return null;
+        if(as.self()) return null;
+        if(result.generatingSuccess() || result.generatingResult()) return null;
+        if(!(body instanceof CommandExecuteAt at) || !at.targets().self()) return null;
+        if(!(at.command() instanceof CommandExecuteRun run)) return null;
+        if(!(run.command() instanceof CommandFunction fn) || fn.functions().size() != 1) return null;
+        DataLocation id = fn.functions().getFirst();
+        return ParallelSafetyAnalyzer.isSafe(id) ? id : null;
+    }
+
     private static void compile(CompilationContext context, @Nullable ForkingContext forkingContext, CommandParams inputCommand, ResultContext result) {
+        var outliner = context.getOutliner();
+        if(outliner != null && forkingContext == null && !result.tracking() && !ExecuteChains.containsReturn(inputCommand)) {
+            var call = outliner.outline(inputCommand);
+            if(call != null) {
+                context.writeInstruction(Instructions2.callOutlined(call, makeCurrentCommandSourceStack(context)));
+                return;
+            }
+        }
+        if(ExecuteChains.isModifier(inputCommand)) {
+            compileCommand(context, forkingContext, inputCommand, result);
+            return;
+        }
+        switch(inputCommand) {
+            // `return <value>` / `return fail` report to the enclosing store callbacks, then leave the frame.
+            case CommandReturnValue(int value) -> {
+                result.emitReturn(value);
+                return;
+            }
+            case CommandReturnFail _ -> {
+                result.emitReturn(null);
+                return;
+            }
+            default -> {}
+        }
+        if(!result.tracking()) {
+            var terminal = result.beginTerminal();
+            compileCommand(context, null, inputCommand, terminal);
+            terminal.endTerminal();
+            return;
+        }
+        // Tracked terminal: skip-jumps inside the command must still reach the success report,
+        // so the command gets its own scope; failures jump to the terminal's error label.
+        ResultContext terminal;
+        try(var _ = context.enterLocalScope()) {
+            terminal = result.beginTerminal();
+            compileCommand(context, null, inputCommand, terminal);
+            terminal.checkImplemented(inputCommand);
+        }
+        terminal.endTerminal();
+    }
+
+    private static void compileCommand(CompilationContext context, @Nullable ForkingContext forkingContext, CommandParams inputCommand, ResultContext result) {
         switch(inputCommand) {
             case CommandDataModifySetValue(NbtDataLocation destination, NbtPath path, NbtValue setValue) -> {
                 if(destination instanceof NbtDataLocation.Storage(DataLocation storage)) {
@@ -109,7 +180,9 @@ public final class CommandCompiler {
                         assignNbtValue(context, value, last, tagCopiedLocal, setCountLocal, innerContext.data().contextEndLabel());
                     }
 
-                    context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, setCountLocal, LocationData.ofInteger(0), context.current().contextEndLabel()));
+                    // vanilla: nothing changed -> ERROR_MERGE_UNCHANGED (the command fails)
+                    var unchangedLabel = result.generatingSuccess() ? result.markAndGetErrorLabel() : context.current().contextEndLabel();
+                    context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, setCountLocal, LocationData.ofInteger(0), unchangedLabel));
                     context.writeInstruction(Instructions.setNbtStorage(storage, storageLocal));
                     result.updateResultValue(setCountLocal);
                 }else {
@@ -122,7 +195,7 @@ public final class CommandCompiler {
                 context.writeInstruction(Instructions.setDifficulty(difficultyLocation));
             }
             case CommandExecuteAlign(SwizzleArgument swizzle, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var pos = context.getPosition()) {
                         var newPosition = context.<TVec3>createLocal();
                         pos.writeInstruction(Instructions.alignPosition(newPosition, pos.content(), swizzle));
@@ -133,23 +206,32 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteAnchored(LocationAnchor anchor, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var _ =context.enterWithoutValue(context.current().withCurrentAnchor(anchor))) {
                         compile(context, fContext.content(), command, result);
                     }
                 }
             }
             case CommandExecuteAs(SelectorArgument targets, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
-                    try(var selector = context.forSelector(targets, result)) {
-                        try(var _ =context.enterWithoutValue(selector.data().withCurrentEntity(selector.content()))) {
-                            compile(context, fContext.content(), command, result);
+                DataLocation parallelFn = parallelEligibleFunction(targets, command, result);
+                if(parallelFn != null) {
+                    // Gated parallel fan-out: run the classified-safe function per matched
+                    // entity (at @s) across the pool, mutations buffered + applied serially.
+                    var entities = context.getSelectorList(targets);
+                    context.writeInstruction(Instructions.parallelRunFunctionAtSelf(entities, context.current().commandSourceStack(), parallelFn.toString()));
+                    result.markImplemented();
+                } else {
+                    try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
+                        try(var selector = context.forSelector(targets, result)) {
+                            try(var _ =context.enterWithoutValue(selector.data().withCurrentEntity(selector.content()))) {
+                                compile(context, fContext.content(), command, result);
+                            }
                         }
                     }
                 }
             }
             case CommandExecuteAt(SelectorArgument targets, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var selector = context.forSelector(targets, result)) {
                         var world = context.<TServerLevel>createLocal();
                         var position = context.<TVec3>createLocal();
@@ -164,14 +246,14 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteIfEntity(SelectorArgument entities, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var _ =context.forSelector(entities.limit(1), result)) {
                         compile(context, fContext.content(), command, result);
                     }
                 }
             }
             case CommandExecuteIfFunction(List<DataLocation> functions, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     var current = context.current();
                     var stack = context.<TCommandSourceStack>createLocal();
                     context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
@@ -182,12 +264,18 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteIfScoreRange(ScoreAccessorArgument target, IntRangeArgument range, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
+                    var holder = constantHolder(target);
+                    if(holder != null) {
+                        context.writeInstruction(Instructions.scoreRefIfMatchesElseJump(holder, target.objective(), rangeMin(range), rangeMax(range), context.current().contextEndLabel()));
+                        compile(context, fContext.content(), command, result);
+                        return;
+                    }
                     try(var scoreAccessor = context.forScoreAccessors(target.selectSingle(), result)) {
                         // Skip-on-null jumps to the local context end (continue iteration in
                         // `as @a` etc.), not to the function-level error label — vanilla treats
                         // a missing score entry as predicate-false, not as fatal.
-                        try(var scoreData = context.getScoreData(scoreAccessor.content(), context.current().contextEndLabel(), false)) {
+                        try(var scoreData = context.getScoreData(scoreAccessor.content(), context.current().contextEndLabel())) {
                             var scoreValue = context.<Integer>createLocal();
                             scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
                             context.jumpIfNotMatchesRange(scoreData.data(), scoreValue, range, scoreData.data().contextEndLabel());
@@ -197,11 +285,18 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteIfScoreCompare(ScoreAccessorArgument targetArg, ScoreboardCompareOperation comparison, ScoreAccessorArgument sourceArg, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
+                    var targetHolder = constantHolder(targetArg);
+                    var sourceHolder = constantHolder(sourceArg);
+                    if(targetHolder != null && sourceHolder != null) {
+                        context.writeInstruction(Instructions.scoreRefIfCompareElseJump(targetHolder, targetArg.objective(), LocationData.ofInteger(comparison.ordinal()), sourceHolder, sourceArg.objective(), context.current().contextEndLabel()));
+                        compile(context, fContext.content(), command, result);
+                        return;
+                    }
                     try(var target = context.forScoreAccessors(targetArg.selectSingle(), result)) {
                         try(var source = context.forScoreAccessors(sourceArg.selectSingle(), result)) {
-                            try(var targetScore = context.getScoreData(target.content(), context.current().contextEndLabel(), false)) {
-                                try(var sourceScore = context.getScoreData(source.content(), context.current().contextEndLabel(), false)) {
+                            try(var targetScore = context.getScoreData(target.content(), context.current().contextEndLabel())) {
+                                try(var sourceScore = context.getScoreData(source.content(), context.current().contextEndLabel())) {
                                     var targetValue = context.<Integer>createLocal();
                                     var sourceValue = context.<Integer>createLocal();
                                     sourceScore.writeInstruction(Instructions.getScoreValue(targetValue, targetScore.content()));
@@ -215,7 +310,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteOnOrigin(CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var currentEntity = context.getCurrentEntity()) {
                         var traceableEntity = context.<TTraceableEntity>createLocal();
                         currentEntity.writeInstruction(Instructions.tryAsTraceableEntity(traceableEntity, currentEntity.content(), currentEntity.endLabel()));
@@ -229,7 +324,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteOnTarget(CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var currentEntity = context.getCurrentEntity()) {
                         var targetingEntity = context.<TTargeting>createLocal();
                         currentEntity.writeInstruction(Instructions.tryAsTargetingEntity(targetingEntity, currentEntity.content(), currentEntity.endLabel()));
@@ -243,7 +338,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteOnVehicle(CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var currentEntity = context.getCurrentEntity()) {
                         var vehicle = context.<TEntity>createLocal();
                         currentEntity.writeInstruction(Instructions.getEntityVehicle(vehicle, currentEntity.content()));
@@ -255,7 +350,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecutePositionedAs(SelectorArgument targetsArg, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var targets = context.forSelector(targetsArg, result)) {
                         var position = context.<TVec3>createLocal();
                         targets.writeInstruction(Instructions.getEntityPosition(position, targets.content()));
@@ -266,7 +361,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecutePositionedPos(WorldCoordinates pos, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var position = context.applyPosition(pos)) {
                         try(var _ =context.enterWithoutValue(position.data().withCurrentPosition(position.content()).withCurrentAnchor(LocationAnchor.FEET))) {
                             compile(context, fContext.content(), command, result);
@@ -275,7 +370,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteRotatedAs(SelectorArgument targetsArg, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var targets = context.forSelector(targetsArg, result)) {
                         var rotation = context.<TVec2>createLocal();
                         targets.writeInstruction(Instructions.getEntityRotation(rotation, targets.content()));
@@ -286,7 +381,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteRotatedRot(RotationCoordinates rot, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var rotation = context.applyRotation(rot)) {
                         try(var _ =context.enterWithoutValue(rotation.data().withCurrentRotation(rotation.content()))) {
                             compile(context, fContext.content(), command, result);
@@ -296,134 +391,33 @@ public final class CommandCompiler {
             }
             case CommandExecuteRun(CommandParams command) -> {
                 try(var _ =context.generateForkExecCode(forkingContext)) {
-                    compile(context, forkingContext, command, result);
+                    compile(context, null, command, result);
                 }
             }
             case CommandExecuteStoreScore(ResultStoreLocationType storeLocation, ScoreAccessorArgument targets, CommandParams command) -> {
-                // When the inner is a vanilla-fallback "Only" terminal (e.g.
-                // `if items block`), the recursive compile() path runs the
-                // command via executeVanillaCommand but discards vanilla's
-                // return — localResult.result stays 0, the target score gets
-                // set to 0, and predicate-driven counts (chestful_of_cobblestone,
-                // etc.) never accumulate. Vanilla natively supports
-                // `execute store result score X run execute if items …`, so
-                // when we can rebuild the inner as a string we emit the whole
-                // thing as one vanilla command and let vanilla do the capture.
-                String vanillaInnerClause = vanillaOnlyExecuteInnerClause(command);
-                if(vanillaInnerClause != null) {
-                    var storeMode = storeLocation == ResultStoreLocationType.SUCCESS ? "success" : "result";
-                    var accessor = scoreHolderToString(targets.scoreHolder()) + " " + targets.objective();
-                    // Note: clause appended WITHOUT `run` — vanilla evaluates `if items …`
-                    // as a terminal predicate clause and returns the match count. With
-                    // `run execute if …` instead it would store 0/1 only.
-                    emitVanillaFallback(context, "execute store " + storeMode + " score " + accessor + " " + vanillaInnerClause);
-                    break;
-                }
                 try(var _ =context.generateForkExecCode(forkingContext)) {
-                    var localResult = ResultContext.create(context, storeLocation == ResultStoreLocationType.SUCCESS, storeLocation == ResultStoreLocationType.RESULT);
-                    compile(context, null, command, localResult);
-                    localResult.endGeneration();
-                    localResult.checkImplemented(command);
-                    var localResultValue = storeLocation == ResultStoreLocationType.SUCCESS ? localResult.getSuccess() : localResult.getResult();
-                    try(var scoreAccessor = context.forScoreAccessors(targets, result)) {
-                        scoreAccessor.writeInstruction(Instructions.setScoreSafe(scoreAccessor.content().objective(), scoreAccessor.content().scoreHolder(), localResultValue));
+                    // Vanilla resolves the objective and the holders when the store modifier runs (before the
+                    // body); the callback then writes once per execution of the final command.
+                    try(var objective = context.getObjective(targets.objective(), null)) {
+                        try(var holders = resolveScoreHolders(context, targets.scoreHolder(), null)) {
+                            var sink = new ScoreStoreSink(objective.content(), targets.objective(), holders.content(), storeLocation == ResultStoreLocationType.RESULT);
+                            compile(context, null, command, result.withSink(sink));
+                        }
                     }
                 }
             }
             case CommandExecuteStoreStorage(ResultStoreLocationType storeLocation, DataLocation storage, NbtPath path, ResultStoreType storeType, double scale, CommandParams command) -> {
+                if(storeType != ResultStoreType.INT && storeType != ResultStoreType.DOUBLE && storeType != ResultStoreType.FLOAT
+                        && storeType != ResultStoreType.BYTE && storeType != ResultStoreType.SHORT && storeType != ResultStoreType.LONG) {
+                    throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_STORE, context.getSource(), "Storing into storage with unsupported type: " + storeType));
+                }
                 try(var _ =context.generateForkExecCode(forkingContext)) {
-                    var localResult = ResultContext.create(context, storeLocation == ResultStoreLocationType.SUCCESS, storeLocation == ResultStoreLocationType.RESULT);
-                    compile(context, null, command, localResult);
-                    localResult.endGeneration();
-                    localResult.checkImplemented(command);
-                    var localResultValue = storeLocation == ResultStoreLocationType.SUCCESS ? localResult.getSuccess() : localResult.getResult();
-
-                    var storageLocal = context.<TCompoundTag>createLocal();
-                    var setCountLocal = context.<Integer>createLocal();
-
-                    context.writeInstruction(Instructions.getNbtStorage(storageLocal, storage));
-                    context.writeInstruction(Instructions.dup(setCountLocal, LocationData.ofInteger(0)));
-
-                    var parts = path.parts();
-
-                    try(var innerContext = context.enterLocalScope()) {
-                        var value = getNbtPathValue(context, storageLocal, parts.subList(0, parts.size() - 1), true, innerContext.endLabel());
-
-                        var last = parts.getLast();
-                        var tagLocal = context.<TTag>createLocal();
-                        if(storeType == ResultStoreType.INT) {
-                            if(scale == 1.0d) {
-                                innerContext.writeInstruction(Instructions.createIntTag(tagLocal, localResultValue));
-                            }else {
-                                var resultDouble = context.<Double>createLocal();
-                                innerContext.writeInstruction(Instructions.numberToDouble(resultDouble, localResultValue));
-                                var multipliedDouble = context.<Double>createLocal();
-                                innerContext.writeInstruction(Instructions.valueMul(multipliedDouble, resultDouble, LocationData.ofDouble(scale)));
-                                var convertedInteger = context.<Integer>createLocal();
-                                innerContext.writeInstruction(Instructions.numberToInteger(convertedInteger, multipliedDouble));
-                                innerContext.writeInstruction(Instructions.createIntTag(tagLocal, convertedInteger));
-                            }
-                        }else if(storeType == ResultStoreType.DOUBLE) {
-                            var convertedDouble = context.<Double>createLocal();
-                            innerContext.writeInstruction(Instructions.numberToDouble(convertedDouble, localResultValue));
-                            if(scale == 1.0d) {
-                                innerContext.writeInstruction(Instructions.createDoubleTag(tagLocal, convertedDouble));
-                            }else {
-                                var multipliedDouble = context.<Double>createLocal();
-                                innerContext.writeInstruction(Instructions.valueMul(multipliedDouble, convertedDouble, LocationData.ofDouble(scale)));
-                                innerContext.writeInstruction(Instructions.createDoubleTag(tagLocal, multipliedDouble));
-                            }
-                        }else if(storeType == ResultStoreType.FLOAT) {
-                            if(scale == 1.0d) {
-                                var convertedFloat = context.<Float>createLocal();
-                                innerContext.writeInstruction(Instructions.numberToFloat(convertedFloat, localResultValue));
-                                innerContext.writeInstruction(Instructions.createFloatTag(tagLocal, convertedFloat));
-                            }else {
-                                var resultDouble = context.<Double>createLocal();
-                                innerContext.writeInstruction(Instructions.numberToDouble(resultDouble, localResultValue));
-                                var multipliedDouble = context.<Double>createLocal();
-                                innerContext.writeInstruction(Instructions.valueMul(multipliedDouble, resultDouble, LocationData.ofDouble(scale)));
-                                var convertedFloat = context.<Float>createLocal();
-                                innerContext.writeInstruction(Instructions.numberToFloat(convertedFloat, multipliedDouble));
-                                innerContext.writeInstruction(Instructions.createFloatTag(tagLocal, convertedFloat));
-                            }
-                        }else if(storeType == ResultStoreType.BYTE || storeType == ResultStoreType.SHORT) {
-                            if(scale == 1.0d) {
-                                innerContext.writeInstruction(storeType == ResultStoreType.BYTE
-                                    ? Instructions.createByteTag(tagLocal, localResultValue)
-                                    : Instructions.createShortTag(tagLocal, localResultValue));
-                            }else {
-                                var resultDouble = context.<Double>createLocal();
-                                innerContext.writeInstruction(Instructions.numberToDouble(resultDouble, localResultValue));
-                                var multipliedDouble = context.<Double>createLocal();
-                                innerContext.writeInstruction(Instructions.valueMul(multipliedDouble, resultDouble, LocationData.ofDouble(scale)));
-                                var convertedInteger = context.<Integer>createLocal();
-                                innerContext.writeInstruction(Instructions.numberToInteger(convertedInteger, multipliedDouble));
-                                innerContext.writeInstruction(storeType == ResultStoreType.BYTE
-                                    ? Instructions.createByteTag(tagLocal, convertedInteger)
-                                    : Instructions.createShortTag(tagLocal, convertedInteger));
-                            }
-                        }else if(storeType == ResultStoreType.LONG) {
-                            if(scale == 1.0d) {
-                                innerContext.writeInstruction(Instructions.createLongTag(tagLocal, localResultValue));
-                            }else {
-                                var resultDouble = context.<Double>createLocal();
-                                innerContext.writeInstruction(Instructions.numberToDouble(resultDouble, localResultValue));
-                                var multipliedDouble = context.<Double>createLocal();
-                                innerContext.writeInstruction(Instructions.valueMul(multipliedDouble, resultDouble, LocationData.ofDouble(scale)));
-                                innerContext.writeInstruction(Instructions.createLongTagFromDouble(tagLocal, multipliedDouble));
-                            }
-                        }else {
-                            throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_STORE, context.getSource(), "Storing into storage with unsupported type: " + storeType));
-                        }
-                        assignNbtValue(context, value, last, tagLocal, setCountLocal, innerContext.endLabel());
-                    }
-                    context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, setCountLocal, LocationData.ofInteger(0), context.current().contextEndLabel()));
-                    context.writeInstruction(Instructions.setNbtStorage(storage, storageLocal));
+                    var sink = new StorageStoreSink(storage, path, storeType, scale, storeLocation == ResultStoreLocationType.RESULT);
+                    compile(context, null, command, result.withSink(sink));
                 }
             }
             case CommandExecuteUnlessEntity(SelectorArgument entities, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     var contextLabel = context.current().contextEndLabel();
                     var codeLocation = context.current().writeLabel(context.instructionWriter);
                     try(var _ =context.enterWithoutValue(context.current().withContextLabel(codeLocation))) {
@@ -435,7 +429,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteUnlessFunction(List<DataLocation> functions, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     var current = context.current();
                     var stack = context.<TCommandSourceStack>createLocal();
                     context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
@@ -446,43 +440,54 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteUnlessScoreRange(ScoreAccessorArgument target, IntRangeArgument range, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
-                    var contextLabel = context.current().contextEndLabel();
-                    try(var scope = context.enterLocalScope()) {
-                        var scopeResult = ResultContext.create(context, scope.endLabel());
-                        try(var scoreAccessor = context.forScoreAccessors(target.selectSingle(), scopeResult)) {
-                            try(var scoreData = context.getScoreData(scoreAccessor.content(), scopeResult.markAndGetErrorLabel(), false)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
+                    // A missing objective or an empty holder selection aborts this source (vanilla throws);
+                    // only a missing score makes the condition false, i.e. `unless` passes.
+                    var holder = constantHolder(target);
+                    if(holder != null) {
+                        context.writeInstruction(Instructions.scoreRefUnlessMatchesElseJump(holder, target.objective(), rangeMin(range), rangeMax(range), context.current().contextEndLabel()));
+                        compile(context, fContext.content(), command, result);
+                        return;
+                    }
+                    try(var scoreAccessor = context.forScoreAccessors(target.selectSingle(), result)) {
+                        var skipLabel = context.current().contextEndLabel();
+                        try(var scope = context.enterLocalScope()) {
+                            try(var scoreData = context.getScoreData(scoreAccessor.content(), scope.endLabel())) {
                                 var scoreValue = context.<Integer>createLocal();
                                 scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
-                                context.jumpIfMatchesRange(scoreData.data(), scoreValue, range, contextLabel);
+                                context.jumpIfMatchesRange(scoreData.data(), scoreValue, range, skipLabel);
                             }
                         }
-                        scopeResult.close();
+                        compile(context, fContext.content(), command, result);
                     }
-                    compile(context, fContext.content(), command, result);
                 }
             }
             case CommandExecuteUnlessScoreCompare(ScoreAccessorArgument targetArg, ScoreboardCompareOperation comparison, ScoreAccessorArgument sourceArg, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
-                    var contextLabel = context.current().contextEndLabel();
-                    try(var scope = context.enterLocalScope()) {
-                        var scopeResult = ResultContext.create(context, scope.endLabel());
-                        try(var target = context.forScoreAccessors(targetArg.selectSingle(), scopeResult)) {
-                            try(var source = context.forScoreAccessors(sourceArg.selectSingle(), scopeResult)) {
-                                try(var targetScore = context.getScoreData(target.content(), scopeResult.markAndGetErrorLabel(), false)) {
-                                    try(var sourceScore = context.getScoreData(source.content(), scopeResult.markAndGetErrorLabel(), false)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
+                    var targetHolder = constantHolder(targetArg);
+                    var sourceHolder = constantHolder(sourceArg);
+                    if(targetHolder != null && sourceHolder != null) {
+                        context.writeInstruction(Instructions.scoreRefUnlessCompareElseJump(targetHolder, targetArg.objective(), LocationData.ofInteger(comparison.ordinal()), sourceHolder, sourceArg.objective(), context.current().contextEndLabel()));
+                        compile(context, fContext.content(), command, result);
+                        return;
+                    }
+                    try(var target = context.forScoreAccessors(targetArg.selectSingle(), result)) {
+                        try(var source = context.forScoreAccessors(sourceArg.selectSingle(), result)) {
+                            var skipLabel = context.current().contextEndLabel();
+                            try(var scope = context.enterLocalScope()) {
+                                try(var targetScore = context.getScoreData(target.content(), scope.endLabel())) {
+                                    try(var sourceScore = context.getScoreData(source.content(), scope.endLabel())) {
                                         var targetValue = context.<Integer>createLocal();
                                         var sourceValue = context.<Integer>createLocal();
                                         sourceScore.writeInstruction(Instructions.getScoreValue(targetValue, targetScore.content()));
                                         sourceScore.writeInstruction(Instructions.getScoreValue(sourceValue, sourceScore.content()));
-                                        sourceScore.writeInstruction(Instructions.ifNumberCompareJump(comparison.negate().toNumberComparisonJump(), targetValue, sourceValue, contextLabel));
+                                        sourceScore.writeInstruction(Instructions.ifNumberCompareJump(comparison.negate().toNumberComparisonJump(), targetValue, sourceValue, skipLabel));
                                     }
                                 }
                             }
+                            compile(context, fContext.content(), command, result);
                         }
-                        scopeResult.close();
                     }
-                    compile(context, fContext.content(), command, result);
                 }
             }
             case CommandExperienceAdd(SelectorArgument targetsArg, MacroTemplate<Integer> amount) -> {
@@ -588,31 +593,31 @@ public final class CommandCompiler {
                     }
                 }
             }
-            case CommandReturnFail _ -> context.writeInstruction(Instructions.returnFail());
             case CommandReturnRun(CommandParams command) -> {
-                var current = context.current();
-
-                var localResult = ResultContext.create(context, true, true);
-                compile(context, null, command, localResult);
-                localResult.endGeneration();
-                localResult.checkImplemented(command);
-
-                var jumpLabel = current.writeLabel(context.instructionWriter);
-                context.instructionWriter.addInstructionBefore(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, localResult.getSuccess(), LocationData.ofInteger(0), jumpLabel), jumpLabel);
-                context.instructionWriter.addInstructionBefore(Instructions.returnSuccess(localResult.getResult()), jumpLabel);
-                current.writeInstruction(context.instructionWriter, Instructions.returnFail());
-
+                // Skip-jumps inside the chain land at this scope's end, i.e. on the `return fail` below.
+                try(var _ = context.enterLocalScope()) {
+                    compile(context, null, command, result.withSink(ReturnSink.INSTANCE));
+                }
+                // A deferred `return <value>|fail` (store callbacks ran for every source) returns here.
+                result.emitPendingReturn();
+                // Reached only when the command did not execute (no source left): vanilla returns failure.
+                context.writeInstruction(Instructions.returnFail());
             }
-            case CommandReturnValue(int value) -> context.writeInstruction(Instructions.returnSuccess(LocationData.ofInteger(value)));
             case CommandScoreboardPlayersAdd(ScoreAccessorArgument targetsArg, MacroTemplate<Integer> score) -> {
-                try(var targets = context.forScoreAccessors(targetsArg, result)) {
-                    try(var scoreData = context.getScoreDataAutoCreate(targets.content())) {
-                        var scoreValue = context.<Integer>createLocal();
-                        scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
-                        var updatedScoreValue = context.<Integer>createLocal();
-                        scoreData.writeInstruction(Instructions.valueAdd(updatedScoreValue, scoreValue, context.getResolvedIntegerMacro(score)));
-                        scoreData.writeInstruction(Instructions.setScoreSafe(targets.content().objective(), targets.content().scoreHolder(), updatedScoreValue));
-                    }
+                // vanilla result: sum of the targets' new scores; one getOrCreatePlayerScore access per target
+                result.markImplemented();
+                var holder = constantHolder(targetsArg);
+                if(holder != null) {
+                    context.writeInstruction(Instructions.scoreRefAdd(holder, targetsArg.objective(), context.getResolvedIntegerMacro(score), context.failureLabel(result)));
+                    updateScoreRefResult(context, result, holder, targetsArg.objective());
+                    return;
+                }
+                try(var targets = context.forScoreAccessors(targetsArg, result, true)) {
+                    var slot = context.getOrCreateScore(targets.content());
+                    var updatedScoreValue = context.<Integer>createLocal();
+                    context.writeInstruction(Instructions.valueAdd(updatedScoreValue, context.getScoreValue(slot.score()), context.getResolvedIntegerMacro(score)));
+                    context.setScore(slot, updatedScoreValue);
+                    result.updateResultValue(updatedScoreValue);
                 }
             }
             case CommandScoreboardPlayersEnable(ScoreAccessorArgument targets1) -> {
@@ -623,167 +628,111 @@ public final class CommandCompiler {
                     objective.writeInstruction(Instructions.mapObjectiveCriterion(mappedCriterion, DataRegistries.SCOREBOARD_CRITERIA.get("trigger").orElseThrow()));
                     objective.writeInstruction(Instructions.ifObjectCompareJump(ObjectComparisonType.NOT_IDENTITY_EQUAL, criterion, mappedCriterion, objective.data().contextEndLabel()));
                     try(var name = context.forScoreHolder(targets1.scoreHolder(), result)) {
-                        try(var scoreData = context.getScoreDataAutoCreate(new ScoreAccessor(objective.content(), name.content()))) {
-                            scoreData.writeInstruction(Instructions.scoreUnlock(scoreData.content()));
-                        }
+                        // vanilla enableTrigger: unlock (and sync) only a locked score
+                        var unlocked = context.<Boolean>createLocal();
+                        name.writeInstruction(Instructions.enableTrigger(unlocked, objective.content(), name.content()));
                     }
                 }
             }
             case CommandScoreboardPlayersGet(ScoreAccessorArgument targets1) -> {
+                // vanilla getScore: a single holder (getName never resolves `*`), missing score fails
                 result.markImplemented();
-                try(var targets = context.forScoreAccessors(targets1, result)) {
-                    try(var scoreData = context.getScoreData(targets.content(), result.markAndGetErrorLabel(), false)) {
-                        var res = context.<Integer>createLocal();
-                        scoreData.writeInstruction(Instructions.getScoreValue(res, scoreData.content()));
-                        result.updateResultValue(res);
+                var holder = constantHolder(targets1);
+                if(holder != null) {
+                    var live = context.<TScore>createLocal();
+                    context.writeInstruction(Instructions.scoreRefScore(live, holder, targets1.objective()));
+                    context.writeInstruction(Instructions.ifNullJump(live, result.markAndGetErrorLabel()));
+                    result.updateResultValue(context.getScoreValue(live));
+                    return;
+                }
+                try(var targets = context.forScoreAccessors(targets1.selectSingle(), result)) {
+                    try(var scoreData = context.getScoreData(targets.content(), result.markAndGetErrorLabel())) {
+                        result.updateResultValue(context.getScoreValue(scoreData.content()));
                     }
                 }
             }
             case CommandScoreboardPlayersOperation(ScoreAccessorArgument targetsArg, ScoreboardOperation operation, ScoreAccessorArgument sourceArg) -> {
+                // vanilla ScoreboardCommand.performOperation: both holder lists are resolved up front; for each
+                // target the operation is applied with every source in turn, then the target's final value is
+                // added to the result.
                 result.markImplemented();
-                try(var targets = context.forScoreAccessors(targetsArg, result)) {
-                    try(var source = context.forScoreAccessors(sourceArg, result)) {
-                        try(var targetScore = context.getScoreDataAutoCreate(targets.content())) {
-                            try(var sourceScore = context.getScoreDataAutoCreate(source.content())) {
-                                var targetObj = targets.content().objective();
-                                var targetHolder = targets.content().scoreHolder();
-                                var sourceObj = source.content().objective();
-                                var sourceHolder = source.content().scoreHolder();
-                                switch(operation) {
-                                    case SET -> {
-                                        var scoreValue = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValue, sourceScore.content()));
-                                        sourceScore.writeInstruction(Instructions.setScoreSafe(targetObj, targetHolder, scoreValue));
-                                        result.updateResultValue(scoreValue);
-                                    }
-                                    case ADD -> {
-                                        var scoreValueA = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueA, sourceScore.content()));
-                                        var scoreValueB = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
-                                        var updatedScoreValue = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.valueAdd(updatedScoreValue, scoreValueA, scoreValueB));
-                                        sourceScore.writeInstruction(Instructions.setScoreSafe(targetObj, targetHolder, updatedScoreValue));
-                                        result.updateResultValue(updatedScoreValue);
-                                    }
-                                    case SUB -> {
-                                        var scoreValueA = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueA, sourceScore.content()));
-                                        var scoreValueB = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
-                                        var updatedScoreValue = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.valueSub(updatedScoreValue, scoreValueA, scoreValueB));
-                                        sourceScore.writeInstruction(Instructions.setScoreSafe(targetObj, targetHolder, updatedScoreValue));
-                                        result.updateResultValue(updatedScoreValue);
-                                    }
-                                    case MUL -> {
-                                        var scoreValueA = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueA, sourceScore.content()));
-                                        var scoreValueB = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
-                                        var updatedScoreValue = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.valueMul(updatedScoreValue, scoreValueA, scoreValueB));
-                                        sourceScore.writeInstruction(Instructions.setScoreSafe(targetObj, targetHolder, updatedScoreValue));
-                                        result.updateResultValue(updatedScoreValue);
-                                    }
-                                    case DIV -> {
-                                        var divisor = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(divisor, sourceScore.content()));
-                                        sourceScore.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, divisor, LocationData.ofInteger(0), result.markAndGetErrorLabel()));
-                                        var dividend = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(dividend, targetScore.content()));
-
-                                        var updatedScoreValue = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.intFloorDiv(updatedScoreValue, dividend, divisor));
-                                        sourceScore.writeInstruction(Instructions.setScoreSafe(targetObj, targetHolder, updatedScoreValue));
-                                        result.updateResultValue(updatedScoreValue);
-                                    }
-                                    case MOD -> {
-                                        var divisor = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(divisor, sourceScore.content()));
-                                        sourceScore.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, divisor, LocationData.ofInteger(0), result.markAndGetErrorLabel()));
-                                        var dividend = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(dividend, targetScore.content()));
-
-                                        var updatedScoreValue = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.intFloorMod(updatedScoreValue, dividend, divisor));
-                                        sourceScore.writeInstruction(Instructions.setScoreSafe(targetObj, targetHolder, updatedScoreValue));
-                                        result.updateResultValue(updatedScoreValue);
-                                    }
-                                    case MIN -> {
-                                        var scoreValueA = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueA, sourceScore.content()));
-                                        var scoreValueB = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
-                                        var updatedScoreValue = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.intMin(updatedScoreValue, scoreValueA, scoreValueB));
-                                        sourceScore.writeInstruction(Instructions.setScoreSafe(targetObj, targetHolder, updatedScoreValue));
-                                        result.updateResultValue(updatedScoreValue);
-                                    }
-                                    case MAX -> {
-                                        var scoreValueA = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueA, sourceScore.content()));
-                                        var scoreValueB = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
-                                        var updatedScoreValue = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.intMax(updatedScoreValue, scoreValueA, scoreValueB));
-                                        sourceScore.writeInstruction(Instructions.setScoreSafe(targetObj, targetHolder, updatedScoreValue));
-                                        result.updateResultValue(updatedScoreValue);
-                                    }
-                                    case SWAP -> {
-                                        var scoreValueA = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueA, sourceScore.content()));
-                                        var scoreValueB = context.<Integer>createLocal();
-                                        sourceScore.writeInstruction(Instructions.getScoreValue(scoreValueB, targetScore.content()));
-
-                                        sourceScore.writeInstruction(Instructions.setScoreSafe(targetObj, targetHolder, scoreValueA));
-                                        sourceScore.writeInstruction(Instructions.setScoreSafe(sourceObj, sourceHolder, scoreValueB));
-                                        result.updateResultValue(scoreValueA);
-                                    }
-                                }
+                var targetHolder = constantHolder(targetsArg);
+                var sourceHolder = constantHolder(sourceArg);
+                if(targetHolder != null && sourceHolder != null) {
+                    context.writeInstruction(Instructions.scoreRefOperation(targetHolder, targetsArg.objective(), LocationData.ofInteger(operation.ordinal()), sourceHolder, sourceArg.objective(), context.failureLabel(result)));
+                    updateScoreRefResult(context, result, targetHolder, targetsArg.objective());
+                    return;
+                }
+                try(var sourceObjective = context.getObjective(sourceArg.objective(), result)) {
+                    try(var sources = resolveScoreHolders(context, sourceArg.scoreHolder(), result)) {
+                        try(var targets = context.forScoreAccessors(targetsArg, result, true)) {
+                            var targetSlot = context.getOrCreateScore(targets.content());
+                            forEachScoreHolder(context, sources.content(), sourceObjective.content(), sourceArg.objective(), sourceAccessor ->
+                                emitScoreOperation(context, result, operation, targetSlot, context.getOrCreateScore(sourceAccessor)));
+                            if(result.generatingResult()) {
+                                result.updateResultValue(context.getScoreValue(targetSlot.score()));
                             }
                         }
                     }
                 }
             }
             case CommandScoreboardPlayersRemove(ScoreAccessorArgument targetsArg, MacroTemplate<Integer> score) -> {
-                try(var targets = context.forScoreAccessors(targetsArg, result)) {
-                    try(var scoreData = context.getScoreDataAutoCreate(targets.content())) {
-                        var scoreValue = context.<Integer>createLocal();
-                        scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
-                        var updatedScoreValue = context.<Integer>createLocal();
-                        scoreData.writeInstruction(Instructions.valueSub(updatedScoreValue, scoreValue, context.getResolvedIntegerMacro(score)));
-                        scoreData.writeInstruction(Instructions.setScoreSafe(targets.content().objective(), targets.content().scoreHolder(), updatedScoreValue));
-                    }
+                // vanilla result: sum of the targets' new scores; one getOrCreatePlayerScore access per target
+                result.markImplemented();
+                var holder = constantHolder(targetsArg);
+                if(holder != null) {
+                    context.writeInstruction(Instructions.scoreRefRemove(holder, targetsArg.objective(), context.getResolvedIntegerMacro(score), context.failureLabel(result)));
+                    updateScoreRefResult(context, result, holder, targetsArg.objective());
+                    return;
+                }
+                try(var targets = context.forScoreAccessors(targetsArg, result, true)) {
+                    var slot = context.getOrCreateScore(targets.content());
+                    var updatedScoreValue = context.<Integer>createLocal();
+                    context.writeInstruction(Instructions.valueSub(updatedScoreValue, context.getScoreValue(slot.score()), context.getResolvedIntegerMacro(score)));
+                    context.setScore(slot, updatedScoreValue);
+                    result.updateResultValue(updatedScoreValue);
                 }
             }
             case CommandScoreboardPlayersResetAll(ScoreHolderArgument targetsArg) -> {
+                // vanilla result: number of holders
+                result.markImplemented();
                 try(var name = context.forScoreHolder(targetsArg, result)) {
                     name.writeInstruction(Instructions.resetPlayerScore(name.content()));
+                    result.updateResultValue(LocationData.ofInteger(1));
                 }
             }
             case CommandScoreboardPlayersResetObjective(ScoreAccessorArgument targetsArg) -> {
+                result.markImplemented();
                 try(var objective = context.getObjective(targetsArg.objective(), result)) {
                     try(var name = context.forScoreHolder(targetsArg.scoreHolder(), result)) {
                         name.writeInstruction(Instructions.resetScore(objective.content(), name.content()));
+                        result.updateResultValue(LocationData.ofInteger(1));
                     }
                 }
             }
             case CommandScoreboardPlayersSet(ScoreAccessorArgument targetsArg, MacroTemplate<Integer> score) -> {
-                try(var targets = context.forScoreAccessors(targetsArg, result)) {
-                    targets.writeInstruction(Instructions.setScoreSafe(targets.content().objective(), targets.content().scoreHolder(), context.getResolvedIntegerMacro(score)));
+                // vanilla result: value × number of targets
+                result.markImplemented();
+                var value = context.getResolvedIntegerMacro(score);
+                var holder = constantHolder(targetsArg);
+                if(holder != null) {
+                    context.writeInstruction(Instructions.scoreRefSet(holder, targetsArg.objective(), value, context.failureLabel(result)));
+                    result.updateResultValue(value);
+                    return;
+                }
+                try(var targets = context.forScoreAccessors(targetsArg, result, true)) {
+                    context.setScore(context.getOrCreateScore(targets.content()), value);
+                    result.updateResultValue(value);
                 }
             }
             case CommandTagAdd(SelectorArgument targets, String name) -> {
+                // vanilla: result = number of entities that gained the tag; fails when none did
                 result.markImplemented();
-                try(var entity = context.forSelector(targets, result)) {
-                    entity.writeInstruction(Instructions.addEntityTag(entity.content(), LocationData.ofString(name)));
-                }
+                emitTagChange(context, result, targets, name, true);
             }
             case CommandTagRemove(SelectorArgument targets, String name) -> {
-                try(var entity = context.forSelector(targets, result)) {
-                    entity.writeInstruction(Instructions.removeEntityTag(entity.content(), LocationData.ofString(name)));
-                }
+                result.markImplemented();
+                emitTagChange(context, result, targets, name, false);
             }
             case CommandTitleActionbar(SelectorArgument playersArg, Text text) -> {
                 try(var players = context.forSelector(playersArg, result)) {
@@ -846,42 +795,42 @@ public final class CommandCompiler {
             case CommandWeatherThunder _ -> context.writeInstruction(Instructions.setWeatherDynamic(SetRandomizedWeatherData.THUNDER));
             // give
             case CommandGive(SelectorArgument targets, String item) -> {
-                var players = context.getSelectorList(targets, null);
+                var players = context.getSelectorList(targets);
                 context.writeInstruction(Instructions.giveItemsToAll(players, item, 1));
             }
             case CommandGiveCount(SelectorArgument targets, String item, int count) -> {
-                var players = context.getSelectorList(targets, null);
+                var players = context.getSelectorList(targets);
                 context.writeInstruction(Instructions.giveItemsToAll(players, item, count));
             }
             // playsound
             case CommandPlaysoundMinVolume(DataLocation sound, String source, SelectorArgument targets, WorldCoordinates pos, double volume, double pitch, double minVolume) -> {
-                var players = context.getSelectorList(targets, null);
-                try(var position = context.applyPosition(pos)) {
-                    context.writeInstruction(Instructions.playSoundToAll(players, sound.toString(), source, position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(pitch), LocationData.ofDouble(minVolume)));
+                var players = context.getSelectorList(targets);
+                try(var world = context.getWorld(); var position = context.applyPosition(pos)) {
+                    context.writeInstruction(Instructions.playSoundToAll(world.content(), players, sound.toString(), source, position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(pitch), LocationData.ofDouble(minVolume)));
                 }
             }
             case CommandPlaysoundPitch(DataLocation sound, String source, SelectorArgument targets, WorldCoordinates pos, double volume, double pitch) -> {
-                var players = context.getSelectorList(targets, null);
-                try(var position = context.applyPosition(pos)) {
-                    context.writeInstruction(Instructions.playSoundToAll(players, sound.toString(), source, position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(pitch), LocationData.ofDouble(0.0)));
+                var players = context.getSelectorList(targets);
+                try(var world = context.getWorld(); var position = context.applyPosition(pos)) {
+                    context.writeInstruction(Instructions.playSoundToAll(world.content(), players, sound.toString(), source, position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(pitch), LocationData.ofDouble(0.0)));
                 }
             }
             case CommandPlaysoundVolume(DataLocation sound, String source, SelectorArgument targets, WorldCoordinates pos, double volume) -> {
-                var players = context.getSelectorList(targets, null);
-                try(var position = context.applyPosition(pos)) {
-                    context.writeInstruction(Instructions.playSoundToAll(players, sound.toString(), source, position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
+                var players = context.getSelectorList(targets);
+                try(var world = context.getWorld(); var position = context.applyPosition(pos)) {
+                    context.writeInstruction(Instructions.playSoundToAll(world.content(), players, sound.toString(), source, position.content(), LocationData.ofDouble(volume), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
                 }
             }
             case CommandPlaysoundPos(DataLocation sound, String source, SelectorArgument targets, WorldCoordinates pos) -> {
-                var players = context.getSelectorList(targets, null);
-                try(var position = context.applyPosition(pos)) {
-                    context.writeInstruction(Instructions.playSoundToAll(players, sound.toString(), source, position.content(), LocationData.ofDouble(1.0), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
+                var players = context.getSelectorList(targets);
+                try(var world = context.getWorld(); var position = context.applyPosition(pos)) {
+                    context.writeInstruction(Instructions.playSoundToAll(world.content(), players, sound.toString(), source, position.content(), LocationData.ofDouble(1.0), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
                 }
             }
             case CommandPlaysound(DataLocation sound, String source, SelectorArgument targets) -> {
-                var players = context.getSelectorList(targets, null);
-                try(var position = context.getPosition()) {
-                    context.writeInstruction(Instructions.playSoundToAll(players, sound.toString(), source, position.content(), LocationData.ofDouble(1.0), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
+                var players = context.getSelectorList(targets);
+                try(var world = context.getWorld(); var position = context.getPosition()) {
+                    context.writeInstruction(Instructions.playSoundToAll(world.content(), players, sound.toString(), source, position.content(), LocationData.ofDouble(1.0), LocationData.ofDouble(1.0), LocationData.ofDouble(0.0)));
                 }
             }
             // summon
@@ -911,61 +860,76 @@ public final class CommandCompiler {
             // time
             case CommandTimeSet(int time) -> {
                 try(var world = context.getWorld()) {
-                    context.writeInstruction(Instructions.setTime(world.content(), LocationData.ofInteger(time)));
+                    var returnValue = context.<Long>createLocal();
+                    context.writeInstruction(Instructions.setTime(returnValue, world.content(), LocationData.ofInteger(time)));
+                    emitEncodedResult(context, result, returnValue);
                 }
             }
             case CommandTimeSetToMarker(DataLocation timeMarkerId) -> {
                 try(var world = context.getWorld()) {
-                    context.writeInstruction(Instructions.setTimeToMarker(world.content(), timeMarkerId.toString()));
+                    var returnValue = context.<Long>createLocal();
+                    context.writeInstruction(Instructions.setTimeToMarker(returnValue, world.content(), timeMarkerId.toString()));
+                    emitEncodedResult(context, result, returnValue);
                 }
             }
             case CommandTimeAdd(int time) -> {
                 try(var world = context.getWorld()) {
-                    context.writeInstruction(Instructions.addTime(world.content(), LocationData.ofInteger(time)));
+                    var returnValue = context.<Long>createLocal();
+                    context.writeInstruction(Instructions.addTime(returnValue, world.content(), LocationData.ofInteger(time)));
+                    emitEncodedResult(context, result, returnValue);
                 }
             }
             case CommandTimeRate(float rate) -> {
                 try(var world = context.getWorld()) {
-                    context.writeInstruction(Instructions.setTimeRate(world.content(), LocationData.ofFloat(rate)));
+                    var returnValue = context.<Long>createLocal();
+                    context.writeInstruction(Instructions.setTimeRate(returnValue, world.content(), LocationData.ofFloat(rate)));
+                    emitEncodedResult(context, result, returnValue);
                 }
             }
             case CommandTimePause _ -> {
                 try(var world = context.getWorld()) {
-                    context.writeInstruction(Instructions.setTimePaused(world.content(), true));
+                    var returnValue = context.<Long>createLocal();
+                    context.writeInstruction(Instructions.setTimePaused(returnValue, world.content(), true));
+                    emitEncodedResult(context, result, returnValue);
                 }
             }
             case CommandTimeResume _ -> {
                 try(var world = context.getWorld()) {
-                    context.writeInstruction(Instructions.setTimePaused(world.content(), false));
+                    var returnValue = context.<Long>createLocal();
+                    context.writeInstruction(Instructions.setTimePaused(returnValue, world.content(), false));
+                    emitEncodedResult(context, result, returnValue);
                 }
             }
             case CommandTimeQueryTime _ -> {
                 result.markImplemented();
                 try(var world = context.getWorld()) {
-                    if (result.generatingResult()) {
-                        var val = context.<Integer>createLocal();
-                        context.writeInstruction(Instructions.queryTime(val, world.content()));
-                        result.updateResultValue(val);
+                    if (result.generatingResult() || result.generatingSuccess()) {
+                        // compiled-function return encoding: fails in a dimension without a default clock
+                        var returnValue = context.<Long>createLocal();
+                        context.writeInstruction(Instructions.queryTime(returnValue, world.content()));
+                        emitEncodedResult(context, result, returnValue);
                     }
                 }
             }
             case CommandTimeQueryTimelineTicks(DataLocation timelineId) -> {
                 result.markImplemented();
                 try(var world = context.getWorld()) {
-                    if (result.generatingResult()) {
-                        var val = context.<Integer>createLocal();
-                        context.writeInstruction(Instructions.queryTimelineTicks(val, world.content(), timelineId.toString()));
-                        result.updateResultValue(val);
+                    if (result.generatingResult() || result.generatingSuccess()) {
+                        // fails without a default clock or for a timeline of another clock
+                        var returnValue = context.<Long>createLocal();
+                        context.writeInstruction(Instructions.queryTimelineTicks(returnValue, world.content(), timelineId.toString()));
+                        emitEncodedResult(context, result, returnValue);
                     }
                 }
             }
             case CommandTimeQueryTimelineRepetitions(DataLocation timelineId) -> {
                 result.markImplemented();
                 try(var world = context.getWorld()) {
-                    if (result.generatingResult()) {
-                        var val = context.<Integer>createLocal();
-                        context.writeInstruction(Instructions.queryTimelineRepetitions(val, world.content(), timelineId.toString()));
-                        result.updateResultValue(val);
+                    if (result.generatingResult() || result.generatingSuccess()) {
+                        // fails without a default clock or for a timeline of another clock
+                        var returnValue = context.<Long>createLocal();
+                        context.writeInstruction(Instructions.queryTimelineRepetitions(returnValue, world.content(), timelineId.toString()));
+                        emitEncodedResult(context, result, returnValue);
                     }
                 }
             }
@@ -979,18 +943,37 @@ public final class CommandCompiler {
                     }
                 }
             }
-            case CommandTimeOf(CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
-                    compile(context, fContext.content(), command, result);
-                }
+            // `time of <clock> …` targets a specific world clock; the native time instructions only
+            // know the default clock, so the whole command goes to vanilla (PAR-18).
+            case CommandTimeOf(DataLocation clock, CommandParams command) -> {
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             }
             // schedule
-            case CommandScheduleFunctionAppend(DataLocation function, int time) -> context.writeInstruction(Instructions.scheduleFunction(function.toString(), LocationData.ofInteger(time), true));
-            case CommandScheduleFunctionReplace(DataLocation function, int time) -> context.writeInstruction(Instructions.scheduleFunction(function.toString(), LocationData.ofInteger(time), false));
-            case CommandScheduleFunction(DataLocation function, int time) -> context.writeInstruction(Instructions.scheduleFunction(function.toString(), LocationData.ofInteger(time), false));
-            case CommandScheduleClear(DataLocation function) -> context.writeInstruction(Instructions.scheduleClearFunction(function.toString()));
+            case CommandScheduleFunctionAppend(DataLocation function, int time) -> {
+                // vanilla rejects a 0-tick delay (ERROR_SAME_TICK) without touching the schedule
+                if(time != 0) context.writeInstruction(Instructions.scheduleFunction(function.toString(), LocationData.ofInteger(time), true));
+            }
+            case CommandScheduleFunctionReplace(DataLocation function, int time) -> {
+                // vanilla rejects a 0-tick delay (ERROR_SAME_TICK) without touching the schedule
+                if(time != 0) context.writeInstruction(Instructions.scheduleFunction(function.toString(), LocationData.ofInteger(time), false));
+            }
+            case CommandScheduleFunction(DataLocation function, int time) -> {
+                // vanilla rejects a 0-tick delay (ERROR_SAME_TICK) without touching the schedule
+                if(time != 0) context.writeInstruction(Instructions.scheduleFunction(function.toString(), LocationData.ofInteger(time), false));
+            }
+            case CommandScheduleClear(DataLocation function) -> {
+                // vanilla ScheduleCommand.remove: result = removed entries, none removed = failure
+                result.markImplemented();
+                var removed = context.<Integer>createLocal();
+                context.writeInstruction(Instructions.scheduleClearFunction(removed, function.toString()));
+                emitClearTotal(context, result, removed);
+            }
             // gamerule
-            case CommandGameruleSet(DataLocation rule, String value) -> context.writeInstruction(Instructions.setGamerule(rule.toString(), value));
+            case CommandGameruleSet(DataLocation rule, String value) -> {
+                var returnValue = context.<Long>createLocal();
+                context.writeInstruction(Instructions.setGamerule(returnValue, rule.toString(), value));
+                emitEncodedResult(context, result, returnValue);
+            }
             case CommandGameruleQuery(DataLocation rule) -> {
                 result.markImplemented();
                 var val = context.<Integer>createLocal();
@@ -1003,7 +986,7 @@ public final class CommandCompiler {
 
             // execute if/unless predicate
             case CommandExecuteIfPredicate(DataLocation predicate, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var currentEntity = context.getCurrentNullableEntity()) {
                         try(var world = context.getWorld()) {
                             try(var position = context.getPosition()) {
@@ -1015,7 +998,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteUnlessPredicate(DataLocation predicate, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var currentEntity = context.getCurrentNullableEntity()) {
                         try(var world = context.getWorld()) {
                             try(var position = context.getPosition()) {
@@ -1029,7 +1012,7 @@ public final class CommandCompiler {
 
             // execute if/unless data (NBT check)
             case CommandExecuteIfDataEntity(SelectorArgument target, NbtPath path, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var entityData = context.forSelector(target, result)) {
                         var nbtLocal = context.<TCompoundTag>createLocal();
                         entityData.writeInstruction(Instructions.getEntityNbt(nbtLocal, entityData.content()));
@@ -1040,7 +1023,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteIfDataStorage(DataLocation target, NbtPath path, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     var nbtLocal = context.<TCompoundTag>createLocal();
                     context.writeInstruction(Instructions.getNbtStorage(nbtLocal, target));
                     var tagVal = getNbtPathValue(context, nbtLocal, path.parts(), false, context.current().contextEndLabel());
@@ -1051,9 +1034,9 @@ public final class CommandCompiler {
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: block entity NBT access),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandExecuteIfDataBlock(WorldCoordinates pos, NbtPath path, CommandParams command) ->
-                emitVanillaFallback(context, "execute if data block " + worldCoordsToString(pos) + " " + nbtPathToString(path) + " run " + getRawCommand(context, command));
+                compileVanillaCondition(context, forkingContext, inputCommand, command, result);
             case CommandExecuteUnlessDataEntity(SelectorArgument target, NbtPath path, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     var contextLabel = context.current().contextEndLabel();
                     try(var scope = context.enterLocalScope()) {
                         try(var entityData = context.forSelector(target, result)) {
@@ -1067,7 +1050,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteUnlessDataStorage(DataLocation target, NbtPath path, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     var contextLabel = context.current().contextEndLabel();
                     try(var scope = context.enterLocalScope()) {
                         var nbtLocal = context.<TCompoundTag>createLocal();
@@ -1079,81 +1062,114 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteUnlessDataBlock(WorldCoordinates pos, NbtPath path, CommandParams command) ->
-                emitVanillaFallback(context, "execute unless data block " + worldCoordsToString(pos) + " " + nbtPathToString(path) + " run " + getRawCommand(context, command));
+                compileVanillaCondition(context, forkingContext, inputCommand, command, result);
 
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: block region comparison + block entity serialization),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandExecuteIfBlocks(WorldCoordinates start, WorldCoordinates end, WorldCoordinates destination, CommandParams command) ->
-                emitVanillaFallback(context, "execute if blocks " + worldCoordsToString(start) + " " + worldCoordsToString(end) + " " + worldCoordsToString(destination) + " all run " + getRawCommand(context, command));
+                compileVanillaCondition(context, forkingContext, inputCommand, command, result);
             case CommandExecuteIfBlocksMasked(WorldCoordinates start, WorldCoordinates end, WorldCoordinates destination, CommandParams command) ->
-                emitVanillaFallback(context, "execute if blocks " + worldCoordsToString(start) + " " + worldCoordsToString(end) + " " + worldCoordsToString(destination) + " masked run " + getRawCommand(context, command));
+                compileVanillaCondition(context, forkingContext, inputCommand, command, result);
             case CommandExecuteUnlessBlocks(WorldCoordinates start, WorldCoordinates end, WorldCoordinates destination, CommandParams command) ->
-                emitVanillaFallback(context, "execute unless blocks " + worldCoordsToString(start) + " " + worldCoordsToString(end) + " " + worldCoordsToString(destination) + " all run " + getRawCommand(context, command));
+                compileVanillaCondition(context, forkingContext, inputCommand, command, result);
             case CommandExecuteUnlessBlocksMasked(WorldCoordinates start, WorldCoordinates end, WorldCoordinates destination, CommandParams command) ->
-                emitVanillaFallback(context, "execute unless blocks " + worldCoordsToString(start) + " " + worldCoordsToString(end) + " " + worldCoordsToString(destination) + " masked run " + getRawCommand(context, command));
+                compileVanillaCondition(context, forkingContext, inputCommand, command, result);
 
             // execute if/unless без sub-command (result/success context)
             case CommandExecuteIfScoreRangeOnly(ScoreAccessorArgument target, IntRangeArgument range) -> {
+                // vanilla: 1 when the score exists and matches, otherwise the command fails
                 result.markImplemented();
+                var holder = constantHolder(target);
+                if(holder != null) {
+                    context.writeInstruction(Instructions.scoreRefIfMatchesElseJump(holder, target.objective(), rangeMin(range), rangeMax(range), result.markAndGetErrorLabel()));
+                    result.updateResultValue(LocationData.ofInteger(1));
+                    return;
+                }
                 try(var scoreAccessor = context.forScoreAccessors(target.selectSingle(), result)) {
-                    try(var scoreData = context.getScoreData(scoreAccessor.content(), result.markAndGetErrorLabel(), false)) {
+                    try(var scoreData = context.getScoreData(scoreAccessor.content(), result.markAndGetErrorLabel())) {
                         var scoreValue = context.<Integer>createLocal();
                         scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
-                        result.updateResultValue(scoreValue);
                         context.jumpIfNotMatchesRange(scoreData.data(), scoreValue, range, result.markAndGetErrorLabel());
+                        result.updateResultValue(LocationData.ofInteger(1));
                     }
                 }
             }
             case CommandExecuteUnlessScoreRangeOnly(ScoreAccessorArgument target, IntRangeArgument range) -> {
+                // vanilla: 1 when the score is missing or does not match; a missing objective/holder fails
                 result.markImplemented();
-                try(var scope = context.enterLocalScope()) {
-                    var scopeResult = ResultContext.create(context, scope.endLabel());
-                    try(var scoreAccessor = context.forScoreAccessors(target.selectSingle(), scopeResult)) {
-                        try(var scoreData = context.getScoreData(scoreAccessor.content(), scopeResult.markAndGetErrorLabel(), false)) {
+                var holder = constantHolder(target);
+                if(holder != null) {
+                    context.writeInstruction(Instructions.scoreRefUnlessMatchesElseJump(holder, target.objective(), rangeMin(range), rangeMax(range), result.markAndGetErrorLabel()));
+                    result.updateResultValue(LocationData.ofInteger(1));
+                    return;
+                }
+                try(var scoreAccessor = context.forScoreAccessors(target.selectSingle(), result)) {
+                    try(var scope = context.enterLocalScope()) {
+                        try(var scoreData = context.getScoreData(scoreAccessor.content(), scope.endLabel())) {
                             var scoreValue = context.<Integer>createLocal();
                             scoreData.writeInstruction(Instructions.getScoreValue(scoreValue, scoreData.content()));
                             context.jumpIfMatchesRange(scoreData.data(), scoreValue, range, result.markAndGetErrorLabel());
                         }
                     }
-                    scopeResult.close();
+                    result.updateResultValue(LocationData.ofInteger(1));
                 }
             }
             case CommandExecuteIfEntityOnly(SelectorArgument entities) -> {
+                // vanilla: the match count when > 0, otherwise the command fails
                 result.markImplemented();
-                var entityList = context.getSelectorList(entities, result);
+                var entityList = context.getSelectorList(entities);
                 var countLocal = context.<Integer>createLocal();
                 context.writeInstruction(Instructions.getListLength(countLocal, entityList));
+                context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, countLocal, LocationData.ofInteger(0), result.markAndGetErrorLabel()));
                 result.updateResultValue(countLocal);
             }
             case CommandExecuteUnlessEntityOnly(SelectorArgument entities) -> {
+                // vanilla: 1 when nothing matches, otherwise the command fails
                 result.markImplemented();
-                var codeLocation = context.current().writeLabel(context.instructionWriter);
-                try(var _ =context.enterWithoutValue(context.current().withContextLabel(codeLocation))) {
-                    try(var selector = context.forSelector(entities.limit(1), result)) {
-                        selector.writeInstruction(Instructions.jump(result.markAndGetErrorLabel()));
-                    }
-                }
+                var entityList = context.getSelectorList(entities.limit(1));
+                var countLocal = context.<Integer>createLocal();
+                context.writeInstruction(Instructions.getListLength(countLocal, entityList));
+                context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, countLocal, LocationData.ofInteger(0), result.markAndGetErrorLabel()));
+                result.updateResultValue(LocationData.ofInteger(1));
             }
 
             // recipe give/take * wildcard — native compilation
-            case CommandRecipeGiveAllStar(SelectorArgument targets, _) -> {
-                try(var selector = context.forSelector(targets, result)) {
-                    var player = context.<TServerPlayer>createLocal();
-                    selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
-                    selector.writeInstruction(Instructions.recipeGiveAll(player));
+            case CommandRecipeGiveAllStar(SelectorArgument targets) -> {
+                // vanilla RecipeCommand: result = recipes awarded/reset summed over players, 0 = failure
+                result.markImplemented();
+                var total = context.<Integer>createLocal();
+                context.writeInstruction(Instructions.dup(total, LocationData.ofInteger(0)));
+                try(var _ = context.enterLocalScope()) {
+                    try(var selector = context.forSelector(targets, result)) {
+                        var player = context.<TServerPlayer>createLocal();
+                        selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
+                        var changed = context.<Integer>createLocal();
+                        selector.writeInstruction(Instructions.recipeGiveAll(changed, player));
+                        selector.writeInstruction(Instructions.valueAdd(total, total, changed));
+                    }
                 }
+                emitClearTotal(context, result, total);
             }
-            case CommandRecipeTakeAllStar(SelectorArgument targets, _) -> {
-                try(var selector = context.forSelector(targets, result)) {
-                    var player = context.<TServerPlayer>createLocal();
-                    selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
-                    selector.writeInstruction(Instructions.recipeTakeAll(player));
+            case CommandRecipeTakeAllStar(SelectorArgument targets) -> {
+                // vanilla RecipeCommand: result = recipes awarded/reset summed over players, 0 = failure
+                result.markImplemented();
+                var total = context.<Integer>createLocal();
+                context.writeInstruction(Instructions.dup(total, LocationData.ofInteger(0)));
+                try(var _ = context.enterLocalScope()) {
+                    try(var selector = context.forSelector(targets, result)) {
+                        var player = context.<TServerPlayer>createLocal();
+                        selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
+                        var changed = context.<Integer>createLocal();
+                        selector.writeInstruction(Instructions.recipeTakeAll(changed, player));
+                        selector.writeInstruction(Instructions.valueAdd(total, total, changed));
+                    }
                 }
+                emitClearTotal(context, result, total);
             }
 
             // execute summon — native compilation
             case CommandExecuteSummon(DataLocation entity, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     var current = context.current();
                     var stack = context.<TCommandSourceStack>createLocal();
                     context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
@@ -1170,11 +1186,13 @@ public final class CommandCompiler {
             }
             // execute positioned over — native compilation
             case CommandExecutePositionedOver(String heightmap, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var world = context.getWorld()) {
                         try(var currentPos = context.getPosition()) {
                             var newPos = context.<TVec3>createLocal();
                             context.writeInstruction(Instructions.positionedOver(newPos, world.content(), currentPos.content(), heightmap));
+                            // null: the column's chunk is not loaded (vanilla ERROR_NOT_LOADED)
+                            context.writeInstruction(Instructions.ifNullJump(newPos, context.current().contextEndLabel()));
                             try(var _ =context.enterWithoutValue(context.current().withCurrentPosition(newPos))) {
                                 compile(context, fContext.content(), command, result);
                             }
@@ -1186,21 +1204,15 @@ public final class CommandCompiler {
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: slot mapping + item parsing),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandItemReplaceEntityWith(SelectorArgument targets, String slot, String item) ->
-                emitVanillaFallback(context, "item replace entity " + selectorToString(targets) + " " + slot + " with " + item);
-            case CommandItemReplaceEntityFromEntity(SelectorArgument targets, String slot, SelectorArgument source) ->
-                emitVanillaFallback(context, "item replace entity " + selectorToString(targets) + " " + slot + " from entity " + selectorToString(source));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandItemReplaceEntityFromEntitySlot(SelectorArgument targets, String slot, SelectorArgument source, String sourceSlot) ->
-                emitVanillaFallback(context, "item replace entity " + selectorToString(targets) + " " + slot + " from entity " + selectorToString(source) + " " + sourceSlot);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandItemReplaceBlockWith(WorldCoordinates pos, String slot, String item) ->
-                emitVanillaFallback(context, "item replace block " + worldCoordsToString(pos) + " " + slot + " with " + item);
-            case CommandItemReplaceBlockFromEntity(WorldCoordinates pos, String slot, SelectorArgument source) ->
-                emitVanillaFallback(context, "item replace block " + worldCoordsToString(pos) + " " + slot + " from entity " + selectorToString(source));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandItemReplaceBlockFromEntitySlot(WorldCoordinates pos, String slot, SelectorArgument source, String sourceSlot) ->
-                emitVanillaFallback(context, "item replace block " + worldCoordsToString(pos) + " " + slot + " from entity " + selectorToString(source) + " " + sourceSlot);
-            case CommandItemReplaceBlockFromBlock(WorldCoordinates pos, String slot, WorldCoordinates sourcePos) ->
-                emitVanillaFallback(context, "item replace block " + worldCoordsToString(pos) + " " + slot + " from block " + worldCoordsToString(sourcePos));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandItemReplaceBlockFromBlockSlot(WorldCoordinates pos, String slot, WorldCoordinates sourcePos, String sourceSlot) ->
-                emitVanillaFallback(context, "item replace block " + worldCoordsToString(pos) + " " + slot + " from block " + worldCoordsToString(sourcePos) + " " + sourceSlot);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
 
             // scoreboard objectives setdisplay — native compilation
             case CommandScoreboardObjectivesSetdisplayClear(String slot) ->
@@ -1215,7 +1227,7 @@ public final class CommandCompiler {
                 context.writeInstruction(Instructions.addObjectiveDisplay(objective, criteria, displayLocal));
             }
             case CommandScoreboardObjectivesAddDisplayGreedy(String objective, String criteria, String displayName) ->
-                emitVanillaFallback(context, "scoreboard objectives add " + objective + " " + criteria + " " + displayName);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandScoreboardPlayersDisplayName(ScoreHolderArgument targets, String objective) -> {
                 try(var holder = context.forScoreHolder(targets, result)) {
                     context.writeInstruction(Instructions.scoreboardPlayersDisplayNameClear(holder.content(), objective));
@@ -1229,9 +1241,9 @@ public final class CommandCompiler {
                 }
             }
             case CommandScoreboardPlayersDisplayNameGreedy(ScoreHolderArgument targets, String objective, String displayName) ->
-                emitVanillaFallback(context, "scoreboard players display name " + scoreHolderToString(targets) + " " + objective + " " + displayName);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandScoreboardPlayersDisplayNameClear(ScoreHolderArgument targets) ->
-                emitVanillaFallback(context, "scoreboard players display name " + scoreHolderToString(targets));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandScoreboardObjectivesSetdisplay(String slot, String objective) ->
                 context.writeInstruction(Instructions.scoreboardSetdisplay(slot, objective));
             case CommandScoreboardPlayersDisplayNumberformatBlank(ScoreHolderArgument targets, String objective) -> {
@@ -1254,19 +1266,47 @@ public final class CommandCompiler {
 
             // execute in <dimension>
             case CommandExecuteIn(DataLocation dimension, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
-                    var worldLocal = context.<TServerLevel>createLocal();
-                    context.writeInstruction(Instructions.getDimensionLevel(worldLocal, dimension.toString()));
-                    context.writeInstruction(Instructions.ifNullJump(worldLocal, context.current().contextEndLabel()));
-                    try(var _ =context.enterWithoutValue(context.current().withCurrentWorld(worldLocal))) {
-                        compile(context, fContext.content(), command, result);
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
+                    try(var world = context.getWorld()) {
+                        try(var position = context.getPosition()) {
+                            var worldLocal = context.<TServerLevel>createLocal();
+                            context.writeInstruction(Instructions.getDimensionLevel(worldLocal, dimension.toString()));
+                            context.writeInstruction(Instructions.ifNullJump(worldLocal, context.current().contextEndLabel()));
+                            // vanilla CommandSourceStack.withLevel: X/Z scaled by the dimensions' teleportation scale
+                            var scaledPosition = context.<TVec3>createLocal();
+                            context.writeInstruction(Instructions.scalePositionForLevel(scaledPosition, world.content(), worldLocal, position.content()));
+                            try(var _ =context.enterWithoutValue(context.current().withCurrentWorld(worldLocal).withCurrentPosition(scaledPosition))) {
+                                compile(context, fContext.content(), command, result);
+                            }
+                        }
+                    }
+                }
+            }
+            case CommandExecuteIfDimension(DataLocation dimension, CommandParams command) ->
+                compileDimensionCondition(context, forkingContext, inputCommand, dimension, command, result, true);
+            case CommandExecuteUnlessDimension(DataLocation dimension, CommandParams command) ->
+                compileDimensionCondition(context, forkingContext, inputCommand, dimension, command, result, false);
+            case CommandExecuteIfLoaded(WorldCoordinates pos, CommandParams command) ->
+                compileLoadedCondition(context, forkingContext, inputCommand, pos, command, result, true);
+            case CommandExecuteUnlessLoaded(WorldCoordinates pos, CommandParams command) ->
+                compileLoadedCondition(context, forkingContext, inputCommand, pos, command, result, false);
+            case CommandExecuteUnlessBiome(WorldCoordinates pos, DataLocation biome, CommandParams command) -> {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
+                    try(var world = context.getWorld()) {
+                        try(var posData = context.applyPosition(pos)) {
+                            var cond = context.<Integer>createLocal();
+                            context.writeInstruction(Instructions.checkBiome(cond, world.content(), posData.content(), biome.toString()));
+                            // 0 = other biome; 1 = match and -1 = unloaded/outside the world both fail `unless`
+                            context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, cond, LocationData.ofInteger(0), context.current().contextEndLabel()));
+                            compile(context, fContext.content(), command, result);
+                        }
                     }
                 }
             }
 
             // execute if/unless block
             case CommandExecuteIfBlock(WorldCoordinates pos, String block, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     var current = context.current();
                     var worldLocal = current.currentWorld();
                     if(worldLocal == null) {
@@ -1275,15 +1315,16 @@ public final class CommandCompiler {
                         worldLocal = w;
                     }
                     try(var posData = context.applyPosition(pos)) {
-                        var cond = context.<Boolean>createLocal();
+                        var cond = context.<Integer>createLocal();
                         posData.writeInstruction(Instructions.checkBlock(cond, worldLocal, posData.content(), block));
-                        posData.writeInstruction(Instructions.ifFalseJump(cond, posData.data().contextEndLabel()));
+                        // 1 = match; 0 = no match and -1 = vanilla error both fail `if`
+                        posData.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, cond, LocationData.ofInteger(1), posData.data().contextEndLabel()));
                         compile(context, fContext.content(), command, result);
                     }
                 }
             }
             case CommandExecuteUnlessBlock(WorldCoordinates pos, String block, CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     var current = context.current();
                     var worldLocal = current.currentWorld();
                     if(worldLocal == null) {
@@ -1292,9 +1333,10 @@ public final class CommandCompiler {
                         worldLocal = w;
                     }
                     try(var posData = context.applyPosition(pos)) {
-                        var cond = context.<Boolean>createLocal();
+                        var cond = context.<Integer>createLocal();
                         posData.writeInstruction(Instructions.checkBlock(cond, worldLocal, posData.content(), block));
-                        posData.writeInstruction(Instructions.ifNotNullJump(cond, posData.data().contextEndLabel()));
+                        // 0 = no match; 1 = match and -1 = vanilla error both fail `unless`
+                        posData.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, cond, LocationData.ofInteger(0), posData.data().contextEndLabel()));
                         compile(context, fContext.content(), command, result);
                     }
                 }
@@ -1303,40 +1345,32 @@ public final class CommandCompiler {
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: item predicate parsing + slot iteration),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandExecuteIfItemsEntity(SelectorArgument targets, String slot, String predicate, CommandParams command) ->
-                emitVanillaFallback(context, "execute if items entity " + selectorToString(targets) + " " + slot + " " + predicate + " run " + getRawCommand(context, command));
+                compileVanillaCondition(context, forkingContext, inputCommand, command, result);
             case CommandExecuteUnlessItemsEntity(SelectorArgument targets, String slot, String predicate, CommandParams command) ->
-                emitVanillaFallback(context, "execute unless items entity " + selectorToString(targets) + " " + slot + " " + predicate + " run " + getRawCommand(context, command));
+                compileVanillaCondition(context, forkingContext, inputCommand, command, result);
             case CommandExecuteIfItemsBlock(WorldCoordinates pos, String slot, String predicate, CommandParams command) ->
-                emitVanillaFallback(context, "execute if items block " + worldCoordsToString(pos) + " " + slot + " " + predicate + " run " + getRawCommand(context, command));
+                compileVanillaCondition(context, forkingContext, inputCommand, command, result);
             case CommandExecuteUnlessItemsBlock(WorldCoordinates pos, String slot, String predicate, CommandParams command) ->
-                emitVanillaFallback(context, "execute unless items block " + worldCoordsToString(pos) + " " + slot + " " + predicate + " run " + getRawCommand(context, command));
+                compileVanillaCondition(context, forkingContext, inputCommand, command, result);
 
             // execute if/unless items standalone — для execute store result ... if items ...
-            case CommandExecuteIfItemsEntityOnly(SelectorArgument targets, String slot, String predicate) -> {
-                result.markImplemented();
-                emitVanillaFallback(context, "execute if items entity " + selectorToString(targets) + " " + slot + " " + predicate);
-            }
-            case CommandExecuteUnlessItemsEntityOnly(SelectorArgument targets, String slot, String predicate) -> {
-                result.markImplemented();
-                emitVanillaFallback(context, "execute unless items entity " + selectorToString(targets) + " " + slot + " " + predicate);
-            }
-            case CommandExecuteIfItemsBlockOnly(WorldCoordinates pos, String slot, String predicate) -> {
-                result.markImplemented();
-                emitVanillaFallback(context, "execute if items block " + worldCoordsToString(pos) + " " + slot + " " + predicate);
-            }
-            case CommandExecuteUnlessItemsBlockOnly(WorldCoordinates pos, String slot, String predicate) -> {
-                result.markImplemented();
-                emitVanillaFallback(context, "execute unless items block " + worldCoordsToString(pos) + " " + slot + " " + predicate);
-            }
+            case CommandExecuteIfItemsEntityOnly(SelectorArgument targets, String slot, String predicate) ->
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
+            case CommandExecuteUnlessItemsEntityOnly(SelectorArgument targets, String slot, String predicate) ->
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
+            case CommandExecuteIfItemsBlockOnly(WorldCoordinates pos, String slot, String predicate) ->
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
+            case CommandExecuteUnlessItemsBlockOnly(WorldCoordinates pos, String slot, String predicate) ->
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
 
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: entity NBT load/save + path resolution),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandExecuteStoreEntity(ResultStoreLocationType storeLocation, SelectorArgument target, NbtPath path, ResultStoreType storeType, double scale, CommandParams command) ->
-                emitVanillaFallback(context, "execute store " + storeLocation.name().toLowerCase() + " entity " + selectorToString(target) + " " + nbtPathToString(path) + " " + storeType.name().toLowerCase() + " " + scale + " run " + getRawCommand(context, command));
+                emitVanillaFallback(context, sourceTextWithoutReturn(context, inputCommand));
 
             // execute on leasher / attacker / controller / owner / passengers
             case CommandExecuteOnLeasher(CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var currentEntity = context.getCurrentEntity()) {
                         var holder = context.<TEntity>createLocal();
                         currentEntity.writeInstruction(Instructions.getEntityLeashHolder(holder, currentEntity.content()));
@@ -1348,7 +1382,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteOnAttacker(CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var currentEntity = context.getCurrentEntity()) {
                         var attacker = context.<TEntity>createLocal();
                         currentEntity.writeInstruction(Instructions.getEntityLastAttacker(attacker, currentEntity.content()));
@@ -1360,7 +1394,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteOnController(CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var currentEntity = context.getCurrentEntity()) {
                         var controller = context.<TEntity>createLocal();
                         currentEntity.writeInstruction(Instructions.getEntityController(controller, currentEntity.content()));
@@ -1372,7 +1406,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteOnOwner(CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var currentEntity = context.getCurrentEntity()) {
                         var owner = context.<TEntity>createLocal();
                         currentEntity.writeInstruction(Instructions.getEntityOwner(owner, currentEntity.content()));
@@ -1384,7 +1418,7 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteOnPassengers(CommandParams command) -> {
-                try(var fContext = context.withForkingContext(forkingContext)) {
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var currentEntity = context.getCurrentEntity()) {
                         var passengerList = context.<List<? extends TEntity>>createLocal();
                         currentEntity.writeInstruction(Instructions.getEntityPassengers(passengerList, currentEntity.content()));
@@ -1436,181 +1470,201 @@ public final class CommandCompiler {
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandDataModifyPrependValue(NbtDataLocation destination, NbtPath path, NbtValue setValue) -> {
                 if(destination instanceof NbtDataLocation.Storage(DataLocation storage)) {
-                    compileDataModifyListOpValue(context, storage, path, setValue, true);
+                    compileDataModifyListOpValue(context, result, storage, path, setValue, 0);
                 } else {
-                    emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " prepend value " + nbtValueToString(setValue));
+                    emitVanillaFallback(context, sourceText(context, inputCommand));
                 }
             }
             case CommandDataModifyAppendValue(NbtDataLocation destination, NbtPath path, NbtValue setValue) -> {
                 if(destination instanceof NbtDataLocation.Storage(DataLocation storage)) {
-                    compileDataModifyListOpValue(context, storage, path, setValue, false);
+                    compileDataModifyListOpValue(context, result, storage, path, setValue, -1);
                 } else {
-                    emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " append value " + nbtValueToString(setValue));
+                    emitVanillaFallback(context, sourceText(context, inputCommand));
                 }
             }
             case CommandDataModifyInsertValue(NbtDataLocation destination, NbtPath path, int index, NbtValue setValue) -> {
                 if(destination instanceof NbtDataLocation.Storage(DataLocation storage)) {
-                    var storageLocal = context.<TCompoundTag>createLocal();
-                    context.writeInstruction(Instructions.getNbtStorage(storageLocal, storage));
-                    var parts = path.parts();
-                    var codeLocation = context.current().writeLabel(context.instructionWriter);
-                    try(var innerContext = context.enterWithoutValue(context.current().withContextLabel(codeLocation))) {
-                        var listContainer = getNbtPathValue(context, storageLocal, parts.subList(0, parts.size() - 1), false, innerContext.data().contextEndLabel());
-                        var listTag = context.<TListTag>createLocal();
-                        innerContext.writeInstruction(Instructions.tryAsNbtList(listTag, listContainer, innerContext.data().contextEndLabel()));
-                        var tagLocal = context.<TTag>createLocal();
-                        var tagCopied = context.<TTag>createLocal();
-                        innerContext.writeInstruction(Instructions.loadNbtValue(tagLocal, setValue));
-                        innerContext.writeInstruction(Instructions.cloneNbtValue(tagCopied, tagLocal));
-                        innerContext.writeInstruction(Instructions.nbtListInsert(listTag, LocationData.ofInteger(index), tagCopied, innerContext.data().contextEndLabel()));
-                    }
-                    context.writeInstruction(Instructions.setNbtStorage(storage, storageLocal));
+                    compileDataModifyListOpValue(context, result, storage, path, setValue, index);
                 } else {
-                    emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " insert " + index + " value " + nbtValueToString(setValue));
+                    emitVanillaFallback(context, sourceText(context, inputCommand));
                 }
             }
 
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: runtime NBT path resolution + deep copy),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandDataModifySetFrom(NbtDataLocation destination, NbtPath path, NbtDataLocation source) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " set from " + nbtDataLocationToString(source));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifySetFromPath(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " set from " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifyPrependFrom(NbtDataLocation destination, NbtPath path, NbtDataLocation source) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " prepend from " + nbtDataLocationToString(source));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifyPrependFromPath(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " prepend from " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifyAppendFrom(NbtDataLocation destination, NbtPath path, NbtDataLocation source) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " append from " + nbtDataLocationToString(source));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifyAppendFromPath(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " append from " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifyInsertFrom(NbtDataLocation destination, NbtPath path, int index, NbtDataLocation source) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " insert " + index + " from " + nbtDataLocationToString(source));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifyInsertFromPath(NbtDataLocation destination, NbtPath path, int index, NbtDataLocation source, NbtPath sourcePath) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " insert " + index + " from " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifyMergeValue(NbtDataLocation destination, NbtPath path, NbtValue setValue) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " merge value " + nbtValueToString(setValue));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifyMergeFrom(NbtDataLocation destination, NbtPath path, NbtDataLocation source) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " merge from " + nbtDataLocationToString(source));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifyMergeFromPath(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " merge from " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifySetString(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " set string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifySetStringStart(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath, int start) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " set string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath) + " " + start);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifySetStringRange(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath, int start, int end) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " set string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath) + " " + start + " " + end);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifyAppendString(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " append string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifyAppendStringStart(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath, int start) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " append string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath) + " " + start);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifyAppendStringRange(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath, int start, int end) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " append string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath) + " " + start + " " + end);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifyPrependString(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " prepend string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifyPrependStringStart(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath, int start) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " prepend string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath) + " " + start);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifyPrependStringRange(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath, int start, int end) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " prepend string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath) + " " + start + " " + end);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifyInsertString(NbtDataLocation destination, NbtPath path, int index, NbtDataLocation source, NbtPath sourcePath) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " insert " + index + " string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifyInsertStringStart(NbtDataLocation destination, NbtPath path, int index, NbtDataLocation source, NbtPath sourcePath, int start) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " insert " + index + " string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath) + " " + start);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandDataModifyInsertStringRange(NbtDataLocation destination, NbtPath path, int index, NbtDataLocation source, NbtPath sourcePath, int start, int end) ->
-                emitVanillaFallback(context, "data modify " + nbtDataLocationToString(destination) + " " + nbtPathToString(path) + " insert " + index + " string " + nbtDataLocationToString(source) + " " + nbtPathToString(sourcePath) + " " + start + " " + end);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
 
-            // data get — нативная реализация для entity (самый частый случай в датапаках)
+            // data get — native for entity and storage; block through vanilla
             case CommandDataGetPath(NbtDataLocation source, NbtPath path) -> {
-                if(source instanceof NbtDataLocation.Entity(SelectorArgument selector)) {
-                    result.markImplemented();
-                    try(var entityData = context.forSelector(selector, result)) {
-                        var nbtLocal = context.<TCompoundTag>createLocal();
-                        entityData.writeInstruction(Instructions.getEntityNbt(nbtLocal, entityData.content()));
-                        var tagVal = getNbtPathValue(context, nbtLocal, path.parts(), false, result.markAndGetErrorLabel());
-                        context.writeInstruction(Instructions.ifNullJump(tagVal, result.markAndGetErrorLabel()));
-                        var intVal = context.<Integer>createLocal();
-                        context.writeInstruction(Instructions.nbtTagToInt(intVal, tagVal, 1.0));
-                        result.updateResultValue(intVal);
-                    }
+                if(!(source instanceof NbtDataLocation.Block)) {
+                    compileDataGet(context, result, source, path, null);
                 } else {
-                    emitVanillaFallback(context, "data get " + nbtDataLocationToString(source) + " " + nbtPathToString(path));
+                    emitVanillaFallback(context, sourceText(context, inputCommand));
                 }
             }
             case CommandDataGetPathScale(NbtDataLocation source, NbtPath path, double scale) -> {
-                if(source instanceof NbtDataLocation.Entity(SelectorArgument selector)) {
-                    result.markImplemented();
-                    try(var entityData = context.forSelector(selector, result)) {
-                        var nbtLocal = context.<TCompoundTag>createLocal();
-                        entityData.writeInstruction(Instructions.getEntityNbt(nbtLocal, entityData.content()));
-                        var tagVal = getNbtPathValue(context, nbtLocal, path.parts(), false, result.markAndGetErrorLabel());
-                        context.writeInstruction(Instructions.ifNullJump(tagVal, result.markAndGetErrorLabel()));
-                        var intVal = context.<Integer>createLocal();
-                        context.writeInstruction(Instructions.nbtTagToInt(intVal, tagVal, scale));
-                        result.updateResultValue(intVal);
-                    }
+                if(!(source instanceof NbtDataLocation.Block)) {
+                    compileDataGet(context, result, source, path, scale);
                 } else {
-                    emitVanillaFallback(context, "data get " + nbtDataLocationToString(source) + " " + nbtPathToString(path) + " " + scale);
+                    emitVanillaFallback(context, sourceText(context, inputCommand));
+                }
+            }
+            case CommandDataGet(NbtDataLocation source) -> {
+                // vanilla prints the whole tag and returns 1
+                switch(source) {
+                    case NbtDataLocation.Entity(SelectorArgument selector) -> {
+                        result.markImplemented();
+                        try(var _ = context.forSelector(selector.limit(1), result)) {
+                            result.updateResultValue(LocationData.ofInteger(1));
+                        }
+                    }
+                    case NbtDataLocation.Storage _ -> {
+                        result.markImplemented();
+                        result.updateResultValue(LocationData.ofInteger(1));
+                    }
+                    case NbtDataLocation.Block _ -> emitVanillaFallback(context, sourceText(context, inputCommand));
                 }
             }
 
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: loot table resolution + item distribution),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandLootReplaceEntityLoot(SelectorArgument target, String slot, DataLocation loot) ->
-                emitVanillaFallback(context, "loot replace entity " + selectorToString(target) + " " + slot + " loot " + loot);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandLootReplaceEntityKill(SelectorArgument target, String slot, SelectorArgument kill) ->
-                emitVanillaFallback(context, "loot replace entity " + selectorToString(target) + " " + slot + " kill " + selectorToString(kill));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandLootReplaceBlockLoot(WorldCoordinates pos, String slot, DataLocation loot) ->
-                emitVanillaFallback(context, "loot replace block " + worldCoordsToString(pos) + " " + slot + " loot " + loot);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandLootReplaceBlockKill(WorldCoordinates pos, String slot, SelectorArgument kill) ->
-                emitVanillaFallback(context, "loot replace block " + worldCoordsToString(pos) + " " + slot + " kill " + selectorToString(kill));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandLootInsertLoot(WorldCoordinates pos, DataLocation loot) ->
-                emitVanillaFallback(context, "loot insert " + worldCoordsToString(pos) + " loot " + loot);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandLootInsertKill(WorldCoordinates pos, SelectorArgument kill) ->
-                emitVanillaFallback(context, "loot insert " + worldCoordsToString(pos) + " kill " + selectorToString(kill));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandLootGiveLoot(SelectorArgument players, DataLocation loot) ->
-                emitVanillaFallback(context, "loot give " + selectorToString(players) + " loot " + loot);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandLootGiveKill(SelectorArgument players, SelectorArgument kill) ->
-                emitVanillaFallback(context, "loot give " + selectorToString(players) + " kill " + selectorToString(kill));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandLootSpawnLoot(WorldCoordinates pos, DataLocation loot) ->
-                emitVanillaFallback(context, "loot spawn " + worldCoordsToString(pos) + " loot " + loot);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandLootSpawnKill(WorldCoordinates pos, SelectorArgument kill) ->
-                emitVanillaFallback(context, "loot spawn " + worldCoordsToString(pos) + " kill " + selectorToString(kill));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
 
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: loot function resolution + item modification),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandItemModifyEntity(SelectorArgument targets, String slot, String modifier) ->
-                emitVanillaFallback(context, "item modify entity " + selectorToString(targets) + " " + slot + " " + modifier);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandItemModifyBlock(WorldCoordinates pos, String slot, String modifier) ->
-                emitVanillaFallback(context, "item modify block " + worldCoordsToString(pos) + " " + slot + " " + modifier);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
 
             // effect — native compilation
             case CommandEffectGive(SelectorArgument targets, DataLocation effect) -> {
-                try(var selector = context.forSelector(targets, result)) {
-                    try(var src = context.getCurrentNullableEntity()) {
-                        selector.writeInstruction(Instructions.effectGive(selector.content(), src.content(), effect.toString(), -1, 0, false));
+                // vanilla EffectCommands.giveEffect: result = number of entities affected, 0 = failure
+                result.markImplemented();
+                var total = context.<Integer>createLocal();
+                context.writeInstruction(Instructions.dup(total, LocationData.ofInteger(0)));
+                try(var _ = context.enterLocalScope()) {
+                    try(var selector = context.forSelector(targets, result)) {
+                        try(var src = context.getCurrentNullableEntity()) {
+                            var applied = context.<Integer>createLocal();
+                            selector.writeInstruction(Instructions.effectGive(applied, selector.content(), src.content(), effect.toString(), -1, 0, false));
+                            selector.writeInstruction(Instructions.valueAdd(total, total, applied));
+                        }
                     }
                 }
+                emitClearTotal(context, result, total);
             }
             case CommandEffectGiveSeconds(SelectorArgument targets, DataLocation effect, int seconds) -> {
-                try(var selector = context.forSelector(targets, result)) {
-                    try(var src = context.getCurrentNullableEntity()) {
-                        selector.writeInstruction(Instructions.effectGive(selector.content(), src.content(), effect.toString(), seconds * 20, 0, false));
+                // vanilla EffectCommands.giveEffect: result = number of entities affected, 0 = failure
+                result.markImplemented();
+                var total = context.<Integer>createLocal();
+                context.writeInstruction(Instructions.dup(total, LocationData.ofInteger(0)));
+                try(var _ = context.enterLocalScope()) {
+                    try(var selector = context.forSelector(targets, result)) {
+                        try(var src = context.getCurrentNullableEntity()) {
+                            var applied = context.<Integer>createLocal();
+                            selector.writeInstruction(Instructions.effectGive(applied, selector.content(), src.content(), effect.toString(), seconds, 0, false));
+                            selector.writeInstruction(Instructions.valueAdd(total, total, applied));
+                        }
                     }
                 }
+                emitClearTotal(context, result, total);
             }
             case CommandEffectGiveSecondsAmplifier(SelectorArgument targets, DataLocation effect, int seconds, int amplifier) -> {
-                try(var selector = context.forSelector(targets, result)) {
-                    try(var src = context.getCurrentNullableEntity()) {
-                        selector.writeInstruction(Instructions.effectGive(selector.content(), src.content(), effect.toString(), seconds * 20, amplifier, false));
+                // vanilla EffectCommands.giveEffect: result = number of entities affected, 0 = failure
+                result.markImplemented();
+                var total = context.<Integer>createLocal();
+                context.writeInstruction(Instructions.dup(total, LocationData.ofInteger(0)));
+                try(var _ = context.enterLocalScope()) {
+                    try(var selector = context.forSelector(targets, result)) {
+                        try(var src = context.getCurrentNullableEntity()) {
+                            var applied = context.<Integer>createLocal();
+                            selector.writeInstruction(Instructions.effectGive(applied, selector.content(), src.content(), effect.toString(), seconds, amplifier, false));
+                            selector.writeInstruction(Instructions.valueAdd(total, total, applied));
+                        }
                     }
                 }
+                emitClearTotal(context, result, total);
             }
             case CommandEffectGiveSecondsAmplifierHide(SelectorArgument targets, DataLocation effect, int seconds, int amplifier, boolean hide) -> {
-                try(var selector = context.forSelector(targets, result)) {
-                    try(var src = context.getCurrentNullableEntity()) {
-                        selector.writeInstruction(Instructions.effectGive(selector.content(), src.content(), effect.toString(), seconds * 20, amplifier, hide));
+                // vanilla EffectCommands.giveEffect: result = number of entities affected, 0 = failure
+                result.markImplemented();
+                var total = context.<Integer>createLocal();
+                context.writeInstruction(Instructions.dup(total, LocationData.ofInteger(0)));
+                try(var _ = context.enterLocalScope()) {
+                    try(var selector = context.forSelector(targets, result)) {
+                        try(var src = context.getCurrentNullableEntity()) {
+                            var applied = context.<Integer>createLocal();
+                            selector.writeInstruction(Instructions.effectGive(applied, selector.content(), src.content(), effect.toString(), seconds, amplifier, hide));
+                            selector.writeInstruction(Instructions.valueAdd(total, total, applied));
+                        }
                     }
                 }
+                emitClearTotal(context, result, total);
             }
             case CommandEffectClear() -> {
                 try(var selector = context.getCurrentEntity()) {
@@ -1637,9 +1691,9 @@ public final class CommandCompiler {
                 }
             }
             case CommandTpTargetsEntity(SelectorArgument targets, SelectorArgument destination) -> {
-                try(var selector = context.forSelector(targets, result)) {
-                    // resolve destination once, then tp each target to it
-                    try(var dest = context.forSelector(destination, result)) {
+                // vanilla resolves the (single) destination once, before teleporting any target
+                try(var dest = context.forSelector(destination.limit(1), result)) {
+                    try(var selector = context.forSelector(targets, result)) {
                         selector.writeInstruction(Instructions.teleportToEntity(selector.content(), dest.content()));
                     }
                 }
@@ -1648,7 +1702,7 @@ public final class CommandCompiler {
                 try(var selector = context.forSelector(targets, result)) {
                     try(var world = context.getWorld()) {
                         try(var position = context.applyPosition(pos)) {
-                            selector.writeInstruction(Instructions.teleportToPos(selector.content(), world.content(), position.content()));
+                            selector.writeInstruction(Instructions.teleportToPos(selector.content(), world.content(), position.content(), tpRelativeFlags(pos)));
                         }
                     }
                 }
@@ -1662,7 +1716,7 @@ public final class CommandCompiler {
                                 var pitch = context.<Float>createLocal();
                                 selector.writeInstruction(Instructions.getRotationYaw(yaw, rotation.content()));
                                 selector.writeInstruction(Instructions.getRotationPitch(pitch, rotation.content()));
-                                selector.writeInstruction(Instructions.teleportToPosRot(selector.content(), world.content(), position.content(), yaw, pitch));
+                                selector.writeInstruction(Instructions.teleportToPosRot(selector.content(), world.content(), position.content(), yaw, pitch, tpRelativeFlags(pos) | tpRelativeFlags(rot)));
                             }
                         }
                     }
@@ -1672,29 +1726,29 @@ public final class CommandCompiler {
                 try(var current = context.getCurrentEntity()) {
                     try(var world = context.getWorld()) {
                         try(var position = context.applyPosition(pos)) {
-                            current.writeInstruction(Instructions.teleportToPos(current.content(), world.content(), position.content()));
+                            current.writeInstruction(Instructions.teleportToPos(current.content(), world.content(), position.content(), tpRelativeFlags(pos)));
                         }
                     }
                 }
             }
             // tp facing variants — native compilation with rotation math
             case CommandTpTargetsPosFacingEntity(SelectorArgument targets, WorldCoordinates pos, SelectorArgument facingTarget) -> {
-                try(var selector = context.forSelector(targets, result)) {
-                    try(var world = context.getWorld()) {
-                        try(var position = context.applyPosition(pos)) {
-                            try(var facing = context.forSelector(facingTarget, result)) {
-                                facing.writeInstruction(Instructions.teleportFacingEntity(selector.content(), world.content(), position.content(), facing.content(), false));
+                try(var facing = context.forSelector(facingTarget.limit(1), result)) {
+                    try(var selector = context.forSelector(targets, result)) {
+                        try(var world = context.getWorld()) {
+                            try(var position = context.applyPosition(pos)) {
+                                context.writeInstruction(Instructions.teleportFacingEntity(selector.content(), world.content(), position.content(), tpRelativeFlags(pos), context.current().commandSourceStack(), tpSourceAnchor(context), facing.content(), false));
                             }
                         }
                     }
                 }
             }
             case CommandTpTargetsPosFacingEntityAnchor(SelectorArgument targets, WorldCoordinates pos, SelectorArgument facingTarget, LocationAnchor anchor) -> {
-                try(var selector = context.forSelector(targets, result)) {
-                    try(var world = context.getWorld()) {
-                        try(var position = context.applyPosition(pos)) {
-                            try(var facing = context.forSelector(facingTarget, result)) {
-                                facing.writeInstruction(Instructions.teleportFacingEntity(selector.content(), world.content(), position.content(), facing.content(), anchor == LocationAnchor.EYES));
+                try(var facing = context.forSelector(facingTarget.limit(1), result)) {
+                    try(var selector = context.forSelector(targets, result)) {
+                        try(var world = context.getWorld()) {
+                            try(var position = context.applyPosition(pos)) {
+                                context.writeInstruction(Instructions.teleportFacingEntity(selector.content(), world.content(), position.content(), tpRelativeFlags(pos), context.current().commandSourceStack(), tpSourceAnchor(context), facing.content(), anchor == LocationAnchor.EYES));
                             }
                         }
                     }
@@ -1705,7 +1759,7 @@ public final class CommandCompiler {
                     try(var world = context.getWorld()) {
                         try(var position = context.applyPosition(pos)) {
                             try(var facingPosition = context.applyPosition(facingPos)) {
-                                facingPosition.writeInstruction(Instructions.teleportFacingPos(selector.content(), world.content(), position.content(), facingPosition.content()));
+                                facingPosition.writeInstruction(Instructions.teleportFacingPos(selector.content(), world.content(), position.content(), tpRelativeFlags(pos), context.current().commandSourceStack(), tpSourceAnchor(context), facingPosition.content()));
                             }
                         }
                     }
@@ -1716,7 +1770,7 @@ public final class CommandCompiler {
                     try(var world = context.getWorld()) {
                         try(var position = context.applyPosition(pos)) {
                             try(var facing = context.forSelector(facingTarget, result)) {
-                                facing.writeInstruction(Instructions.teleportFacingEntity(current.content(), world.content(), position.content(), facing.content(), false));
+                                facing.writeInstruction(Instructions.teleportFacingEntity(current.content(), world.content(), position.content(), tpRelativeFlags(pos), context.current().commandSourceStack(), tpSourceAnchor(context), facing.content(), false));
                             }
                         }
                     }
@@ -1727,7 +1781,7 @@ public final class CommandCompiler {
                     try(var world = context.getWorld()) {
                         try(var position = context.applyPosition(pos)) {
                             try(var facing = context.forSelector(facingTarget, result)) {
-                                facing.writeInstruction(Instructions.teleportFacingEntity(current.content(), world.content(), position.content(), facing.content(), anchor == LocationAnchor.EYES));
+                                facing.writeInstruction(Instructions.teleportFacingEntity(current.content(), world.content(), position.content(), tpRelativeFlags(pos), context.current().commandSourceStack(), tpSourceAnchor(context), facing.content(), anchor == LocationAnchor.EYES));
                             }
                         }
                     }
@@ -1738,7 +1792,7 @@ public final class CommandCompiler {
                     try(var world = context.getWorld()) {
                         try(var position = context.applyPosition(pos)) {
                             try(var facingPosition = context.applyPosition(facingPos)) {
-                                facingPosition.writeInstruction(Instructions.teleportFacingPos(current.content(), world.content(), position.content(), facingPosition.content()));
+                                facingPosition.writeInstruction(Instructions.teleportFacingPos(current.content(), world.content(), position.content(), tpRelativeFlags(pos), context.current().commandSourceStack(), tpSourceAnchor(context), facingPosition.content()));
                             }
                         }
                     }
@@ -1775,8 +1829,13 @@ public final class CommandCompiler {
                 emitVanillaFallback(context, "team list");
             case CommandTeamListTeam(String team) ->
                 emitVanillaFallback(context, "team list " + team);
-            case CommandTeamModify(String team, String option, String value) ->
-                context.writeInstruction(Instructions.teamModifyFull(team, option, value));
+            case CommandTeamModify(String team, String option, String value) -> {
+                if(isNativeTeamModify(option, value)) {
+                    context.writeInstruction(Instructions.teamModifyFull(team, option, value));
+                } else {
+                    emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
+                }
+            }
             case CommandTeamEmpty(String team) ->
                 context.writeInstruction(Instructions.teamEmpty(team));
 
@@ -1810,7 +1869,7 @@ public final class CommandCompiler {
                     try(var position = context.applyPosition(pos)) {
                         var setResult = context.<Integer>createLocal();
                         context.writeInstruction(Instructions.setBlock(setResult, world.content(), position.content(), block, 0));
-                        result.updateResultValue(setResult);
+                        updateBlockCommandResult(context, result, setResult);
                     }
                 }
             }
@@ -1820,7 +1879,7 @@ public final class CommandCompiler {
                     try(var position = context.applyPosition(pos)) {
                         var setResult = context.<Integer>createLocal();
                         context.writeInstruction(Instructions.setBlock(setResult, world.content(), position.content(), block, 1));
-                        result.updateResultValue(setResult);
+                        updateBlockCommandResult(context, result, setResult);
                     }
                 }
             }
@@ -1830,7 +1889,7 @@ public final class CommandCompiler {
                     try(var position = context.applyPosition(pos)) {
                         var setResult = context.<Integer>createLocal();
                         context.writeInstruction(Instructions.setBlock(setResult, world.content(), position.content(), block, 2));
-                        result.updateResultValue(setResult);
+                        updateBlockCommandResult(context, result, setResult);
                     }
                 }
             }
@@ -1843,7 +1902,7 @@ public final class CommandCompiler {
                         try(var toPos = context.applyPosition(to)) {
                             var fillResult = context.<Integer>createLocal();
                             context.writeInstruction(Instructions.fillBlocks(fillResult, world.content(), fromPos.content(), toPos.content(), block, 0));
-                            result.updateResultValue(fillResult);
+                            updateBlockCommandResult(context, result, fillResult);
                         }
                     }
                 }
@@ -1855,7 +1914,7 @@ public final class CommandCompiler {
                         try(var toPos = context.applyPosition(to)) {
                             var fillResult = context.<Integer>createLocal();
                             context.writeInstruction(Instructions.fillBlocks(fillResult, world.content(), fromPos.content(), toPos.content(), block, 0));
-                            result.updateResultValue(fillResult);
+                            updateBlockCommandResult(context, result, fillResult);
                         }
                     }
                 }
@@ -1867,7 +1926,7 @@ public final class CommandCompiler {
                         try(var toPos = context.applyPosition(to)) {
                             var fillResult = context.<Integer>createLocal();
                             context.writeInstruction(Instructions.fillBlocksFilter(fillResult, world.content(), fromPos.content(), toPos.content(), block, filter));
-                            result.updateResultValue(fillResult);
+                            updateBlockCommandResult(context, result, fillResult);
                         }
                     }
                 }
@@ -1879,7 +1938,7 @@ public final class CommandCompiler {
                         try(var toPos = context.applyPosition(to)) {
                             var fillResult = context.<Integer>createLocal();
                             context.writeInstruction(Instructions.fillBlocks(fillResult, world.content(), fromPos.content(), toPos.content(), block, 2));
-                            result.updateResultValue(fillResult);
+                            updateBlockCommandResult(context, result, fillResult);
                         }
                     }
                 }
@@ -1891,7 +1950,7 @@ public final class CommandCompiler {
                         try(var toPos = context.applyPosition(to)) {
                             var fillResult = context.<Integer>createLocal();
                             context.writeInstruction(Instructions.fillBlocks(fillResult, world.content(), fromPos.content(), toPos.content(), block, 3));
-                            result.updateResultValue(fillResult);
+                            updateBlockCommandResult(context, result, fillResult);
                         }
                     }
                 }
@@ -1903,7 +1962,7 @@ public final class CommandCompiler {
                         try(var toPos = context.applyPosition(to)) {
                             var fillResult = context.<Integer>createLocal();
                             context.writeInstruction(Instructions.fillBlocks(fillResult, world.content(), fromPos.content(), toPos.content(), block, 4));
-                            result.updateResultValue(fillResult);
+                            updateBlockCommandResult(context, result, fillResult);
                         }
                     }
                 }
@@ -1915,7 +1974,7 @@ public final class CommandCompiler {
                         try(var toPos = context.applyPosition(to)) {
                             var fillResult = context.<Integer>createLocal();
                             context.writeInstruction(Instructions.fillBlocks(fillResult, world.content(), fromPos.content(), toPos.content(), block, 5));
-                            result.updateResultValue(fillResult);
+                            updateBlockCommandResult(context, result, fillResult);
                         }
                     }
                 }
@@ -1940,7 +1999,7 @@ public final class CommandCompiler {
                 try(var world = context.getWorld()) {
                     try(var position = context.applyPosition(pos)) {
                         try(var deltaPos = context.applyPosition(delta)) {
-                            context.writeInstruction(Instructions.spawnParticle(world.content(), name.toString(), position.content(), deltaPos.content(), LocationData.ofDouble(speed), LocationData.ofInteger(count)));
+                            context.writeInstruction(Instructions.spawnParticle(world.content(), name.toString(), position.content(), deltaPos.content(), LocationData.ofDouble(speed), LocationData.ofInteger(count), false));
                         }
                     }
                 }
@@ -1949,7 +2008,7 @@ public final class CommandCompiler {
                 try(var world = context.getWorld()) {
                     try(var position = context.applyPosition(pos)) {
                         try(var deltaPos = context.applyPosition(delta)) {
-                            context.writeInstruction(Instructions.spawnParticle(world.content(), name.toString(), position.content(), deltaPos.content(), LocationData.ofDouble(speed), LocationData.ofInteger(count)));
+                            context.writeInstruction(Instructions.spawnParticle(world.content(), name.toString(), position.content(), deltaPos.content(), LocationData.ofDouble(speed), LocationData.ofInteger(count), true));
                         }
                     }
                 }
@@ -1958,7 +2017,7 @@ public final class CommandCompiler {
                 try(var world = context.getWorld()) {
                     try(var position = context.applyPosition(pos)) {
                         try(var deltaPos = context.applyPosition(delta)) {
-                            context.writeInstruction(Instructions.spawnParticle(world.content(), name.toString(), position.content(), deltaPos.content(), LocationData.ofDouble(speed), LocationData.ofInteger(count)));
+                            context.writeInstruction(Instructions.spawnParticle(world.content(), name.toString(), position.content(), deltaPos.content(), LocationData.ofDouble(speed), LocationData.ofInteger(count), false));
                         }
                     }
                 }
@@ -1967,8 +2026,8 @@ public final class CommandCompiler {
                 try(var world = context.getWorld()) {
                     try(var position = context.applyPosition(pos)) {
                         try(var deltaPos = context.applyPosition(delta)) {
-                            var viewerList = context.getSelectorList(viewers, null);
-                            context.writeInstruction(Instructions.spawnParticleForPlayers(world.content(), name.toString(), position.content(), deltaPos.content(), LocationData.ofDouble(speed), LocationData.ofInteger(count), viewerList));
+                            var viewerList = context.getSelectorList(viewers);
+                            context.writeInstruction(Instructions.spawnParticleForPlayers(world.content(), name.toString(), position.content(), deltaPos.content(), LocationData.ofDouble(speed), LocationData.ofInteger(count), false, viewerList));
                         }
                     }
                 }
@@ -1977,8 +2036,8 @@ public final class CommandCompiler {
                 try(var world = context.getWorld()) {
                     try(var position = context.applyPosition(pos)) {
                         try(var deltaPos = context.applyPosition(delta)) {
-                            var viewerList = context.getSelectorList(viewers, null);
-                            context.writeInstruction(Instructions.spawnParticleForPlayers(world.content(), name.toString(), position.content(), deltaPos.content(), LocationData.ofDouble(speed), LocationData.ofInteger(count), viewerList));
+                            var viewerList = context.getSelectorList(viewers);
+                            context.writeInstruction(Instructions.spawnParticleForPlayers(world.content(), name.toString(), position.content(), deltaPos.content(), LocationData.ofDouble(speed), LocationData.ofInteger(count), true, viewerList));
                         }
                     }
                 }
@@ -1987,8 +2046,8 @@ public final class CommandCompiler {
                 try(var world = context.getWorld()) {
                     try(var position = context.applyPosition(pos)) {
                         try(var deltaPos = context.applyPosition(delta)) {
-                            var viewerList = context.getSelectorList(viewers, null);
-                            context.writeInstruction(Instructions.spawnParticleForPlayers(world.content(), name.toString(), position.content(), deltaPos.content(), LocationData.ofDouble(speed), LocationData.ofInteger(count), viewerList));
+                            var viewerList = context.getSelectorList(viewers);
+                            context.writeInstruction(Instructions.spawnParticleForPlayers(world.content(), name.toString(), position.content(), deltaPos.content(), LocationData.ofDouble(speed), LocationData.ofInteger(count), false, viewerList));
                         }
                     }
                 }
@@ -1996,22 +2055,31 @@ public final class CommandCompiler {
 
             // random — native compilation via RandomSequences API
             case CommandRandomValue(IntRangeArgument range) -> {
-                result.markImplemented();
-                try(var world = context.getWorld()) {
-                    var resultLocal = context.<Integer>createLocal();
-                    int min = range.minimum() != null ? range.minimum().intValue() : Integer.MIN_VALUE;
-                    int max = range.maximum() != null ? range.maximum().intValue() : Integer.MAX_VALUE;
-                    context.writeInstruction(Instructions.randomValue(resultLocal, world.content(), min, max));
-                    result.updateResultValue(resultLocal);
+                int min = range.minimum() != null ? range.minimum().intValue() : Integer.MIN_VALUE;
+                int max = range.maximum() != null ? range.maximum().intValue() : Integer.MAX_VALUE;
+                if(!isValidRandomSpan(min, max)) {
+                    emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
+                } else {
+                    result.markImplemented();
+                    try(var world = context.getWorld()) {
+                        var resultLocal = context.<Integer>createLocal();
+                        context.writeInstruction(Instructions.randomValue(resultLocal, world.content(), min, max));
+                        result.updateResultValue(resultLocal);
+                    }
                 }
             }
             case CommandRandomRoll(IntRangeArgument range, DataLocation sequence) -> {
-                result.markImplemented();
-                var resultLocal = context.<Integer>createLocal();
                 int min = range.minimum() != null ? range.minimum() : Integer.MIN_VALUE;
                 int max = range.maximum() != null ? range.maximum() : Integer.MAX_VALUE;
-                context.writeInstruction(Instructions.randomValueSequence(resultLocal, min, max, sequence.toString()));
-                result.updateResultValue(resultLocal);
+                if(!isValidRandomSpan(min, max)) {
+                    emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
+                } else {
+                    result.markImplemented();
+                    var stack = makeCurrentCommandSourceStack(context);
+                    var resultLocal = context.<Integer>createLocal();
+                    context.writeInstruction(Instructions.randomRollSequence(resultLocal, stack, min, max, sequence.toString()));
+                    result.updateResultValue(resultLocal);
+                }
             }
             case CommandRandomReset(DataLocation sequence) -> {
                 try(var world = context.getWorld()) {
@@ -2021,108 +2089,97 @@ public final class CommandCompiler {
             case CommandRandomResetAll() ->
                 context.writeInstruction(Instructions.randomResetAll());
 
-            // clear — native compilation
+            // clear — native compilation. Vanilla ClearInventoryCommands: the result is the total number of
+            // items cleared and the command fails when it is 0; bare `clear` requires a player source.
             case CommandClear() -> {
                 result.markImplemented();
-                try(var current = context.getCurrentEntity()) {
+                var total = context.<Integer>createLocal();
+                context.writeInstruction(Instructions.dup(total, LocationData.ofInteger(0)));
+                try(var source = context.getCurrentNullableEntity()) {
                     var player = context.<TServerPlayer>createLocal();
-                    current.writeInstruction(Instructions.tryAsPlayer(player, current.content(), current.data().contextEndLabel()));
-                    var cleared = context.<Integer>createLocal();
-                    current.writeInstruction(Instructions.clearPlayerInventory(cleared, player));
-                    result.updateResultValue(cleared);
+                    context.writeInstruction(Instructions.ifNullJump(source.content(), result.markAndGetErrorLabel()));
+                    context.writeInstruction(Instructions.tryAsPlayer(player, source.content(), result.markAndGetErrorLabel()));
+                    context.writeInstruction(Instructions.clearPlayerInventory(total, player));
                 }
+                emitClearTotal(context, result, total);
             }
-            case CommandClearTargets(SelectorArgument targets) -> {
-                result.markImplemented();
-                try(var selector = context.forSelector(targets, result)) {
-                    var player = context.<TServerPlayer>createLocal();
-                    selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
-                    var cleared = context.<Integer>createLocal();
-                    selector.writeInstruction(Instructions.clearPlayerInventory(cleared, player));
-                    result.updateResultValue(cleared);
-                }
-            }
-            case CommandClearTargetsItem(SelectorArgument targets, String item) -> {
-                result.markImplemented();
-                try(var selector = context.forSelector(targets, result)) {
-                    var player = context.<TServerPlayer>createLocal();
-                    selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
-                    var cleared = context.<Integer>createLocal();
-                    selector.writeInstruction(Instructions.clearPlayerItem(cleared, player, item, -1));
-                    result.updateResultValue(cleared);
-                }
-            }
-            case CommandClearTargetsItemMax(SelectorArgument targets, String item, int maxCount) -> {
-                result.markImplemented();
-                try(var selector = context.forSelector(targets, result)) {
-                    var player = context.<TServerPlayer>createLocal();
-                    selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
-                    var cleared = context.<Integer>createLocal();
-                    selector.writeInstruction(Instructions.clearPlayerItem(cleared, player, item, maxCount));
-                    result.updateResultValue(cleared);
-                }
-            }
+            case CommandClearTargets(SelectorArgument targets) -> emitClear(context, result, targets, null, -1);
+            case CommandClearTargetsItem(SelectorArgument targets, String item) -> emitClear(context, result, targets, item, -1);
+            case CommandClearTargetsItemMax(SelectorArgument targets, String item, int maxCount) -> emitClear(context, result, targets, item, maxCount);
 
             // recipe — native compilation
             case CommandRecipeGive(SelectorArgument targets, DataLocation recipe) -> {
-                try(var selector = context.forSelector(targets, result)) {
-                    var player = context.<TServerPlayer>createLocal();
-                    selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
-                    selector.writeInstruction(Instructions.recipeGive(player, recipe.toString()));
+                // vanilla RecipeCommand: result = recipes awarded/reset summed over players, 0 = failure
+                result.markImplemented();
+                var total = context.<Integer>createLocal();
+                context.writeInstruction(Instructions.dup(total, LocationData.ofInteger(0)));
+                try(var _ = context.enterLocalScope()) {
+                    try(var selector = context.forSelector(targets, result)) {
+                        var player = context.<TServerPlayer>createLocal();
+                        selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
+                        var changed = context.<Integer>createLocal();
+                        selector.writeInstruction(Instructions.recipeGive(changed, player, recipe.toString()));
+                        selector.writeInstruction(Instructions.valueAdd(total, total, changed));
+                    }
                 }
+                emitClearTotal(context, result, total);
             }
             case CommandRecipeTake(SelectorArgument targets, DataLocation recipe) -> {
-                try(var selector = context.forSelector(targets, result)) {
-                    var player = context.<TServerPlayer>createLocal();
-                    selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
-                    selector.writeInstruction(Instructions.recipeTake(player, recipe.toString()));
+                // vanilla RecipeCommand: result = recipes awarded/reset summed over players, 0 = failure
+                result.markImplemented();
+                var total = context.<Integer>createLocal();
+                context.writeInstruction(Instructions.dup(total, LocationData.ofInteger(0)));
+                try(var _ = context.enterLocalScope()) {
+                    try(var selector = context.forSelector(targets, result)) {
+                        var player = context.<TServerPlayer>createLocal();
+                        selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
+                        var changed = context.<Integer>createLocal();
+                        selector.writeInstruction(Instructions.recipeTake(changed, player, recipe.toString()));
+                        selector.writeInstruction(Instructions.valueAdd(total, total, changed));
+                    }
                 }
+                emitClearTotal(context, result, total);
             }
 
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: loot table + fishing/mining context),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandLootSpawnFish(WorldCoordinates pos, DataLocation lootTable, WorldCoordinates pos2) ->
-                emitVanillaFallback(context, "loot spawn " + worldCoordsToString(pos) + " fish " + lootTable + " " + worldCoordsToString(pos2));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandLootSpawnMine(WorldCoordinates pos, WorldCoordinates pos2, String tool) ->
-                emitVanillaFallback(context, "loot spawn " + worldCoordsToString(pos) + " mine " + worldCoordsToString(pos2) + " " + tool);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandLootSpawnMineMainhand(WorldCoordinates pos, WorldCoordinates pos2) ->
-                emitVanillaFallback(context, "loot spawn " + worldCoordsToString(pos) + " mine " + worldCoordsToString(pos2) + " mainhand");
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandLootSpawnMineOffhand(WorldCoordinates pos, WorldCoordinates pos2) ->
-                emitVanillaFallback(context, "loot spawn " + worldCoordsToString(pos) + " mine " + worldCoordsToString(pos2) + " offhand");
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandLootInsertFish(WorldCoordinates pos, DataLocation lootTable, WorldCoordinates pos2) ->
-                emitVanillaFallback(context, "loot insert " + worldCoordsToString(pos) + " fish " + lootTable + " " + worldCoordsToString(pos2));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandLootInsertMine(WorldCoordinates pos, WorldCoordinates pos2, String tool) ->
-                emitVanillaFallback(context, "loot insert " + worldCoordsToString(pos) + " mine " + worldCoordsToString(pos2) + " " + tool);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandLootInsertMineMainhand(WorldCoordinates pos, WorldCoordinates pos2) ->
-                emitVanillaFallback(context, "loot insert " + worldCoordsToString(pos) + " mine " + worldCoordsToString(pos2) + " mainhand");
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandLootInsertMineOffhand(WorldCoordinates pos, WorldCoordinates pos2) ->
-                emitVanillaFallback(context, "loot insert " + worldCoordsToString(pos) + " mine " + worldCoordsToString(pos2) + " offhand");
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandLootGiveFish(SelectorArgument players, DataLocation lootTable, WorldCoordinates pos) ->
-                emitVanillaFallback(context, "loot give " + selectorToString(players) + " fish " + lootTable + " " + worldCoordsToString(pos));
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandLootGiveMine(SelectorArgument players, WorldCoordinates pos, String tool) ->
-                emitVanillaFallback(context, "loot give " + selectorToString(players) + " mine " + worldCoordsToString(pos) + " " + tool);
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandLootGiveMineMainhand(SelectorArgument players, WorldCoordinates pos) ->
-                emitVanillaFallback(context, "loot give " + selectorToString(players) + " mine " + worldCoordsToString(pos) + " mainhand");
+                emitVanillaFallback(context, sourceText(context, inputCommand));
             case CommandLootGiveMineOffhand(SelectorArgument players, WorldCoordinates pos) ->
-                emitVanillaFallback(context, "loot give " + selectorToString(players) + " mine " + worldCoordsToString(pos) + " offhand");
+                emitVanillaFallback(context, sourceText(context, inputCommand));
 
             // vanilla fallback for partial compilation
+            // If the raw fallback still carries macro placeholders (e.g. `$damage @s
+            // $(damage)`), emitVanillaFallback builds the string at runtime from the
+            // function's CompoundTag macro args via LOAD_MACRO + the _DYNAMIC variant.
             case CommandFallbackVanilla(String rawCommand) -> {
-                var current = context.current();
-                var stack = context.<TCommandSourceStack>createLocal();
-                context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
-                // If the raw fallback still carries macro placeholders (e.g. `$damage @s
-                // $(damage)`), vanilla can't parse them — macro substitution happens at
-                // function-instantiation time, and our executeVanillaCommand path calls
-                // performPrefixedCommand directly. Build the string at runtime from the
-                // function's CompoundTag macro args via LOAD_MACRO + the _DYNAMIC variant.
-                if(rawCommand.indexOf("$(") >= 0) {
-                    var template = parseVanillaMacroTemplate(rawCommand);
-                    var resolved = context.getResolvedStringMacro(template);
-                    context.writeInstruction(Instructions.executeVanillaCommandDynamic(stack, resolved));
-                } else {
-                    context.writeInstruction(Instructions.executeVanillaCommand(stack, rawCommand));
+                if(mayContainReturn(rawCommand)) {
+                    // Vanilla would swallow the `return` inside a separately dispatched command (C8).
+                    throw new DiagnosticException(Diagnostic.compileError(
+                        COMMAND_COMPILE_RESULT_NOT_IMPLEMENTED, context.getSource(),
+                        "`return` inside an unparsed command would be swallowed; falling back the whole function"));
                 }
+                emitVanillaFallback(context, rawCommand);
             }
             case CommandAdvancementGrantOnly(SelectorArgument targets, DataLocation advancement) -> {
                 try(var players = context.forSelector(targets, result)) {
@@ -2213,9 +2270,31 @@ public final class CommandCompiler {
     }
 
     private static void callFunctionsAndProvideResult(CompilationContext context, ResultContext resultContext, List<DataLocation> functions, LocationData<? extends TCommandSourceStack> stack, @Nullable LocationData<? extends TCompoundTag> arguments) {
-        if(resultContext.generatingResult() || resultContext.generatingSuccess()) {
+        if((resultContext.generatingResult() || resultContext.generatingSuccess()) && functions.size() > 1 && !resultContext.hasReturnSink()) {
+            // vanilla FunctionCommand.queueFunctionsNoReturn with a callback: every function of the tag runs and
+            // the callback gets success(sum of results) once, if any of them returned (the Accumulator).
+            var anyResult = context.<Integer>createLocal();
+            var sum = context.<Integer>createLocal();
+            context.writeInstruction(Instructions.dup(anyResult, LocationData.ofInteger(0)));
+            context.writeInstruction(Instructions.dup(sum, LocationData.ofInteger(0)));
+            for(var function : functions) {
+                var resultValue = context.<Long>createLocal();
+                var next = context.instructionWriter.createDeferredLabel();
+                context.writeInstruction(Instructions2.callFunctionsWithResult(resultValue, List.of(function), stack, arguments));
+                context.writeInstruction(Instructions.jumpIfVoidReturnValue(resultValue, next));
+                context.writeInstruction(Instructions.dup(anyResult, LocationData.ofInteger(1)));
+                var partial = context.<Integer>createLocal();
+                context.writeInstruction(Instructions.extractReturnResult(partial, resultValue));
+                context.writeInstruction(Instructions.valueAdd(sum, sum, partial));
+                context.writeInstruction(Instructions.label(next));
+            }
+            context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, anyResult, LocationData.ofInteger(0), resultContext.markAndGetNoResultLabel()));
+            resultContext.updateResultValue(sum);
+        }else if(resultContext.generatingResult() || resultContext.generatingSuccess()) {
             var resultValue = context.<Long>createLocal();
             context.writeInstruction(Instructions2.callFunctionsWithResult(resultValue, functions, stack, arguments));
+            // A function that does not `return` reports nothing to the callbacks (vanilla never calls them).
+            context.writeInstruction(Instructions.jumpIfVoidReturnValue(resultValue, resultContext.markAndGetNoResultLabel()));
             var successFunctionValue = context.<Integer>createLocal();
             context.writeInstruction(Instructions.extractReturnSuccess(successFunctionValue, resultValue));
 
@@ -2225,6 +2304,301 @@ public final class CommandCompiler {
             resultContext.updateResultValue(resultFunctionValue);
         }else {
             context.writeInstruction(Instructions2.callFunctions(functions, stack, arguments));
+        }
+    }
+
+    /** Resolved score holders: one holder ({@code singleName} when it is a constant name), or a materialized list
+     * (entities, or names when {@code namedList}). */
+    private record StoreHolders(@Nullable LocationData<? extends TScoreHolder> single, @Nullable String singleName, @Nullable LocationData<? extends List<?>> list, boolean namedList) {}
+
+    /** Resolves a score-holder argument once, in the current source context. An empty selection fails
+     * {@code failure} when it tracks success (a terminal command), otherwise skips to the context end
+     * (a store modifier: vanilla aborts the chain for this source). */
+    private static CompilationData<StoreHolders> resolveScoreHolders(CompilationContext context, ScoreHolderArgument holder, @Nullable ResultContext failure) {
+        var emptyLabel = failure != null && failure.generatingSuccess() ? failure.markAndGetErrorLabel() : context.current().contextEndLabel();
+        if(holder.all()) {
+            var holders = context.<List<? extends String>>createLocal();
+            context.writeInstruction(Instructions.getScoreboardHolders(holders));
+            var length = context.<Integer>createLocal();
+            context.writeInstruction(Instructions.getListLength(length, holders));
+            context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, length, LocationData.ofInteger(0), emptyLabel));
+            return new CompilationData<>(context, context.current(), new StoreHolders(null, null, holders, true), 0);
+        }
+        if(holder.name() != null) {
+            var scoreHolder = context.<TScoreHolder>createLocal();
+            var constantName = CompilationContext.constantScoreHolderName(holder);
+            if(constantName != null) {
+                context.writeInstruction(Instructions.constScoreHolder(scoreHolder, constantName));
+            }else {
+                context.writeInstruction(Instructions.namedScoreHolder(scoreHolder, context.getResolvedStringMacro(holder.name())));
+            }
+            return new CompilationData<>(context, context.current(), new StoreHolders(scoreHolder, constantName, null, false), 0);
+        }
+        var selector = holder.selector();
+        if(selector == null) throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_RESULT_NOT_IMPLEMENTED, context.getSource(), "Unsupported score holder"));
+        if(holder.single() || selector.self() || selector.playerName() != null || selector.entityUuid() != null || (selector.limit() != null && selector.limit() == 1)) {
+            var entity = context.forSelector(selector.limit(1), failure);
+            return new CompilationData<>(context, entity.data(), new StoreHolders(entity.content(), null, null, false), entity.stackCount());
+        }
+        var entities = context.getSelectorList(selector);
+        var length = context.<Integer>createLocal();
+        context.writeInstruction(Instructions.getListLength(length, entities));
+        context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, length, LocationData.ofInteger(0), emptyLabel));
+        return new CompilationData<>(context, context.current(), new StoreHolders(null, null, entities, false), 0);
+    }
+
+    /** Emits {@code body} with the score of {@code objective} for one holder, or as a loop over the holder list. */
+    private static void forEachScoreHolder(CompilationContext context, StoreHolders holders, LocationData<TObjective> objective, String objectiveName, Consumer<ScoreAccessor> body) {
+        if(holders.single() != null) {
+            body.accept(new ScoreAccessor(objective, objectiveName, holders.single(), holders.singleName()));
+            return;
+        }
+        var list = holders.list();
+        var length = context.<Integer>createLocal();
+        context.writeInstruction(Instructions.getListLength(length, list));
+        var index = context.<Integer>createLocal();
+        context.writeInstruction(Instructions.dup(index, LocationData.ofInteger(0)));
+        var loopStart = context.current().writeLabel(context.instructionWriter);
+        var loopEnd = context.instructionWriter.createDeferredLabel();
+        context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.GREATER_THAN_OR_EQUAL, index, length, loopEnd));
+        var element = context.createLocal();
+        context.writeInstruction(Instructions.getListElement(element, list, index));
+        if(holders.namedList()) {
+            var name = context.<String>createLocal();
+            context.writeInstruction(Instructions.assumeString(name, element));
+            var scoreHolder = context.<TScoreHolder>createLocal();
+            context.writeInstruction(Instructions.namedScoreHolder(scoreHolder, name));
+            body.accept(new ScoreAccessor(objective, objectiveName, scoreHolder, null));
+        }else {
+            var entity = context.<TEntity>createLocal();
+            context.writeInstruction(Instructions.assumeEntity(entity, element));
+            body.accept(new ScoreAccessor(objective, objectiveName, entity, null));
+        }
+        context.writeInstruction(Instructions.valueAdd(index, index, LocationData.ofInteger(1)));
+        context.writeInstruction(Instructions.jump(loopStart));
+        context.writeInstruction(Instructions.label(loopEnd));
+    }
+
+    /** One application of `scoreboard players operation` (vanilla OperationArgument.apply on the target's and the
+     * source's ScoreAccess): target = target OP source. */
+    private static void emitScoreOperation(CompilationContext context, ResultContext result, ScoreboardOperation operation, CompilationContext.ScoreSlot target, CompilationContext.ScoreSlot source) {
+        var targetValue = context.getScoreValue(target.score());
+        var sourceValue = context.getScoreValue(source.score());
+        if(operation == ScoreboardOperation.SWAP) {
+            context.setScore(target, sourceValue);
+            context.setScore(source, targetValue);
+            return;
+        }
+        if(operation == ScoreboardOperation.SET) {
+            context.setScore(target, sourceValue);
+            return;
+        }
+        var updated = context.<Integer>createLocal();
+        switch(operation) {
+            case ADD -> context.writeInstruction(Instructions.valueAdd(updated, targetValue, sourceValue));
+            case SUB -> context.writeInstruction(Instructions.valueSub(updated, targetValue, sourceValue));
+            case MUL -> context.writeInstruction(Instructions.valueMul(updated, targetValue, sourceValue));
+            case DIV -> {
+                context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, sourceValue, LocationData.ofInteger(0), result.markAndGetErrorLabel()));
+                context.writeInstruction(Instructions.intFloorDiv(updated, targetValue, sourceValue));
+            }
+            case MOD -> {
+                context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, sourceValue, LocationData.ofInteger(0), result.markAndGetErrorLabel()));
+                context.writeInstruction(Instructions.intFloorMod(updated, targetValue, sourceValue));
+            }
+            case MIN -> context.writeInstruction(Instructions.intMin(updated, targetValue, sourceValue));
+            case MAX -> context.writeInstruction(Instructions.intMax(updated, targetValue, sourceValue));
+            default -> throw new IllegalStateException("unhandled operation " + operation);
+        }
+        context.setScore(target, updated);
+    }
+
+    /** The holder of a score argument when it is a constant name: the command can use a fused ScoreRef call. */
+    private static @Nullable String constantHolder(ScoreAccessorArgument accessor) {
+        return CompilationContext.constantScoreHolderName(accessor.scoreHolder());
+    }
+
+    private static LocationData<Integer> rangeMin(IntRangeArgument range) {
+        return LocationData.ofInteger(range.minimum() != null ? range.minimum() : Integer.MIN_VALUE);
+    }
+
+    private static LocationData<Integer> rangeMax(IntRangeArgument range) {
+        return LocationData.ofInteger(range.maximum() != null ? range.maximum() : Integer.MAX_VALUE);
+    }
+
+    /** Adds the new value of the last fused ScoreRef write (set/add/remove/operation) to the result. */
+    private static void updateScoreRefResult(CompilationContext context, ResultContext result, String holder, String objective) {
+        if(!result.generatingResult()) return;
+        var value = context.<Integer>createLocal();
+        context.writeInstruction(Instructions.scoreRefLastValue(value, holder, objective));
+        result.updateResultValue(value);
+    }
+
+    /** `tag … add|remove`: result = number of entities whose tags changed; vanilla fails when none changed. */
+    private static void emitTagChange(CompilationContext context, ResultContext result, SelectorArgument targets, String name, boolean add) {
+        boolean counting = result.generatingSuccess();
+        var changedCount = context.<Integer>createLocal();
+        if(counting) context.writeInstruction(Instructions.dup(changedCount, LocationData.ofInteger(0)));
+        // the selector loop exits to the end of its enclosing context: scope it so the count check runs after it
+        try(var _ = context.enterLocalScope()) {
+            try(var entity = context.forSelector(targets, result)) {
+                entity.writeInstruction(add
+                    ? Instructions.addEntityTag(entity.content(), LocationData.ofString(name), entity.endLabel())
+                    : Instructions.removeEntityTag(entity.content(), LocationData.ofString(name), entity.endLabel()));
+                if(counting) entity.writeInstruction(Instructions.valueAdd(changedCount, changedCount, LocationData.ofInteger(1)));
+            }
+        }
+        if(counting) {
+            context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, changedCount, LocationData.ofInteger(0), result.markAndGetErrorLabel()));
+            result.updateResultValue(changedCount);
+        }
+    }
+
+    /** `execute store result|success score`: writes every execution's value to the resolved holders
+     * (vanilla storeValue callback: one getOrCreatePlayerScore access per holder and execution). */
+    private record ScoreStoreSink(LocationData<TObjective> objective, String objectiveName, StoreHolders holders, boolean storeResult) implements ResultContext.Sink {
+        @Override
+        public boolean needsResult() {
+            return storeResult;
+        }
+
+        @Override
+        public void onSuccess(CompilationContext context, LocationData<Integer> result) {
+            write(context, storeResult ? result : LocationData.ofInteger(1));
+        }
+
+        @Override
+        public void onFailure(CompilationContext context) {
+            write(context, LocationData.ofInteger(0));
+        }
+
+        private void write(CompilationContext context, LocationData<Integer> value) {
+            if(holders.singleName() != null) {
+                context.writeInstruction(Instructions.scoreRefStore(objective, holders.singleName(), objectiveName, value));
+                return;
+            }
+            forEachScoreHolder(context, holders, objective, objectiveName, accessor -> context.setScore(context.getOrCreateScore(accessor), value));
+        }
+    }
+
+    /** `execute store result|success storage`. */
+    private record StorageStoreSink(DataLocation storage, NbtPath path, ResultStoreType storeType, double scale, boolean storeResult) implements ResultContext.Sink {
+        @Override
+        public boolean needsResult() {
+            return storeResult;
+        }
+
+        @Override
+        public void onSuccess(CompilationContext context, LocationData<Integer> result) {
+            writeStoreToStorage(context, storage, path, storeType, scale, storeResult ? result : LocationData.ofInteger(1));
+        }
+
+        @Override
+        public void onFailure(CompilationContext context) {
+            writeStoreToStorage(context, storage, path, storeType, scale, LocationData.ofInteger(0));
+        }
+    }
+
+    /** `return run`: the first execution's outcome becomes the function's return. */
+    private enum ReturnSink implements ResultContext.Sink {
+        INSTANCE;
+
+        @Override
+        public boolean needsResult() {
+            return true;
+        }
+
+        @Override
+        public boolean isReturn() {
+            return true;
+        }
+
+        @Override
+        public void onSuccess(CompilationContext context, LocationData<Integer> result) {
+            context.writeInstruction(Instructions.returnSuccess(result));
+        }
+
+        @Override
+        public void onFailure(CompilationContext context) {
+            context.writeInstruction(Instructions.returnFail());
+        }
+    }
+
+    private static void writeStoreToStorage(CompilationContext context, DataLocation storage, NbtPath path, ResultStoreType storeType, double scale, LocationData<Integer> localResultValue) {
+        var storageLocal = context.<TCompoundTag>createLocal();
+        context.writeInstruction(Instructions.getNbtStorage(storageLocal, storage));
+        var parts = path.parts();
+        try(var innerContext = context.enterLocalScope()) {
+            var value = getNbtPathValue(context, storageLocal, parts.subList(0, parts.size() - 1), true, innerContext.endLabel());
+            var last = parts.getLast();
+                        var tagLocal = context.<TTag>createLocal();
+                        if(storeType == ResultStoreType.INT) {
+                            if(scale == 1.0d) {
+                                innerContext.writeInstruction(Instructions.createIntTag(tagLocal, localResultValue));
+                            }else {
+                                var resultDouble = context.<Double>createLocal();
+                                innerContext.writeInstruction(Instructions.numberToDouble(resultDouble, localResultValue));
+                                var multipliedDouble = context.<Double>createLocal();
+                                innerContext.writeInstruction(Instructions.valueMul(multipliedDouble, resultDouble, LocationData.ofDouble(scale)));
+                                var convertedInteger = context.<Integer>createLocal();
+                                innerContext.writeInstruction(Instructions.numberToInteger(convertedInteger, multipliedDouble));
+                                innerContext.writeInstruction(Instructions.createIntTag(tagLocal, convertedInteger));
+                            }
+                        }else if(storeType == ResultStoreType.DOUBLE) {
+                            var convertedDouble = context.<Double>createLocal();
+                            innerContext.writeInstruction(Instructions.numberToDouble(convertedDouble, localResultValue));
+                            if(scale == 1.0d) {
+                                innerContext.writeInstruction(Instructions.createDoubleTag(tagLocal, convertedDouble));
+                            }else {
+                                var multipliedDouble = context.<Double>createLocal();
+                                innerContext.writeInstruction(Instructions.valueMul(multipliedDouble, convertedDouble, LocationData.ofDouble(scale)));
+                                innerContext.writeInstruction(Instructions.createDoubleTag(tagLocal, multipliedDouble));
+                            }
+                        }else if(storeType == ResultStoreType.FLOAT) {
+                            if(scale == 1.0d) {
+                                var convertedFloat = context.<Float>createLocal();
+                                innerContext.writeInstruction(Instructions.numberToFloat(convertedFloat, localResultValue));
+                                innerContext.writeInstruction(Instructions.createFloatTag(tagLocal, convertedFloat));
+                            }else {
+                                var resultDouble = context.<Double>createLocal();
+                                innerContext.writeInstruction(Instructions.numberToDouble(resultDouble, localResultValue));
+                                var multipliedDouble = context.<Double>createLocal();
+                                innerContext.writeInstruction(Instructions.valueMul(multipliedDouble, resultDouble, LocationData.ofDouble(scale)));
+                                var convertedFloat = context.<Float>createLocal();
+                                innerContext.writeInstruction(Instructions.numberToFloat(convertedFloat, multipliedDouble));
+                                innerContext.writeInstruction(Instructions.createFloatTag(tagLocal, convertedFloat));
+                            }
+                        }else if(storeType == ResultStoreType.BYTE || storeType == ResultStoreType.SHORT) {
+                            if(scale == 1.0d) {
+                                innerContext.writeInstruction(storeType == ResultStoreType.BYTE
+                                    ? Instructions.createByteTag(tagLocal, localResultValue)
+                                    : Instructions.createShortTag(tagLocal, localResultValue));
+                            }else {
+                                var resultDouble = context.<Double>createLocal();
+                                innerContext.writeInstruction(Instructions.numberToDouble(resultDouble, localResultValue));
+                                var multipliedDouble = context.<Double>createLocal();
+                                innerContext.writeInstruction(Instructions.valueMul(multipliedDouble, resultDouble, LocationData.ofDouble(scale)));
+                                var convertedInteger = context.<Integer>createLocal();
+                                innerContext.writeInstruction(Instructions.numberToInteger(convertedInteger, multipliedDouble));
+                                innerContext.writeInstruction(storeType == ResultStoreType.BYTE
+                                    ? Instructions.createByteTag(tagLocal, convertedInteger)
+                                    : Instructions.createShortTag(tagLocal, convertedInteger));
+                            }
+                        }else if(storeType == ResultStoreType.LONG) {
+                            if(scale == 1.0d) {
+                                innerContext.writeInstruction(Instructions.createLongTag(tagLocal, localResultValue));
+                            }else {
+                                var resultDouble = context.<Double>createLocal();
+                                innerContext.writeInstruction(Instructions.numberToDouble(resultDouble, localResultValue));
+                                var multipliedDouble = context.<Double>createLocal();
+                                innerContext.writeInstruction(Instructions.valueMul(multipliedDouble, resultDouble, LocationData.ofDouble(scale)));
+                                innerContext.writeInstruction(Instructions.createLongTagFromDouble(tagLocal, multipliedDouble));
+                            }
+                        }else {
+                            throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_STORE, context.getSource(), "Storing into storage with unsupported type: " + storeType));
+                        }
+            assignNbtValue(context, value, last, tagLocal, null, innerContext.endLabel());
+            context.writeInstruction(Instructions.setNbtStorage(storage, storageLocal));
         }
     }
 
@@ -2284,17 +2658,32 @@ public final class CommandCompiler {
     }
 
     private static void assignNbtValue(CompilationContext context, LocationData<? extends TTag> source, NbtPathPart accessor, LocationData<? extends TTag> value, @Nullable LocationData<Integer> modifiedCount, LabelData failLabel) {
+        // Counts only real changes (vanilla CompoundChildNode / IndexedElementNode.setTag return 0 for an equal value).
+        var unchanged = modifiedCount != null ? context.instructionWriter.createDeferredLabel() : null;
         if(accessor instanceof NbtPathPart.Named(String name)) {
             var valueCompound = context.<TCompoundTag>createLocal();
             context.writeInstruction(Instructions.tryAsNbtCompound(valueCompound, source, failLabel));
+            if(unchanged != null) {
+                var previous = context.<TTag>createLocal();
+                context.writeInstruction(Instructions.getNbtFromCompound(previous, valueCompound, LocationData.ofString(name)));
+                context.writeInstruction(Instructions.ifObjectCompareJump(ObjectComparisonType.EQUAL, previous, value, unchanged));
+            }
             context.writeInstruction(Instructions.setNbtInCompound(valueCompound, LocationData.ofString(name), value));
         }else if(accessor instanceof NbtPathPart.ArrayIndexInteger indexed) {
             var listAccess = accessNbtList(context, source, indexed, failLabel);
+            if(unchanged != null) {
+                var previous = context.<TTag>createLocal();
+                context.writeInstruction(Instructions.getNbtFromList(previous, listAccess.list, listAccess.index));
+                context.writeInstruction(Instructions.ifObjectCompareJump(ObjectComparisonType.EQUAL, previous, value, unchanged));
+            }
             context.writeInstruction(Instructions.setNbtInList(listAccess.list, listAccess.index, value, failLabel));
         }else {
             throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_NBT_ACCESS, context.getSource(), "Cannot set nbt value in path " + accessor));
         }
-        if(modifiedCount != null) context.writeInstruction(Instructions.valueAdd(modifiedCount, modifiedCount, LocationData.ofInteger(1)));
+        if(unchanged != null) {
+            context.writeInstruction(Instructions.valueAdd(modifiedCount, modifiedCount, LocationData.ofInteger(1)));
+            context.writeInstruction(Instructions.label(unchanged));
+        }
     }
 
     private static NbtListAccessResult accessNbtList(CompilationContext context, LocationData<? extends TTag> source, NbtPathPart.ArrayIndexInteger indexed, LabelData failLabel) {
@@ -2319,6 +2708,56 @@ public final class CommandCompiler {
 
     private record NbtListAccessResult(LocationData<TListTag> list, LocationData<Integer> index) {}
 
+    /** setblock/fill: vanilla throws where the runtime helper returns 0 (success is always ≥ 1), so 0 fails the command. */
+    private static void updateBlockCommandResult(CompilationContext context, ResultContext result, LocationData<Integer> value) {
+        if(result.generatingSuccess() || result.generatingResult()) {
+            context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, value, LocationData.ofInteger(0), result.markAndGetErrorLabel()));
+        }
+        result.updateResultValue(value);
+    }
+
+    // Bits of the tp `rel_flags` instruction constant; must match ExtensionFunctions.TP_REL_*.
+    private static final int TP_REL_X = 1, TP_REL_Y = 2, TP_REL_Z = 4, TP_REL_YAW = 8, TP_REL_PITCH = 16;
+
+    /** Vanilla Coordinates.isX/Y/ZRelative: `~` components, and every component of local `^` coordinates. */
+    private static int tpRelativeFlags(WorldCoordinates pos) {
+        if(pos.localCoordinates()) return TP_REL_X | TP_REL_Y | TP_REL_Z;
+        return (pos.isXRelative() ? TP_REL_X : 0) | (pos.isYRelative() ? TP_REL_Y : 0) | (pos.isZRelative() ? TP_REL_Z : 0);
+    }
+
+    private static int tpRelativeFlags(RotationCoordinates rot) {
+        return (rot.isYawRelative() ? TP_REL_YAW : 0) | (rot.isPitchRelative() ? TP_REL_PITCH : 0);
+    }
+
+    private static final java.util.Set<String> TEAM_COLORS = java.util.Set.of(
+        "black", "dark_blue", "dark_green", "dark_aqua", "dark_red", "dark_purple", "gold", "gray",
+        "dark_gray", "blue", "green", "aqua", "red", "light_purple", "yellow", "white", "reset");
+    private static final java.util.Set<String> TEAM_VISIBILITIES = java.util.Set.of("always", "never", "hideForOtherTeams", "hideForOwnTeam");
+    private static final java.util.Set<String> TEAM_COLLISION_RULES = java.util.Set.of("always", "never", "pushOtherTeams", "pushOwnTeam");
+
+    /** Whether `team modify <team> <option> <value>` has a native implementation with exactly vanilla's argument grammar. */
+    private static boolean isNativeTeamModify(String option, String value) {
+        return switch(option) {
+            case "color" -> TEAM_COLORS.contains(value);
+            case "friendlyFire", "seeFriendlyInvisibles" -> value.equals("true") || value.equals("false");
+            case "nametagVisibility", "deathMessageVisibility" -> TEAM_VISIBILITIES.contains(value);
+            case "collisionRule" -> TEAM_COLLISION_RULES.contains(value);
+            default -> false; // displayName / prefix / suffix are components resolved against the source
+        };
+    }
+
+    /**
+     * Vanilla RandomCommand.randomSample: span 0 (ERROR_RANGE_TOO_SMALL) and span ≥ Integer.MAX_VALUE
+     * (TOO_LARGE) fail; min > max never parses in vanilla. Invalid ranges run through the vanilla fallback.
+     */
+    private static boolean isValidRandomSpan(int min, int max) {
+        long span = (long) max - min;
+        return span > 0L && span < Integer.MAX_VALUE;
+    }
+
+    /** Vanilla ComponentUtils.DEFAULT_NO_STYLE_SEPARATOR, the NbtContents default separator. */
+    private static final Text NBT_TEXT_DEFAULT_SEPARATOR = new Text(List.of(), TextStyle.empty(), new TextContent.LiteralText(", "));
+
     private static LocationData<? extends TComponent> loadText(CompilationContext context, Text text) {
         if(!text.isCompilationSupported()) {
             throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_TEXT, context.getSource(), "Compiling " + text + " is not implemented yet"));
@@ -2330,7 +2769,7 @@ public final class CommandCompiler {
             return textLocation;
         }else {
             if(text.content() instanceof TextContent.SelectorText(SelectorArgument selector, Text separator)) {
-                var selectorResult = context.getSelectorList(selector, null);
+                var selectorResult = context.getSelectorList(selector);
                 var loadedSeparator = loadText(context, separator != null ? separator : TextContent.SelectorText.DEFAULT_SEPARATOR);
                 var textLocation = context.<TMutableComponent>createLocal();
                 context.writeInstruction(Instructions.formatEntityTextList(textLocation, selectorResult, loadedSeparator));
@@ -2351,11 +2790,13 @@ public final class CommandCompiler {
                 applyStyleAndSiblings(context, text, textLocation);
                 return textLocation;
             }
-            if(text.content() instanceof TextContent.ScoreText(ScoreHolderArgument scoreHolder, String objective)) {
+            if(text.content() instanceof TextContent.ScoreText(ScoreHolderArgument scoreHolder, String objective, String holderSource)) {
                 if(scoreHolder.selector() != null) {
-                    var selectorResult = context.getSelectorList(scoreHolder.selector(), null);
+                    var selectorResult = context.getSelectorList(scoreHolder.selector());
                     var textLocation = context.<TComponent>createLocal();
-                    context.writeInstruction(Instructions.loadScoreText(textLocation, selectorResult, objective));
+                    context.writeInstruction(Instructions.loadScoreText(textLocation, selectorResult, objective, holderSource));
+                    // null = vanilla ERROR_NOT_SINGLE_ENTITY: text resolution throws, so the command does nothing
+                    context.writeInstruction(Instructions.ifNullJump(textLocation, context.current().contextEndLabel()));
                     if(!text.style().isEmpty() || !text.siblings().isEmpty()) {
                         var mutableText = context.<TMutableComponent>createLocal();
                         context.writeInstruction(Instructions.copyText(mutableText, textLocation));
@@ -2376,22 +2817,28 @@ public final class CommandCompiler {
                     return textLocation;
                 }
             }
-            if(text.content() instanceof TextContent.NbtText(NbtPath path, _, NbtDataLocation source)) {
+            if(text.content() instanceof TextContent.NbtText(_, String rawPath, boolean interpret, boolean plain, Text separator, NbtDataLocation source)) {
+                // Vanilla NbtContents: every matched tag of every source, joined with the separator
+                // (default ", " without style); the runtime evaluates rawPath with NbtPathArgument.
+                var loadedSeparator = loadText(context, separator != null ? separator : NBT_TEXT_DEFAULT_SEPARATOR);
+                LocationData<TComponent> textLocation = null;
                 if(source instanceof NbtDataLocation.Storage(DataLocation storage)) {
-                    var textLocation = context.<TComponent>createLocal();
-                    context.writeInstruction(Instructions.getNbtText(textLocation, storage.toString(), nbtPathToString(path)));
-                    if(!text.style().isEmpty() || !text.siblings().isEmpty()) {
-                        var mutableText = context.<TMutableComponent>createLocal();
-                        context.writeInstruction(Instructions.copyText(mutableText, textLocation));
-                        applyStyleAndSiblings(context, text, mutableText);
-                        return mutableText;
+                    textLocation = context.createLocal();
+                    if(interpret) {
+                        context.writeInstruction(Instructions.getNbtTextInterpreted(textLocation, makeCurrentCommandSourceStack(context), storage.toString(), rawPath, loadedSeparator));
+                    }else {
+                        context.writeInstruction(Instructions.getNbtText(textLocation, storage.toString(), rawPath, plain, loadedSeparator));
                     }
-                    return textLocation;
+                }else if(source instanceof NbtDataLocation.Entity(SelectorArgument selector)) {
+                    var entityList = context.getSelectorList(selector);
+                    textLocation = context.createLocal();
+                    if(interpret) {
+                        context.writeInstruction(Instructions.getEntityNbtTextInterpreted(textLocation, makeCurrentCommandSourceStack(context), entityList, rawPath, loadedSeparator));
+                    }else {
+                        context.writeInstruction(Instructions.getEntityNbtText(textLocation, entityList, rawPath, plain, loadedSeparator));
+                    }
                 }
-                if(source instanceof NbtDataLocation.Entity(SelectorArgument selector)) {
-                    var entityList = context.getSelectorList(selector, null);
-                    var textLocation = context.<TComponent>createLocal();
-                    context.writeInstruction(Instructions.getEntityNbtText(textLocation, entityList, nbtPathToString(path)));
+                if(textLocation != null) {
                     if(!text.style().isEmpty() || !text.siblings().isEmpty()) {
                         var mutableText = context.<TMutableComponent>createLocal();
                         context.writeInstruction(Instructions.copyText(mutableText, textLocation));
@@ -2473,93 +2920,158 @@ public final class CommandCompiler {
         return new MacroTemplate<>(parts, MacroType.STRING_MACRO_TYPE);
     }
 
-    // Reconstruct the raw command string for a nested command inside an
-    // `execute <mod> run X` vanilla fallback. Until we had this, non-fallback
-    // inner commands were silently replaced with a `true` no-op — so e.g.
-    // `execute as @p if items entity @s weapon.mainhand *[...] run item modify ...`
-    // compiled down to `execute if items entity ... run true`, dropping the
-    // item-modify and breaking datapacks that rely on that pattern (gbg guns
-    // reset their charged_projectiles this way).
-    //
-    // We reconstruct the common commands people actually put in that slot;
-    // for anything we don't yet know how to format, we throw — that bubbles
-    // up to FunctionCodeGenerator / FunctionCompilerClassLoader, which drop
-    // the enclosing function from the compiled set so vanilla dispatches it
-    // correctly. Slower for that one function, but correct.
-    private static String getRawCommand(CompilationContext context, CommandParams cmd) {
-        return switch(cmd) {
-            case CommandFallbackVanilla(String raw) -> raw;
-            // `execute <mods> run X` parses as CommandExecute*(..., CommandExecuteRun(X));
-            // from a raw-text perspective it's just a transparent wrapper around X.
-            case CommandExecuteRun(CommandParams inner) -> getRawCommand(context, inner);
-            case CommandFunction(List<DataLocation> fns) when fns.size() == 1 -> "function " + fns.getFirst();
-            case CommandReturnFail __ -> "return fail";
-            case CommandReturnValue(int value) -> "return " + value;
-            case CommandReturnRun(CommandParams inner) -> "return run " + getRawCommand(context, inner);
-            case CommandKill(SelectorArgument targets) -> "kill " + selectorToString(targets);
-            case CommandItemModifyEntity(SelectorArgument targets, String slot, String modifier) ->
-                "item modify entity " + selectorToString(targets) + " " + slot + " " + modifier;
-            case CommandItemModifyBlock(WorldCoordinates pos, String slot, String modifier) ->
-                "item modify block " + worldCoordsToString(pos) + " " + slot + " " + modifier;
-            case CommandTagAdd(SelectorArgument targets, String name) ->
-                "tag " + selectorToString(targets) + " add " + name;
-            case CommandTagRemove(SelectorArgument targets, String name) ->
-                "tag " + selectorToString(targets) + " remove " + name;
-            case CommandDataGetPath(NbtDataLocation source, NbtPath path) ->
-                "data get " + nbtDataLocationToString(source) + " " + nbtPathToString(path);
-            case CommandDataGetPathScale(NbtDataLocation source, NbtPath path, double scale) ->
-                "data get " + nbtDataLocationToString(source) + " " + nbtPathToString(path) + " " + scale;
-            case CommandScoreboardPlayersGet(ScoreAccessorArgument targets) ->
-                "scoreboard players get " + scoreHolderToString(targets.scoreHolder()) + " " + targets.objective();
-            case CommandRandomValue(IntRangeArgument range) ->
-                "random value " + rangeToString(range);
-            default -> throw new DiagnosticException(Diagnostic.compileError(
-                COMMAND_COMPILE_RESULT_NOT_IMPLEMENTED, context.getSource(),
-                "Cannot reconstruct raw text for nested `run " + cmd.getClass().getSimpleName()
-                    + "` inside a vanilla-fallback execute modifier; falling back the whole function"));
-        };
+    // ── Verbatim source text for vanilla fallbacks ────────────────────────────
+    // Vanilla fallbacks always receive the command's original source text (from the
+    // parser's CommandSourceMap side table), never a re-serialization of parsed
+    // arguments: re-serializing lost `^` coordinates, selector filters, integer block
+    // positions, quoting, etc. A node without a recorded span throws so the whole
+    // function falls back to vanilla instead of running a wrong command.
+
+    private static DiagnosticException missingSource(CompilationContext context, CommandParams node) {
+        return new DiagnosticException(Diagnostic.compileError(
+            COMMAND_COMPILE_RESULT_NOT_IMPLEMENTED, context.getSource(),
+            "No source text recorded for " + node.getClass().getSimpleName() + " vanilla fallback; falling back the whole function"));
     }
 
-    /** Reconstructs the EXECUTE CLAUSE (no leading `execute`/`run`) for an inner command of
-     * `execute store …` iff that inner can ONLY compile via {@link #emitVanillaFallback}
-     * — meaning its return value is otherwise unreachable for our store-result machinery.
-     * The clause is appended directly to `execute store <mode> score <accessor> ` so the
-     * whole statement becomes one normal vanilla execute (e.g.
-     * `execute store result score @s X if items block POS SLOT PRED`). Using `run execute if …`
-     * instead would change semantics: vanilla's `if X` returns the count when used as a
-     * terminal clause, but stores 0/1 when wrapped behind `run`. */
-    private static @Nullable String vanillaOnlyExecuteInnerClause(CommandParams cmd) {
-        return switch(cmd) {
-            case CommandExecuteIfItemsBlockOnly(WorldCoordinates pos, String slot, String predicate) ->
-                "if items block " + worldCoordsToString(pos) + " " + slot + " " + predicate;
-            case CommandExecuteUnlessItemsBlockOnly(WorldCoordinates pos, String slot, String predicate) ->
-                "unless items block " + worldCoordsToString(pos) + " " + slot + " " + predicate;
-            case CommandExecuteIfItemsEntityOnly(SelectorArgument targets, String slot, String predicate) ->
-                "if items entity " + selectorToString(targets) + " " + slot + " " + predicate;
-            case CommandExecuteUnlessItemsEntityOnly(SelectorArgument targets, String slot, String predicate) ->
-                "unless items entity " + selectorToString(targets) + " " + slot + " " + predicate;
-            default -> null;
-        };
+    /** Full verbatim source text of {@code node} (including any nested `run` command). */
+    private static String sourceText(CompilationContext context, CommandParams node) {
+        var sources = context.getCommandSource();
+        var text = sources == null ? null : sources.text(node);
+        if(text == null) throw missingSource(context, node);
+        return text;
+    }
+
+    /** Full verbatim source text of {@code node}; throws when the nested command contains a
+     * `return`, which vanilla would swallow inside a separately dispatched command (C8). */
+    private static String sourceTextWithoutReturn(CompilationContext context, CommandParams node) {
+        var text = sourceText(context, node);
+        if(mayContainReturn(text)) {
+            throw new DiagnosticException(Diagnostic.compileError(
+                COMMAND_COMPILE_RESULT_NOT_IMPLEMENTED, context.getSource(),
+                "`return` inside a vanilla-fallback command would be swallowed; falling back the whole function"));
+        }
+        return text;
+    }
+
+    private static final java.util.regex.Pattern RUN_SEPARATOR = java.util.regex.Pattern.compile("\\srun\\s+");
+
+    /** Conservative: true when a `return` (or a macro placeholder that could expand to one)
+     * appears in command position. A placeholder anywhere inside an `execute` chain (before its
+     * final `run`, or in a final `execute` segment) can expand to `… run return …`.
+     * False positives only cost a whole-function fallback. */
+    private static boolean mayContainReturn(String text) {
+        var segments = RUN_SEPARATOR.split(text, -1);
+        for(int i = 0; i < segments.length; i++) {
+            var segment = segments[i];
+            if(segment.startsWith("$(") || segment.equals("return") || segment.startsWith("return ")) return true;
+            boolean executeSegment = i < segments.length - 1 || segment.startsWith("execute ");
+            if(executeSegment && segment.contains("$(")) return true;
+        }
+        return false;
+    }
+
+    /** `$(…)` placeholders are substituted only on macro lines; elsewhere they are literal text (C25). */
+    private static boolean isMacroText(CompilationContext context, String command) {
+        var sources = context.getCommandSource();
+        return sources != null && sources.isMacroLine() && command.indexOf("$(") >= 0;
+    }
+
+    /** `execute (if|unless) <condition> <body>` where the condition has no native implementation:
+     * evaluate the terminal condition form (`execute if …` without the body) through vanilla and
+     * compile the body natively, so `return`, result tracking and forking behave like native code. */
+    private static void compileVanillaCondition(CompilationContext context, @Nullable ForkingContext forkingContext, CommandParams node, CommandParams body, ResultContext result) {
+        var sources = context.getCommandSource();
+        var condition = sources == null ? null : sources.prefix(node, body);
+        if(condition == null) throw missingSource(context, node);
+        try(var fContext = context.withForkingContext(forkingContext, node)) {
+            var stack = makeCurrentCommandSourceStack(context);
+            var returnValue = context.<Long>createLocal();
+            if(isMacroText(context, condition)) {
+                var resolved = context.getResolvedStringMacro(parseVanillaMacroTemplate(condition));
+                context.writeInstruction(Instructions.executeVanillaCommandWithResultDynamic(returnValue, stack, resolved));
+            } else {
+                context.writeInstruction(Instructions.executeVanillaCommandWithResult(returnValue, stack, condition));
+            }
+            var failedValue = context.<Integer>createLocal();
+            context.writeInstruction(Instructions.extractReturnSuccess(failedValue, returnValue));
+            context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, failedValue, LocationData.ofInteger(0), context.current().contextEndLabel()));
+            compile(context, fContext.content(), body, result);
+        }
     }
 
     // Вспомогательный метод — vanilla fallback через executeVanillaCommand с текущим стеком
     private static void emitVanillaFallback(CompilationContext context, String command) {
-        var current = context.current();
-        var stack = context.<TCommandSourceStack>createLocal();
-        context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
+        var stack = makeCurrentCommandSourceStack(context);
         // Same `$(...)` substitution as the CommandFallbackVanilla case. Parsers
         // that accept greedy_string/macro arguments (item modify, tellraw, data
         // modify value, etc.) funnel their raw text through here, and without
         // this branch macro placeholders survived into the vanilla dispatch and
         // broke macro functions that relied on us resolving them (e.g.
         // gbg:misc/update_model → no scope model swap).
-        if(command.indexOf("$(") >= 0) {
+        if(isMacroText(context, command)) {
             var template = parseVanillaMacroTemplate(command);
             var resolved = context.getResolvedStringMacro(template);
             context.writeInstruction(Instructions.executeVanillaCommandDynamic(stack, resolved));
         } else {
             context.writeInstruction(Instructions.executeVanillaCommand(stack, command));
         }
+    }
+
+    /** Vanilla fallback for a terminal command whose success/result feed the enclosing
+     * {@link ResultContext} (`execute store …`, `return run …`). Vanilla failure (thrown
+     * CommandSyntaxException, reported as (false, 0) through the source callback) jumps to
+     * the result context's error label; success adds vanilla's result value. */
+    private static void emitVanillaFallbackWithResult(CompilationContext context, ResultContext result, String command) {
+        result.markImplemented();
+        if(!result.generatingResult() && !result.generatingSuccess()) {
+            emitVanillaFallback(context, command);
+            return;
+        }
+        var stack = makeCurrentCommandSourceStack(context);
+        var returnValue = context.<Long>createLocal();
+        if(isMacroText(context, command)) {
+            var template = parseVanillaMacroTemplate(command);
+            var resolved = context.getResolvedStringMacro(template);
+            context.writeInstruction(Instructions.executeVanillaCommandWithResultDynamic(returnValue, stack, resolved));
+        } else {
+            context.writeInstruction(Instructions.executeVanillaCommandWithResult(returnValue, stack, command));
+        }
+        var failedValue = context.<Integer>createLocal();
+        context.writeInstruction(Instructions.extractReturnSuccess(failedValue, returnValue));
+        context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, failedValue, LocationData.ofInteger(0), result.markAndGetErrorLabel()));
+        if(result.generatingResult()) {
+            var resultValue = context.<Integer>createLocal();
+            context.writeInstruction(Instructions.extractReturnResult(resultValue, returnValue));
+            result.updateResultValue(resultValue);
+        }
+    }
+
+    /** Native command whose helper returns the compiled-function return encoding (COMMAND_FAILED, or the
+     * vanilla result in the low 32 bits): failure jumps to the error label, success adds the result. */
+    private static void emitEncodedResult(CompilationContext context, ResultContext result, LocationData<Long> returnValue) {
+        result.markImplemented();
+        if(!result.generatingResult() && !result.generatingSuccess()) return;
+        var failedValue = context.<Integer>createLocal();
+        context.writeInstruction(Instructions.extractReturnSuccess(failedValue, returnValue));
+        context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, failedValue, LocationData.ofInteger(0), result.markAndGetErrorLabel()));
+        if(result.generatingResult()) {
+            var resultValue = context.<Integer>createLocal();
+            context.writeInstruction(Instructions.extractReturnResult(resultValue, returnValue));
+            result.updateResultValue(resultValue);
+        }
+    }
+
+    /** ExtensionFunctions.TP_SOURCE_ANCHOR_*: the source anchor vanilla LookAt uses, when it is known at compile time. */
+    private static int tpSourceAnchor(CompilationContext context) {
+        var anchor = context.current().currentAnchor();
+        return anchor == null ? 2 : anchor == LocationAnchor.EYES ? 1 : 0;
+    }
+
+    private static LocationData<TCommandSourceStack> makeCurrentCommandSourceStack(CompilationContext context) {
+        var current = context.current();
+        var stack = context.<TCommandSourceStack>createLocal();
+        context.writeInstruction(Instructions.makeCommandSourceStack(stack, current.commandSourceStack(), current.currentEntity(), current.currentWorld(), current.currentPosition(), current.currentRotation(), current.currentAnchor()));
+        return stack;
     }
 
     // Реконструкция строки nbt_path для vanilla fallback
@@ -2630,65 +3142,6 @@ public final class CommandCompiler {
         };
     }
 
-    private static String selectorToString(SelectorArgument sel) {
-        if(sel.entityUuid() != null) return sel.entityUuid().toString();
-        if(sel.playerName() != null) return sel.playerName();
-        if(sel.self()) {
-            // Check if there are any extra filters beyond self
-            if(sel.tags().isEmpty() && sel.names().isEmpty() && sel.scores().isEmpty()
-                && sel.entityTypes() == null && sel.distance() == null && sel.level() == null
-                && sel.gamemodes().isEmpty() && sel.predicates().isEmpty() && sel.nbts().isEmpty()
-                && sel.hasTags() == null && sel.hasTeam() == null && sel.teams().isEmpty()
-                && sel.advancements() == null && sel.yaw() == null && sel.pitch() == null) {
-                return "@s";
-            }
-        }
-        // Full selector serialization
-        var sb = new StringBuilder("@e");
-        if(sel.self()) sb = new StringBuilder("@s");
-        else if(sel.requirePlayer() && sel.limit() != null && sel.limit() == 1 && sel.sort() == SelectorSort.NEAREST) sb = new StringBuilder("@p");
-        else if(sel.requirePlayer()) sb = new StringBuilder("@a");
-        else if(sel.sort() == SelectorSort.RANDOM && sel.limit() != null && sel.limit() == 1) sb = new StringBuilder("@r");
-
-        var args = new java.util.ArrayList<String>();
-        if(sel.entityTypes() != null) {
-            for(var type : sel.entityTypes().data()) {
-                args.add((sel.entityTypes().negated() ? "type=!" : "type=") + type);
-            }
-        }
-        if(sel.limit() != null && !sel.self()) args.add("limit=" + sel.limit());
-        if(sel.sort() != null && sel.sort() != SelectorSort.ARBITRARY && !sel.self()) args.add("sort=" + sel.sort().name().toLowerCase());
-        if(sel.distance() != null) args.add("distance=" + sel.distance());
-        for(var tag : sel.tags()) args.add("tag=" + (tag.negated() ? "!" : "") + tag.data().getStaticValue());
-        for(var name : sel.names()) args.add("name=" + (name.negated() ? "!" : "") + name.data());
-        for(var team : sel.teams()) args.add("team=" + (team.negated() ? "!" : "") + team.data());
-        for(var gm : sel.gamemodes()) args.add("gamemode=" + (gm.negated() ? "!" : "") + gm.data().name().toLowerCase());
-        for(var entry : sel.scores().entrySet()) args.add("scores={" + entry.getKey() + "=" + entry.getValue() + "}");
-        for(var nbt : sel.nbts()) args.add("nbt=" + (nbt.negated() ? "!" : "") + nbtValueToString(nbt.data()));
-        for(var pred : sel.predicates()) args.add("predicate=" + (pred.negated() ? "!" : "") + pred.data());
-        if(sel.level() != null) args.add("level=" + sel.level());
-        if(sel.x() != null) args.add("x=" + sel.x());
-        if(sel.y() != null) args.add("y=" + sel.y());
-        if(sel.z() != null) args.add("z=" + sel.z());
-        if(sel.dx() != null) args.add("dx=" + sel.dx());
-        if(sel.dy() != null) args.add("dy=" + sel.dy());
-        if(sel.dz() != null) args.add("dz=" + sel.dz());
-
-        if(!args.isEmpty()) {
-            sb.append('[');
-            sb.append(String.join(",", args));
-            sb.append(']');
-        }
-        return sb.toString();
-    }
-
-    private static String scoreHolderToString(ScoreHolderArgument holder) {
-        if(holder.all()) return "*";
-        if(holder.name() != null) return holder.name().getStaticValue();
-        if(holder.selector() != null) return selectorToString(holder.selector());
-        return "@s";
-    }
-
     private static final java.util.regex.Pattern NBT_SIMPLE_KEY = java.util.regex.Pattern.compile("[A-Za-z0-9._+-]+");
 
     private static String escapeNbtKey(String key) {
@@ -2696,55 +3149,141 @@ public final class CommandCompiler {
         return '"' + key.replace("\\", "\\\\").replace("\"", "\\\"") + '"';
     }
 
-    private static String nbtDataLocationToString(NbtDataLocation loc) {
-        return switch(loc) {
-            case NbtDataLocation.Storage(DataLocation storage) -> "storage " + storage;
-            case NbtDataLocation.Entity(SelectorArgument selector) -> "entity " + selectorToString(selector);
-            case NbtDataLocation.Block(WorldCoordinates pos) -> "block " + worldCoordsToString(pos);
-        };
-    }
-
-    private static String worldCoordsToString(WorldCoordinates pos) {
-        return coordToStr(pos.x(), pos.isXRelative()) + " "
-             + coordToStr(pos.y(), pos.isYRelative()) + " "
-             + coordToStr(pos.z(), pos.isZRelative());
-    }
-
-    private static String coordToStr(double v, boolean relative) {
-        if(relative) return v == 0.0 ? "~" : "~" + v;
-        return String.valueOf(v);
-    }
-
-    private static String rangeToString(IntRangeArgument range) {
-        if(range.minimum() != null && range.maximum() != null && range.minimum().equals(range.maximum())) {
-            return String.valueOf(range.minimum());
-        }
-        String min = range.minimum() != null ? String.valueOf(range.minimum()) : "";
-        String max = range.maximum() != null ? String.valueOf(range.maximum()) : "";
-        return min + ".." + max;
-    }
-
-    // data modify prepend/append для storage — нативная реализация
-    private static void compileDataModifyListOpValue(CompilationContext context, DataLocation storage, NbtPath path, NbtValue setValue, boolean prepend) {
+    /** `data modify storage <path> append|prepend|insert <index> value <v>` (vanilla NbtPath.insert): the list at
+     * the full path is created when missing; negative indices count from the end (append = -1); the result is
+     * the number of lists changed and the command fails when nothing changed. */
+    private static void compileDataModifyListOpValue(CompilationContext context, ResultContext result, DataLocation storage, NbtPath path, NbtValue setValue, int index) {
+        result.markImplemented();
         var storageLocal = context.<TCompoundTag>createLocal();
         context.writeInstruction(Instructions.getNbtStorage(storageLocal, storage));
+        var changed = context.<Integer>createLocal();
+        context.writeInstruction(Instructions.dup(changed, LocationData.ofInteger(0)));
         var parts = path.parts();
-        var codeLocation = context.current().writeLabel(context.instructionWriter);
-        try(var innerContext = context.enterWithoutValue(context.current().withContextLabel(codeLocation))) {
-            var listContainer = getNbtPathValue(context, storageLocal, parts.subList(0, parts.size() - 1), false, innerContext.data().contextEndLabel());
+        try(var inner = context.enterLocalScope()) {
+            var failLabel = inner.endLabel();
+            var parent = getNbtPathValue(context, storageLocal, parts.subList(0, parts.size() - 1), true, failLabel);
+            LocationData<? extends TTag> container;
+            if(parts.getLast() instanceof NbtPathPart.Named(String name)) {
+                var compound = context.<TCompoundTag>createLocal();
+                context.writeInstruction(Instructions.tryAsNbtCompound(compound, parent, failLabel));
+                var created = context.<TTag>createLocal();
+                context.writeInstruction(Instructions.getNbtListFromCompoundOrCreate(created, compound, LocationData.ofString(name)));
+                container = created;
+            }else {
+                container = getNbtPathValue(context, parent, List.of(parts.getLast()), false, failLabel);
+                context.writeInstruction(Instructions.ifNullJump(container, failLabel));
+            }
             var listTag = context.<TListTag>createLocal();
-            innerContext.writeInstruction(Instructions.tryAsNbtList(listTag, listContainer, innerContext.data().contextEndLabel()));
+            context.writeInstruction(Instructions.tryAsNbtList(listTag, container, failLabel));
             var tagLocal = context.<TTag>createLocal();
             var tagCopied = context.<TTag>createLocal();
-            innerContext.writeInstruction(Instructions.loadNbtValue(tagLocal, setValue));
-            innerContext.writeInstruction(Instructions.cloneNbtValue(tagCopied, tagLocal));
-            if(prepend) {
-                innerContext.writeInstruction(Instructions.nbtListPrepend(listTag, tagCopied, innerContext.data().contextEndLabel()));
-            } else {
-                innerContext.writeInstruction(Instructions.nbtListAppend(listTag, tagCopied, innerContext.data().contextEndLabel()));
+            context.writeInstruction(Instructions.loadNbtValue(tagLocal, setValue));
+            context.writeInstruction(Instructions.cloneNbtValue(tagCopied, tagLocal));
+            if(index == -1) {
+                context.writeInstruction(Instructions.nbtListAppend(listTag, tagCopied, failLabel));
+            }else if(index >= 0) {
+                context.writeInstruction(Instructions.nbtListInsert(listTag, LocationData.ofInteger(index), tagCopied, failLabel));
+            }else {
+                var length = context.<Integer>createLocal();
+                context.writeInstruction(Instructions.getListLength(length, listTag));
+                var actualIndex = context.<Integer>createLocal();
+                context.writeInstruction(Instructions.valueAdd(actualIndex, length, LocationData.ofInteger(index + 1)));
+                context.writeInstruction(Instructions.nbtListInsert(listTag, actualIndex, tagCopied, failLabel));
+            }
+            context.writeInstruction(Instructions.dup(changed, LocationData.ofInteger(1)));
+            context.writeInstruction(Instructions.setNbtStorage(storage, storageLocal));
+        }
+        context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, changed, LocationData.ofInteger(0), result.markAndGetErrorLabel()));
+        result.updateResultValue(changed);
+    }
+
+    /** `execute if|unless dimension <dim>`: identity compare with the source level; an unknown dimension
+     * aborts this source (vanilla DimensionArgument throws). */
+    private static void compileDimensionCondition(CompilationContext context, @Nullable ForkingContext forkingContext, CommandParams node, DataLocation dimension, CommandParams body, ResultContext result, boolean expected) {
+        try(var fContext = context.withForkingContext(forkingContext, node)) {
+            try(var world = context.getWorld()) {
+                var skipLabel = context.current().contextEndLabel();
+                var target = context.<TServerLevel>createLocal();
+                context.writeInstruction(Instructions.getDimensionLevel(target, dimension.toString()));
+                context.writeInstruction(Instructions.ifNullJump(target, skipLabel));
+                context.writeInstruction(Instructions.ifObjectCompareJump(expected ? ObjectComparisonType.NOT_IDENTITY_EQUAL : ObjectComparisonType.IDENTITY_EQUAL, world.content(), target, skipLabel));
+                compile(context, fContext.content(), body, result);
             }
         }
-        context.writeInstruction(Instructions.setNbtStorage(storage, storageLocal));
+    }
+
+    /** `execute if|unless loaded <pos>` (vanilla ExecuteCommand.isChunkLoaded on the source level). */
+    private static void compileLoadedCondition(CompilationContext context, @Nullable ForkingContext forkingContext, CommandParams node, WorldCoordinates pos, CommandParams body, ResultContext result, boolean expected) {
+        try(var fContext = context.withForkingContext(forkingContext, node)) {
+            try(var world = context.getWorld()) {
+                try(var posData = context.applyPosition(pos)) {
+                    var loaded = context.<Integer>createLocal();
+                    context.writeInstruction(Instructions.isBlockLoaded(loaded, world.content(), posData.content()));
+                    context.writeInstruction(Instructions.ifNumberCompareJump(expected ? NumberComparisonType.EQUAL : NumberComparisonType.NOT_EQUAL, loaded, LocationData.ofInteger(0), context.current().contextEndLabel()));
+                    compile(context, fContext.content(), body, result);
+                }
+            }
+        }
+    }
+
+    /** `data get entity|storage <path> [scale]` (vanilla DataCommands.getData / getNumeric); a missing path fails. */
+    private static void compileDataGet(CompilationContext context, ResultContext result, NbtDataLocation source, NbtPath path, @Nullable Double scale) {
+        result.markImplemented();
+        // Only feedback text is produced when nobody consumes the result.
+        if(!result.generatingSuccess()) return;
+        switch(source) {
+            case NbtDataLocation.Entity(SelectorArgument selector) -> {
+                try(var entityData = context.forSelector(selector, result)) {
+                    var nbtLocal = context.<TCompoundTag>createLocal();
+                    entityData.writeInstruction(Instructions.getEntityNbt(nbtLocal, entityData.content()));
+                    emitDataGetValue(context, result, nbtLocal, path, scale);
+                }
+            }
+            case NbtDataLocation.Storage(DataLocation storage) -> {
+                var nbtLocal = context.<TCompoundTag>createLocal();
+                context.writeInstruction(Instructions.getNbtStorage(nbtLocal, storage));
+                emitDataGetValue(context, result, nbtLocal, path, scale);
+            }
+            case NbtDataLocation.Block _ -> throw new IllegalStateException("block data get is compiled as a vanilla fallback");
+        }
+    }
+
+    private static void emitDataGetValue(CompilationContext context, ResultContext result, LocationData<TCompoundTag> nbt, NbtPath path, @Nullable Double scale) {
+        var tagVal = getNbtPathValue(context, nbt, path.parts(), false, result.markAndGetErrorLabel());
+        context.writeInstruction(Instructions.ifNullJump(tagVal, result.markAndGetErrorLabel()));
+        if(!result.generatingResult() && scale == null) return;
+        var intVal = context.<Integer>createLocal();
+        if(scale == null) {
+            context.writeInstruction(Instructions.nbtTagToInt(intVal, tagVal));
+        }else {
+            context.writeInstruction(Instructions.nbtNumericToIntScaled(intVal, tagVal, scale, result.markAndGetErrorLabel()));
+        }
+        result.updateResultValue(intVal);
+    }
+
+    /** `clear <targets> [item] [maxCount]`: sums the per-player counts ({@code item == null}: whole inventory). */
+    private static void emitClear(CompilationContext context, ResultContext result, SelectorArgument targets, @Nullable String item, int maxCount) {
+        result.markImplemented();
+        var total = context.<Integer>createLocal();
+        context.writeInstruction(Instructions.dup(total, LocationData.ofInteger(0)));
+        try(var _ = context.enterLocalScope()) {
+            try(var selector = context.forSelector(targets, result)) {
+                var player = context.<TServerPlayer>createLocal();
+                selector.writeInstruction(Instructions.tryAsPlayer(player, selector.content(), selector.data().contextEndLabel()));
+                var cleared = context.<Integer>createLocal();
+                selector.writeInstruction(item == null
+                    ? Instructions.clearPlayerInventory(cleared, player)
+                    : Instructions.clearPlayerItem(cleared, player, item, maxCount));
+                selector.writeInstruction(Instructions.valueAdd(total, total, cleared));
+            }
+        }
+        emitClearTotal(context, result, total);
+    }
+
+    private static void emitClearTotal(CompilationContext context, ResultContext result, LocationData<Integer> total) {
+        if(!result.generatingSuccess()) return;
+        context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.EQUAL, total, LocationData.ofInteger(0), result.markAndGetErrorLabel()));
+        result.updateResultValue(total);
     }
 
 }

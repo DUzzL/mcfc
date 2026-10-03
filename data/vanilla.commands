@@ -38,8 +38,8 @@ EXECUTE_AS/execute as <targets:entity_selector> <command:command[root=execute]>
 EXECUTE_AT/execute at <targets:entity_selector> <command:command[root=execute]>
 EXECUTE_IF_ENTITY/execute if entity <entities:entity_selector> <command:command[root=execute]>
 EXECUTE_IF_FUNCTION/execute if function <functions:function> <command:command[root=execute]>
-EXECUTE_IF_SCORE_RANGE/execute if score <target:score_accessor> matches <range:int_range> <command:command[root=execute]>
-EXECUTE_IF_SCORE_COMPARE/execute if score <target:score_accessor> <comparison:score_comparison> <source:score_accessor> <command:command[root=execute]>
+EXECUTE_IF_SCORE_RANGE/execute if score <target:score_accessor[single]> matches <range:int_range> <command:command[root=execute]>
+EXECUTE_IF_SCORE_COMPARE/execute if score <target:score_accessor[single]> <comparison:score_comparison> <source:score_accessor[single]> <command:command[root=execute]>
 EXECUTE_ON_ORIGIN/execute on origin <command:command[root=execute]>
 EXECUTE_ON_TARGET/execute on target <command:command[root=execute]>
 EXECUTE_ON_VEHICLE/execute on vehicle <command:command[root=execute]>
@@ -52,8 +52,8 @@ EXECUTE_STORE_SCORE/execute store <store_location:result_store_location_type> sc
 EXECUTE_STORE_STORAGE/execute store <store_location:result_store_location_type> storage <storage:resource_location> <path:nbt_path> <store_type:result_store_type> <scale:double> <command:command[root=execute]>
 EXECUTE_UNLESS_ENTITY/execute unless entity <entities:entity_selector> <command:command[root=execute]>
 EXECUTE_UNLESS_FUNCTION/execute unless function <functions:function> <command:command[root=execute]>
-EXECUTE_UNLESS_SCORE_RANGE/execute unless score <target:score_accessor> matches <range:int_range> <command:command[root=execute]>
-EXECUTE_UNLESS_SCORE_COMPARE/execute unless score <target:score_accessor> <comparison:score_comparison> <source:score_accessor> <command:command[root=execute]>
+EXECUTE_UNLESS_SCORE_RANGE/execute unless score <target:score_accessor[single]> matches <range:int_range> <command:command[root=execute]>
+EXECUTE_UNLESS_SCORE_COMPARE/execute unless score <target:score_accessor[single]> <comparison:score_comparison> <source:score_accessor[single]> <command:command[root=execute]>
 
 =DEFINE/xp/experience
 EXPERIENCE_ADD/experience add <targets:entity_selector[players]> <amount:macro_int>
@@ -78,7 +78,7 @@ RETURN_VALUE/return <value:int>
 
 SCOREBOARD_PLAYERS_ADD/scoreboard players add <targets:score_accessor> <score:macro_int[minimum=0]>
 SCOREBOARD_PLAYERS_ENABLE/scoreboard players enable <targets:score_accessor>
-SCOREBOARD_PLAYERS_GET/scoreboard players get <targets:score_accessor>
+SCOREBOARD_PLAYERS_GET/scoreboard players get <targets:score_accessor[single]>
 SCOREBOARD_PLAYERS_OPERATION/scoreboard players operation <targets:score_accessor> <operation:scoreboard_operation> <source:score_accessor>
 SCOREBOARD_PLAYERS_REMOVE/scoreboard players remove <targets:score_accessor> <score:macro_int[minimum=0]>
 SCOREBOARD_PLAYERS_RESET_OBJECTIVE/scoreboard players reset <targets:score_accessor>
@@ -105,11 +105,11 @@ WEATHER_THUNDER_TIMED/weather thunder <duration:time[minimum=1]>
 WEATHER_THUNDER/weather thunder
 
 GIVE/give <targets:entity_selector[players]> <item:item_stack>
-GIVE_COUNT/give <targets:entity_selector[players]> <item:item_stack> <count:int>
+GIVE_COUNT/give <targets:entity_selector[players]> <item:item_stack> <count:int[minimum=1]>
 
-PLAYSOUND_MIN_VOLUME/playsound <sound:resource_location> <source:word> <targets:entity_selector[players]> <pos:vec3> <volume:double> <pitch:double> <min_volume:double>
-PLAYSOUND_PITCH/playsound <sound:resource_location> <source:word> <targets:entity_selector[players]> <pos:vec3> <volume:double> <pitch:double>
-PLAYSOUND_VOLUME/playsound <sound:resource_location> <source:word> <targets:entity_selector[players]> <pos:vec3> <volume:double>
+PLAYSOUND_MIN_VOLUME/playsound <sound:resource_location> <source:word> <targets:entity_selector[players]> <pos:vec3> <volume:double[minimum=0]> <pitch:double[minimum=0,maximum=2]> <min_volume:double[minimum=0,maximum=1]>
+PLAYSOUND_PITCH/playsound <sound:resource_location> <source:word> <targets:entity_selector[players]> <pos:vec3> <volume:double[minimum=0]> <pitch:double[minimum=0,maximum=2]>
+PLAYSOUND_VOLUME/playsound <sound:resource_location> <source:word> <targets:entity_selector[players]> <pos:vec3> <volume:double[minimum=0]>
 PLAYSOUND_POS/playsound <sound:resource_location> <source:word> <targets:entity_selector[players]> <pos:vec3>
 PLAYSOUND/playsound <sound:resource_location> <source:word> <targets:entity_selector[players]>
 
@@ -117,7 +117,7 @@ SUMMON_POS_NBT/summon <entity:resource_location> <pos:vec3> <nbt:nbt_compound>
 SUMMON_POS/summon <entity:resource_location> <pos:vec3>
 SUMMON/summon <entity:resource_location>
 
-TIME_SET/time set <time:time>
+TIME_SET/time set <time:time[minimum=0]>
 TIME_SET_TO_MARKER/time set <time_marker_id:resource_location>
 TIME_ADD/time add <time:time>
 TIME_RATE/time rate <rate:float>
@@ -127,11 +127,11 @@ TIME_QUERY_TIME/time query time
 TIME_QUERY_TIMELINE_TICKS/time query <timeline_id:resource_location>
 TIME_QUERY_TIMELINE_REPETITIONS/time query <timeline_id:resource_location> repetition
 TIME_QUERY_GAMETIME/time query gametime
-TIME_OF/time of <command:command[root=time]
+TIME_OF/time of <clock:resource_location> <command:command[root=time]>
 
-SCHEDULE_FUNCTION_APPEND/schedule function <function:resource_location> <time:time> append
-SCHEDULE_FUNCTION_REPLACE/schedule function <function:resource_location> <time:time> replace
-SCHEDULE_FUNCTION/schedule function <function:resource_location> <time:time>
+SCHEDULE_FUNCTION_APPEND/schedule function <function:resource_location> <time:time[minimum=0]> append
+SCHEDULE_FUNCTION_REPLACE/schedule function <function:resource_location> <time:time[minimum=0]> replace
+SCHEDULE_FUNCTION/schedule function <function:resource_location> <time:time[minimum=0]>
 SCHEDULE_CLEAR/schedule clear <function:resource_location>
 
 GAMERULE_SET/gamerule <rule:resource_location> <value:greedy_string>
@@ -142,7 +142,7 @@ DATAPACK_DISABLE/datapack disable <name:greedy_string>
 
 SCOREBOARD_OBJECTIVES_ADD/scoreboard objectives add <objective:word> <criteria:objective_criteria>
 SCOREBOARD_OBJECTIVES_ADD_DISPLAY/scoreboard objectives add <objective:word> <criteria:objective_criteria> <display_name:text>
-SCOREBOARD_OBJECTIVES_ADD_DISPLAY_GREEDY/scoreboard objectives add <objective:word> <criteria:objective_criteria> <display_name:greedy_string>
+SCOREBOARD_OBJECTIVES_ADD_DISPLAY_GREEDY/scoreboard objectives add <objective:word> <criteria:objective_criteria> <display_name:greedy_string[macros]>
 SCOREBOARD_OBJECTIVES_REMOVE/scoreboard objectives remove <objective:word>
 SCOREBOARD_OBJECTIVES_SETDISPLAY_CLEAR/scoreboard objectives setdisplay <slot:slot>
 SCOREBOARD_OBJECTIVES_SETDISPLAY/scoreboard objectives setdisplay <slot:slot> <objective:word>
@@ -170,12 +170,12 @@ DATA_GET_PATH/data get <source:nbt_data_location> <path:nbt_path>
 DATA_GET_PATH_SCALE/data get <source:nbt_data_location> <path:nbt_path> <scale:double>
 
 EXECUTE_IN/execute in <dimension:resource_location> <command:command[root=execute]>
-EXECUTE_IF_BLOCK/execute if block <pos:vec3> <block:block_predicate> <command:command[root=execute]>
-EXECUTE_UNLESS_BLOCK/execute unless block <pos:vec3> <block:block_predicate> <command:command[root=execute]>
-EXECUTE_IF_ITEMS_ENTITY/execute if items entity <targets:entity_selector> <slot:slot> <item_predicate:block_predicate> <command:command[root=execute]>
-EXECUTE_UNLESS_ITEMS_ENTITY/execute unless items entity <targets:entity_selector> <slot:slot> <item_predicate:block_predicate> <command:command[root=execute]>
-EXECUTE_IF_ITEMS_BLOCK/execute if items block <pos:vec3> <slot:slot> <item_predicate:block_predicate> <command:command[root=execute]>
-EXECUTE_UNLESS_ITEMS_BLOCK/execute unless items block <pos:vec3> <slot:slot> <item_predicate:block_predicate> <command:command[root=execute]>
+EXECUTE_IF_BLOCK/execute if block <pos:block_pos> <block:block_predicate> <command:command[root=execute]>
+EXECUTE_UNLESS_BLOCK/execute unless block <pos:block_pos> <block:block_predicate> <command:command[root=execute]>
+EXECUTE_IF_ITEMS_ENTITY/execute if items entity <targets:entity_selector> <slot:slot_source> <item_predicate:block_predicate> <command:command[root=execute]>
+EXECUTE_UNLESS_ITEMS_ENTITY/execute unless items entity <targets:entity_selector> <slot:slot_source> <item_predicate:block_predicate> <command:command[root=execute]>
+EXECUTE_IF_ITEMS_BLOCK/execute if items block <pos:block_pos> <slot:slot_source> <item_predicate:block_predicate> <command:command[root=execute]>
+EXECUTE_UNLESS_ITEMS_BLOCK/execute unless items block <pos:block_pos> <slot:slot_source> <item_predicate:block_predicate> <command:command[root=execute]>
 EXECUTE_STORE_ENTITY/execute store <store_location:result_store_location_type> entity <target:entity_selector[single]> <path:nbt_path> <store_type:result_store_type> <scale:double> <command:command[root=execute]>
 EXECUTE_ON_LEASHER/execute on leasher <command:command[root=execute]>
 EXECUTE_ON_ATTACKER/execute on attacker <command:command[root=execute]>
@@ -185,22 +185,22 @@ EXECUTE_ON_PASSENGERS/execute on passengers <command:command[root=execute]>
 
 LOOT_REPLACE_ENTITY_LOOT/loot replace entity <target:entity_selector[single]> <slot:slot> loot <loot_table:resource_location>
 LOOT_REPLACE_ENTITY_KILL/loot replace entity <target:entity_selector[single]> <slot:slot> kill <kill_target:entity_selector[single]>
-LOOT_REPLACE_BLOCK_LOOT/loot replace block <pos:vec3> <slot:slot> loot <loot_table:resource_location>
-LOOT_REPLACE_BLOCK_KILL/loot replace block <pos:vec3> <slot:slot> kill <kill_target:entity_selector[single]>
-LOOT_INSERT_LOOT/loot insert <pos:vec3> loot <loot_table:resource_location>
-LOOT_INSERT_KILL/loot insert <pos:vec3> kill <kill_target:entity_selector[single]>
+LOOT_REPLACE_BLOCK_LOOT/loot replace block <pos:block_pos> <slot:slot> loot <loot_table:resource_location>
+LOOT_REPLACE_BLOCK_KILL/loot replace block <pos:block_pos> <slot:slot> kill <kill_target:entity_selector[single]>
+LOOT_INSERT_LOOT/loot insert <pos:block_pos> loot <loot_table:resource_location>
+LOOT_INSERT_KILL/loot insert <pos:block_pos> kill <kill_target:entity_selector[single]>
 LOOT_GIVE_LOOT/loot give <players:entity_selector[players]> loot <loot_table:resource_location>
 LOOT_GIVE_KILL/loot give <players:entity_selector[players]> kill <kill_target:entity_selector[single]>
 LOOT_SPAWN_LOOT/loot spawn <pos:vec3> loot <loot_table:resource_location>
 LOOT_SPAWN_KILL/loot spawn <pos:vec3> kill <kill_target:entity_selector[single]>
 
-ITEM_MODIFY_ENTITY/item modify entity <targets:entity_selector> <slot:slot> <modifier:greedy_string>
-ITEM_MODIFY_BLOCK/item modify block <pos:vec3> <slot:slot> <modifier:greedy_string>
+ITEM_MODIFY_ENTITY/item modify entity <targets:entity_selector> <slot:slot_source> <modifier:greedy_string[macros]>
+ITEM_MODIFY_BLOCK/item modify block <pos:block_pos> <slot:slot_source> <modifier:greedy_string[macros]>
 
 EFFECT_GIVE/effect give <targets:entity_selector> <effect:resource_location>
-EFFECT_GIVE_SECONDS/effect give <targets:entity_selector> <effect:resource_location> <seconds:int>
-EFFECT_GIVE_SECONDS_AMPLIFIER/effect give <targets:entity_selector> <effect:resource_location> <seconds:int> <amplifier:int>
-EFFECT_GIVE_SECONDS_AMPLIFIER_HIDE/effect give <targets:entity_selector> <effect:resource_location> <seconds:int> <amplifier:int> <hide_particles:boolean>
+EFFECT_GIVE_SECONDS/effect give <targets:entity_selector> <effect:resource_location> <seconds:int[minimum=1,maximum=1000000]>
+EFFECT_GIVE_SECONDS_AMPLIFIER/effect give <targets:entity_selector> <effect:resource_location> <seconds:int[minimum=1,maximum=1000000]> <amplifier:int[minimum=0,maximum=255]>
+EFFECT_GIVE_SECONDS_AMPLIFIER_HIDE/effect give <targets:entity_selector> <effect:resource_location> <seconds:int[minimum=1,maximum=1000000]> <amplifier:int[minimum=0,maximum=255]> <hide_particles:boolean>
 EFFECT_CLEAR/effect clear
 EFFECT_CLEAR_TARGETS/effect clear <targets:entity_selector>
 EFFECT_CLEAR_TARGETS_EFFECT/effect clear <targets:entity_selector> <effect:resource_location>
@@ -233,18 +233,18 @@ STOPSOUND/stopsound <targets:entity_selector[players]>
 STOPSOUND_SOURCE/stopsound <targets:entity_selector[players]> <source:word>
 STOPSOUND_SOUND/stopsound <targets:entity_selector[players]> <source:word> <sound:resource_location>
 
-SETBLOCK_REPLACE/setblock <pos:vec3> <block:block_predicate>
-SETBLOCK_KEEP/setblock <pos:vec3> <block:block_predicate> keep
-SETBLOCK_DESTROY/setblock <pos:vec3> <block:block_predicate> destroy
+SETBLOCK_REPLACE/setblock <pos:block_pos> <block:block_predicate>
+SETBLOCK_KEEP/setblock <pos:block_pos> <block:block_predicate> keep
+SETBLOCK_DESTROY/setblock <pos:block_pos> <block:block_predicate> destroy
 
 PARTICLE_NAME/particle <name:particle_options>
 PARTICLE/particle <name:particle_options> <pos:vec3>
-PARTICLE_VIEWERS/particle <name:particle_options> <pos:vec3> <delta:vec3_uncentered> <speed:double> <count:int>
-PARTICLE_VIEWERS_FORCE/particle <name:particle_options> <pos:vec3> <delta:vec3_uncentered> <speed:double> <count:int> force
-PARTICLE_VIEWERS_NORMAL/particle <name:particle_options> <pos:vec3> <delta:vec3_uncentered> <speed:double> <count:int> normal
-PARTICLE_VIEWERS_PARAMS/particle <name:particle_options> <pos:vec3> <delta:vec3_uncentered> <speed:double> <count:int> <viewers:entity_selector[players]>
-PARTICLE_VIEWERS_FORCE_PARAMS/particle <name:particle_options> <pos:vec3> <delta:vec3_uncentered> <speed:double> <count:int> force <viewers:entity_selector[players]>
-PARTICLE_VIEWERS_NORMAL_PARAMS/particle <name:particle_options> <pos:vec3> <delta:vec3_uncentered> <speed:double> <count:int> normal <viewers:entity_selector[players]>
+PARTICLE_VIEWERS/particle <name:particle_options> <pos:vec3> <delta:vec3_uncentered> <speed:double[minimum=0]> <count:int[minimum=0]>
+PARTICLE_VIEWERS_FORCE/particle <name:particle_options> <pos:vec3> <delta:vec3_uncentered> <speed:double[minimum=0]> <count:int[minimum=0]> force
+PARTICLE_VIEWERS_NORMAL/particle <name:particle_options> <pos:vec3> <delta:vec3_uncentered> <speed:double[minimum=0]> <count:int[minimum=0]> normal
+PARTICLE_VIEWERS_PARAMS/particle <name:particle_options> <pos:vec3> <delta:vec3_uncentered> <speed:double[minimum=0]> <count:int[minimum=0]> <viewers:entity_selector[players]>
+PARTICLE_VIEWERS_FORCE_PARAMS/particle <name:particle_options> <pos:vec3> <delta:vec3_uncentered> <speed:double[minimum=0]> <count:int[minimum=0]> force <viewers:entity_selector[players]>
+PARTICLE_VIEWERS_NORMAL_PARAMS/particle <name:particle_options> <pos:vec3> <delta:vec3_uncentered> <speed:double[minimum=0]> <count:int[minimum=0]> normal <viewers:entity_selector[players]>
 
 RANDOM_VALUE/random value <range:int_range>
 RANDOM_ROLL/random roll <range:int_range> <sequence:resource_location>
@@ -254,80 +254,77 @@ RANDOM_RESET_ALL/random reset *
 CLEAR/clear
 CLEAR_TARGETS/clear <targets:entity_selector[players]>
 CLEAR_TARGETS_ITEM/clear <targets:entity_selector[players]> <item:block_predicate>
-CLEAR_TARGETS_ITEM_MAX/clear <targets:entity_selector[players]> <item:block_predicate> <max_count:int>
+CLEAR_TARGETS_ITEM_MAX/clear <targets:entity_selector[players]> <item:block_predicate> <max_count:int[minimum=0]>
 
 RECIPE_GIVE/recipe give <targets:entity_selector[players]> <recipe:resource_location>
-RECIPE_GIVE_ALL_STAR/recipe give <targets:entity_selector[players]> <star:greedy_string>
+RECIPE_GIVE_ALL_STAR/recipe give <targets:entity_selector[players]> *
 RECIPE_TAKE/recipe take <targets:entity_selector[players]> <recipe:resource_location>
-RECIPE_TAKE_ALL_STAR/recipe take <targets:entity_selector[players]> <star:greedy_string>
+RECIPE_TAKE_ALL_STAR/recipe take <targets:entity_selector[players]> *
 
-FILL/fill <from:vec3> <to:vec3> <block:block_predicate>
-FILL_REPLACE/fill <from:vec3> <to:vec3> <block:block_predicate> replace
-FILL_REPLACE_FILTER/fill <from:vec3> <to:vec3> <block:block_predicate> replace <filter:block_predicate>
-FILL_KEEP/fill <from:vec3> <to:vec3> <block:block_predicate> keep
-FILL_DESTROY/fill <from:vec3> <to:vec3> <block:block_predicate> destroy
-FILL_HOLLOW/fill <from:vec3> <to:vec3> <block:block_predicate> hollow
-FILL_OUTLINE/fill <from:vec3> <to:vec3> <block:block_predicate> outline
+FILL/fill <from:block_pos> <to:block_pos> <block:block_predicate>
+FILL_REPLACE/fill <from:block_pos> <to:block_pos> <block:block_predicate> replace
+FILL_REPLACE_FILTER/fill <from:block_pos> <to:block_pos> <block:block_predicate> replace <filter:block_predicate>
+FILL_KEEP/fill <from:block_pos> <to:block_pos> <block:block_predicate> keep
+FILL_DESTROY/fill <from:block_pos> <to:block_pos> <block:block_predicate> destroy
+FILL_HOLLOW/fill <from:block_pos> <to:block_pos> <block:block_predicate> hollow
+FILL_OUTLINE/fill <from:block_pos> <to:block_pos> <block:block_predicate> outline
 
 # loot дополнительные источники
-LOOT_SPAWN_FISH/loot spawn <pos:vec3> fish <loot_table:resource_location> <pos2:vec3>
-LOOT_SPAWN_MINE/loot spawn <pos:vec3> mine <pos2:vec3> <tool:block_predicate>
-LOOT_SPAWN_MINE_MAINHAND/loot spawn <pos:vec3> mine <pos2:vec3> mainhand
-LOOT_SPAWN_MINE_OFFHAND/loot spawn <pos:vec3> mine <pos2:vec3> offhand
-LOOT_INSERT_FISH/loot insert <pos:vec3> fish <loot_table:resource_location> <pos2:vec3>
-LOOT_INSERT_MINE/loot insert <pos:vec3> mine <pos2:vec3> <tool:block_predicate>
-LOOT_INSERT_MINE_MAINHAND/loot insert <pos:vec3> mine <pos2:vec3> mainhand
-LOOT_INSERT_MINE_OFFHAND/loot insert <pos:vec3> mine <pos2:vec3> offhand
-LOOT_GIVE_FISH/loot give <players:entity_selector[players]> fish <loot_table:resource_location> <pos:vec3>
-LOOT_GIVE_MINE/loot give <players:entity_selector[players]> mine <pos:vec3> <tool:block_predicate>
-LOOT_GIVE_MINE_MAINHAND/loot give <players:entity_selector[players]> mine <pos:vec3> mainhand
-LOOT_GIVE_MINE_OFFHAND/loot give <players:entity_selector[players]> mine <pos:vec3> offhand
+LOOT_SPAWN_FISH/loot spawn <pos:vec3> fish <loot_table:resource_location> <pos2:block_pos>
+LOOT_SPAWN_MINE/loot spawn <pos:vec3> mine <pos2:block_pos> <tool:block_predicate>
+LOOT_SPAWN_MINE_MAINHAND/loot spawn <pos:vec3> mine <pos2:block_pos> mainhand
+LOOT_SPAWN_MINE_OFFHAND/loot spawn <pos:vec3> mine <pos2:block_pos> offhand
+LOOT_INSERT_FISH/loot insert <pos:block_pos> fish <loot_table:resource_location> <pos2:block_pos>
+LOOT_INSERT_MINE/loot insert <pos:block_pos> mine <pos2:block_pos> <tool:block_predicate>
+LOOT_INSERT_MINE_MAINHAND/loot insert <pos:block_pos> mine <pos2:block_pos> mainhand
+LOOT_INSERT_MINE_OFFHAND/loot insert <pos:block_pos> mine <pos2:block_pos> offhand
+LOOT_GIVE_FISH/loot give <players:entity_selector[players]> fish <loot_table:resource_location> <pos:block_pos>
+LOOT_GIVE_MINE/loot give <players:entity_selector[players]> mine <pos:block_pos> <tool:block_predicate>
+LOOT_GIVE_MINE_MAINHAND/loot give <players:entity_selector[players]> mine <pos:block_pos> mainhand
+LOOT_GIVE_MINE_OFFHAND/loot give <players:entity_selector[players]> mine <pos:block_pos> offhand
 
 # execute if дополнительные subcommands
 EXECUTE_IF_PREDICATE/execute if predicate <predicate:resource_location> <command:command[root=execute]>
 EXECUTE_UNLESS_PREDICATE/execute unless predicate <predicate:resource_location> <command:command[root=execute]>
-EXECUTE_IF_BLOCKS/execute if blocks <start:vec3> <end:vec3> <destination:vec3> all <command:command[root=execute]>
-EXECUTE_IF_BLOCKS_MASKED/execute if blocks <start:vec3> <end:vec3> <destination:vec3> masked <command:command[root=execute]>
-EXECUTE_UNLESS_BLOCKS/execute unless blocks <start:vec3> <end:vec3> <destination:vec3> all <command:command[root=execute]>
-EXECUTE_UNLESS_BLOCKS_MASKED/execute unless blocks <start:vec3> <end:vec3> <destination:vec3> masked <command:command[root=execute]>
-EXECUTE_IF_SCORE_RANGE_ONLY/execute if score <target:score_accessor> matches <range:int_range>
-EXECUTE_UNLESS_SCORE_RANGE_ONLY/execute unless score <target:score_accessor> matches <range:int_range>
+EXECUTE_IF_BLOCKS/execute if blocks <start:block_pos> <end:block_pos> <destination:block_pos> all <command:command[root=execute]>
+EXECUTE_IF_BLOCKS_MASKED/execute if blocks <start:block_pos> <end:block_pos> <destination:block_pos> masked <command:command[root=execute]>
+EXECUTE_UNLESS_BLOCKS/execute unless blocks <start:block_pos> <end:block_pos> <destination:block_pos> all <command:command[root=execute]>
+EXECUTE_UNLESS_BLOCKS_MASKED/execute unless blocks <start:block_pos> <end:block_pos> <destination:block_pos> masked <command:command[root=execute]>
+EXECUTE_IF_SCORE_RANGE_ONLY/execute if score <target:score_accessor[single]> matches <range:int_range>
+EXECUTE_UNLESS_SCORE_RANGE_ONLY/execute unless score <target:score_accessor[single]> matches <range:int_range>
 EXECUTE_IF_ENTITY_ONLY/execute if entity <entities:entity_selector>
 EXECUTE_UNLESS_ENTITY_ONLY/execute unless entity <entities:entity_selector>
-EXECUTE_UNLESS_BIOME/execute unless biome <pos:vec3> <biome:resource_location> <command:command[root=execute]>
+EXECUTE_UNLESS_BIOME/execute unless biome <pos:block_pos> <biome:resource_location> <command:command[root=execute]>
 EXECUTE_IF_DIMENSION/execute if dimension <dimension:resource_location> <command:command[root=execute]>
 EXECUTE_UNLESS_DIMENSION/execute unless dimension <dimension:resource_location> <command:command[root=execute]>
-EXECUTE_IF_LOADED/execute if loaded <pos:vec3> <command:command[root=execute]>
-EXECUTE_UNLESS_LOADED/execute unless loaded <pos:vec3> <command:command[root=execute]>
+EXECUTE_IF_LOADED/execute if loaded <pos:block_pos> <command:command[root=execute]>
+EXECUTE_UNLESS_LOADED/execute unless loaded <pos:block_pos> <command:command[root=execute]>
 
 # Одиночный селектор relaxed — @e[limit=1,sort=arbitrary] как single
 
 EXECUTE_SUMMON/execute summon <entity:resource_location> <command:command[root=execute]>
 EXECUTE_POSITIONED_OVER/execute positioned over <heightmap:word> <command:command[root=execute]>
 
-ITEM_REPLACE_ENTITY_WITH/item replace entity <targets:entity_selector> <slot:slot> with <item:greedy_string>
-ITEM_REPLACE_ENTITY_FROM_ENTITY/item replace entity <targets:entity_selector> <slot:slot> from entity <source:entity_selector[single]>
-ITEM_REPLACE_ENTITY_FROM_ENTITY_SLOT/item replace entity <targets:entity_selector> <slot:slot> from entity <source:entity_selector[single]> <source_slot:slot>
-ITEM_REPLACE_BLOCK_WITH/item replace block <pos:vec3> <slot:slot> with <item:greedy_string>
-ITEM_REPLACE_BLOCK_FROM_ENTITY/item replace block <pos:vec3> <slot:slot> from entity <source:entity_selector[single]>
-ITEM_REPLACE_BLOCK_FROM_ENTITY_SLOT/item replace block <pos:vec3> <slot:slot> from entity <source:entity_selector[single]> <source_slot:slot>
-ITEM_REPLACE_BLOCK_FROM_BLOCK/item replace block <pos:vec3> <slot:slot> from block <source_pos:vec3>
-ITEM_REPLACE_BLOCK_FROM_BLOCK_SLOT/item replace block <pos:vec3> <slot:slot> from block <source_pos:vec3> <source_slot:slot>
+ITEM_REPLACE_ENTITY_WITH/item replace entity <targets:entity_selector> <slot:slot_source> with <item:greedy_string[macros]>
+ITEM_REPLACE_ENTITY_FROM_ENTITY_SLOT/item replace entity <targets:entity_selector> <slot:slot_source> from entity <source:entity_selector> <source_slot:slot_source>
+ITEM_REPLACE_BLOCK_WITH/item replace block <pos:block_pos> <slot:slot_source> with <item:greedy_string[macros]>
+ITEM_REPLACE_BLOCK_FROM_ENTITY_SLOT/item replace block <pos:block_pos> <slot:slot_source> from entity <source:entity_selector> <source_slot:slot_source>
+ITEM_REPLACE_BLOCK_FROM_BLOCK_SLOT/item replace block <pos:block_pos> <slot:slot_source> from block <source_pos:block_pos> <source_slot:slot_source>
 
 # execute if/unless data (проверка NBT)
 EXECUTE_IF_DATA_ENTITY/execute if data entity <target:entity_selector[single]> <path:nbt_path> <command:command[root=execute]>
 EXECUTE_IF_DATA_STORAGE/execute if data storage <target:resource_location> <path:nbt_path> <command:command[root=execute]>
-EXECUTE_IF_DATA_BLOCK/execute if data block <pos:vec3> <path:nbt_path> <command:command[root=execute]>
+EXECUTE_IF_DATA_BLOCK/execute if data block <pos:block_pos> <path:nbt_path> <command:command[root=execute]>
 EXECUTE_UNLESS_DATA_ENTITY/execute unless data entity <target:entity_selector[single]> <path:nbt_path> <command:command[root=execute]>
 EXECUTE_UNLESS_DATA_STORAGE/execute unless data storage <target:resource_location> <path:nbt_path> <command:command[root=execute]>
-EXECUTE_UNLESS_DATA_BLOCK/execute unless data block <pos:vec3> <path:nbt_path> <command:command[root=execute]>
+EXECUTE_UNLESS_DATA_BLOCK/execute unless data block <pos:block_pos> <path:nbt_path> <command:command[root=execute]>
 
 # execute if/unless items standalone (без команды в конце — для execute store result ... if items)
-EXECUTE_IF_ITEMS_ENTITY_ONLY/execute if items entity <targets:entity_selector> <slot:slot> <item_predicate:block_predicate>
-EXECUTE_UNLESS_ITEMS_ENTITY_ONLY/execute unless items entity <targets:entity_selector> <slot:slot> <item_predicate:block_predicate>
-EXECUTE_IF_ITEMS_BLOCK_ONLY/execute if items block <pos:vec3> <slot:slot> <item_predicate:block_predicate>
-EXECUTE_UNLESS_ITEMS_BLOCK_ONLY/execute unless items block <pos:vec3> <slot:slot> <item_predicate:block_predicate>
+EXECUTE_IF_ITEMS_ENTITY_ONLY/execute if items entity <targets:entity_selector> <slot:slot_source> <item_predicate:block_predicate>
+EXECUTE_UNLESS_ITEMS_ENTITY_ONLY/execute unless items entity <targets:entity_selector> <slot:slot_source> <item_predicate:block_predicate>
+EXECUTE_IF_ITEMS_BLOCK_ONLY/execute if items block <pos:block_pos> <slot:slot_source> <item_predicate:block_predicate>
+EXECUTE_UNLESS_ITEMS_BLOCK_ONLY/execute unless items block <pos:block_pos> <slot:slot_source> <item_predicate:block_predicate>
 
 # scoreboard players display name с display name
 SCOREBOARD_PLAYERS_DISPLAY_NAME_TEXT/scoreboard players display name <targets:score_holder> <objective:word> <display_name:text>
-SCOREBOARD_PLAYERS_DISPLAY_NAME_GREEDY/scoreboard players display name <targets:score_holder> <objective:word> <display_name:greedy_string>
+SCOREBOARD_PLAYERS_DISPLAY_NAME_GREEDY/scoreboard players display name <targets:score_holder> <objective:word> <display_name:greedy_string[macros]>

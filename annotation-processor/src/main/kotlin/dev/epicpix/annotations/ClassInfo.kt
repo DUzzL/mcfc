@@ -1,10 +1,11 @@
 package dev.epicpix.annotations
 
+import com.google.devtools.ksp.KspExperimental
+import com.google.devtools.ksp.getDeclaredProperties
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
-import com.google.devtools.ksp.symbol.KSType
 import java.lang.classfile.ClassFile
 import java.lang.constant.MethodTypeDesc
 import java.lang.reflect.AccessFlag
@@ -40,149 +41,101 @@ data class ClassInfo(
     val isEnum: Boolean,
 )
 
-private val loadedClasses = mutableMapOf<String, ClassInfo>()
+/** Keyed by display name (`a.b.Outer.Inner`). */
+private val loadedClasses = HashMap<String, ClassInfo>()
+/** Display name -> internal name, including negative results (null). */
+private val internalNameCache = HashMap<String, String?>()
+private val accessibleFieldsCache = HashMap<String, Set<ClassFieldInfo>>()
+private val accessibleMethodsCache = HashMap<String, Set<ClassMethodInfo>>()
+private val lowerBoundsCache = HashMap<String, Set<String>>()
 
-typealias JarInfo = Pair<List<JarFile>, Map<String, Int>>
-private var privateJarInfo: JarInfo? = null
+private class JarEntryRef(val entryName: String, val jar: JarFile)
+
+private var jarFiles: List<JarFile> = emptyList()
+/** Display name -> class file entry; the first jar on the classpath wins, like the JVM. */
+private val jarIndex = HashMap<String, JarEntryRef>()
 private lateinit var privateResolver: Resolver
 
-fun setJarInfo(jarInfo: JarInfo) {
-    privateJarInfo = jarInfo
+fun setJars(jars: List<JarFile>) {
+    jarFiles = jars
+    jarIndex.clear()
+    for(jar in jars) {
+        for(entry in jar.entries()) {
+            val name = entry.name
+            if(entry.isDirectory || !name.endsWith(".class")) continue
+            jarIndex.putIfAbsent(name.substring(0, name.length - 6).replace('/', '.').replace('$', '.'), JarEntryRef(name, jar))
+        }
+    }
+}
+
+/** Closes the jars and drops every cache; called at the end of each processing run. */
+fun closeClassInfo() {
+    jarFiles.forEach { it.close() }
+    jarFiles = emptyList()
+    jarIndex.clear()
+    loadedClasses.clear()
+    internalNameCache.clear()
+    accessibleFieldsCache.clear()
+    accessibleMethodsCache.clear()
+    lowerBoundsCache.clear()
 }
 
 fun setResolver(resolver: Resolver) {
     privateResolver = resolver
 }
 
-private fun fixKotlinDesc(type: KSType): String {
-    return when(val from = type.declaration.qualifiedName!!.asString()) {
-        "kotlin.Double" -> "D"
-        "kotlin.Float" -> "F"
-        "kotlin.Boolean" -> "Z"
-        "kotlin.Unit" -> "V"
-        "kotlin.Int" -> "I"
-        "kotlin.String" -> "Ljava/lang/String;"
-        "kotlin.collections.MutableList" -> "Ljava/util/List;"
-        "kotlin.collections.MutableCollection" -> "Ljava/util/Collection;"
-        "kotlin.collections.MutableSet" -> "Ljava/util/Set;"
-        "kotlin.collections.MutableMap" -> "Ljava/util/Map;"
-        "kotlin.collections.List" -> "Ljava/util/List;"
-        "kotlin.collections.Collection" -> "Ljava/util/Collection;"
-        "kotlin.collections.Set" -> "Ljava/util/Set;"
-        "kotlin.collections.Map" -> "Ljava/util/Map;"
-        "kotlin.collections.Iterable" -> "Ljava/lang/Iterable;"
-        "kotlin.collections.MutableIterable" -> "Ljava/lang/Iterable;"
-        "kotlin.collections.Iterator" -> "Ljava/util/Iterator;"
-        "kotlin.collections.MutableIterator" -> "Ljava/util/Iterator;"
-        "kotlin.Array" -> "[Ljava/lang/Object;"
-        else -> {
-            if(from.startsWith("kotlin.")) throw IllegalArgumentException("Unknown kotlin class: $from")
-            "L${from.replace('.', '/')};"
-        }
+/** JVM binary name (`a/b/Outer$Inner`) of a source/classpath declaration. */
+@OptIn(KspExperimental::class)
+private fun binaryName(decl: KSClassDeclaration): String {
+    val qualified = decl.qualifiedName!!
+    privateResolver.mapKotlinNameToJava(qualified)?.let { return it.asString().replace('.', '/') }
+    val names = ArrayDeque<String>()
+    var current: KSClassDeclaration? = decl
+    while(current != null) {
+        names.addFirst(current.simpleName.asString())
+        current = current.parentDeclaration as? KSClassDeclaration
     }
+    val pkg = decl.packageName.asString()
+    return (if(pkg.isEmpty()) "" else pkg.replace('.', '/') + "/") + names.joinToString("$")
 }
 
 fun displayToInternalClassName(className: String): String? {
     if(className.contains("/")) throw RuntimeException("Expected display class name, but got '$className'")
-    loadedClasses[className]?.also {
-        if(it.name.contains(".")) throw IllegalStateException("Loaded class name is not stored as internal name: ${it.name}")
-        return it.name
-    }
-    val found = privateJarInfo?.second?.entries?.find { (k, _) -> k.replace('/', '.').replace('$', '.') == "$className.class" }
-    if(found != null) {
-        return found.key.substring(0, found.key.length - 6)
-    }
-    runCatching {
-        val clz = Class.forName(className)
-        return clz.descriptorString().let { it.substring(1, it.length - 1) }
-    }
-
-    return privateResolver.getClassDeclarationByName(privateResolver.getKSNameFromString(className))?.qualifiedName?.asString()?.replace('.', '/')
+    if(internalNameCache.containsKey(className)) return internalNameCache[className]
+    val result = loadedClasses[className]?.name
+        ?: jarIndex[className]?.entryName?.let { it.substring(0, it.length - 6) }
+        ?: runCatching { Class.forName(className).descriptorString().let { it.substring(1, it.length - 1) } }.getOrNull()
+        ?: privateResolver.getClassDeclarationByName(privateResolver.getKSNameFromString(className))?.let { binaryName(it) }
+    internalNameCache[className] = result
+    return result
 }
 
 fun loadClassInfo(className: String): ClassInfo {
     if(className.contains(".")) throw RuntimeException("Expected internal class name, but got '$className'")
-    val className = className.replace('/', '.').replace('$', '.')
-    loadedClasses[className]?.also { return it }
-    val found = privateJarInfo?.second?.entries?.find { (k, _) -> k.replace('/', '.').replace('$', '.') == "$className.class" }
-    if(found == null) {
-        runCatching {
-            val clz = Class.forName(className)
-            val clzName = clz.descriptorString().run { substring(1, length - 1) }
-            loadedClasses[className] = ClassInfo(
-                name = clzName,
-                superClass = clz.superclass?.descriptorString()?.run { substring(1, length - 1) },
-                interfaces = clz.interfaces.map { it.descriptorString().run { substring(1, length - 1) } },
-                fields = clz.declaredFields.map { f ->
-                    ClassFieldInfo(owner = clzName, name = f.name, descriptor = f.type.descriptorString(), isPublic = Modifier.isPublic(f.modifiers), isStatic = Modifier.isStatic(f.modifiers), isFinal = Modifier.isFinal(f.modifiers))
-                },
-                methods = clz.declaredMethods.map { f ->
-                    ClassMethodInfo(
-                        owner = clzName,
-                        name = f.name,
-                        descriptor = MethodTypeDesc.ofDescriptor("(${f.parameters.joinToString("") { p -> p.type.descriptorString() }})${f.returnType.descriptorString()}"),
-                        isPublic = Modifier.isPublic(f.modifiers),
-                        isStatic = Modifier.isStatic(f.modifiers),
-                    )
-                } + clz.declaredConstructors.map { f ->
-                    ClassMethodInfo(
-                        owner = clzName,
-                        name = "<init>",
-                        descriptor = MethodTypeDesc.ofDescriptor("(${f.parameters.joinToString("") { p -> p.type.descriptorString() }})V"),
-                        isPublic = Modifier.isPublic(f.modifiers),
-                        isStatic = false,
-                    )
-                },
-                isPublic = Modifier.isPublic(clz.modifiers),
-                isInterface = clz.isInterface,
-                isEnum = clz.isEnum,
-            )
-        }.getOrElse {
-            val classDecl = privateResolver.getClassDeclarationByName(privateResolver.getKSNameFromString(className))
-                ?: throw IllegalArgumentException("Class not found: $className", it)
-            val enumEntries = classDecl.declarations.filterIsInstance<KSClassDeclaration>().filter { decl -> decl.classKind == ClassKind.ENUM_ENTRY }.toList()
-            val methods = classDecl.declarations.filterIsInstance<KSFunctionDeclaration>().toList()
-            loadedClasses[className] = ClassInfo(
-                name = classDecl.qualifiedName!!.asString().replace('.', '/'),
-                superClass = "java/lang/Object",
-                interfaces = listOf(),
-                fields = enumEntries.map { f ->
-                    ClassFieldInfo(
-                        owner = classDecl.qualifiedName!!.asString().replace('.', '/'),
-                        name = f.simpleName.asString(),
-                        descriptor = "L${className.replace('.', '/')};",
-                        isPublic = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.PUBLIC),
-                        isStatic = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.JAVA_STATIC),
-                        isFinal = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.FINAL),
-                    )
-                },
-                methods = methods.map { f ->
-                    ClassMethodInfo(
-                        owner = classDecl.qualifiedName!!.asString().replace('.', '/'),
-                        name = f.simpleName.asString(),
-                        descriptor = MethodTypeDesc.ofDescriptor("(${f.parameters.joinToString("") { p -> fixKotlinDesc(p.type.resolve()) }})${fixKotlinDesc(f.returnType!!.resolve())}"),
-                        isPublic = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.PUBLIC),
-                        isStatic = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.JAVA_STATIC),
-                    )
-                },
-                isPublic = classDecl.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.PUBLIC),
-                isInterface = false,
-                isEnum = classDecl.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.ENUM),
-            )
+    val displayName = className.replace('/', '.').replace('$', '.')
+    loadedClasses[displayName]?.also { return it }
+    val found = jarIndex[displayName]
+    val info = if(found != null) {
+        loadFromClassFile(found)
+    } else {
+        runCatching { loadFromReflection(Class.forName(displayName)) }.getOrElse {
+            val classDecl = privateResolver.getClassDeclarationByName(privateResolver.getKSNameFromString(displayName))
+                ?: throw IllegalArgumentException("Class not found: $displayName", it)
+            loadFromDeclaration(classDecl)
         }
-        return loadedClasses[className]!!
-    }else {
-        val jar = privateJarInfo!!.first[found.value]
-        val foundEntry = jar.getInputStream(jar.getJarEntry(found.key))
-        val cf = ClassFile.of().parse(foundEntry.readAllBytes())
-        foundEntry.close()
-        val name = cf.thisClass().asInternalName()
-        val isPublic = cf.flags().has(AccessFlag.PUBLIC)
-        val isInterface = cf.flags().has(AccessFlag.INTERFACE)
-        val isEnum = cf.flags().has(AccessFlag.ENUM)
-        val superClass = cf.superclass().getOrNull()?.asInternalName()
-        val interfaces = cf.interfaces().map { it.asInternalName() }.toList()
-        val fields = cf.fields().map {
+    }
+    loadedClasses[displayName] = info
+    return info
+}
+
+private fun loadFromClassFile(found: JarEntryRef): ClassInfo {
+    val cf = found.jar.getInputStream(found.jar.getJarEntry(found.entryName)).use { ClassFile.of().parse(it.readAllBytes()) }
+    val name = cf.thisClass().asInternalName()
+    return ClassInfo(
+        name = name,
+        superClass = cf.superclass().getOrNull()?.asInternalName(),
+        interfaces = cf.interfaces().map { it.asInternalName() }.toList(),
+        fields = cf.fields().map {
             ClassFieldInfo(
                 owner = name,
                 name = it.fieldName().stringValue(),
@@ -191,8 +144,8 @@ fun loadClassInfo(className: String): ClassInfo {
                 isStatic = it.flags().has(AccessFlag.STATIC),
                 isFinal = it.flags().has(AccessFlag.FINAL),
             )
-        }.toList()
-        val methods = cf.methods().map {
+        }.toList(),
+        methods = cf.methods().map {
             ClassMethodInfo(
                 owner = name,
                 name = it.methodName().stringValue(),
@@ -200,20 +153,104 @@ fun loadClassInfo(className: String): ClassInfo {
                 isPublic = it.flags().has(AccessFlag.PUBLIC),
                 isStatic = it.flags().has(AccessFlag.STATIC),
             )
-        }.toList()
-        val ci = ClassInfo(
-            name = name,
-            superClass = superClass,
-            interfaces = interfaces,
-            fields = fields,
-            methods = methods,
-            isPublic = isPublic,
-            isInterface = isInterface,
-            isEnum = isEnum,
-        )
-        loadedClasses[className] = ci
-        return ci
+        }.toList(),
+        isPublic = cf.flags().has(AccessFlag.PUBLIC),
+        isInterface = cf.flags().has(AccessFlag.INTERFACE),
+        isEnum = cf.flags().has(AccessFlag.ENUM),
+    )
+}
+
+private fun loadFromReflection(clz: Class<*>): ClassInfo {
+    val clzName = clz.descriptorString().run { substring(1, length - 1) }
+    return ClassInfo(
+        name = clzName,
+        superClass = clz.superclass?.descriptorString()?.run { substring(1, length - 1) },
+        interfaces = clz.interfaces.map { it.descriptorString().run { substring(1, length - 1) } },
+        fields = clz.declaredFields.map { f ->
+            ClassFieldInfo(owner = clzName, name = f.name, descriptor = f.type.descriptorString(), isPublic = Modifier.isPublic(f.modifiers), isStatic = Modifier.isStatic(f.modifiers), isFinal = Modifier.isFinal(f.modifiers))
+        },
+        methods = clz.declaredMethods.map { f ->
+            ClassMethodInfo(
+                owner = clzName,
+                name = f.name,
+                descriptor = MethodTypeDesc.ofDescriptor("(${f.parameterTypes.joinToString("") { p -> p.descriptorString() }})${f.returnType.descriptorString()}"),
+                isPublic = Modifier.isPublic(f.modifiers),
+                isStatic = Modifier.isStatic(f.modifiers),
+            )
+        } + clz.declaredConstructors.map { f ->
+            ClassMethodInfo(
+                owner = clzName,
+                name = "<init>",
+                descriptor = MethodTypeDesc.ofDescriptor("(${f.parameterTypes.joinToString("") { p -> p.descriptorString() }})V"),
+                isPublic = Modifier.isPublic(f.modifiers),
+                isStatic = false,
+            )
+        },
+        isPublic = Modifier.isPublic(clz.modifiers),
+        isInterface = clz.isInterface,
+        isEnum = clz.isEnum,
+    )
+}
+
+/** Source classes of the module being processed: descriptors come from KSP's exact JVM signature mapping. */
+@OptIn(KspExperimental::class)
+private fun loadFromDeclaration(classDecl: KSClassDeclaration): ClassInfo {
+    val name = binaryName(classDecl)
+    val isInterface = classDecl.classKind == ClassKind.INTERFACE || classDecl.classKind == ClassKind.ANNOTATION_CLASS
+    var superClass: String? = if(isInterface) "java/lang/Object" else null
+    val interfaces = mutableListOf<String>()
+    for(superType in classDecl.superTypes) {
+        val decl = superType.resolve().declaration as? KSClassDeclaration ?: continue
+        val superName = binaryName(decl)
+        if(decl.classKind == ClassKind.INTERFACE) {
+            interfaces.add(superName)
+        }else if(superClass == null) {
+            superClass = superName
+        }
     }
+    if(superClass == null && name != "java/lang/Object") superClass = "java/lang/Object"
+    val enumEntries = classDecl.declarations.filterIsInstance<KSClassDeclaration>().filter { decl -> decl.classKind == ClassKind.ENUM_ENTRY }.map { f ->
+        ClassFieldInfo(
+            owner = name,
+            name = f.simpleName.asString(),
+            descriptor = "L$name;",
+            isPublic = true,
+            isStatic = true,
+            isFinal = true,
+        )
+    }
+    val fields = classDecl.getDeclaredProperties().mapNotNull { f ->
+        val descriptor = privateResolver.mapToJvmSignature(f) ?: return@mapNotNull null
+        ClassFieldInfo(
+            owner = name,
+            name = f.simpleName.asString(),
+            descriptor = descriptor,
+            isPublic = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.PUBLIC),
+            isStatic = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.JAVA_STATIC),
+            isFinal = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.FINAL),
+        )
+    }
+    val methods = classDecl.declarations.filterIsInstance<KSFunctionDeclaration>().mapNotNull { f ->
+        val descriptor = privateResolver.mapToJvmSignature(f) ?: return@mapNotNull null
+        val methodName = f.simpleName.asString()
+        ClassMethodInfo(
+            owner = name,
+            name = if(methodName == name.substringAfterLast('/').substringAfterLast('$')) "<init>" else methodName,
+            descriptor = MethodTypeDesc.ofDescriptor(descriptor),
+            isPublic = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.PUBLIC),
+            isStatic = f.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.JAVA_STATIC),
+        )
+    }
+    return ClassInfo(
+        name = name,
+        superClass = superClass,
+        interfaces = interfaces,
+        fields = (enumEntries + fields).toList(),
+        methods = methods.toList(),
+        isPublic = classDecl.modifiers.contains(com.google.devtools.ksp.symbol.Modifier.PUBLIC),
+        isInterface = isInterface,
+        isEnum = classDecl.classKind == ClassKind.ENUM_CLASS,
+    )
 }
 
 fun ClassInfo.checkPublic(): ClassInfo {
@@ -243,23 +280,27 @@ fun ClassMethodInfo.checkPublic(): ClassMethodInfo {
     return this
 }
 
-fun getClassAccessibleFields(className: String): Set<ClassFieldInfo> {
-    val result = mutableSetOf<ClassFieldInfo>()
+/** Members visible on [className]; the first declaration found (superclass, then interfaces, then own) wins per signature. */
+private fun <T> collectAccessible(className: String, cache: HashMap<String, Set<T>>, own: (ClassInfo) -> List<T>, key: (T) -> Pair<String, Any>): Set<T> {
+    cache[className]?.let { return it }
     val clz = loadClassInfo(className)
-    clz.superClass?.also { result.addAll(getClassAccessibleFields(it).filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } }) }
-    clz.interfaces.forEach { result.addAll(getClassAccessibleFields(it).filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } }) }
-    result.addAll(clz.fields.filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } })
+    val seen = HashSet<Pair<String, Any>>()
+    val result = LinkedHashSet<T>()
+    fun addAll(items: Iterable<T>) {
+        for(item in items) if(seen.add(key(item))) result.add(item)
+    }
+    clz.superClass?.also { addAll(collectAccessible(it, cache, own, key)) }
+    clz.interfaces.forEach { addAll(collectAccessible(it, cache, own, key)) }
+    addAll(own(clz))
+    cache[className] = result
     return result
 }
 
-fun getClassAccessibleMethods(className: String): Set<ClassMethodInfo> {
-    val result = mutableSetOf<ClassMethodInfo>()
-    val clz = loadClassInfo(className)
-    clz.superClass?.also { result.addAll(getClassAccessibleMethods(it).filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } }) }
-    clz.interfaces.forEach { result.addAll(getClassAccessibleMethods(it).filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } }) }
-    result.addAll(clz.methods.filter { a -> result.none { b -> a.name == b.name && a.descriptor == b.descriptor } })
-    return result
-}
+fun getClassAccessibleFields(className: String): Set<ClassFieldInfo> =
+    collectAccessible(className, accessibleFieldsCache, { it.fields }, { it.name to it.descriptor })
+
+fun getClassAccessibleMethods(className: String): Set<ClassMethodInfo> =
+    collectAccessible(className, accessibleMethodsCache, { it.methods }, { it.name to it.descriptor })
 
 fun checkClassDistance(from: String, to: String, currentDepth: Int = 0): Int? {
     if(from == to) return currentDepth
@@ -270,10 +311,12 @@ fun checkClassDistance(from: String, to: String, currentDepth: Int = 0): Int? {
 }
 
 fun getClassLowerBounds(className: String): Set<String> {
-    val result = mutableSetOf<String>()
+    lowerBoundsCache[className]?.let { return it }
+    val result = HashSet<String>()
     val clz = loadClassInfo(className)
     result.add(clz.name)
     clz.superClass?.also { result.addAll(getClassLowerBounds(it)) }
     clz.interfaces.forEach { result.addAll(getClassLowerBounds(it)) }
+    lowerBoundsCache[className] = result
     return result
 }

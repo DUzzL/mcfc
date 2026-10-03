@@ -1,17 +1,22 @@
 package dev.epicpix.minecraftfunctioncompiler.mod.emitter;
 
-import dev.epicpix.minecraftfunctioncompiler.CommonConstants;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
+import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterContext;
 import dev.epicpix.minecraftfunctioncompiler.emitter.EmitterInstructions;
 import dev.epicpix.minecraftfunctioncompiler.emitter.InstructionTarget;
+import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeLabel;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeRegister;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeValue;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.JumpCondition;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.il.InstructionTypes2;
-import dev.epicpix.minecraftfunctioncompiler.mod.CompiledCommandResultStore;
+import dev.epicpix.minecraftfunctioncompiler.loader.FrameCost;
+import dev.epicpix.minecraftfunctioncompiler.mod.FunctionCompilerRecursionGuard;
+import dev.epicpix.minecraftfunctioncompiler.mod.VanillaFunctionCall;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.functions.CommandFunction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.ServerFunctionManager;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
@@ -19,19 +24,20 @@ import java.lang.constant.MethodTypeDesc;
 import java.util.List;
 import java.util.Objects;
 
-import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callThreadLocal_get;
-import static dev.epicpix.minecraftfunctioncompiler.emitter.JavaMappedUsageDefinitionsExtensions.callThreadLocal_set;
-import static dev.epicpix.minecraftfunctioncompiler.mod.emitter.MappedUsageDefinitionsExtensions.callCommandSourceStack_withCallback;
-import static dev.epicpix.minecraftfunctioncompiler.mod.emitter.MappedUsageDefinitionsExtensions.callExtensionFunctions_executeFunction;
-import static dev.epicpix.minecraftfunctioncompiler.mod.emitter.MappedUsageDefinitionsExtensions.callServerFunctionManager_execute;
-import static dev.epicpix.minecraftfunctioncompiler.mod.emitter.MappedUsageDefinitionsExtensions.loadCommands_CURRENT_EXECUTION_CONTEXT;
-
 public final class Emitter {
     private Emitter() {}
 
-    private static final InstructionTarget COMMAND_RESULT_STORE_INIT_TARGET = InstructionTarget.FunctionTarget.initFunction(CompiledCommandResultStore.class);
-    private static final InstructionTarget RUN_RESULT_FIELD_READ_TARGET = new InstructionTarget.FieldTarget(CommonConstants.DATA_CLASS, CommonConstants.RUN_RESULT_FIELD, ConstantDescs.CD_long, true, false);
-    private static final InstructionTarget RUN_RESULT_FIELD_WRITE_TARGET = new InstructionTarget.FieldTarget(CommonConstants.DATA_CLASS, CommonConstants.RUN_RESULT_FIELD, ConstantDescs.CD_long, true, true);
+
+    private static final ClassDesc GUARD = FunctionCompilerRecursionGuard.class.describeConstable().orElseThrow();
+    private static final InstructionTarget DEPTH_READ_TARGET = new InstructionTarget.FieldTarget(GUARD, "depth", ConstantDescs.CD_int, true, false);
+    private static final InstructionTarget DEPTH_WRITE_TARGET = new InstructionTarget.FieldTarget(GUARD, "depth", ConstantDescs.CD_int, true, true);
+    private static final ClassDesc CD_COMMAND_SOURCE_STACK = CommandSourceStack.class.describeConstable().orElseThrow();
+    private static final ClassDesc CD_COMPOUND_TAG = CompoundTag.class.describeConstable().orElseThrow();
+    private static final InstructionTarget VANILLA_CALL_TARGET = new InstructionTarget.FunctionTarget(
+        VanillaFunctionCall.class.describeConstable().orElseThrow(), "call",
+        MethodTypeDesc.of(ConstantDescs.CD_long, ServerFunctionManager.class.describeConstable().orElseThrow(),
+            CommandFunction.class.describeConstable().orElseThrow(), CD_COMMAND_SOURCE_STACK, CD_COMPOUND_TAG),
+        true, false, false, true);
 
     public static void registerInstructionEmitters() {
         EmitterInstructions.registerEmitterInstruction(context -> {
@@ -39,40 +45,20 @@ public final class Emitter {
             if(context.instruction().type() == InstructionTypes2.CALL_FUNCTIONS) {
                 var functions = Objects.requireNonNull(context.instruction().<List<DataLocation>>get("functions"));
                 if(!functions.isEmpty()) {
-                    var post = codeWriter.createLabel();
                     for(var func : functions) {
                         var commandSourceStack = context.load("stack");
                         if(context.compiledFunctions().contains(func)) {
-                            var nbtArgs = context.instruction().get("arguments") != null ? codeWriter.castType(context.load("arguments"), CompoundTag.class.describeConstable().orElseThrow()) : new BytecodeValue.NullValue();
-                            var methodType = MethodTypeDesc.of(ConstantDescs.CD_long, CommandSourceStack.class.describeConstable().orElseThrow(), context.fieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND));
-                            ClassDesc targetClass;
-                            String targetMethod;
-                            var resolver = context.resolver();
-                            if(resolver != null) {
-                                var resolved = Objects.requireNonNull(resolver.resolveRun(func));
-                                targetClass = resolved.batchClass();
-                                targetMethod = resolved.methodName();
-                            } else {
-                                targetClass = ClassDesc.ofInternalName(("mcfc/function/" + func.namespace() + "/" + func.path()).replace('.', '$'));
-                                targetMethod = "run";
-                            }
-                            var target = new InstructionTarget.FunctionTarget(targetClass, targetMethod, methodType, true, false, false, true);
-                            codeWriter.writeTarget(target, commandSourceStack, nbtArgs);
+                            var slow = codeWriter.createLabel();
+                            var done = codeWriter.createLabel();
+                            emitGuardedCompiledCall(context, func, commandSourceStack, slow);
+                            codeWriter.jump(done);
+                            codeWriter.label(slow);
+                            emitVanillaCall(context, func, commandSourceStack);
+                            codeWriter.label(done);
                         }else {
-                            var mctxtl = loadCommands_CURRENT_EXECUTION_CONTEXT(codeWriter);
-                            var mctx = callThreadLocal_get(codeWriter, mctxtl);
-                            callThreadLocal_set(codeWriter, mctxtl, new BytecodeValue.NullValue());
-                            var functionManager = context.fieldStorage().loadServerFunctionManager(codeWriter);
-                            var function = context.fieldStorage().loadFunction(codeWriter, func);
-                            if(context.instruction().get("arguments") != null) {
-                                callExtensionFunctions_executeFunction(codeWriter, functionManager, function, commandSourceStack, codeWriter.castType(context.load("arguments"), CompoundTag.class.describeConstable().orElseThrow()));
-                            }else {
-                                callServerFunctionManager_execute(codeWriter, functionManager, function, commandSourceStack);
-                            }
-                            callThreadLocal_set(codeWriter, mctxtl, mctx);
+                            emitVanillaCall(context, func, commandSourceStack);
                         }
                     }
-                    codeWriter.label(post);
                 }
                 return true;
             }
@@ -82,45 +68,21 @@ public final class Emitter {
                     context.store("result", new BytecodeValue.LongValue(1L << 32));
                 }else {
                     var post = codeWriter.createLabel();
-                    codeWriter.writeTarget(RUN_RESULT_FIELD_WRITE_TARGET, new BytecodeValue.LongValue(2L << 32));
                     for(int i = 0; i < functions.size(); i++) {
                         var func = functions.get(i);
                         var commandSourceStack = context.load("stack");
-                        BytecodeRegister returnValue;
                         if(context.compiledFunctions().contains(func)) {
-                            var nbtArgs = context.instruction().get("arguments") != null ? codeWriter.castType(context.load("arguments"), CompoundTag.class.describeConstable().orElseThrow()) : new BytecodeValue.NullValue();
-                            var methodType = MethodTypeDesc.of(ConstantDescs.CD_long, CommandSourceStack.class.describeConstable().orElseThrow(), context.fieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND));
-                            ClassDesc targetClass;
-                            String targetMethod;
-                            var resolver = context.resolver();
-                            if(resolver != null) {
-                                var resolved = Objects.requireNonNull(resolver.resolveRun(func));
-                                targetClass = resolved.batchClass();
-                                targetMethod = resolved.methodName();
-                            } else {
-                                targetClass = ClassDesc.ofInternalName(("mcfc/function/" + func.namespace() + "/" + func.path()).replace('.', '$'));
-                                targetMethod = "run";
-                            }
-                            var target = new InstructionTarget.FunctionTarget(targetClass, targetMethod, methodType, true, false, false, true);
-                            returnValue = codeWriter.writeTarget(target, commandSourceStack, nbtArgs);
+                            var slow = codeWriter.createLabel();
+                            var done = codeWriter.createLabel();
+                            context.store("result", emitGuardedCompiledCall(context, func, commandSourceStack, slow));
+                            codeWriter.jump(done);
+                            codeWriter.label(slow);
+                            context.store("result", emitVanillaCall(context, func, commandSourceStack));
+                            codeWriter.label(done);
                         }else {
-                            var mctxtl = loadCommands_CURRENT_EXECUTION_CONTEXT(codeWriter);
-                            var mctx = callThreadLocal_get(codeWriter, mctxtl);
-                            callThreadLocal_set(codeWriter, mctxtl, new BytecodeValue.NullValue());
-                            var store = codeWriter.newObjectCreate(COMMAND_RESULT_STORE_INIT_TARGET);
-                            commandSourceStack = callCommandSourceStack_withCallback(codeWriter, commandSourceStack, store);
-                            var functionManager = context.fieldStorage().loadServerFunctionManager(codeWriter);
-                            var function = context.fieldStorage().loadFunction(codeWriter, func);
-                            if(context.instruction().get("arguments") != null) {
-                                callExtensionFunctions_executeFunction(codeWriter, functionManager, function, commandSourceStack, codeWriter.castType(context.load("arguments"), CompoundTag.class.describeConstable().orElseThrow()));
-                            }else {
-                                callServerFunctionManager_execute(codeWriter, functionManager, function, commandSourceStack);
-                            }
-                            callThreadLocal_set(codeWriter, mctxtl, mctx);
-                            returnValue = codeWriter.writeTarget(RUN_RESULT_FIELD_READ_TARGET);
+                            context.store("result", emitVanillaCall(context, func, commandSourceStack));
                         }
 
-                        context.store("result", returnValue);
                         if(i + 1 != functions.size()) {
                             var shiftedResult = codeWriter.shiftRight(context.load("result"), new BytecodeValue.IntegerValue(32));
                             var shiftedIntResult = codeWriter.castType(shiftedResult, ConstantDescs.CD_int);
@@ -134,5 +96,54 @@ public final class Emitter {
 
             return false;
         });
+    }
+
+    /**
+     * Direct invokestatic of a compiled callee, charged against {@link FunctionCompilerRecursionGuard} with the
+     * calling function's frame chain ({@link FrameCost#PLACEHOLDER}, patched after stack compilation).
+     * Jumps to {@code atLimit} (the caller emits the vanilla path there) when the depth budget is used up,
+     * so deep datapack recursion continues through vanilla's iterative executor instead of overflowing the
+     * Java stack. The depth is restored from a local on normal return; exceptional exits are restored by the
+     * vanilla->compiled entry point.
+     */
+    private static BytecodeRegister emitGuardedCompiledCall(EmitterContext context, DataLocation func, BytecodeValue commandSourceStack, BytecodeLabel atLimit) {
+        var codeWriter = context.codeWriter();
+        var nbtArgs = context.instruction().get("arguments") != null ? codeWriter.castType(context.load("arguments"), CD_COMPOUND_TAG) : new BytecodeValue.NullValue();
+        var depth = codeWriter.writeTarget(DEPTH_READ_TARGET);
+        codeWriter.conditionalJump(JumpCondition.GE, depth, new BytecodeValue.IntegerValue(FunctionCompilerRecursionGuard.MAX_DEPTH), atLimit);
+        codeWriter.writeTarget(DEPTH_WRITE_TARGET, codeWriter.add(depth, codeWriter.writeTarget(FrameCost.PLACEHOLDER)));
+        var methodType = MethodTypeDesc.of(ConstantDescs.CD_long, CD_COMMAND_SOURCE_STACK, context.fieldStorage().getMap().getValueType(CodeFieldStorageMapKind.NBT_COMPOUND));
+        ClassDesc targetClass;
+        String targetMethod;
+        var resolver = context.resolver();
+        if(resolver != null) {
+            var resolved = Objects.requireNonNull(resolver.resolveRun(func));
+            targetClass = resolved.batchClass();
+            targetMethod = resolved.methodName();
+        } else {
+            targetClass = ClassDesc.ofInternalName(("mcfc/function/" + func.namespace() + "/" + func.path()).replace('.', '$'));
+            targetMethod = "run";
+        }
+        var target = new InstructionTarget.FunctionTarget(targetClass, targetMethod, methodType, true, false, false, true);
+        var result = codeWriter.writeTarget(target, commandSourceStack, nbtArgs);
+        codeWriter.writeTarget(DEPTH_WRITE_TARGET, depth);
+        return result;
+    }
+
+    /**
+     * Runs {@code func} through vanilla ({@link VanillaFunctionCall#call}) and returns its result register. The
+     * calling function's frames are charged to the guard for the duration of the call, since vanilla may re-enter
+     * compiled code on top of them.
+     */
+    private static BytecodeRegister emitVanillaCall(EmitterContext context, DataLocation func, BytecodeValue commandSourceStack) {
+        var codeWriter = context.codeWriter();
+        var nbtArgs = context.instruction().get("arguments") != null ? codeWriter.castType(context.load("arguments"), CD_COMPOUND_TAG) : new BytecodeValue.NullValue();
+        var functionManager = context.fieldStorage().loadServerFunctionManager(codeWriter);
+        var function = context.fieldStorage().loadFunction(codeWriter, func);
+        var depth = codeWriter.writeTarget(DEPTH_READ_TARGET);
+        codeWriter.writeTarget(DEPTH_WRITE_TARGET, codeWriter.add(depth, codeWriter.writeTarget(FrameCost.PLACEHOLDER)));
+        var result = codeWriter.writeTarget(VANILLA_CALL_TARGET, functionManager, function, commandSourceStack, nbtArgs);
+        codeWriter.writeTarget(DEPTH_WRITE_TARGET, depth);
+        return result;
     }
 }

@@ -1,0 +1,26 @@
+; 26.3 slot sources: slot-range names, and inline SNBT that contains spaces and quoted brackets.
+; The multi-entity `from entity` source of `item replace` is 26.3 syntax.
+@setup
+objective create t dummy
+
+@function run
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_items","mcfc_src"],equipment:{mainhand:{id:"minecraft:stone",count:5},head:{id:"minecraft:dirt",count:2}}}
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_items","mcfc_dst"]}
+execute store result score range t if items entity @e[tag=mcfc_src] weapon.mainhand minecraft:stone
+execute store result score inline t if items entity @e[tag=mcfc_src] {type:"minecraft:slot_range", slots:"weapon.mainhand"} minecraft:stone
+execute store result score inline_list t if items entity @e[tag=mcfc_src] {type: "minecraft:group", terms: [{type: "minecraft:slot_range", slots: "armor.head"}, {type: "minecraft:slot_range", slots: "weapon.mainhand"}]} *
+execute store result score quoted_predicate t if items entity @e[tag=mcfc_src] weapon.mainhand *[!minecraft:custom_name="a ]b"]
+execute if items entity @e[tag=mcfc_src] {type:"minecraft:slot_range", slots:"weapon.mainhand"} minecraft:stone run function mcfc-test:mark_inline_run
+item replace entity @e[tag=mcfc_dst] weapon.mainhand from entity @e[tag=mcfc_items] {type:"minecraft:slot_range", slots:"weapon.mainhand"}
+execute store result score copied t if items entity @e[tag=mcfc_dst] weapon.mainhand minecraft:stone
+
+@function mark_inline_run
+scoreboard players set inline_run t 1
+
+@validate
+score range t is 5
+score inline t is 5
+score inline_list t is 7
+score quoted_predicate t is 5
+score inline_run t is 1
+score copied t is 5

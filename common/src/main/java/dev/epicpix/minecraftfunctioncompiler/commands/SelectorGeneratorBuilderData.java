@@ -19,6 +19,13 @@ import java.util.List;
 import java.util.Map;
 
 public class SelectorGeneratorBuilderData {
+    // Parse-time state mirroring vanilla EntitySelectorParser (not part of the built selector).
+    boolean includesEntities = true;
+    boolean typeLimited = false;
+    boolean typeLimitedInversely = false;
+    boolean positiveTypeTag = false;
+    boolean limitSet = false;
+    boolean sortSet = false;
     public boolean self = false;
     public @Nullable NegatableData<List<DataLocation>> entityTypes = null;
     public boolean requireAlive = false;
@@ -30,6 +37,7 @@ public class SelectorGeneratorBuilderData {
     public @Nullable Boolean hasTeam = null;
     public @Nullable Integer limit = null;
     public final HashMap<String, IntRangeArgument> scores = new HashMap<>();
+    public boolean scoresSet = false;
     public final ArrayList<NegatableData<Gamemode>> gamemodes = new ArrayList<>();
     public @Nullable DoubleRangeArgument distance = null;
     public @Nullable IntRangeArgument level = null;

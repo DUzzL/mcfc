@@ -30,6 +30,7 @@ public final class DiagnosticIds {
     public static final String COMMAND_INVALID_SCORE_ACCESSOR = "command.error.invalid.score_accessor";
     public static final String COMMAND_INVALID_JSON = "command.error.invalid.json";
     public static final String COMMAND_INVALID_NBT_DATA_LOCATION = "command.error.invalid.nbt_data_location";
+    public static final String COMMAND_INVALID_SLOT_SOURCE = "command.error.invalid.slot_source";
 
     public static final String COMMAND_UNSUPPORTED_MACRO_LOCATION = "command.error.macro.unsupported";
     public static final String COMMAND_EXPECTED_MACRO = "command.error.macro.expected";

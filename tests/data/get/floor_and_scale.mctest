@@ -1,0 +1,18 @@
+; RT-06 / C5: `data get` floors (not truncates) numbers; the scaled form only accepts numeric tags.
+@setup
+objective create t dummy
+
+@function run
+summon minecraft:armor_stand ~ ~10 ~ {NoGravity:1b,Tags:["mcfc_dg"],Rotation:[-45.7f,12.5f]}
+execute store result score rot t run data get entity @e[tag=mcfc_dg,limit=1] Rotation[0]
+execute store result score rot_scaled t run data get entity @e[tag=mcfc_dg,limit=1] Rotation[0] 10
+execute store result score pitch t run data get entity @e[tag=mcfc_dg,limit=1] Rotation[1]
+execute store result score tags_size t run data get entity @e[tag=mcfc_dg,limit=1] Tags
+execute store success score tags_scaled t run data get entity @e[tag=mcfc_dg,limit=1] Tags 1
+
+@validate
+score rot t is -46
+score rot_scaled t is -458
+score pitch t is 12
+score tags_size t is 1
+score tags_scaled t is 0

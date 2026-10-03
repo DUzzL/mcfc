@@ -1,0 +1,16 @@
+; A `return` in the body of an execute whose condition is evaluated through vanilla must return from the
+; function (it used to be sent inside the fallback string and swallowed).
+@setup
+objective create t dummy
+
+@function run
+setblock ~ 100 ~ minecraft:chest{Items:[{Slot:0b,id:"minecraft:stone",count:1}]}
+execute store result score ret t run function mcfc-test:early
+setblock ~ 100 ~ minecraft:air
+
+@function early
+execute if data block ~ 100 ~ Items[0] run return 7
+return 3
+
+@validate
+score ret t is 7

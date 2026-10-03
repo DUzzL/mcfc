@@ -1,0 +1,19 @@
+; W2 ReviewRuntime[3]: `schedule function … 0t` throws ERROR_SAME_TICK in vanilla before touching the
+; schedule: no extra entry with append, no removal with replace.
+@setup
+objective create t dummy
+
+@function run
+schedule function mcfc-test:target 100t
+schedule function mcfc-test:target 0t append
+execute store result score append_cleared t run schedule clear mcfc-test:target
+schedule function mcfc-test:target 100t
+schedule function mcfc-test:target 0t replace
+execute store result score replace_cleared t run schedule clear mcfc-test:target
+
+@function target
+scoreboard players add ran t 1
+
+@validate
+score append_cleared t is 1
+score replace_cleared t is 1

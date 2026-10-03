@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 
 import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.ENABLE_REPORTING;
 
@@ -22,9 +23,13 @@ public final class GlobalConfig {
 
     private static final int CONFIG_VERSION = 2;
 
-
     public static boolean enableReporting = ENABLE_REPORTING;
     public static boolean profilerCollectMemoryUsage = true;
+    /**
+     * Parallel datapack execution is not supported: it is hard-disabled regardless of the config file
+     * (a set "enable_parallel_datapacks" key only produces a warning).
+     */
+    public static final boolean enableParallelDatapacks = false;
 
     public static void loadAndSaveConfig(Path path) {
         var loadResult = loadConfig(path);
@@ -35,8 +40,11 @@ public final class GlobalConfig {
     }
 
     public enum ConfigLoadResult {
+        /** Current version with every key present. */
         LOADED_NEWEST,
+        /** Loaded, but written by an older version or missing keys; should be re-saved. */
         LOADED_OLD,
+        /** No usable file (missing, or unreadable and moved aside); defaults are in effect. */
         NOT_LOADED,
     }
 
@@ -47,40 +55,42 @@ public final class GlobalConfig {
     }
 
     public static ConfigLoadResult loadConfig(Path path) {
-        if(Files.exists(path)) {
-            try {
-                var content = GSON.fromJson(Files.readString(path), JsonObject.class);
-                var version = content.get("version").getAsInt();
-                if(version == 1) {
-                    enableReporting = getOrDefault(content, "enable_reporting", ENABLE_REPORTING);
-                    profilerCollectMemoryUsage = true;
-                    if(enableReporting) {
-                        if(!ENABLE_REPORTING) {
-                            LOGGER.warn("This version was not compiled with telemetry reporting, \"enable_reporting\" config option ignored");
-                            enableReporting = false;
-                        }
-                    }
-                    FunctionCompilerReporter.setReportingEnabled(enableReporting);
-                    return ConfigLoadResult.LOADED_OLD;
-                }else if(version == CONFIG_VERSION) {
-                    enableReporting = getOrDefault(content, "enable_reporting", ENABLE_REPORTING);
-                    profilerCollectMemoryUsage = getOrDefault(content, "profiler_collect_memory_usage", true);
-                    if(enableReporting) {
-                        if(!ENABLE_REPORTING) {
-                            LOGGER.warn("This version was not compiled with telemetry reporting, \"enable_reporting\" config option ignored");
-                            enableReporting = false;
-                        }
-                    }
-                    FunctionCompilerReporter.setReportingEnabled(enableReporting);
-                    return ConfigLoadResult.LOADED_NEWEST;
-                }else {
-                    throw new IllegalArgumentException("Invalid config version: " + version);
-                }
-            } catch(Exception e) {
-                LOGGER.error("Failed to load config", e);
+        if(!Files.exists(path)) return ConfigLoadResult.NOT_LOADED;
+        // Parse everything into locals first so a malformed file leaves the current settings untouched.
+        boolean reporting;
+        boolean memoryUsage;
+        boolean complete;
+        int version;
+        try {
+            var content = GSON.fromJson(Files.readString(path), JsonObject.class);
+            if(content == null || !content.has("version")) throw new IllegalArgumentException("Missing \"version\"");
+            version = content.get("version").getAsInt();
+            if(version != 1 && version != CONFIG_VERSION) throw new IllegalArgumentException("Invalid config version: " + version);
+            reporting = getOrDefault(content, "enable_reporting", ENABLE_REPORTING);
+            memoryUsage = version == 1 || getOrDefault(content, "profiler_collect_memory_usage", true);
+            complete = content.has("enable_reporting") && content.has("profiler_collect_memory_usage");
+            if(getOrDefault(content, "enable_parallel_datapacks", false)) {
+                LOGGER.warn("\"enable_parallel_datapacks\" is not supported and is ignored; functions always run serially");
             }
+        } catch(Exception e) {
+            var backup = path.resolveSibling(path.getFileName() + ".bak");
+            LOGGER.error("Failed to load config {}, moving it to {} and using defaults", path, backup, e);
+            try {
+                Files.move(path, backup, StandardCopyOption.REPLACE_EXISTING);
+            } catch(Exception moveError) {
+                LOGGER.error("Failed to move unreadable config {} aside", path, moveError);
+            }
+            return ConfigLoadResult.NOT_LOADED;
         }
-        return ConfigLoadResult.NOT_LOADED;
+
+        if(reporting && !ENABLE_REPORTING) {
+            LOGGER.warn("This version was not compiled with telemetry reporting, \"enable_reporting\" config option ignored");
+            reporting = false;
+        }
+        enableReporting = reporting;
+        profilerCollectMemoryUsage = memoryUsage;
+        FunctionCompilerReporter.setReportingEnabled(enableReporting);
+        return version == CONFIG_VERSION && complete ? ConfigLoadResult.LOADED_NEWEST : ConfigLoadResult.LOADED_OLD;
     }
 
     public static void saveConfig(Path path) {

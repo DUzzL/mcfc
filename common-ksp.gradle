@@ -5,14 +5,6 @@ dependencies {
     ksp project(":annotation-processor")
 }
 
-project.ext.isJarTask = false
-
-gradle.taskGraph.whenReady { taskExecutionGraph ->
-    ksp {
-        arg("isJarTask", taskExecutionGraph.hasTask(':jar').toString())
-    }
-}
-
 ksp {
     if(project.name.startsWith("mc-")) {
         arg("project", "minecraft")
@@ -28,7 +20,7 @@ ksp {
     }
     arg("version", project.mod_version)
     if("true" == System.getenv("CI")) {
-        arg("commit", System.getenv("CI_COMMIT_SHA"))
+        arg("commit", System.getenv("CI_COMMIT_SHA") ?: "development")
     }else {
         arg("commit", "development")
     }

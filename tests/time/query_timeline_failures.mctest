@@ -1,0 +1,20 @@
+; W2 ReviewRuntime[2]: `time query <timeline>` fails without a default clock (nether) like `time query time`;
+; `time resume`/`time rate` on an unchanged clock fail; results are wired to store.
+@setup
+objective create t dummy
+
+@function run
+execute in minecraft:the_nether store success score nether_ticks t run time query minecraft:day
+execute in minecraft:the_nether store result score nether_ticks_r t run time query minecraft:day
+execute in minecraft:the_nether store success score nether_reps t run time query minecraft:day repetition
+execute in minecraft:overworld store success score ow_ticks t run time query minecraft:day
+execute in minecraft:the_nether store success score nether_set t run time add 0
+execute in minecraft:the_nether store success score nether_rate t run time rate 1
+
+@validate
+score nether_ticks t is 0
+score nether_ticks_r t is 0
+score nether_reps t is 0
+score ow_ticks t is 1
+score nether_set t is 0
+score nether_rate t is 0

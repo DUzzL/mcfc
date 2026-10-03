@@ -1,14 +1,14 @@
 plugins {
-    id 'net.fabricmc.fabric-loom' version '1.15.3'
+    id 'net.fabricmc.fabric-loom' version '1.17.21'
     id 'maven-publish'
     id 'org.jetbrains.kotlin.jvm' version '2.3.0'
     id 'com.google.devtools.ksp' version "2.3.4"
 }
 
 ext {
-    minecraft_version = "26.1"
-    loader_version = "0.18.4"
-    fabric_api_version = "0.144.3+26.1"
+    minecraft_version = "26.3"
+    loader_version = "0.19.5"
+    fabric_api_version = "0.161.0+26.3"
     java_version = 25
 }
 

@@ -1,7 +1,5 @@
 classTweaker v1 official
 
-inject-interface net/minecraft/server/ServerFunctionLibrary dev/epicpix/minecraftfunctioncompiler/loader/FunctionCompilerClassLoader$SourceFileProvider
-
 accessible field net/minecraft/world/scores/Scoreboard playerScores Ljava/util/Map;
 accessible class net/minecraft/world/scores/PlayerScores
 accessible field net/minecraft/commands/arguments/ScoreHolderArgument$SelectorResult selector Lnet/minecraft/commands/arguments/selector/EntitySelector;
@@ -21,8 +19,10 @@ accessible method net/minecraft/network/chat/Style <init> (Lnet/minecraft/networ
 accessible field net/minecraft/commands/Commands CURRENT_EXECUTION_CONTEXT Ljava/lang/ThreadLocal;
 accessible method net/minecraft/server/commands/TimeCommand wrapTime (J)I
 
-# ExtensionFunctions.getEntitiesInside
+# EntitySelection (entity selector candidates)
 accessible field net/minecraft/server/level/ServerLevel entityManager Lnet/minecraft/world/level/entity/PersistentEntitySectionManager;
 accessible field net/minecraft/world/level/entity/PersistentEntitySectionManager sectionStorage Lnet/minecraft/world/level/entity/EntitySectionStorage;
 accessible field net/minecraft/world/level/entity/EntitySectionStorage sectionIds Lit/unimi/dsi/fastutil/longs/LongSortedSet;
 accessible field net/minecraft/world/level/entity/EntitySection storage Lnet/minecraft/util/ClassInstanceMultiMap;
+accessible field net/minecraft/util/ClassInstanceMultiMap allInstances Ljava/util/List;
+accessible field net/minecraft/world/level/entity/PersistentEntitySectionManager visibleEntityStorage Lnet/minecraft/world/level/entity/EntityLookup;

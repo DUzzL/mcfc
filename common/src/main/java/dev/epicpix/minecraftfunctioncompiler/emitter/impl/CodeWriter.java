@@ -163,6 +163,10 @@ public final class CodeWriter {
         instructions.add(new BytecodeInstruction.SetArrayValue(array, index, value));
     }
 
+    public int size() {
+        return instructions.size();
+    }
+
     public List<BytecodeInstruction> getInstructions() {
         return List.copyOf(instructions);
     }

@@ -1,3 +1,3 @@
 package dev.epicpix.minecraftfunctioncompiler.il.locations;
 
-public interface TScoreAccess {}
+public interface TScore {}

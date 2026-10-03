@@ -1,5 +1,8 @@
 package dev.epicpix.minecraftfunctioncompiler.mod.mixin;
 
+import dev.epicpix.minecraftfunctioncompiler.mod.CompiledDispatchCache;
+import dev.epicpix.minecraftfunctioncompiler.mod.FunctionCompilerRecursionGuard;
+import dev.epicpix.minecraftfunctioncompiler.mod.FunctionDebugLogger;
 import net.minecraft.commands.CommandResultCallback;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.ExecutionCommandSource;
@@ -14,9 +17,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import dev.epicpix.minecraftfunctioncompiler.mod.FunctionCompilerRecursionGuard;
-import dev.epicpix.minecraftfunctioncompiler.mod.FunctionDebugLogger;
-
 import static dev.epicpix.minecraftfunctioncompiler.mod.FunctionCompilerMain.functionClassLoader;
 
 @Mixin(value = CallFunction.class, priority = 990)
@@ -28,18 +28,13 @@ public class CallFunctionMixin<T extends ExecutionCommandSource<T>> {
 
     @Inject(method = "execute(Lnet/minecraft/commands/ExecutionCommandSource;Lnet/minecraft/commands/execution/ExecutionContext;Lnet/minecraft/commands/execution/Frame;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/commands/execution/ExecutionContext;incrementCost()V", shift = At.Shift.AFTER), cancellable = true)
     public void execute(T source, ExecutionContext<T> executionContext, Frame frame, CallbackInfo ci) {
-        if(source instanceof CommandSourceStack stack && functionClassLoader != null && functionClassLoader.isUseReady()) {
-            var id = ((CallFunction<?>) (Object) this).function.id();
-            if(functionClassLoader.hasFunctionLoaded(id) && !FunctionCompilerRecursionGuard.atLimit()) {
-                FunctionDebugLogger.setMcfcState(true);
-                FunctionDebugLogger.recordCompiledCall(id);
-                long res;
-                FunctionCompilerRecursionGuard.enter();
-                try {
-                    res = functionClassLoader.runFunction(id, stack, null);
-                } finally {
-                    FunctionCompilerRecursionGuard.exit();
-                }
+        var loader = functionClassLoader;
+        if(loader != null && source instanceof CommandSourceStack stack && function instanceof CompiledDispatchCache cache && loader.isUseReady()) {
+            var entry = cache.mcfc$entry(loader);
+            var compiled = entry.function;
+            if(compiled != null && !FunctionCompilerRecursionGuard.atLimit()) {
+                if(FunctionDebugLogger.enabled) FunctionDebugLogger.recordCompiledCall(function.id());
+                long res = loader.invoke(entry, compiled, stack, null);
                 if(res >> 32 < 2) {
                     if (res >> 32 == 1) resultCallback.onFailure();
                     else resultCallback.onSuccess((int) res);
@@ -50,8 +45,8 @@ public class CallFunctionMixin<T extends ExecutionCommandSource<T>> {
                 return;
             }
         }
-        if(source instanceof CommandSourceStack) {
-            FunctionDebugLogger.recordCall(((CallFunction<?>) (Object) this).function.id(), true);
+        if(FunctionDebugLogger.enabled && source instanceof CommandSourceStack) {
+            FunctionDebugLogger.recordCall(function.id(), true);
         }
     }
 

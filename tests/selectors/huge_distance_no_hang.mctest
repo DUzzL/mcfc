@@ -1,0 +1,15 @@
+; W2 ReviewRuntime[0]: a huge `distance=..R` box overflowed the section-count estimate (long product went
+; negative), so the selection probed every section position and hung the server. Larger radii
+; throw in vanilla too (SectionPos range), which the differential run compares.
+@setup
+objective create t dummy
+
+@function run
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_huge_d"]}
+execute store result score a t if entity @e[tag=mcfc_huge_d,distance=..17000000]
+execute store result score b t if entity @e[tag=mcfc_huge_d,distance=..30000000]
+execute store result score c t if entity @e[tag=mcfc_huge_d,distance=..99999999]
+kill @e[tag=mcfc_huge_d]
+
+@validate
+score a t is 1

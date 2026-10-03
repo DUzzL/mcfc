@@ -1,0 +1,23 @@
+; Deferred RT-45: a score text whose selector matches more than one entity throws
+; ERROR_NOT_SINGLE_ENTITY in vanilla, so the command using the text (here `team add`) does nothing.
+@setup
+objective create t dummy
+
+@function run
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_st"]}
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_st"]}
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_st_probe"]}
+team add mcfc_st_team {"score":{"name":"@e[tag=mcfc_st]","objective":"t"}}
+team add mcfc_st_one {"score":{"name":"@e[tag=mcfc_st,limit=1]","objective":"t"}}
+execute as @e[tag=mcfc_st_probe] run team join mcfc_st_team
+execute store result score joined t if entity @e[tag=mcfc_st_probe,team=mcfc_st_team]
+execute as @e[tag=mcfc_st_probe] run team join mcfc_st_one
+execute store result score joined_one t if entity @e[tag=mcfc_st_probe,team=mcfc_st_one]
+team remove mcfc_st_team
+team remove mcfc_st_one
+kill @e[tag=mcfc_st]
+kill @e[tag=mcfc_st_probe]
+
+@validate
+score joined t is 0
+score joined_one t is 1

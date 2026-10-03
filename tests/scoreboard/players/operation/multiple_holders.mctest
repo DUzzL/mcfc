@@ -1,0 +1,26 @@
+; C19: sources are resolved once, every source is applied to each target in turn, and the result is the
+; sum of the targets' final values. Scoreboard commands return vanilla totals (set: value x targets,
+; add/remove: sum of new values).
+@setup
+objective create t dummy
+
+@function run
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_op_src"]}
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_op_src"]}
+execute store result score set_result t run scoreboard players set @e[tag=mcfc_op_src] t 3
+scoreboard players set #acc t 1
+execute store result score op_result t run scoreboard players operation #acc t += @e[tag=mcfc_op_src] t
+execute store result score add_result t run scoreboard players add @e[tag=mcfc_op_src] t 2
+execute store result score remove_result t run scoreboard players remove @e[tag=mcfc_op_src] t 1
+scoreboard players set #t1 t 10
+scoreboard players set #t2 t 20
+execute store result score multi_result t run scoreboard players operation * t < #t1 t
+kill @e[tag=mcfc_op_src]
+
+@validate
+score set_result t is 6
+score #acc t is 7
+score op_result t is 7
+score add_result t is 10
+score remove_result t is 8
+score #t2 t is 10

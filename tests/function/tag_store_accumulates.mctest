@@ -1,0 +1,50 @@
+; C23: `execute store … run function #tag` runs every function of the tag and stores the sum of the results
+; (vanilla FunctionCommand Accumulator; tags are sets, so the functions must be distinct); `return run function #tag` stops at the first returning function.
+@setup
+objective create t dummy
+
+@file mcfc-test:tags/function/sum.json
+{"values":["mcfc-test:two","mcfc-test:none","mcfc-test:five"]}
+
+@file mcfc-test:tags/function/fails.json
+{"values":["mcfc-test:fail","mcfc-test:fail2"]}
+
+@file mcfc-test:tags/function/voids.json
+{"values":["mcfc-test:none","mcfc-test:none2"]}
+
+@function run
+scoreboard players set #calls t 0
+execute store result score sum t run function #mcfc-test:sum
+execute store success score fails t run function #mcfc-test:fails
+scoreboard players set voids t 42
+execute store result score voids t run function #mcfc-test:voids
+execute store result score ret t run function mcfc-test:ret
+
+@function ret
+return run function #mcfc-test:sum
+
+@function two
+return 2
+
+@function five
+scoreboard players add #calls t 100
+return 5
+
+@function none
+scoreboard players add #calls t 1
+
+@function fail
+return fail
+
+@function fail2
+return fail
+
+@function none2
+scoreboard players add #calls t 1
+
+@validate
+score sum t is 7
+score fails t is 1
+score voids t is 42
+score ret t is 2
+score #calls t is 103

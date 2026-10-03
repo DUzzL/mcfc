@@ -93,6 +93,11 @@ fun parseTest(test: TestInfo): ParsedTest {
                 val context = FileTestContext(location)
                 currentContext = context
                 contexts.add(context)
+            }else if(parts[0] == "file") {
+                // raw datapack resource, e.g. `@file mcfc-test:tags/function/all.json`
+                val context = FileTestContext(parts[1])
+                currentContext = context
+                contexts.add(context)
             }else {
                 throw IllegalArgumentException("invalid compiler instruction \"${line}\", during parsing test ${test.id}")
             }

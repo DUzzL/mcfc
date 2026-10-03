@@ -27,11 +27,5 @@ public interface FunctionResolver {
      */
     @Nullable ResolvedTarget resolveRun(DataLocation function);
 
-    /**
-     * Resolve the `runInstanced` entry point of a macro function.
-     * @return null if the function has no macros or was not compiled.
-     */
-    @Nullable ResolvedTarget resolveRunInstanced(DataLocation function);
-
     record ResolvedTarget(ClassDesc batchClass, String methodName) {}
 }

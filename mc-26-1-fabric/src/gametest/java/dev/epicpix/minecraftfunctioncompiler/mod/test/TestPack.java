@@ -3,6 +3,7 @@ package dev.epicpix.minecraftfunctioncompiler.mod.test;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.PackLocationInfo;
+import net.minecraft.server.packs.PackMetadataResources;
 import net.minecraft.server.packs.PackResources;
 import net.minecraft.server.packs.PackSelectionConfig;
 import net.minecraft.server.packs.PackType;
@@ -22,6 +23,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 public class TestPack extends Pack {
     public TestPack() {
@@ -38,13 +40,13 @@ public class TestPack extends Pack {
         @Nullable private TestPack pack;
 
         @Override
-        public PackResources openPrimary(PackLocationInfo location) {
+        public PackMetadataResources openMetadata(PackLocationInfo location) {
             return new TestPackResources(Objects.requireNonNull(pack));
         }
 
         @Override
-        public PackResources openFull(PackLocationInfo location, Metadata metadata) {
-            return openPrimary(location);
+        public Stream<PackResources> openResources(PackLocationInfo location, Metadata metadata) {
+            return Stream.of(new TestPackResources(Objects.requireNonNull(pack)));
         }
 
         public void setPack(TestPack pack) {
@@ -67,6 +69,13 @@ public class TestPack extends Pack {
 
         @Override
         public @Nullable IoSupplier<InputStream> getResource(PackType type, Identifier location) {
+            if(type == PackType.SERVER_DATA && McfcTestHelper.currentTest != null) {
+                for(var file : McfcTestHelper.currentTest.files()) {
+                    if(file.location().namespace().equals(location.getNamespace()) && file.location().path().equals(location.getPath())) {
+                        return () -> new ByteArrayInputStream(file.content().getBytes(StandardCharsets.UTF_8));
+                    }
+                }
+            }
             return null;
         }
 

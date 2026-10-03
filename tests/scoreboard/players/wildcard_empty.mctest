@@ -1,0 +1,34 @@
+; ReviewCompiler[3]: `*` with no tracked score holders fails like NO_ENTITIES_FOUND (store success 0,
+; `return run` fails) instead of succeeding with 0. A single-holder argument (`scoreboard players get`,
+; `if score`) never resolves `*` (ScoreHolderArgument.getName passes an empty wildcard supplier).
+; Results go to storage first: storing into a score would itself create a tracked holder.
+@setup
+objective create t dummy
+
+@function wild_return
+return run scoreboard players add * t 1
+
+@function run
+execute store success storage mcfc:wild set int 1 run scoreboard players set * t 1
+execute store success storage mcfc:wild ret int 1 run function mcfc-test:wild_return
+execute store success storage mcfc:wild reset int 1 run scoreboard players reset * t
+scoreboard players set #h t 5
+execute store success storage mcfc:wild get int 1 run scoreboard players get * t
+data modify storage mcfc:wild if_ran set value 0
+execute if score * t matches 5 run data modify storage mcfc:wild if_ran set value 1
+execute store success storage mcfc:wild add int 1 run scoreboard players add * t 1
+execute store result score set t run data get storage mcfc:wild set
+execute store result score ret t run data get storage mcfc:wild ret
+execute store result score reset t run data get storage mcfc:wild reset
+execute store result score get t run data get storage mcfc:wild get
+execute store result score add t run data get storage mcfc:wild add
+execute store result score if_ran t run data get storage mcfc:wild if_ran
+
+@validate
+score set t is 0
+score ret t is 0
+score reset t is 0
+score get t is 0
+score if_ran t is 0
+score add t is 1
+score #h t is 6
