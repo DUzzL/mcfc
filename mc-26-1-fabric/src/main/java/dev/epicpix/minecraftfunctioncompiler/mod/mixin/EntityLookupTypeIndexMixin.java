@@ -58,8 +58,12 @@ public abstract class EntityLookupTypeIndexMixin<T extends EntityAccess> impleme
         }
     }
 
+    /** A snapshot: other threads may add/remove entities while the caller iterates. */
     @Override
     public @Nullable ObjectLinkedOpenHashSet<Entity> mcfc$entitiesOfType(EntityType<?> type) {
-        return this.mcfc$byType.get(type);
+        synchronized(this.mcfc$byType) {
+            var set = this.mcfc$byType.get(type);
+            return set == null ? null : new ObjectLinkedOpenHashSet<>(set);
+        }
     }
 }
