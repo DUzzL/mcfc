@@ -1,0 +1,21 @@
+; `@e[type=X]` reads the per-type entity index: summoned entities are found at once and killed ones are gone,
+; also while EntityLookup.add/remove are replaced by another mod (the gametest mixin ReplacedEntityLookupMixin).
+@setup
+objective create t dummy
+
+@function run
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_ti","mcfc_ti_a"]}
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_ti"]}
+summon minecraft:marker ~ ~ ~ {Tags:["mcfc_ti"]}
+execute store result score added t if entity @e[type=minecraft:marker,tag=mcfc_ti]
+execute as @e[type=minecraft:marker,tag=mcfc_ti] run scoreboard players add visited t 1
+kill @e[type=minecraft:marker,tag=mcfc_ti_a]
+execute store result score after_kill t if entity @e[type=minecraft:marker,tag=mcfc_ti]
+kill @e[type=minecraft:marker,tag=mcfc_ti]
+execute store result score cleared t if entity @e[type=minecraft:marker,tag=mcfc_ti]
+
+@validate
+score added t is 3
+score visited t is 3
+score after_kill t is 2
+score cleared t is 0

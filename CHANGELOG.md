@@ -1,3 +1,16 @@
+# 0.4.0-alpha.2
+
+Fixes bugs:
+- With a mod that replaces `EntityLookup.add`/`remove` (Fabrolia cancels both at HEAD with its concurrent lookup), the per-type entity index stayed empty and kept killed entities: compiled `@e[type=…]` selectors found no entities (BlazeandCave checks, `execute as @e[type=…]`, `if entity`). The index now wraps both methods and re-checks the lookup afterwards, so it follows `byId` whatever implementation runs inside.
+- `@e[type=…]` no longer copies the whole per-type entity set on every evaluation; the index hands out one array snapshot per type, rebuilt only after an entity of that type was added or removed.
+
+Removed:
+- The hard-disabled parallel datapack mode (`parallelFanout`, its `ForkJoinPool`, the mutation buffer, `ParallelSafetyAnalyzer`, the `PARALLEL_RUN_FUNCTION_AT_SELF` instruction and its design note). It could never run (`enable_parallel_datapacks` is ignored), and buffered mutations from pool threads do not fit server mods that tie entities to owning threads.
+
+## Details
+- **Released:** In Development
+- **Supported Versions:** Minecraft 26.3
+
 # 0.4.0-alpha.1
 
 Updates to Minecraft 26.3 (Fabric Loader 0.19.5, Fabric API 0.161.0+26.3).

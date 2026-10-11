@@ -1,5 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.mod;
 
+import it.unimi.dsi.fastutil.objects.ObjectIterators;
 import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
@@ -33,10 +34,10 @@ public final class EntitySelection {
         return level.getAllEntities().iterator();
     }
 
-    /** {@code @e[type=X]}: the entities of exactly type X from the level's EntityLookup, same relative order as {@link #all}. */
+    /** {@code @e[type=X]}: the entities of exactly type X from the level's EntityLookup, in the order they entered it. */
     public static Iterator<Entity> ofType(ServerLevel level, EntityType<?> type) {
-        var set = ((EntityTypeIndex) (Object) level.entityManager.visibleEntityStorage).mcfc$entitiesOfType(type);
-        return set == null || set.isEmpty() ? Collections.emptyIterator() : set.iterator();
+        var entities = ((EntityTypeIndex) (Object) level.entityManager.visibleEntityStorage).mcfc$entitiesOfType(type);
+        return entities == null ? Collections.emptyIterator() : ObjectIterators.wrap(entities);
     }
 
     /**
