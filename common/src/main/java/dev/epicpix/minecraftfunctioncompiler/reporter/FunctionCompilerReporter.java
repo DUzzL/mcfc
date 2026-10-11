@@ -47,15 +47,22 @@ public final class FunctionCompilerReporter {
     private static final UUID runUuid = UUID.randomUUID();
     private static final URI REPORT_URI = URI.create("https://mcfc.mods.epicpix.dev/api/v1/send_reports");
     private static final java.time.Duration HTTP_TIMEOUT = java.time.Duration.ofSeconds(10);
-    private static final java.util.concurrent.ExecutorService SENDER = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
-        var t = new Thread(r, "Function Compiler Data Reporter");
-        t.setDaemon(true);
-        return t;
-    });
-    // SENDER only serializes submissions. It must not also be the client's executor: the synchronous send()
-    // below runs on SENDER and waits for exchange stages the client schedules on its executor, which would
-    // deadlock the single thread. The default executor uses its own daemon threads.
-    private static final HttpClient httpClient = HttpClient.newBuilder().connectTimeout(HTTP_TIMEOUT).build();
+
+    /**
+     * Created on the first report only: building an HttpClient starts its selector thread, which a server
+     * that never reports (the default build, or reporting disabled) must not carry.
+     */
+    private static final class Transport {
+        static final java.util.concurrent.ExecutorService SENDER = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+            var t = new Thread(r, "Function Compiler Data Reporter");
+            t.setDaemon(true);
+            return t;
+        });
+        // SENDER only serializes submissions. It must not also be the client's executor: the synchronous send()
+        // below runs on SENDER and waits for exchange stages the client schedules on its executor, which would
+        // deadlock the single thread. The default executor uses its own daemon threads.
+        static final HttpClient HTTP_CLIENT = HttpClient.newBuilder().connectTimeout(HTTP_TIMEOUT).build();
+    }
 
     @Nullable
     private static String minecraftVersionName = null;
@@ -213,9 +220,9 @@ public final class FunctionCompilerReporter {
         for(JsonObject report; (report = reportQueue.poll()) != null; ) sendData.add(report);
         if(sendData.isEmpty()) return;
 
-        SENDER.execute(() -> {
+        Transport.SENDER.execute(() -> {
             try {
-                var response = httpClient.send(
+                var response = Transport.HTTP_CLIENT.send(
                         HttpRequest.newBuilder()
                                 .uri(REPORT_URI)
                                 .POST(HttpRequest.BodyPublishers.ofString(new Gson().toJson(sendData)))
