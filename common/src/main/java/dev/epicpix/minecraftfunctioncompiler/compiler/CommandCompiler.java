@@ -98,21 +98,6 @@ public final class CommandCompiler {
         return context.end();
     }
 
-    // Returns the function to run in parallel for `execute as <sel> at @s run function <fn>`,
-    // or null if not eligible (then the normal serial path is used). Gated by config; only
-    // multi-entity `as` (not @s), only when the result value isn't captured, only a single
-    // function classified parallel-safe. See PARALLEL_DATAPACK_DESIGN.md.
-    private static DataLocation parallelEligibleFunction(SelectorArgument as, CommandParams body, ResultContext result) {
-        if(!dev.epicpix.minecraftfunctioncompiler.GlobalConfig.enableParallelDatapacks) return null;
-        if(as.self()) return null;
-        if(result.generatingSuccess() || result.generatingResult()) return null;
-        if(!(body instanceof CommandExecuteAt at) || !at.targets().self()) return null;
-        if(!(at.command() instanceof CommandExecuteRun run)) return null;
-        if(!(run.command() instanceof CommandFunction fn) || fn.functions().size() != 1) return null;
-        DataLocation id = fn.functions().getFirst();
-        return ParallelSafetyAnalyzer.isSafe(id) ? id : null;
-    }
-
     private static void compile(CompilationContext context, @Nullable ForkingContext forkingContext, CommandParams inputCommand, ResultContext result) {
         var outliner = context.getOutliner();
         if(outliner != null && forkingContext == null && !result.tracking() && !ExecuteChains.containsReturn(inputCommand)) {
@@ -213,19 +198,10 @@ public final class CommandCompiler {
                 }
             }
             case CommandExecuteAs(SelectorArgument targets, CommandParams command) -> {
-                DataLocation parallelFn = parallelEligibleFunction(targets, command, result);
-                if(parallelFn != null) {
-                    // Gated parallel fan-out: run the classified-safe function per matched
-                    // entity (at @s) across the pool, mutations buffered + applied serially.
-                    var entities = context.getSelectorList(targets);
-                    context.writeInstruction(Instructions.parallelRunFunctionAtSelf(entities, context.current().commandSourceStack(), parallelFn.toString()));
-                    result.markImplemented();
-                } else {
-                    try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
-                        try(var selector = context.forSelector(targets, result)) {
-                            try(var _ =context.enterWithoutValue(selector.data().withCurrentEntity(selector.content()))) {
-                                compile(context, fContext.content(), command, result);
-                            }
+                try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
+                    try(var selector = context.forSelector(targets, result)) {
+                        try(var _ =context.enterWithoutValue(selector.data().withCurrentEntity(selector.content()))) {
+                            compile(context, fContext.content(), command, result);
                         }
                     }
                 }

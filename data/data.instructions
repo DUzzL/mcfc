@@ -268,10 +268,6 @@
 ##PURE
 @GET_ENTITIES_OF_TYPE(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.entity.EntityType> [ctx:entity_type]) -> <java.util.Iterator<net.minecraft.world.entity.Entity> > = <dev.epicpix.minecraftfunctioncompiler.mod.EntitySelection>.ofType([ctx:world], [ctx:entity_type]);
 
-@PARALLEL_RUN_FUNCTION_AT_SELF(<java.util.List> [ctx:entities], <net.minecraft.commands.CommandSourceStack> [ctx:base_stack], <java.lang.String> [instr:fn]) {
-  <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.parallelRunFunctionAtSelf([ctx:entities], [ctx:base_stack], [instr:fn]);
-}
-
 ##PURE
 @GET_ENTITIES_INSIDE(<net.minecraft.server.level.ServerLevel> [ctx:world], double [ctx:min_x], double [ctx:min_y], double [ctx:min_z], double [ctx:max_x], double [ctx:max_y], double [ctx:max_z]) -> <java.util.List<net.minecraft.world.entity.Entity> >
   = <dev.epicpix.minecraftfunctioncompiler.mod.EntitySelection>.inside([ctx:world], [ctx:min_x], [ctx:min_y], [ctx:min_z], [ctx:max_x], [ctx:max_y], [ctx:max_z]);

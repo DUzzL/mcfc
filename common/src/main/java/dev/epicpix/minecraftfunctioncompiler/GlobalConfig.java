@@ -25,11 +25,6 @@ public final class GlobalConfig {
 
     public static boolean enableReporting = ENABLE_REPORTING;
     public static boolean profilerCollectMemoryUsage = true;
-    /**
-     * Parallel datapack execution is not supported: it is hard-disabled regardless of the config file
-     * (a set "enable_parallel_datapacks" key only produces a warning).
-     */
-    public static final boolean enableParallelDatapacks = false;
 
     public static void loadAndSaveConfig(Path path) {
         var loadResult = loadConfig(path);

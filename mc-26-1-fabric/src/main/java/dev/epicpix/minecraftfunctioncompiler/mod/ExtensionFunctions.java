@@ -108,10 +108,6 @@ public class ExtensionFunctions {
      */
     public static void setScore(ServerScoreboard scoreboard, Objective objective, ScoreHolder holder, Score score, @Nullable Score found, int value) {
         if (objective.getCriteria().isReadOnly()) return;
-        if (dev.epicpix.minecraftfunctioncompiler.GlobalConfig.enableParallelDatapacks) {
-            bufferOrRun(() -> scoreboard.getOrCreatePlayerScore(holder, objective).set(value));
-            return;
-        }
         boolean changed = found == null;
         if (objective.displayAutoUpdate()) {
             Component display = holder.getDisplayName();
@@ -133,80 +129,6 @@ public class ExtensionFunctions {
         if (!access.locked()) return false;
         access.unlock();
         return true;
-    }
-
-    // ===================== Parallel datapack execution (gated) =====================
-    // Deferred-mutation model: inside a parallel fan-out worker, mutations are recorded
-    // into a per-thread buffer instead of applied; the main thread applies all buffers in
-    // element order after the join (cross-element writes are visible next tick). Reads go
-    // straight to live world state: there are no per-tick snapshots or read caches.
-    // Gated by GlobalConfig.enableParallelDatapacks (hard-disabled).
-    // See PARALLEL_DATAPACK_DESIGN.md.
-    private static final ThreadLocal<java.util.List<Runnable>> MUTATION_BUFFER = new ThreadLocal<>();
-    private static void bufferOrRun(Runnable apply) {
-        java.util.List<Runnable> buf = MUTATION_BUFFER.get();
-        if (buf != null) buf.add(apply); else apply.run();
-    }
-
-    private static final java.util.concurrent.ForkJoinPool DATAPACK_FANOUT_POOL =
-            new java.util.concurrent.ForkJoinPool(Math.max(2, Runtime.getRuntime().availableProcessors() - 2));
-
-    /** Run {@code body} for each item across the fan-out pool in buffered mode, then apply
-     *  all buffered mutations serially on the calling (server) thread in element order. */
-    public static void parallelFanout(java.util.List<? extends Entity> items, java.util.function.Consumer<Entity> body) {
-        int n = items.size();
-        if (n == 0) return;
-        int pool = Math.max(1, DATAPACK_FANOUT_POOL.getParallelism());
-        int chunk = Math.max(1, (n + pool - 1) / pool);
-        int batches = (n + chunk - 1) / chunk;
-        @SuppressWarnings("unchecked")
-        java.util.List<Runnable>[] buffers = new java.util.List[batches];
-        var futures = new java.util.concurrent.Future<?>[batches];
-        for (int b = 0, s = 0; b < batches; b++, s += chunk) {
-            final int from = s, to = Math.min(s + chunk, n), bi = b;
-            futures[bi] = DATAPACK_FANOUT_POOL.submit(() -> {
-                var localBuf = new ArrayList<Runnable>();
-                MUTATION_BUFFER.set(localBuf);
-                try {
-                    for (int i = from; i < to; i++) body.accept(items.get(i));
-                } finally {
-                    MUTATION_BUFFER.remove();
-                }
-                buffers[bi] = localBuf;
-            });
-        }
-        for (var f : futures) {
-            try { f.get(); } catch (Exception e) { LOGGER.error("parallel datapack fan-out failed", e); }
-        }
-        // deterministic apply: batches are contiguous element ranges → batch order = element order
-        for (var buf : buffers) if (buf != null) for (Runnable r : buf) r.run();
-    }
-
-    /** Backs the parallel `execute as <sel> at @s run function <fn>` codegen path: run the
-     *  (classified-safe) compiled function once per matched entity, at-self, across the
-     *  fan-out pool in buffered mode; mutations apply serially after the join. Falls back to
-     *  serial if the function classloader isn't ready. fn id passed as the MFC DataLocation. */
-    @SuppressWarnings("unchecked")
-    public static void parallelRunFunctionAtSelf(java.util.List entities,
-                                                 net.minecraft.commands.CommandSourceStack baseStack,
-                                                 String fn) {
-        if (entities.isEmpty()) return;
-        java.util.List<? extends Entity> ents = (java.util.List<? extends Entity>) entities;
-        var loader = dev.epicpix.minecraftfunctioncompiler.mod.FunctionCompilerMain.functionClassLoader;
-        net.minecraft.resources.Identifier id = cachedId(fn);
-        if (loader == null || !loader.isUseReady() || !loader.hasFunctionLoaded(id)) return;
-        if (!(baseStack.getLevel() instanceof ServerLevel)) return;
-        // body re-reads the classloader from the static field rather than capturing it, so
-        // the synthetic lambda's descriptor stays free of the mod's loader type.
-        parallelFanout(ents, e -> {
-            if (!(e.level() instanceof ServerLevel lvl)) return;
-            net.minecraft.commands.CommandSourceStack s = baseStack
-                    .withEntity(e).withLevel(lvl)
-                    .withPosition(e.position())
-                    .withRotation(new net.minecraft.world.phys.Vec2(e.getYRot(), e.getXRot()));
-            var fcl = dev.epicpix.minecraftfunctioncompiler.mod.FunctionCompilerMain.functionClassLoader;
-            if (fcl != null) fcl.runFunction(id, s, null);
-        });
     }
 
     // Tag creation helpers for execute store byte/short/long
