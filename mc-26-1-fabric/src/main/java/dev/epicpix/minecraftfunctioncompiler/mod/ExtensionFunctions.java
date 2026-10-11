@@ -961,6 +961,34 @@ public class ExtensionFunctions {
         return net.minecraft.advancements.predicates.NbtPredicate.getEntityTagToCompare(entity);
     }
 
+    // Vectors of Entity.saveWithoutId, in the order of CommandCompiler.ENTITY_VECTOR_KEYS.
+    public static final int ENTITY_VECTOR_POS = 0;
+    public static final int ENTITY_VECTOR_MOTION = 1;
+    public static final int ENTITY_VECTOR_ROTATION = 2;
+
+    /**
+     * Element {@code index} (already resolved to 0..size-1) of the list {@code getEntityNbt(entity)} holds under Pos,
+     * Motion or Rotation, read with the calls Entity.saveWithoutId makes: Pos is the vehicle's X/Z with the entity's
+     * own Y while riding, Motion is getDeltaMovement() (overridden by shulkers), Rotation is [yRot, xRot] as floats.
+     */
+    public static Tag entityVectorElement(Entity entity, int vector, int index) {
+        return switch (vector) {
+            case ENTITY_VECTOR_POS -> {
+                Entity vehicle = entity.getVehicle();
+                yield DoubleTag.valueOf(switch (index) {
+                    case 0 -> vehicle != null ? vehicle.getX() : entity.getX();
+                    case 1 -> entity.getY();
+                    default -> vehicle != null ? vehicle.getZ() : entity.getZ();
+                });
+            }
+            case ENTITY_VECTOR_MOTION -> {
+                Vec3 motion = entity.getDeltaMovement();
+                yield DoubleTag.valueOf(index == 0 ? motion.x : index == 1 ? motion.y : motion.z);
+            }
+            default -> FloatTag.valueOf(index == 0 ? entity.getYRot() : entity.getXRot());
+        };
+    }
+
     public static boolean matchesEntityNbt(Entity entity, CompoundTag pattern) {
         // Fast-path: avoid saveWithoutId() for patterns using only known keys
         Boolean fast = tryMatchEntityNbtFast(entity, pattern);

@@ -2,7 +2,10 @@
 
 Fixes bugs:
 - With a mod that replaces `EntityLookup.add`/`remove` (Fabrolia cancels both at HEAD with its concurrent lookup), the per-type entity index stayed empty and kept killed entities: compiled `@e[type=…]` selectors found no entities (BlazeandCave checks, `execute as @e[type=…]`, `if entity`). The index now wraps both methods and re-checks the lookup afterwards, so it follows `byId` whatever implementation runs inside.
+
+Performance:
 - `@e[type=…]` no longer copies the whole per-type entity set on every evaluation; the index hands out one array snapshot per type, rebuilt only after an entity of that type was added or removed.
+- `data get entity <target> Pos|Motion|Rotation[i] [scale]` (also under `execute store … run`) reads that one element from the entity instead of serializing the whole entity, which for a player includes inventory and ender chest. The value is the one `Entity.saveWithoutId` writes (a passenger's Pos holds the vehicle's X/Z, a shulker's Motion is zero, Rotation is `[yaw, pitch]` as floats); other paths and out-of-range indices still serialize. In the 2026-10-10 production profile the afk display pack's `remove_afk`/`check_afk` (six such reads per player every second) were the most expensive compiled functions.
 
 Removed:
 - The hard-disabled parallel datapack mode (`parallelFanout`, its `ForkJoinPool`, the mutation buffer, `ParallelSafetyAnalyzer`, the `PARALLEL_RUN_FUNCTION_AT_SELF` instruction and its design note). It could never run (`enable_parallel_datapacks` is ignored), and buffered mutations from pool threads do not fit server mods that tie entities to owning threads.

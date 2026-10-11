@@ -615,6 +615,11 @@
 @GET_ENTITY_NBT(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.nbt.CompoundTag>
   = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.getEntityNbt([ctx:entity]);
 
+// One element of the entity's saved Pos/Motion/Rotation list (ExtensionFunctions.ENTITY_VECTOR_*), without serializing the entity
+##PURE
+@GET_ENTITY_VECTOR_ELEMENT(<net.minecraft.world.entity.Entity> [ctx:entity], int [instr:vector], int [instr:index]) -> <net.minecraft.nbt.Tag>
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.entityVectorElement([ctx:entity], [instr:vector], [instr:index]);
+
 @SET_NBT_STORAGE(mut <net.minecraft.world.level.storage.CommandStorage> [static:CommandStorage], <dev.epicpix.minecraftfunctioncompiler.data.DataLocation> [instr:storage_name], <net.minecraft.nbt.CompoundTag> [ctx:tag]) {
   [static:CommandStorage].set(map_resource_location([instr:storage_name]), [ctx:tag]);
 }

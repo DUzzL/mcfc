@@ -1,0 +1,41 @@
+; `data get entity <target> Pos|Motion|Rotation[i]` reads the element without serializing the entity, with
+; Entity.saveWithoutId's values: a passenger's Pos holds the vehicle's X/Z, a shulker's Motion is always zero,
+; negative indices count from the end and an index past the list fails.
+@setup
+objective create t dummy
+
+@function run
+summon minecraft:pig ~0.3 ~10 ~0.7 {NoAI:1b,NoGravity:1b,Tags:["mcfc_vec_pig"],Passengers:[{id:"minecraft:armor_stand",NoGravity:1b,Tags:["mcfc_vec_rider"]}]}
+summon minecraft:armor_stand ~ ~12 ~ {NoGravity:1b,Tags:["mcfc_vec_stand"],Motion:[0.5d,0.0d,-0.25d],Rotation:[30.5f,-12.25f]}
+summon minecraft:shulker ~ ~14 ~ {NoAI:1b,Tags:["mcfc_vec_shulker"],Motion:[1.0d,0.0d,0.0d]}
+execute store result score rider_x t run data get entity @e[tag=mcfc_vec_rider,limit=1] Pos[0] 100
+execute store result score pig_x t run data get entity @e[tag=mcfc_vec_pig,limit=1] Pos[0] 100
+scoreboard players operation rider_x t -= pig_x t
+execute store result score rider_z t run data get entity @e[tag=mcfc_vec_rider,limit=1] Pos[-1] 100
+execute store result score pig_z t run data get entity @e[tag=mcfc_vec_pig,limit=1] Pos[2] 100
+scoreboard players operation rider_z t -= pig_z t
+execute store result score rider_y t run data get entity @e[tag=mcfc_vec_rider,limit=1] Pos[1] 100
+execute store result score pig_y t run data get entity @e[tag=mcfc_vec_pig,limit=1] Pos[-2] 100
+scoreboard players operation rider_y t -= pig_y t
+execute store result score motion_x t run data get entity @e[tag=mcfc_vec_stand,limit=1] Motion[0] 100
+execute store result score motion_z t run data get entity @e[tag=mcfc_vec_stand,limit=1] Motion[-1] 100
+execute store result score yaw t run data get entity @e[tag=mcfc_vec_stand,limit=1] Rotation[0] 10
+execute store result score pitch t run data get entity @e[tag=mcfc_vec_stand,limit=1] Rotation[-1]
+execute store result score shulker_motion t run data get entity @e[tag=mcfc_vec_shulker,limit=1] Motion[0] 100
+execute store success score past_end t run data get entity @e[tag=mcfc_vec_stand,limit=1] Pos[3]
+execute store success score past_start t run data get entity @e[tag=mcfc_vec_stand,limit=1] Rotation[-3]
+kill @e[tag=mcfc_vec_rider]
+kill @e[tag=mcfc_vec_pig]
+kill @e[tag=mcfc_vec_stand]
+kill @e[tag=mcfc_vec_shulker]
+
+@validate
+score rider_x t is 0
+score rider_z t is 0
+score motion_x t is 50
+score motion_z t is -25
+score yaw t is 305
+score pitch t is -13
+score shulker_motion t is 0
+score past_end t is 0
+score past_start t is 0

@@ -3210,6 +3210,13 @@ public final class CommandCompiler {
         switch(source) {
             case NbtDataLocation.Entity(SelectorArgument selector) -> {
                 try(var entityData = context.forSelector(selector, result)) {
+                    var vectorElement = entityVectorElement(path);
+                    if(vectorElement != null) {
+                        var tagVal = context.<TTag>createLocal();
+                        entityData.writeInstruction(Instructions.getEntityVectorElement(tagVal, entityData.content(), vectorElement[0], vectorElement[1]));
+                        emitDataGetNumber(context, result, tagVal, scale);
+                        return;
+                    }
                     var nbtLocal = context.<TCompoundTag>createLocal();
                     entityData.writeInstruction(Instructions.getEntityNbt(nbtLocal, entityData.content()));
                     emitDataGetValue(context, result, nbtLocal, path, scale);
@@ -3224,9 +3231,32 @@ public final class CommandCompiler {
         }
     }
 
+    /** Entity.saveWithoutId lists answered by GET_ENTITY_VECTOR_ELEMENT, indexed by ExtensionFunctions.ENTITY_VECTOR_*, with their sizes. */
+    private static final List<String> ENTITY_VECTOR_KEYS = List.of("Pos", "Motion", "Rotation");
+    private static final int[] ENTITY_VECTOR_SIZES = {3, 3, 2};
+
+    /**
+     * {vector, index} when {@code path} is exactly {@code Pos|Motion|Rotation[i]} with an index inside the list
+     * (negative indices count from the end, like NbtPathArgument), else null. Every entity saves these lists with a
+     * fixed size, so the element can be read without serializing the entity.
+     */
+    private static int @Nullable [] entityVectorElement(NbtPath path) {
+        var parts = path.parts();
+        if(parts.size() != 2 || !(parts.get(0) instanceof NbtPathPart.Named(String name)) || !(parts.get(1) instanceof NbtPathPart.ArrayIndexInteger(int index))) return null;
+        int vector = ENTITY_VECTOR_KEYS.indexOf(name);
+        if(vector < 0) return null;
+        int size = ENTITY_VECTOR_SIZES[vector];
+        int resolved = index < 0 ? size + index : index;
+        return resolved >= 0 && resolved < size ? new int[]{vector, resolved} : null;
+    }
+
     private static void emitDataGetValue(CompilationContext context, ResultContext result, LocationData<TCompoundTag> nbt, NbtPath path, @Nullable Double scale) {
         var tagVal = getNbtPathValue(context, nbt, path.parts(), false, result.markAndGetErrorLabel());
         context.writeInstruction(Instructions.ifNullJump(tagVal, result.markAndGetErrorLabel()));
+        emitDataGetNumber(context, result, tagVal, scale);
+    }
+
+    private static void emitDataGetNumber(CompilationContext context, ResultContext result, LocationData<? extends TTag> tagVal, @Nullable Double scale) {
         if(!result.generatingResult() && scale == null) return;
         var intVal = context.<Integer>createLocal();
         if(scale == null) {
