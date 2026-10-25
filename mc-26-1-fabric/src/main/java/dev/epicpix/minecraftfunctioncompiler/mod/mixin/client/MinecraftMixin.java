@@ -1,7 +1,6 @@
 package dev.epicpix.minecraftfunctioncompiler.mod.mixin.client;
 
-import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
-import dev.epicpix.minecraftfunctioncompiler.reporter.MinecraftEnvironment;
+import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.main.GameConfig;
@@ -16,7 +15,7 @@ public class MinecraftMixin {
 
     @Inject(method = "<init>", at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;launchedVersion:Ljava/lang/String;", shift = At.Shift.AFTER, opcode = Opcodes.PUTFIELD))
     public void init(GameConfig gameConfig, CallbackInfo ci) {
-        FunctionCompilerReporter.setMinecraftVersion(SharedConstants.getCurrentVersion().name(), gameConfig.game.versionType, MinecraftEnvironment.CLIENT);
+        MinecraftVersion.setCurrentVersion(MinecraftVersion.getByName(SharedConstants.getCurrentVersion().name()));
     }
 
 }

@@ -4,7 +4,7 @@ Check it out on Modrinth [here](https://modrinth.com/mod/mcfc)!
 
 This mod allows the server to compile functions from datapacks on load to Java bytecode, which results in increased performance, because compiled code can run everything at once instead of running commands one by one.
 
-Some statistics are automatically collected when using this mod. Feel free to check the [code](/common/src/main/java/dev/epicpix/minecraftfunctioncompiler/reporter/FunctionCompilerReporter.java) to check what is reported, but the main things are: timings, function counts, instruction counts, exceptions/crashes (those might contain the commands for debugging).
+The mod does not collect or upload any data. Compilation statistics and errors are only written to the server log.
 
 This mod will not respect the `maxCommandChainLength` gamerule to improve performance, otherwise it would require the compiled code to check the amount of commands ran, which could be slow.
 
@@ -12,7 +12,7 @@ This mod will not respect the `maxCommandChainLength` gamerule to improve perfor
 
 Put the mod on a fabric server with all the dependencies, the mod will automatically try to optimize all functions and commands which are supported.
 
-**If you encounter any crashes, they will be automatically reported. If you have more context to how to trigger a crash, please report it on the [issue tracker](https://gitlab.epicpix.dev/EpicPix/MinecraftFunctionCompiler/-/issues).**
+**If you encounter any crashes, please report them with the server log and, if possible, the datapack that triggers them on the [issue tracker](https://github.com/DUzzL/mcfc/issues).**
 
 ## Supported Commands
 

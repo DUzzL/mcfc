@@ -1,6 +1,7 @@
 package dev.epicpix.minecraftfunctioncompiler.mod;
 
 import dev.epicpix.minecraftfunctioncompiler.CompileConstants;
+import dev.epicpix.minecraftfunctioncompiler.TestEnvironment;
 import dev.epicpix.minecraftfunctioncompiler.commands.IArgumentLookup;
 import dev.epicpix.minecraftfunctioncompiler.data.DataLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.TaggableLocation;
@@ -11,7 +12,6 @@ import dev.epicpix.minecraftfunctioncompiler.loader.CompilationParams;
 import dev.epicpix.minecraftfunctioncompiler.loader.CompiledFunction;
 import dev.epicpix.minecraftfunctioncompiler.loader.FunctionCompilerClassLoader;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
-import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -151,7 +151,7 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<MinecraftSe
      * {@code onComplete} runs on the server thread when this compile finished, failed, or was superseded.
      */
     public void loadFunctions(boolean autoEnable, Runnable onComplete) {
-        boolean blocking = BLOCKING_COMPILATION || FunctionCompilerReporter.isTestEnvironment();
+        boolean blocking = BLOCKING_COMPILATION || TestEnvironment.isTestEnvironment();
         startCompile(() -> compile(autoEnable), blocking, onComplete);
     }
 

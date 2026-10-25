@@ -3,15 +3,12 @@ package dev.epicpix.minecraftfunctioncompiler;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
-import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-
-import static dev.epicpix.minecraftfunctioncompiler.CommonConstants.ENABLE_REPORTING;
 
 public final class GlobalConfig {
     private GlobalConfig() {}
@@ -21,9 +18,8 @@ public final class GlobalConfig {
 
     public static final String DEFAULT_CONFIG_FILE = "mcfc.json";
 
-    private static final int CONFIG_VERSION = 2;
+    private static final int CONFIG_VERSION = 3;
 
-    public static boolean enableReporting = ENABLE_REPORTING;
     public static boolean profilerCollectMemoryUsage = true;
 
     public static void loadAndSaveConfig(Path path) {
@@ -44,15 +40,12 @@ public final class GlobalConfig {
     }
 
     public static void resetConfig() {
-        enableReporting = ENABLE_REPORTING;
         profilerCollectMemoryUsage = true;
-        FunctionCompilerReporter.setReportingEnabled(enableReporting);
     }
 
     public static ConfigLoadResult loadConfig(Path path) {
         if(!Files.exists(path)) return ConfigLoadResult.NOT_LOADED;
         // Parse everything into locals first so a malformed file leaves the current settings untouched.
-        boolean reporting;
         boolean memoryUsage;
         boolean complete;
         int version;
@@ -60,10 +53,10 @@ public final class GlobalConfig {
             var content = GSON.fromJson(Files.readString(path), JsonObject.class);
             if(content == null || !content.has("version")) throw new IllegalArgumentException("Missing \"version\"");
             version = content.get("version").getAsInt();
-            if(version != 1 && version != CONFIG_VERSION) throw new IllegalArgumentException("Invalid config version: " + version);
-            reporting = getOrDefault(content, "enable_reporting", ENABLE_REPORTING);
+            if(version < 1 || version > CONFIG_VERSION) throw new IllegalArgumentException("Invalid config version: " + version);
             memoryUsage = version == 1 || getOrDefault(content, "profiler_collect_memory_usage", true);
-            complete = content.has("enable_reporting") && content.has("profiler_collect_memory_usage");
+            // Files from version 2 and older carry "enable_reporting"; it is dropped on the next save.
+            complete = content.has("profiler_collect_memory_usage") && !content.has("enable_reporting");
             if(getOrDefault(content, "enable_parallel_datapacks", false)) {
                 LOGGER.warn("\"enable_parallel_datapacks\" is not supported and is ignored; functions always run serially");
             }
@@ -78,13 +71,7 @@ public final class GlobalConfig {
             return ConfigLoadResult.NOT_LOADED;
         }
 
-        if(reporting && !ENABLE_REPORTING) {
-            LOGGER.warn("This version was not compiled with telemetry reporting, \"enable_reporting\" config option ignored");
-            reporting = false;
-        }
-        enableReporting = reporting;
         profilerCollectMemoryUsage = memoryUsage;
-        FunctionCompilerReporter.setReportingEnabled(enableReporting);
         return version == CONFIG_VERSION && complete ? ConfigLoadResult.LOADED_NEWEST : ConfigLoadResult.LOADED_OLD;
     }
 
@@ -92,7 +79,6 @@ public final class GlobalConfig {
         var content = new JsonObject();
         content.addProperty("_note", "To use new config options, first run the new version (for a proper config update), and then edit the config.");
         content.addProperty("version", CONFIG_VERSION);
-        content.addProperty("enable_reporting", enableReporting);
         content.addProperty("profiler_collect_memory_usage", profilerCollectMemoryUsage);
         try {
             Files.createDirectories(path.getParent());

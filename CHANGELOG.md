@@ -8,7 +8,7 @@ Performance:
 - `data get entity <target> Pos|Motion|Rotation[i] [scale]` (also under `execute store … run`) reads that one element from the entity instead of serializing the whole entity, which for a player includes inventory and ender chest. The value is the one `Entity.saveWithoutId` writes (a passenger's Pos holds the vehicle's X/Z, a shulker's Motion is zero, Rotation is `[yaw, pitch]` as floats); other paths and out-of-range indices still serialize. In the 2026-10-10 production profile the afk display pack's `remove_afk`/`check_afk` (six such reads per player every second) were the most expensive compiled functions.
 
 Removed:
-- The data reporter no longer builds its HTTP client (which starts a selector thread) and sender executor when the class loads; both are created on the first report, which the default build never sends.
+- Data reporting is gone: the reporter (`FunctionCompilerReporter` and its data records), its HTTP client and upload endpoint, and the `enable_reporting` config option. The mod no longer collects or sends timings, function counts, diagnostics or exceptions anywhere. Config files written by older versions are rewritten as version 3 without `enable_reporting`. Compilation counts and timings are logged locally in one `[Summary]` line after each load.
 - The hard-disabled parallel datapack mode (`parallelFanout`, its `ForkJoinPool`, the mutation buffer, `ParallelSafetyAnalyzer`, the `PARALLEL_RUN_FUNCTION_AT_SELF` instruction and its design note). It could never run (`enable_parallel_datapacks` is ignored), and buffered mutations from pool threads do not fit server mods that tie entities to owning threads.
 
 ## Details

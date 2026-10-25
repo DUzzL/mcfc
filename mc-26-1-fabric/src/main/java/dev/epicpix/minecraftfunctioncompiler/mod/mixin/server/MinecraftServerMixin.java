@@ -1,10 +1,9 @@
 package dev.epicpix.minecraftfunctioncompiler.mod.mixin.server;
 
+import dev.epicpix.minecraftfunctioncompiler.MinecraftVersion;
 import dev.epicpix.minecraftfunctioncompiler.mod.FunctionDebugLogger;
 import dev.epicpix.minecraftfunctioncompiler.mod.ServerThreadGate;
 import com.mojang.datafixers.DataFixer;
-import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
-import dev.epicpix.minecraftfunctioncompiler.reporter.MinecraftEnvironment;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.Services;
@@ -26,14 +25,13 @@ import java.util.Optional;
 @Mixin(MinecraftServer.class)
 public abstract class MinecraftServerMixin {
 
-    @Shadow public abstract String getServerModName();
     @Shadow public abstract long getNextTickTime();
     @Shadow public abstract int getTickCount();
 
     @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/thread/ReentrantBlockableEventLoop;<init>(Ljava/lang/String;Z)V", shift = At.Shift.AFTER))
     public void init(Thread serverThread, LevelStorageSource.LevelStorageAccess storageSource, PackRepository packRepository, WorldStem worldStem, Optional<GameRules> gameRules, Proxy proxy, DataFixer fixerUpper, Services services, LevelLoadListener levelLoadListener, boolean propagatesCrashes, NotificationManager notificationManager, CallbackInfo ci) {
         ServerThreadGate.bind(serverThread);
-        FunctionCompilerReporter.setMinecraftVersion(SharedConstants.getCurrentVersion().name(), getServerModName(), MinecraftEnvironment.SERVER);
+        MinecraftVersion.setCurrentVersion(MinecraftVersion.getByName(SharedConstants.getCurrentVersion().name()));
     }
 
     @Inject(method = "tickServer", at = @At("HEAD"))

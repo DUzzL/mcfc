@@ -18,10 +18,6 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeInstructio
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
-import dev.epicpix.minecraftfunctioncompiler.reporter.CodeGenerationMetrics;
-import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCompilerReporter;
-import dev.epicpix.minecraftfunctioncompiler.reporter.FunctionCountsData;
-import dev.epicpix.minecraftfunctioncompiler.reporter.TimingData;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -734,11 +730,8 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
                     if(!defineAndLoadFromBytes(cached.batchBytes(), cached.placements(), cached.dataClassBytes(), params, serverFunctionManager, allParsedIds.size())) return;
                     LOGGER.info("Loaded compiled functions from cache in {}ms", (int)((System.nanoTime() - startLoad) / 1_000_000d));
 
-                    var functionCountsData = new FunctionCountsData(totalFunctionCount, allParsedIds.size(), handles.size(), handles.size());
-                    var timingData         = new TimingData((System.nanoTime() - startParse) / 1_000_000_000d, 0d, 0d, 0d, 0d);
-                    var codeGenMetrics     = new CodeGenerationMetrics(0, 0, 0, 0, 0, 0);
-                    FunctionCompilerReporter.reportCompilationStatistics(functionCountsData, timingData, codeGenMetrics, diagnostics.getDiagnostics());
-                    FunctionCompilerReporter.sendReports();
+                    LOGGER.info("[Summary] {} function(s) found, {} parsed, {} compiled (from cache)",
+                        totalFunctionCount, allParsedIds.size(), handles.size());
                     finishLoading(autoEnable);
                     return;
                 }
@@ -881,8 +874,6 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
             if(e instanceof DiagnosticException de) diagnostics.addDiagnostic(de.toDiagnostic());
             LOGGER.error("Failed to load generated classes", e);
             setState(State.FAILED);
-            FunctionCompilerReporter.reportException("define_generated_classes", e, new JsonObject());
-            FunctionCompilerReporter.sendReports();
             return;
         }
         var classLoadTime = (System.nanoTime() - startLoader) / 1_000_000_000d;
@@ -946,15 +937,11 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
             }
         }
 
-        // ── Metrics ───────────────────────────────────────────────────────────
-        var functionCountsData = new FunctionCountsData(totalFunctionCount, parsedFunctionCount, compiled.size(), registered);
-        var timingData         = new TimingData(parseTime, compileTime, 0d, classLoadTime, handleLoadTime);
-        var codeGenMetrics     = new CodeGenerationMetrics(
-            compiledCommandCount, (int) env.preOptInstructions().sum(), (int) env.postOptInstructions().sum(),
-            lowLevelFunctions == null ? 0 : lowLevelFunctions.values().stream().mapToInt(List::size).sum(),
-            (int) totalFnFileSize, defined.dataClassBytes().length);
-        FunctionCompilerReporter.reportCompilationStatistics(functionCountsData, timingData, codeGenMetrics, diagnostics.getDiagnostics());
-        FunctionCompilerReporter.sendReports();
+        // ── Summary (local log only) ──────────────────────────────────────────
+        LOGGER.info("[Summary] {} function(s) found, {} parsed, {} compiled, {} registered; {} command(s), {} -> {} instruction(s) after optimization, {} KB of function classes; parse {}ms, compile {}ms, class load {}ms, handles {}ms",
+            totalFunctionCount, parsedFunctionCount, compiled.size(), registered,
+            compiledCommandCount, env.preOptInstructions().sum(), env.postOptInstructions().sum(), totalFnFileSize / 1024,
+            (int)(parseTime * 1000), (int)(compileTime * 1000), (int)(classLoadTime * 1000), (int)(handleLoadTime * 1000));
 
         finishLoading(autoEnable);
     }
