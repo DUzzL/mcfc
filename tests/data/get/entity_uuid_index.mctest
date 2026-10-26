@@ -1,0 +1,31 @@
+; `data get entity <target> UUID[i]` reads an element of an int array (Armor Statues stores the editing
+; player's UUID this way). Compiled code stored 0 instead of the element.
+@setup
+objective create t dummy
+
+@function run
+summon marker ~ ~ ~ {UUID:[I;11,-22,33,-44],Tags:["mcfc_uuid"]}
+execute store result score u0 t run data get entity @e[type=marker,tag=mcfc_uuid,limit=1] UUID[0]
+execute store result score u1 t run data get entity @e[type=marker,tag=mcfc_uuid,limit=1] UUID[1]
+execute store result score u3 t run data get entity @e[type=marker,tag=mcfc_uuid,limit=1] UUID[-1]
+execute as @e[type=marker,tag=mcfc_uuid] run execute store result score @s t run data get entity @s UUID[2]
+execute store result score self t run scoreboard players get @e[type=marker,tag=mcfc_uuid,limit=1] t
+data modify storage mcfc-test:uuid a set value [I;5,6,7]
+execute store result score s1 t run data get storage mcfc-test:uuid a[1]
+execute store result score set t run data modify storage mcfc-test:uuid a[-1] set value 9
+execute store result score s2 t run data get storage mcfc-test:uuid a[2]
+execute store success score wrong t run data modify storage mcfc-test:uuid a[0] set value "x"
+execute store result score s0 t run data get storage mcfc-test:uuid a[0]
+kill @e[type=marker,tag=mcfc_uuid]
+
+@validate
+score u0 t is 11
+score u1 t is -22
+score u3 t is -44
+score self t is 33
+score s1 t is 6
+score set t is 1
+score s2 t is 9
+score wrong t is 0
+score s0 t is 5
+no_fallback

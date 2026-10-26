@@ -672,6 +672,21 @@
   _jumpIfEqual([ctx:list].setTag([ctx:index], [ctx:value]), false, [ctx:fail_label]);
 }
 
+// `path[i]` (vanilla NbtPathArgument.IndexedElementNode): any CollectionTag, i.e. lists and byte/int/long arrays
+@TRY_AS_NBT_COLLECTION(<net.minecraft.nbt.Tag> [ctx:tag], label [ctx:fail_label]) -> <net.minecraft.nbt.CollectionTag> {
+  _jumpIfNotInstanceOf([ctx:tag], <net.minecraft.nbt.CollectionTag>, [ctx:fail_label]);
+  return cast([ctx:tag], <net.minecraft.nbt.CollectionTag>);
+}
+
+@GET_COLLECTION_LENGTH(<net.minecraft.nbt.CollectionTag> [ctx:list]) -> int = [ctx:list].size();
+
+##PURE
+@GET_NBT_FROM_COLLECTION(<net.minecraft.nbt.CollectionTag> [ctx:from], int [ctx:index]) -> <net.minecraft.nbt.Tag> = [ctx:from].get([ctx:index]);
+
+@SET_NBT_IN_COLLECTION(mut <net.minecraft.nbt.CollectionTag> [ctx:list], int [ctx:index], <net.minecraft.nbt.Tag> [ctx:value], label [ctx:fail_label]) {
+  _jumpIfEqual([ctx:list].setTag([ctx:index], [ctx:value]), false, [ctx:fail_label]);
+}
+
 ##PURE
 @CREATE_DOUBLE_TAG(double [ctx:value]) -> <net.minecraft.nbt.Tag> = <net.minecraft.nbt.DoubleTag>.valueOf([ctx:value]);
 ##PURE

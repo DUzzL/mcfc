@@ -43,7 +43,9 @@ import dev.epicpix.minecraftfunctioncompiler.il.locations.TCompoundTag;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TDifficulty;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TEntity;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TGameType;
+import dev.epicpix.minecraftfunctioncompiler.il.locations.TCollectionTag;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TListTag;
+
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TLivingEntity;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TMutableComponent;
 import dev.epicpix.minecraftfunctioncompiler.il.locations.TObjective;
@@ -2611,7 +2613,7 @@ public final class CommandCompiler {
             }else if(part instanceof NbtPathPart.ArrayIndexInteger indexed) {
                 var listAccess = accessNbtList(context, source, indexed, failLabel);
                 var storage = context.<TTag>createLocal();
-                context.writeInstruction(Instructions.getNbtFromList(storage, listAccess.list, listAccess.index));
+                context.writeInstruction(Instructions.getNbtFromCollection(storage, listAccess.list, listAccess.index));
                 source = storage;
             }else if(part instanceof NbtPathPart.ArrayIndexCompound(NbtValue.Compound filter)) {
                 var list = context.<TListTag>createLocal();
@@ -2649,10 +2651,10 @@ public final class CommandCompiler {
             var listAccess = accessNbtList(context, source, indexed, failLabel);
             if(unchanged != null) {
                 var previous = context.<TTag>createLocal();
-                context.writeInstruction(Instructions.getNbtFromList(previous, listAccess.list, listAccess.index));
+                context.writeInstruction(Instructions.getNbtFromCollection(previous, listAccess.list, listAccess.index));
                 context.writeInstruction(Instructions.ifObjectCompareJump(ObjectComparisonType.EQUAL, previous, value, unchanged));
             }
-            context.writeInstruction(Instructions.setNbtInList(listAccess.list, listAccess.index, value, failLabel));
+            context.writeInstruction(Instructions.setNbtInCollection(listAccess.list, listAccess.index, value, failLabel));
         }else {
             throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_NBT_ACCESS, context.getSource(), "Cannot set nbt value in path " + accessor));
         }
@@ -2663,10 +2665,10 @@ public final class CommandCompiler {
     }
 
     private static NbtListAccessResult accessNbtList(CompilationContext context, LocationData<? extends TTag> source, NbtPathPart.ArrayIndexInteger indexed, LabelData failLabel) {
-        var list = context.<TListTag>createLocal();
-        context.writeInstruction(Instructions.tryAsNbtList(list, source, failLabel));
+        var list = context.<TCollectionTag>createLocal();
+        context.writeInstruction(Instructions.tryAsNbtCollection(list, source, failLabel));
         var length = context.<Integer>createLocal();
-        context.writeInstruction(Instructions.getListLength(length, list));
+        context.writeInstruction(Instructions.getCollectionLength(length, list));
         var index = context.<Integer>createLocal();
 
         if(indexed.index() >= 0) {
@@ -2682,7 +2684,7 @@ public final class CommandCompiler {
         return new NbtListAccessResult(list, index);
     }
 
-    private record NbtListAccessResult(LocationData<TListTag> list, LocationData<Integer> index) {}
+    private record NbtListAccessResult(LocationData<TCollectionTag> list, LocationData<Integer> index) {}
 
     /** setblock/fill: vanilla throws where the runtime helper returns 0 (success is always ≥ 1), so 0 fails the command. */
     private static void updateBlockCommandResult(CompilationContext context, ResultContext result, LocationData<Integer> value) {
