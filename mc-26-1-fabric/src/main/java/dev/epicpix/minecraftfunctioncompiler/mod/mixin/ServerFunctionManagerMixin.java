@@ -8,6 +8,7 @@ import dev.epicpix.minecraftfunctioncompiler.mod.FunctionCompilerRecursionGuard;
 import dev.epicpix.minecraftfunctioncompiler.mod.FunctionDebugLogger;
 import dev.epicpix.minecraftfunctioncompiler.mod.ServerThreadGate;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import net.minecraft.commands.functions.CommandFunction;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerFunctionLibrary;
@@ -47,6 +48,9 @@ public class ServerFunctionManagerMixin implements FunctionCompilationStarter {
     public void run(CommandFunction<CommandSourceStack> commandFunction, CommandSourceStack commandSourceStack, CallbackInfo ci) {
         // Compiled bodies use server-thread-only state; any other thread runs vanilla's interpreter.
         if(!ServerThreadGate.onServerThread()) return;
+        // Inside a running vanilla command (e.g. an advancement reward during `advancement grant`) vanilla queues
+        // the call after that command (Commands.executeCommandInContext); CallFunctionMixin then runs it compiled.
+        if(Commands.CURRENT_EXECUTION_CONTEXT.get() != null) return;
         var loader = FunctionCompilerMain.functionClassLoader;
         // Only plain functions: a macro function called without arguments fails to instantiate in vanilla.
         if(loader != null && commandFunction instanceof CompiledDispatchCache cache && loader.isUseReady()) {

@@ -185,19 +185,23 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<MinecraftSe
 
     /**
      * Vanilla->compiled entry. Charges the recursion budget, restores it (and vanilla's current execution
-     * context, which compiled code clears around nested vanilla calls) on every exit, and turns exceptions
-     * into a per-function switch to vanilla.
+     * context) on every exit, and turns exceptions into a per-function switch to vanilla.
+     *
+     * Compiled code runs without vanilla's current execution context: a function that one of its commands
+     * starts (an advancement reward) runs right away, as before, while a non-null context tells
+     * {@code ServerFunctionManagerMixin} that a vanilla command is running and vanilla must queue the call.
      */
     public long invoke(CompiledFunction.Entry entry, CompiledFunction function, CommandSourceStack stack, @Nullable CompoundTag arguments) {
         int savedDepth = FunctionCompilerRecursionGuard.depth;
         FunctionCompilerRecursionGuard.depth = savedDepth + FunctionCompilerRecursionGuard.VANILLA_ENTRY_COST;
         var savedContext = Commands.CURRENT_EXECUTION_CONTEXT.get();
+        if(savedContext != null) Commands.CURRENT_EXECUTION_CONTEXT.set(null);
         try {
             return function.run(stack, arguments);
         } catch(Throwable e) {
-            Commands.CURRENT_EXECUTION_CONTEXT.set(savedContext);
             return onRuntimeFailure(entry, e);
         } finally {
+            Commands.CURRENT_EXECUTION_CONTEXT.set(savedContext);
             FunctionCompilerRecursionGuard.depth = savedDepth;
         }
     }

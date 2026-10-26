@@ -1,0 +1,10 @@
+{
+  "criteria": {
+    "never": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "rewards": {
+    "function": "mcfc-test:reward_order/revoke_b"
+  }
+}
