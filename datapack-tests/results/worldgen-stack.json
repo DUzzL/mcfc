@@ -1,0 +1,546 @@
+{
+ "id": "worldgen-stack",
+ "status": "DIFF",
+ "kind": "worldgen",
+ "packs": [
+  "mr-terralith",
+  "mr-incendium",
+  "mr-nullscape",
+  "mr-structory"
+ ],
+ "problems": [],
+ "notes": [],
+ "mcfcJar": {
+  "name": "mcfc-1a611fce.jar",
+  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
+  "mtime": "2026-10-26 09:56:09"
+ },
+ "mcfcState": {
+  "afterLoad": "READY_ON",
+  "final": "READY_ON",
+  "decisiveError": null,
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 2324Total Function Count: 2327"
+ },
+ "compile": {
+  "found": 2327,
+  "compiled": 2324,
+  "rate": 0.9987,
+  "partialFallbackCommands": 273,
+  "wholeFallbacks": {},
+  "compileFailures": [
+   "incendium:item/scouts_battle_helm/helper",
+   "incendium:item/multiplex_crossbow/arrow/arrow_init",
+   "nullscape:link_rift/position_other_side"
+  ],
+  "compilerErrors": [],
+  "runtimeDisables": [],
+  "topPartialReasons": {
+   "Failed to parse any options @ execute": 90,
+   "Unknown command: attribute": 56,
+   "Unknown command: rotate": 50,
+   "Invalid integer": 15,
+   "Unknown command: place": 13,
+   "Unknown command: damage": 11,
+   "Unknown command: bossbar": 8,
+   "Unknown command: forceload": 7,
+   "Missing space after argument @ stopsound <targets:entity_selector[players]> <source:word>": 7,
+   "Macros are not supported in this location": 5,
+   "Unknown command: spreadplayers": 4,
+   "Failed to parse any options @ execute store <store_location:result_store_location_type>": 2,
+   "Mixed positive and negated type options are resolved by vanilla": 1,
+   "Too many arguments for @ fill <from:block_pos> <to:block_pos> <block:block_predicate> replace <filter:block_predicate>": 1,
+   "Missing space after argument @ summon <entity:resource_location>": 1
+  },
+  "unsupportedCommands": {
+   "attribute": 56,
+   "rotate": 50,
+   "place": 13,
+   "damage": 11,
+   "bossbar": 8,
+   "forceload": 7,
+   "spreadplayers": 4
+  }
+ },
+ "debug": {
+  "header": "1940 compiled | 0 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
+  "functionsByStatus": {
+   "compiled": 1940
+  },
+  "totalCalls": 2749,
+  "vanillaCalls": 0,
+  "compiledCalls": 2749,
+  "compiledCallShare": 1.0,
+  "nonCompiled": [],
+  "nonCompiledCount": 0
+ },
+ "compare": {
+  "confirmedFindings": 6,
+  "flakyFindings": 32,
+  "lowConfidence": 4,
+  "noise": 582,
+  "genFindings": 7,
+  "genNoise": 168,
+  "confirmation": {
+   "enabled": true,
+   "ran": true,
+   "onlyInSecondAttempt": 23
+  },
+  "sections": {
+   "blocks": {
+    "paths": 414,
+    "noise": 163,
+    "findings": 4,
+    "lowConfidence": 4
+   },
+   "bossbars": {
+    "paths": 11,
+    "noise": 1,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "datapacks": {
+    "paths": 5,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "entities": {
+    "paths": 1153,
+    "noise": 370,
+    "findings": 14,
+    "lowConfidence": 0
+   },
+   "functionTags": {
+    "paths": 10,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functions": {
+    "paths": 2327,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "gamerules": {
+    "paths": 58,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "players": {
+    "paths": 44,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scheduled": {
+    "paths": 20,
+    "noise": 5,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scoreboard": {
+    "paths": 309,
+    "noise": 40,
+    "findings": 13,
+    "lowConfidence": 0
+   },
+   "storage": {
+    "paths": 1,
+    "noise": 1,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "world": {
+    "paths": 12,
+    "noise": 2,
+    "findings": 0,
+    "lowConfidence": 0
+   }
+  },
+  "confirmed": [
+   {
+    "path": "scoreboard.teams.in.castle.members[20]",
+    "base": "\"<U?>\"",
+    "mcfc": "\"DPTester1\"",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.teams.in.sanctum.members[2]",
+    "base": "<missing>",
+    "mcfc": "\"<U?>\"",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.teams.in.sanctum.members[3]",
+    "base": "<missing>",
+    "mcfc": "\"<U?>\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.-6,-1",
+    "base": "\"396910a29cc797a3336313867aa9f11d342b30698a0bac5f490b41227b6857ea\"",
+    "mcfc": "\"c5ad11b66b79237824e955aa263ea0de489296cbc156c2c0bce15d22daac03bc\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.-6,0",
+    "base": "\"aa0f2c93d425e7af708748425af5b11a755ba1f3937b8b295b249e853f3eab22\"",
+    "mcfc": "\"f4833cdce71ca9bc68544191bea15dc0854fcd92f6fb598fb5755b423c6cf774\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.5,-5",
+    "base": "\"154eed7e2ef3e6471b4edafe3eaf574b1f5a35d8e6ed322e336d55d8a96cbe0d\"",
+    "mcfc": "\"8c127a338f05ce05d0eb795b442ab4414561771013bfa3f57ff71249743b24c0\"",
+    "dump": "gen"
+   }
+  ],
+  "flaky": [
+   {
+    "path": "blocks[overworld].columns.-2,-7",
+    "base": "\"6bc51e0bf5255783fc4f188a60df9c3a230d669a972970f5465220783d64a09f\"",
+    "mcfc": "\"8a9b474ea04a2cfd85ff41010549c0bdfe6562ad8901d35fa8d5882e9c537245\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.4,-5",
+    "base": "\"5689c86d8d49abf11bb5740bec85dd4ac23e86ea1970acaba7f789cb31a6ead4\"",
+    "mcfc": "\"0500c96aab2b998b4a38d1b20cd651f5b274dff14d3af8fbd76e8c300baab7f6\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.7,-1",
+    "base": "\"c0192de52f23c2958e7251d1d8a38307f14aae79ba2b85b569eb43a6c364a07d\"",
+    "mcfc": "\"f549c6d74f51d6c23d921c80b9299eca0b0a585d0b90176d4f3121f0350a6c2e\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.7,-2",
+    "base": "\"9929fd7b42e7777a446a0325dce88b2cad6d892932730ae7620ea4d0d3570802\"",
+    "mcfc": "\"4fef8c037ce436491c1b9b83c1dc6f70aaaf9e69d7d67432874f3cfd58d490a6\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:cat#1].tags[3]",
+    "base": "\"in.eid_4\"",
+    "mcfc": "\"in.eid_2\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:cat#1].tags[4]",
+    "base": "<missing>",
+    "mcfc": "\"in.eid_4\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:cat#2].tags[3]",
+    "base": "\"in.eid_2\"",
+    "mcfc": "\"in.eid_3\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:cat#3].tags[2]",
+    "base": "\"in.eid_2\"",
+    "mcfc": "\"in.eid_3\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:iron_golem#1].tags[1]",
+    "base": "\"in.eid_2\"",
+    "mcfc": "\"in.eid_3\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:pig#3].tags[1]",
+    "base": "\"in.eid_0\"",
+    "mcfc": "\"in.eid_1\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:sheep#1].tags[2]",
+    "base": "\"in.eid_3\"",
+    "mcfc": "\"in.eid_4\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:sheep#1].tags[3]",
+    "base": "\"in.eid_4\"",
+    "mcfc": "<missing>",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:villager#3].tags[1]",
+    "base": "\"in.eid_3\"",
+    "mcfc": "\"in.eid_2\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:villager#3].tags[2]",
+    "base": "\"in.eid_4\"",
+    "mcfc": "\"in.eid_3\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:villager#3].tags[3]",
+    "base": "<missing>",
+    "mcfc": "\"in.eid_4\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:villager#4].tags[2]",
+    "base": "\"in.eid_2\"",
+    "mcfc": "\"in.eid_3\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:villager#6].tags[2]",
+    "base": "\"in.eid_4\"",
+    "mcfc": "\"in.eid_2\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:villager#6].tags[3]",
+    "base": "<missing>",
+    "mcfc": "\"in.eid_4\"",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.scores.<cat#1>.in.eid",
+    "base": "19",
+    "mcfc": "23",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.scores.<cat#2>.in.eid",
+    "base": "23",
+    "mcfc": "27",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.scores.<cat#3>.in.eid",
+    "base": "21",
+    "mcfc": "25",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.scores.<iron_golem#1>.in.eid",
+    "base": "20",
+    "mcfc": "24",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.scores.<villager#3>.in.eid",
+    "base": "24",
+    "mcfc": "28",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.scores.<villager#4>.in.eid",
+    "base": "22",
+    "mcfc": "26",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.scores.<villager#6>.in.eid",
+    "base": "18",
+    "mcfc": "22",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.teams.in.sanctum.members[4]",
+    "base": "<missing>",
+    "mcfc": "\"<U?>\"",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.teams.in.sanctum.members[5]",
+    "base": "<missing>",
+    "mcfc": "\"<U?>\"",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.teams.in.sanctum.members[6]",
+    "base": "<missing>",
+    "mcfc": "\"<U?>\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.-2,-7",
+    "base": "\"6bc51e0bf5255783fc4f188a60df9c3a230d669a972970f5465220783d64a09f\"",
+    "mcfc": "\"8a9b474ea04a2cfd85ff41010549c0bdfe6562ad8901d35fa8d5882e9c537245\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.4,-5",
+    "base": "\"5689c86d8d49abf11bb5740bec85dd4ac23e86ea1970acaba7f789cb31a6ead4\"",
+    "mcfc": "\"0500c96aab2b998b4a38d1b20cd651f5b274dff14d3af8fbd76e8c300baab7f6\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.7,-1",
+    "base": "\"c0192de52f23c2958e7251d1d8a38307f14aae79ba2b85b569eb43a6c364a07d\"",
+    "mcfc": "\"f549c6d74f51d6c23d921c80b9299eca0b0a585d0b90176d4f3121f0350a6c2e\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.7,-2",
+    "base": "\"9929fd7b42e7777a446a0325dce88b2cad6d892932730ae7620ea4d0d3570802\"",
+    "mcfc": "\"4fef8c037ce436491c1b9b83c1dc6f70aaaf9e69d7d67432874f3cfd58d490a6\"",
+    "dump": "gen"
+   }
+  ],
+  "lowConfidenceSample": [
+   {
+    "path": "blocks[overworld].columns.-5,-3",
+    "base": "\"65151775c603f66f62ab258aae663a79cefea88c7482df1e2d7f7607e901022e\"",
+    "mcfc": "\"529da3a8a5e2b6dacc209d50af91888f9cdd0630747dd7c728aebd0b4eb7540b\""
+   },
+   {
+    "path": "blocks[overworld].columns.-6,-1",
+    "base": "\"d7af3bb20f8565f3a5ef7985a39ccebd9680f93157b4b7c480a9dcc1a92abfd5\"",
+    "mcfc": "\"b18e00d40339c73223572c571854aec5e37c4dd2e2e5e1fa7e1d7a0a8958aea8\""
+   },
+   {
+    "path": "blocks[overworld].columns.-6,0",
+    "base": "\"0b4ea62d7e7e99acc97e07af19d968cdac2c39eb21dc74800390f05930019801\"",
+    "mcfc": "\"e3158096f301e9c69b3de919cf57ca4686c8222e0522bc04d003cb16ed6c94c1\""
+   },
+   {
+    "path": "blocks[overworld].columns.5,-5",
+    "base": "\"9a8244e89ee658d9cebd984dbb52402a6c39180fc14ad7c2cb8e5be3b4bd6146\"",
+    "mcfc": "\"957fbba2bbea05b69d191eb16762c6fd8ccf79607133b4661924a29771db6130\""
+   }
+  ]
+ },
+ "exceptions": {
+  "base1": {},
+  "base2": {},
+  "mcfc": {},
+  "perfbase": {}
+ },
+ "exceptionTotals": {
+  "base1": 0,
+  "base2": 0,
+  "mcfc": 0,
+  "perfbase": 0
+ },
+ "exercise": {
+  "base1": {
+   "namespaces": [
+    "incendium",
+    "load",
+    "nullscape",
+    "structory",
+    "terralith"
+   ],
+   "dumpedFunctions": 2327,
+   "candidates": 2327,
+   "skippedMacro": 5,
+   "skippedName": 15,
+   "skippedScenario": 0,
+   "ran": 2307,
+   "replyExecuted": 1915,
+   "replyError": 392,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "base2": {
+   "namespaces": [
+    "incendium",
+    "load",
+    "nullscape",
+    "structory",
+    "terralith"
+   ],
+   "dumpedFunctions": 2327,
+   "candidates": 2327,
+   "skippedMacro": 5,
+   "skippedName": 15,
+   "skippedScenario": 0,
+   "ran": 2307,
+   "replyExecuted": 1915,
+   "replyError": 392,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "mcfc": {
+   "namespaces": [
+    "incendium",
+    "load",
+    "nullscape",
+    "structory",
+    "terralith"
+   ],
+   "dumpedFunctions": 2327,
+   "candidates": 2327,
+   "skippedMacro": 5,
+   "skippedName": 15,
+   "skippedScenario": 0,
+   "ran": 2307,
+   "replyExecuted": 1915,
+   "replyError": 392,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  }
+ },
+ "slowFunctions": {},
+ "perf": {
+  "mcfc": {
+   "median": 1.55,
+   "min": 1.38,
+   "max": 1.77,
+   "lines": [
+    "Sprint completed with 565 ticks per second, or 1.77 ms per tick",
+    "Sprint completed with 643 ticks per second, or 1.55 ms per tick",
+    "Sprint completed with 724 ticks per second, or 1.38 ms per tick"
+   ]
+  },
+  "vanilla": {
+   "median": 1.87,
+   "min": 1.65,
+   "max": 2.29,
+   "lines": [
+    "Sprint completed with 436 ticks per second, or 2.29 ms per tick",
+    "Sprint completed with 534 ticks per second, or 1.87 ms per tick",
+    "Sprint completed with 604 ticks per second, or 1.65 ms per tick"
+   ]
+  },
+  "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
+ },
+ "durationsSeconds": {
+  "base1": 86.7,
+  "base2": 92.2,
+  "mcfc": 81.0,
+  "perfbase": 76.3,
+  "attempt2-base1": 101.3,
+  "attempt2-base2": 101.3,
+  "attempt2-mcfc": 69.6
+ },
+ "gamerules": {
+  "command_chain_limit": "max_command_sequence_length",
+  "spawn_mobs": "spawn_mobs",
+  "spawn_monsters": "spawn_monsters",
+  "spawn_patrols": "spawn_patrols",
+  "spawn_wandering_traders": "spawn_wandering_traders",
+  "spawn_phantoms": "spawn_phantoms",
+  "spawn_wardens": "spawn_wardens",
+  "random_tick_speed": "random_tick_speed",
+  "weather_cycle": "advance_weather"
+ },
+ "ticks": 200,
+ "seed": "20261026"
+}

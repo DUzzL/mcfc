@@ -1,0 +1,575 @@
+{
+ "id": "mr-functions-all",
+ "status": "FALLBACK-ISSUE",
+ "kind": "function",
+ "packs": [
+  "bacap",
+  "mr-veinminer",
+  "mr-tree-vein-miner",
+  "mr-timber-strike",
+  "mr-gardeners-dream",
+  "mr-spawn-animations",
+  "mr-orbital-strike-cannon",
+  "mr-armor-stand-arms"
+ ],
+ "problems": [],
+ "notes": [
+  "mr-orbital-strike-cannon: pack_format patched (manifest): pack_format 108 -> 121; added min_format/max_format [121, 0] (required for formats above 81)"
+ ],
+ "mcfcJar": {
+  "name": "mcfc-1a611fce.jar",
+  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
+  "mtime": "2026-10-26 09:56:09"
+ },
+ "mcfcState": {
+  "afterLoad": "READY_ON",
+  "final": "READY_ON",
+  "decisiveError": null,
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 5829Total Function Count: 5839"
+ },
+ "compile": {
+  "found": 5839,
+  "compiled": 5829,
+  "rate": 0.9983,
+  "partialFallbackCommands": 262,
+  "wholeFallbacks": {},
+  "compileFailures": [
+   "stm:queue/load_next",
+   "stm:queue/visit",
+   "timberstrike:main/handle",
+   "veinminer:block_add",
+   "veinminer:block_edit",
+   "veinminer:internal/check/_loopi",
+   "veinminer:internal/mine/_loopi",
+   "veinminer:tool_add",
+   "veinminer:tool_edit",
+   "armor_stand_arms:app/arms/right_click/change_arms"
+  ],
+  "compilerErrors": [],
+  "runtimeDisables": [],
+  "topPartialReasons": {
+   "Macros are not supported in this location": 105,
+   "Missing space after argument @ function <functions:function>": 73,
+   "Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>": 20,
+   "Missing space after argument @ advancement grant <targets:entity_selector[players]> only <advancement:resource_location>": 17,
+   "Expected a selector": 17,
+   "Failed to parse any options @ scoreboard objectives": 8,
+   "Too many arguments for @ scoreboard players reset <targets:score_holder>": 5,
+   "Unknown command: clone": 4,
+   "Macro commands are not supported for json arguments": 4,
+   "Unknown command: say": 4,
+   "Unknown command: attribute": 2,
+   "Unknown command: msg": 2,
+   "Unknown command: dialog": 1
+  },
+  "unsupportedCommands": {
+   "clone": 4,
+   "say": 4,
+   "attribute": 2,
+   "msg": 2,
+   "dialog": 1
+  }
+ },
+ "debug": {
+  "header": "5467 compiled | 8 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
+  "functionsByStatus": {
+   "vanilla": 8,
+   "compiled": 5467
+  },
+  "totalCalls": 17963,
+  "vanillaCalls": 3115,
+  "compiledCalls": 14848,
+  "compiledCallShare": 0.8266,
+  "nonCompiled": [
+   {
+    "id": "veinminer:internal/check/_loopi/164062945",
+    "status": "vanilla",
+    "calls": 2212,
+    "vanillaCalls": 2212
+   },
+   {
+    "id": "stm:detection/scan_owned/111972752",
+    "status": "vanilla",
+    "calls": 426,
+    "vanillaCalls": 426
+   },
+   {
+    "id": "stm:operation/process_owned/111972752",
+    "status": "vanilla",
+    "calls": 426,
+    "vanillaCalls": 426
+   },
+   {
+    "id": "veinminer:block_add/1460620541",
+    "status": "vanilla",
+    "calls": 18,
+    "vanillaCalls": 18
+   },
+   {
+    "id": "veinminer:block_edit/50511133",
+    "status": "vanilla",
+    "calls": 18,
+    "vanillaCalls": 18
+   },
+   {
+    "id": "veinminer:tool_add/1460620541",
+    "status": "vanilla",
+    "calls": 7,
+    "vanillaCalls": 7
+   },
+   {
+    "id": "veinminer:tool_edit/50511133",
+    "status": "vanilla",
+    "calls": 7,
+    "vanillaCalls": 7
+   },
+   {
+    "id": "armor_stand_arms:app/arms/right_click/change_arms/2616282",
+    "status": "vanilla",
+    "calls": 1,
+    "vanillaCalls": 1
+   }
+  ],
+  "nonCompiledCount": 8
+ },
+ "compare": {
+  "confirmedFindings": 0,
+  "flakyFindings": 0,
+  "lowConfidence": 366,
+  "noise": 2413,
+  "genFindings": null,
+  "genNoise": null,
+  "confirmation": {
+   "enabled": true,
+   "ran": false
+  },
+  "sections": {
+   "blocks": {
+    "paths": 266,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "bossbars": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "datapacks": {
+    "paths": 9,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "entities": {
+    "paths": 7478,
+    "noise": 2406,
+    "findings": 0,
+    "lowConfidence": 366
+   },
+   "functionTags": {
+    "paths": 47,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functions": {
+    "paths": 5839,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "gamerules": {
+    "paths": 58,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "players": {
+    "paths": 48,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scheduled": {
+    "paths": 16,
+    "noise": 4,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scoreboard": {
+    "paths": 2358,
+    "noise": 1,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "storage": {
+    "paths": 4,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "world": {
+    "paths": 12,
+    "noise": 2,
+    "findings": 0,
+    "lowConfidence": 0
+   }
+  },
+  "confirmed": [],
+  "flaky": [],
+  "lowConfidenceSample": [
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#177].pos[0]",
+    "base": "0.42",
+    "mcfc": "0.41"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#194].pos[0]",
+    "base": "0.43",
+    "mcfc": "0.42"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#195].pos[0]",
+    "base": "0.43",
+    "mcfc": "0.42"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#196].pos[0]",
+    "base": "0.43",
+    "mcfc": "0.42"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#197].pos[0]",
+    "base": "0.43",
+    "mcfc": "0.42"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#198].pos[0]",
+    "base": "0.43",
+    "mcfc": "0.42"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#212].pos[0]",
+    "base": "0.44",
+    "mcfc": "0.43"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#213].pos[0]",
+    "base": "0.44",
+    "mcfc": "0.43"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#214].pos[0]",
+    "base": "0.44",
+    "mcfc": "0.43"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#215].pos[0]",
+    "base": "0.44",
+    "mcfc": "0.43"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#216].pos[0]",
+    "base": "0.44",
+    "mcfc": "0.43"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#217].pos[0]",
+    "base": "0.44",
+    "mcfc": "0.43"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#218].pos[0]",
+    "base": "0.44",
+    "mcfc": "0.43"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#219].pos[0]",
+    "base": "0.44",
+    "mcfc": "0.43"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#220].pos[0]",
+    "base": "0.44",
+    "mcfc": "0.43"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#221].pos[0]",
+    "base": "0.44",
+    "mcfc": "0.43"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#222].pos[0]",
+    "base": "0.44",
+    "mcfc": "0.43"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#223].pos[0]",
+    "base": "0.44",
+    "mcfc": "0.43"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#224].pos[0]",
+    "base": "0.44",
+    "mcfc": "0.43"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#225].pos[0]",
+    "base": "0.44",
+    "mcfc": "0.43"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#226].pos[0]",
+    "base": "0.44",
+    "mcfc": "0.43"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#227].pos[0]",
+    "base": "0.44",
+    "mcfc": "0.43"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#237].pos[0]",
+    "base": "0.45",
+    "mcfc": "0.44"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#238].pos[0]",
+    "base": "0.45",
+    "mcfc": "0.44"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#239].pos[0]",
+    "base": "0.45",
+    "mcfc": "0.44"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#240].pos[0]",
+    "base": "0.45",
+    "mcfc": "0.44"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#241].pos[0]",
+    "base": "0.45",
+    "mcfc": "0.44"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#242].pos[0]",
+    "base": "0.45",
+    "mcfc": "0.44"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#243].pos[0]",
+    "base": "0.45",
+    "mcfc": "0.44"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#244].pos[0]",
+    "base": "0.45",
+    "mcfc": "0.44"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#245].pos[0]",
+    "base": "0.45",
+    "mcfc": "0.44"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#246].pos[0]",
+    "base": "0.45",
+    "mcfc": "0.44"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#247].pos[0]",
+    "base": "0.45",
+    "mcfc": "0.44"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#248].pos[0]",
+    "base": "0.45",
+    "mcfc": "0.44"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#249].pos[0]",
+    "base": "0.45",
+    "mcfc": "0.44"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#250].pos[0]",
+    "base": "0.45",
+    "mcfc": "0.44"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#251].pos[0]",
+    "base": "0.45",
+    "mcfc": "0.44"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#252].pos[0]",
+    "base": "0.45",
+    "mcfc": "0.44"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#265].pos[0]",
+    "base": "0.46",
+    "mcfc": "0.45"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#266].pos[0]",
+    "base": "0.46",
+    "mcfc": "0.45"
+   }
+  ]
+ },
+ "exceptions": {
+  "base1": {},
+  "base2": {},
+  "mcfc": {},
+  "perfbase": {}
+ },
+ "exceptionTotals": {
+  "base1": 0,
+  "base2": 0,
+  "mcfc": 0,
+  "perfbase": 0
+ },
+ "exercise": {
+  "base1": {
+   "namespaces": [
+    "armor_stand_arms",
+    "bacap_rewards",
+    "blazeandcave",
+    "gardenersdream",
+    "jaden",
+    "orbital_strike_cannon",
+    "spawnanimations",
+    "stasistp",
+    "stm",
+    "timberstrike",
+    "tschipcraft",
+    "vdv_raycast",
+    "veinminer"
+   ],
+   "dumpedFunctions": 5839,
+   "candidates": 5839,
+   "skippedMacro": 50,
+   "skippedName": 30,
+   "skippedScenario": 0,
+   "ran": 5759,
+   "replyExecuted": 5452,
+   "replyError": 307,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "base2": {
+   "namespaces": [
+    "armor_stand_arms",
+    "bacap_rewards",
+    "blazeandcave",
+    "gardenersdream",
+    "jaden",
+    "orbital_strike_cannon",
+    "spawnanimations",
+    "stasistp",
+    "stm",
+    "timberstrike",
+    "tschipcraft",
+    "vdv_raycast",
+    "veinminer"
+   ],
+   "dumpedFunctions": 5839,
+   "candidates": 5839,
+   "skippedMacro": 50,
+   "skippedName": 30,
+   "skippedScenario": 0,
+   "ran": 5759,
+   "replyExecuted": 5452,
+   "replyError": 307,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "mcfc": {
+   "namespaces": [
+    "armor_stand_arms",
+    "bacap_rewards",
+    "blazeandcave",
+    "gardenersdream",
+    "jaden",
+    "orbital_strike_cannon",
+    "spawnanimations",
+    "stasistp",
+    "stm",
+    "timberstrike",
+    "tschipcraft",
+    "vdv_raycast",
+    "veinminer"
+   ],
+   "dumpedFunctions": 5839,
+   "candidates": 5839,
+   "skippedMacro": 50,
+   "skippedName": 30,
+   "skippedScenario": 0,
+   "ran": 5759,
+   "replyExecuted": 5452,
+   "replyError": 307,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  }
+ },
+ "slowFunctions": {},
+ "perf": {
+  "mcfc": {
+   "median": 19.17,
+   "min": 18.63,
+   "max": 20.84,
+   "lines": [
+    "Sprint completed with 47 ticks per second, or 20.84 ms per tick",
+    "Sprint completed with 52 ticks per second, or 19.17 ms per tick",
+    "Sprint completed with 53 ticks per second, or 18.63 ms per tick"
+   ]
+  },
+  "vanilla": {
+   "median": 17.46,
+   "min": 17.39,
+   "max": 18.16,
+   "lines": [
+    "Sprint completed with 55 ticks per second, or 18.16 ms per tick",
+    "Sprint completed with 57 ticks per second, or 17.39 ms per tick",
+    "Sprint completed with 57 ticks per second, or 17.46 ms per tick"
+   ]
+  },
+  "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
+ },
+ "durationsSeconds": {
+  "base1": 56.7,
+  "base2": 56.7,
+  "mcfc": 131.4,
+  "perfbase": 115.1
+ },
+ "gamerules": {
+  "command_chain_limit": "max_command_sequence_length",
+  "spawn_mobs": "spawn_mobs",
+  "spawn_monsters": "spawn_monsters",
+  "spawn_patrols": "spawn_patrols",
+  "spawn_wandering_traders": "spawn_wandering_traders",
+  "spawn_phantoms": "spawn_phantoms",
+  "spawn_wardens": "spawn_wardens",
+  "random_tick_speed": "random_tick_speed",
+  "weather_cycle": "advance_weather"
+ },
+ "ticks": 200,
+ "seed": "20261026"
+}

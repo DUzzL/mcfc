@@ -26,33 +26,32 @@
   "vt-track-raw-statistics",
   "vt-track-statistics"
  ],
- "totalDiagnostics": 895,
+ "totalDiagnostics": 837,
  "reasons": [
   {
-   "reason": "PARSE_ERROR: Missing space after argument @ execute if predicate <predicate:resource_location>",
-   "commands": 232,
+   "reason": "PARSE_ERROR: Unknown command: tell",
+   "commands": 204,
    "packs": {
-    "mr-orbital-strike-cannon": 6,
-    "mr-dungeons-and-taverns": 226
+    "mr-dungeons-and-taverns": 204
    },
    "ids": {
-    "command.error.parse.execute.if.predicate.predicate": 232
+    "command.error.parse": 204
    }
   },
   {
    "reason": "PARSE_ERROR: Macros are not supported in this location",
-   "commands": 156,
+   "commands": 140,
    "packs": {
-    "mr-veinminer": 28,
-    "mr-tree-vein-miner": 9,
-    "mr-timber-strike": 79,
+    "mr-veinminer": 27,
+    "mr-tree-vein-miner": 6,
+    "mr-timber-strike": 67,
     "mr-armor-stand-arms": 5,
     "mr-incendium": 4,
     "mr-nullscape": 1,
     "vt-graves": 30
    },
    "ids": {
-    "command.error.macro.unsupported": 156
+    "command.error.macro.unsupported": 140
    }
   },
   {
@@ -98,22 +97,6 @@
    },
    "ids": {
     "command.error.parse": 61
-   }
-  },
-  {
-   "reason": "COMPILE_ERROR: `return` inside an unparsed command would be swallowed; falling back the whole function",
-   "commands": 25,
-   "packs": {
-    "mr-veinminer": 7,
-    "mr-tree-vein-miner": 5,
-    "mr-timber-strike": 5,
-    "mr-armor-stand-arms": 1,
-    "mr-incendium": 2,
-    "mr-nullscape": 2,
-    "vt-graves": 3
-   },
-   "ids": {
-    "command.compile.result_context.not_implemented": 25
    }
   },
   {
@@ -168,6 +151,22 @@
    },
    "ids": {
     "command.error.invalid.integer": 17
+   }
+  },
+  {
+   "reason": "COMPILE_ERROR: `return` inside an unparsed command would be swallowed; falling back the whole function",
+   "commands": 16,
+   "packs": {
+    "mr-veinminer": 6,
+    "mr-tree-vein-miner": 2,
+    "mr-timber-strike": 1,
+    "mr-armor-stand-arms": 1,
+    "mr-incendium": 2,
+    "mr-nullscape": 1,
+    "vt-graves": 3
+   },
+   "ids": {
+    "command.compile.result_context.not_implemented": 16
    }
   },
   {
@@ -226,17 +225,6 @@
    }
   },
   {
-   "reason": "PARSE_ERROR: Too many arguments for @ scoreboard players reset <targets:score_holder>",
-   "commands": 5,
-   "packs": {
-    "mr-veinminer": 4,
-    "mr-timber-strike": 1
-   },
-   "ids": {
-    "command.error.parse.scoreboard.players.reset.targets": 5
-   }
-  },
-  {
    "reason": "PARSE_ERROR: Macro commands are not supported for json arguments",
    "commands": 5,
    "packs": {
@@ -248,14 +236,14 @@
    }
   },
   {
-   "reason": "PARSE_ERROR: Missing space after argument @ execute unless predicate <predicate:resource_location>",
+   "reason": "PARSE_ERROR: Too many arguments for @ scoreboard players reset <targets:score_holder>",
    "commands": 5,
    "packs": {
-    "mr-nullscape": 2,
-    "mr-dungeons-and-taverns": 3
+    "mr-veinminer": 4,
+    "mr-timber-strike": 1
    },
    "ids": {
-    "command.error.parse.execute.unless.predicate.predicate": 5
+    "command.error.parse.scoreboard.players.reset.targets": 5
    }
   },
   {
@@ -417,28 +405,13 @@
  ],
  "commandWords": [
   {
-   "command": "execute if predicate",
-   "count": 235,
+   "command": "tell",
+   "count": 204,
    "reasons": {
-    "PARSE_ERROR: Missing space after argument @ execute if predicate <predicate:resource_location>": 232,
-    "PARSE_ERROR: Failed to parse any options @ execute": 3
+    "PARSE_ERROR: Unknown command: tell": 204
    },
    "packs": {
-    "mr-orbital-strike-cannon": 6,
-    "mr-incendium": 3,
-    "mr-dungeons-and-taverns": 226
-   }
-  },
-  {
-   "command": "execute if block",
-   "count": 75,
-   "reasons": {
-    "PARSE_ERROR: Macros are not supported in this location": 75
-   },
-   "packs": {
-    "mr-veinminer": 1,
-    "mr-tree-vein-miner": 3,
-    "mr-timber-strike": 71
+    "mr-dungeons-and-taverns": 204
    }
   },
   {
@@ -477,6 +450,16 @@
    }
   },
   {
+   "command": "execute if block",
+   "count": 59,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 59
+   },
+   "packs": {
+    "mr-timber-strike": 59
+   }
+  },
+  {
    "command": "execute if entity",
    "count": 31,
    "reasons": {
@@ -501,22 +484,6 @@
     "mr-veinminer": 7,
     "mr-armor-stand-arms": 1,
     "vt-graves": 18
-   }
-  },
-  {
-   "command": "(whole function)",
-   "count": 25,
-   "reasons": {
-    "COMPILE_ERROR: `return` inside an unparsed command would be swallowed; falling back the whole function": 25
-   },
-   "packs": {
-    "mr-veinminer": 7,
-    "mr-tree-vein-miner": 5,
-    "mr-timber-strike": 5,
-    "mr-armor-stand-arms": 1,
-    "mr-incendium": 2,
-    "mr-nullscape": 2,
-    "vt-graves": 3
    }
   },
   {
@@ -575,6 +542,22 @@
    },
    "packs": {
     "mr-incendium": 17
+   }
+  },
+  {
+   "command": "(whole function)",
+   "count": 16,
+   "reasons": {
+    "COMPILE_ERROR: `return` inside an unparsed command would be swallowed; falling back the whole function": 16
+   },
+   "packs": {
+    "mr-veinminer": 6,
+    "mr-tree-vein-miner": 2,
+    "mr-timber-strike": 1,
+    "mr-armor-stand-arms": 1,
+    "mr-incendium": 2,
+    "mr-nullscape": 1,
+    "vt-graves": 3
    }
   },
   {
@@ -708,6 +691,17 @@
    }
   },
   {
+   "command": "tellraw",
+   "count": 5,
+   "reasons": {
+    "PARSE_ERROR: Macro commands are not supported for json arguments": 5
+   },
+   "packs": {
+    "mr-veinminer": 4,
+    "vt-graves": 1
+   }
+  },
+  {
    "command": "data remove storage",
    "count": 5,
    "reasons": {
@@ -730,17 +724,6 @@
    }
   },
   {
-   "command": "tellraw",
-   "count": 5,
-   "reasons": {
-    "PARSE_ERROR: Macro commands are not supported for json arguments": 5
-   },
-   "packs": {
-    "mr-veinminer": 4,
-    "vt-graves": 1
-   }
-  },
-  {
    "command": "stopsound",
    "count": 5,
    "reasons": {
@@ -748,17 +731,6 @@
    },
    "packs": {
     "mr-incendium": 5
-   }
-  },
-  {
-   "command": "execute unless predicate",
-   "count": 5,
-   "reasons": {
-    "PARSE_ERROR: Missing space after argument @ execute unless predicate <predicate:resource_location>": 5
-   },
-   "packs": {
-    "mr-nullscape": 2,
-    "mr-dungeons-and-taverns": 3
    }
   },
   {
@@ -872,6 +844,16 @@
    }
   },
   {
+   "command": "execute if predicate",
+   "count": 3,
+   "reasons": {
+    "PARSE_ERROR: Failed to parse any options @ execute": 3
+   },
+   "packs": {
+    "mr-incendium": 3
+   }
+  },
+  {
    "command": "scoreboard objectives remove",
    "count": 2,
    "reasons": {
@@ -975,16 +957,6 @@
    }
   },
   {
-   "command": "data merge storage",
-   "count": 1,
-   "reasons": {
-    "PARSE_ERROR: Macros are not supported in this location": 1
-   },
-   "packs": {
-    "mr-veinminer": 1
-   }
-  },
-  {
    "command": "execute run data get storage",
    "count": 1,
    "reasons": {
@@ -995,13 +967,13 @@
    }
   },
   {
-   "command": "data modify entity",
+   "command": "data merge storage",
    "count": 1,
    "reasons": {
     "PARSE_ERROR: Macros are not supported in this location": 1
    },
    "packs": {
-    "mr-tree-vein-miner": 1
+    "mr-veinminer": 1
    }
   },
   {
@@ -1016,6 +988,16 @@
   },
   {
    "command": "data merge entity",
+   "count": 1,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 1
+   },
+   "packs": {
+    "mr-tree-vein-miner": 1
+   }
+  },
+  {
+   "command": "data modify entity",
    "count": 1,
    "reasons": {
     "PARSE_ERROR: Macros are not supported in this location": 1
@@ -1109,7 +1091,7 @@
   {
    "command": "execute if block",
    "position": "arg 4",
-   "count": 75
+   "count": 59
   },
   {
    "command": "data modify storage",
@@ -1162,13 +1144,13 @@
    "count": 2
   },
   {
-   "command": "scoreboard objectives remove",
-   "position": "arg 3",
+   "command": "data modify storage",
+   "position": "arg 4",
    "count": 2
   },
   {
-   "command": "data modify storage",
-   "position": "arg 4",
+   "command": "scoreboard objectives remove",
+   "position": "arg 3",
    "count": 2
   },
   {
@@ -1217,23 +1199,13 @@
    "count": 1
   },
   {
-   "command": "data merge storage",
-   "position": "arg 4 (inside {...})",
-   "count": 1
-  },
-  {
    "command": "execute run data get storage",
    "position": "arg 4",
    "count": 1
   },
   {
-   "command": "execute as",
-   "position": "arg 1",
-   "count": 1
-  },
-  {
-   "command": "data modify entity",
-   "position": "arg 9",
+   "command": "data merge storage",
+   "position": "arg 4 (inside {...})",
    "count": 1
   },
   {
@@ -1242,8 +1214,18 @@
    "count": 1
   },
   {
+   "command": "execute as",
+   "position": "arg 1",
+   "count": 1
+  },
+  {
    "command": "data merge entity",
    "position": "arg 4 (inside {...})",
+   "count": 1
+  },
+  {
+   "command": "data modify entity",
+   "position": "arg 9",
    "count": 1
   },
   {
@@ -1291,41 +1273,32 @@
   {
    "kind": "COMPILE_ERROR",
    "message": "`return` inside an unparsed command would be swallowed; falling back the whole function",
-   "count": 25,
+   "count": 16,
    "functions": {
     "veinminer:block_add": 1,
     "veinminer:block_edit": 1,
     "veinminer:internal/check/_loopi": 1,
     "veinminer:internal/mine/_loopi": 1,
-    "veinminer:internal/mine/try": 1,
     "veinminer:tool_add": 1,
     "veinminer:tool_edit": 1,
-    "stm:operation/dispatch_match": 1,
-    "stm:queue/enqueue_match": 1,
     "stm:queue/load_next": 1,
     "stm:queue/visit": 1,
-    "stm:detection/check_present": 1,
     "timberstrike:main/handle": 1,
-    "timberstrike:tree/visit": 1,
-    "timberstrike:tree/blob_expand": 1,
-    "timberstrike:tree/candidate": 1,
-    "timberstrike:tree/expand": 1,
     "armor_stand_arms:app/arms/right_click/change_arms": 1,
     "incendium:item/multiplex_crossbow/arrow/arrow_init": 1,
     "incendium:item/scouts_battle_helm/helper": 1,
-    "nullscape:broke_sculk": 1,
     "nullscape:link_rift/position_other_side": 1,
     "graves:creation/create_loading_grave_listing": 1,
     "graves:creation/items/pick_up_items_at_inventory_pos": 1,
     "graves:creation/update_grave_listing": 1
    },
    "packs": {
-    "mr-veinminer": 7,
-    "mr-tree-vein-miner": 5,
-    "mr-timber-strike": 5,
+    "mr-veinminer": 6,
+    "mr-tree-vein-miner": 2,
+    "mr-timber-strike": 1,
     "mr-armor-stand-arms": 1,
     "mr-incendium": 2,
-    "mr-nullscape": 2,
+    "mr-nullscape": 1,
     "vt-graves": 3
    }
   }

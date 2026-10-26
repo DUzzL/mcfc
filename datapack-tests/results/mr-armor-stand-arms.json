@@ -7,20 +7,23 @@
  ],
  "problems": [],
  "notes": [],
+ "mcfcJar": {
+  "name": "mcfc-1a611fce.jar",
+  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
+  "mtime": "2026-10-26 09:56:09"
+ },
  "mcfcState": {
   "afterLoad": "READY_ON",
   "final": "READY_ON",
   "decisiveError": null,
-  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 18Total Function Count: 20"
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 19Total Function Count: 20"
  },
  "compile": {
   "found": 20,
-  "compiled": 18,
-  "rate": 0.9,
+  "compiled": 19,
+  "rate": 0.95,
   "partialFallbackCommands": 7,
-  "wholeFallbacks": {
-   "armor_stand_arms:config/save_config": "verification failed: Bad type on operand stack in mcfc/batch/Batch$0::fn_armor_stand_arms_config_save_config_5262b0c7__instanced(CommandSourceStack,String,int) @21 (java/lang/String is not assignable from integer_type)"
-  },
+  "wholeFallbacks": {},
   "compileFailures": [
    "armor_stand_arms:app/arms/right_click/change_arms"
   ],
@@ -65,7 +68,8 @@
   "genNoise": null,
   "confirmation": {
    "enabled": true,
-   "ran": false
+   "ran": true,
+   "onlyInSecondAttempt": 0
   },
   "sections": {
    "blocks": {
@@ -219,32 +223,35 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 0.3,
+   "median": 0.24,
    "min": 0.19,
-   "max": 0.47,
+   "max": 0.49,
    "lines": [
-    "Sprint completed with 2126 ticks per second, or 0.47 ms per tick",
-    "Sprint completed with 3379 ticks per second, or 0.30 ms per tick",
-    "Sprint completed with 5275 ticks per second, or 0.19 ms per tick"
+    "Sprint completed with 2047 ticks per second, or 0.49 ms per tick",
+    "Sprint completed with 4122 ticks per second, or 0.24 ms per tick",
+    "Sprint completed with 5358 ticks per second, or 0.19 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.32,
-   "min": 0.26,
-   "max": 0.51,
+   "median": 0.28,
+   "min": 0.2,
+   "max": 0.53,
    "lines": [
-    "Sprint completed with 1964 ticks per second, or 0.51 ms per tick",
-    "Sprint completed with 3121 ticks per second, or 0.32 ms per tick",
-    "Sprint completed with 3900 ticks per second, or 0.26 ms per tick"
+    "Sprint completed with 1893 ticks per second, or 0.53 ms per tick",
+    "Sprint completed with 3631 ticks per second, or 0.28 ms per tick",
+    "Sprint completed with 4927 ticks per second, or 0.20 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 37.5,
-  "base2": 37.8,
-  "mcfc": 37.7,
-  "perfbase": 37.9
+  "base1": 38.7,
+  "base2": 38.7,
+  "mcfc": 41.7,
+  "perfbase": 36.1,
+  "attempt2-base1": 37.0,
+  "attempt2-base2": 37.9,
+  "attempt2-mcfc": 35.1
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

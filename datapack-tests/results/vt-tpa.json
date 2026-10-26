@@ -1,6 +1,6 @@
 {
  "id": "vt-tpa",
- "status": "OK",
+ "status": "DIFF",
  "kind": "function",
  "packs": [
   "vt-tpa"
@@ -8,9 +8,9 @@
  "problems": [],
  "notes": [],
  "mcfcJar": {
-  "name": "mcfc-cd77d43f.jar",
-  "sha256": "b2a4923b93f4217a26c275c3c03f8f52795cc15b052ef828ec3841ad5690161b",
-  "mtime": "2026-10-26 09:06:07"
+  "name": "mcfc-1a611fce.jar",
+  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
+  "mtime": "2026-10-26 09:56:09"
  },
  "mcfcState": {
   "afterLoad": "READY_ON",
@@ -43,7 +43,7 @@
   "nonCompiledCount": 0
  },
  "compare": {
-  "confirmedFindings": 0,
+  "confirmedFindings": 4,
   "flakyFindings": 0,
   "lowConfidence": 0,
   "noise": 4,
@@ -99,19 +99,19 @@
    },
    "players": {
     "paths": 46,
-    "noise": 0,
+    "noise": 2,
     "findings": 0,
     "lowConfidence": 0
    },
    "scheduled": {
     "paths": 8,
-    "noise": 2,
-    "findings": 0,
+    "noise": 0,
+    "findings": 2,
     "lowConfidence": 0
    },
    "scoreboard": {
     "paths": 42,
-    "noise": 0,
+    "noise": 2,
     "findings": 0,
     "lowConfidence": 0
    },
@@ -123,33 +123,51 @@
    },
    "world": {
     "paths": 12,
-    "noise": 2,
-    "findings": 0,
+    "noise": 0,
+    "findings": 2,
     "lowConfidence": 0
    }
   },
-  "confirmed": [],
+  "confirmed": [
+   {
+    "path": "scheduled.events[0].trigger_time",
+    "base": "6484",
+    "mcfc": "6488",
+    "dump": "final"
+   },
+   {
+    "path": "scheduled.events[1].trigger_time",
+    "base": "6503",
+    "mcfc": "6507",
+    "dump": "final"
+   },
+   {
+    "path": "world.dayTime",
+    "base": "6483",
+    "mcfc": "6487",
+    "dump": "final"
+   },
+   {
+    "path": "world.gameTime",
+    "base": "6483",
+    "mcfc": "6487",
+    "dump": "final"
+   }
+  ],
   "flaky": [],
   "lowConfidenceSample": []
  },
  "exceptions": {
   "base1": {},
-  "base2": {
-   "com.mojang.authlib.exceptions.MinecraftClientException": {
-    "count": 1,
-    "first": "Failed to read from https://sessionserver.mojang.com/session/minecraft/profile/c8b0ccc87cd3306481b83317aa73ed1a?unsigned=false due to Read timed out"
-   },
-   "java.net.SocketTimeoutException": {
-    "count": 1,
-    "first": "Read timed out"
-   }
-  },
-  "mcfc": {}
+  "base2": {},
+  "mcfc": {},
+  "perfbase": {}
  },
  "exceptionTotals": {
   "base1": 0,
-  "base2": 2,
-  "mcfc": 0
+  "base2": 0,
+  "mcfc": 0,
+  "perfbase": 0
  },
  "exercise": {
   "base1": {
@@ -211,14 +229,37 @@
   }
  },
  "slowFunctions": {},
- "perf": null,
+ "perf": {
+  "mcfc": {
+   "median": 0.17,
+   "min": 0.16,
+   "max": 0.17,
+   "lines": [
+    "Sprint completed with 5742 ticks per second, or 0.17 ms per tick",
+    "Sprint completed with 5848 ticks per second, or 0.17 ms per tick",
+    "Sprint completed with 6190 ticks per second, or 0.16 ms per tick"
+   ]
+  },
+  "vanilla": {
+   "median": 0.15,
+   "min": 0.15,
+   "max": 0.18,
+   "lines": [
+    "Sprint completed with 5572 ticks per second, or 0.18 ms per tick",
+    "Sprint completed with 6587 ticks per second, or 0.15 ms per tick",
+    "Sprint completed with 6549 ticks per second, or 0.15 ms per tick"
+   ]
+  },
+  "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
+ },
  "durationsSeconds": {
-  "base1": 342.8,
-  "base2": 347.8,
-  "mcfc": 341.7,
-  "attempt2-base1": 344.9,
-  "attempt2-base2": 345.2,
-  "attempt2-mcfc": 346.7
+  "base1": 347.8,
+  "base2": 348.6,
+  "mcfc": 346.3,
+  "perfbase": 344.4,
+  "attempt2-base1": 348.8,
+  "attempt2-base2": 348.8,
+  "attempt2-mcfc": 349.3
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

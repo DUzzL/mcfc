@@ -261,6 +261,17 @@ class Runner:
             if isinstance(data, list):
                 data = {"steps": data}
             self.scenario_data.update({k: data.get(k, []) for k in ("steps", "exerciserSkip")})
+        # A combination inherits the exerciser skip list of its member packs (their steps are not run).
+        skip = list(self.scenario_data["exerciserSkip"])
+        for p in self.spec["packs"]:
+            if p["id"] == self.args.id:
+                continue
+            mpath = c.SCENARIOS_DIR / f"{p['id']}.json"
+            if mpath.exists():
+                mdata = json.loads(mpath.read_text(encoding="utf-8"))
+                if isinstance(mdata, dict):
+                    skip += [x for x in mdata.get("exerciserSkip", []) if x not in skip]
+        self.scenario_data["exerciserSkip"] = skip
 
     def scenario(self) -> None:
         if not self.scenario_data["steps"]:

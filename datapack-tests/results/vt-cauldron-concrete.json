@@ -7,6 +7,11 @@
  ],
  "problems": [],
  "notes": [],
+ "mcfcJar": {
+  "name": "mcfc-1a611fce.jar",
+  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
+  "mtime": "2026-10-26 09:56:09"
+ },
  "mcfcState": {
   "afterLoad": "READY_ON",
   "final": "READY_ON",
@@ -39,15 +44,14 @@
  },
  "compare": {
   "confirmedFindings": 0,
-  "flakyFindings": 1,
+  "flakyFindings": 0,
   "lowConfidence": 0,
-  "noise": 31,
+  "noise": 30,
   "genFindings": null,
   "genNoise": null,
   "confirmation": {
    "enabled": true,
-   "ran": true,
-   "onlyInSecondAttempt": 0
+   "ran": false
   },
   "sections": {
    "blocks": {
@@ -70,8 +74,8 @@
    },
    "entities": {
     "paths": 78,
-    "noise": 28,
-    "findings": 1,
+    "noise": 27,
+    "findings": 0,
     "lowConfidence": 0
    },
    "functionTags": {
@@ -124,14 +128,7 @@
    }
   },
   "confirmed": [],
-  "flaky": [
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#7].pos[0]",
-    "base": "3.88",
-    "mcfc": "3.93",
-    "dump": "final"
-   }
-  ],
+  "flaky": [],
   "lowConfidenceSample": []
  },
  "exceptions": {
@@ -208,35 +205,32 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 0.23,
-   "min": 0.19,
-   "max": 0.45,
+   "median": 0.25,
+   "min": 0.22,
+   "max": 0.5,
    "lines": [
-    "Sprint completed with 2203 ticks per second, or 0.45 ms per tick",
-    "Sprint completed with 4436 ticks per second, or 0.23 ms per tick",
-    "Sprint completed with 5212 ticks per second, or 0.19 ms per tick"
+    "Sprint completed with 2012 ticks per second, or 0.50 ms per tick",
+    "Sprint completed with 4039 ticks per second, or 0.25 ms per tick",
+    "Sprint completed with 4578 ticks per second, or 0.22 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.25,
-   "min": 0.2,
-   "max": 0.47,
+   "median": 0.24,
+   "min": 0.23,
+   "max": 0.49,
    "lines": [
-    "Sprint completed with 2132 ticks per second, or 0.47 ms per tick",
-    "Sprint completed with 4038 ticks per second, or 0.25 ms per tick",
-    "Sprint completed with 5071 ticks per second, or 0.20 ms per tick"
+    "Sprint completed with 2023 ticks per second, or 0.49 ms per tick",
+    "Sprint completed with 4215 ticks per second, or 0.24 ms per tick",
+    "Sprint completed with 4275 ticks per second, or 0.23 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 40.6,
-  "base2": 44.7,
+  "base1": 40.5,
+  "base2": 41.5,
   "mcfc": 41.6,
-  "perfbase": 44.1,
-  "attempt2-base1": 40.8,
-  "attempt2-base2": 41.1,
-  "attempt2-mcfc": 39.9
+  "perfbase": 41.7
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

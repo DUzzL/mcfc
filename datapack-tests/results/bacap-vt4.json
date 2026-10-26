@@ -1,0 +1,479 @@
+{
+ "id": "bacap-vt4",
+ "status": "OK",
+ "kind": "function",
+ "packs": [
+  "bacap",
+  "vt-multiplayer-sleep",
+  "vt-afk-display",
+  "vt-coordinates-hud",
+  "vt-homes"
+ ],
+ "problems": [],
+ "notes": [],
+ "mcfcJar": {
+  "name": "mcfc-bfaa7efd.jar",
+  "sha256": "fca3ca87409825f94361fa4e189433dcced4f759e339f2b7bc1999eb69d81ed0",
+  "mtime": "2026-10-26 13:45:38"
+ },
+ "mcfcState": {
+  "afterLoad": "READY_ON",
+  "final": "READY_ON",
+  "decisiveError": null,
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 5537Total Function Count: 5537"
+ },
+ "compile": {
+  "found": 5537,
+  "compiled": 5537,
+  "rate": 1.0,
+  "partialFallbackCommands": 119,
+  "wholeFallbacks": {},
+  "compileFailures": [],
+  "compilerErrors": [],
+  "runtimeDisables": [],
+  "topPartialReasons": {
+   "Missing space after argument @ function <functions:function>": 73,
+   "Missing space after argument @ advancement grant <targets:entity_selector[players]> only <advancement:resource_location>": 17,
+   "Unknown command: bossbar": 15,
+   "Failed to parse any options @ scoreboard objectives": 8,
+   "Unknown command: forceload": 3,
+   "Failed to parse any options @ execute store <store_location:result_store_location_type>": 2,
+   "Failed to parse any options @ execute": 1
+  },
+  "unsupportedCommands": {
+   "bossbar": 15,
+   "forceload": 3
+  }
+ },
+ "debug": {
+  "header": "5452 compiled | 0 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
+  "functionsByStatus": {
+   "compiled": 5452
+  },
+  "totalCalls": 1831694,
+  "vanillaCalls": 1818182,
+  "compiledCalls": 13512,
+  "compiledCallShare": 0.0074,
+  "nonCompiled": [],
+  "nonCompiledCount": 0
+ },
+ "compare": {
+  "confirmedFindings": 0,
+  "flakyFindings": 0,
+  "lowConfidence": 122,
+  "noise": 2437,
+  "genFindings": null,
+  "genNoise": null,
+  "confirmation": {
+   "enabled": true,
+   "ran": false
+  },
+  "sections": {
+   "blocks": {
+    "paths": 266,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "bossbars": {
+    "paths": 22,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "datapacks": {
+    "paths": 6,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "entities": {
+    "paths": 7439,
+    "noise": 2425,
+    "findings": 0,
+    "lowConfidence": 122
+   },
+   "functionTags": {
+    "paths": 39,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functions": {
+    "paths": 5537,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "gamerules": {
+    "paths": 58,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "players": {
+    "paths": 50,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scheduled": {
+    "paths": 32,
+    "noise": 8,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scoreboard": {
+    "paths": 2069,
+    "noise": 2,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "storage": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "world": {
+    "paths": 12,
+    "noise": 2,
+    "findings": 0,
+    "lowConfidence": 0
+   }
+  },
+  "confirmed": [],
+  "flaky": [],
+  "lowConfidenceSample": [
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#110].pos[0]",
+    "base": "0.39",
+    "mcfc": "0.4"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#111].pos[0]",
+    "base": "0.39",
+    "mcfc": "0.4"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#112].pos[0]",
+    "base": "0.39",
+    "mcfc": "0.4"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#113].pos[0]",
+    "base": "0.39",
+    "mcfc": "0.4"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#114].pos[0]",
+    "base": "0.39",
+    "mcfc": "0.4"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#483].pos[0]",
+    "base": "0.5",
+    "mcfc": "0.51"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#484].pos[0]",
+    "base": "0.5",
+    "mcfc": "0.51"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#534].pos[0]",
+    "base": "0.51",
+    "mcfc": "0.52"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#535].pos[0]",
+    "base": "0.51",
+    "mcfc": "0.52"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#536].pos[0]",
+    "base": "0.51",
+    "mcfc": "0.52"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#537].pos[0]",
+    "base": "0.51",
+    "mcfc": "0.52"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#538].pos[0]",
+    "base": "0.51",
+    "mcfc": "0.52"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#539].pos[0]",
+    "base": "0.51",
+    "mcfc": "0.52"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#575].pos[0]",
+    "base": "0.52",
+    "mcfc": "0.53"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#576].pos[0]",
+    "base": "0.52",
+    "mcfc": "0.53"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#577].pos[0]",
+    "base": "0.52",
+    "mcfc": "0.53"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#578].pos[0]",
+    "base": "0.52",
+    "mcfc": "0.53"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#579].pos[0]",
+    "base": "0.52",
+    "mcfc": "0.53"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#701].pos[0]",
+    "base": "0.56",
+    "mcfc": "0.57"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#702].pos[0]",
+    "base": "0.56",
+    "mcfc": "0.57"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#703].pos[0]",
+    "base": "0.56",
+    "mcfc": "0.57"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#704].pos[0]",
+    "base": "0.56",
+    "mcfc": "0.57"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#705].pos[0]",
+    "base": "0.56",
+    "mcfc": "0.57"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#706].pos[0]",
+    "base": "0.56",
+    "mcfc": "0.57"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#707].pos[0]",
+    "base": "0.56",
+    "mcfc": "0.57"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#708].pos[0]",
+    "base": "0.56",
+    "mcfc": "0.57"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#721].pos[0]",
+    "base": "0.57",
+    "mcfc": "0.58"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#722].pos[0]",
+    "base": "0.57",
+    "mcfc": "0.58"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#723].pos[0]",
+    "base": "0.57",
+    "mcfc": "0.58"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#724].pos[0]",
+    "base": "0.57",
+    "mcfc": "0.58"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#725].pos[0]",
+    "base": "0.57",
+    "mcfc": "0.58"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#726].pos[0]",
+    "base": "0.57",
+    "mcfc": "0.58"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#743].pos[0]",
+    "base": "0.58",
+    "mcfc": "0.59"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#744].pos[0]",
+    "base": "0.58",
+    "mcfc": "0.59"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#745].pos[0]",
+    "base": "0.58",
+    "mcfc": "0.59"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#746].pos[0]",
+    "base": "0.58",
+    "mcfc": "0.59"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#747].pos[0]",
+    "base": "0.58",
+    "mcfc": "0.59"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#748].pos[0]",
+    "base": "0.58",
+    "mcfc": "0.59"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#749].pos[0]",
+    "base": "0.58",
+    "mcfc": "0.59"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#750].pos[0]",
+    "base": "0.58",
+    "mcfc": "0.59"
+   }
+  ]
+ },
+ "exceptions": {
+  "base1": {},
+  "base2": {},
+  "mcfc": {},
+  "perfbase": {}
+ },
+ "exceptionTotals": {
+  "base1": 0,
+  "base2": 0,
+  "mcfc": 0,
+  "perfbase": 0
+ },
+ "exercise": {
+  "base1": {
+   "namespaces": [
+    "afk_display",
+    "bacap_rewards",
+    "blazeandcave",
+    "coordinates_hud",
+    "homes",
+    "multiplayer_sleep"
+   ],
+   "dumpedFunctions": 5537,
+   "candidates": 5537,
+   "skippedMacro": 8,
+   "skippedName": 23,
+   "skippedScenario": 3,
+   "ran": 5503,
+   "replyExecuted": 5446,
+   "replyError": 57,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "base2": {
+   "namespaces": [
+    "afk_display",
+    "bacap_rewards",
+    "blazeandcave",
+    "coordinates_hud",
+    "homes",
+    "multiplayer_sleep"
+   ],
+   "dumpedFunctions": 5537,
+   "candidates": 5537,
+   "skippedMacro": 8,
+   "skippedName": 23,
+   "skippedScenario": 3,
+   "ran": 5503,
+   "replyExecuted": 5446,
+   "replyError": 57,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "mcfc": {
+   "namespaces": [
+    "afk_display",
+    "bacap_rewards",
+    "blazeandcave",
+    "coordinates_hud",
+    "homes",
+    "multiplayer_sleep"
+   ],
+   "dumpedFunctions": 5537,
+   "candidates": 5537,
+   "skippedMacro": 8,
+   "skippedName": 23,
+   "skippedScenario": 3,
+   "ran": 5503,
+   "replyExecuted": 5446,
+   "replyError": 57,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  }
+ },
+ "slowFunctions": {},
+ "perf": {
+  "mcfc": {
+   "median": 20.43,
+   "min": 19.93,
+   "max": 20.66,
+   "lines": [
+    "Sprint completed with 48 ticks per second, or 20.43 ms per tick",
+    "Sprint completed with 50 ticks per second, or 19.93 ms per tick",
+    "Sprint completed with 48 ticks per second, or 20.66 ms per tick"
+   ]
+  },
+  "vanilla": {
+   "median": 19.75,
+   "min": 19.67,
+   "max": 19.99,
+   "lines": [
+    "Sprint completed with 50 ticks per second, or 19.99 ms per tick",
+    "Sprint completed with 50 ticks per second, or 19.75 ms per tick",
+    "Sprint completed with 50 ticks per second, or 19.67 ms per tick"
+   ]
+  },
+  "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
+ },
+ "durationsSeconds": {
+  "base1": 72.1,
+  "base2": 72.5,
+  "mcfc": 144.6,
+  "perfbase": 131.4
+ },
+ "gamerules": {
+  "command_chain_limit": "max_command_sequence_length",
+  "spawn_mobs": "spawn_mobs",
+  "spawn_monsters": "spawn_monsters",
+  "spawn_patrols": "spawn_patrols",
+  "spawn_wandering_traders": "spawn_wandering_traders",
+  "spawn_phantoms": "spawn_phantoms",
+  "spawn_wardens": "spawn_wardens",
+  "random_tick_speed": "random_tick_speed",
+  "weather_cycle": "advance_weather"
+ },
+ "ticks": 200,
+ "seed": "20261026"
+}

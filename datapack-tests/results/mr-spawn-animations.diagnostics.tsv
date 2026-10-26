@@ -1,0 +1,9 @@
+kind	id	function	message	command
+PARSE_ERROR	command.error.parse	spawnanimations:internal/entity/ehs/entity_specific/emissive_layer/hide	Unknown command: attribute	attribute @s minecraft:scale modifier add spawnanimations.ehs.scale -1000000000000000000000000000000 add_value
+PARSE_ERROR	command.error.parse	spawnanimations:internal/entity/ehs/entity_specific/emissive_layer/unhide	Unknown command: attribute	attribute @s minecraft:scale modifier remove spawnanimations.ehs.scale
+PARSE_ERROR	command.error.parse	spawnanimations:uninstall	Unknown command: say	say ⏻ Spawn Animations v1.11.6 by Tschipcraft has been uninstalled by @s! It is safe to disable and remove the data pack/mod.
+PARSE_ERROR	command.error.parse	spawnanimations:internal/animation/dig_up/sound/support	Unknown command: clone	execute if score $block ts.sa.settings matches 1..2 run clone ~1 ~ ~1 ~-1 ~ ~-1 ~-1 -64 ~-1
+PARSE_ERROR	command.error.parse	spawnanimations:internal/animation/dig_up/sound/support	Unknown command: clone	execute if score $block ts.sa.settings matches 3..4 run clone ~1 ~ ~1 ~-1 ~ ~-1 ~-1 0 ~-1
+PARSE_ERROR	command.error.parse	spawnanimations:reset	Unknown command: say	say ⏏ Spawn Animations successfully reset!
+PARSE_ERROR	command.error.parse	spawnanimations:internal/animation/dig_up/sound/support	Unknown command: clone	execute if score $block ts.sa.settings matches 1..2 run clone ~1 -64 ~1 ~-1 -64 ~-1 ~-1 ~ ~-1 masked
+PARSE_ERROR	command.error.parse	spawnanimations:internal/animation/dig_up/sound/support	Unknown command: clone	execute if score $block ts.sa.settings matches 3..4 run clone ~1 0 ~1 ~-1 0 ~-1 ~-1 ~ ~-1 masked

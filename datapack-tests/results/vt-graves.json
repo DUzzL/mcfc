@@ -7,25 +7,27 @@
  ],
  "problems": [],
  "notes": [],
+ "mcfcJar": {
+  "name": "mcfc-1a611fce.jar",
+  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
+  "mtime": "2026-10-26 09:56:09"
+ },
  "mcfcState": {
   "afterLoad": "READY_ON",
   "final": "READY_ON",
   "decisiveError": null,
-  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 133Total Function Count: 139"
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 136Total Function Count: 139"
  },
  "compile": {
   "found": 139,
-  "compiled": 133,
-  "rate": 0.9568,
+  "compiled": 136,
+  "rate": 0.9784,
   "partialFallbackCommands": 51,
   "wholeFallbacks": {},
   "compileFailures": [
    "graves:creation/create_loading_grave_listing",
-   "graves:opening/animate_shaking",
-   "graves:opening/attempt_fix_vehicle",
    "graves:creation/items/pick_up_items_at_inventory_pos",
-   "graves:creation/update_grave_listing",
-   "graves:face_cardinal_direction"
+   "graves:creation/update_grave_listing"
   ],
   "compilerErrors": [],
   "runtimeDisables": [],
@@ -220,32 +222,32 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 0.19,
+   "median": 0.21,
    "min": 0.18,
-   "max": 0.24,
+   "max": 0.26,
    "lines": [
-    "Sprint completed with 4125 ticks per second, or 0.24 ms per tick",
-    "Sprint completed with 5225 ticks per second, or 0.19 ms per tick",
-    "Sprint completed with 5686 ticks per second, or 0.18 ms per tick"
+    "Sprint completed with 3777 ticks per second, or 0.26 ms per tick",
+    "Sprint completed with 4668 ticks per second, or 0.21 ms per tick",
+    "Sprint completed with 5670 ticks per second, or 0.18 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.22,
+   "median": 0.23,
    "min": 0.2,
-   "max": 0.26,
+   "max": 0.28,
    "lines": [
-    "Sprint completed with 3799 ticks per second, or 0.26 ms per tick",
-    "Sprint completed with 4504 ticks per second, or 0.22 ms per tick",
-    "Sprint completed with 5001 ticks per second, or 0.20 ms per tick"
+    "Sprint completed with 3548 ticks per second, or 0.28 ms per tick",
+    "Sprint completed with 4267 ticks per second, or 0.23 ms per tick",
+    "Sprint completed with 4963 ticks per second, or 0.20 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 45.8,
-  "base2": 45.8,
-  "mcfc": 39.0,
-  "perfbase": 39.2
+  "base1": 43.8,
+  "base2": 43.9,
+  "mcfc": 39.1,
+  "perfbase": 37.5
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

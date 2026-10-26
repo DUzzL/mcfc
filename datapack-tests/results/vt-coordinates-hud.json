@@ -7,6 +7,11 @@
  ],
  "problems": [],
  "notes": [],
+ "mcfcJar": {
+  "name": "mcfc-1a611fce.jar",
+  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
+  "mtime": "2026-10-26 09:56:09"
+ },
  "mcfcState": {
   "afterLoad": "READY_ON",
   "final": "READY_ON",
@@ -200,32 +205,32 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 0.25,
-   "min": 0.21,
-   "max": 0.29,
+   "median": 0.27,
+   "min": 0.23,
+   "max": 0.31,
    "lines": [
-    "Sprint completed with 3402 ticks per second, or 0.29 ms per tick",
-    "Sprint completed with 3986 ticks per second, or 0.25 ms per tick",
-    "Sprint completed with 4651 ticks per second, or 0.21 ms per tick"
+    "Sprint completed with 3178 ticks per second, or 0.31 ms per tick",
+    "Sprint completed with 3670 ticks per second, or 0.27 ms per tick",
+    "Sprint completed with 4302 ticks per second, or 0.23 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.32,
+   "median": 0.37,
    "min": 0.28,
-   "max": 0.52,
+   "max": 0.49,
    "lines": [
-    "Sprint completed with 1908 ticks per second, or 0.52 ms per tick",
-    "Sprint completed with 3078 ticks per second, or 0.32 ms per tick",
-    "Sprint completed with 3554 ticks per second, or 0.28 ms per tick"
+    "Sprint completed with 2029 ticks per second, or 0.49 ms per tick",
+    "Sprint completed with 2696 ticks per second, or 0.37 ms per tick",
+    "Sprint completed with 3630 ticks per second, or 0.28 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 40.3,
-  "base2": 44.3,
-  "mcfc": 39.3,
-  "perfbase": 38.5
+  "base1": 42.7,
+  "base2": 42.7,
+  "mcfc": 41.0,
+  "perfbase": 42.7
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

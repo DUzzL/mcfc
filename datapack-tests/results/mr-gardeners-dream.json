@@ -8,9 +8,9 @@
  "problems": [],
  "notes": [],
  "mcfcJar": {
-  "name": "mcfc-cd77d43f.jar",
-  "sha256": "b2a4923b93f4217a26c275c3c03f8f52795cc15b052ef828ec3841ad5690161b",
-  "mtime": "2026-10-26 09:06:07"
+  "name": "mcfc-1a611fce.jar",
+  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
+  "mtime": "2026-10-26 09:56:09"
  },
  "mcfcState": {
   "afterLoad": "READY_ON",
@@ -51,8 +51,8 @@
  "compare": {
   "confirmedFindings": 0,
   "flakyFindings": 0,
-  "lowConfidence": 4,
-  "noise": 22,
+  "lowConfidence": 0,
+  "noise": 39,
   "genFindings": null,
   "genNoise": null,
   "confirmation": {
@@ -79,10 +79,10 @@
     "lowConfidence": 0
    },
    "entities": {
-    "paths": 54,
-    "noise": 19,
+    "paths": 62,
+    "noise": 36,
     "findings": 0,
-    "lowConfidence": 4
+    "lowConfidence": 0
    },
    "functionTags": {
     "paths": 2,
@@ -135,38 +135,26 @@
   },
   "confirmed": [],
   "flaky": [],
-  "lowConfidenceSample": [
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#2].pos[0]",
-    "base": "0.5",
-    "mcfc": "-0.95"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#3].pos[0]",
-    "base": "0.5",
-    "mcfc": "0.25"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#3].pos[1]",
-    "base": "-60.0",
-    "mcfc": "-59.75"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#3].pos[2]",
-    "base": "0.5",
-    "mcfc": "2.74"
-   }
-  ]
+  "lowConfidenceSample": []
  },
  "exceptions": {
   "base1": {},
-  "base2": {},
+  "base2": {
+   "com.mojang.authlib.exceptions.MinecraftClientException": {
+    "count": 1,
+    "first": "Failed to read from https://sessionserver.mojang.com/session/minecraft/profile/3c60c0c23d05399fbffb864ec993da33?unsigned=false due to Read timed out"
+   },
+   "java.net.SocketTimeoutException": {
+    "count": 1,
+    "first": "Read timed out"
+   }
+  },
   "mcfc": {},
   "perfbase": {}
  },
  "exceptionTotals": {
   "base1": 0,
-  "base2": 0,
+  "base2": 2,
   "mcfc": 0,
   "perfbase": 0
  },
@@ -237,30 +225,30 @@
   "mcfc": {
    "median": 0.24,
    "min": 0.19,
-   "max": 0.3,
+   "max": 0.31,
    "lines": [
-    "Sprint completed with 3381 ticks per second, or 0.30 ms per tick",
-    "Sprint completed with 4243 ticks per second, or 0.24 ms per tick",
-    "Sprint completed with 5228 ticks per second, or 0.19 ms per tick"
+    "Sprint completed with 3198 ticks per second, or 0.31 ms per tick",
+    "Sprint completed with 4167 ticks per second, or 0.24 ms per tick",
+    "Sprint completed with 5203 ticks per second, or 0.19 ms per tick"
    ]
   },
   "vanilla": {
    "median": 0.23,
-   "min": 0.18,
-   "max": 0.29,
+   "min": 0.19,
+   "max": 0.3,
    "lines": [
-    "Sprint completed with 3392 ticks per second, or 0.29 ms per tick",
-    "Sprint completed with 4310 ticks per second, or 0.23 ms per tick",
-    "Sprint completed with 5566 ticks per second, or 0.18 ms per tick"
+    "Sprint completed with 3286 ticks per second, or 0.30 ms per tick",
+    "Sprint completed with 4265 ticks per second, or 0.23 ms per tick",
+    "Sprint completed with 5137 ticks per second, or 0.19 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 39.9,
-  "base2": 40.7,
-  "mcfc": 40.7,
-  "perfbase": 42.7
+  "base1": 40.1,
+  "base2": 44.4,
+  "mcfc": 40.1,
+  "perfbase": 38.3
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

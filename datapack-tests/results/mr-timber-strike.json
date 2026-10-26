@@ -7,29 +7,30 @@
  ],
  "problems": [],
  "notes": [],
+ "mcfcJar": {
+  "name": "mcfc-1a611fce.jar",
+  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
+  "mtime": "2026-10-26 09:56:09"
+ },
  "mcfcState": {
   "afterLoad": "READY_ON",
   "final": "READY_ON",
   "decisiveError": null,
-  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 46Total Function Count: 51"
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 50Total Function Count: 51"
  },
  "compile": {
   "found": 51,
-  "compiled": 46,
-  "rate": 0.902,
-  "partialFallbackCommands": 95,
+  "compiled": 50,
+  "rate": 0.9804,
+  "partialFallbackCommands": 83,
   "wholeFallbacks": {},
   "compileFailures": [
-   "timberstrike:main/handle",
-   "timberstrike:tree/visit",
-   "timberstrike:tree/blob_expand",
-   "timberstrike:tree/candidate",
-   "timberstrike:tree/expand"
+   "timberstrike:main/handle"
   ],
   "compilerErrors": [],
   "runtimeDisables": [],
   "topPartialReasons": {
-   "Macros are not supported in this location": 79,
+   "Macros are not supported in this location": 67,
    "Expected a selector": 15,
    "Too many arguments for @ scoreboard players reset <targets:score_holder>": 1
   },
@@ -94,14 +95,13 @@
  "compare": {
   "confirmedFindings": 0,
   "flakyFindings": 0,
-  "lowConfidence": 0,
-  "noise": 121,
+  "lowConfidence": 4,
+  "noise": 98,
   "genFindings": null,
   "genNoise": null,
   "confirmation": {
    "enabled": true,
-   "ran": true,
-   "onlyInSecondAttempt": 0
+   "ran": false
   },
   "sections": {
    "blocks": {
@@ -123,10 +123,10 @@
     "lowConfidence": 0
    },
    "entities": {
-    "paths": 254,
-    "noise": 119,
+    "paths": 230,
+    "noise": 96,
     "findings": 0,
-    "lowConfidence": 0
+    "lowConfidence": 4
    },
    "functionTags": {
     "paths": 2,
@@ -179,7 +179,28 @@
   },
   "confirmed": [],
   "flaky": [],
-  "lowConfidenceSample": []
+  "lowConfidenceSample": [
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#14].pos[2]",
+    "base": "3.13",
+    "mcfc": "3.88"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#15].pos[0]",
+    "base": "3.13",
+    "mcfc": "3.54"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#4].pos[0]",
+    "base": "-2.12",
+    "mcfc": "-2.32"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#8].pos[0]",
+    "base": "-3.0",
+    "mcfc": "-3.44"
+   }
+  ]
  },
  "exceptions": {
   "base1": {},
@@ -256,34 +277,31 @@
  "perf": {
   "mcfc": {
    "median": 0.3,
-   "min": 0.26,
-   "max": 0.38,
+   "min": 0.25,
+   "max": 0.41,
    "lines": [
-    "Sprint completed with 2609 ticks per second, or 0.38 ms per tick",
-    "Sprint completed with 3312 ticks per second, or 0.30 ms per tick",
-    "Sprint completed with 3848 ticks per second, or 0.26 ms per tick"
+    "Sprint completed with 2433 ticks per second, or 0.41 ms per tick",
+    "Sprint completed with 3302 ticks per second, or 0.30 ms per tick",
+    "Sprint completed with 3931 ticks per second, or 0.25 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.3,
-   "min": 0.3,
-   "max": 0.37,
+   "median": 0.28,
+   "min": 0.28,
+   "max": 0.38,
    "lines": [
-    "Sprint completed with 2686 ticks per second, or 0.37 ms per tick",
-    "Sprint completed with 3340 ticks per second, or 0.30 ms per tick",
-    "Sprint completed with 3288 ticks per second, or 0.30 ms per tick"
+    "Sprint completed with 2620 ticks per second, or 0.38 ms per tick",
+    "Sprint completed with 3549 ticks per second, or 0.28 ms per tick",
+    "Sprint completed with 3627 ticks per second, or 0.28 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 44.5,
-  "base2": 45.3,
-  "mcfc": 45.1,
-  "perfbase": 45.2,
-  "attempt2-base1": 47.3,
-  "attempt2-base2": 47.3,
-  "attempt2-mcfc": 47.6
+  "base1": 45.6,
+  "base2": 46.1,
+  "mcfc": 50.2,
+  "perfbase": 42.8
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

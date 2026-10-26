@@ -1,12 +1,17 @@
 {
  "id": "mr-structory",
- "status": "OK",
+ "status": "DIFF",
  "kind": "worldgen",
  "packs": [
   "mr-structory"
  ],
  "problems": [],
  "notes": [],
+ "mcfcJar": {
+  "name": "mcfc-1a611fce.jar",
+  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
+  "mtime": "2026-10-26 09:56:09"
+ },
  "mcfcState": {
   "afterLoad": "READY_ON",
   "final": "READY_ON",
@@ -38,23 +43,23 @@
   "nonCompiledCount": 0
  },
  "compare": {
-  "confirmedFindings": 0,
-  "flakyFindings": 4,
-  "lowConfidence": 3,
-  "noise": 328,
-  "genFindings": 3,
-  "genNoise": 232,
+  "confirmedFindings": 3,
+  "flakyFindings": 3,
+  "lowConfidence": 1,
+  "noise": 338,
+  "genFindings": 4,
+  "genNoise": 230,
   "confirmation": {
    "enabled": true,
    "ran": true,
-   "onlyInSecondAttempt": 20
+   "onlyInSecondAttempt": 17
   },
   "sections": {
    "blocks": {
     "paths": 414,
     "noise": 230,
-    "findings": 1,
-    "lowConfidence": 3
+    "findings": 2,
+    "lowConfidence": 1
    },
    "bossbars": {
     "paths": 1,
@@ -69,8 +74,8 @@
     "lowConfidence": 0
    },
    "entities": {
-    "paths": 881,
-    "noise": 96,
+    "paths": 897,
+    "noise": 106,
     "findings": 0,
     "lowConfidence": 0
    },
@@ -123,48 +128,51 @@
     "lowConfidence": 0
    }
   },
-  "confirmed": [],
-  "flaky": [
+  "confirmed": [
    {
-    "path": "blocks[overworld].columns.-8,2",
-    "base": "\"6bc8902aa2d76a8687e51fcbec627b552a29565dca79a12986b69fdcfdaaf295\"",
-    "mcfc": "\"99cb3762c942031c3a1c15587451a41613b642f02fb2bb282aad868e10dc683a\"",
+    "path": "blocks[overworld].columns.7,-3",
+    "base": "\"7c7f8024c2514cd9ea92f766dc63c358b53e840356bb21e79ae11fdf143b8e25\"",
+    "mcfc": "\"5ee5643a464b7d4c48b9ff5d9f4e75294a8531ca451469f9453895bd125f83a3\"",
     "dump": "final"
    },
    {
-    "path": "blocks[overworld].columns.-5,3",
-    "base": "\"410f99d1bd1c3c8bf0a06d11cc5333818ebe5310fcc02e37b95a5f5357658388\"",
-    "mcfc": "\"383dc648640181523d0216d723d0ce87595b9772cd66d26f45f54f0401b91c7c\"",
+    "path": "blocks[overworld].columns.7,-3",
+    "base": "\"7c7f8024c2514cd9ea92f766dc63c358b53e840356bb21e79ae11fdf143b8e25\"",
+    "mcfc": "\"5ee5643a464b7d4c48b9ff5d9f4e75294a8531ca451469f9453895bd125f83a3\"",
     "dump": "gen"
    },
    {
-    "path": "blocks[overworld].columns.-5,4",
-    "base": "\"b0c4d8b50e07b827e823f4775538846bcfe6f5785c601b8266bd946338e06335\"",
-    "mcfc": "\"8789d6ea881c4284244fadb4c4c1bdee5c3724f16ab6b94603094dc6f9ce23a9\"",
+    "path": "blocks[overworld].columns.7,-4",
+    "base": "\"74c6860e00509661c68052560bc47cd63b4911e58882ea45b49fac3e635c067b\"",
+    "mcfc": "\"f1f2609ea872bcd5edc2295d6f143e120c8c339dc205b2ddbdbde4ded1e9101f\"",
+    "dump": "gen"
+   }
+  ],
+  "flaky": [
+   {
+    "path": "blocks[overworld].columns.3,3",
+    "base": "\"7ca66704f53b7275201a09e08ca5e47bc1fdc0165b81823606b705605a4f2947\"",
+    "mcfc": "\"a0022d590dac293fe5fd5468d5c7a71c50ec7869d928697509135fe8de49f8b1\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.3,3",
+    "base": "\"7ca66704f53b7275201a09e08ca5e47bc1fdc0165b81823606b705605a4f2947\"",
+    "mcfc": "\"a0022d590dac293fe5fd5468d5c7a71c50ec7869d928697509135fe8de49f8b1\"",
     "dump": "gen"
    },
    {
-    "path": "blocks[overworld].columns.-8,2",
-    "base": "\"6bc8902aa2d76a8687e51fcbec627b552a29565dca79a12986b69fdcfdaaf295\"",
-    "mcfc": "\"99cb3762c942031c3a1c15587451a41613b642f02fb2bb282aad868e10dc683a\"",
+    "path": "blocks[overworld].columns.7,-5",
+    "base": "\"e3872ff3ea881b7450e20d626816dfb1882aeba391deb48c0f9a4f39ce7864b6\"",
+    "mcfc": "\"53a7106e572de74ef39ea48035a5ca8c04e8cc5bd5f02c343742cd37d4073fcc\"",
     "dump": "gen"
    }
   ],
   "lowConfidenceSample": [
    {
-    "path": "blocks[overworld].columns.-5,3",
-    "base": "\"f793df008cd45576bff957db827b1237cc784caeabcb25bb763457fd27d0e3a9\"",
-    "mcfc": "\"2c2a32bfb9e6cd1b39416022ecca1429fd64530d7967a62560baefa32840fad0\""
-   },
-   {
-    "path": "blocks[overworld].columns.-5,4",
-    "base": "\"2ea648396bd354e199e557b9dfd9c807654f47e457693ec27c6db2089b8d8a28\"",
-    "mcfc": "\"5b08d7319cfd82332d8e2b45386836556ee843e5e159f8d76e6bffcf056112d7\""
-   },
-   {
-    "path": "blocks[overworld].columns.6,-8",
-    "base": "\"f49940cbba0f1a13058a421e6f21b39a6407e2cd7369b493663b0855fcc2e6cb\"",
-    "mcfc": "\"015eb2502b3b0d8cc3f95774372cf5f684cd06351fc300148ed85fbebed6bba3\""
+    "path": "blocks[overworld].columns.7,-4",
+    "base": "\"1f4dd72088959b883bef71fd846fb93f8c37ab3ac592abf83a6df9c8ae907fb2\"",
+    "mcfc": "\"50b69acba770dbfb27ebb845bdb4b3427558e1cfebec0a6caf81ff116b65f78a\""
    }
   ]
  },
@@ -242,35 +250,35 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 0.61,
+   "median": 0.69,
    "min": 0.53,
-   "max": 1.08,
+   "max": 1.17,
    "lines": [
-    "Sprint completed with 928 ticks per second, or 1.08 ms per tick",
-    "Sprint completed with 1871 ticks per second, or 0.53 ms per tick",
-    "Sprint completed with 1630 ticks per second, or 0.61 ms per tick"
+    "Sprint completed with 855 ticks per second, or 1.17 ms per tick",
+    "Sprint completed with 1455 ticks per second, or 0.69 ms per tick",
+    "Sprint completed with 1882 ticks per second, or 0.53 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.67,
-   "min": 0.57,
-   "max": 1.13,
+   "median": 0.62,
+   "min": 0.54,
+   "max": 0.99,
    "lines": [
-    "Sprint completed with 885 ticks per second, or 1.13 ms per tick",
-    "Sprint completed with 1495 ticks per second, or 0.67 ms per tick",
-    "Sprint completed with 1745 ticks per second, or 0.57 ms per tick"
+    "Sprint completed with 1013 ticks per second, or 0.99 ms per tick",
+    "Sprint completed with 1625 ticks per second, or 0.62 ms per tick",
+    "Sprint completed with 1848 ticks per second, or 0.54 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 46.4,
-  "base2": 48.3,
-  "mcfc": 43.9,
-  "perfbase": 43.2,
-  "attempt2-base1": 51.6,
-  "attempt2-base2": 51.6,
-  "attempt2-mcfc": 39.4
+  "base1": 50.4,
+  "base2": 50.4,
+  "mcfc": 45.1,
+  "perfbase": 42.9,
+  "attempt2-base1": 49.1,
+  "attempt2-base2": 49.1,
+  "attempt2-mcfc": 39.5
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

@@ -7,6 +7,11 @@
  ],
  "problems": [],
  "notes": [],
+ "mcfcJar": {
+  "name": "mcfc-1a611fce.jar",
+  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
+  "mtime": "2026-10-26 09:56:09"
+ },
  "mcfcState": {
   "afterLoad": "READY_ON",
   "final": "READY_ON",
@@ -127,22 +132,13 @@
   "lowConfidenceSample": []
  },
  "exceptions": {
-  "base1": {
-   "com.mojang.authlib.exceptions.MinecraftClientException": {
-    "count": 1,
-    "first": "Failed to read from https://sessionserver.mojang.com/session/minecraft/profile/c8b0ccc87cd3306481b83317aa73ed1a?unsigned=false due to Read timed out"
-   },
-   "java.net.SocketTimeoutException": {
-    "count": 1,
-    "first": "Read timed out"
-   }
-  },
+  "base1": {},
   "base2": {},
   "mcfc": {},
   "perfbase": {}
  },
  "exceptionTotals": {
-  "base1": 2,
+  "base1": 0,
   "base2": 0,
   "mcfc": 0,
   "perfbase": 0
@@ -209,32 +205,32 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 0.22,
-   "min": 0.21,
-   "max": 0.28,
+   "median": 0.21,
+   "min": 0.18,
+   "max": 0.29,
    "lines": [
-    "Sprint completed with 3530 ticks per second, or 0.28 ms per tick",
-    "Sprint completed with 4479 ticks per second, or 0.22 ms per tick",
-    "Sprint completed with 4679 ticks per second, or 0.21 ms per tick"
+    "Sprint completed with 3442 ticks per second, or 0.29 ms per tick",
+    "Sprint completed with 4856 ticks per second, or 0.21 ms per tick",
+    "Sprint completed with 5471 ticks per second, or 0.18 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.21,
+   "median": 0.2,
    "min": 0.19,
-   "max": 0.26,
+   "max": 0.28,
    "lines": [
-    "Sprint completed with 3799 ticks per second, or 0.26 ms per tick",
-    "Sprint completed with 4776 ticks per second, or 0.21 ms per tick",
-    "Sprint completed with 5187 ticks per second, or 0.19 ms per tick"
+    "Sprint completed with 3622 ticks per second, or 0.28 ms per tick",
+    "Sprint completed with 4963 ticks per second, or 0.20 ms per tick",
+    "Sprint completed with 5174 ticks per second, or 0.19 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 42.3,
-  "base2": 42.3,
-  "mcfc": 38.5,
-  "perfbase": 36.5
+  "base1": 38.4,
+  "base2": 41.9,
+  "mcfc": 39.0,
+  "perfbase": 39.3
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

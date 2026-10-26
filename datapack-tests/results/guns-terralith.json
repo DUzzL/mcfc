@@ -1,0 +1,378 @@
+{
+ "id": "guns-terralith",
+ "status": "DIFF",
+ "kind": "worldgen",
+ "packs": [
+  "mr-timber-strike",
+  "mr-terralith"
+ ],
+ "problems": [],
+ "notes": [],
+ "mcfcJar": {
+  "name": "mcfc-1a611fce.jar",
+  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
+  "mtime": "2026-10-26 09:56:09"
+ },
+ "mcfcState": {
+  "afterLoad": "READY_ON",
+  "final": "READY_ON",
+  "decisiveError": null,
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 53Total Function Count: 54"
+ },
+ "compile": {
+  "found": 54,
+  "compiled": 53,
+  "rate": 0.9815,
+  "partialFallbackCommands": 84,
+  "wholeFallbacks": {},
+  "compileFailures": [
+   "timberstrike:main/handle"
+  ],
+  "compilerErrors": [],
+  "runtimeDisables": [],
+  "topPartialReasons": {
+   "Macros are not supported in this location": 67,
+   "Expected a selector": 15,
+   "Too many arguments for @ scoreboard players reset <targets:score_holder>": 1,
+   "Unknown command: spreadplayers": 1
+  },
+  "unsupportedCommands": {
+   "spreadplayers": 1
+  }
+ },
+ "debug": {
+  "header": "44 compiled | 1 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
+  "functionsByStatus": {
+   "vanilla": 1,
+   "compiled": 44
+  },
+  "totalCalls": 249,
+  "vanillaCalls": 1,
+  "compiledCalls": 248,
+  "compiledCallShare": 0.996,
+  "nonCompiled": [
+   {
+    "id": "timberstrike:tree/expand/-1959091592",
+    "status": "vanilla",
+    "calls": 1,
+    "vanillaCalls": 1
+   }
+  ],
+  "nonCompiledCount": 1
+ },
+ "compare": {
+  "confirmedFindings": 3,
+  "flakyFindings": 9,
+  "lowConfidence": 6,
+  "noise": 1343,
+  "genFindings": 9,
+  "genNoise": 218,
+  "confirmation": {
+   "enabled": true,
+   "ran": true,
+   "onlyInSecondAttempt": 5
+  },
+  "sections": {
+   "blocks": {
+    "paths": 414,
+    "noise": 216,
+    "findings": 3,
+    "lowConfidence": 6
+   },
+   "bossbars": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "datapacks": {
+    "paths": 3,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "entities": {
+    "paths": 1648,
+    "noise": 1120,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functionTags": {
+    "paths": 3,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functions": {
+    "paths": 54,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "gamerules": {
+    "paths": 58,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "players": {
+    "paths": 41,
+    "noise": 5,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scheduled": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scoreboard": {
+    "paths": 72,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "storage": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "world": {
+    "paths": 12,
+    "noise": 2,
+    "findings": 0,
+    "lowConfidence": 0
+   }
+  },
+  "confirmed": [
+   {
+    "path": "blocks[overworld].columns.4,-8",
+    "base": "\"c14a3e82c26a1cdc6e3811c6541556778d14644f9659ddfa5632c9ef3df56341\"",
+    "mcfc": "\"1fc3faba92d6edb39d6c2643986289660cccb7468c7e06398e277afa9036c839\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.-1,3",
+    "base": "\"51b5e03f6cd929443406a5aa460029a3a9a5e33442a42f97dd0c0dd0aa874ba9\"",
+    "mcfc": "\"887321f92d69a0216a33a22bf142178496a54703a8dfee8e84e6c3e202723ad6\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.4,-8",
+    "base": "\"c14a3e82c26a1cdc6e3811c6541556778d14644f9659ddfa5632c9ef3df56341\"",
+    "mcfc": "\"1fc3faba92d6edb39d6c2643986289660cccb7468c7e06398e277afa9036c839\"",
+    "dump": "gen"
+   }
+  ],
+  "flaky": [
+   {
+    "path": "blocks[overworld].columns.4,1",
+    "base": "\"53add80c94a2e804ecad8dc37d74712da31b39d893afbe22fdc516f72a5f8cdb\"",
+    "mcfc": "\"fa647596622b89f4fd54053e12975d211983393c67e71f770ee9494acf721d2c\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.4,2",
+    "base": "\"1a9b61dcc383d3d33c86689e37572bde0c9ff23a226fe866dba5958b334e500b\"",
+    "mcfc": "\"7aca8f0e71e684ca54fa3d1ac45364f47a8852ba9d4b932f1e855d52491c2579\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.-1,2",
+    "base": "\"85211e6b3cea7cd8c427eeb67b25d767503ac84101af0c8dbe513da29b6f9b59\"",
+    "mcfc": "\"fb748e41398b0ad97a65632d9a990e801fe16403c00e1cb9c892ccb7d1871cb9\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.3,2",
+    "base": "\"8b84a699caacdaa6813ee865eff867f50073a6f6ddd17cfca830d81cef379732\"",
+    "mcfc": "\"4135406404e0a0775436bacb041421bfb801501fa90d9da45bdb3cd1692ab7ab\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.3,3",
+    "base": "\"4117f4225dd252f4a780543692350db035a739ad0c0ea718d9cca5c4796f87ed\"",
+    "mcfc": "\"123eba11973606fc2687b382c7f66d90cb051706a49dcfa468e5fbffd2308e7b\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.3,5",
+    "base": "\"e2d1ea2bdba7e33952560ec50e906e7f393023262f72a7228cbddfa71ba5cd51\"",
+    "mcfc": "\"170e525e07cc66dbced7f5d9046d8551298c7679c14401a808acbffd6c08c21e\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.4,1",
+    "base": "\"53add80c94a2e804ecad8dc37d74712da31b39d893afbe22fdc516f72a5f8cdb\"",
+    "mcfc": "\"fa647596622b89f4fd54053e12975d211983393c67e71f770ee9494acf721d2c\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.4,2",
+    "base": "\"1a9b61dcc383d3d33c86689e37572bde0c9ff23a226fe866dba5958b334e500b\"",
+    "mcfc": "\"7aca8f0e71e684ca54fa3d1ac45364f47a8852ba9d4b932f1e855d52491c2579\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.4,5",
+    "base": "\"f79e99e20efac6b2cedff4b5597b30f5dd4b8f769ba27794716ad31993a3421a\"",
+    "mcfc": "\"cc312464ec91efb5db4f66faa4d97aa009dd498879cc2190f93f87c03c58d820\"",
+    "dump": "gen"
+   }
+  ],
+  "lowConfidenceSample": [
+   {
+    "path": "blocks[overworld].columns.-1,2",
+    "base": "\"1d8c82e63a68da3a094edb5c24b97a35bf77d698ef71beb36bb56682193e33b5\"",
+    "mcfc": "\"1da4ff0ebaa138695c956d4aa181ede9e1c144abe074a9b872d7238de95c4ad0\""
+   },
+   {
+    "path": "blocks[overworld].columns.-1,3",
+    "base": "\"8c5dd464e5fb2c6951436c89b8cf2c2b407437d824219c320cc0637021bb2e2d\"",
+    "mcfc": "\"06f61c88662541273916dd570944a6a69479bab9b1c098863cd3944bd3ac0405\""
+   },
+   {
+    "path": "blocks[overworld].columns.3,2",
+    "base": "\"6105fdbd3103d7a836425371949a2b28308582a6e38eeeb6b559389f62704430\"",
+    "mcfc": "\"ba8f44c15d06950b01c0c88c979f00a6c009c90383713cf6e4359fb236c4df1f\""
+   },
+   {
+    "path": "blocks[overworld].columns.3,3",
+    "base": "\"cfcd90e3cbef9d37c8dfed2df357af8d0ba21d172fac8d6057fd1639912030ee\"",
+    "mcfc": "\"0013447297dfe10baaa5bef9907105b9ec04c5bf70b4380bb2ec49b24ddc96fb\""
+   },
+   {
+    "path": "blocks[overworld].columns.3,5",
+    "base": "\"c3277eb838df669a38ec6d25048096c34a956080e2ddb6321176840e61a26f3c\"",
+    "mcfc": "\"5cdccf4eb37b0df2bf2da15312ed646ee8cc3be81dd14b901164fddaea351b5e\""
+   },
+   {
+    "path": "blocks[overworld].columns.4,5",
+    "base": "\"228bef36bd0b3f3007f993c8f22627d9480243b1a8e6551a3c58b48aedd70fad\"",
+    "mcfc": "\"79063432c4cc72e333e1087d50f1039da9fea95a0f84b07950ab45d57bc6249c\""
+   }
+  ]
+ },
+ "exceptions": {
+  "base1": {},
+  "base2": {},
+  "mcfc": {},
+  "perfbase": {}
+ },
+ "exceptionTotals": {
+  "base1": 0,
+  "base2": 0,
+  "mcfc": 0,
+  "perfbase": 0
+ },
+ "exercise": {
+  "base1": {
+   "namespaces": [
+    "terralith",
+    "timberstrike"
+   ],
+   "dumpedFunctions": 54,
+   "candidates": 54,
+   "skippedMacro": 9,
+   "skippedName": 1,
+   "skippedScenario": 0,
+   "ran": 44,
+   "replyExecuted": 44,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "base2": {
+   "namespaces": [
+    "terralith",
+    "timberstrike"
+   ],
+   "dumpedFunctions": 54,
+   "candidates": 54,
+   "skippedMacro": 9,
+   "skippedName": 1,
+   "skippedScenario": 0,
+   "ran": 44,
+   "replyExecuted": 44,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "mcfc": {
+   "namespaces": [
+    "terralith",
+    "timberstrike"
+   ],
+   "dumpedFunctions": 54,
+   "candidates": 54,
+   "skippedMacro": 9,
+   "skippedName": 1,
+   "skippedScenario": 0,
+   "ran": 44,
+   "replyExecuted": 44,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  }
+ },
+ "slowFunctions": {},
+ "perf": {
+  "mcfc": {
+   "median": 2.1,
+   "min": 1.98,
+   "max": 2.58,
+   "lines": [
+    "Sprint completed with 388 ticks per second, or 2.58 ms per tick",
+    "Sprint completed with 505 ticks per second, or 1.98 ms per tick",
+    "Sprint completed with 476 ticks per second, or 2.10 ms per tick"
+   ]
+  },
+  "vanilla": {
+   "median": 3.15,
+   "min": 2.62,
+   "max": 3.37,
+   "lines": [
+    "Sprint completed with 296 ticks per second, or 3.37 ms per tick",
+    "Sprint completed with 317 ticks per second, or 3.15 ms per tick",
+    "Sprint completed with 381 ticks per second, or 2.62 ms per tick"
+   ]
+  },
+  "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
+ },
+ "durationsSeconds": {
+  "base1": 71.2,
+  "base2": 72.5,
+  "mcfc": 72.4,
+  "perfbase": 69.1,
+  "attempt2-base1": 75.1,
+  "attempt2-base2": 75.1,
+  "attempt2-mcfc": 55.5
+ },
+ "gamerules": {
+  "command_chain_limit": "max_command_sequence_length",
+  "spawn_mobs": "spawn_mobs",
+  "spawn_monsters": "spawn_monsters",
+  "spawn_patrols": "spawn_patrols",
+  "spawn_wandering_traders": "spawn_wandering_traders",
+  "spawn_phantoms": "spawn_phantoms",
+  "spawn_wardens": "spawn_wardens",
+  "random_tick_speed": "random_tick_speed",
+  "weather_cycle": "advance_weather"
+ },
+ "ticks": 200,
+ "seed": "20261026"
+}

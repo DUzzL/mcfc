@@ -1,0 +1,2 @@
+kind	id	function	message	command
+PARSE_ERROR	selector.error.expected.singular_target	armor_statues:trigger/random_pose	Only one entity is allowed, but the provided selector allows more than one	loot replace entity @e[type=minecraft:armor_stand,tag=as_temp_armor_stand] armor.head loot armor_statues:random_pose

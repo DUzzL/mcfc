@@ -7,6 +7,11 @@
  ],
  "problems": [],
  "notes": [],
+ "mcfcJar": {
+  "name": "mcfc-1a611fce.jar",
+  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
+  "mtime": "2026-10-26 09:56:09"
+ },
  "mcfcState": {
   "afterLoad": "READY_ON",
   "final": "READY_ON",
@@ -41,15 +46,14 @@
  },
  "compare": {
   "confirmedFindings": 0,
-  "flakyFindings": 1,
+  "flakyFindings": 0,
   "lowConfidence": 0,
-  "noise": 27,
+  "noise": 10,
   "genFindings": null,
   "genNoise": null,
   "confirmation": {
    "enabled": true,
-   "ran": true,
-   "onlyInSecondAttempt": 0
+   "ran": false
   },
   "sections": {
    "blocks": {
@@ -72,7 +76,7 @@
    },
    "entities": {
     "paths": 40,
-    "noise": 12,
+    "noise": 4,
     "findings": 0,
     "lowConfidence": 0
    },
@@ -95,8 +99,8 @@
     "lowConfidence": 0
    },
    "players": {
-    "paths": 58,
-    "noise": 8,
+    "paths": 54,
+    "noise": 0,
     "findings": 0,
     "lowConfidence": 0
    },
@@ -108,13 +112,13 @@
    },
    "scoreboard": {
     "paths": 114,
-    "noise": 1,
-    "findings": 1,
+    "noise": 2,
+    "findings": 0,
     "lowConfidence": 0
    },
    "storage": {
     "paths": 5,
-    "noise": 2,
+    "noise": 0,
     "findings": 0,
     "lowConfidence": 0
    },
@@ -126,14 +130,7 @@
    }
   },
   "confirmed": [],
-  "flaky": [
-   {
-    "path": "scoreboard.scores.#no_crossing.as_angle",
-    "base": "1",
-    "mcfc": "0",
-    "dump": "final"
-   }
-  ],
+  "flaky": [],
   "lowConfidenceSample": []
  },
  "exceptions": {
@@ -210,35 +207,32 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 0.31,
-   "min": 0.23,
+   "median": 0.29,
+   "min": 0.19,
    "max": 0.38,
    "lines": [
     "Sprint completed with 2617 ticks per second, or 0.38 ms per tick",
-    "Sprint completed with 3231 ticks per second, or 0.31 ms per tick",
-    "Sprint completed with 4371 ticks per second, or 0.23 ms per tick"
+    "Sprint completed with 3469 ticks per second, or 0.29 ms per tick",
+    "Sprint completed with 5275 ticks per second, or 0.19 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.4,
+   "median": 0.25,
    "min": 0.21,
-   "max": 0.47,
+   "max": 0.43,
    "lines": [
-    "Sprint completed with 2131 ticks per second, or 0.47 ms per tick",
-    "Sprint completed with 2487 ticks per second, or 0.40 ms per tick",
-    "Sprint completed with 4711 ticks per second, or 0.21 ms per tick"
+    "Sprint completed with 2344 ticks per second, or 0.43 ms per tick",
+    "Sprint completed with 4002 ticks per second, or 0.25 ms per tick",
+    "Sprint completed with 4736 ticks per second, or 0.21 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 59.9,
-  "base2": 61.0,
-  "mcfc": 57.6,
-  "perfbase": 55.9,
-  "attempt2-base1": 59.1,
-  "attempt2-base2": 60.2,
-  "attempt2-mcfc": 59.4
+  "base1": 57.5,
+  "base2": 64.8,
+  "mcfc": 56.9,
+  "perfbase": 56.2
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

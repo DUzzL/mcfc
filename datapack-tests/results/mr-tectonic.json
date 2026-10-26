@@ -1,12 +1,17 @@
 {
  "id": "mr-tectonic",
- "status": "DIFF",
+ "status": "OK",
  "kind": "worldgen",
  "packs": [
   "mr-tectonic"
  ],
  "problems": [],
  "notes": [],
+ "mcfcJar": {
+  "name": "mcfc-1a611fce.jar",
+  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
+  "mtime": "2026-10-26 09:56:09"
+ },
  "mcfcState": {
   "afterLoad": "READY_ON",
   "final": "READY_ON",
@@ -27,23 +32,23 @@
  },
  "debug": null,
  "compare": {
-  "confirmedFindings": 4,
-  "flakyFindings": 16,
-  "lowConfidence": 13,
-  "noise": 262,
-  "genFindings": 16,
-  "genNoise": 233,
+  "confirmedFindings": 0,
+  "flakyFindings": 1,
+  "lowConfidence": 1,
+  "noise": 260,
+  "genFindings": 1,
+  "genNoise": 229,
   "confirmation": {
    "enabled": true,
    "ran": true,
-   "onlyInSecondAttempt": 6
+   "onlyInSecondAttempt": 11
   },
   "sections": {
    "blocks": {
     "paths": 414,
-    "noise": 231,
-    "findings": 4,
-    "lowConfidence": 13
+    "noise": 229,
+    "findings": 0,
+    "lowConfidence": 1
    },
    "bossbars": {
     "paths": 1,
@@ -112,195 +117,20 @@
     "lowConfidence": 0
    }
   },
-  "confirmed": [
-   {
-    "path": "blocks[overworld].columns.-1,-3",
-    "base": "\"3699bd823b899cebbc39cc1cfcc4e320e025807b2fc56999c22c305ba7995de5\"",
-    "mcfc": "\"1dd9ed8e267a02a48bdc43aed9b0457a87eb83b6f05a6c6aaa284179fbbd159b\"",
-    "dump": "gen"
-   },
-   {
-    "path": "blocks[overworld].columns.0,-4",
-    "base": "\"d13476abaa77c8c72f2602b7c3774f44a1c52cba58179f025b0a7520df043785\"",
-    "mcfc": "\"4fd6a569c3f3b5911404957f936181018ad8fc1a5aff4abba10de35f7945d8aa\"",
-    "dump": "gen"
-   },
-   {
-    "path": "blocks[overworld].columns.0,-5",
-    "base": "\"1e74eba011e8c2828426f9ce5d2e60f65f6c1cc1acb9a2d8bc75fd951ef7ffbb\"",
-    "mcfc": "\"4c6a5dcf092a29d4201130ebd0e1eae1b2f4ed772046a3dadec8da74fd2d2008\"",
-    "dump": "gen"
-   },
-   {
-    "path": "blocks[overworld].columns.1,4",
-    "base": "\"f1c84b0d6aad1c1a8e390a67bc50953369dc3ed5c917317316b49ee74763d0f0\"",
-    "mcfc": "\"b47c423b8905baac35d045fdabd3202922fa80dfbc2cf6ce07dadaf62d1b34af\"",
-    "dump": "gen"
-   }
-  ],
+  "confirmed": [],
   "flaky": [
    {
-    "path": "blocks[overworld].columns.0,0",
-    "base": "\"23be03558fd5a8894319c5e5820dbaa89fa11d9f570d733abdda476ac4427d5c\"",
-    "mcfc": "\"62b27d1ce5e9bc4f998292ac8a200ede856645eb3d932fe270dc53bfdd64b2b8\"",
-    "dump": "final"
-   },
-   {
-    "path": "blocks[overworld].columns.1,0",
-    "base": "\"e5bfb6496983ee7af69ea6a51634d543598d2989dffcb8a6a19040b716ad577c\"",
-    "mcfc": "\"012480071a0ab6f6a6fbdd1ede611e7996e1bda6aa310a4a0e89dfc8a7894047\"",
-    "dump": "final"
-   },
-   {
-    "path": "blocks[overworld].columns.2,0",
-    "base": "\"64066fb23a921e262567ad18266ea3ce70e5a84d171eba3c048c9f6439f3f1dd\"",
-    "mcfc": "\"7c046eeabba43494e665451833a6eb325839a9286e5de566af941a07bd019e8d\"",
-    "dump": "final"
-   },
-   {
-    "path": "blocks[overworld].columns.2,1",
-    "base": "\"4ddb589ffda7996e3f0b4d949ff6eabbfe06db4b6c20071c3c56120f7656f672\"",
-    "mcfc": "\"dc47eb7552e2729213a9ac20632f73f5163ce887e8a3b3cf78f9fcc60ee66b45\"",
-    "dump": "final"
-   },
-   {
-    "path": "blocks[overworld].columns.-1,-1",
-    "base": "\"835979b9863618b0102d23368127effb9cbbbfe0465d9e818e3dd28e6bf3526f\"",
-    "mcfc": "\"64300bab50d1d932fb0291d6c8bda0e7e8c09a069f44822b57ecca59b1a67a94\"",
-    "dump": "gen"
-   },
-   {
-    "path": "blocks[overworld].columns.-1,-2",
-    "base": "\"8dca4fe094efbd67803390b316d0291105ac225acafc7061da609e7c4b8e83a9\"",
-    "mcfc": "\"17b12ace146447845e9c96561730442159cedcfedf9285790be3074138483d3a\"",
-    "dump": "gen"
-   },
-   {
-    "path": "blocks[overworld].columns.-2,-7",
-    "base": "\"e22845c66d0f76b6d94da73e84244507a2f20b80102c3d4c0959e6ab330eb319\"",
-    "mcfc": "\"fc100a6fc72e2d91680af271e6504b2310cfebc42935eedb4b03544cf2f3c451\"",
-    "dump": "gen"
-   },
-   {
-    "path": "blocks[overworld].columns.0,0",
-    "base": "\"23be03558fd5a8894319c5e5820dbaa89fa11d9f570d733abdda476ac4427d5c\"",
-    "mcfc": "\"62b27d1ce5e9bc4f998292ac8a200ede856645eb3d932fe270dc53bfdd64b2b8\"",
-    "dump": "gen"
-   },
-   {
-    "path": "blocks[overworld].columns.1,-1",
-    "base": "\"932f5723ca8a1be4a4f0b40048d390e639bdb0e1bb0dd12d1061b80209e78728\"",
-    "mcfc": "\"8de48ad0054a2ae0a65d7330719176aef100199623c7ec2ca2c491fcb528a6ab\"",
-    "dump": "gen"
-   },
-   {
-    "path": "blocks[overworld].columns.1,-2",
-    "base": "\"d93198f2dcb7975a433b93e25ebb6d9032d8e1431fd165e8cd523ee95b92fa24\"",
-    "mcfc": "\"b51323709b32c47d15cfac9cd71744aa264879b16b5f3a363713aed338195d0d\"",
-    "dump": "gen"
-   },
-   {
-    "path": "blocks[overworld].columns.1,0",
-    "base": "\"e5bfb6496983ee7af69ea6a51634d543598d2989dffcb8a6a19040b716ad577c\"",
-    "mcfc": "\"012480071a0ab6f6a6fbdd1ede611e7996e1bda6aa310a4a0e89dfc8a7894047\"",
-    "dump": "gen"
-   },
-   {
-    "path": "blocks[overworld].columns.2,-1",
-    "base": "\"3a49ea3262e7eca73bd35988ad7b4d9166e32bf2e30611cd8a21afe859c20763\"",
-    "mcfc": "\"6e1e1b0cb08a6db9f765b1f59a8053f7f327bb06cda5e48dd314756414a62e99\"",
-    "dump": "gen"
-   },
-   {
-    "path": "blocks[overworld].columns.2,-2",
-    "base": "\"a97355ab4c92ec0f9996da61969b585fc02ac9ea241661807be14682a6be8a5b\"",
-    "mcfc": "\"46f352780f9851422f49eeb11c56a46f56534b5f3ceba4eabd9855ba982a7a6b\"",
-    "dump": "gen"
-   },
-   {
-    "path": "blocks[overworld].columns.2,0",
-    "base": "\"64066fb23a921e262567ad18266ea3ce70e5a84d171eba3c048c9f6439f3f1dd\"",
-    "mcfc": "\"7c046eeabba43494e665451833a6eb325839a9286e5de566af941a07bd019e8d\"",
-    "dump": "gen"
-   },
-   {
-    "path": "blocks[overworld].columns.2,1",
-    "base": "\"4ddb589ffda7996e3f0b4d949ff6eabbfe06db4b6c20071c3c56120f7656f672\"",
-    "mcfc": "\"dc47eb7552e2729213a9ac20632f73f5163ce887e8a3b3cf78f9fcc60ee66b45\"",
-    "dump": "gen"
-   },
-   {
-    "path": "blocks[overworld].columns.7,-1",
-    "base": "\"054699ff81bd4f2deedcf5e8e2802d905f2690c152c50bb77b105861453cbeeb\"",
-    "mcfc": "\"c633b24f2c62e0f7c8de2fa057737e2525e6b14b4f7c9bebc41b4470feef4a27\"",
+    "path": "blocks[overworld].columns.6,7",
+    "base": "\"19526e10c030fc495e2a34e54a82ccb58203416a595a130fffdebc8226d55c0a\"",
+    "mcfc": "\"3170a914fb6c570f82916cc31a2cea6c3cdac31514a33be45748082949a26539\"",
     "dump": "gen"
    }
   ],
   "lowConfidenceSample": [
    {
-    "path": "blocks[overworld].columns.-1,-1",
-    "base": "\"c97752c45e42fded2df7673905024a749dee1bd9e71a4fe36629d619ae62c890\"",
-    "mcfc": "\"d93b785612b01926ea697f7bc7f828a94f7cdaf4fbe3bac89bf17599f82e1421\""
-   },
-   {
-    "path": "blocks[overworld].columns.-1,-2",
-    "base": "\"90048e0535b2a31431a8712a0a13f7ae5b778b916dd8b94e959ee85efacdae97\"",
-    "mcfc": "\"46e51de82892b94d72e57d558af8862a106e624c1bd4081aa7d4e8ccd1bc961c\""
-   },
-   {
-    "path": "blocks[overworld].columns.-1,-3",
-    "base": "\"677241ac9218e37f65b24e0f40ec9025492425e4723a3f5523fae8e94d34d327\"",
-    "mcfc": "\"fbfc90205f94d423f00b445d25b381188dbf131b613265ef7b66bee5f3b17a7e\""
-   },
-   {
-    "path": "blocks[overworld].columns.-1,-4",
-    "base": "\"470c7edeb06fce46c5e2fd6143e32339216e0f6163e92638770cfecee523aef2\"",
-    "mcfc": "\"07531ed35e903562e12af7fc402bb1a13ce979fa1926b7e46795d1ce0f93b836\""
-   },
-   {
-    "path": "blocks[overworld].columns.0,-4",
-    "base": "\"d53b9b8129703311dadae8810608d3c0b314460d5a23388ca2ffd74b7e8fbd53\"",
-    "mcfc": "\"972a4d8876a70d25aa373fd8eab5c8de724bf4d6f8db84f45a117c154b9cc53e\""
-   },
-   {
-    "path": "blocks[overworld].columns.0,-5",
-    "base": "\"64b4cbeeb0c3f8938245da69b2310bd2af37c7b372ab57f27a061111285f4bc3\"",
-    "mcfc": "\"b9ca2da8564463757faeeebb9f49cf68ccfb47e14d3b72b4579ffca727a3d387\""
-   },
-   {
-    "path": "blocks[overworld].columns.0,-6",
-    "base": "\"0a8828da3b11e9e606fdcaa146cd2deb78be6e958bcc79fddbf41ad9116fa081\"",
-    "mcfc": "\"6c35dbaa180d565f770ae4a2ef180dfd93696b2fe600bed0433ee561ea0f10e1\""
-   },
-   {
-    "path": "blocks[overworld].columns.1,-1",
-    "base": "\"ebe66e00d9cc59be9120bac9d1c31689261da948516d5398fb77a799c50fb835\"",
-    "mcfc": "\"30fc9d65f3f3ec76da39dd8d266feb5862e08d952e658598cf299185f2a29122\""
-   },
-   {
-    "path": "blocks[overworld].columns.1,-2",
-    "base": "\"6e7718b3a125ab4948d29dcfa8a30f7ad45e157d084880922595da71afcb44e3\"",
-    "mcfc": "\"aaead9ce6d8525bce852fadc81fc39f76b4aa30932880dc8ef1dce5e20916141\""
-   },
-   {
-    "path": "blocks[overworld].columns.1,4",
-    "base": "\"6f5769d68ceceee64d99ffac8926c47bd16cb46e62b530ad59a707819671678c\"",
-    "mcfc": "\"737342c5656f291eb9cb2218fac70afd8e0bd0ae64167c79ff90d01de70a1456\""
-   },
-   {
-    "path": "blocks[overworld].columns.2,-1",
-    "base": "\"c731eb4f4eac8eb8d59704e20b21cd641e3166b4673e448a25828347ff80ce79\"",
-    "mcfc": "\"b61d107994a87f7dfd7c901c01617bf8dd4aa5da77c1309cd5f61c50cb5ba7c5\""
-   },
-   {
-    "path": "blocks[overworld].columns.2,-2",
-    "base": "\"518ca5b764a316071ee8497ba41ba019a9a8fe2358994d24316f10f755b29c55\"",
-    "mcfc": "\"f227fb0530d55e96966457ec4d19e7d83d93c1d2ee2603506ea7d9d1fff99da2\""
-   },
-   {
-    "path": "blocks[overworld].columns.7,-1",
-    "base": "\"ef98893f73c835c7a2cdc36339f0d3a44f6774e9ce8dfa3b24e748ecabd646f8\"",
-    "mcfc": "\"be79bbeb8052c0b1dc3cff28be76a3276f2527b56778994d6cd095fe3696d24b\""
+    "path": "blocks[overworld].columns.6,7",
+    "base": "\"56288abdaf3d1e2fbaaeb5cad978b4231fad079ba6a7a3541da07f5325d40719\"",
+    "mcfc": "\"1419bacb5bf98eda7fe5c2f3bd9acb53a2eb735444fe61e996ba248b68a32335\""
    }
   ]
  },
@@ -372,35 +202,35 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 0.45,
-   "min": 0.44,
-   "max": 0.77,
+   "median": 0.43,
+   "min": 0.41,
+   "max": 0.88,
    "lines": [
-    "Sprint completed with 1302 ticks per second, or 0.77 ms per tick",
-    "Sprint completed with 2207 ticks per second, or 0.45 ms per tick",
-    "Sprint completed with 2247 ticks per second, or 0.44 ms per tick"
+    "Sprint completed with 1142 ticks per second, or 0.88 ms per tick",
+    "Sprint completed with 2442 ticks per second, or 0.41 ms per tick",
+    "Sprint completed with 2332 ticks per second, or 0.43 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.46,
-   "min": 0.43,
-   "max": 0.84,
+   "median": 0.52,
+   "min": 0.51,
+   "max": 0.99,
    "lines": [
-    "Sprint completed with 1194 ticks per second, or 0.84 ms per tick",
-    "Sprint completed with 2350 ticks per second, or 0.43 ms per tick",
-    "Sprint completed with 2177 ticks per second, or 0.46 ms per tick"
+    "Sprint completed with 1010 ticks per second, or 0.99 ms per tick",
+    "Sprint completed with 1944 ticks per second, or 0.51 ms per tick",
+    "Sprint completed with 1919 ticks per second, or 0.52 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 44.8,
-  "base2": 45.2,
-  "mcfc": 41.7,
-  "perfbase": 41.6,
-  "attempt2-base1": 46.9,
-  "attempt2-base2": 46.9,
-  "attempt2-mcfc": 37.5
+  "base1": 44.9,
+  "base2": 45.0,
+  "mcfc": 41.5,
+  "perfbase": 42.5,
+  "attempt2-base1": 46.4,
+  "attempt2-base2": 46.8,
+  "attempt2-mcfc": 45.5
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

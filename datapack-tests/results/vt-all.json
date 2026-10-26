@@ -1,0 +1,334 @@
+{
+ "id": "vt-all",
+ "status": "FALLBACK-ISSUE",
+ "kind": "function",
+ "packs": [
+  "vt-multiplayer-sleep",
+  "vt-cauldron-concrete",
+  "vt-afk-display",
+  "vt-coordinates-hud",
+  "vt-durability-ping",
+  "vt-track-statistics",
+  "vt-track-raw-statistics",
+  "vt-armor-statues",
+  "vt-fast-leaf-decay",
+  "vt-graves",
+  "vt-homes",
+  "vt-tpa"
+ ],
+ "problems": [],
+ "notes": [],
+ "mcfcJar": {
+  "name": "mcfc-bfaa7efd.jar",
+  "sha256": "fca3ca87409825f94361fa4e189433dcced4f759e339f2b7bc1999eb69d81ed0",
+  "mtime": "2026-10-26 13:45:38"
+ },
+ "mcfcState": {
+  "afterLoad": "READY_ON",
+  "final": "READY_ON",
+  "decisiveError": null,
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 464Total Function Count: 467"
+ },
+ "compile": {
+  "found": 467,
+  "compiled": 464,
+  "rate": 0.9936,
+  "partialFallbackCommands": 73,
+  "wholeFallbacks": {},
+  "compileFailures": [
+   "graves:creation/update_grave_listing",
+   "graves:creation/create_loading_grave_listing",
+   "graves:creation/items/pick_up_items_at_inventory_pos"
+  ],
+  "compilerErrors": [],
+  "runtimeDisables": [],
+  "topPartialReasons": {
+   "Macros are not supported in this location": 30,
+   "Unknown command: bossbar": 15,
+   "Unknown command: rotate": 11,
+   "Unknown command: forceload": 5,
+   "Unknown command: ride": 2,
+   "Too many arguments for @ loot spawn <pos:vec3> loot <loot_table:resource_location>": 2,
+   "Invalid integer": 2,
+   "Failed to parse any options @ execute store <store_location:result_store_location_type>": 2,
+   "Macro commands are not supported for json arguments": 1,
+   "Expected '{' while reading nbt compound, but got '$'": 1,
+   "Only one entity is allowed, but the provided selector allows more than one": 1,
+   "Failed to parse any options @ execute": 1
+  },
+  "unsupportedCommands": {
+   "bossbar": 15,
+   "rotate": 11,
+   "forceload": 5,
+   "ride": 2
+  }
+ },
+ "debug": {
+  "header": "211 compiled | 0 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
+  "functionsByStatus": {
+   "compiled": 211
+  },
+  "totalCalls": 2109,
+  "vanillaCalls": 0,
+  "compiledCalls": 2109,
+  "compiledCallShare": 1.0,
+  "nonCompiled": [],
+  "nonCompiledCount": 0
+ },
+ "compare": {
+  "confirmedFindings": 0,
+  "flakyFindings": 1,
+  "lowConfidence": 0,
+  "noise": 23,
+  "genFindings": null,
+  "genNoise": null,
+  "confirmation": {
+   "enabled": true,
+   "ran": true,
+   "onlyInSecondAttempt": 0
+  },
+  "sections": {
+   "blocks": {
+    "paths": 266,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "bossbars": {
+    "paths": 22,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "datapacks": {
+    "paths": 13,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "entities": {
+    "paths": 6,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functionTags": {
+    "paths": 38,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functions": {
+    "paths": 467,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "gamerules": {
+    "paths": 58,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "players": {
+    "paths": 49,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scheduled": {
+    "paths": 68,
+    "noise": 17,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scoreboard": {
+    "paths": 1423,
+    "noise": 4,
+    "findings": 1,
+    "lowConfidence": 0
+   },
+   "storage": {
+    "paths": 9,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "world": {
+    "paths": 12,
+    "noise": 2,
+    "findings": 0,
+    "lowConfidence": 0
+   }
+  },
+  "confirmed": [],
+  "flaky": [
+   {
+    "path": "scoreboard.scores.#random_type.as_angle",
+    "base": "0",
+    "mcfc": "2",
+    "dump": "final"
+   }
+  ],
+  "lowConfidenceSample": []
+ },
+ "exceptions": {
+  "base1": {},
+  "base2": {},
+  "mcfc": {
+   "com.mojang.authlib.exceptions.MinecraftClientException": {
+    "count": 1,
+    "first": "Failed to read from https://sessionserver.mojang.com/session/minecraft/profile/3c60c0c23d05399fbffb864ec993da33?unsigned=false due to Read timed out"
+   },
+   "java.net.SocketTimeoutException": {
+    "count": 1,
+    "first": "Read timed out"
+   }
+  },
+  "perfbase": {}
+ },
+ "exceptionTotals": {
+  "base1": 0,
+  "base2": 0,
+  "mcfc": 2,
+  "perfbase": 0
+ },
+ "exercise": {
+  "base1": {
+   "namespaces": [
+    "afk_display",
+    "armor_statues",
+    "cauldron_concrete",
+    "coordinates_hud",
+    "durability_ping",
+    "fast_leaf_decay",
+    "graves",
+    "homes",
+    "multiplayer_sleep",
+    "tpa",
+    "track_raw_stats",
+    "track_stats"
+   ],
+   "dumpedFunctions": 467,
+   "candidates": 467,
+   "skippedMacro": 18,
+   "skippedName": 32,
+   "skippedScenario": 3,
+   "ran": 414,
+   "replyExecuted": 193,
+   "replyError": 221,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "base2": {
+   "namespaces": [
+    "afk_display",
+    "armor_statues",
+    "cauldron_concrete",
+    "coordinates_hud",
+    "durability_ping",
+    "fast_leaf_decay",
+    "graves",
+    "homes",
+    "multiplayer_sleep",
+    "tpa",
+    "track_raw_stats",
+    "track_stats"
+   ],
+   "dumpedFunctions": 467,
+   "candidates": 467,
+   "skippedMacro": 18,
+   "skippedName": 32,
+   "skippedScenario": 3,
+   "ran": 414,
+   "replyExecuted": 193,
+   "replyError": 221,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "mcfc": {
+   "namespaces": [
+    "afk_display",
+    "armor_statues",
+    "cauldron_concrete",
+    "coordinates_hud",
+    "durability_ping",
+    "fast_leaf_decay",
+    "graves",
+    "homes",
+    "multiplayer_sleep",
+    "tpa",
+    "track_raw_stats",
+    "track_stats"
+   ],
+   "dumpedFunctions": 467,
+   "candidates": 467,
+   "skippedMacro": 18,
+   "skippedName": 32,
+   "skippedScenario": 3,
+   "ran": 414,
+   "replyExecuted": 193,
+   "replyError": 221,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  }
+ },
+ "slowFunctions": {},
+ "perf": {
+  "mcfc": {
+   "median": 0.58,
+   "min": 0.41,
+   "max": 0.7,
+   "lines": [
+    "Sprint completed with 1437 ticks per second, or 0.70 ms per tick",
+    "Sprint completed with 1736 ticks per second, or 0.58 ms per tick",
+    "Sprint completed with 2421 ticks per second, or 0.41 ms per tick"
+   ]
+  },
+  "vanilla": {
+   "median": 0.57,
+   "min": 0.46,
+   "max": 0.9,
+   "lines": [
+    "Sprint completed with 1110 ticks per second, or 0.90 ms per tick",
+    "Sprint completed with 1746 ticks per second, or 0.57 ms per tick",
+    "Sprint completed with 2192 ticks per second, or 0.46 ms per tick"
+   ]
+  },
+  "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
+ },
+ "durationsSeconds": {
+  "base1": 37.5,
+  "base2": 38.0,
+  "mcfc": 41.2,
+  "perfbase": 35.1,
+  "attempt2-base1": 35.4,
+  "attempt2-base2": 41.5,
+  "attempt2-mcfc": 35.1
+ },
+ "gamerules": {
+  "command_chain_limit": "max_command_sequence_length",
+  "spawn_mobs": "spawn_mobs",
+  "spawn_monsters": "spawn_monsters",
+  "spawn_patrols": "spawn_patrols",
+  "spawn_wandering_traders": "spawn_wandering_traders",
+  "spawn_phantoms": "spawn_phantoms",
+  "spawn_wardens": "spawn_wardens",
+  "random_tick_speed": "random_tick_speed",
+  "weather_cycle": "advance_weather"
+ },
+ "ticks": 200,
+ "seed": "20261026"
+}

@@ -7,6 +7,11 @@
  ],
  "problems": [],
  "notes": [],
+ "mcfcJar": {
+  "name": "mcfc-bfaa7efd.jar",
+  "sha256": "fca3ca87409825f94361fa4e189433dcced4f759e339f2b7bc1999eb69d81ed0",
+  "mtime": "2026-10-26 13:45:38"
+ },
  "mcfcState": {
   "afterLoad": "READY_ON",
   "final": "READY_ON",
@@ -35,9 +40,9 @@
   "functionsByStatus": {
    "compiled": 19
   },
-  "totalCalls": 621,
+  "totalCalls": 623,
   "vanillaCalls": 0,
-  "compiledCalls": 621,
+  "compiledCalls": 623,
   "compiledCallShare": 1.0,
   "nonCompiled": [],
   "nonCompiledCount": 0
@@ -205,32 +210,32 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 0.21,
-   "min": 0.17,
-   "max": 0.27,
+   "median": 0.26,
+   "min": 0.21,
+   "max": 0.44,
    "lines": [
-    "Sprint completed with 3734 ticks per second, or 0.27 ms per tick",
-    "Sprint completed with 4837 ticks per second, or 0.21 ms per tick",
-    "Sprint completed with 5904 ticks per second, or 0.17 ms per tick"
+    "Sprint completed with 2275 ticks per second, or 0.44 ms per tick",
+    "Sprint completed with 3834 ticks per second, or 0.26 ms per tick",
+    "Sprint completed with 4770 ticks per second, or 0.21 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.23,
-   "min": 0.2,
-   "max": 0.29,
+   "median": 0.3,
+   "min": 0.27,
+   "max": 0.43,
    "lines": [
-    "Sprint completed with 3494 ticks per second, or 0.29 ms per tick",
-    "Sprint completed with 4322 ticks per second, or 0.23 ms per tick",
-    "Sprint completed with 4976 ticks per second, or 0.20 ms per tick"
+    "Sprint completed with 2324 ticks per second, or 0.43 ms per tick",
+    "Sprint completed with 3667 ticks per second, or 0.27 ms per tick",
+    "Sprint completed with 3372 ticks per second, or 0.30 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 49.2,
-  "base2": 49.2,
-  "mcfc": 49.2,
-  "perfbase": 52.1
+  "base1": 57.0,
+  "base2": 57.0,
+  "mcfc": 56.6,
+  "perfbase": 52.7
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

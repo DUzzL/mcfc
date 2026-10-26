@@ -1,14 +1,14 @@
-# bacap: DIFF
+# bacap: OK
 
 - kind: function, packs: bacap
 - mcfc final state: READY_ON (after load: READY_ON)
-- mcfc jar: mcfc-0.4.0-alpha.2+26.3-fabric.jar (file mtime 2026-10-26 07:34:22)
-- compile: 5435/5436 functions compiled (100.0%), partial fallback commands: 98
-- whole-function fallbacks: 0, compile failures: 1, runtime disables: 0
-- findings: confirmed 51, flaky 43, low-confidence 0, noise paths 3323
-- exceptions (non-ignorable lines): base1=0, base2=0, mcfc=0
-- MSPT (solo, sprint 1200 x3): vanilla median 30.43 ms (min 30.09, max 31.1); mcfc median 29.97 ms (min 29.23, max 30.05)
-- mcfc debug: 5423 compiled | 1 vanilla | 0 errors | 0 too_big | 0 mcfc_off; compiled-call share 0.8284
+- mcfc jar: mcfc-bfaa7efd.jar sha256=fca3ca87409825f94361fa4e189433dcced4f759e339f2b7bc1999eb69d81ed0 (file mtime 2026-10-26 13:45:38)
+- compile: 5436/5436 functions compiled (100.0%), partial fallback commands: 98
+- whole-function fallbacks: 0, compile failures: 0, runtime disables: 0
+- findings: confirmed 0, flaky 0, low-confidence 37, noise paths 3541; not re-run (no findings)
+- exceptions (non-ignorable lines): base1=2, base2=0, mcfc=0
+- MSPT (solo, sprint 1200 x3): vanilla median 32.97 ms (min 32.78, max 33.84); mcfc median 33.15 ms (min 32.96, max 33.78)
+- mcfc debug: 5423 compiled | 0 vanilla | 0 errors | 0 too_big | 0 mcfc_off; compiled-call share 1.0
 - exerciser (mcfc): ran 5418 of 5436 candidate functions (macro skipped 8, name skipped 10, scenario skipped 0), errors 0, slow 0
 
 ## top partial-fallback reasons
@@ -16,36 +16,18 @@
 - Missing space after argument @ advancement grant <targets:entity_selector[players]> only <advancement:resource_location>: 17
 - Failed to parse any options @ scoreboard objectives: 8
 
-## confirmed findings (first 20)
-- [final] `entities.minecraft:overworld.list[minecraft:item#1179].pos[0]`: base=0.67 | mcfc=0.68
-- [final] `entities.minecraft:overworld.list[minecraft:item#1214].customName`: base=null | mcfc=<missing>
-- [final] `entities.minecraft:overworld.list[minecraft:item#1214].pos[1]`: base=-60.0 | mcfc=<missing>
-- [final] `entities.minecraft:overworld.list[minecraft:item#1214].tags[]`: base=[] | mcfc=<missing>
-- [final] `entities.minecraft:overworld.list[minecraft:item#1214].type`: base="minecraft:item" | mcfc=<missing>
-- [final] `entities.minecraft:overworld.list[minecraft:item#1214].uuid`: base="<item#1214>" | mcfc=<missing>
-- [final] `entities.minecraft:overworld.list[minecraft:item#1215].customName`: base=null | mcfc=<missing>
-- [final] `entities.minecraft:overworld.list[minecraft:item#1215].pos[1]`: base=-60.0 | mcfc=<missing>
-- [final] `entities.minecraft:overworld.list[minecraft:item#1215].tags[]`: base=[] | mcfc=<missing>
-- [final] `entities.minecraft:overworld.list[minecraft:item#1215].type`: base="minecraft:item" | mcfc=<missing>
-- [final] `entities.minecraft:overworld.list[minecraft:item#1215].uuid`: base="<item#1215>" | mcfc=<missing>
-- [final] `entities.minecraft:overworld.list[minecraft:item#1216].customName`: base=null | mcfc=<missing>
-- [final] `entities.minecraft:overworld.list[minecraft:item#1216].pos[1]`: base=-60.0 | mcfc=<missing>
-- [final] `entities.minecraft:overworld.list[minecraft:item#1216].tags[]`: base=[] | mcfc=<missing>
-- [final] `entities.minecraft:overworld.list[minecraft:item#1216].type`: base="minecraft:item" | mcfc=<missing>
-- [final] `entities.minecraft:overworld.list[minecraft:item#1216].uuid`: base="<item#1216>" | mcfc=<missing>
-- [final] `entities.minecraft:overworld.list[minecraft:item#1217].customName`: base=null | mcfc=<missing>
-- [final] `entities.minecraft:overworld.list[minecraft:item#1217].pos[1]`: base=-60.0 | mcfc=<missing>
-- [final] `entities.minecraft:overworld.list[minecraft:item#1217].tags[]`: base=[] | mcfc=<missing>
-- [final] `entities.minecraft:overworld.list[minecraft:item#1217].type`: base="minecraft:item" | mcfc=<missing>
+## low-confidence findings (37, first 10; not counted)
+- `entities.minecraft:overworld.list[minecraft:item#1198].pos[0]`
+- `entities.minecraft:overworld.list[minecraft:item#1204].pos[0]`
+- `entities.minecraft:overworld.list[minecraft:item#1205].pos[0]`
+- `entities.minecraft:overworld.list[minecraft:item#1206].pos[0]`
+- `entities.minecraft:overworld.list[minecraft:item#131].pos[0]`
+- `entities.minecraft:overworld.list[minecraft:item#132].pos[0]`
+- `entities.minecraft:overworld.list[minecraft:item#133].pos[0]`
+- `entities.minecraft:overworld.list[minecraft:item#134].pos[0]`
+- `entities.minecraft:overworld.list[minecraft:item#153].pos[0]`
+- `entities.minecraft:overworld.list[minecraft:item#154].pos[0]`
 
-## flaky findings (first 10, not reproduced in the second attempt)
-- [final] `entities.minecraft:overworld.list[minecraft:item#1000].pos[0]`
-- [final] `entities.minecraft:overworld.list[minecraft:item#1001].pos[0]`
-- [final] `entities.minecraft:overworld.list[minecraft:item#1002].pos[0]`
-- [final] `entities.minecraft:overworld.list[minecraft:item#1003].pos[0]`
-- [final] `entities.minecraft:overworld.list[minecraft:item#1080].pos[0]`
-- [final] `entities.minecraft:overworld.list[minecraft:item#1081].pos[0]`
-- [final] `entities.minecraft:overworld.list[minecraft:item#1082].pos[0]`
-- [final] `entities.minecraft:overworld.list[minecraft:item#1083].pos[0]`
-- [final] `entities.minecraft:overworld.list[minecraft:item#1084].pos[0]`
-- [final] `entities.minecraft:overworld.list[minecraft:item#1138].pos[0]`
+## exceptions base1
+- com.mojang.authlib.exceptions.MinecraftClientException x1: Failed to read from https://api.mojang.com/users/profiles/minecraft/dptester1 due to Read timed out
+- java.net.SocketTimeoutException x1: Read timed out

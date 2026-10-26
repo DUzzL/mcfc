@@ -7,6 +7,11 @@
  ],
  "problems": [],
  "notes": [],
+ "mcfcJar": {
+  "name": "mcfc-1a611fce.jar",
+  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
+  "mtime": "2026-10-26 09:56:09"
+ },
  "mcfcState": {
   "afterLoad": "READY_ON",
   "final": "READY_ON",
@@ -49,7 +54,7 @@
   "confirmedFindings": 0,
   "flakyFindings": 0,
   "lowConfidence": 0,
-  "noise": 25,
+  "noise": 27,
   "genFindings": null,
   "genNoise": null,
   "confirmation": {
@@ -113,13 +118,13 @@
    },
    "scoreboard": {
     "paths": 102,
-    "noise": 1,
+    "noise": 2,
     "findings": 0,
     "lowConfidence": 0
    },
    "storage": {
     "paths": 1,
-    "noise": 0,
+    "noise": 1,
     "findings": 0,
     "lowConfidence": 0
    },
@@ -211,32 +216,32 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 0.38,
-   "min": 0.36,
-   "max": 0.48,
+   "median": 0.4,
+   "min": 0.38,
+   "max": 0.5,
    "lines": [
-    "Sprint completed with 2092 ticks per second, or 0.48 ms per tick",
-    "Sprint completed with 2612 ticks per second, or 0.38 ms per tick",
-    "Sprint completed with 2773 ticks per second, or 0.36 ms per tick"
+    "Sprint completed with 2005 ticks per second, or 0.50 ms per tick",
+    "Sprint completed with 2659 ticks per second, or 0.38 ms per tick",
+    "Sprint completed with 2493 ticks per second, or 0.40 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.38,
-   "min": 0.37,
-   "max": 0.55,
+   "median": 0.43,
+   "min": 0.35,
+   "max": 0.56,
    "lines": [
-    "Sprint completed with 1817 ticks per second, or 0.55 ms per tick",
-    "Sprint completed with 2605 ticks per second, or 0.38 ms per tick",
-    "Sprint completed with 2674 ticks per second, or 0.37 ms per tick"
+    "Sprint completed with 1793 ticks per second, or 0.56 ms per tick",
+    "Sprint completed with 2335 ticks per second, or 0.43 ms per tick",
+    "Sprint completed with 2843 ticks per second, or 0.35 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 53.3,
-  "base2": 53.3,
-  "mcfc": 51.3,
-  "perfbase": 49.5
+  "base1": 51.3,
+  "base2": 51.4,
+  "mcfc": 51.7,
+  "perfbase": 49.8
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

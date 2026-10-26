@@ -1,20 +1,20 @@
 kind	id	function	message	command
+PARSE_ERROR	command.error.parse	gardenersdream:plantrotate_offhand	Unknown command: msg	execute align xyz positioned ~.5 ~ ~.5 if entity @e[type=block_display,tag=pp_norotate,distance=..0.9] run msg @s "Sorry, this plant can't be rotated."
 PARSE_ERROR	command.error.parse.setblock.pos.block	gardenersdream:hit_propagule	Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>	setblock ~ ~ ~ mangrove_propagule[hanging=true,age=4] strict
-PARSE_ERROR	selector.error.invalid.syntax	gardenersdream:start_ray_soil_nofilter	Expected a selector	execute if entity @s[gamemode=survival] unless entity @s[tag=gd_soil_ok] run playsound block.stone.break
-PARSE_ERROR	command.error.parse.setblock.pos.block	gardenersdream:hit_lilac	Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>	setblock ~ ~1 ~ air replace
-PARSE_ERROR	command.error.parse.setblock.pos.block	gardenersdream:hit_lilac	Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>	setblock ~ ~ ~ lilac[half=upper] replace
 PARSE_ERROR	command.error.parse.setblock.pos.block	gardenersdream:hit_grass	Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>	setblock ~ ~1 ~ air replace
 PARSE_ERROR	command.error.parse.setblock.pos.block	gardenersdream:hit_grass	Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>	setblock ~ ~ ~ tall_grass[half=upper] replace
-PARSE_ERROR	command.error.parse.setblock.pos.block	gardenersdream:hit_composter_upper	Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>	execute align xyz run setblock ~ ~ ~ mossy_cobblestone_slab[type=top] replace
+PARSE_ERROR	command.error.parse	gardenersdream:plantrotate	Unknown command: msg	execute align xyz positioned ~.5 ~ ~.5 if entity @e[type=block_display,tag=pp_norotate,distance=..0.9] run msg @s "Sorry, this plant can't be rotated."
 PARSE_ERROR	command.error.parse.setblock.pos.block	gardenersdream:hit_rose	Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>	setblock ~ ~1 ~ air replace
 PARSE_ERROR	command.error.parse.setblock.pos.block	gardenersdream:hit_rose	Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>	setblock ~ ~ ~ rose_bush[half=upper] replace
-PARSE_ERROR	command.error.parse	gardenersdream:plantrotate_offhand	Unknown command: msg	execute align xyz positioned ~.5 ~ ~.5 if entity @e[type=block_display,tag=pp_norotate,distance=..0.9] run msg @s "Sorry, this plant can't be rotated."
-PARSE_ERROR	command.error.parse	gardenersdream:plantrotate	Unknown command: msg	execute align xyz positioned ~.5 ~ ~.5 if entity @e[type=block_display,tag=pp_norotate,distance=..0.9] run msg @s "Sorry, this plant can't be rotated."
 PARSE_ERROR	command.error.parse.setblock.pos.block	gardenersdream:hit_sunflower	Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>	setblock ~ ~1 ~ air replace
 PARSE_ERROR	command.error.parse.setblock.pos.block	gardenersdream:hit_sunflower	Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>	setblock ~ ~ ~ sunflower[half=upper] replace
 PARSE_ERROR	command.error.parse.setblock.pos.block	gardenersdream:destroy_halfpot	Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>	setblock ~ ~ ~ air replace
+PARSE_ERROR	command.error.parse.setblock.pos.block	gardenersdream:hit_lilac	Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>	setblock ~ ~1 ~ air replace
+PARSE_ERROR	command.error.parse.setblock.pos.block	gardenersdream:hit_lilac	Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>	setblock ~ ~ ~ lilac[half=upper] replace
 PARSE_ERROR	command.error.parse.setblock.pos.block	gardenersdream:hit_pitcher	Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>	setblock ~ ~1 ~ air replace
 PARSE_ERROR	command.error.parse.setblock.pos.block	gardenersdream:hit_pitcher	Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>	setblock ~ ~ ~ minecraft:pitcher_crop[half=upper,age=3] replace
+PARSE_ERROR	command.error.parse.setblock.pos.block	gardenersdream:hit_composter_upper	Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>	execute align xyz run setblock ~ ~ ~ mossy_cobblestone_slab[type=top] replace
+PARSE_ERROR	selector.error.invalid.syntax	gardenersdream:start_ray_soil_nofilter	Expected a selector	execute if entity @s[gamemode=survival] unless entity @s[tag=gd_soil_ok] run playsound block.stone.break
 PARSE_ERROR	command.error.parse.setblock.pos.block	gardenersdream:hit_peony	Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>	setblock ~ ~1 ~ air replace
 PARSE_ERROR	command.error.parse.setblock.pos.block	gardenersdream:hit_peony	Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>	setblock ~ ~ ~ peony[half=upper] strict
 PARSE_ERROR	command.error.parse.setblock.pos.block	gardenersdream:hit_cauldron_upper	Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>	execute align xyz run setblock ~ ~ ~ mossy_cobblestone_slab[type=top] replace

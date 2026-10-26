@@ -1,0 +1,2 @@
+kind	id	function	message	command
+PARSE_ERROR	command.error.parse	terralith:rtp_testing	Unknown command: spreadplayers	spreadplayers 0 0 1000000 1000000 under 128 false @s
