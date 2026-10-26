@@ -7,6 +7,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import re
 import shutil
@@ -110,6 +111,7 @@ class Runner:
                 raise SystemExit("mcfc jar not found")
             mods.append(jar)
             self.info["mcfcJar"] = jar.name
+            self.info["mcfcJarMtime"] = datetime.datetime.fromtimestamp(jar.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
         for m in mods:
             if not m.exists():
                 raise SystemExit(f"missing mod: {m}")

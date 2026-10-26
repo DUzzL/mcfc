@@ -1,0 +1,1 @@
+{"steps":[{"step":20},{"cmd":"scoreboard objectives list"},{"cmd":"scoreboard players set DPTester1 ts_Deaths 3"},{"cmd":"scoreboard players set DPTester2 ts_KillCount 5"},{"step":50},{"cmd":"execute as DPTester1 run damage @s 2 minecraft:generic"},{"step":10},{"step":100}]}

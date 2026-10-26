@@ -1,0 +1,252 @@
+{
+ "id": "vt-fast-leaf-decay",
+ "status": "OK",
+ "kind": "function",
+ "packs": [
+  "vt-fast-leaf-decay"
+ ],
+ "problems": [],
+ "notes": [],
+ "mcfcState": {
+  "afterLoad": "READY_ON",
+  "final": "READY_ON",
+  "decisiveError": null,
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 23Total Function Count: 23"
+ },
+ "compile": {
+  "found": 23,
+  "compiled": 23,
+  "rate": 1.0,
+  "partialFallbackCommands": 0,
+  "wholeFallbacks": {},
+  "compileFailures": [],
+  "compilerErrors": [],
+  "runtimeDisables": [],
+  "topPartialReasons": {},
+  "unsupportedCommands": {}
+ },
+ "debug": {
+  "header": "12 compiled | 0 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
+  "functionsByStatus": {
+   "compiled": 12
+  },
+  "totalCalls": 550,
+  "vanillaCalls": 0,
+  "compiledCalls": 550,
+  "compiledCallShare": 1.0,
+  "nonCompiled": [],
+  "nonCompiledCount": 0
+ },
+ "compare": {
+  "confirmedFindings": 0,
+  "flakyFindings": 0,
+  "lowConfidence": 0,
+  "noise": 21,
+  "genFindings": null,
+  "genNoise": null,
+  "confirmation": {
+   "enabled": true,
+   "ran": false
+  },
+  "sections": {
+   "blocks": {
+    "paths": 266,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "bossbars": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "datapacks": {
+    "paths": 2,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "entities": {
+    "paths": 38,
+    "noise": 18,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functionTags": {
+    "paths": 4,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functions": {
+    "paths": 23,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "gamerules": {
+    "paths": 58,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "players": {
+    "paths": 23,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scheduled": {
+    "paths": 4,
+    "noise": 1,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scoreboard": {
+    "paths": 83,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "storage": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "world": {
+    "paths": 12,
+    "noise": 2,
+    "findings": 0,
+    "lowConfidence": 0
+   }
+  },
+  "confirmed": [],
+  "flaky": [],
+  "lowConfidenceSample": []
+ },
+ "exceptions": {
+  "base1": {},
+  "base2": {
+   "com.mojang.authlib.exceptions.MinecraftClientException": {
+    "count": 1,
+    "first": "Failed to read from https://sessionserver.mojang.com/session/minecraft/profile/3c60c0c23d05399fbffb864ec993da33?unsigned=false due to Read timed out"
+   },
+   "java.net.SocketTimeoutException": {
+    "count": 1,
+    "first": "Read timed out"
+   }
+  },
+  "mcfc": {},
+  "perfbase": {}
+ },
+ "exceptionTotals": {
+  "base1": 0,
+  "base2": 2,
+  "mcfc": 0,
+  "perfbase": 0
+ },
+ "exercise": {
+  "base1": {
+   "namespaces": [
+    "fast_leaf_decay"
+   ],
+   "dumpedFunctions": 23,
+   "candidates": 23,
+   "skippedMacro": 0,
+   "skippedName": 2,
+   "skippedScenario": 0,
+   "ran": 21,
+   "replyExecuted": 10,
+   "replyError": 11,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "base2": {
+   "namespaces": [
+    "fast_leaf_decay"
+   ],
+   "dumpedFunctions": 23,
+   "candidates": 23,
+   "skippedMacro": 0,
+   "skippedName": 2,
+   "skippedScenario": 0,
+   "ran": 21,
+   "replyExecuted": 10,
+   "replyError": 11,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "mcfc": {
+   "namespaces": [
+    "fast_leaf_decay"
+   ],
+   "dumpedFunctions": 23,
+   "candidates": 23,
+   "skippedMacro": 0,
+   "skippedName": 2,
+   "skippedScenario": 0,
+   "ran": 21,
+   "replyExecuted": 10,
+   "replyError": 11,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  }
+ },
+ "slowFunctions": {},
+ "perf": {
+  "mcfc": {
+   "median": 0.22,
+   "min": 0.16,
+   "max": 0.26,
+   "lines": [
+    "Sprint completed with 3829 ticks per second, or 0.26 ms per tick",
+    "Sprint completed with 4623 ticks per second, or 0.22 ms per tick",
+    "Sprint completed with 6067 ticks per second, or 0.16 ms per tick"
+   ]
+  },
+  "vanilla": {
+   "median": 0.25,
+   "min": 0.19,
+   "max": 0.29,
+   "lines": [
+    "Sprint completed with 3488 ticks per second, or 0.29 ms per tick",
+    "Sprint completed with 3937 ticks per second, or 0.25 ms per tick",
+    "Sprint completed with 5146 ticks per second, or 0.19 ms per tick"
+   ]
+  },
+  "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
+ },
+ "durationsSeconds": {
+  "base1": 52.2,
+  "base2": 54.2,
+  "mcfc": 46.8,
+  "perfbase": 45.2
+ },
+ "gamerules": {
+  "command_chain_limit": "max_command_sequence_length",
+  "spawn_mobs": "spawn_mobs",
+  "spawn_monsters": "spawn_monsters",
+  "spawn_patrols": "spawn_patrols",
+  "spawn_wandering_traders": "spawn_wandering_traders",
+  "spawn_phantoms": "spawn_phantoms",
+  "spawn_wardens": "spawn_wardens",
+  "random_tick_speed": "random_tick_speed",
+  "weather_cycle": "advance_weather"
+ },
+ "ticks": 200,
+ "seed": "20261026"
+}

@@ -265,11 +265,20 @@ def fmt_perf(p: dict | None) -> str:
     return f"median {p['median']} ms (min {p['min']}, max {p['max']})"
 
 
+def _jar_note(pack_id: str) -> str:
+    try:
+        info = json.loads((c.RUNS / pack_id / "mcfc" / "run.json").read_text(encoding="utf-8"))
+        return f"{info.get('mcfcJar')} (file mtime {info.get('mcfcJarMtime', 'not recorded')})"
+    except Exception:  # noqa: BLE001
+        return "unknown"
+
+
 def write_md_report(rep: dict, dest: Path) -> None:
     cp, cm, st = rep["compile"], rep["compare"], rep["mcfcState"]
     L = [f"# {rep['id']}: {rep['status']}", "",
          f"- kind: {rep['kind']}, packs: {', '.join(rep['packs'])}",
          f"- mcfc final state: {st['final']} (after load: {st['afterLoad']})",
+         f"- mcfc jar: {_jar_note(rep['id'])}",
          f"- compile: {cp['compiled']}/{cp['found']} functions compiled"
          + (f" ({cp['rate'] * 100:.1f}%)" if cp["rate"] is not None else "")
          + f", partial fallback commands: {cp['partialFallbackCommands']}",

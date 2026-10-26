@@ -1,0 +1,243 @@
+{
+ "id": "vt-coordinates-hud",
+ "status": "OK",
+ "kind": "function",
+ "packs": [
+  "vt-coordinates-hud"
+ ],
+ "problems": [],
+ "notes": [],
+ "mcfcState": {
+  "afterLoad": "READY_ON",
+  "final": "READY_ON",
+  "decisiveError": null,
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 9Total Function Count: 9"
+ },
+ "compile": {
+  "found": 9,
+  "compiled": 9,
+  "rate": 1.0,
+  "partialFallbackCommands": 0,
+  "wholeFallbacks": {},
+  "compileFailures": [],
+  "compilerErrors": [],
+  "runtimeDisables": [],
+  "topPartialReasons": {},
+  "unsupportedCommands": {}
+ },
+ "debug": {
+  "header": "8 compiled | 0 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
+  "functionsByStatus": {
+   "compiled": 8
+  },
+  "totalCalls": 410,
+  "vanillaCalls": 0,
+  "compiledCalls": 410,
+  "compiledCallShare": 1.0,
+  "nonCompiled": [],
+  "nonCompiledCount": 0
+ },
+ "compare": {
+  "confirmedFindings": 0,
+  "flakyFindings": 0,
+  "lowConfidence": 0,
+  "noise": 2,
+  "genFindings": null,
+  "genNoise": null,
+  "confirmation": {
+   "enabled": true,
+   "ran": false
+  },
+  "sections": {
+   "blocks": {
+    "paths": 266,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "bossbars": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "datapacks": {
+    "paths": 2,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "entities": {
+    "paths": 6,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functionTags": {
+    "paths": 3,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functions": {
+    "paths": 9,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "gamerules": {
+    "paths": 58,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "players": {
+    "paths": 47,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scheduled": {
+    "paths": 4,
+    "noise": 1,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scoreboard": {
+    "paths": 62,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "storage": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "world": {
+    "paths": 12,
+    "noise": 1,
+    "findings": 0,
+    "lowConfidence": 0
+   }
+  },
+  "confirmed": [],
+  "flaky": [],
+  "lowConfidenceSample": []
+ },
+ "exceptions": {
+  "base1": {},
+  "base2": {},
+  "mcfc": {},
+  "perfbase": {}
+ },
+ "exceptionTotals": {
+  "base1": 0,
+  "base2": 0,
+  "mcfc": 0,
+  "perfbase": 0
+ },
+ "exercise": {
+  "base1": {
+   "namespaces": [
+    "coordinates_hud"
+   ],
+   "dumpedFunctions": 9,
+   "candidates": 9,
+   "skippedMacro": 0,
+   "skippedName": 1,
+   "skippedScenario": 0,
+   "ran": 8,
+   "replyExecuted": 8,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "base2": {
+   "namespaces": [
+    "coordinates_hud"
+   ],
+   "dumpedFunctions": 9,
+   "candidates": 9,
+   "skippedMacro": 0,
+   "skippedName": 1,
+   "skippedScenario": 0,
+   "ran": 8,
+   "replyExecuted": 8,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "mcfc": {
+   "namespaces": [
+    "coordinates_hud"
+   ],
+   "dumpedFunctions": 9,
+   "candidates": 9,
+   "skippedMacro": 0,
+   "skippedName": 1,
+   "skippedScenario": 0,
+   "ran": 8,
+   "replyExecuted": 8,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  }
+ },
+ "slowFunctions": {},
+ "perf": {
+  "mcfc": {
+   "median": 0.25,
+   "min": 0.21,
+   "max": 0.29,
+   "lines": [
+    "Sprint completed with 3402 ticks per second, or 0.29 ms per tick",
+    "Sprint completed with 3986 ticks per second, or 0.25 ms per tick",
+    "Sprint completed with 4651 ticks per second, or 0.21 ms per tick"
+   ]
+  },
+  "vanilla": {
+   "median": 0.32,
+   "min": 0.28,
+   "max": 0.52,
+   "lines": [
+    "Sprint completed with 1908 ticks per second, or 0.52 ms per tick",
+    "Sprint completed with 3078 ticks per second, or 0.32 ms per tick",
+    "Sprint completed with 3554 ticks per second, or 0.28 ms per tick"
+   ]
+  },
+  "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
+ },
+ "durationsSeconds": {
+  "base1": 40.3,
+  "base2": 44.3,
+  "mcfc": 39.3,
+  "perfbase": 38.5
+ },
+ "gamerules": {
+  "command_chain_limit": "max_command_sequence_length",
+  "spawn_mobs": "spawn_mobs",
+  "spawn_monsters": "spawn_monsters",
+  "spawn_patrols": "spawn_patrols",
+  "spawn_wandering_traders": "spawn_wandering_traders",
+  "spawn_phantoms": "spawn_phantoms",
+  "spawn_wardens": "spawn_wardens",
+  "random_tick_speed": "random_tick_speed",
+  "weather_cycle": "advance_weather"
+ },
+ "ticks": 200,
+ "seed": "20261026"
+}

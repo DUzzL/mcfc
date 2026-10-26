@@ -1,0 +1,1 @@
+{"steps":[{"step":200},{"cmd":"scoreboard players set DPTester1 afkDis.checkAFK 150"},{"step":30},{"cmd":"scoreboard players set DPTester2 afkDis.checkAFK 150"},{"step":30},{"step":1200},{"cmd":"team list"},{"cmd":"execute as DPTester1 at @s run tp @s ~5 ~ ~5"},{"step":25},{"step":50},{"cmd":"team list"},{"step":100}]}

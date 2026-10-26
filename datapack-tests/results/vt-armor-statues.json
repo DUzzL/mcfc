@@ -1,0 +1,298 @@
+{
+ "id": "vt-armor-statues",
+ "status": "DIFF",
+ "kind": "function",
+ "packs": [
+  "vt-armor-statues"
+ ],
+ "problems": [],
+ "notes": [],
+ "mcfcState": {
+  "afterLoad": "READY_ON",
+  "final": "READY_ON",
+  "decisiveError": null,
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 72Total Function Count: 72"
+ },
+ "compile": {
+  "found": 72,
+  "compiled": 72,
+  "rate": 1.0,
+  "partialFallbackCommands": 1,
+  "wholeFallbacks": {},
+  "compileFailures": [],
+  "compilerErrors": [],
+  "runtimeDisables": [],
+  "topPartialReasons": {
+   "Only one entity is allowed, but the provided selector allows more than one": 1
+  },
+  "unsupportedCommands": {}
+ },
+ "debug": {
+  "header": "69 compiled | 0 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
+  "functionsByStatus": {
+   "compiled": 69
+  },
+  "totalCalls": 850,
+  "vanillaCalls": 0,
+  "compiledCalls": 850,
+  "compiledCallShare": 1.0,
+  "nonCompiled": [],
+  "nonCompiledCount": 0
+ },
+ "compare": {
+  "confirmedFindings": 8,
+  "flakyFindings": 0,
+  "lowConfidence": 0,
+  "noise": 28,
+  "genFindings": null,
+  "genNoise": null,
+  "confirmation": {
+   "enabled": true,
+   "ran": true,
+   "onlyInSecondAttempt": 0
+  },
+  "sections": {
+   "blocks": {
+    "paths": 266,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "bossbars": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "datapacks": {
+    "paths": 2,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "entities": {
+    "paths": 40,
+    "noise": 12,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functionTags": {
+    "paths": 4,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functions": {
+    "paths": 72,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "gamerules": {
+    "paths": 58,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "players": {
+    "paths": 58,
+    "noise": 8,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scheduled": {
+    "paths": 8,
+    "noise": 2,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scoreboard": {
+    "paths": 114,
+    "noise": 2,
+    "findings": 8,
+    "lowConfidence": 0
+   },
+   "storage": {
+    "paths": 5,
+    "noise": 2,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "world": {
+    "paths": 12,
+    "noise": 2,
+    "findings": 0,
+    "lowConfidence": 0
+   }
+  },
+  "confirmed": [
+   {
+    "path": "scoreboard.scores.<armor_stand#1>.as_edited_uuid1",
+    "base": "1012973762",
+    "mcfc": "0",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.scores.<armor_stand#1>.as_edited_uuid2",
+    "base": "1023752607",
+    "mcfc": "0",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.scores.<armor_stand#1>.as_edited_uuid3",
+    "base": "-1074035122",
+    "mcfc": "0",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.scores.<armor_stand#1>.as_edited_uuid4",
+    "base": "-913057229",
+    "mcfc": "0",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.scores.<armor_stand#1>.as_lock_uuid1",
+    "base": "1012973762",
+    "mcfc": "0",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.scores.<armor_stand#1>.as_lock_uuid2",
+    "base": "1023752607",
+    "mcfc": "0",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.scores.<armor_stand#1>.as_lock_uuid3",
+    "base": "-1074035122",
+    "mcfc": "0",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.scores.<armor_stand#1>.as_lock_uuid4",
+    "base": "-913057229",
+    "mcfc": "0",
+    "dump": "final"
+   }
+  ],
+  "flaky": [],
+  "lowConfidenceSample": []
+ },
+ "exceptions": {
+  "base1": {},
+  "base2": {},
+  "mcfc": {},
+  "perfbase": {}
+ },
+ "exceptionTotals": {
+  "base1": 0,
+  "base2": 0,
+  "mcfc": 0,
+  "perfbase": 0
+ },
+ "exercise": {
+  "base1": {
+   "namespaces": [
+    "armor_statues"
+   ],
+   "dumpedFunctions": 72,
+   "candidates": 72,
+   "skippedMacro": 1,
+   "skippedName": 2,
+   "skippedScenario": 0,
+   "ran": 69,
+   "replyExecuted": 69,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "base2": {
+   "namespaces": [
+    "armor_statues"
+   ],
+   "dumpedFunctions": 72,
+   "candidates": 72,
+   "skippedMacro": 1,
+   "skippedName": 2,
+   "skippedScenario": 0,
+   "ran": 69,
+   "replyExecuted": 69,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "mcfc": {
+   "namespaces": [
+    "armor_statues"
+   ],
+   "dumpedFunctions": 72,
+   "candidates": 72,
+   "skippedMacro": 1,
+   "skippedName": 2,
+   "skippedScenario": 0,
+   "ran": 69,
+   "replyExecuted": 69,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  }
+ },
+ "slowFunctions": {},
+ "perf": {
+  "mcfc": {
+   "median": 0.23,
+   "min": 0.19,
+   "max": 0.41,
+   "lines": [
+    "Sprint completed with 2448 ticks per second, or 0.41 ms per tick",
+    "Sprint completed with 4291 ticks per second, or 0.23 ms per tick",
+    "Sprint completed with 5266 ticks per second, or 0.19 ms per tick"
+   ]
+  },
+  "vanilla": {
+   "median": 0.26,
+   "min": 0.19,
+   "max": 0.31,
+   "lines": [
+    "Sprint completed with 3190 ticks per second, or 0.31 ms per tick",
+    "Sprint completed with 3814 ticks per second, or 0.26 ms per tick",
+    "Sprint completed with 5403 ticks per second, or 0.19 ms per tick"
+   ]
+  },
+  "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
+ },
+ "durationsSeconds": {
+  "base1": 55.9,
+  "base2": 57.0,
+  "mcfc": 57.8,
+  "perfbase": 54.3,
+  "attempt2-base1": 56.4,
+  "attempt2-base2": 56.8,
+  "attempt2-mcfc": 59.1
+ },
+ "gamerules": {
+  "command_chain_limit": "max_command_sequence_length",
+  "spawn_mobs": "spawn_mobs",
+  "spawn_monsters": "spawn_monsters",
+  "spawn_patrols": "spawn_patrols",
+  "spawn_wandering_traders": "spawn_wandering_traders",
+  "spawn_phantoms": "spawn_phantoms",
+  "spawn_wardens": "spawn_wardens",
+  "random_tick_speed": "random_tick_speed",
+  "weather_cycle": "advance_weather"
+ },
+ "ticks": 200,
+ "seed": "20261026"
+}

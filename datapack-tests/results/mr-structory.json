@@ -1,0 +1,457 @@
+{
+ "id": "mr-structory",
+ "status": "DIFF",
+ "kind": "worldgen",
+ "packs": [
+  "mr-structory"
+ ],
+ "problems": [],
+ "notes": [],
+ "mcfcState": {
+  "afterLoad": "READY_ON",
+  "final": "READY_ON",
+  "decisiveError": null,
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 1Total Function Count: 1"
+ },
+ "compile": {
+  "found": 1,
+  "compiled": 1,
+  "rate": 1.0,
+  "partialFallbackCommands": 0,
+  "wholeFallbacks": {},
+  "compileFailures": [],
+  "compilerErrors": [],
+  "runtimeDisables": [],
+  "topPartialReasons": {},
+  "unsupportedCommands": {}
+ },
+ "debug": {
+  "header": "1 compiled | 0 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
+  "functionsByStatus": {
+   "compiled": 1
+  },
+  "totalCalls": 1,
+  "vanillaCalls": 0,
+  "compiledCalls": 1,
+  "compiledCallShare": 1.0,
+  "nonCompiled": [],
+  "nonCompiledCount": 0
+ },
+ "compare": {
+  "confirmedFindings": 1,
+  "flakyFindings": 26,
+  "lowConfidence": 9,
+  "noise": 320,
+  "genFindings": 14,
+  "genNoise": 230,
+  "confirmation": {
+   "enabled": true,
+   "ran": true,
+   "onlyInSecondAttempt": 6
+  },
+  "sections": {
+   "blocks": {
+    "paths": 414,
+    "noise": 229,
+    "findings": 5,
+    "lowConfidence": 9
+   },
+   "bossbars": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "datapacks": {
+    "paths": 2,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "entities": {
+    "paths": 881,
+    "noise": 89,
+    "findings": 8,
+    "lowConfidence": 0
+   },
+   "functionTags": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functions": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "gamerules": {
+    "paths": 58,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "players": {
+    "paths": 40,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scheduled": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scoreboard": {
+    "paths": 4,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "storage": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "world": {
+    "paths": 12,
+    "noise": 2,
+    "findings": 0,
+    "lowConfidence": 0
+   }
+  },
+  "confirmed": [
+   {
+    "path": "blocks[overworld].columns.-4,-6",
+    "base": "\"756663c78e543e360d346cef57ad3960194a2282b7468f858a39c6822af8790d\"",
+    "mcfc": "\"d6d9c6622065ce981dee28f5cd897da294b94084667adad7762f4fcdee731ef4\"",
+    "dump": "gen"
+   }
+  ],
+  "flaky": [
+   {
+    "path": "blocks[overworld].columns.-4,6",
+    "base": "\"ffbc00b6d6e265cfac90035eb1e9a4c18f0f8730c4e0a171c68a458da76cda54\"",
+    "mcfc": "\"3cd0063263d1c9f42b4eff4fe853955debaeddc5162587811df2445025f9ff26\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.-5,7",
+    "base": "\"0e2acaa0270d18668a637b4d551971de50b7eed0b99e3920c1da8b6805b315db\"",
+    "mcfc": "\"06d4ef77b6f2148facd823eaf5f3a9c6f8796c9840ecb9d9421732f8247156f5\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.4,1",
+    "base": "\"5a3043d17977edbd0026bc46f9e9fd727f2c0e99a6125cafa73325880fcf1d79\"",
+    "mcfc": "\"6be11afa421966665c1fefaf97d61ed550967dc07771aabed0a8abd3aa23504e\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.6,4",
+    "base": "\"f13c33c7cd4aaa54a7a2d4bc323cf04f24aec00b59194eb16066e789d8794199\"",
+    "mcfc": "\"dbc43228c6f070b8d123ecc7538c28150c70a1554ba081ab9656f29f605681f6\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.6,5",
+    "base": "\"bf020bf89e1089560de5efedd64b8271a6123116b723ba97d9f1b26e586f02ef\"",
+    "mcfc": "\"dff4defa8958222caf4e22025f6476d173ab62165c6813110bc667da193b2c0f\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:bee#5].customName",
+    "base": "<missing>",
+    "mcfc": "null",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:bee#5].nbt",
+    "base": "<missing>",
+    "mcfc": "\"{AbsorptionAmount:0.0f,Age:0,AgeLocked:0b,CanPickUpLoot:0b,CannotEnterHiveTicks:0,CropsGrownSincePollination:0,DeathTime:0s,FallFlying:0b,ForcedAge:0,HasNectar:0b,HasStung:0b,Health:10.0f,InLove:0,Invulnerable:0b,LeftHanded:0b,NoGravity:1b,PersistenceRequired:0b,TicksSincePollination:9,anger_end_time:-1L,attributes:[{base:0.30000001192092896d,id:\\\"minecraft:movement_speed\\\"}],current_impulse_context_reset_grace_time:0,flower_pos:[I;95,68,-117],hive_pos:[I;89,72,-119]}\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:bee#5].pos[0]",
+    "base": "<missing>",
+    "mcfc": "91.85",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:bee#5].pos[1]",
+    "base": "<missing>",
+    "mcfc": "72.22",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:bee#5].pos[2]",
+    "base": "<missing>",
+    "mcfc": "-117.08",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:bee#5].tags[]",
+    "base": "<missing>",
+    "mcfc": "[]",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:bee#5].type",
+    "base": "<missing>",
+    "mcfc": "\"minecraft:bee\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:bee#5].uuid",
+    "base": "<missing>",
+    "mcfc": "\"<bee#5>\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.-1,5",
+    "base": "\"cf4108d1d9b419d66b4ebc495eeb7bd93fe9a8c085edb35679f8976132193e99\"",
+    "mcfc": "\"ca970220f69a714c2324435b9bc6d71a9c407f436c4afcfb366e02c10d25d8fe\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.-4,6",
+    "base": "\"ffbc00b6d6e265cfac90035eb1e9a4c18f0f8730c4e0a171c68a458da76cda54\"",
+    "mcfc": "\"3cd0063263d1c9f42b4eff4fe853955debaeddc5162587811df2445025f9ff26\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.-5,7",
+    "base": "\"0e2acaa0270d18668a637b4d551971de50b7eed0b99e3920c1da8b6805b315db\"",
+    "mcfc": "\"06d4ef77b6f2148facd823eaf5f3a9c6f8796c9840ecb9d9421732f8247156f5\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.0,-8",
+    "base": "\"0d4b7f8c79365663416c05dbdebe206daa4c4fddd751bb455e2c29f410816ced\"",
+    "mcfc": "\"c333a08fc9bbcdd96d414b8abdc620b9fbd66990d0dc23c4010eddabef49420a\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.3,-2",
+    "base": "\"09384a9af4445b33ebe0d3d44a40de084ee39b43ae6988916429023df82ec68f\"",
+    "mcfc": "\"5b6d87a769f60dd3b3d36ac049c78e113b6fb5dcdbb6b8cea387a70b8dc5e54e\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.4,-2",
+    "base": "\"163b570e7a7e039acc2ed6f255f67f26fc6a216f808e171bb1f71d1b73574c1e\"",
+    "mcfc": "\"4b4446d370f5a056ec3fc73db9870e651bddd8047043cf21ba7ce9ccd0cfa549\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.4,-3",
+    "base": "\"fc8143beb5c8c864a34b7265a893f42d05063b8021bd0b33bbe1572e76aefebf\"",
+    "mcfc": "\"dede252e4f5d5a241f1ba166680b1462b22160a376839a0c7b56e74c27b3ce06\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.4,0",
+    "base": "\"69f67e67e1e6ee6fc5a32050818be056769a0d78346fa4a6517a6a1178a00b49\"",
+    "mcfc": "\"ef1bdca91591defaa35e59fe16a204159c6e627bcc5c2d60447956f4753eadee\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.4,1",
+    "base": "\"5a3043d17977edbd0026bc46f9e9fd727f2c0e99a6125cafa73325880fcf1d79\"",
+    "mcfc": "\"6be11afa421966665c1fefaf97d61ed550967dc07771aabed0a8abd3aa23504e\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.6,2",
+    "base": "\"b50ae8ef181cccc828a331152b855e510d4dbbe69aadbd7057481a3cc137a4ee\"",
+    "mcfc": "\"1911644ef53013add5037eaaff704582464ec0d260e4301940a14ff908171b4b\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.6,4",
+    "base": "\"f13c33c7cd4aaa54a7a2d4bc323cf04f24aec00b59194eb16066e789d8794199\"",
+    "mcfc": "\"dbc43228c6f070b8d123ecc7538c28150c70a1554ba081ab9656f29f605681f6\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.6,5",
+    "base": "\"bf020bf89e1089560de5efedd64b8271a6123116b723ba97d9f1b26e586f02ef\"",
+    "mcfc": "\"dff4defa8958222caf4e22025f6476d173ab62165c6813110bc667da193b2c0f\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.6,6",
+    "base": "\"de4e2b0d551b10c0e250dad0cf7d660910f52011e5234567fd1cc41c7063267b\"",
+    "mcfc": "\"da84fb21c0476621bed5781037a0d313d0de97052e4151079ba00b5534b69d11\"",
+    "dump": "gen"
+   }
+  ],
+  "lowConfidenceSample": [
+   {
+    "path": "blocks[overworld].columns.-1,5",
+    "base": "\"6d7394a5da1c6db2edb3f693fb33ec7cdadc1e972dae7f8e6c7c373fbed18470\"",
+    "mcfc": "\"2ff4374f606685b85c0890489a0d634be41d08f98be4d5b57dd3135ae5c347cf\""
+   },
+   {
+    "path": "blocks[overworld].columns.-4,-6",
+    "base": "\"9f53f324e101ab0f31cef205ae64a54ff67b8fb887dfa6a52bce4ac91dcab815\"",
+    "mcfc": "\"6e3db6f38eb37c44ca466bdf55698109150897c3a0877762ca45543222fa9afa\""
+   },
+   {
+    "path": "blocks[overworld].columns.0,-8",
+    "base": "\"32541415889d7f9f78fb3e7dbdc21f8dbec0c4ae44f5f0f600515dd1c3168ee7\"",
+    "mcfc": "\"0d8d0171472136459f6b44481b9d0a1ef758f2c39f47091b90daaea013369037\""
+   },
+   {
+    "path": "blocks[overworld].columns.3,-2",
+    "base": "\"5cf05263601f0b8abd1d3c80560953f7e918b29b830e0c9ffe86be9996b177d3\"",
+    "mcfc": "\"02b8f2a6863714a6c80dd042ec2a7cdf349d82be74bae9a127e9d070ef660845\""
+   },
+   {
+    "path": "blocks[overworld].columns.4,-2",
+    "base": "\"0a7be461bead0225cd5b4b45cbfc909556597636601365945a2659427f7998e1\"",
+    "mcfc": "\"e7b4810493a030a35bc1de1f9d5893c7c3c1cb966b85be6654603bfe6c30ca9c\""
+   },
+   {
+    "path": "blocks[overworld].columns.4,-3",
+    "base": "\"9b787b2be006b62e04eff3e6fe54a937749fc8d4bd41c45ad835b26b77c84004\"",
+    "mcfc": "\"686dcb8b460ea8a793b1bab4599db8566393e31f29d29309b0f5a1660e223caa\""
+   },
+   {
+    "path": "blocks[overworld].columns.4,0",
+    "base": "\"fff37439471d064b3457c54a0ec06a3020c6bcdde5bc415c41b4b782de4902ba\"",
+    "mcfc": "\"127b3cc48eedc38395dec6c70e79d99cd3e776c377b74bdafcdd1586e2a37100\""
+   },
+   {
+    "path": "blocks[overworld].columns.6,2",
+    "base": "\"446f7e75700b5a064888fae358e142f2616e26025a47160bd12d53b815153df0\"",
+    "mcfc": "\"53089c9770836a442880e3bd503aad2d77ae1d3cc478da717698b441f4a2bce8\""
+   },
+   {
+    "path": "blocks[overworld].columns.6,6",
+    "base": "\"79c587f2bac864f11e4bc4b493c3cf3cb7034e7aada3b3c6361a8570ac622739\"",
+    "mcfc": "\"80a62c0bb7910762152d2420f3138b543bc8008ab67d7ae522cbda5f61e11f58\""
+   }
+  ]
+ },
+ "exceptions": {
+  "base1": {},
+  "base2": {},
+  "mcfc": {},
+  "perfbase": {}
+ },
+ "exceptionTotals": {
+  "base1": 0,
+  "base2": 0,
+  "mcfc": 0,
+  "perfbase": 0
+ },
+ "exercise": {
+  "base1": {
+   "namespaces": [
+    "structory"
+   ],
+   "dumpedFunctions": 1,
+   "candidates": 1,
+   "skippedMacro": 0,
+   "skippedName": 0,
+   "skippedScenario": 0,
+   "ran": 1,
+   "replyExecuted": 1,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "base2": {
+   "namespaces": [
+    "structory"
+   ],
+   "dumpedFunctions": 1,
+   "candidates": 1,
+   "skippedMacro": 0,
+   "skippedName": 0,
+   "skippedScenario": 0,
+   "ran": 1,
+   "replyExecuted": 1,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "mcfc": {
+   "namespaces": [
+    "structory"
+   ],
+   "dumpedFunctions": 1,
+   "candidates": 1,
+   "skippedMacro": 0,
+   "skippedName": 0,
+   "skippedScenario": 0,
+   "ran": 1,
+   "replyExecuted": 1,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  }
+ },
+ "slowFunctions": {},
+ "perf": {
+  "mcfc": {
+   "median": 0.74,
+   "min": 0.61,
+   "max": 1.05,
+   "lines": [
+    "Sprint completed with 948 ticks per second, or 1.05 ms per tick",
+    "Sprint completed with 1356 ticks per second, or 0.74 ms per tick",
+    "Sprint completed with 1631 ticks per second, or 0.61 ms per tick"
+   ]
+  },
+  "vanilla": {
+   "median": 0.63,
+   "min": 0.56,
+   "max": 1.08,
+   "lines": [
+    "Sprint completed with 923 ticks per second, or 1.08 ms per tick",
+    "Sprint completed with 1596 ticks per second, or 0.63 ms per tick",
+    "Sprint completed with 1784 ticks per second, or 0.56 ms per tick"
+   ]
+  },
+  "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
+ },
+ "durationsSeconds": {
+  "base1": 51.7,
+  "base2": 51.7,
+  "mcfc": 43.4,
+  "perfbase": 43.1,
+  "attempt2-base1": 47.8,
+  "attempt2-base2": 52.6,
+  "attempt2-mcfc": 41.2
+ },
+ "gamerules": {
+  "command_chain_limit": "max_command_sequence_length",
+  "spawn_mobs": "spawn_mobs",
+  "spawn_monsters": "spawn_monsters",
+  "spawn_patrols": "spawn_patrols",
+  "spawn_wandering_traders": "spawn_wandering_traders",
+  "spawn_phantoms": "spawn_phantoms",
+  "spawn_wardens": "spawn_wardens",
+  "random_tick_speed": "random_tick_speed",
+  "weather_cycle": "advance_weather"
+ },
+ "ticks": 200,
+ "seed": "20261026"
+}
