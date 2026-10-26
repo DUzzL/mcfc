@@ -57,6 +57,9 @@ fun generateTests(codeGenerator: CodeGenerator, tests: List<TestInfo>) {
             map.appendText("\n")
             map.appendText("    @Override\n")
             map.appendText("    public void validate(dev.epicpix.minecraftfunctioncompiler.test.state.ServerState state, dev.epicpix.minecraftfunctioncompiler.test.ExceptionThrow thrower) {\n")
+            if(parsed.validateContext?.getParsed()?.contains(AllowRuntimeErrorInstruction) != true) {
+                map.appendText("        state.assertNoRuntimeErrors(thrower);\n")
+            }
             if(parsed.validateContext != null) {
                 for(element in parsed.validateContext.getParsed()) {
                     if(element is CheckScoreInstruction) {

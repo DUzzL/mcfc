@@ -68,11 +68,17 @@ public class McfcTestHelper {
             objectives.put(objective.getName(), objectiveState);
         }
         var diagnostics = new java.util.ArrayList<String>();
+        var runtimeErrors = new java.util.ArrayList<String>();
         var loader = dev.epicpix.minecraftfunctioncompiler.mod.FunctionCompilerMain.functionClassLoader;
         if(loader != null) {
-            for(var diagnostic : loader.getDiagnostics()) diagnostics.add(diagnostic.source() + ": " + diagnostic.message());
+            for(var diagnostic : loader.getDiagnostics()) {
+                diagnostics.add(diagnostic.source() + ": " + diagnostic.message());
+                if(diagnostic.kind() == dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticKind.EXECUTION_ERROR) {
+                    runtimeErrors.add(diagnostic.source() + ": " + (diagnostic.cause() != null ? diagnostic.cause() : diagnostic.message()));
+                }
+            }
         }
-        return new ServerState(objectives, diagnostics);
+        return new ServerState(objectives, diagnostics, runtimeErrors);
     }
 
 }

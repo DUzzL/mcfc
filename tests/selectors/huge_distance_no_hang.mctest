@@ -13,3 +13,5 @@ kill @e[tag=mcfc_huge_d]
 
 @validate
 score a t is 1
+; vanilla aborts the function at `b` with the same exception; the compiled function is switched to vanilla there
+allow_runtime_error

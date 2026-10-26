@@ -57,6 +57,7 @@ public final class ManyConstantsTest implements CompiledTest {
 
     @Override
     public void validate(ServerState state, ExceptionThrow thrower) {
+        state.assertNoRuntimeErrors(thrower);
         state.assertObjectiveExists(thrower, "t").assertScoreSet(thrower, "last", FUNCTIONS * LINES_PER_FUNCTION - 1);
     }
 }

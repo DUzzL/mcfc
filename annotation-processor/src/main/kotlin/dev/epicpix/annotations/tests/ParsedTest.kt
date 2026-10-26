@@ -40,6 +40,9 @@ interface ValidateInstruction {
             if(parts[0] == "no_fallback" && parts.size == 1) {
                 return NoFallbackInstruction
             }
+            if(parts[0] == "allow_runtime_error" && parts.size == 1) {
+                return AllowRuntimeErrorInstruction
+            }
             if(parts[0] == "score") {
                 if(parts[3] == "is") {
                     return CheckScoreInstruction(parts[2], parts[1], parts[4].toInt())
@@ -56,6 +59,9 @@ data class CheckScoreInstruction(val objective: String, val holder: String, val 
 
 /** Every command of the test compiled: the compiler reported no diagnostic (no vanilla fallback). */
 data object NoFallbackInstruction : ValidateInstruction
+
+/** The test expects a compiled function to throw (vanilla throws there too); otherwise a throw fails the test. */
+data object AllowRuntimeErrorInstruction : ValidateInstruction
 
 class SetupTestContext : TestContext<SetupInstruction>() {
     override fun addLine(line: String) = addParsed(SetupInstruction.parse(line))

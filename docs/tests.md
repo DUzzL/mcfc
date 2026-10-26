@@ -18,6 +18,9 @@ objective create <name> <criterion>
 @validate
 score <holder> <objective> is <value>
 no_fallback                 ; the compiler reported no diagnostic: every command compiled
+allow_runtime_error         ; a compiled function may throw (vanilla throws there too)
 ```
+
+Without `allow_runtime_error`, a test fails when a compiled function throws: mcfc switches that function to vanilla, so the scoreboards alone would still match.
 
 Tests that need generated content or Java-side checks live in `mc-26-1-fabric/src/gametest` (for example `ManyConstantsTest`).
