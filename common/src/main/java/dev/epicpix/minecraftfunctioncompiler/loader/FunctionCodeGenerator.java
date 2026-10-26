@@ -150,6 +150,14 @@ public class FunctionCodeGenerator {
                                 .incrementAndGet();
                         }else {
                             arr[idx] = Objects.requireNonNull(res.getResult());
+                            for(var diag : reader.getNestedFallbacks()) {
+                                diagnostics.addDiagnosticSafe(diag);
+                                totalFailures.incrementAndGet();
+                                parseFailures
+                                    .computeIfAbsent(diag.message(), k -> new java.util.concurrent.ConcurrentHashMap<>())
+                                    .computeIfAbsent(key.namespace(), k -> new java.util.concurrent.atomic.AtomicInteger(0))
+                                    .incrementAndGet();
+                            }
                         }
                     }
                 });

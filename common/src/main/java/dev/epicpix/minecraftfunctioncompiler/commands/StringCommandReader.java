@@ -30,6 +30,7 @@ import dev.epicpix.minecraftfunctioncompiler.data.TaggableLocation;
 import dev.epicpix.minecraftfunctioncompiler.data.WorldCoordinates;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.Diagnostic;
 import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException;
+import dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticResult;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
 
 import java.util.ArrayList;
@@ -91,6 +92,25 @@ public class StringCommandReader {
     /** Records that {@code node} was parsed by {@code parseCommand_<root>} starting at {@code start}. */
     public <T extends dev.epicpix.minecraftfunctioncompiler.commands.params.CommandParams> T recordSource(T node, String root, int start) {
         return sources.record(node, root, start);
+    }
+
+    private final java.util.List<Diagnostic> nestedFallbacks = new java.util.ArrayList<>();
+
+    /**
+     * The command after `execute … run` or `return run` that this parser cannot read, starting at {@code start}.
+     * Vanilla accepted the function, so the rest of the line is that command: it becomes a vanilla fallback of its
+     * own and the enclosing chain stays compiled (a whole-line fallback would also lose a `return`).
+     * {@code error} is kept for the partial-fallback report ({@link #getNestedFallbacks}).
+     */
+    public DiagnosticResult<dev.epicpix.minecraftfunctioncompiler.commands.params.CommandParams> nestedFallback(int start, Diagnostic error) {
+        nestedFallbacks.add(error);
+        index = command.length();
+        return DiagnosticResult.result(new dev.epicpix.minecraftfunctioncompiler.commands.params.CommandFallbackVanilla(command.substring(start)));
+    }
+
+    /** Errors of the nested commands {@link #nestedFallback} turned into vanilla fallbacks. */
+    public java.util.List<Diagnostic> getNestedFallbacks() {
+        return nestedFallbacks;
     }
 
     private DiagnosticException createError(String diagnosticId, String message) {

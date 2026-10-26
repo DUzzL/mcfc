@@ -208,7 +208,11 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 if(root != null) {
                     builder.append("    var a$tempIndex = parseCommand_$root(reader, lookup);\n")
                 }else {
-                    builder.append("    var a$tempIndex = parseCommand(reader, lookup);\n")
+                    // A `run` target this parser can't read becomes its own vanilla fallback (StringCommandReader.nestedFallback).
+                    builder.append("    var s$tempIndex = reader.getIndex();\n")
+                    builder.append("    DiagnosticResult<dev.epicpix.minecraftfunctioncompiler.commands.params.CommandParams> a$tempIndex;\n")
+                    builder.append("    try { a$tempIndex = parseCommand(reader, lookup); } catch(dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticException e) { a$tempIndex = DiagnosticResult.error(e.toDiagnostic()); }\n")
+                    builder.append("    if(a$tempIndex.isError()) a$tempIndex = reader.nestedFallback(s$tempIndex, a$tempIndex.getError());\n")
                 }
                 builder.append("    if(a$tempIndex.isError()) return a$tempIndex;\n")
                 builder.append("    var a$argumentIndex = a$tempIndex.getResult();\n")

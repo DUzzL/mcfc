@@ -1,0 +1,23 @@
+; `… run return run <command>` with a command the parser does not know (Vanilla Tweaks Graves: `return run rotate`,
+; `return run ride`) made the whole line an unparsed fallback that contains a `return`, so the whole function fell
+; back to vanilla. Only the unknown command runs through vanilla now; the execute chain and the return stay compiled.
+@setup
+objective create t dummy
+
+@function f
+execute if score #go t matches 1 run return run bossbar set mcfc-test:nested max 7
+return 1
+
+@function run
+bossbar add mcfc-test:nested "n"
+scoreboard players set #go t 1
+execute store result score r t run function mcfc-test:f
+scoreboard players set #go t 0
+execute store result score r0 t run function mcfc-test:f
+execute store result score m t run bossbar get mcfc-test:nested max
+bossbar remove mcfc-test:nested
+
+@validate
+score r t is 7
+score r0 t is 1
+score m t is 7
