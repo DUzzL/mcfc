@@ -23,6 +23,9 @@ public final class RewardOrderTests {
     private static final Identifier FUNCTION = Identifier.parse("mcfc-test:reward_order/revoke_b");
     private static final Identifier ADVANCEMENT_A = Identifier.parse("mcfc-test:reward_order/a");
     private static final Identifier ADVANCEMENT_B = Identifier.parse("mcfc-test:reward_order/b");
+    private static final Identifier ADVANCEMENT_C = Identifier.parse("mcfc-test:reward_order/c");
+    private static final Identifier GRANT_C = Identifier.parse("mcfc-test:reward_order/grant_c");
+    private static final Identifier COUNT_C = Identifier.parse("mcfc-test:reward_order/count_c");
 
     private RewardOrderTests() {}
 
@@ -70,10 +73,42 @@ public final class RewardOrderTests {
                 helper.assertTrue(player.getAdvancements().getOrStartProgress(a).isDone(), mode + " grant must complete a");
                 helper.assertTrue(!player.getAdvancements().getOrStartProgress(b).isDone(), mode + " reward of a must run after the command and revoke b");
             }
+            runCompiledGrant(helper, player);
         } finally {
             loader.tryOn();
             server.getPlayerList().remove(player);
         }
         helper.succeed();
+    }
+
+    /**
+     * `advancement grant @a only c` inside a function: c needs either of two criteria and its reward revokes c.
+     * Vanilla runs the reward after the command, so the second criterion finds c done and the reward runs once.
+     * A compiled grant ran the reward between the two awards and completed c a second time.
+     */
+    private static void runCompiledGrant(GameTestHelper helper, net.minecraft.server.level.ServerPlayer player) {
+        var server = helper.getLevel().getServer();
+        var loader = FunctionCompilerMain.functionClassLoader;
+        var c = server.getAdvancements().get(ADVANCEMENT_C);
+        helper.assertTrue(c != null, "Reward order fixture c must load");
+        helper.assertTrue(loader.hasFunctionLoaded(GRANT_C) && loader.hasFunctionLoaded(COUNT_C), "Grant and reward functions must be compiled");
+        var scoreboard = server.getScoreboard();
+        var objective = scoreboard.addObjective("mcfc_reward", net.minecraft.world.scores.criteria.ObjectiveCriteria.DUMMY,
+                net.minecraft.network.chat.Component.literal("mcfc_reward"), net.minecraft.world.scores.criteria.ObjectiveCriteria.RenderType.INTEGER, false, null);
+        var function = server.getFunctions().get(GRANT_C).orElseThrow();
+        try {
+            for (boolean compiled : new boolean[]{false, true}) {
+                if (compiled) loader.tryOn(); else loader.tryOff();
+                for (var criterion : c.value().criteria().keySet()) player.getAdvancements().revoke(c, criterion);
+                scoreboard.getOrCreatePlayerScore(player, objective).set(0);
+                server.getFunctions().execute(function, server.createCommandSourceStack());
+                var mode = compiled ? "Compiled" : "Vanilla";
+                int rewards = scoreboard.getOrCreatePlayerScore(player, objective).get();
+                helper.assertTrue(rewards == 1, mode + " grant must run the reward of c once, ran " + rewards);
+                helper.assertTrue(!player.getAdvancements().getOrStartProgress(c).isDone(), mode + " reward must leave c revoked");
+            }
+        } finally {
+            scoreboard.removeObjective(objective);
+        }
     }
 }

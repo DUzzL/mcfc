@@ -1,0 +1,19 @@
+{
+  "criteria": {
+    "first": {
+      "trigger": "minecraft:impossible"
+    },
+    "second": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "first",
+      "second"
+    ]
+  ],
+  "rewards": {
+    "function": "mcfc-test:reward_order/count_c"
+  }
+}

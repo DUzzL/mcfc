@@ -639,20 +639,33 @@ public class ExtensionFunctions {
         return parsed;
     }
 
+    /**
+     * Runs an award loop like vanilla's advancement command: reward functions started meanwhile are queued
+     * (ServerFunctionManagerMixin sees the context) and run once the loop has finished, not between two awards.
+     */
+    private static int awardDeferringRewards(MinecraftServer server, java.util.function.IntSupplier awards) {
+        if (Commands.CURRENT_EXECUTION_CONTEXT.get() != null) return awards.getAsInt();
+        int[] count = {0};
+        Commands.executeCommandInContext(server.createCommandSourceStack(), _ -> count[0] = awards.getAsInt());
+        return count[0];
+    }
+
     public static int grantAdvancementOnly(MinecraftServer server, ServerPlayer player, String id) {
         AdvancementHolder holder = server.getAdvancements().get(cachedId(id));
         if (holder == null) return 0;
-        int count = 0;
-        for (String criterion : holder.value().criteria().keySet()) {
-            if (player.getAdvancements().award(holder, criterion)) count++;
-        }
-        return count;
+        return awardDeferringRewards(server, () -> {
+            int count = 0;
+            for (String criterion : holder.value().criteria().keySet()) {
+                if (player.getAdvancements().award(holder, criterion)) count++;
+            }
+            return count;
+        });
     }
 
     public static int grantAdvancementCriterion(MinecraftServer server, ServerPlayer player, String id, String criterion) {
         AdvancementHolder holder = server.getAdvancements().get(cachedId(id));
         if (holder == null) return 0;
-        return player.getAdvancements().award(holder, criterion) ? 1 : 0;
+        return awardDeferringRewards(server, () -> player.getAdvancements().award(holder, criterion) ? 1 : 0);
     }
 
     public static int revokeAdvancementOnly(MinecraftServer server, ServerPlayer player, String id) {
@@ -672,13 +685,15 @@ public class ExtensionFunctions {
     }
 
     public static int grantAdvancementEverything(MinecraftServer server, ServerPlayer player) {
-        int count = 0;
-        for (AdvancementHolder holder : server.getAdvancements().getAllAdvancements()) {
-            for (String criterion : holder.value().criteria().keySet()) {
-                if (player.getAdvancements().award(holder, criterion)) count++;
+        return awardDeferringRewards(server, () -> {
+            int count = 0;
+            for (AdvancementHolder holder : server.getAdvancements().getAllAdvancements()) {
+                for (String criterion : holder.value().criteria().keySet()) {
+                    if (player.getAdvancements().award(holder, criterion)) count++;
+                }
             }
-        }
-        return count;
+            return count;
+        });
     }
 
     public static int revokeAdvancementEverything(MinecraftServer server, ServerPlayer player) {
@@ -696,13 +711,15 @@ public class ExtensionFunctions {
         if (holder == null) return 0;
         AdvancementNode node = server.getAdvancements().tree().get(holder);
         if (node == null) return 0;
-        int count = 0;
-        for (AdvancementHolder adv : collectTreeAdvancements(node, mode)) {
-            for (String criterion : adv.value().criteria().keySet()) {
-                if (player.getAdvancements().award(adv, criterion)) count++;
+        return awardDeferringRewards(server, () -> {
+            int count = 0;
+            for (AdvancementHolder adv : collectTreeAdvancements(node, mode)) {
+                for (String criterion : adv.value().criteria().keySet()) {
+                    if (player.getAdvancements().award(adv, criterion)) count++;
+                }
             }
-        }
-        return count;
+            return count;
+        });
     }
 
     public static int revokeAdvancementTree(MinecraftServer server, ServerPlayer player, String id, String mode) {
