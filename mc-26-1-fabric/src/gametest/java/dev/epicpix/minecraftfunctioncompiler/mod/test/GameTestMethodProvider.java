@@ -25,6 +25,7 @@ public class GameTestMethodProvider {
         for(var test : Tests.TESTS) {
             tests.add(new TestInfo(test));
         }
+        tests.add(new TestInfo(new ManyConstantsTest()));
         return tests;
     }
 }

@@ -65,6 +65,15 @@ public final class CodeWriter {
         writeTarget(new InstructionTarget.FieldTarget(DATA_CLASS, name, type, true, true), value);
     }
 
+    /** A field of one of the data shard classes (see {@link CodeFieldStorage#dataFieldOwner}). */
+    public BytecodeRegister getDataField(ClassDesc owner, String name, ClassDesc type) {
+        return writeTarget(new InstructionTarget.FieldTarget(owner, name, type, true, false));
+    }
+
+    public void setDataField(ClassDesc owner, String name, ClassDesc type, BytecodeValue value) {
+        writeTarget(new InstructionTarget.FieldTarget(owner, name, type, true, true), value);
+    }
+
     public BytecodeRegister castType(BytecodeValue value, ClassDesc type) {
         var resultRegister = createRegister();
         instructions.add(new BytecodeInstruction.Cast(resultRegister, value, type));

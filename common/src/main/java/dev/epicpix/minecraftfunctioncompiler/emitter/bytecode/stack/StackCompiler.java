@@ -541,7 +541,7 @@ public class StackCompiler {
     }
 
     private static boolean isDataClassConstant(InstructionTarget.FieldTarget f) {
-        return f.isStatic() && f.classType().equals(CommonConstants.DATA_CLASS);
+        return f.isStatic() && dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage.isDataClass(f.classType());
     }
 
     private static class DependencyGenerator {

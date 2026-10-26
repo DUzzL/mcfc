@@ -85,7 +85,7 @@ public class SimpleFunctionCompiler {
                 var instructionsText = jsonData(results, "function_high_level_instructions_txt", compRes.getKey(), JsonArray::new);
                 Instruction.printInstructions(compRes.getValue(), instructionsText::add);
             }
-            classBytes.add(params.codeFieldStorage().generate(new HashMap<>(llFunctions)));
+            for(var dataClass : params.codeFieldStorage().generate(new HashMap<>(llFunctions))) classBytes.add(dataClass.bytes());
             for(var f : llFunctions.entrySet()) {
                 var instructionsJson = jsonData(results, "function_low_level_instructions_json", f.getKey(), JsonArray::new);
                 var instructionsText = jsonData(results, "function_low_level_instructions_txt", f.getKey(), JsonArray::new);

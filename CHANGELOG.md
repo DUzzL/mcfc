@@ -1,6 +1,7 @@
 # 0.4.0-alpha.2
 
 Fixes bugs:
+- Packs with tens of thousands of distinct constants (NBT compounds, texts, ids) failed the whole load with `IllegalArgumentException: 65636 is not a valid index` and left every function on vanilla (seen with Orbital Strike Cannon, 88 functions, ~22k NBT compounds): all constants lived in one generated data class whose constant pool overflowed. Constants now live in shard classes of at most 4096 fields per kind, and the code that fills them is spread over loader classes, so no single constant pool overflows. The constant fields are no longer `final`. The compilation cache stores the data classes as `data/<n>.class` (cache version v2.8).
 - With a mod that replaces `EntityLookup.add`/`remove` (Fabrolia cancels both at HEAD with its concurrent lookup), the per-type entity index stayed empty and kept killed entities: compiled `@e[type=…]` selectors found no entities (BlazeandCave checks, `execute as @e[type=…]`, `if entity`). The index now wraps both methods and re-checks the lookup afterwards, so it follows `byId` whatever implementation runs inside.
 
 Performance:

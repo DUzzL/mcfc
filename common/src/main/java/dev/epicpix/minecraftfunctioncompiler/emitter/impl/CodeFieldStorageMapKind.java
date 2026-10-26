@@ -17,6 +17,7 @@ public final class CodeFieldStorageMapKind<T> {
     private static final ArrayList<CodeFieldStorageMapKind<?>> VALUES = new ArrayList<>();
 
     private final String kind;
+    private final int id = VALUES.size();
     private final BiFunction<CodeFieldStorageStorageMap, T, String> nameGetter;
     private List<CodeFieldStorageMapKind<?>> dependencies = List.of();
     private final boolean arrayBacked;
@@ -48,6 +49,11 @@ public final class CodeFieldStorageMapKind<T> {
 
     public String getKind() {
         return kind;
+    }
+
+    /** Unique per kind (declaration order); {@link #getKind} is not unique. */
+    public int id() {
+        return id;
     }
 
     public List<CodeFieldStorageMapKind<?>> getDependencies() {

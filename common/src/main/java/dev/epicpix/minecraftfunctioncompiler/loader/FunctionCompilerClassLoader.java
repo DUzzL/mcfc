@@ -15,6 +15,7 @@ import dev.epicpix.minecraftfunctioncompiler.emitter.GraphGenerator;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeFormatter;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeGraphGenerator;
 import dev.epicpix.minecraftfunctioncompiler.emitter.bytecode.BytecodeInstruction;
+import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorage;
 import dev.epicpix.minecraftfunctioncompiler.emitter.impl.CodeFieldStorageMapKind;
 import dev.epicpix.minecraftfunctioncompiler.il.Instruction;
 import dev.epicpix.minecraftfunctioncompiler.registry.DataRegistries;
@@ -22,6 +23,7 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.constant.ClassDesc;
 import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -62,9 +64,9 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     private static final HexFormat HEX = HexFormat.of();
 
     // ── Cache constants ────────────────────────────────────────────────────────
-    private static final String CACHE_VERSION      = "v2.7";
+    private static final String CACHE_VERSION      = "v2.8";
     private static final String CACHE_MANIFEST     = "manifest.json";
-    private static final String CACHE_DATA_CLASS   = "data.class";
+    private static final String CACHE_DATA_PREFIX  = "data/";
     private static final String CACHE_BATCH_PREFIX = "batch/";
 
     /**
@@ -402,7 +404,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     @Nullable
     private CacheLoadResult readCacheEntry(Path entryDir, String globalHash, Set<DataLocation> functionIds) throws Exception {
         var manifest = GSON.fromJson(Files.readString(entryDir.resolve(CACHE_MANIFEST)), JsonObject.class);
-        if(manifest == null || !manifest.has("hash") || !manifest.has("batches") || !manifest.has("functions") || !manifest.has("sha256") || !manifest.has("fallback")) {
+        if(manifest == null || !manifest.has("hash") || !manifest.has("batches") || !manifest.has("functions") || !manifest.has("sha256") || !manifest.has("fallback") || !manifest.has("data")) {
             LOGGER.warn("Cache entry {} has an invalid manifest, discarding it", entryDir);
             return null;
         }
@@ -442,9 +444,14 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
             batchBytes[i] = readVerified(entryDir, batchPaths.get(i), checksums);
             if(batchBytes[i] == null) return null;
         }
-        var dataClassBytes = readVerified(entryDir, CACHE_DATA_CLASS, checksums);
-        if(dataClassBytes == null) return null;
-        return new CacheLoadResult(List.of(batchBytes), placements, dataClassBytes);
+        var dataClasses = new ArrayList<CodeFieldStorage.DataClass>();
+        for(var el : manifest.getAsJsonArray("data")) {
+            var obj = el.getAsJsonObject();
+            var bytes = readVerified(entryDir, obj.get("path").getAsString(), checksums);
+            if(bytes == null) return null;
+            dataClasses.add(new CodeFieldStorage.DataClass(ClassDesc.ofInternalName(obj.get("class").getAsString()), bytes));
+        }
+        return new CacheLoadResult(List.of(batchBytes), placements, dataClasses);
     }
 
     private static byte @Nullable [] readVerified(Path entryDir, String relPath, JsonObject checksums) throws java.io.IOException {
@@ -464,7 +471,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     private record CacheLoadResult(
         List<byte[]> batchBytes,
         Map<DataLocation, BatchClassPlanner.PlacedFunction> placements,
-        byte[] dataClassBytes
+        List<CodeFieldStorage.DataClass> dataClasses
     ) {}
 
     /**
@@ -474,13 +481,14 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     private void saveToCache(String globalHash, List<byte[]> batchBytes,
                               Map<DataLocation, BatchClassPlanner.PlacedFunction> placements,
                               Set<DataLocation> fallbackFunctions,
-                              byte[] dataClassBytes) throws Exception {
+                              List<CodeFieldStorage.DataClass> dataClasses) throws Exception {
         checkCancelled();
         Files.createDirectories(cacheDir);
         var entryDir = cacheDir.resolve(globalHash);
         var tmpDir = Files.createTempDirectory(cacheDir, globalHash + ".tmp");
         try {
             Files.createDirectories(tmpDir.resolve(CACHE_BATCH_PREFIX));
+            Files.createDirectories(tmpDir.resolve(CACHE_DATA_PREFIX));
             var manifest = new JsonObject();
             manifest.addProperty("hash", globalHash);
             var checksums = new JsonObject();
@@ -512,8 +520,18 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
             }
             manifest.add("functions", functions);
 
-            Files.write(tmpDir.resolve(CACHE_DATA_CLASS), dataClassBytes);
-            checksums.addProperty(CACHE_DATA_CLASS, sha256(dataClassBytes));
+            var dataArr = new JsonArray();
+            for(int i = 0; i < dataClasses.size(); i++) {
+                var dataClass = dataClasses.get(i);
+                var relPath = CACHE_DATA_PREFIX + i + ".class";
+                Files.write(tmpDir.resolve(relPath), dataClass.bytes());
+                checksums.addProperty(relPath, sha256(dataClass.bytes()));
+                var obj = new JsonObject();
+                obj.addProperty("class", dataClass.binaryName().replace('.', '/'));
+                obj.addProperty("path", relPath);
+                dataArr.add(obj);
+            }
+            manifest.add("data", dataArr);
             manifest.add("sha256", checksums);
             Files.writeString(tmpDir.resolve(CACHE_MANIFEST), PRETTY_GSON.toJson(manifest));
 
@@ -559,17 +577,17 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
      *  doesn't define or link, so the caller can fall back to a full compile (in a fresh loader). */
     private boolean defineAndLoadFromBytes(List<byte[]> batchBytes,
                                            Map<DataLocation, BatchClassPlanner.PlacedFunction> placements,
-                                           byte[] dataClassBytes,
+                                           List<CodeFieldStorage.DataClass> dataClasses,
                                            CompilationParams params, Object serverFunctionManager,
                                            int parsedFunctionCount) throws Throwable {
-        var defined = defineGenerated(new ArrayList<>(batchBytes), () -> dataClassBytes, null);
+        var defined = defineGenerated(new ArrayList<>(batchBytes), () -> dataClasses, null);
         initDataClass(defined, params, serverFunctionManager);
         registerAll(defined, placements, params);
         return true;
     }
 
     /** Generated classes of one successful load attempt. */
-    private record DefinedClasses(BatchCompiler.GeneratedClassLoader loader, List<Class<?>> batches, Class<?> dataClass, byte[] dataClassBytes) {}
+    private record DefinedClasses(BatchCompiler.GeneratedClassLoader loader, List<Class<?>> batches, Class<?> dataClass, List<CodeFieldStorage.DataClass> dataClasses) {}
 
     private static final int MAX_LINK_ATTEMPTS = 4;
 
@@ -581,7 +599,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
      * redefined in a new loader; without {@code repair} the link error is thrown. The data class bytes
      * are produced after the batches are final, since repair stubs add data-class constants.
      */
-    private DefinedClasses defineGenerated(List<byte[]> batchBytes, java.util.function.Supplier<byte[]> dataClassBytes,
+    private DefinedClasses defineGenerated(List<byte[]> batchBytes, java.util.function.Supplier<List<CodeFieldStorage.DataClass>> dataClasses,
                                            java.util.function.@Nullable BiFunction<Integer, Throwable, byte[]> repair) {
         for(int attempt = 1; ; attempt++) {
             checkCancelled();
@@ -601,11 +619,15 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
                 }
             }
             if(failed < 0) {
-                var dataBytes = dataClassBytes.get();
-                var desc = DATA_CLASS.descriptorString();
-                var name = desc.substring(1, desc.length() - 1).replace('/', '.');
-                dumpClassFile(name, dataBytes);
-                return new DefinedClasses(loader, classes, loader.define(name, dataBytes), dataBytes);
+                var generated = dataClasses.get();
+                Class<?> dataClass = null;
+                for(var data : generated) {
+                    dumpClassFile(data.binaryName(), data.bytes());
+                    var defined = loader.define(data.binaryName(), data.bytes());
+                    if(data.type().equals(DATA_CLASS)) dataClass = defined;
+                }
+                if(dataClass == null) throw new IllegalStateException("Data classes lack " + DATA_CLASS.displayName());
+                return new DefinedClasses(loader, classes, dataClass, generated);
             }
             if(repair == null || attempt >= MAX_LINK_ATTEMPTS) {
                 throw new IllegalStateException("Generated class " + BatchCompiler.binaryName(failed) + " failed to link", failure);
@@ -727,7 +749,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
                     LOGGER.info("Cache hit — loading {} functions across {} batch class(es) from disk (skipping compilation)",
                         cached.placements().size(), cached.batchBytes().size());
                     var startLoad = System.nanoTime();
-                    if(!defineAndLoadFromBytes(cached.batchBytes(), cached.placements(), cached.dataClassBytes(), params, serverFunctionManager, allParsedIds.size())) return;
+                    if(!defineAndLoadFromBytes(cached.batchBytes(), cached.placements(), cached.dataClasses(), params, serverFunctionManager, allParsedIds.size())) return;
                     LOGGER.info("Loaded compiled functions from cache in {}ms", (int)((System.nanoTime() - startLoad) / 1_000_000d));
 
                     LOGGER.info("[Summary] {} function(s) found, {} parsed, {} compiled (from cache)",
@@ -927,7 +949,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
             try {
                 var fallbackFunctions = new HashSet<>(allParsedIds);
                 fallbackFunctions.removeAll(compiled.keySet());
-                saveToCache(globalHash, batchBytes, compiled, fallbackFunctions, defined.dataClassBytes());
+                saveToCache(globalHash, batchBytes, compiled, fallbackFunctions, defined.dataClasses());
                 LOGGER.info("Saved {} compiled functions across {} batch class(es) to cache ({} vanilla-fallback)",
                     compiled.size(), batchBytes.size(), fallbackFunctions.size());
             } catch(CompileCancelledException e) {
