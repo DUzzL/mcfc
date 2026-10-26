@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "dpdump",
+  "version": "${version}",
+  "name": "dpdump",
+  "description": "Test tooling: dumps deterministic world state to JSON",
+  "authors": [ "dpdump" ],
+  "license": "MIT",
+  "environment": "server",
+  "mixins": [
+    "dpdump.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~26.3"
+  }
+}

@@ -1,0 +1,1466 @@
+{
+  "description": "Datapacks for differential testing (compiled vs vanilla) of the function compiler on Minecraft Java 26.3 (Fabric). Cache: <MCFC_WORK>/cache/packs/<id>.zip. The features lists are detected heuristically from function text and pack contents. stats.functions counts data/*/function/ only; legacyFunctions and overlayFunctions are extra counts.",
+  "minecraftVersion": "26.3",
+  "packFormat26_3": "121.0",
+  "packFormat26_3Detail": {
+    "data_major": 121,
+    "data_minor": 0,
+    "resource_major": 97,
+    "resource_minor": 1,
+    "source": "version.json in server-26.3.c.jar (sha1 33680f5f2ac32864d6d7cf5e56a705fdb3e05f4c)"
+  },
+  "packs": [
+    {
+      "id": "bacap",
+      "name": "BlazeandCave's Advancements Pack",
+      "source": "modrinth",
+      "project": "blazeandcaves-advancements-pack",
+      "version": "1.21.1",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://cdn.modrinth.com/data/VoVJ47kN/versions/YPEkY5bZ/BlazeandCave%27s%20Advancements%20Pack%201.21.1.zip",
+      "sha256": "ce391fe46846d7fb357b7fbdd42387d260ae1a9516c601d1ba9ab09c584971d7",
+      "sha512": "a9f3d976425b1fba20488f770d8f6ac54a1148df27f0ade8d052d00696a2c3364098e2ef0ce949163ea2e25940e0badda59fe17ac654fbe5d9533823af1a6fa5",
+      "sha1": "18bb8fc57e606a1ad41b3f326c6f211e83d4fd2b",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "macros",
+        "advancements",
+        "triggers"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 5436,
+        "macroLines": 165,
+        "packMeta": {
+          "min_format": [
+            121,
+            0
+          ],
+          "max_format": [
+            121,
+            0
+          ]
+        }
+      },
+      "notes": "BlazeandCave's Advancements Pack: ~900 advancements, huge function count, macros, scoreboards. File: BlazeandCave's Advancements Pack 1.21.1.zip."
+    },
+    {
+      "id": "mr-veinminer",
+      "name": "VeinMiner",
+      "source": "modrinth",
+      "project": "veinminer",
+      "version": "1.3.6",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://cdn.modrinth.com/data/OhduvhIc/versions/gjKK90Uh/veinminer-1.3.6.zip",
+      "sha256": "d0575fadca3fe41c8630e3748e7234a3f46c6280c9e9e4776710c7c6d2b1d605",
+      "sha512": "83048337eed5c250532c48cb5d6a632aa7ee24e0518a8e49cf3ca5e96caa0a25a052857bd32a841f1d11d92665a1f50b395d268a149593cde78d5bd3947e0b71",
+      "sha1": "9c69db06a88023044257934fe454c5322cca3724",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "macros",
+        "storage",
+        "raycast"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 33,
+        "macroLines": 36,
+        "packMeta": {
+          "pack_format": 121,
+          "min_format": [
+            121,
+            0
+          ],
+          "max_format": 121
+        }
+      },
+      "notes": "Vein mining via functions; macros. File: veinminer-1.3.6.zip."
+    },
+    {
+      "id": "mr-tree-vein-miner",
+      "name": "Tree Vein Miner",
+      "source": "modrinth",
+      "project": "tree-vein-miner",
+      "version": "4.3.2",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://cdn.modrinth.com/data/wEhW4ceB/versions/N0Dcztkm/TreeVeinMiner-4.3.2%2B26.3.zip",
+      "sha256": "4a30c44dd4a32e9161cacd86a745683d2ff76b31b5a7e7721bef7296a91ad3ad",
+      "sha512": "e764a7ea1d18b5d574129acd3864f92b19f63ef38256867c513c81ae1c8cb0ec03878079612c200e6f7121df4dc66b33f7b241887eb2b62d0661b6fcb365e4b1",
+      "sha1": "98494909a73041a5c70eb4887fee97d111325a63",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "macros",
+        "storage",
+        "raycast",
+        "triggers"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 70,
+        "macroLines": 20,
+        "packMeta": {
+          "min_format": 121,
+          "max_format": 121
+        }
+      },
+      "notes": "Tree felling via function recursion; macros. File: TreeVeinMiner-4.3.2+26.3.zip."
+    },
+    {
+      "id": "mr-timber-strike",
+      "name": "Timber",
+      "source": "modrinth",
+      "project": "timber-strike",
+      "version": "6.1",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://cdn.modrinth.com/data/dLucfkDg/versions/qT8VCy0N/Timber%20Strike%20v6.1%2026.3.zip",
+      "sha256": "9cf5cbc2ee402df001fed1b1acd1d524d0db73e311b3a2d1fa9d88eb42e62ff8",
+      "sha512": "c57d3ee425069263d3cdc6ea63dbbb053370135022b645afe28a52fdb2ff0bffde8934fb04d4bc44711bc83204d0fe1eb7630a20b340ba6253a35c0fc9e5f46d",
+      "sha1": "3b49944ce1e196980700a74c7065e30fcd5b6e99",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "macros"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 51,
+        "macroLines": 80,
+        "packMeta": {
+          "pack_format": 121,
+          "min_format": 121,
+          "max_format": 9999
+        }
+      },
+      "notes": "Tree felling; many macro lines. File: Timber Strike v6.1 26.3.zip."
+    },
+    {
+      "id": "mr-guns_plus_plus",
+      "name": "Guns ++",
+      "source": "modrinth",
+      "project": "guns_plus_plus",
+      "version": "5.9.6",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://cdn.modrinth.com/data/kdch0Jxf/versions/PySr3XFj/guns26-3v0.zip",
+      "sha256": "0a97766dd7bae54308b33b75b6316ca51cf3f60dba8128800a1320126fc56bba",
+      "sha512": "8329957db22359320c3f8c85e3bf93ad3b3bd47c9c9d4733421aea1b2dd192b5a6764434836b2ddb7a546e3c9b881bc8c1f4a804c16c82bc13e3520447f9d091",
+      "sha1": "061add5e5cd8a87d1ad3fc30cad05e107996e16c",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "macros",
+        "storage",
+        "raycast"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 544,
+        "macroLines": 190,
+        "packMeta": {
+          "pack_format": 121,
+          "min_format": 121,
+          "max_format": 121
+        }
+      },
+      "notes": "Guns datapack; very function-heavy, many macros; likely raycasts. File: guns26-3v0.zip."
+    },
+    {
+      "id": "mr-gardeners-dream",
+      "name": "Gardener's Dream",
+      "source": "modrinth",
+      "project": "gardeners-dream",
+      "version": "2.6",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://cdn.modrinth.com/data/cPfmk5E3/versions/YOfl1y56/gardeners-dream-v2-6-26.3.zip",
+      "sha256": "0bedda94498703181aac234dc60a14aaea63de78f793e8e043e030f92a9aa588",
+      "sha512": "31cc908fc6b56624b9e16628058b1c54dc5c0dc0c8381762e497162a7977d08edd34a38c68a7c7d751f2222891c69f687f8beed16b6e6a925b80470dd13aa9a8",
+      "sha1": "0705747432b0a148f287c944ab403fdd7f0d1d95",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "raycast",
+        "advancements"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 54,
+        "macroLines": 0,
+        "packMeta": {
+          "min_format": [
+            121,
+            0
+          ],
+          "max_format": [
+            121,
+            1
+          ]
+        }
+      },
+      "notes": "Plants in pots/heads; many small functions. File: gardeners-dream-v2-6-26.3.zip."
+    },
+    {
+      "id": "mr-vanilla-refresh",
+      "name": "Vanilla Refresh",
+      "source": "modrinth",
+      "project": "vanilla-refresh",
+      "version": "1.4.31",
+      "gameVersionsDeclared": [
+        "26.2"
+      ],
+      "url": "https://cdn.modrinth.com/data/gWO6Zqey/versions/n4kxzqW2/vanilla-refresh-1.4.31.zip",
+      "sha256": "466461d87bbdc8074948db4f6ca76d2d423e0bf1455c8ecf586b68c8d9320abb",
+      "sha512": "f3393cd93320436fa01e55b533f4ab10ac4bdc0db8dab762a143d6f25da2618fedbdb6a8aab7cdd5ca70f3421ed539d10c2fec4f511b4ece953686281c7caa82",
+      "sha1": "89c300fa2b1c3802c66d929789d95eae08812f63",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "macros",
+        "storage",
+        "raycast",
+        "advancements",
+        "triggers"
+      ],
+      "needsPackFormatPatch": true,
+      "stats": {
+        "functions": 1066,
+        "macroLines": 204,
+        "packMeta": {
+          "pack_format": 71,
+          "min_format": 71,
+          "max_format": 9999,
+          "supported_formats": {
+            "min_inclusive": 71,
+            "max_inclusive": 9999
+          },
+          "overlays": true
+        },
+        "overlayFunctions": 2
+      },
+      "notes": "30+ QOL features; newest version declares 26.2 only. Newest datapack version declaring a 26.x game version is 26.2. 2 more .mcfunction files live in overlay directories. File: vanilla-refresh-1.4.31.zip."
+    },
+    {
+      "id": "mr-spawn-animations",
+      "name": "Spawn Animations",
+      "source": "modrinth",
+      "project": "spawn-animations",
+      "version": "1.11.6",
+      "gameVersionsDeclared": [
+        "1.17",
+        "1.17.1-pre1",
+        "1.17.1-pre2",
+        "1.17.1-pre3",
+        "1.17.1-rc1",
+        "1.17.1-rc2",
+        "1.17.1",
+        "21w37a",
+        "21w38a",
+        "21w39a",
+        "21w40a",
+        "21w41a",
+        "21w42a",
+        "21w43a",
+        "21w44a",
+        "1.18-pre1",
+        "1.18-pre2",
+        "1.18-pre3",
+        "1.18-pre4",
+        "1.18-pre5",
+        "1.18-pre6",
+        "1.18-pre7",
+        "1.18-pre8",
+        "1.18-rc1",
+        "1.18-rc2",
+        "1.18-rc3",
+        "1.18-rc4",
+        "1.18",
+        "1.18.1-pre1",
+        "1.18.1-rc1",
+        "1.18.1-rc2",
+        "1.18.1-rc3",
+        "1.18.1",
+        "22w03a",
+        "22w05a",
+        "22w06a",
+        "22w07a",
+        "1.18.2-pre1",
+        "1.18.2-pre2",
+        "1.18.2-pre3",
+        "1.18.2-rc1",
+        "1.18.2",
+        "22w11a",
+        "22w12a",
+        "22w13a",
+        "22w13oneblockatatime",
+        "22w14a",
+        "22w15a",
+        "22w16a",
+        "22w16b",
+        "22w17a",
+        "22w18a",
+        "22w19a",
+        "1.19-pre1",
+        "1.19-pre2",
+        "1.19-pre3",
+        "1.19-pre4",
+        "1.19-pre5",
+        "1.19-rc1",
+        "1.19-rc2",
+        "1.19",
+        "22w24a",
+        "1.19.1-pre1",
+        "1.19.1-rc1",
+        "1.19.1-pre2",
+        "1.19.1-pre3",
+        "1.19.1-pre4",
+        "1.19.1-pre5",
+        "1.19.1-pre6",
+        "1.19.1-rc2",
+        "1.19.1-rc3",
+        "1.19.1",
+        "1.19.2-rc1",
+        "1.19.2-rc2",
+        "1.19.2",
+        "22w42a",
+        "22w43a",
+        "22w44a",
+        "22w45a",
+        "22w46a",
+        "1.19.3-pre1",
+        "1.19.3-pre2",
+        "1.19.3-pre3",
+        "1.19.3-rc1",
+        "1.19.3-rc2",
+        "1.19.3-rc3",
+        "1.19.3",
+        "23w03a",
+        "23w04a",
+        "23w05a",
+        "23w06a",
+        "23w07a",
+        "1.19.4-pre1",
+        "1.19.4-pre2",
+        "1.19.4-pre3",
+        "1.19.4-pre4",
+        "1.19.4-rc1",
+        "1.19.4-rc2",
+        "1.19.4-rc3",
+        "1.19.4",
+        "23w12a",
+        "23w13a",
+        "23w13a_or_b",
+        "23w14a",
+        "23w16a",
+        "23w17a",
+        "23w18a",
+        "1.20-pre1",
+        "1.20-pre2",
+        "1.20-pre3",
+        "1.20-pre4",
+        "1.20-pre5",
+        "1.20-pre6",
+        "1.20-pre7",
+        "1.20-rc1",
+        "1.20",
+        "1.20.1-rc1",
+        "1.20.1",
+        "23w31a",
+        "23w32a",
+        "23w33a",
+        "23w35a",
+        "1.20.2-pre1",
+        "1.20.2-pre2",
+        "1.20.2-pre3",
+        "1.20.2-pre4",
+        "1.20.2-rc1",
+        "1.20.2-rc2",
+        "1.20.2",
+        "23w40a",
+        "23w41a",
+        "23w42a",
+        "23w43a",
+        "23w43b",
+        "23w44a",
+        "23w45a",
+        "23w46a",
+        "1.20.3-pre1",
+        "1.20.3-pre2",
+        "1.20.3-pre3",
+        "1.20.3-pre4",
+        "1.20.3-rc1",
+        "1.20.3",
+        "1.20.4-rc1",
+        "1.20.4",
+        "23w51a",
+        "23w51b",
+        "24w03a",
+        "24w03b",
+        "24w04a",
+        "24w05a",
+        "24w05b",
+        "24w06a",
+        "24w07a",
+        "24w09a",
+        "24w10a",
+        "24w11a",
+        "24w12a",
+        "24w13a",
+        "24w14potato",
+        "24w14a",
+        "1.20.5-pre1",
+        "1.20.5-pre2",
+        "1.20.5-pre3",
+        "1.20.5-pre4",
+        "1.20.5-rc1",
+        "1.20.5-rc2",
+        "1.20.5-rc3",
+        "1.20.5",
+        "1.20.6-rc1",
+        "1.20.6",
+        "24w18a",
+        "24w19a",
+        "24w19b",
+        "24w20a",
+        "24w21a",
+        "24w21b",
+        "1.21-pre1",
+        "1.21-pre2",
+        "1.21-pre3",
+        "1.21-pre4",
+        "1.21-rc1",
+        "1.21",
+        "1.21.1-rc1",
+        "1.21.1",
+        "24w33a",
+        "24w34a",
+        "24w35a",
+        "24w36a",
+        "24w37a",
+        "24w38a",
+        "24w39a",
+        "24w40a",
+        "1.21.2-pre1",
+        "1.21.2-pre2",
+        "1.21.2-pre3",
+        "1.21.2-pre4",
+        "1.21.2-pre5",
+        "1.21.2-rc1",
+        "1.21.2-rc2",
+        "1.21.2",
+        "1.21.3",
+        "24w44a",
+        "24w45a",
+        "24w46a",
+        "1.21.4-pre1",
+        "1.21.4-pre2",
+        "1.21.4-pre3",
+        "1.21.4-rc1",
+        "1.21.4-rc2",
+        "1.21.4-rc3",
+        "1.21.4",
+        "25w02a",
+        "25w03a",
+        "25w04a",
+        "25w05a",
+        "25w06a",
+        "25w07a",
+        "25w08a",
+        "25w09a",
+        "25w09b",
+        "25w10a",
+        "1.21.5-pre1",
+        "1.21.5-pre2",
+        "1.21.5-pre3",
+        "1.21.5-rc1",
+        "1.21.5-rc2",
+        "1.21.5",
+        "25w14craftmine",
+        "25w15a",
+        "25w16a",
+        "25w17a",
+        "25w18a",
+        "25w19a",
+        "25w20a",
+        "25w21a",
+        "1.21.6-pre1",
+        "1.21.6-pre2",
+        "1.21.6-pre3",
+        "1.21.6-pre4",
+        "1.21.6-rc1",
+        "1.21.6",
+        "1.21.7-rc1",
+        "1.21.7-rc2",
+        "1.21.7",
+        "1.21.8-rc1",
+        "1.21.8",
+        "25w31a",
+        "25w32a",
+        "25w33a",
+        "25w34a",
+        "25w34b",
+        "25w35a",
+        "25w36a",
+        "25w36b",
+        "25w37a",
+        "1.21.9-pre1",
+        "1.21.9-pre2",
+        "1.21.9-pre3",
+        "1.21.9-pre4",
+        "1.21.9-rc1",
+        "1.21.9",
+        "1.21.10-rc1",
+        "1.21.10",
+        "25w41a",
+        "25w42a",
+        "25w43a",
+        "25w44a",
+        "25w45a",
+        "25w46a",
+        "1.21.11-pre1",
+        "1.21.11-pre2",
+        "1.21.11-pre3",
+        "1.21.11-pre4",
+        "1.21.11-pre5",
+        "1.21.11-rc1",
+        "1.21.11-rc2",
+        "1.21.11-rc3",
+        "1.21.11",
+        "26.1-snapshot-1",
+        "26.1-snapshot-2",
+        "26.1-snapshot-3",
+        "26.1-snapshot-4",
+        "26.1-snapshot-5",
+        "26.1-snapshot-6",
+        "26.1-snapshot-7",
+        "26.1-snapshot-8",
+        "26.1-snapshot-9",
+        "26.1-snapshot-10",
+        "26.1-snapshot-11",
+        "26.1-pre-1",
+        "26.1-pre-2",
+        "26.1-pre-3",
+        "26.1-rc-1",
+        "26.1-rc-2",
+        "26.1-rc-3",
+        "26.1",
+        "26.1.1-rc-1",
+        "26.1.1",
+        "26w14a",
+        "26.2-snapshot-1",
+        "26.1.2-rc-1",
+        "26.1.2",
+        "26.2-snapshot-2",
+        "26.2-snapshot-3",
+        "26.2-snapshot-4",
+        "26.2-snapshot-5",
+        "26.2-snapshot-6",
+        "26.2-snapshot-7",
+        "26.2-snapshot-8",
+        "26.2-pre-1",
+        "26.2-pre-2",
+        "26.2-pre-3",
+        "26.2-pre-4",
+        "26.2-pre-5",
+        "26.2-pre-6",
+        "26.2-rc-1",
+        "26.2-rc-2",
+        "26.2",
+        "26.3-snapshot-1",
+        "26.3-snapshot-2",
+        "26.3-snapshot-3",
+        "26.3-snapshot-4",
+        "26.3-snapshot-5",
+        "26.3-snapshot-6",
+        "26.3-snapshot-7",
+        "26.3-snapshot-8",
+        "26.3-snapshot-9",
+        "26.3-snapshot-10",
+        "26.3-pre-1",
+        "26.3-pre-2",
+        "26.3-pre-3",
+        "26.3-rc-1",
+        "26.3-rc-2",
+        "26.3-rc-3",
+        "26.3"
+      ],
+      "url": "https://cdn.modrinth.com/data/zrzYrlm0/versions/2Y1IwF8Y/spawnanimations-v1.11.6-mc1.17-26.3.9-datapack.zip",
+      "sha256": "7f467a0870d2445511f652b1d246b2adac54a4051ff49a1746a2992fab86dbe6",
+      "sha512": "1934263cbd19a6b5f536e38ac8687e00fa8c2ae545cc61e938d651de1aaa79be28f42ba706293c93b9d560dd72199f33d042c2ca67a12659e07e613e44c445ef",
+      "sha1": "b513ed740b09e70aa9976a8832a04b0e383d31c0",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "storage",
+        "advancements",
+        "triggers"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 87,
+        "macroLines": 0,
+        "packMeta": {
+          "pack_format": 15,
+          "supported_formats": [
+            7,
+            121
+          ],
+          "min_format": 7,
+          "max_format": 121,
+          "overlays": true
+        },
+        "legacyFunctions": 84,
+        "overlayFunctions": 42
+      },
+      "notes": "Mob spawn animations; mixed legacy functions/ and function/ dirs plus overlays. Also ships 84 legacy functions/ files (ignored on 26.3). 42 more .mcfunction files live in overlay directories. File: spawnanimations-v1.11.6-mc1.17-26.3.9-datapack.zip."
+    },
+    {
+      "id": "mr-orbital-strike-cannon",
+      "name": "Orbital Strike Cannon Datapack & Mod",
+      "source": "modrinth",
+      "project": "orbital-strike-cannon-datapack",
+      "version": "14.5-for-26.3",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://cdn.modrinth.com/data/qXfPsgii/versions/eijBmvrc/Orbital%20Strike%20Cannon%20v14.5%20-%2026.3.zip",
+      "sha256": "7d8e3ece91f91afc6b17809db319b7e03f8e9fdb432758d3314a9b7f86a10762",
+      "sha512": "a5512706aaafb698539ccb34a581ea72fbee66f2870f34bf0f22b793d61d6719fa8204eb43feae115ad9e75527a2e24d4082365f539ec910e290d7a47d19c406",
+      "sha1": "94cafe8bf32b20df696dd1f5393682c73a00547d",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "raycast"
+      ],
+      "needsPackFormatPatch": true,
+      "stats": {
+        "functions": 88,
+        "macroLines": 0,
+        "packMeta": {
+          "pack_format": 108
+        }
+      },
+      "notes": "Orbital strike cannon; pack.mcmeta only has pack_format 108. Declared pack formats do not include 121.0. File: Orbital Strike Cannon v14.5 - 26.3.zip."
+    },
+    {
+      "id": "mr-armor-stand-arms",
+      "name": "Armor Stand Arms",
+      "source": "modrinth",
+      "project": "armor-stand-arms",
+      "version": "v2.7.1",
+      "gameVersionsDeclared": [
+        "1.21.9",
+        "1.21.10",
+        "1.21.11",
+        "26.1",
+        "26.1.1",
+        "26.1.2",
+        "26.2",
+        "26.3"
+      ],
+      "url": "https://cdn.modrinth.com/data/GWFnD2zx/versions/8fj9HagO/armor-stand-arms-v2.7.1.zip",
+      "sha256": "4e69d5fabfa946ddcc62c216380a9f316f55f5ae1759586a6f6c95eaab3ee862",
+      "sha512": "297e1ff45809cc8b95a229a2c89ed0edc905a09317319037c70e65c2e7e20c38447c8b460a9a114f3dcfe9057dea180c5520aa41f4df32be7e591f243971a26f",
+      "sha1": "154b610cba3369b0b73711b880815ea2f1bb08ba",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "macros",
+        "storage",
+        "raycast",
+        "advancements",
+        "triggers"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 20,
+        "macroLines": 7,
+        "packMeta": {
+          "min_format": [
+            88,
+            0
+          ],
+          "max_format": [
+            999,
+            0
+          ],
+          "overlays": true
+        }
+      },
+      "notes": "Armor stands with arms; tick-driven, macros. File: armor-stand-arms-v2.7.1.zip."
+    },
+    {
+      "id": "mr-terralith",
+      "name": "Terralith",
+      "source": "modrinth",
+      "project": "terralith",
+      "version": "2.6.5+26.3",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://cdn.modrinth.com/data/8oi3bsk5/versions/fqnsIp6d/Terralith_v2.6.5%2B26.3.zip",
+      "sha256": "9764f1d11a0bfe99c2cd96cd54f346fe756165d14a6f855b394954c171d603d5",
+      "sha512": "edc75fb0be5d009590d16d0d96ef73fc2e87c3edd3c5b4d80589070a636beeaf4ea202ee3cffaa06ad68a615bbb03e924cd3e173cbd649fb47b5ec6fc74c2482",
+      "sha1": "f177f61facf8c43705debe1e1508792dcf4d5323",
+      "kind": "worldgen",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "worldgen"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 3,
+        "macroLines": 0,
+        "packMeta": {
+          "min_format": 121,
+          "max_format": 121,
+          "overlays": true
+        }
+      },
+      "notes": "Worldgen overhaul (biomes, terrain). File: Terralith_v2.6.5+26.3.zip."
+    },
+    {
+      "id": "mr-tectonic",
+      "name": "Tectonic",
+      "source": "modrinth",
+      "project": "tectonic",
+      "version": "3.0.29-datapack",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://cdn.modrinth.com/data/lWDHr9jE/versions/pxgiJaJp/tectonic-datapack-3.0.29.zip",
+      "sha256": "de17001f3aa97568b5868ce009c46a916f3c6b88de5b188ec9731b0f0994df92",
+      "sha512": "e425783bb29ef1633af881e0174f21d7f0039591a7ba1dd4686d016a373680b46c0117219a66651b05aa0924c933f03ef8ab2ed68c801e431207b260feb6bdb0",
+      "sha1": "529d7faf049c982272a5dfa025085baf02492b84",
+      "kind": "worldgen",
+      "features": [
+        "worldgen"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 0,
+        "macroLines": 0,
+        "packMeta": {
+          "min_format": 121,
+          "max_format": 121
+        }
+      },
+      "notes": "Terrain shaping; worldgen only, no functions. File: tectonic-datapack-3.0.29.zip."
+    },
+    {
+      "id": "mr-incendium",
+      "name": "Incendium Legacy",
+      "source": "modrinth",
+      "project": "incendium",
+      "version": "5.5.4+26.3",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://cdn.modrinth.com/data/ZVzW5oNS/versions/1phtTdhj/Incendium_Legacy_v5.5.4%2B26.3.zip",
+      "sha256": "760d71bfb742e6b80e1648f38823217146b3ad76de142b06225db1b639efaa8c",
+      "sha512": "d1e2679bb748f143b6112744acb45405c9268dd60d9d7563c40281bc5e82adf00365403521dacab563668e2e84333bd084239a2485b01981f030a1a8b54f84e7",
+      "sha1": "3ad96d1907b4c776580dc088ffe53b0b979ac757",
+      "kind": "mixed",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "macros",
+        "storage",
+        "raycast",
+        "advancements",
+        "worldgen"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 2314,
+        "macroLines": 5,
+        "packMeta": {
+          "min_format": [
+            121,
+            0
+          ],
+          "max_format": [
+            121,
+            0
+          ]
+        }
+      },
+      "notes": "Nether overhaul; Modrinth file is the 'Legacy' datapack build, alpha channel. File: Incendium_Legacy_v5.5.4+26.3.zip."
+    },
+    {
+      "id": "mr-nullscape",
+      "name": "Nullscape",
+      "source": "modrinth",
+      "project": "nullscape",
+      "version": "2.0.1+26.3",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://cdn.modrinth.com/data/LPjGiSO4/versions/BJjbILcf/Nullscape_v2.0.1%2B26.3.zip",
+      "sha256": "69dc8ebbd2509d3f3d2b42b18036a38828855939768cccedebcb168c641f4224",
+      "sha512": "18fe0190eac981dd1e715326fd1f021734eb15520875394f2d8cfaa5d50c390a5cb0bfe6876023d247fa3b539e45f830139ba330afef1dd0890493eb370d9041",
+      "sha1": "d759ee004b6d6e633bc849eee0ea2a929de8eabc",
+      "kind": "worldgen",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "macros",
+        "advancements",
+        "worldgen"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 9,
+        "macroLines": 1,
+        "packMeta": {
+          "min_format": 121,
+          "max_format": 121,
+          "overlays": true
+        }
+      },
+      "notes": "End overhaul; worldgen. File: Nullscape_v2.0.1+26.3.zip."
+    },
+    {
+      "id": "mr-structory",
+      "name": "Structory",
+      "source": "modrinth",
+      "project": "structory",
+      "version": "1.3.18+26.3",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://cdn.modrinth.com/data/aKCwCJlY/versions/EV74q3tR/Structory_v1.3.18%2B26.3.zip",
+      "sha256": "0b21dc7288b835b88b603577957d18f27073798d865c58f68ff668221b9d16c0",
+      "sha512": "7f1a8d98726383250e42e294ffd690b7ac26cb1ae860a83b9b74d2d374d9e50bd1b9563acfee0f2ddc70eb683f85fd5e6ed0c4062076b2eac7792e0f9d2cbb52",
+      "sha1": "f2d8e0a54ab03c5722918cc0a822456f22a7c6a2",
+      "kind": "worldgen",
+      "features": [
+        "worldgen"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 1,
+        "macroLines": 0,
+        "packMeta": {
+          "min_format": [
+            121,
+            0
+          ],
+          "max_format": [
+            121,
+            0
+          ],
+          "overlays": true
+        }
+      },
+      "notes": "Structures; worldgen. File: Structory_v1.3.18+26.3.zip."
+    },
+    {
+      "id": "mr-dungeons-and-taverns",
+      "name": "Dungeons and Taverns",
+      "source": "modrinth",
+      "project": "dungeons-and-taverns",
+      "version": "6.0.2",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://cdn.modrinth.com/data/tpehi7ww/versions/iqFWpMVO/Dungeons%20and%20Taverns%20v6.0.2.zip",
+      "sha256": "fc0f1c85a105a491f9095e69cbb9f2edcaa9887b3a838152c2f40976320f3d9a",
+      "sha512": "562a365ee00a2f3ed15fd9d9daf4e15147220fe0033e851ffe8c33c014149a147cb6f5c2f2e59642c128d28a0bbcf43b3e0c5f591da9bb0c2dd8072efddba21c",
+      "sha1": "69181284785c7ed5c26111c6026edc8abbb90c95",
+      "kind": "mixed",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "advancements",
+        "worldgen"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 65,
+        "macroLines": 0,
+        "packMeta": {
+          "min_format": [
+            121,
+            0
+          ],
+          "max_format": [
+            121,
+            0
+          ]
+        }
+      },
+      "notes": "Structure datapack with loot/spawn functions; large (21 MB). File: Dungeons and Taverns v6.0.2.zip."
+    },
+    {
+      "id": "vt-multiplayer-sleep",
+      "name": "Vanilla Tweaks: Multiplayer Sleep",
+      "source": "vanillatweaks",
+      "project": "Convenience/multiplayer sleep",
+      "version": "2.6.18",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://vanillatweaks.net/assets/server/zipdatapacks.php",
+      "sha256": "f9e080074c35d5f045c4d9eefb235dda8197da99ccf42a6c86d870bb26a97bd3",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "advancements",
+        "triggers"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 33,
+        "macroLines": 0,
+        "packMeta": {
+          "min_format": [
+            121,
+            0
+          ],
+          "max_format": [
+            121,
+            0
+          ]
+        }
+      },
+      "notes": "Not all players in the overworld must sleep to skip the night and the rain. '/trigger mpSleep' for details and settings. /function multiplayer_sleep:config Built on demand for MC 26.3; sha256 may change between builds (warning only).",
+      "vtCategory": "Convenience",
+      "vtPack": "multiplayer sleep",
+      "vtMcVersion": "26.3"
+    },
+    {
+      "id": "vt-cauldron-concrete",
+      "name": "Vanilla Tweaks: Cauldron Concrete",
+      "source": "vanillatweaks",
+      "project": "Convenience/cauldron concrete",
+      "version": "3.1.2",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://vanillatweaks.net/assets/server/zipdatapacks.php",
+      "sha256": "05dc0b97574a14b073910a5e36e1da15f4c8d89c30a106211e84c29048823c07",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "advancements"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 2,
+        "macroLines": 0,
+        "packMeta": {
+          "min_format": [
+            121,
+            0
+          ],
+          "max_format": [
+            121,
+            0
+          ]
+        }
+      },
+      "notes": "Drop concrete powder into a water cauldron to instantly harden all of it. Built on demand for MC 26.3; sha256 may change between builds (warning only).",
+      "vtCategory": "Convenience",
+      "vtPack": "cauldron concrete",
+      "vtMcVersion": "26.3"
+    },
+    {
+      "id": "vt-afk-display",
+      "name": "Vanilla Tweaks: AFK Display",
+      "source": "vanillatweaks",
+      "project": "Informative/afk display",
+      "version": "1.1.18",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://vanillatweaks.net/assets/server/zipdatapacks.php",
+      "sha256": "2a5571359bba93cd463b8ccebd06490470ddf77618bf1643c4c23dae041052bd",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "advancements"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 5,
+        "macroLines": 0,
+        "packMeta": {
+          "min_format": [
+            121,
+            0
+          ],
+          "max_format": [
+            121,
+            0
+          ]
+        }
+      },
+      "notes": "Greys out a player's name that is not moving for 5 minutes. Built on demand for MC 26.3; sha256 may change between builds (warning only).",
+      "vtCategory": "Informative",
+      "vtPack": "afk display",
+      "vtMcVersion": "26.3"
+    },
+    {
+      "id": "vt-coordinates-hud",
+      "name": "Vanilla Tweaks: Coordinates HUD",
+      "source": "vanillatweaks",
+      "project": "Informative/coordinates hud",
+      "version": "1.2.19",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://vanillatweaks.net/assets/server/zipdatapacks.php",
+      "sha256": "3cc644f1d7ae6a26cc7451efe451f3c71f25dcc8442baab7eee7ecd4754b43e3",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "advancements",
+        "triggers"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 9,
+        "macroLines": 0,
+        "packMeta": {
+          "min_format": [
+            121,
+            0
+          ],
+          "max_format": [
+            121,
+            0
+          ]
+        }
+      },
+      "notes": "Adds information to your actionbar. XYZ Coords and a 24hr clock. Built on demand for MC 26.3; sha256 may change between builds (warning only).",
+      "vtCategory": "Informative",
+      "vtPack": "coordinates hud",
+      "vtMcVersion": "26.3"
+    },
+    {
+      "id": "vt-durability-ping",
+      "name": "Vanilla Tweaks: Durability Ping",
+      "source": "vanillatweaks",
+      "project": "Informative/durability ping",
+      "version": "1.1.19",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://vanillatweaks.net/assets/server/zipdatapacks.php",
+      "sha256": "08d57b2cda7d18ad3a5353814b8ddbf4f6c3c33f6945c875e1a84a57fe4fa591",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "storage",
+        "advancements",
+        "triggers"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 106,
+        "macroLines": 0,
+        "packMeta": {
+          "min_format": [
+            121,
+            0
+          ],
+          "max_format": [
+            121,
+            0
+          ]
+        }
+      },
+      "notes": "Get notified when you damage an item with 10% or less durability. Fully customizable per-player with '/trigger duraPing' Built on demand for MC 26.3; sha256 may change between builds (warning only).",
+      "vtCategory": "Informative",
+      "vtPack": "durability ping",
+      "vtMcVersion": "26.3"
+    },
+    {
+      "id": "vt-track-statistics",
+      "name": "Vanilla Tweaks: Track Statistics",
+      "source": "vanillatweaks",
+      "project": "Informative/track statistics",
+      "version": "1.1.20",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://vanillatweaks.net/assets/server/zipdatapacks.php",
+      "sha256": "6c3415da011016b8f6af1c75af643f2e83d74d34e1934dc05c15d876442b4aac",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "advancements"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 4,
+        "macroLines": 0,
+        "packMeta": {
+          "min_format": [
+            121,
+            0
+          ],
+          "max_format": [
+            121,
+            0
+          ]
+        }
+      },
+      "notes": "Adds statistics that are processed beforehand. E.g. Km swam, Km flown, etc. Built on demand for MC 26.3; sha256 may change between builds (warning only).",
+      "vtCategory": "Informative",
+      "vtPack": "track statistics",
+      "vtMcVersion": "26.3"
+    },
+    {
+      "id": "vt-track-raw-statistics",
+      "name": "Vanilla Tweaks: Track Raw Statistics",
+      "source": "vanillatweaks",
+      "project": "Informative/track raw statistics",
+      "version": "1.7.14",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://vanillatweaks.net/assets/server/zipdatapacks.php",
+      "sha256": "4b7b6f046bb8fc9c465c8e23682314a9d6e8c95b5986c23eaddde700bff2d0bc",
+      "kind": "function",
+      "features": [
+        "scoreboard",
+        "advancements"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 1,
+        "macroLines": 0,
+        "packMeta": {
+          "min_format": [
+            121,
+            0
+          ],
+          "max_format": [
+            121,
+            0
+          ]
+        }
+      },
+      "notes": "Adds 100+ scoreboards that track many different statistics. Especially useful for multiplayer. Built on demand for MC 26.3; sha256 may change between builds (warning only).",
+      "vtCategory": "Informative",
+      "vtPack": "track raw statistics",
+      "vtMcVersion": "26.3"
+    },
+    {
+      "id": "vt-armor-statues",
+      "name": "Vanilla Tweaks: Armor Statues",
+      "source": "vanillatweaks",
+      "project": "Decorative/Cosmetic/armor statues",
+      "version": "2.8.24",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://vanillatweaks.net/assets/server/zipdatapacks.php",
+      "sha256": "e3e6a2428241d513868fd98c7d8c6a80a7c5186c03461ebbaf332fe3c3cf5488",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "macros",
+        "storage",
+        "raycast",
+        "advancements",
+        "triggers"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 72,
+        "macroLines": 2,
+        "packMeta": {
+          "min_format": [
+            121,
+            0
+          ],
+          "max_format": [
+            121,
+            0
+          ]
+        }
+      },
+      "notes": "Adds a unique book that allows you to alter the properties of armor stands in survival. Built on demand for MC 26.3; sha256 may change between builds (warning only).",
+      "vtCategory": "Decorative/Cosmetic",
+      "vtPack": "armor statues",
+      "vtMcVersion": "26.3"
+    },
+    {
+      "id": "vt-fast-leaf-decay",
+      "name": "Vanilla Tweaks: Fast Leaf Decay",
+      "source": "vanillatweaks",
+      "project": "Convenience/fast leaf decay",
+      "version": "2.0.23",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://vanillatweaks.net/assets/server/zipdatapacks.php",
+      "sha256": "32781994d1f78ae7559ef21b51ae48ce894ba7b30cdda3120b5837f2a52d6fd7",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "raycast",
+        "advancements"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 23,
+        "macroLines": 0,
+        "packMeta": {
+          "min_format": [
+            121,
+            0
+          ],
+          "max_format": [
+            121,
+            0
+          ]
+        }
+      },
+      "notes": "Leaves decay much faster when trees are mined in survival mode. Built on demand for MC 26.3; sha256 may change between builds (warning only).",
+      "vtCategory": "Convenience",
+      "vtPack": "fast leaf decay",
+      "vtMcVersion": "26.3"
+    },
+    {
+      "id": "vt-graves",
+      "name": "Vanilla Tweaks: Graves",
+      "source": "vanillatweaks",
+      "project": "Gameplay Changes/graves",
+      "version": "4.1.2",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://vanillatweaks.net/assets/server/zipdatapacks.php",
+      "sha256": "59938066b6c341edc1328a0f6ecdbe3a5511bf0f433cf61a2f800f1418e607a1",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "macros",
+        "storage",
+        "raycast",
+        "advancements",
+        "triggers"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 139,
+        "macroLines": 37,
+        "packMeta": {
+          "min_format": [
+            121,
+            0
+          ],
+          "max_format": [
+            121,
+            0
+          ],
+          "overlays": true
+        }
+      },
+      "notes": "When you die, it places a grave to save all your drops. Right-click or left-click a grave to retrieve your items. /function graves:config Built on demand for MC 26.3; sha256 may change between builds (warning only).",
+      "vtCategory": "Gameplay Changes",
+      "vtPack": "graves",
+      "vtMcVersion": "26.3"
+    },
+    {
+      "id": "vt-homes",
+      "name": "Vanilla Tweaks: Homes",
+      "source": "vanillatweaks",
+      "project": "Teleport Commands/homes",
+      "version": "1.5.20",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://vanillatweaks.net/assets/server/zipdatapacks.php",
+      "sha256": "fe4e694a0a289f3dfb718ceed8859fed69a21ec73b218527bbe40c5bf2ec6076",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "storage",
+        "advancements",
+        "triggers"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 54,
+        "macroLines": 0,
+        "packMeta": {
+          "min_format": [
+            121,
+            0
+          ],
+          "max_format": [
+            121,
+            0
+          ]
+        }
+      },
+      "notes": "Allows you to set homes ('/trigger sethome' or '/trigger sethome set <ID>') and teleport back to them ('/trigger home' or '/trigger home set <ID>'). /function homes:config Built on demand for MC 26.3; sha256 may change between builds (warning only).",
+      "vtCategory": "Teleport Commands",
+      "vtPack": "homes",
+      "vtMcVersion": "26.3"
+    },
+    {
+      "id": "vt-tpa",
+      "name": "Vanilla Tweaks: TPA",
+      "source": "vanillatweaks",
+      "project": "Teleport Commands/tpa",
+      "version": "2.3.18",
+      "gameVersionsDeclared": [
+        "26.3"
+      ],
+      "url": "https://vanillatweaks.net/assets/server/zipdatapacks.php",
+      "sha256": "dbc2e83c2a00fc3c01a156c8400765a66ed3674a91ee2efe74968ca45744fa0f",
+      "kind": "function",
+      "features": [
+        "tick-loop",
+        "scoreboard",
+        "advancements",
+        "triggers"
+      ],
+      "needsPackFormatPatch": false,
+      "stats": {
+        "functions": 19,
+        "macroLines": 0,
+        "packMeta": {
+          "min_format": [
+            121,
+            0
+          ],
+          "max_format": [
+            121,
+            0
+          ]
+        }
+      },
+      "notes": "Enter '/trigger tpa set <PID>' to request to teleport to another player. Press Tab to see each player's PID (Player ID). Built on demand for MC 26.3; sha256 may change between builds (warning only).",
+      "vtCategory": "Teleport Commands",
+      "vtPack": "tpa",
+      "vtMcVersion": "26.3"
+    }
+  ],
+  "combinations": [
+    {
+      "id": "bacap-vt4",
+      "packs": [
+        "bacap",
+        "vt-multiplayer-sleep",
+        "vt-afk-display",
+        "vt-coordinates-hud",
+        "vt-homes"
+      ],
+      "notes": "BACAP (advancement/function heavy) with four Vanilla Tweaks packs: tick loops, triggers, scoreboards."
+    },
+    {
+      "id": "vt-all",
+      "packs": [
+        "vt-multiplayer-sleep",
+        "vt-cauldron-concrete",
+        "vt-afk-display",
+        "vt-coordinates-hud",
+        "vt-durability-ping",
+        "vt-track-statistics",
+        "vt-track-raw-statistics",
+        "vt-armor-statues",
+        "vt-fast-leaf-decay",
+        "vt-graves",
+        "vt-homes",
+        "vt-tpa"
+      ],
+      "notes": "All selected Vanilla Tweaks packs loaded together; shared #minecraft:load and #minecraft:tick tags."
+    },
+    {
+      "id": "guns-terralith",
+      "packs": [
+        "mr-guns_plus_plus",
+        "mr-terralith"
+      ],
+      "notes": "Most macro-heavy Modrinth function pack plus a worldgen overhaul."
+    },
+    {
+      "id": "mr-functions-all",
+      "packs": [
+        "bacap",
+        "mr-veinminer",
+        "mr-tree-vein-miner",
+        "mr-timber-strike",
+        "mr-guns_plus_plus",
+        "mr-gardeners-dream",
+        "mr-vanilla-refresh",
+        "mr-spawn-animations",
+        "mr-orbital-strike-cannon",
+        "mr-armor-stand-arms"
+      ],
+      "notes": "Every Modrinth function pack including BACAP; maximum function count and tag overlap. Packs may conflict gameplay-wise; only loading matters."
+    },
+    {
+      "id": "worldgen-stack",
+      "packs": [
+        "mr-terralith",
+        "mr-incendium",
+        "mr-nullscape",
+        "mr-structory"
+      ],
+      "notes": "Worldgen datapacks for all three dimensions (Terralith overworld, Incendium nether, Nullscape end, Structory structures)."
+    },
+    {
+      "id": "kitchen-sink",
+      "packs": [
+        "bacap",
+        "vt-multiplayer-sleep",
+        "vt-cauldron-concrete",
+        "vt-afk-display",
+        "vt-coordinates-hud",
+        "vt-durability-ping",
+        "vt-track-statistics",
+        "vt-track-raw-statistics",
+        "vt-armor-statues",
+        "vt-fast-leaf-decay",
+        "vt-graves",
+        "vt-homes",
+        "vt-tpa",
+        "mr-guns_plus_plus",
+        "mr-veinminer",
+        "mr-tree-vein-miner",
+        "mr-terralith"
+      ],
+      "notes": "BACAP, all Vanilla Tweaks packs, two vein-miner packs, guns and Terralith in one world; load-order and tag stress test."
+    }
+  ]
+}
