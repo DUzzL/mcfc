@@ -1,0 +1,52 @@
+{
+ "steps": [
+  {
+   "step": 5
+  },
+  {
+   "cmd": "gamemode creative DPTester1"
+  },
+  {
+   "cmd": "execute in minecraft:the_nether run forceload add 144 208"
+  },
+  {
+   "step": 40
+  },
+  {
+   "cmd": "execute in minecraft:the_nether run tp DPTester1 144 80 208"
+  },
+  {
+   "step": 5
+  },
+  {
+   "cmd": "execute as DPTester1 run function incendium:admin/give/all"
+  },
+  {
+   "cmd": "execute as DPTester1 at @s run function incendium:admin/spawn/castle/all"
+  },
+  {
+   "cmd": "execute as DPTester1 at @s run function incendium:admin/spawn/misc/ghast_sentry"
+  },
+  {
+   "cmd": "execute as DPTester1 at @s run function incendium:admin/spawn/village/guard"
+  },
+  {
+   "cmd": "advancement grant DPTester1 only incendium:root"
+  },
+  {
+   "cmd": "advancement grant DPTester1 only incendium:nether/root"
+  },
+  {
+   "step": 100
+  },
+  {
+   "cmd": "execute in minecraft:the_nether run tp DPTester1 0 70 0"
+  },
+  {
+   "step": 100
+  },
+  {
+   "step": 300
+  }
+ ]
+}

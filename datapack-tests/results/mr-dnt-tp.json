@@ -1,0 +1,536 @@
+{
+ "id": "mr-dnt-tp",
+ "status": "DIFF",
+ "kind": "mixed",
+ "packs": [
+  "mr-dungeons-and-taverns"
+ ],
+ "problems": [],
+ "notes": [],
+ "mcfcState": {
+  "afterLoad": "READY_ON",
+  "final": "READY_ON",
+  "decisiveError": null,
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 65Total Function Count: 65"
+ },
+ "compile": {
+  "found": 65,
+  "compiled": 65,
+  "rate": 1.0,
+  "partialFallbackCommands": 238,
+  "wholeFallbacks": {},
+  "compileFailures": [],
+  "compilerErrors": [],
+  "runtimeDisables": [],
+  "topPartialReasons": {
+   "Missing space after argument @ execute if predicate <predicate:resource_location>": 226,
+   "Unknown command: attribute": 5,
+   "Missing space after argument @ execute unless predicate <predicate:resource_location>": 3,
+   "Unknown command: ride": 2,
+   "Cannot turn \"{\"atlas\":\"minecraft:items\",\"sprite\":\"dnt:item/16x_logo\"}\" into Text": 1,
+   "Unknown command: damage": 1
+  },
+  "unsupportedCommands": {
+   "attribute": 5,
+   "ride": 2,
+   "damage": 1
+  }
+ },
+ "debug": {
+  "header": "10 compiled | 0 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
+  "functionsByStatus": {
+   "compiled": 10
+  },
+  "totalCalls": 661,
+  "vanillaCalls": 0,
+  "compiledCalls": 661,
+  "compiledCallShare": 1.0,
+  "nonCompiled": [],
+  "nonCompiledCount": 0
+ },
+ "compare": {
+  "confirmedFindings": 10,
+  "flakyFindings": 30,
+  "lowConfidence": 12,
+  "noise": 503,
+  "genFindings": 20,
+  "genNoise": 200,
+  "confirmation": {
+   "enabled": true,
+   "ran": true,
+   "onlyInSecondAttempt": 19
+  },
+  "sections": {
+   "blocks": {
+    "paths": 414,
+    "noise": 200,
+    "findings": 9,
+    "lowConfidence": 11
+   },
+   "bossbars": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "datapacks": {
+    "paths": 2,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "entities": {
+    "paths": 1287,
+    "noise": 302,
+    "findings": 11,
+    "lowConfidence": 1
+   },
+   "functionTags": {
+    "paths": 2,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functions": {
+    "paths": 65,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "gamerules": {
+    "paths": 58,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "players": {
+    "paths": 20,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scheduled": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scoreboard": {
+    "paths": 17,
+    "noise": 1,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "storage": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "world": {
+    "paths": 12,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   }
+  },
+  "confirmed": [
+   {
+    "path": "blocks[overworld].columns.2,2",
+    "base": "\"202f9a838a4ee32d131466b67f2f9c697e531ad6f809ddd46e539e4f93f289e2\"",
+    "mcfc": "\"ab94ec307a86ea6728018361d0e8e3926a7da8007239749c657eeff34ed6a1f6\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.7,-1",
+    "base": "\"1d74cf44d0c0c5007a9549c44288aab1c3ec794f5f1583abd0eefbcdb6e502db\"",
+    "mcfc": "\"e33c07bc247c7638935fbfca33fc8d9929499f0e62af5e1e5216b0abdc315f8c\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:pillager#6].pos[1]",
+    "base": "67.0",
+    "mcfc": "66.0",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.-8,-4",
+    "base": "\"2c8f31e802e9dd3a4e49c060f9478038f772e411a1f56228dc48bdd6361b7ec4\"",
+    "mcfc": "\"48c96207be0ddd0d35a392b6ab8683d7fc46b07d641e11555e68eea8cd263376\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.2,2",
+    "base": "\"202f9a838a4ee32d131466b67f2f9c697e531ad6f809ddd46e539e4f93f289e2\"",
+    "mcfc": "\"ab94ec307a86ea6728018361d0e8e3926a7da8007239749c657eeff34ed6a1f6\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.2,3",
+    "base": "\"24b152e827ab38ee2b647b0a1102bbd58c221ad3d434c07fd0bbc8fbb04d9d29\"",
+    "mcfc": "\"288ded9eef4d519e00f866f5231e0c7b9cc032253cbbf48a9903682a33bc40d8\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.3,2",
+    "base": "\"a72622f6c69598e405ed4d9a4974a1a4aacfc3c6a01d6f7ecc125f365c612f78\"",
+    "mcfc": "\"2548ea6fc1a897e376e479e75cc9b3c0c574ccced30dc4ff89c965bdce57c0a7\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.6,-1",
+    "base": "\"a32845d027c1ee411c7ad6be7222435393e977287c6a4bb370e23588f431ea4f\"",
+    "mcfc": "\"3cc30b28201bd3aecbb7b0473467c19e98574e58cd89b74a877712b345bed076\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.7,-1",
+    "base": "\"1d74cf44d0c0c5007a9549c44288aab1c3ec794f5f1583abd0eefbcdb6e502db\"",
+    "mcfc": "\"e33c07bc247c7638935fbfca33fc8d9929499f0e62af5e1e5216b0abdc315f8c\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.7,-8",
+    "base": "\"870023c0fb9cd94ee0c0bda1b0dc59d4c14a040f93c524dd0c801251d06cbee3\"",
+    "mcfc": "\"bf027248610538ce238d0c4319efec1aa522bcfcb25a79c631e0fbeb6c4c832c\"",
+    "dump": "gen"
+   }
+  ],
+  "flaky": [
+   {
+    "path": "blocks[nether].columns.-3,-2",
+    "base": "\"3a5e84d0d4c43e71500d25c45d7533902288cbae5d89d187f862248099767ebe\"",
+    "mcfc": "\"3d50fa89d16241a4e8f626c48a980d8ba6fe3405392bd59b67957d7f3852a60c\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[nether].columns.-3,-3",
+    "base": "\"f1d3336e2be28105e6ec011b2d85f6063778392f9ef9f0049eee08d1cdfb2658\"",
+    "mcfc": "\"e24c544e972fa643ca2a1866aae96a442d3aa9761edb817d357806c1a980eff8\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[nether].columns.-4,-4",
+    "base": "\"8356b838f14e28f93efc5d0dffe6e735f3b30994b197edb5e6f6be5e7a4a102e\"",
+    "mcfc": "\"c63aaeb0a0957704a1084e66c8d200c86f89fc87b712fa2eb76daf51a5276ecc\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.-8,-8",
+    "base": "\"65e84455541570bb03ea9b3156b05cd773fb44fe9507c8d69fa793dbb6b6d107\"",
+    "mcfc": "\"a5e3f0418559692586f9b29f89b2d3b5e55e402e48eb64b25ee22e6357642eb7\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.-8,3",
+    "base": "\"ffae049998f240838f8c11605c6cd4cd2273de680c47a00e258b81552f63325c\"",
+    "mcfc": "\"8cf02bc1084ba8216febbe2036bbefb1446ea7670e7c4d100f03a58fbec28f96\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.-8,4",
+    "base": "\"caa52402162f4782f78be4e4007afd9f6388f7895c02ab71632f24291c9fddd5\"",
+    "mcfc": "\"c1aa13c51b863a270bdf97b78223dfae41b840732532dfaffa561c8b956c1fac\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.0,1",
+    "base": "\"f410849b298afea1184f5f14216a8da0948a37276888d8b21b8b255d971cee36\"",
+    "mcfc": "\"5fac3277bdc5dc9036cea98e1af51d9e1ee6cfd1680fa7b49f3ea75decf4642c\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.counts.minecraft:fireball",
+    "base": "<missing>",
+    "mcfc": "1",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:fireball#1].customName",
+    "base": "<missing>",
+    "mcfc": "null",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:fireball#1].nbt",
+    "base": "<missing>",
+    "mcfc": "\"{ExplosionPower:1b,HasBeenShot:1b,Invulnerable:0b,Item:{count:1,id:\\\"minecraft:fire_charge\\\"},LeftOwner:1b,Owner:<ghast#1>,acceleration_power:0.1d}\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:fireball#1].pos[0]",
+    "base": "<missing>",
+    "mcfc": "128.39",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:fireball#1].pos[1]",
+    "base": "<missing>",
+    "mcfc": "194.1",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:fireball#1].pos[2]",
+    "base": "<missing>",
+    "mcfc": "-60.44",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:fireball#1].tags[]",
+    "base": "<missing>",
+    "mcfc": "[]",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:fireball#1].type",
+    "base": "<missing>",
+    "mcfc": "\"minecraft:fireball\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:fireball#1].uuid",
+    "base": "<missing>",
+    "mcfc": "\"<fireball#1>\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:pillager#5].pos[1]",
+    "base": "67.0",
+    "mcfc": "68.0",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[nether].columns.-3,-2",
+    "base": "\"3a5e84d0d4c43e71500d25c45d7533902288cbae5d89d187f862248099767ebe\"",
+    "mcfc": "\"3d50fa89d16241a4e8f626c48a980d8ba6fe3405392bd59b67957d7f3852a60c\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[nether].columns.-3,-3",
+    "base": "\"f1d3336e2be28105e6ec011b2d85f6063778392f9ef9f0049eee08d1cdfb2658\"",
+    "mcfc": "\"e24c544e972fa643ca2a1866aae96a442d3aa9761edb817d357806c1a980eff8\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[nether].columns.-4,-4",
+    "base": "\"8356b838f14e28f93efc5d0dffe6e735f3b30994b197edb5e6f6be5e7a4a102e\"",
+    "mcfc": "\"c63aaeb0a0957704a1084e66c8d200c86f89fc87b712fa2eb76daf51a5276ecc\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.-1,1",
+    "base": "\"dc7d460110f217fe4255e9764d01af3d623ad24e44a718b5e7803e9d96a681af\"",
+    "mcfc": "\"23374ebafb1c04f7d7062662fdd448942f1e4172824b88ad4f0b789b08944c72\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.-3,-2",
+    "base": "\"bfe7a3fbf3e646ac5d56f6aa48cf9b3d6b814b62ca9655690f9158c5c8bc87df\"",
+    "mcfc": "\"94263e21dbd915380ec3053789cbaf297cfea03ded4d1af3bbfd59cbd3d8449d\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.-3,-3",
+    "base": "\"9132f43acddfdda013f5d8b419c08e8af26cfee079a404b63e852216f1f9dbf6\"",
+    "mcfc": "\"b53cf64b7f82284448d1d68007ffa40b790a47ed4d84bc230bce8b88d429890e\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.-8,-8",
+    "base": "\"65e84455541570bb03ea9b3156b05cd773fb44fe9507c8d69fa793dbb6b6d107\"",
+    "mcfc": "\"a5e3f0418559692586f9b29f89b2d3b5e55e402e48eb64b25ee22e6357642eb7\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.-8,3",
+    "base": "\"ffae049998f240838f8c11605c6cd4cd2273de680c47a00e258b81552f63325c\"",
+    "mcfc": "\"8cf02bc1084ba8216febbe2036bbefb1446ea7670e7c4d100f03a58fbec28f96\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.-8,4",
+    "base": "\"caa52402162f4782f78be4e4007afd9f6388f7895c02ab71632f24291c9fddd5\"",
+    "mcfc": "\"c1aa13c51b863a270bdf97b78223dfae41b840732532dfaffa561c8b956c1fac\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.0,0",
+    "base": "\"d83ba76fb7e522d5eb0385ac134d8186de3570abad3271a2f2ff00961d7814b6\"",
+    "mcfc": "\"95fce463039607266bb752d50a5b5d0ee2b788004bacc9627e76f341fb7c12e4\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.0,1",
+    "base": "\"f410849b298afea1184f5f14216a8da0948a37276888d8b21b8b255d971cee36\"",
+    "mcfc": "\"5fac3277bdc5dc9036cea98e1af51d9e1ee6cfd1680fa7b49f3ea75decf4642c\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.7,0",
+    "base": "\"cde0a92bf720a4b91ebd3a23942763ebb1c45a4ad45e930853e120e3b8471d22\"",
+    "mcfc": "\"f3215f87902c2104dcf6f42022e1972d42449d251c3f209124835207c82a314b\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.7,2",
+    "base": "\"ecf25efca0febf8b2b4895be8e5210a7a45783183240fab7d6e3123d994514e4\"",
+    "mcfc": "\"2a7d5a615031fd6e6c35f15d3aab4eae5f81eeba0ff1c6719e171073b5091411\"",
+    "dump": "gen"
+   }
+  ],
+  "lowConfidenceSample": [
+   {
+    "path": "blocks[overworld].columns.-1,1",
+    "base": "\"b540eab5b76c18a5b5bc6e138e2187a2c69013aeb0d094decb89e4345811e761\"",
+    "mcfc": "\"b757ef07be7c41cf29d8ba5084ca98d4907409c1f7206eca2252e7f73149e958\""
+   },
+   {
+    "path": "blocks[overworld].columns.-3,-2",
+    "base": "\"33412fd97921497f5256d89013b7910b2e2383bab958bdfff5a2f9ff1eac839e\"",
+    "mcfc": "\"a2412145682d20aeb17a10c3454f8029b3637e9dbcf2a3ce0a75c52641dc0d2a\""
+   },
+   {
+    "path": "blocks[overworld].columns.-3,-3",
+    "base": "\"f5e2a64d4cb57c755ea1f431bfebe8689a629f8dada838af5a73f52381fdbba0\"",
+    "mcfc": "\"9b1321e2161b18f759e94c5a7b47cc45ba3583d431be36fb03dba7cdb0ef8056\""
+   },
+   {
+    "path": "blocks[overworld].columns.-8,-4",
+    "base": "\"7be80dbda4848203f72b10cb0c964f460a511e501d9dffcd3da5fc72133b946c\"",
+    "mcfc": "\"ef79b763107976dddce902fbd654ebf288d6ab9920478381bfa6f637a5e6c176\""
+   },
+   {
+    "path": "blocks[overworld].columns.0,0",
+    "base": "\"5861cc47b9b63705eee380ea4a333d383762f063a659b9294a85ca522f31d2c6\"",
+    "mcfc": "\"5d30bb1fca5567ffc7bdce22ae9862dcb331ad9a45be789f624326a8a5068433\""
+   },
+   {
+    "path": "blocks[overworld].columns.2,3",
+    "base": "\"91b5af27d835c8f71b3d5c9e9ff242c2e461ce84619426f3b0f13c8e2242c10c\"",
+    "mcfc": "\"ce5c663d0465f42df19d12aaa123ec8044d8aa9024fa125a5d156cf9ca6250e7\""
+   },
+   {
+    "path": "blocks[overworld].columns.3,2",
+    "base": "\"801b2512983eee3be91b84de0898737f860c73e8b20da78892450a8e27d1340f\"",
+    "mcfc": "\"39b8dc85c470818c1128e6cb10c3387320cd92cf64d70195a0b43b72508d214c\""
+   },
+   {
+    "path": "blocks[overworld].columns.6,-1",
+    "base": "\"43b84db87e0a674c11eeab89f8e9b30553dad5f3fb88677b23b9fd33c2d48cb8\"",
+    "mcfc": "\"6de28c4dfec2c8ae01ce37bf106642bfcae68f6ae53175edfa9b50aba4bdeff1\""
+   },
+   {
+    "path": "blocks[overworld].columns.7,-8",
+    "base": "\"26a4119a27f7851005c38252f5673afb54b681b0cda9c834d0987017b393fadd\"",
+    "mcfc": "\"ddda93b7850f3ce004df7a6ebe137851190030ba5a0f196c6c3c1742e5011542\""
+   },
+   {
+    "path": "blocks[overworld].columns.7,0",
+    "base": "\"ac251c7436616d60a1328d28f8119968b30e0079171fc292ea657a2f659e0ba4\"",
+    "mcfc": "\"9a48176e05e22f2cab7f5e2396c9e1538bf95f737ce442208dc3a3f961b03d38\""
+   },
+   {
+    "path": "blocks[overworld].columns.7,2",
+    "base": "\"8822c108c3965990e9fe3c1f7889c29c15183830babc1d2e0ce011e787dc6310\"",
+    "mcfc": "\"3213d1d771396dcc909e3689d7716d52a930a997aa670321e10781d156c1058c\""
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#10].pos[1]",
+    "base": "58.0",
+    "mcfc": "-32.0"
+   }
+  ]
+ },
+ "exceptions": {
+  "base1": {},
+  "base2": {},
+  "mcfc": {}
+ },
+ "exceptionTotals": {
+  "base1": 0,
+  "base2": 0,
+  "mcfc": 0
+ },
+ "exercise": {
+  "base1": {
+   "namespaces": [
+    "nova_structures"
+   ],
+   "dumpedFunctions": 65,
+   "candidates": 65,
+   "skippedMacro": 0,
+   "skippedName": 0,
+   "skippedScenario": 0,
+   "ran": 65,
+   "replyExecuted": 0,
+   "replyError": 65,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "base2": {
+   "namespaces": [
+    "nova_structures"
+   ],
+   "dumpedFunctions": 65,
+   "candidates": 65,
+   "skippedMacro": 0,
+   "skippedName": 0,
+   "skippedScenario": 0,
+   "ran": 65,
+   "replyExecuted": 0,
+   "replyError": 65,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "mcfc": {
+   "namespaces": [
+    "nova_structures"
+   ],
+   "dumpedFunctions": 65,
+   "candidates": 65,
+   "skippedMacro": 0,
+   "skippedName": 0,
+   "skippedScenario": 0,
+   "ran": 65,
+   "replyExecuted": 0,
+   "replyError": 65,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  }
+ },
+ "slowFunctions": {},
+ "perf": null,
+ "durationsSeconds": {
+  "base1": 81.5,
+  "base2": 84.1,
+  "mcfc": 72.3,
+  "attempt2-base1": 85.9,
+  "attempt2-base2": 85.9,
+  "attempt2-mcfc": 73.3
+ },
+ "gamerules": {
+  "command_chain_limit": "max_command_sequence_length",
+  "spawn_mobs": "spawn_mobs",
+  "spawn_monsters": "spawn_monsters",
+  "spawn_patrols": "spawn_patrols",
+  "spawn_wandering_traders": "spawn_wandering_traders",
+  "spawn_phantoms": "spawn_phantoms",
+  "spawn_wardens": "spawn_wardens",
+  "random_tick_speed": "random_tick_speed",
+  "weather_cycle": "advance_weather"
+ },
+ "ticks": 200,
+ "seed": "20261026"
+}

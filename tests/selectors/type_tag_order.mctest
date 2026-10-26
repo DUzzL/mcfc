@@ -1,0 +1,27 @@
+; `@e[type=#tag]` visits entities in vanilla's order (Incendium hands out `in.eid_N` ids in this order). Entities of
+; several types in the tag must not be grouped by type.
+@setup
+objective create t dummy
+
+@file mcfc-test:tags/entity_type/order.json
+{"values":["minecraft:marker","minecraft:armor_stand","minecraft:item_display"]}
+
+@function number
+scoreboard players add #n t 1
+execute if entity @s[tag=mcfc_o1] store result score o1 t run scoreboard players get #n t
+execute if entity @s[tag=mcfc_o2] store result score o2 t run scoreboard players get #n t
+execute if entity @s[tag=mcfc_o3] store result score o3 t run scoreboard players get #n t
+execute if entity @s[tag=mcfc_o4] store result score o4 t run scoreboard players get #n t
+execute if entity @s[tag=mcfc_o5] store result score o5 t run scoreboard players get #n t
+
+@function run
+summon marker ~ ~ ~ {Tags:["mcfc_o","mcfc_o1"]}
+summon armor_stand ~1 ~ ~ {Tags:["mcfc_o","mcfc_o2"],NoGravity:1b}
+summon marker ~2 ~ ~ {Tags:["mcfc_o","mcfc_o3"]}
+summon item_display ~ ~ ~1 {Tags:["mcfc_o","mcfc_o4"]}
+summon armor_stand ~3 ~ ~ {Tags:["mcfc_o","mcfc_o5"],NoGravity:1b}
+execute as @e[type=#mcfc-test:order,tag=mcfc_o] run function mcfc-test:number
+kill @e[tag=mcfc_o]
+
+@validate
+score #n t is 5

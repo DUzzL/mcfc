@@ -1,0 +1,76 @@
+{
+ "steps": [
+  {
+   "step": 5
+  },
+  {
+   "cmd": "execute as DPTester1 run function incendium:admin/give/all"
+  },
+  {
+   "step": 1
+  },
+  {
+   "cmd": "execute in minecraft:the_nether positioned 0 64 0 run locate biome incendium:ash_barrens"
+  },
+  {
+   "cmd": "execute in minecraft:the_nether positioned 0 64 0 run locate biome incendium:infernal_dunes"
+  },
+  {
+   "cmd": "execute in minecraft:the_nether positioned 0 64 0 run locate biome incendium:quartz_flats"
+  },
+  {
+   "cmd": "execute in minecraft:the_nether positioned 0 64 0 run locate biome incendium:toxic_heap"
+  },
+  {
+   "cmd": "execute in minecraft:the_nether positioned 0 64 0 run locate biome incendium:volcanic_deltas"
+  },
+  {
+   "cmd": "execute in minecraft:the_nether positioned 0 64 0 run locate biome incendium:withered_forest"
+  },
+  {
+   "cmd": "execute in minecraft:the_nether positioned 0 64 0 run locate biome incendium:weeping_valley"
+  },
+  {
+   "cmd": "execute in minecraft:the_nether positioned 0 64 0 run locate biome incendium:inverted_forest"
+  },
+  {
+   "cmd": "execute in minecraft:the_nether positioned 0 64 0 run locate structure incendium:forbidden_castle"
+  },
+  {
+   "cmd": "execute in minecraft:the_nether positioned 0 64 0 run locate structure incendium:piglin_village"
+  },
+  {
+   "cmd": "execute in minecraft:the_nether positioned 0 64 0 run locate structure incendium:sanctum"
+  },
+  {
+   "cmd": "execute in minecraft:the_nether positioned 0 64 0 run locate structure incendium:pipeline"
+  },
+  {
+   "cmd": "execute in minecraft:the_nether positioned 0 64 0 run locate structure incendium:infernal_altar"
+  },
+  {
+   "cmd": "execute in minecraft:the_nether positioned 0 64 0 run locate structure incendium:nether_reactor"
+  },
+  {
+   "cmd": "execute in minecraft:the_nether positioned 0 64 0 run locate structure incendium:quartz_kitchen"
+  },
+  {
+   "cmd": "execute in minecraft:the_nether positioned 0 64 0 run locate structure incendium:ruined_lab"
+  },
+  {
+   "cmd": "execute in minecraft:the_nether positioned 0 64 0 run locate structure incendium:abandoned_tower"
+  },
+  {
+   "cmd": "execute as DPTester1 at @s run function incendium:admin/spawn/castle/all"
+  },
+  {
+   "cmd": "execute as DPTester1 at @s run function incendium:admin/spawn/village/guard"
+  },
+  {
+   "step": 100
+  },
+  {
+   "step": 300
+  }
+ ]
+}

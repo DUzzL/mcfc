@@ -1,6 +1,6 @@
 {
  "id": "resetall",
- "status": "DIFF",
+ "status": "OK",
  "kind": "function",
  "packs": [
   "resetall"
@@ -38,7 +38,7 @@
   "nonCompiledCount": 0
  },
  "compare": {
-  "confirmedFindings": 6,
+  "confirmedFindings": 0,
   "flakyFindings": 0,
   "lowConfidence": 0,
   "noise": 2,
@@ -104,9 +104,9 @@
     "lowConfidence": 0
    },
    "scoreboard": {
-    "paths": 17,
+    "paths": 11,
     "noise": 0,
-    "findings": 6,
+    "findings": 0,
     "lowConfidence": 0
    },
    "storage": {
@@ -122,44 +122,7 @@
     "lowConfidence": 0
    }
   },
-  "confirmed": [
-   {
-    "path": "scoreboard.scores.#x1.a",
-    "base": "<missing>",
-    "mcfc": "1",
-    "dump": "final"
-   },
-   {
-    "path": "scoreboard.scores.#x1.b",
-    "base": "<missing>",
-    "mcfc": "2",
-    "dump": "final"
-   },
-   {
-    "path": "scoreboard.scores.DPTester1.a",
-    "base": "<missing>",
-    "mcfc": "1",
-    "dump": "final"
-   },
-   {
-    "path": "scoreboard.scores.DPTester1.b",
-    "base": "<missing>",
-    "mcfc": "2",
-    "dump": "final"
-   },
-   {
-    "path": "scoreboard.scores.DPTester2.a",
-    "base": "<missing>",
-    "mcfc": "1",
-    "dump": "final"
-   },
-   {
-    "path": "scoreboard.scores.DPTester2.b",
-    "base": "<missing>",
-    "mcfc": "2",
-    "dump": "final"
-   }
-  ],
+  "confirmed": [],
   "flaky": [],
   "lowConfidenceSample": []
  },
@@ -235,9 +198,9 @@
  "slowFunctions": {},
  "perf": null,
  "durationsSeconds": {
-  "base1": 31.3,
-  "base2": 34.1,
-  "mcfc": 27.9
+  "base1": 29.9,
+  "base2": 30.8,
+  "mcfc": 30.9
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

@@ -1,6 +1,6 @@
 {
  "id": "vt-armor-statues",
- "status": "DIFF",
+ "status": "OK",
  "kind": "function",
  "packs": [
   "vt-armor-statues"
@@ -40,10 +40,10 @@
   "nonCompiledCount": 0
  },
  "compare": {
-  "confirmedFindings": 8,
-  "flakyFindings": 0,
+  "confirmedFindings": 0,
+  "flakyFindings": 1,
   "lowConfidence": 0,
-  "noise": 28,
+  "noise": 27,
   "genFindings": null,
   "genNoise": null,
   "confirmation": {
@@ -108,8 +108,8 @@
    },
    "scoreboard": {
     "paths": 114,
-    "noise": 2,
-    "findings": 8,
+    "noise": 1,
+    "findings": 1,
     "lowConfidence": 0
    },
    "storage": {
@@ -125,57 +125,15 @@
     "lowConfidence": 0
    }
   },
-  "confirmed": [
+  "confirmed": [],
+  "flaky": [
    {
-    "path": "scoreboard.scores.<armor_stand#1>.as_edited_uuid1",
-    "base": "1012973762",
-    "mcfc": "0",
-    "dump": "final"
-   },
-   {
-    "path": "scoreboard.scores.<armor_stand#1>.as_edited_uuid2",
-    "base": "1023752607",
-    "mcfc": "0",
-    "dump": "final"
-   },
-   {
-    "path": "scoreboard.scores.<armor_stand#1>.as_edited_uuid3",
-    "base": "-1074035122",
-    "mcfc": "0",
-    "dump": "final"
-   },
-   {
-    "path": "scoreboard.scores.<armor_stand#1>.as_edited_uuid4",
-    "base": "-913057229",
-    "mcfc": "0",
-    "dump": "final"
-   },
-   {
-    "path": "scoreboard.scores.<armor_stand#1>.as_lock_uuid1",
-    "base": "1012973762",
-    "mcfc": "0",
-    "dump": "final"
-   },
-   {
-    "path": "scoreboard.scores.<armor_stand#1>.as_lock_uuid2",
-    "base": "1023752607",
-    "mcfc": "0",
-    "dump": "final"
-   },
-   {
-    "path": "scoreboard.scores.<armor_stand#1>.as_lock_uuid3",
-    "base": "-1074035122",
-    "mcfc": "0",
-    "dump": "final"
-   },
-   {
-    "path": "scoreboard.scores.<armor_stand#1>.as_lock_uuid4",
-    "base": "-913057229",
+    "path": "scoreboard.scores.#no_crossing.as_angle",
+    "base": "1",
     "mcfc": "0",
     "dump": "final"
    }
   ],
-  "flaky": [],
   "lowConfidenceSample": []
  },
  "exceptions": {
@@ -252,35 +210,35 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 0.23,
-   "min": 0.19,
-   "max": 0.41,
+   "median": 0.31,
+   "min": 0.23,
+   "max": 0.38,
    "lines": [
-    "Sprint completed with 2448 ticks per second, or 0.41 ms per tick",
-    "Sprint completed with 4291 ticks per second, or 0.23 ms per tick",
-    "Sprint completed with 5266 ticks per second, or 0.19 ms per tick"
+    "Sprint completed with 2617 ticks per second, or 0.38 ms per tick",
+    "Sprint completed with 3231 ticks per second, or 0.31 ms per tick",
+    "Sprint completed with 4371 ticks per second, or 0.23 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.26,
-   "min": 0.19,
-   "max": 0.31,
+   "median": 0.4,
+   "min": 0.21,
+   "max": 0.47,
    "lines": [
-    "Sprint completed with 3190 ticks per second, or 0.31 ms per tick",
-    "Sprint completed with 3814 ticks per second, or 0.26 ms per tick",
-    "Sprint completed with 5403 ticks per second, or 0.19 ms per tick"
+    "Sprint completed with 2131 ticks per second, or 0.47 ms per tick",
+    "Sprint completed with 2487 ticks per second, or 0.40 ms per tick",
+    "Sprint completed with 4711 ticks per second, or 0.21 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 55.9,
-  "base2": 57.0,
-  "mcfc": 57.8,
-  "perfbase": 54.3,
-  "attempt2-base1": 56.4,
-  "attempt2-base2": 56.8,
-  "attempt2-mcfc": 59.1
+  "base1": 59.9,
+  "base2": 61.0,
+  "mcfc": 57.6,
+  "perfbase": 55.9,
+  "attempt2-base1": 59.1,
+  "attempt2-base2": 60.2,
+  "attempt2-mcfc": 59.4
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

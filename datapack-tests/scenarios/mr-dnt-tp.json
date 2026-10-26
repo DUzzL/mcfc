@@ -1,0 +1,52 @@
+{
+ "steps": [
+  {
+   "step": 5
+  },
+  {
+   "cmd": "execute in minecraft:overworld run forceload add 48 208"
+  },
+  {
+   "step": 40
+  },
+  {
+   "cmd": "execute in minecraft:overworld positioned 48 0 208 positioned over motion_blocking run tp DPTester1 ~ ~ ~"
+  },
+  {
+   "step": 5
+  },
+  {
+   "cmd": "execute as DPTester1 at @s run function nova_structures:check_structure"
+  },
+  {
+   "cmd": "execute at DPTester1 run summon minecraft:marker ~ ~ ~ {Tags:[\"jk\"]}"
+  },
+  {
+   "cmd": "execute as @e[type=minecraft:marker,tag=jk] at @s run function nova_structures:jockey/spawn_chicken_jockey"
+  },
+  {
+   "cmd": "execute at DPTester1 run summon minecraft:marker ~ ~ ~ {Tags:[\"jk2\"]}"
+  },
+  {
+   "cmd": "execute as @e[type=minecraft:marker,tag=jk2] at @s run function nova_structures:jockey/spawn_hoglin_jockey"
+  },
+  {
+   "cmd": "execute as DPTester1 at @s run function nova_structures:miniboss/ghast_boss_summon_child"
+  },
+  {
+   "cmd": "advancement grant DPTester1 only nova_structures:adventure/conquer_barrack_captain"
+  },
+  {
+   "cmd": "advancement grant DPTester1 only nova_structures:charts/bundle_check"
+  },
+  {
+   "cmd": "execute as DPTester1 run locate structure #nova_structures:nova_structures_all"
+  },
+  {
+   "step": 100
+  },
+  {
+   "step": 300
+  }
+ ]
+}

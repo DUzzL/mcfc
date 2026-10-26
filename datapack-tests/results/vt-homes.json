@@ -1,6 +1,6 @@
 {
  "id": "vt-homes",
- "status": "FALLBACK-ISSUE",
+ "status": "OK",
  "kind": "function",
  "packs": [
   "vt-homes"
@@ -11,20 +11,15 @@
   "afterLoad": "READY_ON",
   "final": "READY_ON",
   "decisiveError": null,
-  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 50Total Function Count: 54"
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 54Total Function Count: 54"
  },
  "compile": {
   "found": 54,
-  "compiled": 50,
-  "rate": 0.9259,
+  "compiled": 54,
+  "rate": 1.0,
   "partialFallbackCommands": 4,
   "wholeFallbacks": {},
-  "compileFailures": [
-   "homes:rotate/player",
-   "homes:rotate/players",
-   "homes:try_to_set_home_name",
-   "homes:try_to_summon_destination"
-  ],
+  "compileFailures": [],
   "compilerErrors": [],
   "runtimeDisables": [],
   "topPartialReasons": {
@@ -36,42 +31,16 @@
   }
  },
  "debug": {
-  "header": "21 compiled | 0 vanilla | 4 errors | 0 too_big | 0 mcfc_off",
+  "header": "19 compiled | 0 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
   "functionsByStatus": {
-   "COMPILE_ERR": 4,
-   "compiled": 21
+   "compiled": 19
   },
-  "totalCalls": 647,
-  "vanillaCalls": 23,
-  "compiledCalls": 624,
-  "compiledCallShare": 0.9645,
-  "nonCompiled": [
-   {
-    "id": "homes:rotate/players",
-    "status": "COMPILE_ERR",
-    "calls": 14,
-    "vanillaCalls": 14
-   },
-   {
-    "id": "homes:rotate/player",
-    "status": "COMPILE_ERR",
-    "calls": 4,
-    "vanillaCalls": 4
-   },
-   {
-    "id": "homes:try_to_summon_destination",
-    "status": "COMPILE_ERR",
-    "calls": 4,
-    "vanillaCalls": 4
-   },
-   {
-    "id": "homes:try_to_set_home_name",
-    "status": "COMPILE_ERR",
-    "calls": 1,
-    "vanillaCalls": 1
-   }
-  ],
-  "nonCompiledCount": 4
+  "totalCalls": 621,
+  "vanillaCalls": 0,
+  "compiledCalls": 621,
+  "compiledCallShare": 1.0,
+  "nonCompiled": [],
+  "nonCompiledCount": 0
  },
  "compare": {
   "confirmedFindings": 0,
@@ -236,32 +205,32 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 0.19,
+   "median": 0.21,
    "min": 0.17,
    "max": 0.27,
    "lines": [
-    "Sprint completed with 3743 ticks per second, or 0.27 ms per tick",
-    "Sprint completed with 5180 ticks per second, or 0.19 ms per tick",
-    "Sprint completed with 5848 ticks per second, or 0.17 ms per tick"
+    "Sprint completed with 3734 ticks per second, or 0.27 ms per tick",
+    "Sprint completed with 4837 ticks per second, or 0.21 ms per tick",
+    "Sprint completed with 5904 ticks per second, or 0.17 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.21,
-   "min": 0.19,
+   "median": 0.23,
+   "min": 0.2,
    "max": 0.29,
    "lines": [
-    "Sprint completed with 3408 ticks per second, or 0.29 ms per tick",
-    "Sprint completed with 4715 ticks per second, or 0.21 ms per tick",
-    "Sprint completed with 5269 ticks per second, or 0.19 ms per tick"
+    "Sprint completed with 3494 ticks per second, or 0.29 ms per tick",
+    "Sprint completed with 4322 ticks per second, or 0.23 ms per tick",
+    "Sprint completed with 4976 ticks per second, or 0.20 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 48.9,
-  "base2": 48.9,
-  "mcfc": 56.0,
-  "perfbase": 45.9
+  "base1": 49.2,
+  "base2": 49.2,
+  "mcfc": 49.2,
+  "perfbase": 52.1
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

@@ -11,36 +11,21 @@
   "afterLoad": "READY_ON",
   "final": "READY_ON",
   "decisiveError": null,
-  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 118Total Function Count: 139"
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 133Total Function Count: 139"
  },
  "compile": {
   "found": 139,
-  "compiled": 118,
-  "rate": 0.8489,
+  "compiled": 133,
+  "rate": 0.9568,
   "partialFallbackCommands": 51,
   "wholeFallbacks": {},
   "compileFailures": [
-   "graves:location/list_graves/all",
    "graves:creation/create_loading_grave_listing",
-   "graves:location/show_grave_owner_maybe",
-   "graves:location/show_graves/all",
-   "graves:location/show_graves/self",
-   "graves:opening/access_grave",
-   "graves:creation/does_grave_item_match",
    "graves:opening/animate_shaking",
-   "graves:creation/fail_to_find_grave_item",
-   "graves:creation/fail_to_find_grave_item_at_death_marker",
    "graves:opening/attempt_fix_vehicle",
-   "graves:creation/initialize_grave_name_tag",
-   "graves:creation/items/check_next_pre_death_item_match",
    "graves:creation/items/pick_up_items_at_inventory_pos",
-   "graves:placement/move_side_marker_here",
-   "graves:creation/items/warn_of_missing_pre_death_items",
-   "graves:creation/show_new_grave_location",
    "graves:creation/update_grave_listing",
-   "graves:uninstall",
-   "graves:face_cardinal_direction",
-   "graves:update_allow_locating"
+   "graves:face_cardinal_direction"
   ],
   "compilerErrors": [],
   "runtimeDisables": [],
@@ -61,37 +46,16 @@
   }
  },
  "debug": {
-  "header": "6 compiled | 1 vanilla | 2 errors | 0 too_big | 0 mcfc_off",
+  "header": "6 compiled | 0 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
   "functionsByStatus": {
-   "COMPILE_ERR": 2,
-   "vanilla": 1,
    "compiled": 6
   },
-  "totalCalls": 221,
-  "vanillaCalls": 4,
+  "totalCalls": 217,
+  "vanillaCalls": 0,
   "compiledCalls": 217,
-  "compiledCallShare": 0.9819,
-  "nonCompiled": [
-   {
-    "id": "graves:update_allow_locating",
-    "status": "COMPILE_ERR",
-    "calls": 2,
-    "vanillaCalls": 2
-   },
-   {
-    "id": "graves:location/show_graves/self/-421141757",
-    "status": "vanilla",
-    "calls": 1,
-    "vanillaCalls": 1
-   },
-   {
-    "id": "graves:creation/fail_to_find_grave_item_at_death_marker",
-    "status": "COMPILE_ERR",
-    "calls": 1,
-    "vanillaCalls": 1
-   }
-  ],
-  "nonCompiledCount": 3
+  "compiledCallShare": 1.0,
+  "nonCompiled": [],
+  "nonCompiledCount": 0
  },
  "compare": {
   "confirmedFindings": 0,
@@ -256,32 +220,32 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 0.21,
-   "min": 0.17,
-   "max": 0.26,
+   "median": 0.19,
+   "min": 0.18,
+   "max": 0.24,
    "lines": [
-    "Sprint completed with 3834 ticks per second, or 0.26 ms per tick",
-    "Sprint completed with 4814 ticks per second, or 0.21 ms per tick",
-    "Sprint completed with 5714 ticks per second, or 0.17 ms per tick"
+    "Sprint completed with 4125 ticks per second, or 0.24 ms per tick",
+    "Sprint completed with 5225 ticks per second, or 0.19 ms per tick",
+    "Sprint completed with 5686 ticks per second, or 0.18 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.2,
-   "min": 0.19,
-   "max": 0.25,
+   "median": 0.22,
+   "min": 0.2,
+   "max": 0.26,
    "lines": [
-    "Sprint completed with 4078 ticks per second, or 0.25 ms per tick",
-    "Sprint completed with 4988 ticks per second, or 0.20 ms per tick",
-    "Sprint completed with 5249 ticks per second, or 0.19 ms per tick"
+    "Sprint completed with 3799 ticks per second, or 0.26 ms per tick",
+    "Sprint completed with 4504 ticks per second, or 0.22 ms per tick",
+    "Sprint completed with 5001 ticks per second, or 0.20 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 39.6,
-  "base2": 39.6,
+  "base1": 45.8,
+  "base2": 45.8,
   "mcfc": 39.0,
-  "perfbase": 37.0
+  "perfbase": 39.2
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

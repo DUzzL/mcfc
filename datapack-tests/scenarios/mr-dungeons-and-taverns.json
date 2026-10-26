@@ -1,0 +1,43 @@
+{
+ "steps": [
+  {
+   "step": 5
+  },
+  {
+   "cmd": "execute as DPTester1 run locate structure #nova_structures:nova_structures_overworld"
+  },
+  {
+   "cmd": "execute as DPTester1 run locate structure #nova_structures:nova_structures_underground"
+  },
+  {
+   "cmd": "execute as DPTester1 run locate structure #nova_structures:nova_structures_all"
+  },
+  {
+   "cmd": "execute in minecraft:the_nether positioned 0 64 0 run locate structure #nova_structures:nova_structures_nether"
+  },
+  {
+   "cmd": "execute as DPTester1 at @s run function nova_structures:check_structure"
+  },
+  {
+   "cmd": "execute as DPTester1 at @s run function nova_structures:jockey/spawn_chicken_jockey"
+  },
+  {
+   "cmd": "execute as DPTester1 at @s run summon minecraft:zombie ~ ~ ~4 {NoAI:1b}"
+  },
+  {
+   "cmd": "execute as DPTester1 at @s run function nova_structures:miniboss/ghast_boss_summon_child"
+  },
+  {
+   "cmd": "advancement grant DPTester1 only nova_structures:charts/bundle_check"
+  },
+  {
+   "cmd": "advancement grant DPTester1 only nova_structures:adventure/conquer_barrack_captain"
+  },
+  {
+   "step": 100
+  },
+  {
+   "step": 300
+  }
+ ]
+}

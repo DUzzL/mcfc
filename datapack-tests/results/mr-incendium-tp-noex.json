@@ -1,0 +1,321 @@
+{
+ "id": "mr-incendium-tp-noex",
+ "status": "DIFF",
+ "kind": "mixed",
+ "packs": [
+  "mr-incendium"
+ ],
+ "problems": [],
+ "notes": [],
+ "mcfcState": {
+  "afterLoad": "READY_ON",
+  "final": "READY_ON",
+  "decisiveError": null,
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 2312Total Function Count: 2314"
+ },
+ "compile": {
+  "found": 2314,
+  "compiled": 2312,
+  "rate": 0.9991,
+  "partialFallbackCommands": 255,
+  "wholeFallbacks": {},
+  "compileFailures": [
+   "incendium:item/multiplex_crossbow/arrow/arrow_init",
+   "incendium:item/scouts_battle_helm/helper"
+  ],
+  "compilerErrors": [],
+  "runtimeDisables": [],
+  "topPartialReasons": {
+   "Failed to parse any options @ execute": 89,
+   "Unknown command: attribute": 56,
+   "Unknown command: rotate": 50,
+   "Invalid integer": 15,
+   "Unknown command: damage": 11,
+   "Unknown command: bossbar": 8,
+   "Missing space after argument @ stopsound <targets:entity_selector[players]> <source:word>": 7,
+   "Unknown command: forceload": 5,
+   "Macros are not supported in this location": 4,
+   "Unknown command: spreadplayers": 3,
+   "Failed to parse any options @ execute store <store_location:result_store_location_type>": 2,
+   "Mixed positive and negated type options are resolved by vanilla": 1,
+   "Missing space after argument @ summon <entity:resource_location>": 1,
+   "Only one entity is allowed, but the provided selector allows more than one": 1,
+   "Combined type options are resolved by vanilla": 1
+  },
+  "unsupportedCommands": {
+   "attribute": 56,
+   "rotate": 50,
+   "damage": 11,
+   "bossbar": 8,
+   "forceload": 5,
+   "spreadplayers": 3,
+   "place": 1
+  }
+ },
+ "debug": {
+  "header": "14 compiled | 0 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
+  "functionsByStatus": {
+   "compiled": 14
+  },
+  "totalCalls": 1179,
+  "vanillaCalls": 0,
+  "compiledCalls": 1179,
+  "compiledCallShare": 1.0,
+  "nonCompiled": [],
+  "nonCompiledCount": 0
+ },
+ "compare": {
+  "confirmedFindings": 9,
+  "flakyFindings": 5,
+  "lowConfidence": 6,
+  "noise": 627,
+  "genFindings": 7,
+  "genNoise": 167,
+  "confirmation": {
+   "enabled": true,
+   "ran": true,
+   "onlyInSecondAttempt": 29
+  },
+  "sections": {
+   "blocks": {
+    "paths": 414,
+    "noise": 167,
+    "findings": 2,
+    "lowConfidence": 5
+   },
+   "bossbars": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "datapacks": {
+    "paths": 2,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "entities": {
+    "paths": 1318,
+    "noise": 381,
+    "findings": 5,
+    "lowConfidence": 1
+   },
+   "functionTags": {
+    "paths": 7,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functions": {
+    "paths": 2314,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "gamerules": {
+    "paths": 58,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "players": {
+    "paths": 186,
+    "noise": 12,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scheduled": {
+    "paths": 20,
+    "noise": 5,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scoreboard": {
+    "paths": 273,
+    "noise": 60,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "storage": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "world": {
+    "paths": 12,
+    "noise": 2,
+    "findings": 0,
+    "lowConfidence": 0
+   }
+  },
+  "confirmed": [
+   {
+    "path": "blocks[overworld].columns.7,3",
+    "base": "\"a2402a34874c8bc6c68c976b72f37c3d5eb17589fed86e52e9d7760abfd80002\"",
+    "mcfc": "\"fb4bf9c37dc11db158247b07eda9d624c643505d0235b9c1bc3823c5e6b2b372\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:bee#12].tags[2]",
+    "base": "\"in.eid_5\"",
+    "mcfc": "\"in.eid_2\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:the_nether.list[minecraft:piglin_brute#6].tags[1]",
+    "base": "\"in.activate_mid\"",
+    "mcfc": "\"in.activate_near\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:the_nether.list[minecraft:piglin_brute#6].tags[2]",
+    "base": "\"in.castle\"",
+    "mcfc": "\"in.alchemist\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:the_nether.list[minecraft:piglin_brute#6].tags[3]",
+    "base": "\"in.checked\"",
+    "mcfc": "\"in.castle\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.0,-5",
+    "base": "\"f9eed68ecd1fcbb0e86004b536497189318a9c83b8c069dfe853573c7af50bcb\"",
+    "mcfc": "\"d4db5b464725fbea7aa746a1137f2c76673114599bf6a208e8ff25888448052b\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.0,-6",
+    "base": "\"d1ced48ad4fb737912b886a75e621626d77552bea72b1252e63ee02300ee0fe3\"",
+    "mcfc": "\"bc81f6bf048810b60f02bc6c5abe3c442df794c1b76578dcc2121d48ee9a6435\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.2,-2",
+    "base": "\"1e6853f47a3b6186ddc067306b84256ce675b64063935f8e9e851b2653f098c4\"",
+    "mcfc": "\"b4eab3f27fc934c0e49083809815a6ef2cf714ed638be7766b2bfeb482b6b13c\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.7,3",
+    "base": "\"a2402a34874c8bc6c68c976b72f37c3d5eb17589fed86e52e9d7760abfd80002\"",
+    "mcfc": "\"fb4bf9c37dc11db158247b07eda9d624c643505d0235b9c1bc3823c5e6b2b372\"",
+    "dump": "gen"
+   }
+  ],
+  "flaky": [
+   {
+    "path": "blocks[overworld].columns.7,-1",
+    "base": "\"1d74cf44d0c0c5007a9549c44288aab1c3ec794f5f1583abd0eefbcdb6e502db\"",
+    "mcfc": "\"aad41b044f64bd91486afb7343926889e02ee457ee3e1225b74697a47a89f9aa\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:bee#12].tags[3]",
+    "base": "<missing>",
+    "mcfc": "\"in.eid_5\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.-3,-1",
+    "base": "\"f3952b170b62c9d6f3d3a4cc6cdda94f45f2de9ae89cc468ba6d7d47193eedd1\"",
+    "mcfc": "\"e39807c91651e638700c45070b2df463b1569f05f994315cb857d160c73ab7f5\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.-6,5",
+    "base": "\"8bf02b54adc6c51e392f586e866ffd8156965c8876eddb1adbba9c1c8b7c5266\"",
+    "mcfc": "\"fbff02346ef7fdd5b50a996259a7ac833bd10766c822bc868e26c77d04b0e427\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.7,-1",
+    "base": "\"1d74cf44d0c0c5007a9549c44288aab1c3ec794f5f1583abd0eefbcdb6e502db\"",
+    "mcfc": "\"aad41b044f64bd91486afb7343926889e02ee457ee3e1225b74697a47a89f9aa\"",
+    "dump": "gen"
+   }
+  ],
+  "lowConfidenceSample": [
+   {
+    "path": "blocks[overworld].columns.-3,-1",
+    "base": "\"81414cd191fc10c92f6e3411b18aa406bb2712eab499b82335b83e187faf6361\"",
+    "mcfc": "\"0fdfa8a6e3b8ed34969f4aadbf86fa14ca4adf72f064372c4cb2452b2094368a\""
+   },
+   {
+    "path": "blocks[overworld].columns.-6,5",
+    "base": "\"e55d1591637181ff0d66d7516212fcb41422577a20c88e1dd24dad669b352fc0\"",
+    "mcfc": "\"fdff58b71ac4173fb94adbc9632c31ee160aab3581f74c8fb9bcb79a7ef76ab1\""
+   },
+   {
+    "path": "blocks[overworld].columns.0,-5",
+    "base": "\"40e0654cc6803dc92f96de8d713f66ec4f067c999ea23149f7908cb4628012ea\"",
+    "mcfc": "\"808e1eb892d6b482e5730cc51f526deda4894f24b1d2172f8e4b31d3fbd8e1f6\""
+   },
+   {
+    "path": "blocks[overworld].columns.2,-2",
+    "base": "\"dc7746ef47d669cb2da57ad37c3d526c0fd65ea8b23963b886e36067dc026495\"",
+    "mcfc": "\"6da25cd1309881c2594cd0f5b2c9d3023a8b8244feb8f66945fd4154f8afa335\""
+   },
+   {
+    "path": "blocks[overworld].columns.6,-8",
+    "base": "\"da3d99a5c6f8988380d01270709c9910a28bd3064b01ba34e385b449c2a15655\"",
+    "mcfc": "\"6b2843af474d74f14e7fe0cff9d637e9a74754068c4fa07750790af9b81556a9\""
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#3].nbt",
+    "base": "\"{Age:742s,Health:5s,Invulnerable:0b,Item:{count:1,id:\\\"minecraft:sunflower\\\"},PickupDelay:0s,Tags:[\\\"in.checked\\\"]}\"",
+    "mcfc": "\"{Age:747s,Health:5s,Invulnerable:0b,Item:{count:1,id:\\\"minecraft:sunflower\\\"},PickupDelay:0s,Tags:[\\\"in.checked\\\"]}\""
+   }
+  ]
+ },
+ "exceptions": {
+  "base1": {
+   "com.mojang.authlib.exceptions.MinecraftClientException": {
+    "count": 1,
+    "first": "Failed to read from https://api.mojang.com/users/profiles/minecraft/dptester2 due to Read timed out"
+   },
+   "java.net.SocketTimeoutException": {
+    "count": 1,
+    "first": "Read timed out"
+   }
+  },
+  "base2": {},
+  "mcfc": {}
+ },
+ "exceptionTotals": {
+  "base1": 2,
+  "base2": 0,
+  "mcfc": 0
+ },
+ "exercise": {
+  "base1": null,
+  "base2": null,
+  "mcfc": null
+ },
+ "slowFunctions": {},
+ "perf": null,
+ "durationsSeconds": {
+  "base1": 84.8,
+  "base2": 84.8,
+  "mcfc": 73.9,
+  "attempt2-base1": 80.4,
+  "attempt2-base2": 81.5,
+  "attempt2-mcfc": 73.7
+ },
+ "gamerules": {
+  "command_chain_limit": "max_command_sequence_length",
+  "spawn_mobs": "spawn_mobs",
+  "spawn_monsters": "spawn_monsters",
+  "spawn_patrols": "spawn_patrols",
+  "spawn_wandering_traders": "spawn_wandering_traders",
+  "spawn_phantoms": "spawn_phantoms",
+  "spawn_wardens": "spawn_wardens",
+  "random_tick_speed": "random_tick_speed",
+  "weather_cycle": "advance_weather"
+ },
+ "ticks": 200,
+ "seed": "20261026"
+}
