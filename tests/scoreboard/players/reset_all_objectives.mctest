@@ -1,0 +1,24 @@
+; `scoreboard players reset <targets>` without an objective removes every score of the targets
+; (Guns++ `scoreboard players reset @e[scores={size_time=1000}]`). Compiled code left the scores in place.
+@setup
+objective create t dummy
+objective create u dummy
+
+@function run
+scoreboard players set #r1 t 1
+scoreboard players set #r1 u 2
+scoreboard players set #r2 t 3
+scoreboard players set #keep t 4
+scoreboard players reset #r1
+summon marker ~ ~ ~ {Tags:["mcfc_reset"]}
+scoreboard players set @e[type=marker,tag=mcfc_reset] u 1000
+scoreboard players set @e[type=marker,tag=mcfc_reset] t 5
+scoreboard players reset @e[type=marker,scores={u=1000}]
+execute store result score marker t run execute if score @e[type=marker,tag=mcfc_reset,limit=1] t matches 5
+execute store success score r2 u run scoreboard players reset #r2
+kill @e[type=marker,tag=mcfc_reset]
+
+@validate
+score #keep t is 4
+score marker t is 0
+score r2 u is 1

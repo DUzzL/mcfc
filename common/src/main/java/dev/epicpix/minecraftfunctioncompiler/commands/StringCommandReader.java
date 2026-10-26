@@ -955,6 +955,8 @@ public class StringCommandReader {
         ScoreHolderArgument scoreHolder = SelectorParser.parseScoreHolder(this, allowMultiple);
         if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_SCORE_ACCESSOR, "Invalid score accessor, expected space for next argument");
         String objective = readWord();
+        // At the end of the line skipArgumentWhitespace succeeds; `reset <targets>` must not become an empty objective.
+        if(objective.isEmpty()) throw createError(COMMAND_INVALID_SCORE_ACCESSOR, "Invalid score accessor, expected an objective");
         return new ScoreAccessorArgument(objective, scoreHolder);
     }
 
