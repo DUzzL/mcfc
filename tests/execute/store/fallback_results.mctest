@@ -1,0 +1,34 @@
+; Commands that run through vanilla (data modify … from, data modify entity, raw fallbacks) or have no compiled
+; result (kill, tellraw, schedule) used to make the whole function fall back under `execute store`
+; ("ResultContext success/result not implemented"). Their result and success now come from vanilla.
+@setup
+objective create t dummy
+
+@function run
+data remove storage mcfc-test:fb dst
+data remove storage mcfc-test:fb a
+data modify storage mcfc-test:fb src set value {a:1,b:"x"}
+execute store success score set t run data modify storage mcfc-test:fb dst set from storage mcfc-test:fb src
+execute store success score same t run data modify storage mcfc-test:fb dst set from storage mcfc-test:fb src
+execute store result score path t run data modify storage mcfc-test:fb a set from storage mcfc-test:fb src.a
+summon marker ~ ~ ~ {Tags:["mcfc_fb"]}
+summon marker ~ ~ ~ {Tags:["mcfc_fb"]}
+execute store success score ent t run data modify entity @e[type=marker,tag=mcfc_fb,limit=1] data.v set value 3
+execute store result score killed t run kill @e[type=marker,tag=mcfc_fb]
+execute store success score none t run kill @e[type=marker,tag=mcfc_fb]
+execute store success score msg t run tellraw @a "hi"
+execute store success score sched t run schedule function mcfc-test:noop 10t
+schedule clear mcfc-test:noop
+
+@function noop
+scoreboard players add noop t 1
+
+@validate
+score set t is 1
+score same t is 0
+score path t is 1
+score ent t is 1
+score killed t is 2
+score none t is 0
+score msg t is 0
+score sched t is 1

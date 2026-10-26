@@ -1,0 +1,14 @@
+; `execute rotated as <targets>` forks over every target (Armor Statues: `... rotated as @e[type=armor_stand,...]`).
+@setup
+objective create t dummy
+
+@function run
+summon marker ~ ~ ~ {Tags:["mcfc_rot"],Rotation:[90f,0f]}
+summon marker ~ ~ ~ {Tags:["mcfc_rot"],Rotation:[180f,0f]}
+execute if entity @e[type=marker,tag=mcfc_rot] rotated as @e[type=marker,tag=mcfc_rot] run scoreboard players add n t 1
+execute if entity @p[tag=mcfc_rot,scores={t=1112..1129}] rotated as @e[type=marker,tag=mcfc_rot] run scoreboard players add p t 1
+kill @e[type=marker,tag=mcfc_rot]
+
+@validate
+score n t is 2
+no_fallback

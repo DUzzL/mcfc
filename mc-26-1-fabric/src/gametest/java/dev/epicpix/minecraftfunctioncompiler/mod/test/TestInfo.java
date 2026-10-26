@@ -63,7 +63,7 @@ public record TestInfo(CompiledTest compiledTest) {
             var stateVanilla = McfcTestHelper.takeServerState(helper.getLevel().getServer());
 
             if(!stateCompiled.equals(stateVanilla)) {
-                throw helper.assertionException(Component.literal("vanilla execution results don't match compiled execution results"));
+                throw helper.assertionException(Component.literal("vanilla execution results don't match compiled execution results: compiled " + stateCompiled.objectives() + ", vanilla " + stateVanilla.objectives()));
             }
 
             compiledTest.validate(stateVanilla, message -> {

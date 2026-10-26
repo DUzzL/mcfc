@@ -68,7 +68,6 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_COMPILE_UNSUPPORTED_NBT_ACCESS;
-import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_COMPILE_UNSUPPORTED_NBT_MODIFY_ACCESS;
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_COMPILE_UNSUPPORTED_NBT_SOURCE_ACCESS;
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_COMPILE_UNSUPPORTED_STORE;
 import static dev.epicpix.minecraftfunctioncompiler.diagnostics.DiagnosticIds.COMMAND_COMPILE_UNSUPPORTED_TEXT;
@@ -173,7 +172,7 @@ public final class CommandCompiler {
                     context.writeInstruction(Instructions.setNbtStorage(storage, storageLocal));
                     result.updateResultValue(setCountLocal);
                 }else {
-                    throw new DiagnosticException(Diagnostic.compileError(COMMAND_COMPILE_UNSUPPORTED_NBT_MODIFY_ACCESS, context.getSource(), "Modifying nbt in block/entity is not implemented yet"));
+                    emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
                 }
             }
             case CommandDifficultySet(Difficulty difficulty) -> {
@@ -565,6 +564,11 @@ public final class CommandCompiler {
                 }
             }
             case CommandKill(SelectorArgument targets) -> {
+                // vanilla result: number of killed entities, failure without any; consumed results go to vanilla
+                if(result.generatingSuccess() || result.generatingResult()) {
+                    emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
+                    return;
+                }
                 try(var selector = context.forSelector(targets, result)) {
                     try(var world = context.getWorld()) {
                         selector.writeInstruction(Instructions.killEntity(selector.content(), world.content()));
@@ -758,6 +762,11 @@ public final class CommandCompiler {
                 }
             }
             case CommandTellraw(SelectorArgument playersArg, Text text) -> {
+                // vanilla result: number of players; consumed results go to vanilla
+                if(result.generatingSuccess() || result.generatingResult()) {
+                    emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
+                    return;
+                }
                 try(var players = context.forSelector(playersArg, result)) {
                     var playerLocation = context.<TServerPlayer>createLocal();
                     players.writeInstruction(Instructions.tryAsPlayer(playerLocation, players.content(), players.data().contextEndLabel()));
@@ -928,14 +937,29 @@ public final class CommandCompiler {
             }
             // schedule
             case CommandScheduleFunctionAppend(DataLocation function, int time) -> {
+                // vanilla result: the trigger game time; consumed results go to vanilla
+                if(result.generatingSuccess() || result.generatingResult()) {
+                    emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
+                    return;
+                }
                 // vanilla rejects a 0-tick delay (ERROR_SAME_TICK) without touching the schedule
                 if(time != 0) context.writeInstruction(Instructions.scheduleFunction(function.toString(), LocationData.ofInteger(time), true));
             }
             case CommandScheduleFunctionReplace(DataLocation function, int time) -> {
+                // vanilla result: the trigger game time; consumed results go to vanilla
+                if(result.generatingSuccess() || result.generatingResult()) {
+                    emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
+                    return;
+                }
                 // vanilla rejects a 0-tick delay (ERROR_SAME_TICK) without touching the schedule
                 if(time != 0) context.writeInstruction(Instructions.scheduleFunction(function.toString(), LocationData.ofInteger(time), false));
             }
             case CommandScheduleFunction(DataLocation function, int time) -> {
+                // vanilla result: the trigger game time; consumed results go to vanilla
+                if(result.generatingSuccess() || result.generatingResult()) {
+                    emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
+                    return;
+                }
                 // vanilla rejects a 0-tick delay (ERROR_SAME_TICK) without touching the schedule
                 if(time != 0) context.writeInstruction(Instructions.scheduleFunction(function.toString(), LocationData.ofInteger(time), false));
             }
@@ -1182,15 +1206,15 @@ public final class CommandCompiler {
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: slot mapping + item parsing),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandItemReplaceEntityWith(SelectorArgument targets, String slot, String item) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandItemReplaceEntityFromEntitySlot(SelectorArgument targets, String slot, SelectorArgument source, String sourceSlot) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandItemReplaceBlockWith(WorldCoordinates pos, String slot, String item) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandItemReplaceBlockFromEntitySlot(WorldCoordinates pos, String slot, SelectorArgument source, String sourceSlot) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandItemReplaceBlockFromBlockSlot(WorldCoordinates pos, String slot, WorldCoordinates sourcePos, String sourceSlot) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
 
             // scoreboard objectives setdisplay — native compilation
             case CommandScoreboardObjectivesSetdisplayClear(String slot) ->
@@ -1205,7 +1229,7 @@ public final class CommandCompiler {
                 context.writeInstruction(Instructions.addObjectiveDisplay(objective, criteria, displayLocal));
             }
             case CommandScoreboardObjectivesAddDisplayGreedy(String objective, String criteria, String displayName) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandScoreboardPlayersDisplayName(ScoreHolderArgument targets, String objective) -> {
                 try(var holder = context.forScoreHolder(targets, result)) {
                     context.writeInstruction(Instructions.scoreboardPlayersDisplayNameClear(holder.content(), objective));
@@ -1219,9 +1243,9 @@ public final class CommandCompiler {
                 }
             }
             case CommandScoreboardPlayersDisplayNameGreedy(ScoreHolderArgument targets, String objective, String displayName) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandScoreboardPlayersDisplayNameClear(ScoreHolderArgument targets) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandScoreboardObjectivesSetdisplay(String slot, String objective) ->
                 context.writeInstruction(Instructions.scoreboardSetdisplay(slot, objective));
             case CommandScoreboardPlayersDisplayNumberformatBlank(ScoreHolderArgument targets, String objective) -> {
@@ -1344,7 +1368,7 @@ public final class CommandCompiler {
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: entity NBT load/save + path resolution),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandExecuteStoreEntity(ResultStoreLocationType storeLocation, SelectorArgument target, NbtPath path, ResultStoreType storeType, double scale, CommandParams command) ->
-                emitVanillaFallback(context, sourceTextWithoutReturn(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceTextWithoutReturn(context, inputCommand));
 
             // execute on leasher / attacker / controller / owner / passengers
             case CommandExecuteOnLeasher(CommandParams command) -> {
@@ -1450,86 +1474,86 @@ public final class CommandCompiler {
                 if(destination instanceof NbtDataLocation.Storage(DataLocation storage)) {
                     compileDataModifyListOpValue(context, result, storage, path, setValue, 0);
                 } else {
-                    emitVanillaFallback(context, sourceText(context, inputCommand));
+                    emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
                 }
             }
             case CommandDataModifyAppendValue(NbtDataLocation destination, NbtPath path, NbtValue setValue) -> {
                 if(destination instanceof NbtDataLocation.Storage(DataLocation storage)) {
                     compileDataModifyListOpValue(context, result, storage, path, setValue, -1);
                 } else {
-                    emitVanillaFallback(context, sourceText(context, inputCommand));
+                    emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
                 }
             }
             case CommandDataModifyInsertValue(NbtDataLocation destination, NbtPath path, int index, NbtValue setValue) -> {
                 if(destination instanceof NbtDataLocation.Storage(DataLocation storage)) {
                     compileDataModifyListOpValue(context, result, storage, path, setValue, index);
                 } else {
-                    emitVanillaFallback(context, sourceText(context, inputCommand));
+                    emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
                 }
             }
 
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: runtime NBT path resolution + deep copy),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandDataModifySetFrom(NbtDataLocation destination, NbtPath path, NbtDataLocation source) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifySetFromPath(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifyPrependFrom(NbtDataLocation destination, NbtPath path, NbtDataLocation source) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifyPrependFromPath(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifyAppendFrom(NbtDataLocation destination, NbtPath path, NbtDataLocation source) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifyAppendFromPath(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifyInsertFrom(NbtDataLocation destination, NbtPath path, int index, NbtDataLocation source) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifyInsertFromPath(NbtDataLocation destination, NbtPath path, int index, NbtDataLocation source, NbtPath sourcePath) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifyMergeValue(NbtDataLocation destination, NbtPath path, NbtValue setValue) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifyMergeFrom(NbtDataLocation destination, NbtPath path, NbtDataLocation source) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifyMergeFromPath(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifySetString(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifySetStringStart(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath, int start) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifySetStringRange(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath, int start, int end) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifyAppendString(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifyAppendStringStart(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath, int start) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifyAppendStringRange(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath, int start, int end) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifyPrependString(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifyPrependStringStart(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath, int start) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifyPrependStringRange(NbtDataLocation destination, NbtPath path, NbtDataLocation source, NbtPath sourcePath, int start, int end) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifyInsertString(NbtDataLocation destination, NbtPath path, int index, NbtDataLocation source, NbtPath sourcePath) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifyInsertStringStart(NbtDataLocation destination, NbtPath path, int index, NbtDataLocation source, NbtPath sourcePath, int start) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandDataModifyInsertStringRange(NbtDataLocation destination, NbtPath path, int index, NbtDataLocation source, NbtPath sourcePath, int start, int end) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
 
             // data get — native for entity and storage; block through vanilla
             case CommandDataGetPath(NbtDataLocation source, NbtPath path) -> {
                 if(!(source instanceof NbtDataLocation.Block)) {
                     compileDataGet(context, result, source, path, null);
                 } else {
-                    emitVanillaFallback(context, sourceText(context, inputCommand));
+                    emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
                 }
             }
             case CommandDataGetPathScale(NbtDataLocation source, NbtPath path, double scale) -> {
                 if(!(source instanceof NbtDataLocation.Block)) {
                     compileDataGet(context, result, source, path, scale);
                 } else {
-                    emitVanillaFallback(context, sourceText(context, inputCommand));
+                    emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
                 }
             }
             case CommandDataGet(NbtDataLocation source) -> {
@@ -1545,39 +1569,39 @@ public final class CommandCompiler {
                         result.markImplemented();
                         result.updateResultValue(LocationData.ofInteger(1));
                     }
-                    case NbtDataLocation.Block _ -> emitVanillaFallback(context, sourceText(context, inputCommand));
+                    case NbtDataLocation.Block _ -> emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
                 }
             }
 
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: loot table resolution + item distribution),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandLootReplaceEntityLoot(SelectorArgument target, String slot, DataLocation loot) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandLootReplaceEntityKill(SelectorArgument target, String slot, SelectorArgument kill) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandLootReplaceBlockLoot(WorldCoordinates pos, String slot, DataLocation loot) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandLootReplaceBlockKill(WorldCoordinates pos, String slot, SelectorArgument kill) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandLootInsertLoot(WorldCoordinates pos, DataLocation loot) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandLootInsertKill(WorldCoordinates pos, SelectorArgument kill) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandLootGiveLoot(SelectorArgument players, DataLocation loot) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandLootGiveKill(SelectorArgument players, SelectorArgument kill) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandLootSpawnLoot(WorldCoordinates pos, DataLocation loot) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandLootSpawnKill(WorldCoordinates pos, SelectorArgument kill) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
 
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: loot function resolution + item modification),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandItemModifyEntity(SelectorArgument targets, String slot, String modifier) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandItemModifyBlock(WorldCoordinates pos, String slot, String modifier) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
 
             // effect — native compilation
             case CommandEffectGive(SelectorArgument targets, DataLocation effect) -> {
@@ -2122,29 +2146,29 @@ public final class CommandCompiler {
             // TODO: vanilla fallback — особого смысла делать нативными нету (bottleneck в MC API: loot table + fishing/mining context),
             //  но оставлены в fallback для того чтобы замерять нагрузку в spark
             case CommandLootSpawnFish(WorldCoordinates pos, DataLocation lootTable, WorldCoordinates pos2) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandLootSpawnMine(WorldCoordinates pos, WorldCoordinates pos2, String tool) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandLootSpawnMineMainhand(WorldCoordinates pos, WorldCoordinates pos2) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandLootSpawnMineOffhand(WorldCoordinates pos, WorldCoordinates pos2) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandLootInsertFish(WorldCoordinates pos, DataLocation lootTable, WorldCoordinates pos2) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandLootInsertMine(WorldCoordinates pos, WorldCoordinates pos2, String tool) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandLootInsertMineMainhand(WorldCoordinates pos, WorldCoordinates pos2) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandLootInsertMineOffhand(WorldCoordinates pos, WorldCoordinates pos2) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandLootGiveFish(SelectorArgument players, DataLocation lootTable, WorldCoordinates pos) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandLootGiveMine(SelectorArgument players, WorldCoordinates pos, String tool) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandLootGiveMineMainhand(SelectorArgument players, WorldCoordinates pos) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
             case CommandLootGiveMineOffhand(SelectorArgument players, WorldCoordinates pos) ->
-                emitVanillaFallback(context, sourceText(context, inputCommand));
+                emitVanillaFallbackWithResult(context, result, sourceText(context, inputCommand));
 
             // vanilla fallback for partial compilation
             // If the raw fallback still carries macro placeholders (e.g. `$damage @s
@@ -2157,7 +2181,7 @@ public final class CommandCompiler {
                         COMMAND_COMPILE_RESULT_NOT_IMPLEMENTED, context.getSource(),
                         "`return` inside an unparsed command would be swallowed; falling back the whole function"));
                 }
-                emitVanillaFallback(context, rawCommand);
+                emitVanillaFallbackWithResult(context, result, rawCommand);
             }
             case CommandAdvancementGrantOnly(SelectorArgument targets, DataLocation advancement) -> {
                 try(var players = context.forSelector(targets, result)) {
