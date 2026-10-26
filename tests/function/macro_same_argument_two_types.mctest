@@ -1,0 +1,18 @@
+; One macro argument used as text and as an integer in the same function (Armor Stand Arms
+; `config/save_config`). Both typed copies shared one register, so the body failed bytecode verification
+; ("java/lang/String is not assignable from integer") and the whole function fell back to vanilla.
+@setup
+objective create t dummy
+
+@function m
+$data modify storage mcfc-test:mt v set value $(x)
+$scoreboard players set #m t $(x)
+data modify storage mcfc-test:mt s set value "$(x)"
+
+@function run
+function mcfc-test:m {x:7}
+execute store result score v t run data get storage mcfc-test:mt v
+
+@validate
+score #m t is 7
+score v t is 7

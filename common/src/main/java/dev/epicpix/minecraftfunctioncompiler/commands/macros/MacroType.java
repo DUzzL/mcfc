@@ -21,6 +21,11 @@ public final class MacroType<T> {
         return type;
     }
 
+    /** Key of a macro body parameter: one argument used with two types is passed twice, once per type. */
+    public static String parameterKey(String source, MacroType<?> type) {
+        return source + "#" + type.getType().getName();
+    }
+
     public int hashCode() {
         return type.hashCode();
     }

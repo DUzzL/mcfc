@@ -23,7 +23,7 @@ public record MacroTemplate<T>(List<MacroPart> parts, MacroType<T> macroType) {
             }else {
                 var part = parts.getFirst();
                 if(part instanceof MacroKind macro) {
-                    return Objects.requireNonNull(context.getMacro(macro.source));
+                    return Objects.requireNonNull(context.getMacro(MacroType.parameterKey(macro.source, macroType)));
                 }else if(part instanceof LiteralKind<?>(Object literal)) {
                     var staticContent = context.codeWriter().createRegister();
                     if(macroType == MacroType.INT_MACRO_TYPE) {
@@ -40,7 +40,7 @@ public record MacroTemplate<T>(List<MacroPart> parts, MacroType<T> macroType) {
         ArrayList<BytecodeValue> concatArgs = new ArrayList<>();
         for(var part : parts) {
             if(part instanceof MacroKind macro) {
-                concatArgs.add(Objects.requireNonNull(context.getMacro(macro.source)));
+                concatArgs.add(Objects.requireNonNull(context.getMacro(MacroType.parameterKey(macro.source, macroType))));
             }else if(part instanceof LiteralKind<?>(Object literal)) {
                 if(macroType == MacroType.STRING_MACRO_TYPE) {
                     concatArgs.add(new BytecodeValue.StringValue((String) literal));

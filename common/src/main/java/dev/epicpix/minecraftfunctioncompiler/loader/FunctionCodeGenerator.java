@@ -192,7 +192,11 @@ public class FunctionCodeGenerator {
         BytecodeValue nbtTagToBytecodeString(EmitterContext context, String key, @Nullable BytecodeLabel errorLabel);
     }
 
-    private record MacroInput(String source, MacroType<?> type) {}
+    private record MacroInput(String source, MacroType<?> type) {
+        String key() {
+            return MacroType.parameterKey(source, type);
+        }
+    }
 
     private static void writeMacroInstanceCreation(NbtTagBytecodeStringGenerator nbtStringGenerator, ClassDesc className, String instancedMethodName, BytecodeLabel errorLabel, EmitterContext context, List<Instruction> macroInstructions, List<MacroInput> macroInputs, ClassDesc commandSourceStackType) {
         context.codeWriter().conditionalJump(JumpCondition.EQ, context.getStatic("FunctionCompound"), new BytecodeValue.NullValue(), errorLabel);
@@ -331,7 +335,7 @@ public class FunctionCodeGenerator {
         boolean hasMacros = !macroInputs.isEmpty();
         String bodyName = hasMacros ? BatchClassPlanner.instancedMethodName(base) : base;
         var bodyType = hasMacros ? macroBodyType(env, macroInputs) : env.entryType();
-        var outlineTargets = new OutlineTargets(ownerClass, bodyName, bodyType, hasMacros ? macroInputs.stream().map(MacroInput::source).toList() : null);
+        var outlineTargets = new OutlineTargets(ownerClass, bodyName, bodyType, hasMacros ? macroInputs.stream().map(MacroInput::key).toList() : null);
 
         var bodies = new ArrayList<List<BytecodeInstruction>>(chunks.size());
         for(int i = 0; i < chunks.size(); ) {
@@ -619,7 +623,7 @@ public class FunctionCodeGenerator {
             for(int i = 0; i < macroInputs.size(); i++) {
                 var register = writer.createRegister();
                 writer.setValue(register, params.get(i + 1));
-                macroLocations.put(macroInputs.get(i).source(), register);
+                macroLocations.put(macroInputs.get(i).key(), register);
             }
         }
         new EmitterContext(key, env.params().codeFieldStorage(), writer, env.compiledFunctions(), staticArguments, macroLocations, instructions, env.resolver()).emitForEach();
