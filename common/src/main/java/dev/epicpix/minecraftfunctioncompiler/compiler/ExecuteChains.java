@@ -71,10 +71,12 @@ final class ExecuteChains {
             || (selector.limit() != null && selector.limit() <= 1);
     }
 
-    /** True when the chain starting at {@code command} contains a {@code return} (as a modifier or its terminal). */
+    /** True when the chain starting at {@code command} contains a {@code return} (as a modifier or its terminal),
+     * including a vanilla fallback terminal that may run one. */
     static boolean containsReturn(CommandParams command) {
         for(CommandParams current = command; current != null; current = isModifier(current) ? innerCommand(current) : null) {
             if(current instanceof CommandReturnValue || current instanceof CommandReturnFail || current instanceof CommandReturnRun) return true;
+            if(current instanceof CommandFallbackVanilla(String rawCommand) && CommandCompiler.mayContainReturn(rawCommand)) return true;
         }
         return false;
     }

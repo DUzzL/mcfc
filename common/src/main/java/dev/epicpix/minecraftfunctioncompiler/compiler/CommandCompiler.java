@@ -2176,12 +2176,17 @@ public final class CommandCompiler {
             // function's CompoundTag macro args via LOAD_MACRO + the _DYNAMIC variant.
             case CommandFallbackVanilla(String rawCommand) -> {
                 if(mayContainReturn(rawCommand)) {
-                    // Vanilla would swallow the `return` inside a separately dispatched command (C8).
-                    throw new DiagnosticException(Diagnostic.compileError(
-                        COMMAND_COMPILE_RESULT_NOT_IMPLEMENTED, context.getSource(),
-                        "`return` inside an unparsed command would be swallowed; falling back the whole function"));
+                    if(result.tracking()) {
+                        // Vanilla would swallow the `return` inside a separately dispatched command (C8); a return
+                        // observed at runtime cannot be ordered against store/return callbacks of the chain.
+                        throw new DiagnosticException(Diagnostic.compileError(
+                            COMMAND_COMPILE_RESULT_NOT_IMPLEMENTED, context.getSource(),
+                            "`return` inside an unparsed command would be swallowed; falling back the whole function"));
+                    }
+                    emitVanillaFallbackReturning(context, result, rawCommand);
+                }else {
+                    emitVanillaFallbackWithResult(context, result, rawCommand);
                 }
-                emitVanillaFallbackWithResult(context, result, rawCommand);
             }
             case CommandAdvancementGrantOnly(SelectorArgument targets, DataLocation advancement) -> {
                 try(var players = context.forSelector(targets, result)) {
@@ -2961,7 +2966,7 @@ public final class CommandCompiler {
      * appears in command position. A placeholder anywhere inside an `execute` chain (before its
      * final `run`, or in a final `execute` segment) can expand to `… run return …`.
      * False positives only cost a whole-function fallback. */
-    private static boolean mayContainReturn(String text) {
+    static boolean mayContainReturn(String text) {
         var segments = RUN_SEPARATOR.split(text, -1);
         for(int i = 0; i < segments.length; i++) {
             var segment = segments[i];
@@ -3046,6 +3051,34 @@ public final class CommandCompiler {
             context.writeInstruction(Instructions.extractReturnResult(resultValue, returnValue));
             result.updateResultValue(resultValue);
         }
+    }
+
+    /** Vanilla fallback that may run `return` (literally or after macro substitution) without store/return
+     * callbacks around it: the helper runs it in a frame whose return is observable, and a return it executed
+     * leaves the compiled function with the same value (vanilla runs the line in the function's frame). */
+    private static void emitVanillaFallbackReturning(CompilationContext context, ResultContext result, String command) {
+        result.markImplemented();
+        var stack = makeCurrentCommandSourceStack(context);
+        var returnValue = context.<Long>createLocal();
+        if(isMacroText(context, command)) {
+            var resolved = context.getResolvedStringMacro(parseVanillaMacroTemplate(command));
+            context.writeInstruction(Instructions.executeVanillaCommandReturningDynamic(returnValue, stack, resolved));
+        } else {
+            context.writeInstruction(Instructions.executeVanillaCommandReturning(returnValue, stack, command));
+        }
+        var writer = context.instructionWriter;
+        var continueLabel = writer.createDeferredLabel();
+        var failedLabel = writer.createDeferredLabel();
+        context.writeInstruction(Instructions.jumpIfVoidReturnValue(returnValue, continueLabel));
+        var failedValue = context.<Integer>createLocal();
+        context.writeInstruction(Instructions.extractReturnSuccess(failedValue, returnValue));
+        context.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, failedValue, LocationData.ofInteger(0), failedLabel));
+        var resultValue = context.<Integer>createLocal();
+        context.writeInstruction(Instructions.extractReturnResult(resultValue, returnValue));
+        context.writeInstruction(Instructions.returnSuccess(resultValue));
+        context.writeInstruction(Instructions.label(failedLabel));
+        context.writeInstruction(Instructions.returnFail());
+        context.writeInstruction(Instructions.label(continueLabel));
     }
 
     /** Native command whose helper returns the compiled-function return encoding (COMMAND_FAILED, or the

@@ -1,0 +1,35 @@
+; Like macro_fallback_line, without macros (an execute modifier the parser does not know sends the whole line to
+; vanilla) and inside a compiled fork (only the command after `run` falls back, once per source): a `return` the
+; fallback executes leaves the compiled function, so the remaining sources and lines do not run.
+@setup
+objective create t dummy
+
+@function static
+execute facing entity @e[type=minecraft:marker,tag=mt,limit=1] eyes if score #go t matches 1 run return 7
+scoreboard players add #after t 1
+return 1
+
+@function forked
+$execute as @e[type=minecraft:marker,tag=mt] run $(c)
+scoreboard players add #after_fork t 1
+return 1
+
+@function run
+summon minecraft:marker ~ ~ ~ {Tags:["mt"]}
+summon minecraft:marker ~ ~ ~ {Tags:["mt"]}
+scoreboard players set #go t 1
+execute store result score static_on t run function mcfc-test:static
+scoreboard players set #go t 0
+execute store result score static_off t run function mcfc-test:static
+execute store result score forked_return t run function mcfc-test:forked {c:"return 4"}
+execute store result score forked_add t run function mcfc-test:forked {c:"scoreboard players add #fork t 1"}
+kill @e[type=minecraft:marker,tag=mt]
+
+@validate
+score static_on t is 7
+score static_off t is 1
+score #after t is 1
+score forked_return t is 4
+score forked_add t is 1
+score #fork t is 2
+score #after_fork t is 1

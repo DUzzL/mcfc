@@ -1013,6 +1013,14 @@
 @EXECUTE_VANILLA_COMMAND_WITH_RESULT_DYNAMIC(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <java.lang.String> [ctx:command]) -> long
   = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.executeVanillaCommandWithResultDynamic([ctx:stack], [ctx:command]);
 
+// vanilla fallback that may execute `return` in the function's frame.
+// Returns the no-return sentinel (2L << 32) when it did not return, else the frame return in compiled-function encoding.
+@EXECUTE_VANILLA_COMMAND_RETURNING(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <java.lang.String> [instr:command]) -> long
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.executeVanillaCommandReturning([ctx:stack], [instr:command]);
+
+@EXECUTE_VANILLA_COMMAND_RETURNING_DYNAMIC(<net.minecraft.commands.CommandSourceStack> [ctx:stack], <java.lang.String> [ctx:command]) -> long
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.executeVanillaCommandReturningDynamic([ctx:stack], [ctx:command]);
+
 // scoreboard objectives
 @REMOVE_OBJECTIVE(mut <net.minecraft.server.ServerScoreboard> [static:Scoreboard], <java.lang.String> [instr:objective]) {
   [local:obj] = [static:Scoreboard].getObjective([instr:objective]);

@@ -1484,6 +1484,22 @@ public class ExtensionFunctions {
         return chain == null ? COMMAND_FAILED : runFallbackWithResult(stack, command, chain);
     }
 
+    /**
+     * Runs a vanilla command that may execute {@code return} (directly, or after macro substitution). Returns
+     * {@link VanillaFunctionCall#NO_RETURN} when it did not return, otherwise the frame return in compiled
+     * encoding: {@code value} on success, {@code 1 << 32 | value} on failure. Vanilla runs a function line in
+     * the function's frame, so its {@code return} leaves the function; the caller returns this value.
+     */
+    public static long executeVanillaCommandReturning(CommandSourceStack stack, String command) {
+        var chain = fallbackChain(stack.getServer(), command, false);
+        return chain == null ? VanillaFunctionCall.NO_RETURN : runFallbackReturning(stack, command, chain);
+    }
+
+    public static long executeVanillaCommandReturningDynamic(CommandSourceStack stack, String command) {
+        var chain = fallbackChain(stack.getServer(), command, true);
+        return chain == null ? VanillaFunctionCall.NO_RETURN : runFallbackReturning(stack, command, chain);
+    }
+
     public static void executeVanillaCommand(CommandSourceStack stack, String command) {
         var chain = fallbackChain(stack.getServer(), command, false);
         if (chain != null) runFallback(stack, command, chain);
@@ -1575,7 +1591,30 @@ public class ExtensionFunctions {
         return out[0];
     }
 
+    /** Receives the return of a fallback's top frame; {@code returned} is set when the frame was discarded. */
+    private static final class FallbackReturn implements CommandResultCallback {
+        boolean returned;
+        long result = COMMAND_FAILED;
+
+        @Override
+        public void onResult(boolean success, int value) {
+            result = success ? Integer.toUnsignedLong(value) : COMMAND_FAILED | Integer.toUnsignedLong(value);
+        }
+    }
+
+    private static long runFallbackReturning(CommandSourceStack stack, String command, com.mojang.brigadier.context.ContextChain<CommandSourceStack> chain) {
+        var frameReturn = new FallbackReturn();
+        runFallback(stack, command, chain, frameReturn);
+        // Every vanilla return path (return <value>|fail|run, FallthroughTask, a callee sharing the frame) discards
+        // the frame. A discard without a reported value (a throwing modifier after `return run`) counts as failure.
+        return frameReturn.returned ? frameReturn.result : VanillaFunctionCall.NO_RETURN;
+    }
+
     private static void runFallback(CommandSourceStack stack, String command, com.mojang.brigadier.context.ContextChain<CommandSourceStack> chain) {
+        runFallback(stack, command, chain, null);
+    }
+
+    private static void runFallback(CommandSourceStack stack, String command, com.mojang.brigadier.context.ContextChain<CommandSourceStack> chain, @Nullable FallbackReturn frameReturn) {
         // Vanilla's Commands.executeCommandInContext checks the thread-local
         // CURRENT_EXECUTION_CONTEXT: if non-null (we're already inside a
         // running command's ExecutionContext), it just queues the command in
@@ -1592,7 +1631,18 @@ public class ExtensionFunctions {
         try {
             Commands.executeCommandInContext(stack, context -> {
                 used[0] = context;
-                ExecutionContext.queueInitialCommandExecution(context, command, chain, stack, CommandResultCallback.EMPTY);
+                if (frameReturn == null) {
+                    ExecutionContext.queueInitialCommandExecution(context, command, chain, stack, CommandResultCallback.EMPTY);
+                } else {
+                    // Same top frame as queueInitialCommandExecution in a fresh context, with an observable discard.
+                    var discard = context.frameControlForDepth(0);
+                    context.queueNext(new net.minecraft.commands.execution.CommandQueueEntry<>(
+                        new net.minecraft.commands.execution.Frame(0, frameReturn, () -> {
+                            frameReturn.returned = true;
+                            discard.discard();
+                        }),
+                        new net.minecraft.commands.execution.tasks.BuildContexts.TopLevel<>(command, chain, stack)));
+                }
             });
         } catch (CommandLimitAbort e) {
             throw e;

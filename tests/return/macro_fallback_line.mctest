@@ -1,0 +1,52 @@
+; A macro line that does not parse before its `run` (here a placeholder in a storage path) may `return`, also when
+; the substituted text only contains it. The whole function used to fall back to vanilla (the test then fails on
+; loaded != total functions). The line now runs through vanilla on its own, and a `return` it executes leaves the
+; compiled function with the same value.
+@setup
+objective create t dummy
+
+@function value
+$execute if data storage mcfc-test:s flags.$(k) run return 5
+scoreboard players add #after t 1
+return 1
+
+@function fail
+$execute if data storage mcfc-test:s flags.$(k) run return fail
+scoreboard players add #after t 1
+return 1
+
+@function run_no_return
+$execute if data storage mcfc-test:s flags.$(k) run return run function mcfc-test:no_return
+scoreboard players add #after t 1
+return 1
+
+@function no_return
+scoreboard players add #no_return t 1
+
+@function no_literal_return
+$execute if data storage mcfc-test:s flags.$(k) run scoreboard players add #plain t 1
+scoreboard players add #after t 1
+return 2
+
+@function run
+data modify storage mcfc-test:s flags.on set value 1b
+execute store result score value_on t run function mcfc-test:value {k:"on"}
+execute store result score value_off t run function mcfc-test:value {k:"off"}
+execute store success score fail_on t run function mcfc-test:fail {k:"on"}
+execute store success score fail_off t run function mcfc-test:fail {k:"off"}
+execute store success score run_on t run function mcfc-test:run_no_return {k:"on"}
+execute store result score run_off t run function mcfc-test:run_no_return {k:"off"}
+execute store result score plain_on t run function mcfc-test:no_literal_return {k:"on"}
+data remove storage mcfc-test:s flags
+
+@validate
+score value_on t is 5
+score value_off t is 1
+score fail_on t is 0
+score fail_off t is 1
+score run_on t is 0
+score run_off t is 1
+score plain_on t is 2
+score #no_return t is 1
+score #plain t is 1
+score #after t is 4

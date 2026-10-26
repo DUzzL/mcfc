@@ -64,7 +64,7 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
     private static final HexFormat HEX = HexFormat.of();
 
     // ── Cache constants ────────────────────────────────────────────────────────
-    private static final String CACHE_VERSION      = "v2.8";
+    private static final String CACHE_VERSION      = "v2.9";
     private static final String CACHE_MANIFEST     = "manifest.json";
     private static final String CACHE_DATA_PREFIX  = "data/";
     private static final String CACHE_BATCH_PREFIX = "batch/";
