@@ -1,0 +1,171 @@
+{
+ "runs": [
+  {
+   "index": 1,
+   "config": "vanilla",
+   "rc": 0,
+   "seconds": 132.6,
+   "mspt": [
+    21.65,
+    21.13,
+    20.69
+   ],
+   "median": 21.13,
+   "min": 20.69,
+   "max": 21.65,
+   "lines": [
+    "Sprint completed with 46 ticks per second, or 21.65 ms per tick",
+    "Sprint completed with 47 ticks per second, or 21.13 ms per tick",
+    "Sprint completed with 48 ticks per second, or 20.69 ms per tick"
+   ],
+   "error": null,
+   "mcfcState": null,
+   "jarSha256": null
+  },
+  {
+   "index": 2,
+   "config": "old",
+   "rc": 0,
+   "seconds": 133.0,
+   "mspt": [
+    19.75,
+    19.32,
+    19.55
+   ],
+   "median": 19.55,
+   "min": 19.32,
+   "max": 19.75,
+   "lines": [
+    "Sprint completed with 50 ticks per second, or 19.75 ms per tick",
+    "Sprint completed with 51 ticks per second, or 19.32 ms per tick",
+    "Sprint completed with 51 ticks per second, or 19.55 ms per tick"
+   ],
+   "error": null,
+   "mcfcState": "READY_ON",
+   "jarSha256": "fca3ca87409825f94361fa4e189433dcced4f759e339f2b7bc1999eb69d81ed0"
+  },
+  {
+   "index": 3,
+   "config": "new",
+   "rc": 0,
+   "seconds": 132.2,
+   "mspt": [
+    19.7,
+    19.77,
+    18.81
+   ],
+   "median": 19.7,
+   "min": 18.81,
+   "max": 19.77,
+   "lines": [
+    "Sprint completed with 50 ticks per second, or 19.70 ms per tick",
+    "Sprint completed with 50 ticks per second, or 19.77 ms per tick",
+    "Sprint completed with 53 ticks per second, or 18.81 ms per tick"
+   ],
+   "error": null,
+   "mcfcState": "READY_ON",
+   "jarSha256": "5f2c1a7e1971f44c8106c7472ecb704e1ef97f5761eb41aa8226e49adffd1792"
+  },
+  {
+   "index": 4,
+   "config": "new",
+   "rc": 0,
+   "seconds": 134.8,
+   "mspt": [
+    19.18,
+    18.71,
+    19.07
+   ],
+   "median": 19.07,
+   "min": 18.71,
+   "max": 19.18,
+   "lines": [
+    "Sprint completed with 52 ticks per second, or 19.18 ms per tick",
+    "Sprint completed with 53 ticks per second, or 18.71 ms per tick",
+    "Sprint completed with 52 ticks per second, or 19.07 ms per tick"
+   ],
+   "error": null,
+   "mcfcState": "READY_ON",
+   "jarSha256": "5f2c1a7e1971f44c8106c7472ecb704e1ef97f5761eb41aa8226e49adffd1792"
+  },
+  {
+   "index": 5,
+   "config": "old",
+   "rc": 0,
+   "seconds": 133.3,
+   "mspt": [
+    19.5,
+    18.9,
+    21.61
+   ],
+   "median": 19.5,
+   "min": 18.9,
+   "max": 21.61,
+   "lines": [
+    "Sprint completed with 51 ticks per second, or 19.50 ms per tick",
+    "Sprint completed with 52 ticks per second, or 18.90 ms per tick",
+    "Sprint completed with 46 ticks per second, or 21.61 ms per tick"
+   ],
+   "error": null,
+   "mcfcState": "READY_ON",
+   "jarSha256": "fca3ca87409825f94361fa4e189433dcced4f759e339f2b7bc1999eb69d81ed0"
+  },
+  {
+   "index": 6,
+   "config": "vanilla",
+   "rc": 0,
+   "seconds": 118.2,
+   "mspt": [
+    18.42,
+    18.07,
+    17.3
+   ],
+   "median": 18.07,
+   "min": 17.3,
+   "max": 18.42,
+   "lines": [
+    "Sprint completed with 54 ticks per second, or 18.42 ms per tick",
+    "Sprint completed with 55 ticks per second, or 18.07 ms per tick",
+    "Sprint completed with 57 ticks per second, or 17.30 ms per tick"
+   ],
+   "error": null,
+   "mcfcState": null,
+   "jarSha256": null
+  }
+ ],
+ "summary": {
+  "vanilla": {
+   "medianOfRunMedians": 19.6,
+   "medianAllSprints": 19.555,
+   "min": 17.3,
+   "max": 21.65,
+   "medianFirstSprints": null,
+   "minFirstSprints": null,
+   "maxFirstSprints": null,
+   "runs": 2,
+   "jarSha256": null
+  },
+  "old": {
+   "medianOfRunMedians": 19.525,
+   "medianAllSprints": 19.525,
+   "min": 18.9,
+   "max": 21.61,
+   "medianFirstSprints": null,
+   "minFirstSprints": null,
+   "maxFirstSprints": null,
+   "runs": 2,
+   "jarSha256": "fca3ca87409825f94361fa4e189433dcced4f759e339f2b7bc1999eb69d81ed0"
+  },
+  "new": {
+   "medianOfRunMedians": 19.385,
+   "medianAllSprints": 19.125,
+   "min": 18.71,
+   "max": 19.77,
+   "medianFirstSprints": null,
+   "minFirstSprints": null,
+   "maxFirstSprints": null,
+   "runs": 2,
+   "jarSha256": "5f2c1a7e1971f44c8106c7472ecb704e1ef97f5761eb41aa8226e49adffd1792"
+  }
+ }
+}

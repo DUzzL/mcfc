@@ -1,6 +1,6 @@
 {
  "id": "mr-functions-all",
- "status": "FALLBACK-ISSUE",
+ "status": "OK",
  "kind": "function",
  "packs": [
   "bacap",
@@ -17,34 +17,23 @@
   "mr-orbital-strike-cannon: pack_format patched (manifest): pack_format 108 -> 121; added min_format/max_format [121, 0] (required for formats above 81)"
  ],
  "mcfcJar": {
-  "name": "mcfc-bfaa7efd.jar",
-  "sha256": "fca3ca87409825f94361fa4e189433dcced4f759e339f2b7bc1999eb69d81ed0",
-  "mtime": "2026-10-26 13:45:38"
+  "name": "mcfc-retfix.jar",
+  "sha256": "5f2c1a7e1971f44c8106c7472ecb704e1ef97f5761eb41aa8226e49adffd1792",
+  "mtime": "2026-10-26 15:02:24"
  },
  "mcfcState": {
   "afterLoad": "READY_ON",
   "final": "READY_ON",
   "decisiveError": null,
-  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 5829Total Function Count: 5839"
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 5839Total Function Count: 5839"
  },
  "compile": {
   "found": 5839,
-  "compiled": 5829,
-  "rate": 0.9983,
+  "compiled": 5839,
+  "rate": 1.0,
   "partialFallbackCommands": 262,
   "wholeFallbacks": {},
-  "compileFailures": [
-   "armor_stand_arms:app/arms/right_click/change_arms",
-   "stm:queue/load_next",
-   "stm:queue/visit",
-   "timberstrike:main/handle",
-   "veinminer:block_add",
-   "veinminer:block_edit",
-   "veinminer:internal/check/_loopi",
-   "veinminer:internal/mine/_loopi",
-   "veinminer:tool_add",
-   "veinminer:tool_edit"
-  ],
+  "compileFailures": [],
   "compilerErrors": [],
   "runtimeDisables": [],
   "topPartialReasons": {
@@ -71,22 +60,16 @@
   }
  },
  "debug": {
-  "header": "5467 compiled | 8 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
+  "header": "5467 compiled | 4 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
   "functionsByStatus": {
-   "vanilla": 8,
+   "vanilla": 4,
    "compiled": 5467
   },
-  "totalCalls": 17946,
-  "vanillaCalls": 3106,
+  "totalCalls": 15715,
+  "vanillaCalls": 875,
   "compiledCalls": 14840,
-  "compiledCallShare": 0.8269,
+  "compiledCallShare": 0.9443,
   "nonCompiled": [
-   {
-    "id": "veinminer:internal/check/_loopi/164062945",
-    "status": "vanilla",
-    "calls": 2205,
-    "vanillaCalls": 2205
-   },
    {
     "id": "stm:detection/scan_owned/111972752",
     "status": "vanilla",
@@ -100,43 +83,25 @@
     "vanillaCalls": 425
    },
    {
-    "id": "veinminer:block_add/1460620541",
-    "status": "vanilla",
-    "calls": 18,
-    "vanillaCalls": 18
-   },
-   {
     "id": "veinminer:block_edit/50511133",
     "status": "vanilla",
     "calls": 18,
     "vanillaCalls": 18
    },
    {
-    "id": "veinminer:tool_add/1460620541",
-    "status": "vanilla",
-    "calls": 7,
-    "vanillaCalls": 7
-   },
-   {
     "id": "veinminer:tool_edit/50511133",
     "status": "vanilla",
     "calls": 7,
     "vanillaCalls": 7
-   },
-   {
-    "id": "armor_stand_arms:app/arms/right_click/change_arms/2616282",
-    "status": "vanilla",
-    "calls": 1,
-    "vanillaCalls": 1
    }
   ],
-  "nonCompiledCount": 8
+  "nonCompiledCount": 4
  },
  "compare": {
   "confirmedFindings": 0,
   "flakyFindings": 0,
-  "lowConfidence": 12,
-  "noise": 2640,
+  "lowConfidence": 11,
+  "noise": 2631,
   "genFindings": null,
   "genNoise": null,
   "confirmation": {
@@ -163,10 +128,10 @@
     "lowConfidence": 0
    },
    "entities": {
-    "paths": 7438,
-    "noise": 2633,
+    "paths": 7518,
+    "noise": 2631,
     "findings": 0,
-    "lowConfidence": 12
+    "lowConfidence": 11
    },
    "functionTags": {
     "paths": 47,
@@ -194,13 +159,13 @@
    },
    "scheduled": {
     "paths": 16,
-    "noise": 4,
+    "noise": 0,
     "findings": 0,
     "lowConfidence": 0
    },
    "scoreboard": {
     "paths": 2358,
-    "noise": 1,
+    "noise": 0,
     "findings": 0,
     "lowConfidence": 0
    },
@@ -212,7 +177,7 @@
    },
    "world": {
     "paths": 12,
-    "noise": 2,
+    "noise": 0,
     "findings": 0,
     "lowConfidence": 0
    }
@@ -221,64 +186,59 @@
   "flaky": [],
   "lowConfidenceSample": [
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#316].pos[0]",
-    "base": "0.47",
-    "mcfc": "0.48"
+    "path": "entities.minecraft:overworld.list[minecraft:item#138].pos[0]",
+    "base": "0.4",
+    "mcfc": "0.39"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#719].pos[0]",
+    "path": "entities.minecraft:overworld.list[minecraft:item#139].pos[0]",
+    "base": "0.4",
+    "mcfc": "0.39"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#140].pos[0]",
+    "base": "0.4",
+    "mcfc": "0.39"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#4].pos[0]",
+    "base": "0.28",
+    "mcfc": "0.29"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#728].pos[0]",
     "base": "0.57",
     "mcfc": "0.56"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#720].pos[0]",
-    "base": "0.57",
-    "mcfc": "0.56"
+    "path": "entities.minecraft:overworld.list[minecraft:item#790].pos[0]",
+    "base": "0.6",
+    "mcfc": "0.59"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#740].pos[0]",
-    "base": "0.58",
-    "mcfc": "0.57"
+    "path": "entities.minecraft:overworld.list[minecraft:item#791].pos[0]",
+    "base": "0.6",
+    "mcfc": "0.59"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#741].pos[0]",
-    "base": "0.58",
-    "mcfc": "0.57"
+    "path": "entities.minecraft:overworld.list[minecraft:item#792].pos[0]",
+    "base": "0.6",
+    "mcfc": "0.59"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#742].pos[0]",
-    "base": "0.58",
-    "mcfc": "0.57"
+    "path": "entities.minecraft:overworld.list[minecraft:item#793].pos[0]",
+    "base": "0.6",
+    "mcfc": "0.59"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#743].pos[0]",
-    "base": "0.58",
-    "mcfc": "0.57"
+    "path": "entities.minecraft:overworld.list[minecraft:item#794].pos[0]",
+    "base": "0.6",
+    "mcfc": "0.59"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#744].pos[0]",
-    "base": "0.58",
-    "mcfc": "0.57"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#745].pos[0]",
-    "base": "0.58",
-    "mcfc": "0.57"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#746].pos[0]",
-    "base": "0.58",
-    "mcfc": "0.57"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#747].pos[0]",
-    "base": "0.58",
-    "mcfc": "0.57"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#748].pos[0]",
-    "base": "0.58",
-    "mcfc": "0.57"
+    "path": "entities.minecraft:overworld.list[minecraft:item#811].pos[0]",
+    "base": "0.61",
+    "mcfc": "0.6"
    }
   ]
  },
@@ -392,32 +352,32 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 20.33,
-   "min": 19.56,
-   "max": 20.69,
+   "median": 21.07,
+   "min": 20.85,
+   "max": 21.96,
    "lines": [
-    "Sprint completed with 48 ticks per second, or 20.69 ms per tick",
-    "Sprint completed with 49 ticks per second, or 20.33 ms per tick",
-    "Sprint completed with 51 ticks per second, or 19.56 ms per tick"
+    "Sprint completed with 47 ticks per second, or 20.85 ms per tick",
+    "Sprint completed with 45 ticks per second, or 21.96 ms per tick",
+    "Sprint completed with 47 ticks per second, or 21.07 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 17.91,
-   "min": 17.65,
-   "max": 18.18,
+   "median": 23.88,
+   "min": 23.39,
+   "max": 29.54,
    "lines": [
-    "Sprint completed with 55 ticks per second, or 18.18 ms per tick",
-    "Sprint completed with 56 ticks per second, or 17.65 ms per tick",
-    "Sprint completed with 55 ticks per second, or 17.91 ms per tick"
+    "Sprint completed with 41 ticks per second, or 23.88 ms per tick",
+    "Sprint completed with 42 ticks per second, or 23.39 ms per tick",
+    "Sprint completed with 33 ticks per second, or 29.54 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 56.2,
-  "base2": 56.2,
-  "mcfc": 138.0,
-  "perfbase": 117.4
+  "base1": 61.9,
+  "base2": 62.1,
+  "mcfc": 142.7,
+  "perfbase": 156.1
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

@@ -1,6 +1,6 @@
 {
  "id": "mr-tree-vein-miner",
- "status": "FALLBACK-ISSUE",
+ "status": "OK",
  "kind": "function",
  "packs": [
   "mr-tree-vein-miner"
@@ -8,26 +8,23 @@
  "problems": [],
  "notes": [],
  "mcfcJar": {
-  "name": "mcfc-1a611fce.jar",
-  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
-  "mtime": "2026-10-26 09:56:09"
+  "name": "mcfc-retfix.jar",
+  "sha256": "5f2c1a7e1971f44c8106c7472ecb704e1ef97f5761eb41aa8226e49adffd1792",
+  "mtime": "2026-10-26 15:02:24"
  },
  "mcfcState": {
   "afterLoad": "READY_ON",
   "final": "READY_ON",
   "decisiveError": null,
-  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 68Total Function Count: 70"
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 70Total Function Count: 70"
  },
  "compile": {
   "found": 70,
-  "compiled": 68,
-  "rate": 0.9714,
+  "compiled": 70,
+  "rate": 1.0,
   "partialFallbackCommands": 6,
   "wholeFallbacks": {},
-  "compileFailures": [
-   "stm:queue/load_next",
-   "stm:queue/visit"
-  ],
+  "compileFailures": [],
   "compilerErrors": [],
   "runtimeDisables": [],
   "topPartialReasons": {
@@ -36,15 +33,15 @@
   "unsupportedCommands": {}
  },
  "debug": {
-  "header": "27 compiled | 7 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
+  "header": "27 compiled | 5 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
   "functionsByStatus": {
-   "vanilla": 7,
+   "vanilla": 5,
    "compiled": 27
   },
-  "totalCalls": 3268,
-  "vanillaCalls": 2258,
+  "totalCalls": 2820,
+  "vanillaCalls": 1810,
   "compiledCalls": 1010,
-  "compiledCallShare": 0.3091,
+  "compiledCallShare": 0.3582,
   "nonCompiled": [
    {
     "id": "stm:detection/scan_owned/111972752",
@@ -57,18 +54,6 @@
     "status": "vanilla",
     "calls": 889,
     "vanillaCalls": 889
-   },
-   {
-    "id": "stm:queue/visit/148984",
-    "status": "vanilla",
-    "calls": 224,
-    "vanillaCalls": 224
-   },
-   {
-    "id": "stm:queue/load_next/3198463",
-    "status": "vanilla",
-    "calls": 224,
-    "vanillaCalls": 224
    },
    {
     "id": "stm:detection/upsert_target/623813648",
@@ -89,13 +74,13 @@
     "vanillaCalls": 2
    }
   ],
-  "nonCompiledCount": 7
+  "nonCompiledCount": 5
  },
  "compare": {
   "confirmedFindings": 0,
   "flakyFindings": 0,
-  "lowConfidence": 10,
-  "noise": 167,
+  "lowConfidence": 4,
+  "noise": 174,
   "genFindings": null,
   "genNoise": null,
   "confirmation": {
@@ -123,9 +108,9 @@
    },
    "entities": {
     "paths": 361,
-    "noise": 156,
+    "noise": 174,
     "findings": 0,
-    "lowConfidence": 10
+    "lowConfidence": 4
    },
    "functionTags": {
     "paths": 7,
@@ -146,8 +131,8 @@
     "lowConfidence": 0
    },
    "players": {
-    "paths": 24,
-    "noise": 6,
+    "paths": 20,
+    "noise": 0,
     "findings": 0,
     "lowConfidence": 0
    },
@@ -159,19 +144,19 @@
    },
    "scoreboard": {
     "paths": 216,
-    "noise": 2,
+    "noise": 0,
     "findings": 0,
     "lowConfidence": 0
    },
    "storage": {
     "paths": 1,
-    "noise": 1,
+    "noise": 0,
     "findings": 0,
     "lowConfidence": 0
    },
    "world": {
     "paths": 12,
-    "noise": 2,
+    "noise": 0,
     "findings": 0,
     "lowConfidence": 0
    }
@@ -180,54 +165,24 @@
   "flaky": [],
   "lowConfidenceSample": [
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#1].pos[1]",
+    "path": "entities.minecraft:overworld.list[minecraft:item#27].pos[1]",
     "base": "-60.0",
     "mcfc": "-49.0"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#22].pos[1]",
+    "path": "entities.minecraft:overworld.list[minecraft:item#32].pos[1]",
     "base": "-60.0",
     "mcfc": "-49.0"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#43].customName",
-    "base": "<missing>",
-    "mcfc": "null"
+    "path": "entities.minecraft:overworld.list[minecraft:item#5].pos[1]",
+    "base": "-60.0",
+    "mcfc": "-49.0"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#43].nbt",
-    "base": "<missing>",
-    "mcfc": "\"{Age:572s,Health:5s,Invulnerable:0b,Item:{count:1,id:\\\"minecraft:oak_log\\\"},PickupDelay:0s}\""
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#43].pos[0]",
-    "base": "<missing>",
-    "mcfc": "5.68"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#43].pos[1]",
-    "base": "<missing>",
-    "mcfc": "-60.0"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#43].pos[2]",
-    "base": "<missing>",
-    "mcfc": "3.87"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#43].tags[]",
-    "base": "<missing>",
-    "mcfc": "[]"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#43].type",
-    "base": "<missing>",
-    "mcfc": "\"minecraft:item\""
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#43].uuid",
-    "base": "<missing>",
-    "mcfc": "\"<item#43>\""
+    "path": "entities.minecraft:overworld.list[minecraft:item#9].pos[1]",
+    "base": "-60.0",
+    "mcfc": "-49.0"
    }
   ]
  },
@@ -306,31 +261,31 @@
  "perf": {
   "mcfc": {
    "median": 0.35,
-   "min": 0.28,
+   "min": 0.3,
    "max": 0.4,
    "lines": [
-    "Sprint completed with 2521 ticks per second, or 0.40 ms per tick",
-    "Sprint completed with 2865 ticks per second, or 0.35 ms per tick",
-    "Sprint completed with 3562 ticks per second, or 0.28 ms per tick"
+    "Sprint completed with 2515 ticks per second, or 0.40 ms per tick",
+    "Sprint completed with 2863 ticks per second, or 0.35 ms per tick",
+    "Sprint completed with 3325 ticks per second, or 0.30 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.33,
-   "min": 0.29,
-   "max": 0.46,
+   "median": 0.39,
+   "min": 0.31,
+   "max": 0.47,
    "lines": [
-    "Sprint completed with 2188 ticks per second, or 0.46 ms per tick",
-    "Sprint completed with 3055 ticks per second, or 0.33 ms per tick",
-    "Sprint completed with 3413 ticks per second, or 0.29 ms per tick"
+    "Sprint completed with 2139 ticks per second, or 0.47 ms per tick",
+    "Sprint completed with 2563 ticks per second, or 0.39 ms per tick",
+    "Sprint completed with 3191 ticks per second, or 0.31 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 51.4,
-  "base2": 56.4,
-  "mcfc": 49.6,
-  "perfbase": 47.4
+  "base1": 51.0,
+  "base2": 51.5,
+  "mcfc": 51.5,
+  "perfbase": 58.1
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

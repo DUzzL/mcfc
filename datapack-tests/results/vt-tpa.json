@@ -1,6 +1,6 @@
 {
  "id": "vt-tpa",
- "status": "DIFF",
+ "status": "OK",
  "kind": "function",
  "packs": [
   "vt-tpa"
@@ -8,9 +8,9 @@
  "problems": [],
  "notes": [],
  "mcfcJar": {
-  "name": "mcfc-1a611fce.jar",
-  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
-  "mtime": "2026-10-26 09:56:09"
+  "name": "mcfc-retfix.jar",
+  "sha256": "5f2c1a7e1971f44c8106c7472ecb704e1ef97f5761eb41aa8226e49adffd1792",
+  "mtime": "2026-10-26 15:02:24"
  },
  "mcfcState": {
   "afterLoad": "READY_ON",
@@ -43,16 +43,15 @@
   "nonCompiledCount": 0
  },
  "compare": {
-  "confirmedFindings": 4,
+  "confirmedFindings": 0,
   "flakyFindings": 0,
   "lowConfidence": 0,
-  "noise": 4,
+  "noise": 0,
   "genFindings": null,
   "genNoise": null,
   "confirmation": {
    "enabled": true,
-   "ran": true,
-   "onlyInSecondAttempt": 0
+   "ran": false
   },
   "sections": {
    "blocks": {
@@ -99,19 +98,19 @@
    },
    "players": {
     "paths": 46,
-    "noise": 2,
+    "noise": 0,
     "findings": 0,
     "lowConfidence": 0
    },
    "scheduled": {
     "paths": 8,
     "noise": 0,
-    "findings": 2,
+    "findings": 0,
     "lowConfidence": 0
    },
    "scoreboard": {
     "paths": 42,
-    "noise": 2,
+    "noise": 0,
     "findings": 0,
     "lowConfidence": 0
    },
@@ -124,36 +123,11 @@
    "world": {
     "paths": 12,
     "noise": 0,
-    "findings": 2,
+    "findings": 0,
     "lowConfidence": 0
    }
   },
-  "confirmed": [
-   {
-    "path": "scheduled.events[0].trigger_time",
-    "base": "6484",
-    "mcfc": "6488",
-    "dump": "final"
-   },
-   {
-    "path": "scheduled.events[1].trigger_time",
-    "base": "6503",
-    "mcfc": "6507",
-    "dump": "final"
-   },
-   {
-    "path": "world.dayTime",
-    "base": "6483",
-    "mcfc": "6487",
-    "dump": "final"
-   },
-   {
-    "path": "world.gameTime",
-    "base": "6483",
-    "mcfc": "6487",
-    "dump": "final"
-   }
-  ],
+  "confirmed": [],
   "flaky": [],
   "lowConfidenceSample": []
  },
@@ -231,35 +205,32 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 0.17,
-   "min": 0.16,
-   "max": 0.17,
+   "median": 0.23,
+   "min": 0.19,
+   "max": 0.29,
    "lines": [
-    "Sprint completed with 5742 ticks per second, or 0.17 ms per tick",
-    "Sprint completed with 5848 ticks per second, or 0.17 ms per tick",
-    "Sprint completed with 6190 ticks per second, or 0.16 ms per tick"
+    "Sprint completed with 3407 ticks per second, or 0.29 ms per tick",
+    "Sprint completed with 4321 ticks per second, or 0.23 ms per tick",
+    "Sprint completed with 5354 ticks per second, or 0.19 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.15,
-   "min": 0.15,
-   "max": 0.18,
+   "median": 0.19,
+   "min": 0.18,
+   "max": 0.22,
    "lines": [
-    "Sprint completed with 5572 ticks per second, or 0.18 ms per tick",
-    "Sprint completed with 6587 ticks per second, or 0.15 ms per tick",
-    "Sprint completed with 6549 ticks per second, or 0.15 ms per tick"
+    "Sprint completed with 4508 ticks per second, or 0.22 ms per tick",
+    "Sprint completed with 5131 ticks per second, or 0.19 ms per tick",
+    "Sprint completed with 5513 ticks per second, or 0.18 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 347.8,
-  "base2": 348.6,
-  "mcfc": 346.3,
-  "perfbase": 344.4,
-  "attempt2-base1": 348.8,
-  "attempt2-base2": 348.8,
-  "attempt2-mcfc": 349.3
+  "base1": 347.1,
+  "base2": 348.0,
+  "mcfc": 349.8,
+  "perfbase": 349.4
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

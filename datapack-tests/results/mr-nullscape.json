@@ -1,6 +1,6 @@
 {
  "id": "mr-nullscape",
- "status": "FALLBACK-ISSUE",
+ "status": "DIFF",
  "kind": "worldgen",
  "packs": [
   "mr-nullscape"
@@ -8,25 +8,23 @@
  "problems": [],
  "notes": [],
  "mcfcJar": {
-  "name": "mcfc-1a611fce.jar",
-  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
-  "mtime": "2026-10-26 09:56:09"
+  "name": "mcfc-retfix.jar",
+  "sha256": "5f2c1a7e1971f44c8106c7472ecb704e1ef97f5761eb41aa8226e49adffd1792",
+  "mtime": "2026-10-26 15:02:24"
  },
  "mcfcState": {
   "afterLoad": "READY_ON",
   "final": "READY_ON",
   "decisiveError": null,
-  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 8Total Function Count: 9"
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 9Total Function Count: 9"
  },
  "compile": {
   "found": 9,
-  "compiled": 8,
-  "rate": 0.8889,
+  "compiled": 9,
+  "rate": 1.0,
   "partialFallbackCommands": 17,
   "wholeFallbacks": {},
-  "compileFailures": [
-   "nullscape:link_rift/position_other_side"
-  ],
+  "compileFailures": [],
   "compilerErrors": [],
   "runtimeDisables": [],
   "topPartialReasons": {
@@ -54,23 +52,23 @@
   "nonCompiledCount": 0
  },
  "compare": {
-  "confirmedFindings": 0,
-  "flakyFindings": 14,
-  "lowConfidence": 2,
-  "noise": 324,
-  "genFindings": 8,
-  "genNoise": 227,
+  "confirmedFindings": 1,
+  "flakyFindings": 15,
+  "lowConfidence": 7,
+  "noise": 310,
+  "genFindings": 11,
+  "genNoise": 216,
   "confirmation": {
    "enabled": true,
    "ran": true,
-   "onlyInSecondAttempt": 4
+   "onlyInSecondAttempt": 6
   },
   "sections": {
    "blocks": {
     "paths": 414,
-    "noise": 226,
-    "findings": 6,
-    "lowConfidence": 2
+    "noise": 214,
+    "findings": 5,
+    "lowConfidence": 7
    },
    "bossbars": {
     "paths": 1,
@@ -134,108 +132,146 @@
    },
    "world": {
     "paths": 12,
-    "noise": 2,
+    "noise": 0,
     "findings": 0,
     "lowConfidence": 0
    }
   },
-  "confirmed": [],
+  "confirmed": [
+   {
+    "path": "blocks[overworld].columns.-7,-5",
+    "base": "\"b708fecd507f0bd1bf17d8e0029c93f1cd30c798e927c09efbfe77bb45f6dbce\"",
+    "mcfc": "\"db159ee436b87721b1a3dd8d21cd5c70093b4af6995018c66a74ba65b08ac6aa\"",
+    "dump": "gen"
+   }
+  ],
   "flaky": [
    {
-    "path": "blocks[overworld].columns.-1,1",
-    "base": "\"6ff2952e97f24e231452b3533880931758ea7b160f73bf4e64e17aedfe599df7\"",
-    "mcfc": "\"e24259963eaf7651cb6bd801321cf8ab0315cf450f88dfdb1a0e9420d0a80b1c\"",
+    "path": "blocks[overworld].columns.-2,-4",
+    "base": "\"db9da57c9b6f8e204befd3071f1c4252c4a5cf8b8a74d53f10b9fba16568bcf5\"",
+    "mcfc": "\"6a55f0df659d73655a8bc5ce5d24e96c313f4c961b6aa41ab8c56b88b41aff66\"",
     "dump": "final"
    },
    {
-    "path": "blocks[overworld].columns.-8,-8",
-    "base": "\"12aeaf9e08d80361d10dd6b900fe68585603fac29aaabee837c2f90e94c3aa56\"",
-    "mcfc": "\"52db8ea14f4827ff6ea1c2afd3c6cf75195642eee248d18ec365867a7ed422bc\"",
+    "path": "blocks[overworld].columns.-3,-4",
+    "base": "\"5fbd5e858a8b81f194bab0589cefa9b9c94513524b5d413801b7d1f0c358ddd1\"",
+    "mcfc": "\"c68bbb0aa2e66fc821c0f75f35cb2810014619a4f73157d500cee00b105b1264\"",
     "dump": "final"
    },
    {
-    "path": "blocks[overworld].columns.0,0",
-    "base": "\"f874a854c36c87bd954a4dfe5f030a19678d20d66b549482cfe6996885470be6\"",
-    "mcfc": "\"6a0662c825204e3cbe60fbfd6be24dff50b7b31151702d84b4748decbd7da335\"",
+    "path": "blocks[overworld].columns.0,4",
+    "base": "\"76bc89b92addb559325ca7b3e9b5b04aebe0ee3c6e4cfa0c3efb3be58fbbd490\"",
+    "mcfc": "\"2ad26d8e14720c68748bec4cb95444a2d6099aea88ba2ad15bd4c4f3bfd0f856\"",
     "dump": "final"
    },
    {
-    "path": "blocks[overworld].columns.0,1",
-    "base": "\"b3976f205f702b594b1a62695390491886ef16caf9b072da9868ed43bc4c5821\"",
-    "mcfc": "\"4c493ba9b79de4ca35e6b61a0195f8526f6b587c0a8cbde52f84350962a050f5\"",
+    "path": "blocks[overworld].columns.4,1",
+    "base": "\"5a3043d17977edbd0026bc46f9e9fd727f2c0e99a6125cafa73325880fcf1d79\"",
+    "mcfc": "\"51130c03516ac803c8597ea08e3e1ceb96cc200f943ddd3cac46ec6f5d5d81a9\"",
     "dump": "final"
    },
    {
-    "path": "blocks[overworld].columns.0,6",
-    "base": "\"1da8777e503095bb71511cfe23fab63b006829760f62183c7569b4db529c6b0e\"",
-    "mcfc": "\"6d567344ae4b942cdbbd4d202a79f3a93b7f69e20b718768bd988a187295c981\"",
+    "path": "blocks[overworld].columns.5,2",
+    "base": "\"3519aae4011cf56e499403a221b94d79248ea653c1404f1adc3e91c9b66fcdcd\"",
+    "mcfc": "\"d9643267692129e882cc8b8b4de5747def7ea6d31920a53030768df8824de7d2\"",
     "dump": "final"
    },
    {
-    "path": "blocks[overworld].columns.0,7",
-    "base": "\"82f9bc50bb7e168fca6fef8d4cabe355e15eea56fbf3ad14b2521d4832623d07\"",
-    "mcfc": "\"46163cafca8be12e380cfd593bc1ed15333b477ed078db361f8d8f40df9ea188\"",
-    "dump": "final"
-   },
-   {
-    "path": "blocks[overworld].columns.-1,1",
-    "base": "\"6ff2952e97f24e231452b3533880931758ea7b160f73bf4e64e17aedfe599df7\"",
-    "mcfc": "\"e24259963eaf7651cb6bd801321cf8ab0315cf450f88dfdb1a0e9420d0a80b1c\"",
+    "path": "blocks[overworld].columns.-2,-4",
+    "base": "\"db9da57c9b6f8e204befd3071f1c4252c4a5cf8b8a74d53f10b9fba16568bcf5\"",
+    "mcfc": "\"6a55f0df659d73655a8bc5ce5d24e96c313f4c961b6aa41ab8c56b88b41aff66\"",
     "dump": "gen"
    },
    {
-    "path": "blocks[overworld].columns.-8,-8",
-    "base": "\"12aeaf9e08d80361d10dd6b900fe68585603fac29aaabee837c2f90e94c3aa56\"",
-    "mcfc": "\"52db8ea14f4827ff6ea1c2afd3c6cf75195642eee248d18ec365867a7ed422bc\"",
+    "path": "blocks[overworld].columns.-3,-4",
+    "base": "\"5fbd5e858a8b81f194bab0589cefa9b9c94513524b5d413801b7d1f0c358ddd1\"",
+    "mcfc": "\"c68bbb0aa2e66fc821c0f75f35cb2810014619a4f73157d500cee00b105b1264\"",
     "dump": "gen"
    },
    {
-    "path": "blocks[overworld].columns.0,0",
-    "base": "\"f874a854c36c87bd954a4dfe5f030a19678d20d66b549482cfe6996885470be6\"",
-    "mcfc": "\"6a0662c825204e3cbe60fbfd6be24dff50b7b31151702d84b4748decbd7da335\"",
+    "path": "blocks[overworld].columns.-6,3",
+    "base": "\"6a042df4dbe53bc8f81b4dc5552de9f961c99b5c7159f46fe6a19c7d5d72ac61\"",
+    "mcfc": "\"88cd69a4a52b121583c047184d48cbff71937489e02dd81c313cc9d85b42f02e\"",
     "dump": "gen"
    },
    {
-    "path": "blocks[overworld].columns.0,1",
-    "base": "\"b3976f205f702b594b1a62695390491886ef16caf9b072da9868ed43bc4c5821\"",
-    "mcfc": "\"4c493ba9b79de4ca35e6b61a0195f8526f6b587c0a8cbde52f84350962a050f5\"",
+    "path": "blocks[overworld].columns.-6,4",
+    "base": "\"b18232bb025cef3c6fe89fb2212ec1b42712cb0ea5882adcd1643f33c995d205\"",
+    "mcfc": "\"6a21cf8e2c89846572196e83dfb68227f39ae841229bce883dde272b8af958ae\"",
     "dump": "gen"
    },
    {
-    "path": "blocks[overworld].columns.0,6",
-    "base": "\"1da8777e503095bb71511cfe23fab63b006829760f62183c7569b4db529c6b0e\"",
-    "mcfc": "\"6d567344ae4b942cdbbd4d202a79f3a93b7f69e20b718768bd988a187295c981\"",
+    "path": "blocks[overworld].columns.0,4",
+    "base": "\"76bc89b92addb559325ca7b3e9b5b04aebe0ee3c6e4cfa0c3efb3be58fbbd490\"",
+    "mcfc": "\"2ad26d8e14720c68748bec4cb95444a2d6099aea88ba2ad15bd4c4f3bfd0f856\"",
     "dump": "gen"
    },
    {
-    "path": "blocks[overworld].columns.0,7",
-    "base": "\"82f9bc50bb7e168fca6fef8d4cabe355e15eea56fbf3ad14b2521d4832623d07\"",
-    "mcfc": "\"46163cafca8be12e380cfd593bc1ed15333b477ed078db361f8d8f40df9ea188\"",
+    "path": "blocks[overworld].columns.0,5",
+    "base": "\"e7e4ff0ee506eeb7e07628a9e1188cc679d25c7fa710c166dd6059a5114c338d\"",
+    "mcfc": "\"1d5a7da3682e5ab0caa66d41112210111114e4e29a6c65f29e21d33cdfd9b895\"",
     "dump": "gen"
    },
    {
-    "path": "blocks[overworld].columns.4,-3",
-    "base": "\"fc8143beb5c8c864a34b7265a893f42d05063b8021bd0b33bbe1572e76aefebf\"",
-    "mcfc": "\"17adcdcaa2eab94c114dae472a276ca7743a921013bae119ffe1550cbb0cfcf3\"",
+    "path": "blocks[overworld].columns.4,1",
+    "base": "\"5a3043d17977edbd0026bc46f9e9fd727f2c0e99a6125cafa73325880fcf1d79\"",
+    "mcfc": "\"51130c03516ac803c8597ea08e3e1ceb96cc200f943ddd3cac46ec6f5d5d81a9\"",
     "dump": "gen"
    },
    {
-    "path": "blocks[overworld].columns.5,-3",
-    "base": "\"37c43b48ddbea699606d891ff28b6043543b6caed8649e5825075853eeadc79c\"",
-    "mcfc": "\"63b6a7ca46d4bf309137bc9936d520a2567cfd160746d03e1c2a8f793097d0d3\"",
+    "path": "blocks[overworld].columns.5,-4",
+    "base": "\"07d6138591088af19cc78295f56854adcd7313c9f05ce035c84b63a679e0ef8d\"",
+    "mcfc": "\"23ca529b5fe70aeb6eba34c618070c1d1cc04ac08127dd9223e5c6bb42c2ec1b\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.5,2",
+    "base": "\"3519aae4011cf56e499403a221b94d79248ea653c1404f1adc3e91c9b66fcdcd\"",
+    "mcfc": "\"d9643267692129e882cc8b8b4de5747def7ea6d31920a53030768df8824de7d2\"",
+    "dump": "gen"
+   },
+   {
+    "path": "blocks[overworld].columns.6,-3",
+    "base": "\"85f459c1faf1a1625cb8ee14295f43436a91be66a37b6b71989e72246292d62f\"",
+    "mcfc": "\"3c20711f9f9c906499a4f27aca4ec0e73c4c211c7eb192bcc8b988a3bb842655\"",
     "dump": "gen"
    }
   ],
   "lowConfidenceSample": [
    {
-    "path": "blocks[overworld].columns.4,-3",
-    "base": "\"9b787b2be006b62e04eff3e6fe54a937749fc8d4bd41c45ad835b26b77c84004\"",
-    "mcfc": "\"de3c7e9cbd7f36ba22b82038380b76f7109ecb0273b012f0c55049fa91e64a18\""
+    "path": "blocks[overworld].columns.-6,3",
+    "base": "\"0753592a24117fd2e0196164fa27f5b6c9093cc8ad4f8d584bd718ad961aeb9b\"",
+    "mcfc": "\"115bb7d1e7ee09e08f2e29c388d255a60475ecb06d6919549e50901ed46f56ea\""
    },
    {
-    "path": "blocks[overworld].columns.5,-3",
-    "base": "\"633c52511ab30584d1f4bac72404af0725b6fc7991ebdddd3f40e971231aa5fa\"",
-    "mcfc": "\"9e7214c97f63076754a73f65b130aad99ba62075865d327eb5dbebd4b5d4c2e2\""
+    "path": "blocks[overworld].columns.-6,4",
+    "base": "\"3d35f682488ed5afe7443cebc725b629a892d634c3fc7c882b4907f22525efe8\"",
+    "mcfc": "\"876d3f054be4306d0870c6710997c9d840e251c0a8c0e43dc6aed0adcb280d01\""
+   },
+   {
+    "path": "blocks[overworld].columns.-7,-5",
+    "base": "\"b0b59bd83e11e24f0320736c3869f10c714849874d776b02054a9db6ebf9c494\"",
+    "mcfc": "\"37e0eebbc633f6d9c2b62fc7ca2cf51469aac4cd92f3c8c42afa47ab41f2f838\""
+   },
+   {
+    "path": "blocks[overworld].columns.0,5",
+    "base": "\"f064f5589efc153650e91e63d225b278e5278c0de7e38c2470677810d1a0908a\"",
+    "mcfc": "\"9f8d8318cddf8fdc0afb4dcdc81a799f0dbfe81360dd460c906d4c7a8d1fae30\""
+   },
+   {
+    "path": "blocks[overworld].columns.5,-4",
+    "base": "\"616969244e72cebd4b4c1c18fc2ed8efbd2c69237860f77219e95a2af411f1a2\"",
+    "mcfc": "\"1b48b56f6474eda65811cfb5a64c71179aee6c12050ba61dbb6d4bf41d67a9c9\""
+   },
+   {
+    "path": "blocks[overworld].columns.6,-3",
+    "base": "\"80c613399a71ab667074ff6c4815bdbf8cb4d08dc739f6e95beede1ab0cae5a9\"",
+    "mcfc": "\"65af04b73d8b412061411db7fb0a4fa30a6729f49b2fc1ad51e816dc97d41e3b\""
+   },
+   {
+    "path": "blocks[overworld].columns.6,-4",
+    "base": "\"69e40d49e48db0fc570a962eb48cb1414bb938d6a22c0ceb30ff7d0b8b3bd154\"",
+    "mcfc": "\"c9b1685ac2af271aea313f71d4310afa5d0f23288595cc9d34a8d4ef51a22ec1\""
    }
   ]
  },
@@ -243,22 +279,13 @@
   "base1": {},
   "base2": {},
   "mcfc": {},
-  "perfbase": {
-   "com.mojang.authlib.exceptions.MinecraftClientException": {
-    "count": 1,
-    "first": "Failed to read from https://api.mojang.com/users/profiles/minecraft/dptester1 due to Read timed out"
-   },
-   "java.net.SocketTimeoutException": {
-    "count": 1,
-    "first": "Read timed out"
-   }
-  }
+  "perfbase": {}
  },
  "exceptionTotals": {
   "base1": 0,
   "base2": 0,
   "mcfc": 0,
-  "perfbase": 2
+  "perfbase": 0
  },
  "exercise": {
   "base1": {
@@ -322,35 +349,35 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 0.61,
-   "min": 0.53,
-   "max": 1.17,
+   "median": 1.43,
+   "min": 1.43,
+   "max": 2.32,
    "lines": [
-    "Sprint completed with 851 ticks per second, or 1.17 ms per tick",
-    "Sprint completed with 1648 ticks per second, or 0.61 ms per tick",
-    "Sprint completed with 1881 ticks per second, or 0.53 ms per tick"
+    "Sprint completed with 430 ticks per second, or 2.32 ms per tick",
+    "Sprint completed with 699 ticks per second, or 1.43 ms per tick",
+    "Sprint completed with 700 ticks per second, or 1.43 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.75,
-   "min": 0.67,
-   "max": 1.17,
+   "median": 1.1,
+   "min": 0.92,
+   "max": 1.97,
    "lines": [
-    "Sprint completed with 852 ticks per second, or 1.17 ms per tick",
-    "Sprint completed with 1339 ticks per second, or 0.75 ms per tick",
-    "Sprint completed with 1485 ticks per second, or 0.67 ms per tick"
+    "Sprint completed with 507 ticks per second, or 1.97 ms per tick",
+    "Sprint completed with 905 ticks per second, or 1.10 ms per tick",
+    "Sprint completed with 1086 ticks per second, or 0.92 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 49.8,
-  "base2": 49.8,
-  "mcfc": 44.2,
-  "perfbase": 48.3,
-  "attempt2-base1": 46.3,
-  "attempt2-base2": 47.9,
-  "attempt2-mcfc": 39.8
+  "base1": 68.0,
+  "base2": 68.0,
+  "mcfc": 58.6,
+  "perfbase": 54.4,
+  "attempt2-base1": 60.9,
+  "attempt2-base2": 60.9,
+  "attempt2-mcfc": 47.0
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

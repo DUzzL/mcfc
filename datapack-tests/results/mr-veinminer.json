@@ -1,6 +1,6 @@
 {
  "id": "mr-veinminer",
- "status": "FALLBACK-ISSUE",
+ "status": "OK",
  "kind": "function",
  "packs": [
   "mr-veinminer"
@@ -8,30 +8,23 @@
  "problems": [],
  "notes": [],
  "mcfcJar": {
-  "name": "mcfc-1a611fce.jar",
-  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
-  "mtime": "2026-10-26 09:56:09"
+  "name": "mcfc-retfix.jar",
+  "sha256": "5f2c1a7e1971f44c8106c7472ecb704e1ef97f5761eb41aa8226e49adffd1792",
+  "mtime": "2026-10-26 15:02:24"
  },
  "mcfcState": {
   "afterLoad": "READY_ON",
   "final": "READY_ON",
   "decisiveError": null,
-  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 27Total Function Count: 33"
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 33Total Function Count: 33"
  },
  "compile": {
   "found": 33,
-  "compiled": 27,
-  "rate": 0.8182,
+  "compiled": 33,
+  "rate": 1.0,
   "partialFallbackCommands": 36,
   "wholeFallbacks": {},
-  "compileFailures": [
-   "veinminer:block_add",
-   "veinminer:block_edit",
-   "veinminer:internal/check/_loopi",
-   "veinminer:internal/mine/_loopi",
-   "veinminer:tool_add",
-   "veinminer:tool_edit"
-  ],
+  "compileFailures": [],
   "compilerErrors": [],
   "runtimeDisables": [],
   "topPartialReasons": {
@@ -45,39 +38,21 @@
   }
  },
  "debug": {
-  "header": "16 compiled | 8 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
+  "header": "16 compiled | 6 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
   "functionsByStatus": {
-   "vanilla": 8,
+   "vanilla": 6,
    "compiled": 16
   },
-  "totalCalls": 4359,
-  "vanillaCalls": 3868,
+  "totalCalls": 543,
+  "vanillaCalls": 52,
   "compiledCalls": 491,
-  "compiledCallShare": 0.1126,
+  "compiledCallShare": 0.9042,
   "nonCompiled": [
-   {
-    "id": "veinminer:internal/check/_loopi/164062945",
-    "status": "vanilla",
-    "calls": 3699,
-    "vanillaCalls": 3699
-   },
-   {
-    "id": "veinminer:internal/mine/_loopi/164062945",
-    "status": "vanilla",
-    "calls": 92,
-    "vanillaCalls": 92
-   },
    {
     "id": "veinminer:block_edit/50511133",
     "status": "vanilla",
     "calls": 21,
     "vanillaCalls": 21
-   },
-   {
-    "id": "veinminer:block_add/1460620541",
-    "status": "vanilla",
-    "calls": 20,
-    "vanillaCalls": 20
    },
    {
     "id": "veinminer:internal/check/_mine/164062945",
@@ -92,25 +67,31 @@
     "vanillaCalls": 10
    },
    {
-    "id": "veinminer:tool_add/1460620541",
-    "status": "vanilla",
-    "calls": 9,
-    "vanillaCalls": 9
-   },
-   {
     "id": "veinminer:internal/check/perform_mine/3575641",
     "status": "vanilla",
     "calls": 6,
     "vanillaCalls": 6
+   },
+   {
+    "id": "veinminer:tool_add/1460620541",
+    "status": "vanilla",
+    "calls": 2,
+    "vanillaCalls": 2
+   },
+   {
+    "id": "veinminer:block_add/1460620541",
+    "status": "vanilla",
+    "calls": 2,
+    "vanillaCalls": 2
    }
   ],
-  "nonCompiledCount": 8
+  "nonCompiledCount": 6
  },
  "compare": {
   "confirmedFindings": 0,
   "flakyFindings": 0,
   "lowConfidence": 0,
-  "noise": 3,
+  "noise": 1,
   "genFindings": null,
   "genNoise": null,
   "confirmation": {
@@ -186,7 +167,7 @@
    },
    "world": {
     "paths": 12,
-    "noise": 2,
+    "noise": 0,
     "findings": 0,
     "lowConfidence": 0
    }
@@ -269,32 +250,32 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 0.27,
-   "min": 0.26,
-   "max": 0.42,
+   "median": 0.29,
+   "min": 0.25,
+   "max": 0.36,
    "lines": [
-    "Sprint completed with 2405 ticks per second, or 0.42 ms per tick",
-    "Sprint completed with 3691 ticks per second, or 0.27 ms per tick",
-    "Sprint completed with 3902 ticks per second, or 0.26 ms per tick"
+    "Sprint completed with 2810 ticks per second, or 0.36 ms per tick",
+    "Sprint completed with 3440 ticks per second, or 0.29 ms per tick",
+    "Sprint completed with 4040 ticks per second, or 0.25 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.33,
-   "min": 0.27,
-   "max": 0.35,
+   "median": 0.34,
+   "min": 0.29,
+   "max": 0.41,
    "lines": [
-    "Sprint completed with 2846 ticks per second, or 0.35 ms per tick",
-    "Sprint completed with 3056 ticks per second, or 0.33 ms per tick",
-    "Sprint completed with 3739 ticks per second, or 0.27 ms per tick"
+    "Sprint completed with 2415 ticks per second, or 0.41 ms per tick",
+    "Sprint completed with 2958 ticks per second, or 0.34 ms per tick",
+    "Sprint completed with 3418 ticks per second, or 0.29 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 47.5,
+  "base1": 44.4,
   "base2": 47.5,
-  "mcfc": 43.5,
-  "perfbase": 39.8
+  "mcfc": 43.6,
+  "perfbase": 41.7
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

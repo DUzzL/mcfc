@@ -2,13 +2,13 @@
 
 - kind: worldgen, packs: mr-terralith, mr-incendium, mr-nullscape, mr-structory
 - mcfc final state: READY_ON (after load: READY_ON)
-- mcfc jar: mcfc-bfaa7efd.jar sha256=fca3ca87409825f94361fa4e189433dcced4f759e339f2b7bc1999eb69d81ed0 (file mtime 2026-10-26 13:45:38)
-- compile: 2324/2327 functions compiled (99.9%), partial fallback commands: 273
-- whole-function fallbacks: 0, compile failures: 3, runtime disables: 0
-- findings: confirmed 4, flaky 36, low-confidence 3, noise paths 569; worldgen (gen dump) findings 8
+- mcfc jar: mcfc-retfix.jar sha256=5f2c1a7e1971f44c8106c7472ecb704e1ef97f5761eb41aa8226e49adffd1792 (file mtime 2026-10-26 15:02:24)
+- compile: 2327/2327 functions compiled (100.0%), partial fallback commands: 273
+- whole-function fallbacks: 0, compile failures: 0, runtime disables: 0
+- findings: confirmed 3, flaky 6, low-confidence 11, noise paths 3007; worldgen (gen dump) findings 6
 - exceptions (non-ignorable lines): base1=0, base2=0, mcfc=0
-- MSPT (solo, sprint 1200 x3): vanilla median 1.73 ms (min 1.43, max 2.38); mcfc median 1.86 ms (min 1.56, max 2.05)
-- mcfc debug: 1942 compiled | 0 vanilla | 0 errors | 0 too_big | 0 mcfc_off; compiled-call share 1.0
+- MSPT (solo, sprint 1200 x3): vanilla median 1.99 ms (min 1.56, max 2.02); mcfc median 1.83 ms (min 1.69, max 2.58)
+- mcfc debug: 1939 compiled | 0 vanilla | 0 errors | 0 too_big | 0 mcfc_off; compiled-call share 1.0
 - exerciser (mcfc): ran 2307 of 2327 candidate functions (macro skipped 5, name skipped 15, scenario skipped 0), errors 392, slow 0
 
 ## top partial-fallback reasons
@@ -29,24 +29,26 @@
 - Missing space after argument @ summon <entity:resource_location>: 1
 
 ## confirmed findings (first 20)
-- [final] `scoreboard.scores.$toggle.in.constants`: base=1 | mcfc=0
-- [final] `scoreboard.teams.in.noname.members[2]`: base=<missing> | mcfc="<U?>"
-- [final] `scoreboard.teams.in.noname.members[3]`: base=<missing> | mcfc="<U?>"
-- [final] `scoreboard.teams.in.noname.members[4]`: base=<missing> | mcfc="<U?>"
+- [final] `blocks[nether].columns.2,-2`: base="30dca3cc3b05e5bea2cba43c3ba05cf265b85a3ffe415c880b31c7773c690fbb" | mcfc="480a18eea50ecaedc5dff10021800edc1f2a96ec667f2034b61175cbcbb2d455"
+- [gen] `blocks[nether].columns.2,-2`: base="30dca3cc3b05e5bea2cba43c3ba05cf265b85a3ffe415c880b31c7773c690fbb" | mcfc="480a18eea50ecaedc5dff10021800edc1f2a96ec667f2034b61175cbcbb2d455"
+- [gen] `blocks[overworld].columns.-8,1`: base="64603dd2fc98b730c6fddc1a16ec73b79be8a5db780409f1c610effebc5bb035" | mcfc="2d50060c48229ebc5447e3716ca086b0de229f61e924d0269e4a32fa597fa777"
 
 ## flaky findings (first 10, not reproduced in the second attempt)
-- [final] `blocks[nether].columns.0,2`
-- [final] `blocks[nether].columns.2,-2`
-- [final] `blocks[nether].columns.2,-3`
-- [final] `blocks[overworld].columns.0,-6`
-- [final] `blocks[overworld].columns.6,0`
-- [final] `blocks[overworld].columns.6,1`
-- [final] `entities.minecraft:overworld.list[minecraft:pig#5].tags[1]`
-- [final] `entities.minecraft:overworld.list[minecraft:pig#5].tags[2]`
-- [final] `entities.minecraft:overworld.list[minecraft:pig#5].tags[3]`
-- [final] `entities.minecraft:overworld.list[minecraft:pig#5].tags[4]`
+- [final] `blocks[overworld].columns.-3,-8`
+- [final] `blocks[overworld].columns.4,4`
+- [gen] `blocks[overworld].columns.-3,-8`
+- [gen] `blocks[overworld].columns.-8,-2`
+- [gen] `blocks[overworld].columns.0,2`
+- [gen] `blocks[overworld].columns.4,4`
 
-## low-confidence findings (3, first 10; not counted)
-- `blocks[overworld].columns.-8,3`
-- `blocks[overworld].columns.5,-1`
-- `entities.minecraft:overworld.list[minecraft:item#9].nbt`
+## low-confidence findings (11, first 10; not counted)
+- `blocks[overworld].columns.-8,-2`
+- `blocks[overworld].columns.-8,1`
+- `blocks[overworld].columns.0,2`
+- `entities.minecraft:overworld.list[minecraft:item#65].customName`
+- `entities.minecraft:overworld.list[minecraft:item#65].tags[0]`
+- `entities.minecraft:overworld.list[minecraft:item#65].type`
+- `entities.minecraft:overworld.list[minecraft:item#65].uuid`
+- `entities.minecraft:overworld.list[minecraft:item#66].customName`
+- `entities.minecraft:overworld.list[minecraft:item#66].tags[0]`
+- `entities.minecraft:overworld.list[minecraft:item#66].type`

@@ -1,6 +1,6 @@
 {
  "id": "mr-armor-stand-arms",
- "status": "FALLBACK-ISSUE",
+ "status": "OK",
  "kind": "function",
  "packs": [
   "mr-armor-stand-arms"
@@ -8,25 +8,23 @@
  "problems": [],
  "notes": [],
  "mcfcJar": {
-  "name": "mcfc-1a611fce.jar",
-  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
-  "mtime": "2026-10-26 09:56:09"
+  "name": "mcfc-retfix.jar",
+  "sha256": "5f2c1a7e1971f44c8106c7472ecb704e1ef97f5761eb41aa8226e49adffd1792",
+  "mtime": "2026-10-26 15:02:24"
  },
  "mcfcState": {
   "afterLoad": "READY_ON",
   "final": "READY_ON",
   "decisiveError": null,
-  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 19Total Function Count: 20"
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 20Total Function Count: 20"
  },
  "compile": {
   "found": 20,
-  "compiled": 19,
-  "rate": 0.95,
+  "compiled": 20,
+  "rate": 1.0,
   "partialFallbackCommands": 7,
   "wholeFallbacks": {},
-  "compileFailures": [
-   "armor_stand_arms:app/arms/right_click/change_arms"
-  ],
+  "compileFailures": [],
   "compilerErrors": [],
   "runtimeDisables": [],
   "topPartialReasons": {
@@ -40,36 +38,27 @@
   }
  },
  "debug": {
-  "header": "13 compiled | 1 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
+  "header": "13 compiled | 0 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
   "functionsByStatus": {
-   "vanilla": 1,
    "compiled": 13
   },
-  "totalCalls": 382,
-  "vanillaCalls": 4,
+  "totalCalls": 378,
+  "vanillaCalls": 0,
   "compiledCalls": 378,
-  "compiledCallShare": 0.9895,
-  "nonCompiled": [
-   {
-    "id": "armor_stand_arms:app/arms/right_click/change_arms/2616282",
-    "status": "vanilla",
-    "calls": 4,
-    "vanillaCalls": 4
-   }
-  ],
-  "nonCompiledCount": 1
+  "compiledCallShare": 1.0,
+  "nonCompiled": [],
+  "nonCompiledCount": 0
  },
  "compare": {
   "confirmedFindings": 0,
   "flakyFindings": 0,
   "lowConfidence": 0,
-  "noise": 2,
+  "noise": 0,
   "genFindings": null,
   "genNoise": null,
   "confirmation": {
    "enabled": true,
-   "ran": true,
-   "onlyInSecondAttempt": 0
+   "ran": false
   },
   "sections": {
    "blocks": {
@@ -140,7 +129,7 @@
    },
    "world": {
     "paths": 12,
-    "noise": 2,
+    "noise": 0,
     "findings": 0,
     "lowConfidence": 0
    }
@@ -223,35 +212,32 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 0.24,
-   "min": 0.19,
-   "max": 0.49,
+   "median": 0.42,
+   "min": 0.27,
+   "max": 0.72,
    "lines": [
-    "Sprint completed with 2047 ticks per second, or 0.49 ms per tick",
-    "Sprint completed with 4122 ticks per second, or 0.24 ms per tick",
-    "Sprint completed with 5358 ticks per second, or 0.19 ms per tick"
+    "Sprint completed with 1382 ticks per second, or 0.72 ms per tick",
+    "Sprint completed with 2360 ticks per second, or 0.42 ms per tick",
+    "Sprint completed with 3747 ticks per second, or 0.27 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.28,
-   "min": 0.2,
-   "max": 0.53,
+   "median": 0.33,
+   "min": 0.31,
+   "max": 0.79,
    "lines": [
-    "Sprint completed with 1893 ticks per second, or 0.53 ms per tick",
-    "Sprint completed with 3631 ticks per second, or 0.28 ms per tick",
-    "Sprint completed with 4927 ticks per second, or 0.20 ms per tick"
+    "Sprint completed with 1263 ticks per second, or 0.79 ms per tick",
+    "Sprint completed with 3039 ticks per second, or 0.33 ms per tick",
+    "Sprint completed with 3257 ticks per second, or 0.31 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 38.7,
-  "base2": 38.7,
-  "mcfc": 41.7,
-  "perfbase": 36.1,
-  "attempt2-base1": 37.0,
-  "attempt2-base2": 37.9,
-  "attempt2-mcfc": 35.1
+  "base1": 45.2,
+  "base2": 47.0,
+  "mcfc": 41.6,
+  "perfbase": 44.9
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

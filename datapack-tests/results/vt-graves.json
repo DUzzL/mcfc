@@ -1,6 +1,6 @@
 {
  "id": "vt-graves",
- "status": "FALLBACK-ISSUE",
+ "status": "OK",
  "kind": "function",
  "packs": [
   "vt-graves"
@@ -8,27 +8,23 @@
  "problems": [],
  "notes": [],
  "mcfcJar": {
-  "name": "mcfc-1a611fce.jar",
-  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
-  "mtime": "2026-10-26 09:56:09"
+  "name": "mcfc-retfix.jar",
+  "sha256": "5f2c1a7e1971f44c8106c7472ecb704e1ef97f5761eb41aa8226e49adffd1792",
+  "mtime": "2026-10-26 15:02:24"
  },
  "mcfcState": {
   "afterLoad": "READY_ON",
   "final": "READY_ON",
   "decisiveError": null,
-  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 136Total Function Count: 139"
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 139Total Function Count: 139"
  },
  "compile": {
   "found": 139,
-  "compiled": 136,
-  "rate": 0.9784,
+  "compiled": 139,
+  "rate": 1.0,
   "partialFallbackCommands": 51,
   "wholeFallbacks": {},
-  "compileFailures": [
-   "graves:creation/create_loading_grave_listing",
-   "graves:creation/items/pick_up_items_at_inventory_pos",
-   "graves:creation/update_grave_listing"
-  ],
+  "compileFailures": [],
   "compilerErrors": [],
   "runtimeDisables": [],
   "topPartialReasons": {
@@ -63,7 +59,7 @@
   "confirmedFindings": 0,
   "flakyFindings": 0,
   "lowConfidence": 0,
-  "noise": 4,
+  "noise": 0,
   "genFindings": null,
   "genNoise": null,
   "confirmation": {
@@ -121,7 +117,7 @@
    },
    "scheduled": {
     "paths": 8,
-    "noise": 2,
+    "noise": 0,
     "findings": 0,
     "lowConfidence": 0
    },
@@ -139,7 +135,7 @@
    },
    "world": {
     "paths": 12,
-    "noise": 2,
+    "noise": 0,
     "findings": 0,
     "lowConfidence": 0
    }
@@ -222,32 +218,32 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 0.21,
-   "min": 0.18,
-   "max": 0.26,
+   "median": 0.31,
+   "min": 0.28,
+   "max": 0.32,
    "lines": [
-    "Sprint completed with 3777 ticks per second, or 0.26 ms per tick",
-    "Sprint completed with 4668 ticks per second, or 0.21 ms per tick",
-    "Sprint completed with 5670 ticks per second, or 0.18 ms per tick"
+    "Sprint completed with 3091 ticks per second, or 0.32 ms per tick",
+    "Sprint completed with 3241 ticks per second, or 0.31 ms per tick",
+    "Sprint completed with 3526 ticks per second, or 0.28 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.23,
-   "min": 0.2,
-   "max": 0.28,
+   "median": 0.26,
+   "min": 0.23,
+   "max": 0.32,
    "lines": [
-    "Sprint completed with 3548 ticks per second, or 0.28 ms per tick",
-    "Sprint completed with 4267 ticks per second, or 0.23 ms per tick",
-    "Sprint completed with 4963 ticks per second, or 0.20 ms per tick"
+    "Sprint completed with 3137 ticks per second, or 0.32 ms per tick",
+    "Sprint completed with 3801 ticks per second, or 0.26 ms per tick",
+    "Sprint completed with 4318 ticks per second, or 0.23 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 43.8,
-  "base2": 43.9,
-  "mcfc": 39.1,
-  "perfbase": 37.5
+  "base1": 44.1,
+  "base2": 50.1,
+  "mcfc": 41.8,
+  "perfbase": 40.2
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

@@ -1,6 +1,6 @@
 {
  "id": "mr-timber-strike",
- "status": "FALLBACK-ISSUE",
+ "status": "OK",
  "kind": "function",
  "packs": [
   "mr-timber-strike"
@@ -8,25 +8,23 @@
  "problems": [],
  "notes": [],
  "mcfcJar": {
-  "name": "mcfc-1a611fce.jar",
-  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
-  "mtime": "2026-10-26 09:56:09"
+  "name": "mcfc-retfix.jar",
+  "sha256": "5f2c1a7e1971f44c8106c7472ecb704e1ef97f5761eb41aa8226e49adffd1792",
+  "mtime": "2026-10-26 15:02:24"
  },
  "mcfcState": {
   "afterLoad": "READY_ON",
   "final": "READY_ON",
   "decisiveError": null,
-  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 50Total Function Count: 51"
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 51Total Function Count: 51"
  },
  "compile": {
   "found": 51,
-  "compiled": 50,
-  "rate": 0.9804,
+  "compiled": 51,
+  "rate": 1.0,
   "partialFallbackCommands": 83,
   "wholeFallbacks": {},
-  "compileFailures": [
-   "timberstrike:main/handle"
-  ],
+  "compileFailures": [],
   "compilerErrors": [],
   "runtimeDisables": [],
   "topPartialReasons": {
@@ -37,15 +35,15 @@
   "unsupportedCommands": {}
  },
  "debug": {
-  "header": "41 compiled | 7 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
+  "header": "41 compiled | 6 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
   "functionsByStatus": {
-   "vanilla": 7,
+   "vanilla": 6,
    "compiled": 41
   },
-  "totalCalls": 827,
-  "vanillaCalls": 187,
+  "totalCalls": 818,
+  "vanillaCalls": 178,
   "compiledCalls": 640,
-  "compiledCallShare": 0.7739,
+  "compiledCallShare": 0.7824,
   "nonCompiled": [
    {
     "id": "timberstrike:tree/expand/-1959091592",
@@ -66,12 +64,6 @@
     "vanillaCalls": 51
    },
    {
-    "id": "timberstrike:main/handle/-1046185734",
-    "status": "vanilla",
-    "calls": 9,
-    "vanillaCalls": 9
-   },
-   {
     "id": "timberstrike:tree/run/-1959091592",
     "status": "vanilla",
     "calls": 8,
@@ -90,13 +82,13 @@
     "vanillaCalls": 1
    }
   ],
-  "nonCompiledCount": 7
+  "nonCompiledCount": 6
  },
  "compare": {
   "confirmedFindings": 0,
   "flakyFindings": 0,
-  "lowConfidence": 4,
-  "noise": 98,
+  "lowConfidence": 31,
+  "noise": 111,
   "genFindings": null,
   "genNoise": null,
   "confirmation": {
@@ -123,10 +115,10 @@
     "lowConfidence": 0
    },
    "entities": {
-    "paths": 230,
-    "noise": 96,
+    "paths": 246,
+    "noise": 105,
     "findings": 0,
-    "lowConfidence": 4
+    "lowConfidence": 31
    },
    "functionTags": {
     "paths": 2,
@@ -147,8 +139,8 @@
     "lowConfidence": 0
    },
    "players": {
-    "paths": 43,
-    "noise": 0,
+    "paths": 47,
+    "noise": 6,
     "findings": 0,
     "lowConfidence": 0
    },
@@ -172,7 +164,7 @@
    },
    "world": {
     "paths": 12,
-    "noise": 2,
+    "noise": 0,
     "findings": 0,
     "lowConfidence": 0
    }
@@ -181,24 +173,159 @@
   "flaky": [],
   "lowConfidenceSample": [
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#14].pos[2]",
-    "base": "3.13",
-    "mcfc": "3.88"
+    "path": "entities.minecraft:overworld.list[minecraft:item#22].customName",
+    "base": "null",
+    "mcfc": "<missing>"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#15].pos[0]",
-    "base": "3.13",
-    "mcfc": "3.54"
+    "path": "entities.minecraft:overworld.list[minecraft:item#22].pos[1]",
+    "base": "-60.0",
+    "mcfc": "<missing>"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#4].pos[0]",
-    "base": "-2.12",
-    "mcfc": "-2.32"
+    "path": "entities.minecraft:overworld.list[minecraft:item#22].tags[]",
+    "base": "[]",
+    "mcfc": "<missing>"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#8].pos[0]",
-    "base": "-3.0",
-    "mcfc": "-3.44"
+    "path": "entities.minecraft:overworld.list[minecraft:item#22].type",
+    "base": "\"minecraft:item\"",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#22].uuid",
+    "base": "\"<item#22>\"",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#23].customName",
+    "base": "null",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#23].pos[1]",
+    "base": "-60.0",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#23].tags[]",
+    "base": "[]",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#23].type",
+    "base": "\"minecraft:item\"",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#23].uuid",
+    "base": "\"<item#23>\"",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#24].customName",
+    "base": "null",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#24].pos[1]",
+    "base": "-60.0",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#24].tags[]",
+    "base": "[]",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#24].type",
+    "base": "\"minecraft:item\"",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#24].uuid",
+    "base": "\"<item#24>\"",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#25].customName",
+    "base": "null",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#25].pos[1]",
+    "base": "-60.0",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#25].tags[]",
+    "base": "[]",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#25].type",
+    "base": "\"minecraft:item\"",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#25].uuid",
+    "base": "\"<item#25>\"",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#26].customName",
+    "base": "null",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#26].pos[1]",
+    "base": "-60.0",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#26].tags[]",
+    "base": "[]",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#26].type",
+    "base": "\"minecraft:item\"",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#26].uuid",
+    "base": "\"<item#26>\"",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#27].customName",
+    "base": "null",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#27].pos[1]",
+    "base": "-60.0",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#27].tags[]",
+    "base": "[]",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#27].type",
+    "base": "\"minecraft:item\"",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#27].uuid",
+    "base": "\"<item#27>\"",
+    "mcfc": "<missing>"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#6].nbt",
+    "base": "\"{Age:369s,Health:5s,Invulnerable:0b,Item:{count:1,id:\\\"minecraft:cherry_log\\\"},PickupDelay:0s}\"",
+    "mcfc": "\"{Age:483s,Health:5s,Invulnerable:0b,Item:{count:5,id:\\\"minecraft:birch_log\\\"},PickupDelay:0s}\""
    }
   ]
  },
@@ -277,31 +404,31 @@
  "perf": {
   "mcfc": {
    "median": 0.3,
-   "min": 0.25,
-   "max": 0.41,
+   "min": 0.28,
+   "max": 0.46,
    "lines": [
-    "Sprint completed with 2433 ticks per second, or 0.41 ms per tick",
-    "Sprint completed with 3302 ticks per second, or 0.30 ms per tick",
-    "Sprint completed with 3931 ticks per second, or 0.25 ms per tick"
+    "Sprint completed with 2155 ticks per second, or 0.46 ms per tick",
+    "Sprint completed with 3352 ticks per second, or 0.30 ms per tick",
+    "Sprint completed with 3592 ticks per second, or 0.28 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.28,
-   "min": 0.28,
-   "max": 0.38,
+   "median": 0.38,
+   "min": 0.34,
+   "max": 0.45,
    "lines": [
-    "Sprint completed with 2620 ticks per second, or 0.38 ms per tick",
-    "Sprint completed with 3549 ticks per second, or 0.28 ms per tick",
-    "Sprint completed with 3627 ticks per second, or 0.28 ms per tick"
+    "Sprint completed with 2215 ticks per second, or 0.45 ms per tick",
+    "Sprint completed with 2616 ticks per second, or 0.38 ms per tick",
+    "Sprint completed with 2961 ticks per second, or 0.34 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 45.6,
-  "base2": 46.1,
-  "mcfc": 50.2,
-  "perfbase": 42.8
+  "base1": 50.6,
+  "base2": 50.6,
+  "mcfc": 47.7,
+  "perfbase": 46.3
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

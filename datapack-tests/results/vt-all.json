@@ -1,6 +1,6 @@
 {
  "id": "vt-all",
- "status": "FALLBACK-ISSUE",
+ "status": "OK",
  "kind": "function",
  "packs": [
   "vt-multiplayer-sleep",
@@ -19,27 +19,23 @@
  "problems": [],
  "notes": [],
  "mcfcJar": {
-  "name": "mcfc-bfaa7efd.jar",
-  "sha256": "fca3ca87409825f94361fa4e189433dcced4f759e339f2b7bc1999eb69d81ed0",
-  "mtime": "2026-10-26 13:45:38"
+  "name": "mcfc-retfix.jar",
+  "sha256": "5f2c1a7e1971f44c8106c7472ecb704e1ef97f5761eb41aa8226e49adffd1792",
+  "mtime": "2026-10-26 15:02:24"
  },
  "mcfcState": {
   "afterLoad": "READY_ON",
   "final": "READY_ON",
   "decisiveError": null,
-  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 464Total Function Count: 467"
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 467Total Function Count: 467"
  },
  "compile": {
   "found": 467,
-  "compiled": 464,
-  "rate": 0.9936,
+  "compiled": 467,
+  "rate": 1.0,
   "partialFallbackCommands": 73,
   "wholeFallbacks": {},
-  "compileFailures": [
-   "graves:creation/update_grave_listing",
-   "graves:creation/create_loading_grave_listing",
-   "graves:creation/items/pick_up_items_at_inventory_pos"
-  ],
+  "compileFailures": [],
   "compilerErrors": [],
   "runtimeDisables": [],
   "topPartialReasons": {
@@ -77,15 +73,14 @@
  },
  "compare": {
   "confirmedFindings": 0,
-  "flakyFindings": 1,
+  "flakyFindings": 0,
   "lowConfidence": 0,
-  "noise": 23,
+  "noise": 3,
   "genFindings": null,
   "genNoise": null,
   "confirmation": {
    "enabled": true,
-   "ran": true,
-   "onlyInSecondAttempt": 0
+   "ran": false
   },
   "sections": {
    "blocks": {
@@ -138,14 +133,14 @@
    },
    "scheduled": {
     "paths": 68,
-    "noise": 17,
+    "noise": 0,
     "findings": 0,
     "lowConfidence": 0
    },
    "scoreboard": {
     "paths": 1423,
-    "noise": 4,
-    "findings": 1,
+    "noise": 3,
+    "findings": 0,
     "lowConfidence": 0
    },
    "storage": {
@@ -156,20 +151,13 @@
    },
    "world": {
     "paths": 12,
-    "noise": 2,
+    "noise": 0,
     "findings": 0,
     "lowConfidence": 0
    }
   },
   "confirmed": [],
-  "flaky": [
-   {
-    "path": "scoreboard.scores.#random_type.as_angle",
-    "base": "0",
-    "mcfc": "2",
-    "dump": "final"
-   }
-  ],
+  "flaky": [],
   "lowConfidenceSample": []
  },
  "exceptions": {
@@ -178,7 +166,7 @@
   "mcfc": {
    "com.mojang.authlib.exceptions.MinecraftClientException": {
     "count": 1,
-    "first": "Failed to read from https://sessionserver.mojang.com/session/minecraft/profile/3c60c0c23d05399fbffb864ec993da33?unsigned=false due to Read timed out"
+    "first": "Failed to read from https://api.mojang.com/users/profiles/minecraft/dptester1 due to Read timed out"
    },
    "java.net.SocketTimeoutException": {
     "count": 1,
@@ -288,35 +276,32 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 0.58,
-   "min": 0.41,
-   "max": 0.7,
+   "median": 0.49,
+   "min": 0.29,
+   "max": 0.61,
    "lines": [
-    "Sprint completed with 1437 ticks per second, or 0.70 ms per tick",
-    "Sprint completed with 1736 ticks per second, or 0.58 ms per tick",
-    "Sprint completed with 2421 ticks per second, or 0.41 ms per tick"
+    "Sprint completed with 1646 ticks per second, or 0.61 ms per tick",
+    "Sprint completed with 2034 ticks per second, or 0.49 ms per tick",
+    "Sprint completed with 3429 ticks per second, or 0.29 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 0.57,
-   "min": 0.46,
-   "max": 0.9,
+   "median": 0.45,
+   "min": 0.38,
+   "max": 0.65,
    "lines": [
-    "Sprint completed with 1110 ticks per second, or 0.90 ms per tick",
-    "Sprint completed with 1746 ticks per second, or 0.57 ms per tick",
-    "Sprint completed with 2192 ticks per second, or 0.46 ms per tick"
+    "Sprint completed with 1540 ticks per second, or 0.65 ms per tick",
+    "Sprint completed with 2235 ticks per second, or 0.45 ms per tick",
+    "Sprint completed with 2621 ticks per second, or 0.38 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 37.5,
-  "base2": 38.0,
-  "mcfc": 41.2,
-  "perfbase": 35.1,
-  "attempt2-base1": 35.4,
-  "attempt2-base2": 41.5,
-  "attempt2-mcfc": 35.1
+  "base1": 37.4,
+  "base2": 41.3,
+  "mcfc": 40.2,
+  "perfbase": 34.7
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",
