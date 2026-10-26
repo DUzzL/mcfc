@@ -62,6 +62,9 @@ fun generateTests(codeGenerator: CodeGenerator, tests: List<TestInfo>) {
                     if(element is CheckScoreInstruction) {
                         map.appendText("        state.assertObjectiveExists(thrower, \"${element.objective}\").assertScoreSet(thrower, \"${element.holder}\", ${element.value});\n")
                     }
+                    if(element is NoFallbackInstruction) {
+                        map.appendText("        state.assertNoDiagnostics(thrower);\n")
+                    }
                 }
             }
             map.appendText("    }\n")

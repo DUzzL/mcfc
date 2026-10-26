@@ -37,6 +37,9 @@ interface ValidateInstruction {
     companion object {
         fun parse(line: String): ValidateInstruction {
             val parts = line.split(" ")
+            if(parts[0] == "no_fallback" && parts.size == 1) {
+                return NoFallbackInstruction
+            }
             if(parts[0] == "score") {
                 if(parts[3] == "is") {
                     return CheckScoreInstruction(parts[2], parts[1], parts[4].toInt())
@@ -50,6 +53,9 @@ interface ValidateInstruction {
 data class CreateScoreboardInstruction(val name: String, val criterion: String) : SetupInstruction
 
 data class CheckScoreInstruction(val objective: String, val holder: String, val value: Int) : ValidateInstruction
+
+/** Every command of the test compiled: the compiler reported no diagnostic (no vanilla fallback). */
+data object NoFallbackInstruction : ValidateInstruction
 
 class SetupTestContext : TestContext<SetupInstruction>() {
     override fun addLine(line: String) = addParsed(SetupInstruction.parse(line))

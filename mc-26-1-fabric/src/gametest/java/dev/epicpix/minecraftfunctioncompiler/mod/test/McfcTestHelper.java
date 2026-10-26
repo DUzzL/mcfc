@@ -67,7 +67,12 @@ public class McfcTestHelper {
             var objectiveState = new ObjectiveState(objective.getName(), values);
             objectives.put(objective.getName(), objectiveState);
         }
-        return new ServerState(objectives);
+        var diagnostics = new java.util.ArrayList<String>();
+        var loader = dev.epicpix.minecraftfunctioncompiler.mod.FunctionCompilerMain.functionClassLoader;
+        if(loader != null) {
+            for(var diagnostic : loader.getDiagnostics()) diagnostics.add(diagnostic.source() + ": " + diagnostic.message());
+        }
+        return new ServerState(objectives, diagnostics);
     }
 
 }
