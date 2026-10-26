@@ -1,0 +1,147 @@
+{
+ "id": "mr-guns_plus_plus",
+ "status": "CRASH",
+ "kind": "function",
+ "packs": [
+  "mr-guns_plus_plus"
+ ],
+ "problems": [
+  "base1 run failed: TimeoutError: log pattern not seen: Loaded \\d+ advancements",
+  "base2 run failed: TimeoutError: log pattern not seen: Loaded \\d+ advancements",
+  "mcfc run failed: TimeoutError: log pattern not seen: Loaded \\d+ advancements"
+ ],
+ "notes": [],
+ "mcfcState": {
+  "afterLoad": null,
+  "final": null,
+  "decisiveError": "java.lang.IllegalStateException: Failed to parse thepa:gun_0 from pack file/mr-guns_plus_plus.zip",
+  "text": null
+ },
+ "compile": {
+  "found": null,
+  "compiled": null,
+  "rate": null,
+  "partialFallbackCommands": 0,
+  "wholeFallbacks": {},
+  "compileFailures": [],
+  "compilerErrors": [],
+  "runtimeDisables": [],
+  "topPartialReasons": {},
+  "unsupportedCommands": {}
+ },
+ "debug": null,
+ "compare": {
+  "confirmedFindings": 0,
+  "flakyFindings": 0,
+  "lowConfidence": 0,
+  "noise": 0,
+  "genFindings": null,
+  "genNoise": null,
+  "confirmation": {
+   "enabled": true,
+   "ran": false
+  },
+  "sections": {},
+  "confirmed": [],
+  "flaky": [],
+  "lowConfidenceSample": []
+ },
+ "exceptions": {
+  "base1": {
+   "java.lang.IllegalStateException": {
+    "count": 89,
+    "first": "Failed to parse thepa:gun_0 from pack file/mr-guns_plus_plus.zip"
+   },
+   "java.util.concurrent.CompletionException": {
+    "count": 1,
+    "first": "net.minecraft.ReportedException: Registry Loading"
+   },
+   "net.minecraft.ReportedException": {
+    "count": 1,
+    "first": "Registry Loading"
+   }
+  },
+  "base2": {
+   "java.lang.IllegalStateException": {
+    "count": 89,
+    "first": "Failed to parse thepa:gun_0 from pack file/mr-guns_plus_plus.zip"
+   },
+   "java.util.concurrent.CompletionException": {
+    "count": 1,
+    "first": "net.minecraft.ReportedException: Registry Loading"
+   },
+   "net.minecraft.ReportedException": {
+    "count": 1,
+    "first": "Registry Loading"
+   }
+  },
+  "mcfc": {
+   "java.lang.IllegalStateException": {
+    "count": 89,
+    "first": "Failed to parse thepa:gun_0 from pack file/mr-guns_plus_plus.zip"
+   },
+   "java.util.concurrent.CompletionException": {
+    "count": 1,
+    "first": "net.minecraft.ReportedException: Registry Loading"
+   },
+   "net.minecraft.ReportedException": {
+    "count": 1,
+    "first": "Registry Loading"
+   }
+  },
+  "perfbase": {
+   "java.lang.IllegalStateException": {
+    "count": 89,
+    "first": "Failed to parse thepa:gun_0 from pack file/mr-guns_plus_plus.zip"
+   },
+   "com.mojang.authlib.exceptions.MinecraftClientException": {
+    "count": 1,
+    "first": "Failed to read from https://sessionserver.mojang.com/session/minecraft/profile/c8b0ccc87cd3306481b83317aa73ed1a?unsigned=false due to Read timed out"
+   },
+   "java.net.SocketTimeoutException": {
+    "count": 1,
+    "first": "Read timed out"
+   },
+   "java.util.concurrent.CompletionException": {
+    "count": 1,
+    "first": "net.minecraft.ReportedException: Registry Loading"
+   },
+   "net.minecraft.ReportedException": {
+    "count": 1,
+    "first": "Registry Loading"
+   }
+  }
+ },
+ "exceptionTotals": {
+  "base1": 91,
+  "base2": 91,
+  "mcfc": 91,
+  "perfbase": 93
+ },
+ "exercise": {
+  "base1": null,
+  "base2": null,
+  "mcfc": null
+ },
+ "slowFunctions": {},
+ "perf": null,
+ "durationsSeconds": {
+  "base1": 317.8,
+  "base2": 320.8,
+  "mcfc": 318.9,
+  "perfbase": 318.9
+ },
+ "gamerules": {
+  "command_chain_limit": "max_command_sequence_length",
+  "spawn_mobs": "spawn_mobs",
+  "spawn_monsters": "spawn_monsters",
+  "spawn_patrols": "spawn_patrols",
+  "spawn_wandering_traders": "spawn_wandering_traders",
+  "spawn_phantoms": "spawn_phantoms",
+  "spawn_wardens": "spawn_wardens",
+  "random_tick_speed": "random_tick_speed",
+  "weather_cycle": "advance_weather"
+ },
+ "ticks": 200,
+ "seed": "20261026"
+}

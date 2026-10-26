@@ -1,0 +1,314 @@
+{
+ "id": "mr-veinminer",
+ "status": "FALLBACK-ISSUE",
+ "kind": "function",
+ "packs": [
+  "mr-veinminer"
+ ],
+ "problems": [],
+ "notes": [],
+ "mcfcState": {
+  "afterLoad": "READY_ON",
+  "final": "READY_ON",
+  "decisiveError": null,
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 26Total Function Count: 33"
+ },
+ "compile": {
+  "found": 33,
+  "compiled": 26,
+  "rate": 0.7879,
+  "partialFallbackCommands": 37,
+  "wholeFallbacks": {},
+  "compileFailures": [
+   "veinminer:block_add",
+   "veinminer:block_edit",
+   "veinminer:internal/check/_loopi",
+   "veinminer:internal/mine/_loopi",
+   "veinminer:internal/mine/try",
+   "veinminer:tool_add",
+   "veinminer:tool_edit"
+  ],
+  "compilerErrors": [],
+  "runtimeDisables": [],
+  "topPartialReasons": {
+   "Macros are not supported in this location": 28,
+   "Too many arguments for @ scoreboard players reset <targets:score_holder>": 4,
+   "Macro commands are not supported for json arguments": 4,
+   "Unknown command: say": 1
+  },
+  "unsupportedCommands": {
+   "say": 1
+  }
+ },
+ "debug": {
+  "header": "16 compiled | 9 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
+  "functionsByStatus": {
+   "vanilla": 9,
+   "compiled": 16
+  },
+  "totalCalls": 4371,
+  "vanillaCalls": 3880,
+  "compiledCalls": 491,
+  "compiledCallShare": 0.1123,
+  "nonCompiled": [
+   {
+    "id": "veinminer:internal/check/_loopi/164062945",
+    "status": "vanilla",
+    "calls": 3699,
+    "vanillaCalls": 3699
+   },
+   {
+    "id": "veinminer:internal/mine/_loopi/164062945",
+    "status": "vanilla",
+    "calls": 92,
+    "vanillaCalls": 92
+   },
+   {
+    "id": "veinminer:block_edit/50511133",
+    "status": "vanilla",
+    "calls": 21,
+    "vanillaCalls": 21
+   },
+   {
+    "id": "veinminer:block_add/1460620541",
+    "status": "vanilla",
+    "calls": 20,
+    "vanillaCalls": 20
+   },
+   {
+    "id": "veinminer:internal/mine/try/164062945",
+    "status": "vanilla",
+    "calls": 12,
+    "vanillaCalls": 12
+   },
+   {
+    "id": "veinminer:internal/check/_mine/164062945",
+    "status": "vanilla",
+    "calls": 11,
+    "vanillaCalls": 11
+   },
+   {
+    "id": "veinminer:tool_edit/50511133",
+    "status": "vanilla",
+    "calls": 10,
+    "vanillaCalls": 10
+   },
+   {
+    "id": "veinminer:tool_add/1460620541",
+    "status": "vanilla",
+    "calls": 9,
+    "vanillaCalls": 9
+   },
+   {
+    "id": "veinminer:internal/check/perform_mine/3575641",
+    "status": "vanilla",
+    "calls": 6,
+    "vanillaCalls": 6
+   }
+  ],
+  "nonCompiledCount": 9
+ },
+ "compare": {
+  "confirmedFindings": 0,
+  "flakyFindings": 0,
+  "lowConfidence": 0,
+  "noise": 3,
+  "genFindings": null,
+  "genNoise": null,
+  "confirmation": {
+   "enabled": true,
+   "ran": false
+  },
+  "sections": {
+   "blocks": {
+    "paths": 266,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "bossbars": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "datapacks": {
+    "paths": 2,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "entities": {
+    "paths": 6,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functionTags": {
+    "paths": 2,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functions": {
+    "paths": 33,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "gamerules": {
+    "paths": 58,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "players": {
+    "paths": 30,
+    "noise": 1,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scheduled": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scoreboard": {
+    "paths": 114,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "storage": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "world": {
+    "paths": 12,
+    "noise": 2,
+    "findings": 0,
+    "lowConfidence": 0
+   }
+  },
+  "confirmed": [],
+  "flaky": [],
+  "lowConfidenceSample": []
+ },
+ "exceptions": {
+  "base1": {},
+  "base2": {},
+  "mcfc": {},
+  "perfbase": {}
+ },
+ "exceptionTotals": {
+  "base1": 0,
+  "base2": 0,
+  "mcfc": 0,
+  "perfbase": 0
+ },
+ "exercise": {
+  "base1": {
+   "namespaces": [
+    "veinminer"
+   ],
+   "dumpedFunctions": 33,
+   "candidates": 33,
+   "skippedMacro": 16,
+   "skippedName": 2,
+   "skippedScenario": 0,
+   "ran": 15,
+   "replyExecuted": 15,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "base2": {
+   "namespaces": [
+    "veinminer"
+   ],
+   "dumpedFunctions": 33,
+   "candidates": 33,
+   "skippedMacro": 16,
+   "skippedName": 2,
+   "skippedScenario": 0,
+   "ran": 15,
+   "replyExecuted": 15,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "mcfc": {
+   "namespaces": [
+    "veinminer"
+   ],
+   "dumpedFunctions": 33,
+   "candidates": 33,
+   "skippedMacro": 16,
+   "skippedName": 2,
+   "skippedScenario": 0,
+   "ran": 15,
+   "replyExecuted": 15,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  }
+ },
+ "slowFunctions": {},
+ "perf": {
+  "mcfc": {
+   "median": 0.3,
+   "min": 0.28,
+   "max": 0.35,
+   "lines": [
+    "Sprint completed with 2873 ticks per second, or 0.35 ms per tick",
+    "Sprint completed with 3387 ticks per second, or 0.30 ms per tick",
+    "Sprint completed with 3620 ticks per second, or 0.28 ms per tick"
+   ]
+  },
+  "vanilla": {
+   "median": 0.31,
+   "min": 0.28,
+   "max": 0.35,
+   "lines": [
+    "Sprint completed with 2823 ticks per second, or 0.35 ms per tick",
+    "Sprint completed with 3270 ticks per second, or 0.31 ms per tick",
+    "Sprint completed with 3591 ticks per second, or 0.28 ms per tick"
+   ]
+  },
+  "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
+ },
+ "durationsSeconds": {
+  "base1": 42.0,
+  "base2": 43.2,
+  "mcfc": 44.3,
+  "perfbase": 39.4
+ },
+ "gamerules": {
+  "command_chain_limit": "max_command_sequence_length",
+  "spawn_mobs": "spawn_mobs",
+  "spawn_monsters": "spawn_monsters",
+  "spawn_patrols": "spawn_patrols",
+  "spawn_wandering_traders": "spawn_wandering_traders",
+  "spawn_phantoms": "spawn_phantoms",
+  "spawn_wardens": "spawn_wardens",
+  "random_tick_speed": "random_tick_speed",
+  "weather_cycle": "advance_weather"
+ },
+ "ticks": 200,
+ "seed": "20261026"
+}

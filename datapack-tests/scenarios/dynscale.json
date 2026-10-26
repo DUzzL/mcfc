@@ -1,0 +1,1 @@
+{"steps": [{"step": 1}, {"dump": "t1"}, {"step": 1}, {"dump": "t2"}, {"step": 1}, {"dump": "t3"}, {"step": 1}, {"dump": "t4"}, {"step": 1}, {"dump": "t5"}, {"step": 1}, {"dump": "t6"}], "exerciserSkip": [".*"]}

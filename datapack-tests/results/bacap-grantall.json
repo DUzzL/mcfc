@@ -1,0 +1,1436 @@
+{
+ "id": "bacap-grantall",
+ "status": "DIFF",
+ "kind": "function",
+ "packs": [
+  "bacap"
+ ],
+ "problems": [],
+ "notes": [],
+ "mcfcState": {
+  "afterLoad": "READY_ON",
+  "final": "READY_ON",
+  "decisiveError": null,
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 5435Total Function Count: 5436"
+ },
+ "compile": {
+  "found": 5436,
+  "compiled": 5435,
+  "rate": 0.9998,
+  "partialFallbackCommands": 98,
+  "wholeFallbacks": {},
+  "compileFailures": [
+   "bacap_rewards:advancement_made_macro"
+  ],
+  "compilerErrors": [],
+  "runtimeDisables": [],
+  "topPartialReasons": {
+   "Missing space after argument @ function <functions:function>": 73,
+   "Missing space after argument @ advancement grant <targets:entity_selector[players]> only <advancement:resource_location>": 17,
+   "Failed to parse any options @ scoreboard objectives": 8
+  },
+  "unsupportedCommands": {}
+ },
+ "debug": {
+  "header": "5247 compiled | 1 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
+  "functionsByStatus": {
+   "vanilla": 1,
+   "compiled": 5247
+  },
+  "totalCalls": 8240,
+  "vanillaCalls": 1260,
+  "compiledCalls": 6980,
+  "compiledCallShare": 0.8471,
+  "nonCompiled": [
+   {
+    "id": "bacap_rewards:advancement_made_macro/-604302563",
+    "status": "vanilla",
+    "calls": 1260,
+    "vanillaCalls": 1260
+   }
+  ],
+  "nonCompiledCount": 1
+ },
+ "compare": {
+  "confirmedFindings": 401,
+  "flakyFindings": 0,
+  "lowConfidence": 0,
+  "noise": 1472,
+  "genFindings": null,
+  "genNoise": null,
+  "confirmation": {
+   "enabled": false,
+   "ran": false
+  },
+  "sections": {
+   "blocks": {
+    "paths": 266,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "bossbars": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "datapacks": {
+    "paths": 2,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "entities": {
+    "paths": 4670,
+    "noise": 1472,
+    "findings": 96,
+    "lowConfidence": 0
+   },
+   "functionTags": {
+    "paths": 25,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functions": {
+    "paths": 5436,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "gamerules": {
+    "paths": 58,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "players": {
+    "paths": 13449,
+    "noise": 0,
+    "findings": 294,
+    "lowConfidence": 0
+   },
+   "scheduled": {
+    "paths": 8,
+    "noise": 0,
+    "findings": 2,
+    "lowConfidence": 0
+   },
+   "scoreboard": {
+    "paths": 1872,
+    "noise": 0,
+    "findings": 7,
+    "lowConfidence": 0
+   },
+   "storage": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "world": {
+    "paths": 12,
+    "noise": 0,
+    "findings": 2,
+    "lowConfidence": 0
+   }
+  },
+  "confirmed": [
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#10].pos[0]",
+    "base": "0.3",
+    "mcfc": "0.32",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#12].pos[0]",
+    "base": "0.31",
+    "mcfc": "0.33",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#13].pos[0]",
+    "base": "0.31",
+    "mcfc": "0.33",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#166].pos[0]",
+    "base": "0.45",
+    "mcfc": "0.46",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#167].pos[0]",
+    "base": "0.45",
+    "mcfc": "0.46",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#168].pos[0]",
+    "base": "0.45",
+    "mcfc": "0.46",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#194].pos[0]",
+    "base": "0.47",
+    "mcfc": "0.46",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#216].pos[0]",
+    "base": "0.48",
+    "mcfc": "0.47",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#217].pos[0]",
+    "base": "0.48",
+    "mcfc": "0.47",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#218].pos[0]",
+    "base": "0.48",
+    "mcfc": "0.47",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#243].pos[0]",
+    "base": "0.49",
+    "mcfc": "0.48",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#244].pos[0]",
+    "base": "0.49",
+    "mcfc": "0.48",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#245].pos[0]",
+    "base": "0.49",
+    "mcfc": "0.48",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#246].pos[0]",
+    "base": "0.49",
+    "mcfc": "0.48",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#247].pos[0]",
+    "base": "0.49",
+    "mcfc": "0.48",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#248].pos[0]",
+    "base": "0.49",
+    "mcfc": "0.48",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#249].pos[0]",
+    "base": "0.49",
+    "mcfc": "0.48",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#29].pos[0]",
+    "base": "0.35",
+    "mcfc": "0.34",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#30].pos[0]",
+    "base": "0.35",
+    "mcfc": "0.34",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#31].pos[0]",
+    "base": "0.35",
+    "mcfc": "0.34",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#36].pos[0]",
+    "base": "0.36",
+    "mcfc": "0.35",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#374].pos[2]",
+    "base": "3.88",
+    "mcfc": "4.36",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#378].pos[0]",
+    "base": "0.52",
+    "mcfc": "0.53",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#379].pos[0]",
+    "base": "0.52",
+    "mcfc": "0.53",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#380].pos[0]",
+    "base": "0.52",
+    "mcfc": "0.53",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#381].pos[0]",
+    "base": "0.52",
+    "mcfc": "0.53",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#382].pos[0]",
+    "base": "0.52",
+    "mcfc": "0.53",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#383].pos[0]",
+    "base": "0.52",
+    "mcfc": "0.53",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#384].pos[0]",
+    "base": "0.52",
+    "mcfc": "0.53",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#385].pos[0]",
+    "base": "0.52",
+    "mcfc": "0.53",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#386].pos[0]",
+    "base": "0.52",
+    "mcfc": "0.53",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#386].pos[2]",
+    "base": "4.31",
+    "mcfc": "3.86",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#387].pos[0]",
+    "base": "0.52",
+    "mcfc": "0.53",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#392].pos[0]",
+    "base": "0.53",
+    "mcfc": "0.54",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#393].pos[0]",
+    "base": "0.53",
+    "mcfc": "0.54",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#394].pos[0]",
+    "base": "0.53",
+    "mcfc": "0.54",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#395].pos[0]",
+    "base": "0.53",
+    "mcfc": "0.54",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#396].pos[0]",
+    "base": "0.53",
+    "mcfc": "0.54",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#397].pos[0]",
+    "base": "0.53",
+    "mcfc": "0.54",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#398].pos[0]",
+    "base": "0.53",
+    "mcfc": "0.54",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#399].pos[0]",
+    "base": "0.53",
+    "mcfc": "0.54",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#400].pos[0]",
+    "base": "0.53",
+    "mcfc": "0.54",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#401].pos[0]",
+    "base": "0.53",
+    "mcfc": "0.54",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#402].pos[0]",
+    "base": "0.53",
+    "mcfc": "0.54",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#403].pos[0]",
+    "base": "0.53",
+    "mcfc": "0.54",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#404].pos[0]",
+    "base": "0.53",
+    "mcfc": "0.54",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#405].pos[0]",
+    "base": "0.53",
+    "mcfc": "0.54",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#406].pos[0]",
+    "base": "0.53",
+    "mcfc": "0.54",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#407].pos[0]",
+    "base": "0.53",
+    "mcfc": "0.54",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#408].pos[0]",
+    "base": "0.53",
+    "mcfc": "0.54",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#409].pos[0]",
+    "base": "0.53",
+    "mcfc": "0.54",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#410].pos[0]",
+    "base": "0.53",
+    "mcfc": "0.55",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#411].pos[0]",
+    "base": "0.53",
+    "mcfc": "0.55",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#414].pos[0]",
+    "base": "0.54",
+    "mcfc": "0.55",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#415].pos[0]",
+    "base": "0.54",
+    "mcfc": "0.55",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#416].pos[0]",
+    "base": "0.54",
+    "mcfc": "0.55",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#417].pos[0]",
+    "base": "0.54",
+    "mcfc": "0.55",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#418].pos[0]",
+    "base": "0.54",
+    "mcfc": "0.55",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#419].pos[0]",
+    "base": "0.54",
+    "mcfc": "0.55",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#420].pos[0]",
+    "base": "0.54",
+    "mcfc": "0.55",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#421].pos[0]",
+    "base": "0.54",
+    "mcfc": "0.55",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#422].pos[0]",
+    "base": "0.54",
+    "mcfc": "0.55",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#423].pos[0]",
+    "base": "0.54",
+    "mcfc": "0.55",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#433].pos[0]",
+    "base": "0.55",
+    "mcfc": "0.56",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#434].pos[0]",
+    "base": "0.55",
+    "mcfc": "0.56",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#451].pos[0]",
+    "base": "0.56",
+    "mcfc": "0.57",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#494].pos[0]",
+    "base": "0.59",
+    "mcfc": "0.61",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#502].pos[0]",
+    "base": "0.6",
+    "mcfc": "0.61",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#510].pos[0]",
+    "base": "0.61",
+    "mcfc": "0.62",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#511].pos[0]",
+    "base": "0.61",
+    "mcfc": "0.62",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#512].pos[0]",
+    "base": "0.61",
+    "mcfc": "0.62",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#513].pos[2]",
+    "base": "3.58",
+    "mcfc": "4.09",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#515].pos[0]",
+    "base": "0.62",
+    "mcfc": "0.63",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#516].pos[0]",
+    "base": "0.62",
+    "mcfc": "0.63",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#517].pos[0]",
+    "base": "0.62",
+    "mcfc": "0.63",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#518].pos[0]",
+    "base": "0.62",
+    "mcfc": "0.63",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#519].pos[0]",
+    "base": "0.62",
+    "mcfc": "0.63",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#520].pos[0]",
+    "base": "0.62",
+    "mcfc": "0.63",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#521].pos[0]",
+    "base": "0.62",
+    "mcfc": "0.63",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#522].pos[0]",
+    "base": "0.62",
+    "mcfc": "0.63",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#528].pos[0]",
+    "base": "0.63",
+    "mcfc": "0.64",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#529].pos[0]",
+    "base": "0.63",
+    "mcfc": "0.64",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#530].pos[0]",
+    "base": "0.63",
+    "mcfc": "0.64",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#531].pos[0]",
+    "base": "0.63",
+    "mcfc": "0.64",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#537].pos[0]",
+    "base": "0.64",
+    "mcfc": "0.65",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#538].pos[0]",
+    "base": "0.64",
+    "mcfc": "0.65",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#539].pos[0]",
+    "base": "0.64",
+    "mcfc": "0.65",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#540].pos[0]",
+    "base": "0.64",
+    "mcfc": "0.65",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#541].pos[0]",
+    "base": "0.64",
+    "mcfc": "0.65",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#582].customName",
+    "base": "null",
+    "mcfc": "<missing>",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#582].pos[1]",
+    "base": "-60.0",
+    "mcfc": "<missing>",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#582].tags[]",
+    "base": "[]",
+    "mcfc": "<missing>",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#582].type",
+    "base": "\"minecraft:item\"",
+    "mcfc": "<missing>",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#582].uuid",
+    "base": "\"<item#582>\"",
+    "mcfc": "<missing>",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#6].pos[0]",
+    "base": "0.3",
+    "mcfc": "0.29",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#7].pos[0]",
+    "base": "0.3",
+    "mcfc": "0.29",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementCriteria.blazeandcave:mining/iggy[0]",
+    "base": "\"azalea\"",
+    "mcfc": "\"flowering_azalea\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementCriteria.blazeandcave:mining/iggy[1]",
+    "base": "\"flowering_azalea\"",
+    "mcfc": "<missing>",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementCriteria.blazeandcave:statistics/root[1]",
+    "base": "\"entered_portal\"",
+    "mcfc": "<missing>",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementCriteria.blazeandcave:statistics/root[2]",
+    "base": "\"the_first_night\"",
+    "mcfc": "<missing>",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementCriteria.blazeandcave:technical/consume_food_null[0]",
+    "base": "<missing>",
+    "mcfc": "\"consume_food_null\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1089]",
+    "base": "\"blazeandcave:technical/feed_parrot_cookie\"",
+    "mcfc": "\"blazeandcave:technical/consume_food_null\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1090]",
+    "base": "\"blazeandcave:technical/return_from_void\"",
+    "mcfc": "\"blazeandcave:technical/feed_parrot_cookie\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1091]",
+    "base": "\"blazeandcave:technical/riddle_eighth_line\"",
+    "mcfc": "\"blazeandcave:technical/return_from_void\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1092]",
+    "base": "\"blazeandcave:technical/riddle_fifth_line\"",
+    "mcfc": "\"blazeandcave:technical/riddle_eighth_line\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1093]",
+    "base": "\"blazeandcave:technical/riddle_first_line\"",
+    "mcfc": "\"blazeandcave:technical/riddle_fifth_line\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1094]",
+    "base": "\"blazeandcave:technical/riddle_fourth_line\"",
+    "mcfc": "\"blazeandcave:technical/riddle_first_line\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1095]",
+    "base": "\"blazeandcave:technical/riddle_ninth_line\"",
+    "mcfc": "\"blazeandcave:technical/riddle_fourth_line\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1096]",
+    "base": "\"blazeandcave:technical/riddle_second_line\"",
+    "mcfc": "\"blazeandcave:technical/riddle_ninth_line\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1097]",
+    "base": "\"blazeandcave:technical/riddle_seventh_line\"",
+    "mcfc": "\"blazeandcave:technical/riddle_second_line\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1098]",
+    "base": "\"blazeandcave:technical/riddle_sixth_line\"",
+    "mcfc": "\"blazeandcave:technical/riddle_seventh_line\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1099]",
+    "base": "\"blazeandcave:technical/riddle_tenth_line\"",
+    "mcfc": "\"blazeandcave:technical/riddle_sixth_line\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1100]",
+    "base": "\"blazeandcave:technical/riddle_third_line\"",
+    "mcfc": "\"blazeandcave:technical/riddle_tenth_line\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1101]",
+    "base": "\"blazeandcave:technical/scenic_route_fail\"",
+    "mcfc": "\"blazeandcave:technical/riddle_third_line\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1102]",
+    "base": "\"blazeandcave:technical/spawn_perfect_all\"",
+    "mcfc": "\"blazeandcave:technical/scenic_route_fail\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1103]",
+    "base": "\"blazeandcave:technical/spawn_perfect_one\"",
+    "mcfc": "\"blazeandcave:technical/spawn_perfect_all\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1104]",
+    "base": "\"blazeandcave:technical/stat_branch1_mid\"",
+    "mcfc": "\"blazeandcave:technical/spawn_perfect_one\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1105]",
+    "base": "\"blazeandcave:technical/stat_branch2_mid\"",
+    "mcfc": "\"blazeandcave:technical/stat_branch1_mid\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1106]",
+    "base": "\"blazeandcave:technical/stat_branch3_mid\"",
+    "mcfc": "\"blazeandcave:technical/stat_branch2_mid\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1107]",
+    "base": "\"blazeandcave:technical/stat_branch4_mid\"",
+    "mcfc": "\"blazeandcave:technical/stat_branch3_mid\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1108]",
+    "base": "\"blazeandcave:technical/stat_branch5_mid\"",
+    "mcfc": "\"blazeandcave:technical/stat_branch4_mid\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1109]",
+    "base": "\"blazeandcave:technical/stat_branch6_mid\"",
+    "mcfc": "\"blazeandcave:technical/stat_branch5_mid\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1110]",
+    "base": "\"blazeandcave:technical/stat_branch7_mid\"",
+    "mcfc": "\"blazeandcave:technical/stat_branch6_mid\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1111]",
+    "base": "\"blazeandcave:technical/stat_branch8_mid\"",
+    "mcfc": "\"blazeandcave:technical/stat_branch7_mid\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1112]",
+    "base": "\"blazeandcave:technical/stat_branch9_mid\"",
+    "mcfc": "\"blazeandcave:technical/stat_branch8_mid\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1113]",
+    "base": "\"blazeandcave:technical/you_are_a_big_cheater\"",
+    "mcfc": "\"blazeandcave:technical/stat_branch9_mid\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1114]",
+    "base": "\"blazeandcave:weaponry/a_snowballs_chance_in_hell\"",
+    "mcfc": "\"blazeandcave:technical/you_are_a_big_cheater\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1115]",
+    "base": "\"blazeandcave:weaponry/arrow_of_ultimate_obliteration\"",
+    "mcfc": "\"blazeandcave:weaponry/a_snowballs_chance_in_hell\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1116]",
+    "base": "\"blazeandcave:weaponry/artillery\"",
+    "mcfc": "\"blazeandcave:weaponry/arrow_of_ultimate_obliteration\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1117]",
+    "base": "\"blazeandcave:weaponry/axeman\"",
+    "mcfc": "\"blazeandcave:weaponry/artillery\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1118]",
+    "base": "\"blazeandcave:weaponry/backfire\"",
+    "mcfc": "\"blazeandcave:weaponry/axeman\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1119]",
+    "base": "\"blazeandcave:weaponry/bombs_away\"",
+    "mcfc": "\"blazeandcave:weaponry/backfire\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1120]",
+    "base": "\"blazeandcave:weaponry/bow_spammer\"",
+    "mcfc": "\"blazeandcave:weaponry/bombs_away\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1121]",
+    "base": "\"blazeandcave:weaponry/britney_spears\"",
+    "mcfc": "\"blazeandcave:weaponry/bow_spammer\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1122]",
+    "base": "\"blazeandcave:weaponry/death_star\"",
+    "mcfc": "\"blazeandcave:weaponry/britney_spears\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1123]",
+    "base": "\"blazeandcave:weaponry/demolitions_expert\"",
+    "mcfc": "\"blazeandcave:weaponry/death_star\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1124]",
+    "base": "\"blazeandcave:weaponry/diemonds\"",
+    "mcfc": "\"blazeandcave:weaponry/demolitions_expert\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1125]",
+    "base": "\"blazeandcave:weaponry/egging_dude\"",
+    "mcfc": "\"blazeandcave:weaponry/diemonds\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1126]",
+    "base": "\"blazeandcave:weaponry/expelliarmus\"",
+    "mcfc": "\"blazeandcave:weaponry/egging_dude\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1127]",
+    "base": "\"blazeandcave:weaponry/explosive_fire\"",
+    "mcfc": "\"blazeandcave:weaponry/expelliarmus\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1128]",
+    "base": "\"blazeandcave:weaponry/fireworks_display\"",
+    "mcfc": "\"blazeandcave:weaponry/explosive_fire\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1129]",
+    "base": "\"blazeandcave:weaponry/flying_colors\"",
+    "mcfc": "\"blazeandcave:weaponry/fireworks_display\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1130]",
+    "base": "\"blazeandcave:weaponry/half_heart_life\"",
+    "mcfc": "\"blazeandcave:weaponry/flying_colors\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1131]",
+    "base": "\"blazeandcave:weaponry/hit_and_run\"",
+    "mcfc": "\"blazeandcave:weaponry/half_heart_life\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1132]",
+    "base": "\"blazeandcave:weaponry/impiled\"",
+    "mcfc": "\"blazeandcave:weaponry/hit_and_run\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1133]",
+    "base": "\"blazeandcave:weaponry/indiana_jones\"",
+    "mcfc": "\"blazeandcave:weaponry/impiled\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1134]",
+    "base": "\"blazeandcave:weaponry/inspector_gadget\"",
+    "mcfc": "\"blazeandcave:weaponry/indiana_jones\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1135]",
+    "base": "\"blazeandcave:weaponry/its_time_consuming\"",
+    "mcfc": "\"blazeandcave:weaponry/inspector_gadget\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1136]",
+    "base": "\"blazeandcave:weaponry/king_of_the_sea\"",
+    "mcfc": "\"blazeandcave:weaponry/its_time_consuming\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1137]",
+    "base": "\"blazeandcave:weaponry/loser\"",
+    "mcfc": "\"blazeandcave:weaponry/king_of_the_sea\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1138]",
+    "base": "\"blazeandcave:weaponry/master_shieldsman\"",
+    "mcfc": "\"blazeandcave:weaponry/loser\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1139]",
+    "base": "\"blazeandcave:weaponry/multiclassed\"",
+    "mcfc": "\"blazeandcave:weaponry/master_shieldsman\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1140]",
+    "base": "\"blazeandcave:weaponry/my_eyes\"",
+    "mcfc": "\"blazeandcave:weaponry/multiclassed\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1141]",
+    "base": "\"blazeandcave:weaponry/nice_to_mace_you\"",
+    "mcfc": "\"blazeandcave:weaponry/my_eyes\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1142]",
+    "base": "\"blazeandcave:weaponry/pig_fishing_tournament\"",
+    "mcfc": "\"blazeandcave:weaponry/nice_to_mace_you\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1143]",
+    "base": "\"blazeandcave:weaponry/point_blank\"",
+    "mcfc": "\"blazeandcave:weaponry/pig_fishing_tournament\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1144]",
+    "base": "\"blazeandcave:weaponry/poseidon_vs_hades\"",
+    "mcfc": "\"blazeandcave:weaponry/point_blank\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1145]",
+    "base": "\"blazeandcave:weaponry/pyrotechnic\"",
+    "mcfc": "\"blazeandcave:weaponry/poseidon_vs_hades\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1146]",
+    "base": "\"blazeandcave:weaponry/revenge\"",
+    "mcfc": "\"blazeandcave:weaponry/pyrotechnic\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1147]",
+    "base": "\"blazeandcave:weaponry/rock_paper_shears\"",
+    "mcfc": "\"blazeandcave:weaponry/revenge\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1148]",
+    "base": "\"blazeandcave:weaponry/root\"",
+    "mcfc": "\"blazeandcave:weaponry/rock_paper_shears\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1149]",
+    "base": "\"blazeandcave:weaponry/shield_luck\"",
+    "mcfc": "\"blazeandcave:weaponry/root\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1150]",
+    "base": "\"blazeandcave:weaponry/shovel_knight\"",
+    "mcfc": "\"blazeandcave:weaponry/shield_luck\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1151]",
+    "base": "\"blazeandcave:weaponry/sir_knight\"",
+    "mcfc": "\"blazeandcave:weaponry/shovel_knight\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1152]",
+    "base": "\"blazeandcave:weaponry/slapfish\"",
+    "mcfc": "\"blazeandcave:weaponry/sir_knight\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1153]",
+    "base": "\"blazeandcave:weaponry/snowball_fight\"",
+    "mcfc": "\"blazeandcave:weaponry/slapfish\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1154]",
+    "base": "\"blazeandcave:weaponry/spear_fishing\"",
+    "mcfc": "\"blazeandcave:weaponry/snowball_fight\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1155]",
+    "base": "\"blazeandcave:weaponry/spleaf\"",
+    "mcfc": "\"blazeandcave:weaponry/spear_fishing\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1156]",
+    "base": "\"blazeandcave:weaponry/that_is_so_fletch\"",
+    "mcfc": "\"blazeandcave:weaponry/spleaf\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1157]",
+    "base": "\"blazeandcave:weaponry/the_aquatic_hunter\"",
+    "mcfc": "\"blazeandcave:weaponry/that_is_so_fletch\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1158]",
+    "base": "\"blazeandcave:weaponry/the_mighty_hunter\"",
+    "mcfc": "\"blazeandcave:weaponry/the_aquatic_hunter\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1159]",
+    "base": "\"blazeandcave:weaponry/there_it_goes\"",
+    "mcfc": "\"blazeandcave:weaponry/the_mighty_hunter\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1160]",
+    "base": "\"blazeandcave:weaponry/theres_yolk_on_my_head\"",
+    "mcfc": "\"blazeandcave:weaponry/there_it_goes\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1161]",
+    "base": "\"blazeandcave:weaponry/time_to_hunt\"",
+    "mcfc": "\"blazeandcave:weaponry/theres_yolk_on_my_head\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1162]",
+    "base": "\"blazeandcave:weaponry/toasted_marshmallow\"",
+    "mcfc": "\"blazeandcave:weaponry/time_to_hunt\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1163]",
+    "base": "\"blazeandcave:weaponry/viking\"",
+    "mcfc": "\"blazeandcave:weaponry/toasted_marshmallow\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1164]",
+    "base": "\"blazeandcave:weaponry/warden_extinction\"",
+    "mcfc": "\"blazeandcave:weaponry/viking\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1165]",
+    "base": "\"blazeandcave:weaponry/when_pigs_finally_fly\"",
+    "mcfc": "\"blazeandcave:weaponry/warden_extinction\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1166]",
+    "base": "\"blazeandcave:weaponry/who_ya_gonna_call\"",
+    "mcfc": "\"blazeandcave:weaponry/when_pigs_finally_fly\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1167]",
+    "base": "\"blazeandcave:weaponry/x_bow\"",
+    "mcfc": "\"blazeandcave:weaponry/who_ya_gonna_call\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1168]",
+    "base": "\"minecraft:adventure/adventuring_time\"",
+    "mcfc": "\"blazeandcave:weaponry/x_bow\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1169]",
+    "base": "\"minecraft:adventure/arbalistic\"",
+    "mcfc": "\"minecraft:adventure/adventuring_time\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1170]",
+    "base": "\"minecraft:adventure/avoid_vibration\"",
+    "mcfc": "\"minecraft:adventure/arbalistic\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1171]",
+    "base": "\"minecraft:adventure/blowback\"",
+    "mcfc": "\"minecraft:adventure/avoid_vibration\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1172]",
+    "base": "\"minecraft:adventure/brush_armadillo\"",
+    "mcfc": "\"minecraft:adventure/blowback\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1173]",
+    "base": "\"minecraft:adventure/bullseye\"",
+    "mcfc": "\"minecraft:adventure/brush_armadillo\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1174]",
+    "base": "\"minecraft:adventure/craft_decorated_pot_using_only_sherds\"",
+    "mcfc": "\"minecraft:adventure/bullseye\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1175]",
+    "base": "\"minecraft:adventure/crafters_crafting_crafters\"",
+    "mcfc": "\"minecraft:adventure/craft_decorated_pot_using_only_sherds\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1176]",
+    "base": "\"minecraft:adventure/fall_from_world_height\"",
+    "mcfc": "\"minecraft:adventure/crafters_crafting_crafters\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1177]",
+    "base": "\"minecraft:adventure/heart_transplanter\"",
+    "mcfc": "\"minecraft:adventure/fall_from_world_height\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1178]",
+    "base": "\"minecraft:adventure/hero_of_the_village\"",
+    "mcfc": "\"minecraft:adventure/heart_transplanter\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1179]",
+    "base": "\"minecraft:adventure/honey_block_slide\"",
+    "mcfc": "\"minecraft:adventure/hero_of_the_village\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1180]",
+    "base": "\"minecraft:adventure/kill_a_mob\"",
+    "mcfc": "\"minecraft:adventure/honey_block_slide\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1181]",
+    "base": "\"minecraft:adventure/kill_all_mobs\"",
+    "mcfc": "\"minecraft:adventure/kill_a_mob\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1182]",
+    "base": "\"minecraft:adventure/kill_mob_near_sculk_catalyst\"",
+    "mcfc": "\"minecraft:adventure/kill_all_mobs\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1183]",
+    "base": "\"minecraft:adventure/lighten_up\"",
+    "mcfc": "\"minecraft:adventure/kill_mob_near_sculk_catalyst\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1184]",
+    "base": "\"minecraft:adventure/lightning_rod_with_villager_no_fire\"",
+    "mcfc": "\"minecraft:adventure/lighten_up\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1185]",
+    "base": "\"minecraft:adventure/minecraft_trials_edition\"",
+    "mcfc": "\"minecraft:adventure/lightning_rod_with_villager_no_fire\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1186]",
+    "base": "\"minecraft:adventure/ol_betsy\"",
+    "mcfc": "\"minecraft:adventure/minecraft_trials_edition\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.advancementsDone[1187]",
+    "base": "\"minecraft:adventure/overoverkill\"",
+    "mcfc": "\"minecraft:adventure/ol_betsy\"",
+    "dump": "final"
+   }
+  ],
+  "flaky": [],
+  "lowConfidenceSample": []
+ },
+ "exceptions": {
+  "base1": {},
+  "base2": {},
+  "mcfc": {}
+ },
+ "exceptionTotals": {
+  "base1": 0,
+  "base2": 0,
+  "mcfc": 0
+ },
+ "exercise": {
+  "base1": {
+   "namespaces": [
+    "bacap_rewards",
+    "blazeandcave"
+   ],
+   "dumpedFunctions": 5436,
+   "candidates": 5436,
+   "skippedMacro": 8,
+   "skippedName": 10,
+   "skippedScenario": 5418,
+   "ran": 0,
+   "replyExecuted": 0,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "base2": {
+   "namespaces": [
+    "bacap_rewards",
+    "blazeandcave"
+   ],
+   "dumpedFunctions": 5436,
+   "candidates": 5436,
+   "skippedMacro": 8,
+   "skippedName": 10,
+   "skippedScenario": 5418,
+   "ran": 0,
+   "replyExecuted": 0,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "mcfc": {
+   "namespaces": [
+    "bacap_rewards",
+    "blazeandcave"
+   ],
+   "dumpedFunctions": 5436,
+   "candidates": 5436,
+   "skippedMacro": 8,
+   "skippedName": 10,
+   "skippedScenario": 5418,
+   "ran": 0,
+   "replyExecuted": 0,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  }
+ },
+ "slowFunctions": {},
+ "perf": null,
+ "durationsSeconds": {
+  "base1": 39.4,
+  "base2": 40.9,
+  "mcfc": 44.0
+ },
+ "gamerules": {
+  "command_chain_limit": "max_command_sequence_length",
+  "spawn_mobs": "spawn_mobs",
+  "spawn_monsters": "spawn_monsters",
+  "spawn_patrols": "spawn_patrols",
+  "spawn_wandering_traders": "spawn_wandering_traders",
+  "spawn_phantoms": "spawn_phantoms",
+  "spawn_wardens": "spawn_wardens",
+  "random_tick_speed": "random_tick_speed",
+  "weather_cycle": "advance_weather"
+ },
+ "ticks": 200,
+ "seed": "20261026"
+}

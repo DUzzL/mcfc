@@ -1,0 +1,578 @@
+{
+ "id": "bacap",
+ "status": "DIFF",
+ "kind": "function",
+ "packs": [
+  "bacap"
+ ],
+ "problems": [],
+ "notes": [],
+ "mcfcState": {
+  "afterLoad": "READY_ON",
+  "final": "READY_ON",
+  "decisiveError": null,
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 5435Total Function Count: 5436"
+ },
+ "compile": {
+  "found": 5436,
+  "compiled": 5435,
+  "rate": 0.9998,
+  "partialFallbackCommands": 98,
+  "wholeFallbacks": {},
+  "compileFailures": [
+   "bacap_rewards:advancement_made_macro"
+  ],
+  "compilerErrors": [],
+  "runtimeDisables": [],
+  "topPartialReasons": {
+   "Missing space after argument @ function <functions:function>": 73,
+   "Missing space after argument @ advancement grant <targets:entity_selector[players]> only <advancement:resource_location>": 17,
+   "Failed to parse any options @ scoreboard objectives": 8
+  },
+  "unsupportedCommands": {}
+ },
+ "debug": {
+  "header": "5423 compiled | 1 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
+  "functionsByStatus": {
+   "vanilla": 1,
+   "compiled": 5423
+  },
+  "totalCalls": 22127,
+  "vanillaCalls": 3777,
+  "compiledCalls": 18350,
+  "compiledCallShare": 0.8293,
+  "nonCompiled": [
+   {
+    "id": "bacap_rewards:advancement_made_macro/-604302563",
+    "status": "vanilla",
+    "calls": 3777,
+    "vanillaCalls": 3777
+   }
+  ],
+  "nonCompiledCount": 1
+ },
+ "compare": {
+  "confirmedFindings": 51,
+  "flakyFindings": 1,
+  "lowConfidence": 0,
+  "noise": 3627,
+  "genFindings": null,
+  "genNoise": null,
+  "confirmation": {
+   "enabled": true,
+   "ran": true,
+   "onlyInSecondAttempt": 24
+  },
+  "sections": {
+   "blocks": {
+    "paths": 266,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "bossbars": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "datapacks": {
+    "paths": 2,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "entities": {
+    "paths": 9894,
+    "noise": 3622,
+    "findings": 8,
+    "lowConfidence": 0
+   },
+   "functionTags": {
+    "paths": 25,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functions": {
+    "paths": 5436,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "gamerules": {
+    "paths": 58,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "players": {
+    "paths": 231,
+    "noise": 0,
+    "findings": 42,
+    "lowConfidence": 0
+   },
+   "scheduled": {
+    "paths": 8,
+    "noise": 2,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scoreboard": {
+    "paths": 1887,
+    "noise": 1,
+    "findings": 2,
+    "lowConfidence": 0
+   },
+   "storage": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "world": {
+    "paths": 12,
+    "noise": 2,
+    "findings": 0,
+    "lowConfidence": 0
+   }
+  },
+  "confirmed": [
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#836].pos[0]",
+    "base": "0.54",
+    "mcfc": "0.53",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#837].pos[0]",
+    "base": "0.54",
+    "mcfc": "0.53",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#838].pos[0]",
+    "base": "0.54",
+    "mcfc": "0.53",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#839].pos[0]",
+    "base": "0.54",
+    "mcfc": "0.53",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#840].pos[0]",
+    "base": "0.54",
+    "mcfc": "0.53",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#841].pos[0]",
+    "base": "0.54",
+    "mcfc": "0.53",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#842].pos[0]",
+    "base": "0.54",
+    "mcfc": "0.53",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[21].components",
+    "base": "\"{}\"",
+    "mcfc": "\"{\\\"minecraft:custom_data\\\":{Trophy:1b},\\\"minecraft:custom_model_data\\\":{floats:[131.0f]},\\\"minecraft:custom_name\\\":{bold:1b,color:\\\"#B98E5B\\\",italic:0b,translate:\\\"Fogg's Pocket Watch\\\"},\\\"minecraft:enchantment_glint_override\\\":1b,\\\"minecraft:lore\\\":[{color:\\\"#B98E5B\\\",translate:\\\"Now try to do it in 80 days\\\"},\\\" \\\",{color:\\\"gray\\\",translate:\\\"Awarded for achieving\\\"},{color:\\\"light_purple\\\",italic:0b,translate:\\\"All Around the World\\\"}],\\\"minecraft:tooltip_display\\\":{hidden_components:[\\\"m...",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[21].count",
+    "base": "16",
+    "mcfc": "4",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[21].id",
+    "base": "\"minecraft:blue_egg\"",
+    "mcfc": "\"minecraft:clock\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[22].count",
+    "base": "16",
+    "mcfc": "60",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[22].id",
+    "base": "\"minecraft:brown_egg\"",
+    "mcfc": "\"minecraft:amethyst_shard\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[23].components",
+    "base": "\"{\\\"minecraft:custom_data\\\":{Trophy:1b},\\\"minecraft:custom_model_data\\\":{floats:[131.0f]},\\\"minecraft:custom_name\\\":{bold:1b,color:\\\"#B98E5B\\\",italic:0b,translate:\\\"Fogg's Pocket Watch\\\"},\\\"minecraft:enchantment_glint_override\\\":1b,\\\"minecraft:lore\\\":[{color:\\\"#B98E5B\\\",translate:\\\"Now try to do it in 80 days\\\"},\\\" \\\",{color:\\\"gray\\\",translate:\\\"Awarded for achieving\\\"},{color:\\\"light_purple\\\",italic:0b,translate:\\\"All Around the World\\\"}],\\\"minecraft:tooltip_display\\\":{hidden_components:[\\\"m...",
+    "mcfc": "\"{\\\"minecraft:custom_data\\\":{Trophy:1b},\\\"minecraft:custom_model_data\\\":{floats:[131.0f]},\\\"minecraft:custom_name\\\":{bold:1b,color:\\\"#E48360\\\",italic:0b,translate:\\\"Finger Guns\\\"},\\\"minecraft:enchantments\\\":{\\\"minecraft:quick_charge\\\":3},\\\"minecraft:lore\\\":[{color:\\\"#E48360\\\",translate:\\\"So anyway I started blasting...\\\"},\\\" \\\",{color:\\\"gray\\\",translate:\\\"Awarded for achieving\\\"},{color:\\\"light_purple\\\",italic:0b,translate:\\\"Arbalistic\\\"}],\\\"minecraft:tooltip_display\\\":{hidden_components:[\\\"m...",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[23].count",
+    "base": "4",
+    "mcfc": "1",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[23].id",
+    "base": "\"minecraft:clock\"",
+    "mcfc": "\"minecraft:crossbow\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[24].components",
+    "base": "\"{}\"",
+    "mcfc": "\"{\\\"minecraft:custom_data\\\":{Trophy:1b},\\\"minecraft:custom_model_data\\\":{floats:[131.0f]},\\\"minecraft:custom_name\\\":{bold:1b,color:\\\"#E48360\\\",italic:0b,translate:\\\"Finger Guns\\\"},\\\"minecraft:enchantments\\\":{\\\"minecraft:quick_charge\\\":3},\\\"minecraft:lore\\\":[{color:\\\"#E48360\\\",translate:\\\"So anyway I started blasting...\\\"},\\\" \\\",{color:\\\"gray\\\",translate:\\\"Awarded for achieving\\\"},{color:\\\"light_purple\\\",italic:0b,translate:\\\"Arbalistic\\\"}],\\\"minecraft:tooltip_display\\\":{hidden_components:[\\\"m...",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[24].count",
+    "base": "60",
+    "mcfc": "1",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[24].id",
+    "base": "\"minecraft:amethyst_shard\"",
+    "mcfc": "\"minecraft:crossbow\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[25].components",
+    "base": "\"{\\\"minecraft:custom_data\\\":{Trophy:1b},\\\"minecraft:custom_model_data\\\":{floats:[131.0f]},\\\"minecraft:custom_name\\\":{bold:1b,color:\\\"#E48360\\\",italic:0b,translate:\\\"Finger Guns\\\"},\\\"minecraft:enchantments\\\":{\\\"minecraft:quick_charge\\\":3},\\\"minecraft:lore\\\":[{color:\\\"#E48360\\\",translate:\\\"So anyway I started blasting...\\\"},\\\" \\\",{color:\\\"gray\\\",translate:\\\"Awarded for achieving\\\"},{color:\\\"light_purple\\\",italic:0b,translate:\\\"Arbalistic\\\"}],\\\"minecraft:tooltip_display\\\":{hidden_components:[\\\"m...",
+    "mcfc": "\"{\\\"minecraft:custom_data\\\":{Trophy:1b},\\\"minecraft:custom_model_data\\\":{floats:[132.0f]},\\\"minecraft:custom_name\\\":{bold:1b,color:\\\"#68FFFF\\\",italic:0b,translate:\\\"The Trophy Trophy\\\"},\\\"minecraft:enchantment_glint_override\\\":1b,\\\"minecraft:lore\\\":[{color:\\\"#68FFFF\\\",translate:\\\"If an Allay brings you this, you will\\\"},{color:\\\"#68FFFF\\\",translate:\\\"receive the Trophy Trophy Trophy\\\"},\\\" \\\",{color:\\\"gray\\\",translate:\\\"Awarded for achieving\\\"},{color:\\\"#FFAEFF\\\",italic:0b,translate:\\\"Awards C...",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[25].count",
+    "base": "1",
+    "mcfc": "4",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[25].id",
+    "base": "\"minecraft:crossbow\"",
+    "mcfc": "\"minecraft:gold_block\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[26].components",
+    "base": "\"{\\\"minecraft:custom_data\\\":{Trophy:1b},\\\"minecraft:custom_model_data\\\":{floats:[131.0f]},\\\"minecraft:custom_name\\\":{bold:1b,color:\\\"#E48360\\\",italic:0b,translate:\\\"Finger Guns\\\"},\\\"minecraft:enchantments\\\":{\\\"minecraft:quick_charge\\\":3},\\\"minecraft:lore\\\":[{color:\\\"#E48360\\\",translate:\\\"So anyway I started blasting...\\\"},\\\" \\\",{color:\\\"gray\\\",translate:\\\"Awarded for achieving\\\"},{color:\\\"light_purple\\\",italic:0b,translate:\\\"Arbalistic\\\"}],\\\"minecraft:tooltip_display\\\":{hidden_components:[\\\"m...",
+    "mcfc": "\"{}\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[26].count",
+    "base": "1",
+    "mcfc": "57",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[26].id",
+    "base": "\"minecraft:crossbow\"",
+    "mcfc": "\"minecraft:breeze_rod\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[27].components",
+    "base": "\"{\\\"minecraft:custom_data\\\":{Trophy:1b},\\\"minecraft:custom_model_data\\\":{floats:[132.0f]},\\\"minecraft:custom_name\\\":{bold:1b,color:\\\"#68FFFF\\\",italic:0b,translate:\\\"The Trophy Trophy\\\"},\\\"minecraft:enchantment_glint_override\\\":1b,\\\"minecraft:lore\\\":[{color:\\\"#68FFFF\\\",translate:\\\"If an Allay brings you this, you will\\\"},{color:\\\"#68FFFF\\\",translate:\\\"receive the Trophy Trophy Trophy\\\"},\\\" \\\",{color:\\\"gray\\\",translate:\\\"Awarded for achieving\\\"},{color:\\\"#FFAEFF\\\",italic:0b,translate:\\\"Awards C...",
+    "mcfc": "\"{}\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[27].count",
+    "base": "4",
+    "mcfc": "48",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[27].id",
+    "base": "\"minecraft:gold_block\"",
+    "mcfc": "\"minecraft:armadillo_scute\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[28].components",
+    "base": "\"{}\"",
+    "mcfc": "\"{\\\"minecraft:custom_data\\\":{Trophy:1b},\\\"minecraft:custom_model_data\\\":{floats:[131.0f]},\\\"minecraft:custom_name\\\":{bold:1b,color:\\\"#C65C35\\\",italic:0b,translate:\\\"Quiver\\\"},\\\"minecraft:enchantment_glint_override\\\":1b,\\\"minecraft:lore\\\":[{color:\\\"#C65C35\\\",translate:\\\"You can't actually store arrows in it\\\"},\\\" \\\",{color:\\\"gray\\\",translate:\\\"Awarded for achieving\\\"},{color:\\\"light_purple\\\",italic:0b,translate:\\\"Bullseye\\\"}],\\\"minecraft:tooltip_display\\\":{hidden_components:[\\\"minecraft:attrib...",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[28].count",
+    "base": "57",
+    "mcfc": "4",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[28].id",
+    "base": "\"minecraft:breeze_rod\"",
+    "mcfc": "\"minecraft:leather\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[29].count",
+    "base": "48",
+    "mcfc": "64",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[29].id",
+    "base": "\"minecraft:armadillo_scute\"",
+    "mcfc": "\"minecraft:arrow\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[30].components",
+    "base": "\"{\\\"minecraft:custom_data\\\":{Trophy:1b},\\\"minecraft:custom_model_data\\\":{floats:[131.0f]},\\\"minecraft:custom_name\\\":{bold:1b,color:\\\"#C65C35\\\",italic:0b,translate:\\\"Quiver\\\"},\\\"minecraft:enchantment_glint_override\\\":1b,\\\"minecraft:lore\\\":[{color:\\\"#C65C35\\\",translate:\\\"You can't actually store arrows in it\\\"},\\\" \\\",{color:\\\"gray\\\",translate:\\\"Awarded for achieving\\\"},{color:\\\"light_purple\\\",italic:0b,translate:\\\"Bullseye\\\"}],\\\"minecraft:tooltip_display\\\":{hidden_components:[\\\"minecraft:attrib...",
+    "mcfc": "\"{\\\"minecraft:stored_enchantments\\\":{\\\"minecraft:infinity\\\":1}}\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[30].count",
+    "base": "4",
+    "mcfc": "1",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[30].id",
+    "base": "\"minecraft:leather\"",
+    "mcfc": "\"minecraft:enchanted_book\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[31].components",
+    "base": "\"{}\"",
+    "mcfc": "\"{\\\"minecraft:custom_data\\\":{Trophy:1b},\\\"minecraft:custom_model_data\\\":{floats:[133.0f]},\\\"minecraft:custom_name\\\":{bold:1b,color:\\\"#F6FEFF\\\",italic:0b,translate:\\\"Tron Suit\\\"},\\\"minecraft:dyed_color\\\":0,\\\"minecraft:lore\\\":[{color:\\\"#F6FEFF\\\",translate:\\\"The Grid. A digital frontier\\\"},{color:\\\"#F6FEFF\\\",translate:\\\"I tried to picture clusters of information\\\"},{color:\\\"#F6FEFF\\\",translate:\\\"as they moved through the computer\\\"},{color:\\\"#F6FEFF\\\",translate:\\\"What did they look like? Ships? ...",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[31].count",
+    "base": "64",
+    "mcfc": "1",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[31].id",
+    "base": "\"minecraft:arrow\"",
+    "mcfc": "\"minecraft:leather_chestplate\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[32].components",
+    "base": "\"{\\\"minecraft:stored_enchantments\\\":{\\\"minecraft:infinity\\\":1}}\"",
+    "mcfc": "\"{\\\"minecraft:custom_data\\\":{Trophy:1b},\\\"minecraft:custom_model_data\\\":{floats:[131.0f]},\\\"minecraft:custom_name\\\":{bold:1b,color:\\\"#AEB1B8\\\",italic:0b,translate:\\\"Uru\\\"},\\\"minecraft:enchantment_glint_override\\\":1b,\\\"minecraft:lore\\\":[{color:\\\"#AEB1B8\\\",translate:\\\"The most durable metal in the universe, forged in the heart of a dying star\\\"},\\\" \\\",{color:\\\"gray\\\",translate:\\\"Awarded for achieving\\\"},{color:\\\"#FFAEFF\\\",italic:0b,translate:\\\"Core Keeper\\\"}],\\\"minecraft:tooltip_display\\\":{hidd...",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[32].count",
+    "base": "1",
+    "mcfc": "4",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[32].id",
+    "base": "\"minecraft:enchanted_book\"",
+    "mcfc": "\"minecraft:heavy_core\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[33].components",
+    "base": "\"{\\\"minecraft:custom_data\\\":{Trophy:1b},\\\"minecraft:custom_model_data\\\":{floats:[133.0f]},\\\"minecraft:custom_name\\\":{bold:1b,color:\\\"#F6FEFF\\\",italic:0b,translate:\\\"Tron Suit\\\"},\\\"minecraft:dyed_color\\\":0,\\\"minecraft:lore\\\":[{color:\\\"#F6FEFF\\\",translate:\\\"The Grid. A digital frontier\\\"},{color:\\\"#F6FEFF\\\",translate:\\\"I tried to picture clusters of information\\\"},{color:\\\"#F6FEFF\\\",translate:\\\"as they moved through the computer\\\"},{color:\\\"#F6FEFF\\\",translate:\\\"What did they look like? Ships? ...",
+    "mcfc": "\"{}\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[33].count",
+    "base": "1",
+    "mcfc": "12",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[33].id",
+    "base": "\"minecraft:leather_chestplate\"",
+    "mcfc": "\"minecraft:crafter\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[34].components",
+    "base": "\"{\\\"minecraft:custom_data\\\":{Trophy:1b},\\\"minecraft:custom_model_data\\\":{floats:[131.0f]},\\\"minecraft:custom_name\\\":{bold:1b,color:\\\"#AEB1B8\\\",italic:0b,translate:\\\"Uru\\\"},\\\"minecraft:enchantment_glint_override\\\":1b,\\\"minecraft:lore\\\":[{color:\\\"#AEB1B8\\\",translate:\\\"The most durable metal in the universe, forged in the heart of a dying star\\\"},\\\" \\\",{color:\\\"gray\\\",translate:\\\"Awarded for achieving\\\"},{color:\\\"#FFAEFF\\\",italic:0b,translate:\\\"Core Keeper\\\"}],\\\"minecraft:tooltip_display\\\":{hidd...",
+    "mcfc": "\"{}\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[34].count",
+    "base": "4",
+    "mcfc": "48",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[34].id",
+    "base": "\"minecraft:heavy_core\"",
+    "mcfc": "\"minecraft:cod\"",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[35].count",
+    "base": "12",
+    "mcfc": "64",
+    "dump": "final"
+   },
+   {
+    "path": "players.DPTester1.inventory[35].id",
+    "base": "\"minecraft:crafter\"",
+    "mcfc": "\"minecraft:echo_shard\"",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.scores.DPTester1.bac_pigling",
+    "base": "2",
+    "mcfc": "3",
+    "dump": "final"
+   },
+   {
+    "path": "scoreboard.scores.DPTester1.bac_vault_hunter_count",
+    "base": "2",
+    "mcfc": "3",
+    "dump": "final"
+   }
+  ],
+  "flaky": [
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#464].pos[0]",
+    "base": "0.48",
+    "mcfc": "0.47",
+    "dump": "final"
+   }
+  ],
+  "lowConfidenceSample": []
+ },
+ "exceptions": {
+  "base1": {},
+  "base2": {},
+  "mcfc": {},
+  "perfbase": {}
+ },
+ "exceptionTotals": {
+  "base1": 0,
+  "base2": 0,
+  "mcfc": 0,
+  "perfbase": 0
+ },
+ "exercise": {
+  "base1": {
+   "namespaces": [
+    "bacap_rewards",
+    "blazeandcave"
+   ],
+   "dumpedFunctions": 5436,
+   "candidates": 5436,
+   "skippedMacro": 8,
+   "skippedName": 10,
+   "skippedScenario": 0,
+   "ran": 5418,
+   "replyExecuted": 5418,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "base2": {
+   "namespaces": [
+    "bacap_rewards",
+    "blazeandcave"
+   ],
+   "dumpedFunctions": 5436,
+   "candidates": 5436,
+   "skippedMacro": 8,
+   "skippedName": 10,
+   "skippedScenario": 0,
+   "ran": 5418,
+   "replyExecuted": 5418,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "mcfc": {
+   "namespaces": [
+    "bacap_rewards",
+    "blazeandcave"
+   ],
+   "dumpedFunctions": 5436,
+   "candidates": 5436,
+   "skippedMacro": 8,
+   "skippedName": 10,
+   "skippedScenario": 0,
+   "ran": 5418,
+   "replyExecuted": 5418,
+   "replyError": 0,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  }
+ },
+ "slowFunctions": {},
+ "perf": {
+  "mcfc": {
+   "median": 31.54,
+   "min": 30.01,
+   "max": 34.53,
+   "lines": [
+    "Sprint completed with 33 ticks per second, or 30.01 ms per tick",
+    "Sprint completed with 31 ticks per second, or 31.54 ms per tick",
+    "Sprint completed with 28 ticks per second, or 34.53 ms per tick"
+   ]
+  },
+  "vanilla": {
+   "median": 34.52,
+   "min": 29.88,
+   "max": 36.18,
+   "lines": [
+    "Sprint completed with 28 ticks per second, or 34.52 ms per tick",
+    "Sprint completed with 27 ticks per second, or 36.18 ms per tick",
+    "Sprint completed with 33 ticks per second, or 29.88 ms per tick"
+   ]
+  },
+  "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
+ },
+ "durationsSeconds": {
+  "base1": 86.7,
+  "base2": 86.7,
+  "mcfc": 201.9,
+  "perfbase": 212.0,
+  "attempt2-base1": 78.0,
+  "attempt2-base2": 79.0,
+  "attempt2-mcfc": 83.0
+ },
+ "gamerules": {
+  "command_chain_limit": "max_command_sequence_length",
+  "spawn_mobs": "spawn_mobs",
+  "spawn_monsters": "spawn_monsters",
+  "spawn_patrols": "spawn_patrols",
+  "spawn_wandering_traders": "spawn_wandering_traders",
+  "spawn_phantoms": "spawn_phantoms",
+  "spawn_wardens": "spawn_wardens",
+  "random_tick_speed": "random_tick_speed",
+  "weather_cycle": "advance_weather"
+ },
+ "ticks": 200,
+ "seed": "20261026"
+}

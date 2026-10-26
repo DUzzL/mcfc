@@ -1,0 +1,335 @@
+{
+ "id": "mr-vanilla-refresh-sanitized",
+ "status": "DIFF",
+ "kind": "function",
+ "packs": [
+  "mr-vanilla-refresh-sanitized"
+ ],
+ "problems": [],
+ "notes": [],
+ "mcfcState": {
+  "afterLoad": "READY_ON",
+  "final": "READY_ON",
+  "decisiveError": null,
+  "text": "Function Compiler Version: 0.4.0-alpha.2Current Function Compiler State: READY_ONCompiled Function Count: 982Total Function Count: 1011"
+ },
+ "compile": {
+  "found": 1011,
+  "compiled": 982,
+  "rate": 0.9713,
+  "partialFallbackCommands": 223,
+  "wholeFallbacks": {},
+  "compileFailures": [
+   "vanilla_refresh:wand/z/display/text/display",
+   "vanilla_refresh:other/actions/teleport_to_last_death",
+   "vanilla_refresh:other/actions/z_player_stats_transfer",
+   "vanilla_refresh:admin/player_stats",
+   "vanilla_refresh:admin/set_entity_filter",
+   "vanilla_refresh:wand/z/entity_lock",
+   "vanilla_refresh:admin/storage_add",
+   "vanilla_refresh:admin/storage_get",
+   "vanilla_refresh:wand/z/display/item/set/brightness",
+   "vanilla_refresh:wand/z/display/item/set/custom_model_data",
+   "vanilla_refresh:stats/stats_macro_only",
+   "vanilla_refresh:wand/z/mob_center",
+   "vanilla_refresh:wand/z/mob_directional",
+   "vanilla_refresh:wand/z/display/item/set/item",
+   "vanilla_refresh:wand/z/display/item/set/nbt",
+   "vanilla_refresh:wand/z/mob_elevate",
+   "vanilla_refresh:wand/z/display/item/set/scale",
+   "vanilla_refresh:wand/z/display/item/set/stretch_scale",
+   "vanilla_refresh:wand/z/display/item/set_billboard",
+   "vanilla_refresh:wand/z/brush_mob",
+   "vanilla_refresh:wand/z/brush_mob_32",
+   "vanilla_refresh:wand/z/mob_facer",
+   "vanilla_refresh:wand/z/mob_model",
+   "vanilla_refresh:wand/z/clone",
+   "vanilla_refresh:wand/z/mob_reposition",
+   "vanilla_refresh:wand/z/display/item/set_enchanted",
+   "vanilla_refresh:wand/z/mob_rotate",
+   "vanilla_refresh:wand/z/mob_rotate_reset",
+   "vanilla_refresh:wand/z/scale"
+  ],
+  "compilerErrors": [],
+  "runtimeDisables": [],
+  "topPartialReasons": {
+   "Macros are not supported in this location": 84,
+   "Failed to parse any options @ scoreboard objectives": 46,
+   "Macro commands are not supported for json arguments": 38,
+   "Unsupported entity type: minecraft:": 20,
+   "Missing space after argument @ function <functions:function>": 11,
+   "Invalid double": 7,
+   "Failed to parse any options @ execute": 4,
+   "Unknown command: attribute": 3,
+   "Missing space after argument @ playsound <sound:resource_location>": 3,
+   "Unknown command: damage": 2,
+   "Mixed positive and negated type options are resolved by vanilla": 2,
+   "Missing space after argument @ execute in <dimension:resource_location>": 1,
+   "Missing space after argument @ summon <entity:resource_location>": 1,
+   "Invalid difficulty: ": 1
+  },
+  "unsupportedCommands": {
+   "attribute": 3,
+   "damage": 2
+  }
+ },
+ "debug": {
+  "header": "35 compiled | 0 vanilla | 0 errors | 0 too_big | 0 mcfc_off",
+  "functionsByStatus": {
+   "compiled": 35
+  },
+  "totalCalls": 496,
+  "vanillaCalls": 0,
+  "compiledCalls": 496,
+  "compiledCallShare": 1.0,
+  "nonCompiled": [],
+  "nonCompiledCount": 0
+ },
+ "compare": {
+  "confirmedFindings": 1,
+  "flakyFindings": 5,
+  "lowConfidence": 0,
+  "noise": 58,
+  "genFindings": null,
+  "genNoise": null,
+  "confirmation": {
+   "enabled": true,
+   "ran": true,
+   "onlyInSecondAttempt": 0
+  },
+  "sections": {
+   "blocks": {
+    "paths": 266,
+    "noise": 4,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "bossbars": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "datapacks": {
+    "paths": 2,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "entities": {
+    "paths": 129,
+    "noise": 47,
+    "findings": 6,
+    "lowConfidence": 0
+   },
+   "functionTags": {
+    "paths": 1,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "functions": {
+    "paths": 1011,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "gamerules": {
+    "paths": 58,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "players": {
+    "paths": 26,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scheduled": {
+    "paths": 20,
+    "noise": 5,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "scoreboard": {
+    "paths": 579,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "storage": {
+    "paths": 2,
+    "noise": 0,
+    "findings": 0,
+    "lowConfidence": 0
+   },
+   "world": {
+    "paths": 12,
+    "noise": 2,
+    "findings": 0,
+    "lowConfidence": 0
+   }
+  },
+  "confirmed": [
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#4].nbt",
+    "base": "\"{Age:317s,Health:5s,Invulnerable:0b,Item:{count:2,id:\\\"minecraft:beef\\\"},PickupDelay:0s}\"",
+    "mcfc": "\"{Age:317s,Health:5s,Invulnerable:0b,Item:{count:2,id:\\\"minecraft:leather\\\"},PickupDelay:0s}\"",
+    "dump": "final"
+   }
+  ],
+  "flaky": [
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#11].customName",
+    "base": "null",
+    "mcfc": "<missing>",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#11].pos[1]",
+    "base": "-63.0",
+    "mcfc": "<missing>",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#11].tags[]",
+    "base": "[]",
+    "mcfc": "<missing>",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#11].type",
+    "base": "\"minecraft:item\"",
+    "mcfc": "<missing>",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:item#11].uuid",
+    "base": "\"<item#11>\"",
+    "mcfc": "<missing>",
+    "dump": "final"
+   }
+  ],
+  "lowConfidenceSample": []
+ },
+ "exceptions": {
+  "base1": {
+   "java.util.concurrent.CompletionException": {
+    "count": 55,
+    "first": "java.lang.IllegalArgumentException: Whilst parsing command on line 6: Can't find element 'vanilla_refresh:chance/5_percent' in registry 'minecraft:predicate' at position 53: .../5_percent<--[HERE]"
+   },
+   "java.lang.IllegalArgumentException": {
+    "count": 55,
+    "first": "Whilst parsing command on line 6: Can't find element 'vanilla_refresh:chance/5_percent' in registry 'minecraft:predicate' at position 53: .../5_percent<--[HERE]"
+   }
+  },
+  "base2": {
+   "java.util.concurrent.CompletionException": {
+    "count": 55,
+    "first": "java.lang.IllegalArgumentException: Whilst parsing command on line 6: Can't find element 'vanilla_refresh:chance/5_percent' in registry 'minecraft:predicate' at position 53: .../5_percent<--[HERE]"
+   },
+   "java.lang.IllegalArgumentException": {
+    "count": 55,
+    "first": "Whilst parsing command on line 6: Can't find element 'vanilla_refresh:chance/5_percent' in registry 'minecraft:predicate' at position 53: .../5_percent<--[HERE]"
+   }
+  },
+  "mcfc": {
+   "java.util.concurrent.CompletionException": {
+    "count": 55,
+    "first": "java.lang.IllegalArgumentException: Whilst parsing command on line 6: Can't find element 'vanilla_refresh:chance/5_percent' in registry 'minecraft:predicate' at position 53: .../5_percent<--[HERE]"
+   },
+   "java.lang.IllegalArgumentException": {
+    "count": 55,
+    "first": "Whilst parsing command on line 6: Can't find element 'vanilla_refresh:chance/5_percent' in registry 'minecraft:predicate' at position 53: .../5_percent<--[HERE]"
+   }
+  }
+ },
+ "exceptionTotals": {
+  "base1": 110,
+  "base2": 110,
+  "mcfc": 110
+ },
+ "exercise": {
+  "base1": {
+   "namespaces": [
+    "vanilla_refresh"
+   ],
+   "dumpedFunctions": 1011,
+   "candidates": 1011,
+   "skippedMacro": 62,
+   "skippedName": 90,
+   "skippedScenario": 0,
+   "ran": 859,
+   "replyExecuted": 27,
+   "replyError": 832,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "base2": {
+   "namespaces": [
+    "vanilla_refresh"
+   ],
+   "dumpedFunctions": 1011,
+   "candidates": 1011,
+   "skippedMacro": 62,
+   "skippedName": 90,
+   "skippedScenario": 0,
+   "ran": 859,
+   "replyExecuted": 27,
+   "replyError": 832,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  },
+  "mcfc": {
+   "namespaces": [
+    "vanilla_refresh"
+   ],
+   "dumpedFunctions": 1011,
+   "candidates": 1011,
+   "skippedMacro": 62,
+   "skippedName": 90,
+   "skippedScenario": 0,
+   "ran": 859,
+   "replyExecuted": 27,
+   "replyError": 832,
+   "hang": false,
+   "slow": [],
+   "budgetExceeded": false,
+   "notRun": 0,
+   "budgetSeconds": 300.0,
+   "cmdTimeoutSeconds": 60.0
+  }
+ },
+ "slowFunctions": {},
+ "perf": null,
+ "durationsSeconds": {
+  "base1": 49.3,
+  "base2": 49.8,
+  "mcfc": 46.6,
+  "attempt2-base1": 47.5,
+  "attempt2-base2": 48.3,
+  "attempt2-mcfc": 46.5
+ },
+ "gamerules": {
+  "command_chain_limit": "max_command_sequence_length",
+  "spawn_mobs": "spawn_mobs",
+  "spawn_monsters": "spawn_monsters",
+  "spawn_patrols": "spawn_patrols",
+  "spawn_wandering_traders": "spawn_wandering_traders",
+  "spawn_phantoms": "spawn_phantoms",
+  "spawn_wardens": "spawn_wardens",
+  "random_tick_speed": "random_tick_speed",
+  "weather_cycle": "advance_weather"
+ },
+ "ticks": 200,
+ "seed": "20261026"
+}

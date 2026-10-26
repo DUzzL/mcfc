@@ -1,0 +1,157 @@
+{
+ "id": "mr-vanilla-refresh",
+ "status": "CRASH",
+ "kind": "function",
+ "packs": [
+  "mr-vanilla-refresh"
+ ],
+ "problems": [
+  "base1 run failed: TimeoutError: log pattern not seen: Loaded \\d+ advancements",
+  "base2 run failed: TimeoutError: log pattern not seen: Loaded \\d+ advancements",
+  "mcfc run failed: TimeoutError: log pattern not seen: Loaded \\d+ advancements"
+ ],
+ "notes": [
+  "mr-vanilla-refresh: pack_format patched (manifest): pack_format 71 -> 121; min_format 71 -> 121; max_format 9999 -> 121; supported_formats {'min_inclusive': 71, 'max_inclusive': 9999} -> {'min_inclusive': 121, 'max_inclusive': 121}"
+ ],
+ "mcfcState": {
+  "afterLoad": null,
+  "final": null,
+  "decisiveError": "java.lang.IllegalStateException: Failed to parse vanilla_refresh:biome/badlands from pack file/mr-vanilla-refresh.zip",
+  "text": null
+ },
+ "compile": {
+  "found": null,
+  "compiled": null,
+  "rate": null,
+  "partialFallbackCommands": 0,
+  "wholeFallbacks": {},
+  "compileFailures": [],
+  "compilerErrors": [],
+  "runtimeDisables": [],
+  "topPartialReasons": {},
+  "unsupportedCommands": {}
+ },
+ "debug": null,
+ "compare": {
+  "confirmedFindings": 0,
+  "flakyFindings": 0,
+  "lowConfidence": 0,
+  "noise": 0,
+  "genFindings": null,
+  "genNoise": null,
+  "confirmation": {
+   "enabled": true,
+   "ran": false
+  },
+  "sections": {},
+  "confirmed": [],
+  "flaky": [],
+  "lowConfidenceSample": []
+ },
+ "exceptions": {
+  "base1": {
+   "java.lang.IllegalStateException": {
+    "count": 699,
+    "first": "Failed to parse vanilla_refresh:biome/badlands from pack file/mr-vanilla-refresh.zip"
+   },
+   "com.google.gson.JsonParseException": {
+    "count": 1,
+    "first": "Pack key supported_formats is deprecated starting from pack format 82. Remove supported_formats from your pack.mcmeta."
+   },
+   "java.util.concurrent.CompletionException": {
+    "count": 1,
+    "first": "net.minecraft.ReportedException: Registry Loading"
+   },
+   "net.minecraft.ReportedException": {
+    "count": 1,
+    "first": "Registry Loading"
+   }
+  },
+  "base2": {
+   "java.lang.IllegalStateException": {
+    "count": 699,
+    "first": "Failed to parse vanilla_refresh:biome/badlands from pack file/mr-vanilla-refresh.zip"
+   },
+   "com.google.gson.JsonParseException": {
+    "count": 1,
+    "first": "Pack key supported_formats is deprecated starting from pack format 82. Remove supported_formats from your pack.mcmeta."
+   },
+   "java.util.concurrent.CompletionException": {
+    "count": 1,
+    "first": "net.minecraft.ReportedException: Registry Loading"
+   },
+   "net.minecraft.ReportedException": {
+    "count": 1,
+    "first": "Registry Loading"
+   }
+  },
+  "mcfc": {
+   "java.lang.IllegalStateException": {
+    "count": 699,
+    "first": "Failed to parse vanilla_refresh:biome/badlands from pack file/mr-vanilla-refresh.zip"
+   },
+   "com.google.gson.JsonParseException": {
+    "count": 1,
+    "first": "Pack key supported_formats is deprecated starting from pack format 82. Remove supported_formats from your pack.mcmeta."
+   },
+   "java.util.concurrent.CompletionException": {
+    "count": 1,
+    "first": "net.minecraft.ReportedException: Registry Loading"
+   },
+   "net.minecraft.ReportedException": {
+    "count": 1,
+    "first": "Registry Loading"
+   }
+  },
+  "perfbase": {
+   "java.lang.IllegalStateException": {
+    "count": 699,
+    "first": "Failed to parse vanilla_refresh:biome/badlands from pack file/mr-vanilla-refresh.zip"
+   },
+   "com.google.gson.JsonParseException": {
+    "count": 1,
+    "first": "Pack key supported_formats is deprecated starting from pack format 82. Remove supported_formats from your pack.mcmeta."
+   },
+   "java.util.concurrent.CompletionException": {
+    "count": 1,
+    "first": "net.minecraft.ReportedException: Registry Loading"
+   },
+   "net.minecraft.ReportedException": {
+    "count": 1,
+    "first": "Registry Loading"
+   }
+  }
+ },
+ "exceptionTotals": {
+  "base1": 702,
+  "base2": 702,
+  "mcfc": 702,
+  "perfbase": 702
+ },
+ "exercise": {
+  "base1": null,
+  "base2": null,
+  "mcfc": null
+ },
+ "slowFunctions": {},
+ "perf": null,
+ "durationsSeconds": {
+  "base1": 317.3,
+  "base2": 319.1,
+  "mcfc": 319.4,
+  "perfbase": 314.5
+ },
+ "gamerules": {
+  "command_chain_limit": "max_command_sequence_length",
+  "spawn_mobs": "spawn_mobs",
+  "spawn_monsters": "spawn_monsters",
+  "spawn_patrols": "spawn_patrols",
+  "spawn_wandering_traders": "spawn_wandering_traders",
+  "spawn_phantoms": "spawn_phantoms",
+  "spawn_wardens": "spawn_wardens",
+  "random_tick_speed": "random_tick_speed",
+  "weather_cycle": "advance_weather"
+ },
+ "ticks": 200,
+ "seed": "20261026"
+}
