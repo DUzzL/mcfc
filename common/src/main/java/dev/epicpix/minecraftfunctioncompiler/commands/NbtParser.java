@@ -73,12 +73,8 @@ public final class NbtParser {
         if(!reader.skipIfNext('[')) throw createError(reader, NBT_INVALID_SYNTAX, "Expected '[' while reading nbt list, but got '" + reader.peek() + "'");
         ArrayList<NbtValue> valueList = new ArrayList<>();
         while(peekOrEof(reader, "nbt list") != ']') {
-            var value = readNbtValue(reader);
-            if(!valueList.isEmpty() && value.getClass() != valueList.getFirst().getClass()) {
-                throw createError(reader, NBT_MISMATCHED_TYPE, "Expected " + valueList.getFirst().getClass().getSimpleName() + " nbt value, but got " + value.getClass().getSimpleName());
-            }else {
-                valueList.add(value);
-            }
+            // Lists may mix element types (SNBT since 1.21.5); ListTag keeps each element's own type.
+            valueList.add(readNbtValue(reader));
             reader.skipWhitespace();
             if(!reader.skipIfNext(',')) {
                 if(peekOrEof(reader, "nbt list") != ']') {

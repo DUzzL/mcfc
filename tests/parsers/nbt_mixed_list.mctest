@@ -1,0 +1,19 @@
+; SNBT lists may mix element types since 1.21.5 (packs write `Motion:[0.0,1,0.0]`). Such lists used to be
+; rejected by the parser ("Expected DoubleLiteral nbt value, but got IntegerLiteral") and the command fell back
+; to vanilla.
+@setup
+objective create t dummy
+
+@function run
+data modify storage mcfc-test:mixed l set value [0.0,1,2.5f,"a",{k:3}]
+execute store result score n t run data get storage mcfc-test:mixed l
+execute store result score i t run data get storage mcfc-test:mixed l[1]
+execute store result score f t run data get storage mcfc-test:mixed l[2] 10
+execute store result score k t run data get storage mcfc-test:mixed l[4].k
+
+@validate
+score n t is 5
+score i t is 1
+score f t is 25
+score k t is 3
+no_fallback
