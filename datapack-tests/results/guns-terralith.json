@@ -9,9 +9,9 @@
  "problems": [],
  "notes": [],
  "mcfcJar": {
-  "name": "mcfc-1a611fce.jar",
-  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
-  "mtime": "2026-10-26 09:56:09"
+  "name": "mcfc-bfaa7efd.jar",
+  "sha256": "fca3ca87409825f94361fa4e189433dcced4f759e339f2b7bc1999eb69d81ed0",
+  "mtime": "2026-10-26 13:45:38"
  },
  "mcfcState": {
   "afterLoad": "READY_ON",
@@ -61,23 +61,23 @@
   "nonCompiledCount": 1
  },
  "compare": {
-  "confirmedFindings": 3,
-  "flakyFindings": 9,
-  "lowConfidence": 6,
-  "noise": 1343,
-  "genFindings": 9,
-  "genNoise": 218,
+  "confirmedFindings": 33,
+  "flakyFindings": 6,
+  "lowConfidence": 5,
+  "noise": 736,
+  "genFindings": 6,
+  "genNoise": 197,
   "confirmation": {
    "enabled": true,
    "ran": true,
-   "onlyInSecondAttempt": 5
+   "onlyInSecondAttempt": 132
   },
   "sections": {
    "blocks": {
     "paths": 414,
-    "noise": 216,
-    "findings": 3,
-    "lowConfidence": 6
+    "noise": 194,
+    "findings": 1,
+    "lowConfidence": 5
    },
    "bossbars": {
     "paths": 1,
@@ -92,9 +92,9 @@
     "lowConfidence": 0
    },
    "entities": {
-    "paths": 1648,
-    "noise": 1120,
-    "findings": 0,
+    "paths": 1103,
+    "noise": 535,
+    "findings": 32,
     "lowConfidence": 0
    },
    "functionTags": {
@@ -148,110 +148,267 @@
   },
   "confirmed": [
    {
-    "path": "blocks[overworld].columns.4,-8",
-    "base": "\"c14a3e82c26a1cdc6e3811c6541556778d14644f9659ddfa5632c9ef3df56341\"",
-    "mcfc": "\"1fc3faba92d6edb39d6c2643986289660cccb7468c7e06398e277afa9036c839\"",
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#10].customName",
+    "base": "<missing>",
+    "mcfc": "null",
     "dump": "final"
    },
    {
-    "path": "blocks[overworld].columns.-1,3",
-    "base": "\"51b5e03f6cd929443406a5aa460029a3a9a5e33442a42f97dd0c0dd0aa874ba9\"",
-    "mcfc": "\"887321f92d69a0216a33a22bf142178496a54703a8dfee8e84e6c3e202723ad6\"",
-    "dump": "gen"
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#10].nbt",
+    "base": "<missing>",
+    "mcfc": "\"{FlippedRotation:0b,HasTicked:0b,Invulnerable:0b,LootTable:\\\"minecraft:chests/abandoned_mineshaft\\\",LootTableSeed:-5164577931938602985L}\"",
+    "dump": "final"
    },
    {
-    "path": "blocks[overworld].columns.4,-8",
-    "base": "\"c14a3e82c26a1cdc6e3811c6541556778d14644f9659ddfa5632c9ef3df56341\"",
-    "mcfc": "\"1fc3faba92d6edb39d6c2643986289660cccb7468c7e06398e277afa9036c839\"",
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#10].pos[0]",
+    "base": "<missing>",
+    "mcfc": "-70.5",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#10].pos[1]",
+    "base": "<missing>",
+    "mcfc": "38.06",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#10].pos[2]",
+    "base": "<missing>",
+    "mcfc": "20.5",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#10].tags[]",
+    "base": "<missing>",
+    "mcfc": "[]",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#10].type",
+    "base": "<missing>",
+    "mcfc": "\"minecraft:chest_minecart\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#10].uuid",
+    "base": "<missing>",
+    "mcfc": "\"<chest_minecart#10>\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#7].customName",
+    "base": "<missing>",
+    "mcfc": "null",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#7].nbt",
+    "base": "<missing>",
+    "mcfc": "\"{FlippedRotation:0b,HasTicked:1b,Invulnerable:0b,LootTable:\\\"minecraft:chests/abandoned_mineshaft\\\",LootTableSeed:-8916152141466915146L}\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#7].pos[0]",
+    "base": "<missing>",
+    "mcfc": "-664679.5",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#7].pos[1]",
+    "base": "<missing>",
+    "mcfc": "5.5",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#7].pos[2]",
+    "base": "<missing>",
+    "mcfc": "-26096.5",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#7].tags[]",
+    "base": "<missing>",
+    "mcfc": "[]",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#7].type",
+    "base": "<missing>",
+    "mcfc": "\"minecraft:chest_minecart\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#7].uuid",
+    "base": "<missing>",
+    "mcfc": "\"<chest_minecart#7>\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#8].customName",
+    "base": "<missing>",
+    "mcfc": "null",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#8].nbt",
+    "base": "<missing>",
+    "mcfc": "\"{FlippedRotation:0b,HasTicked:0b,Invulnerable:0b,LootTable:\\\"minecraft:chests/abandoned_mineshaft\\\",LootTableSeed:-2596915838807894336L}\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#8].pos[0]",
+    "base": "<missing>",
+    "mcfc": "-664684.5",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#8].pos[1]",
+    "base": "<missing>",
+    "mcfc": "3.06",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#8].pos[2]",
+    "base": "<missing>",
+    "mcfc": "-26070.5",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#8].tags[]",
+    "base": "<missing>",
+    "mcfc": "[]",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#8].type",
+    "base": "<missing>",
+    "mcfc": "\"minecraft:chest_minecart\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#8].uuid",
+    "base": "<missing>",
+    "mcfc": "\"<chest_minecart#8>\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#9].customName",
+    "base": "<missing>",
+    "mcfc": "null",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#9].nbt",
+    "base": "<missing>",
+    "mcfc": "\"{FlippedRotation:0b,HasTicked:1b,Invulnerable:0b,LootTable:\\\"minecraft:chests/abandoned_mineshaft\\\",LootTableSeed:-1201193312003935843L}\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#9].pos[0]",
+    "base": "<missing>",
+    "mcfc": "-664689.5",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#9].pos[1]",
+    "base": "<missing>",
+    "mcfc": "3.5",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#9].pos[2]",
+    "base": "<missing>",
+    "mcfc": "-26070.5",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#9].tags[]",
+    "base": "<missing>",
+    "mcfc": "[]",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#9].type",
+    "base": "<missing>",
+    "mcfc": "\"minecraft:chest_minecart\"",
+    "dump": "final"
+   },
+   {
+    "path": "entities.minecraft:overworld.list[minecraft:chest_minecart#9].uuid",
+    "base": "<missing>",
+    "mcfc": "\"<chest_minecart#9>\"",
+    "dump": "final"
+   },
+   {
+    "path": "blocks[overworld].columns.-8,-4",
+    "base": "\"13d848608321fbde176cbaf567b328519fd11c3f596d2097d3ed1e85f2d6aee7\"",
+    "mcfc": "\"b15e20ba06e454b600a8483cfb20fe22dfe43e54525d29c01c9cee928cfe7f13\"",
     "dump": "gen"
    }
   ],
   "flaky": [
    {
-    "path": "blocks[overworld].columns.4,1",
-    "base": "\"53add80c94a2e804ecad8dc37d74712da31b39d893afbe22fdc516f72a5f8cdb\"",
-    "mcfc": "\"fa647596622b89f4fd54053e12975d211983393c67e71f770ee9494acf721d2c\"",
+    "path": "blocks[overworld].columns.6,5",
+    "base": "\"8643d0b5743d245d9c82ccb7d95ac0c9051d16ff845e3af601859eb211b21a5f\"",
+    "mcfc": "\"fb0727de8e540a86e6677a97f7bae6397ba24564320b54e5d4cc4ec725ad327b\"",
     "dump": "final"
    },
    {
-    "path": "blocks[overworld].columns.4,2",
-    "base": "\"1a9b61dcc383d3d33c86689e37572bde0c9ff23a226fe866dba5958b334e500b\"",
-    "mcfc": "\"7aca8f0e71e684ca54fa3d1ac45364f47a8852ba9d4b932f1e855d52491c2579\"",
-    "dump": "final"
-   },
-   {
-    "path": "blocks[overworld].columns.-1,2",
-    "base": "\"85211e6b3cea7cd8c427eeb67b25d767503ac84101af0c8dbe513da29b6f9b59\"",
-    "mcfc": "\"fb748e41398b0ad97a65632d9a990e801fe16403c00e1cb9c892ccb7d1871cb9\"",
+    "path": "blocks[overworld].columns.-5,6",
+    "base": "\"a26337387a219074f3ae227113a48612c80309c29c6fd26dc113efdef5d57d75\"",
+    "mcfc": "\"3ba1214ddbeb6475b3e1d4d9870135dd9f8a0139d610c635cb76c5441bb5d2db\"",
     "dump": "gen"
    },
    {
-    "path": "blocks[overworld].columns.3,2",
-    "base": "\"8b84a699caacdaa6813ee865eff867f50073a6f6ddd17cfca830d81cef379732\"",
-    "mcfc": "\"4135406404e0a0775436bacb041421bfb801501fa90d9da45bdb3cd1692ab7ab\"",
+    "path": "blocks[overworld].columns.-7,3",
+    "base": "\"79fa910fd4e0642a0cbd3fab2add43166eee83a55dc59447f9ffeccc8a031798\"",
+    "mcfc": "\"df7f063bf8b31fbeebbda9e35d99d891301a18a687dff9a8a7456e71eabb6da9\"",
     "dump": "gen"
    },
    {
-    "path": "blocks[overworld].columns.3,3",
-    "base": "\"4117f4225dd252f4a780543692350db035a739ad0c0ea718d9cca5c4796f87ed\"",
-    "mcfc": "\"123eba11973606fc2687b382c7f66d90cb051706a49dcfa468e5fbffd2308e7b\"",
+    "path": "blocks[overworld].columns.-7,4",
+    "base": "\"6783a18ab49f132eda6323210fb1a150fa4f0d8aaf6f411884548ee2d2848a3b\"",
+    "mcfc": "\"5b8cd5c4f205fd5d4a41b69503167b134f78f7c56b99cfd761db010a116e34ee\"",
     "dump": "gen"
    },
    {
-    "path": "blocks[overworld].columns.3,5",
-    "base": "\"e2d1ea2bdba7e33952560ec50e906e7f393023262f72a7228cbddfa71ba5cd51\"",
-    "mcfc": "\"170e525e07cc66dbced7f5d9046d8551298c7679c14401a808acbffd6c08c21e\"",
+    "path": "blocks[overworld].columns.-8,-2",
+    "base": "\"6afa7377239e02796e5ba8d36814a4378f99ecc8cd32d58c56fcedf0b34f807b\"",
+    "mcfc": "\"60ffc203f80cb9701223aed0a6f2496b366e18e485b7bc423208c8a28886321a\"",
     "dump": "gen"
    },
    {
-    "path": "blocks[overworld].columns.4,1",
-    "base": "\"53add80c94a2e804ecad8dc37d74712da31b39d893afbe22fdc516f72a5f8cdb\"",
-    "mcfc": "\"fa647596622b89f4fd54053e12975d211983393c67e71f770ee9494acf721d2c\"",
-    "dump": "gen"
-   },
-   {
-    "path": "blocks[overworld].columns.4,2",
-    "base": "\"1a9b61dcc383d3d33c86689e37572bde0c9ff23a226fe866dba5958b334e500b\"",
-    "mcfc": "\"7aca8f0e71e684ca54fa3d1ac45364f47a8852ba9d4b932f1e855d52491c2579\"",
-    "dump": "gen"
-   },
-   {
-    "path": "blocks[overworld].columns.4,5",
-    "base": "\"f79e99e20efac6b2cedff4b5597b30f5dd4b8f769ba27794716ad31993a3421a\"",
-    "mcfc": "\"cc312464ec91efb5db4f66faa4d97aa009dd498879cc2190f93f87c03c58d820\"",
+    "path": "blocks[overworld].columns.6,5",
+    "base": "\"8643d0b5743d245d9c82ccb7d95ac0c9051d16ff845e3af601859eb211b21a5f\"",
+    "mcfc": "\"fb0727de8e540a86e6677a97f7bae6397ba24564320b54e5d4cc4ec725ad327b\"",
     "dump": "gen"
    }
   ],
   "lowConfidenceSample": [
    {
-    "path": "blocks[overworld].columns.-1,2",
-    "base": "\"1d8c82e63a68da3a094edb5c24b97a35bf77d698ef71beb36bb56682193e33b5\"",
-    "mcfc": "\"1da4ff0ebaa138695c956d4aa181ede9e1c144abe074a9b872d7238de95c4ad0\""
+    "path": "blocks[overworld].columns.-5,6",
+    "base": "\"d4ca6ae2c8abe8e863921d5c192fe8adf8ce762485c9ac5c2727feccda0eb38e\"",
+    "mcfc": "\"7b622a750c3b8efd89255b8084f3bf9b22328c8b5f796de9214b21b7d8d215eb\""
    },
    {
-    "path": "blocks[overworld].columns.-1,3",
-    "base": "\"8c5dd464e5fb2c6951436c89b8cf2c2b407437d824219c320cc0637021bb2e2d\"",
-    "mcfc": "\"06f61c88662541273916dd570944a6a69479bab9b1c098863cd3944bd3ac0405\""
+    "path": "blocks[overworld].columns.-7,3",
+    "base": "\"98b94c91c3dd2ef1040982d6ab0d858814b9dfb05f4cd0218e58f85be01a1e32\"",
+    "mcfc": "\"2e3f871a99d257ca1a18d231ed42c6159aa971083b9a006ecca0b9f125ee6251\""
    },
    {
-    "path": "blocks[overworld].columns.3,2",
-    "base": "\"6105fdbd3103d7a836425371949a2b28308582a6e38eeeb6b559389f62704430\"",
-    "mcfc": "\"ba8f44c15d06950b01c0c88c979f00a6c009c90383713cf6e4359fb236c4df1f\""
+    "path": "blocks[overworld].columns.-7,4",
+    "base": "\"1e789707b75e1dd6f05aea251597c812a4afd5199bd7de17f3f97f4a38b313f0\"",
+    "mcfc": "\"5372aeac89a736fe42b7c1fb8a414cd48be8c1128e2fa66ab40b9ace108c4b2b\""
    },
    {
-    "path": "blocks[overworld].columns.3,3",
-    "base": "\"cfcd90e3cbef9d37c8dfed2df357af8d0ba21d172fac8d6057fd1639912030ee\"",
-    "mcfc": "\"0013447297dfe10baaa5bef9907105b9ec04c5bf70b4380bb2ec49b24ddc96fb\""
+    "path": "blocks[overworld].columns.-8,-2",
+    "base": "\"6a5bbb74e3f734074c3ac3fd089f6b4477a79ce9823320fb3d79aa858308cae6\"",
+    "mcfc": "\"7675d0ef53dbe2edd9dc11b9bb62f63070e36b77657d34de36b925f2711d2678\""
    },
    {
-    "path": "blocks[overworld].columns.3,5",
-    "base": "\"c3277eb838df669a38ec6d25048096c34a956080e2ddb6321176840e61a26f3c\"",
-    "mcfc": "\"5cdccf4eb37b0df2bf2da15312ed646ee8cc3be81dd14b901164fddaea351b5e\""
-   },
-   {
-    "path": "blocks[overworld].columns.4,5",
-    "base": "\"228bef36bd0b3f3007f993c8f22627d9480243b1a8e6551a3c58b48aedd70fad\"",
-    "mcfc": "\"79063432c4cc72e333e1087d50f1039da9fea95a0f84b07950ab45d57bc6249c\""
+    "path": "blocks[overworld].columns.-8,-4",
+    "base": "\"c5cbb9b7fc55727f691828693a40da65ec42b6230dba1f1bc398e37d66662b06\"",
+    "mcfc": "\"90f094e4e6479f58906dfb0815b110dca74992e24918890e1d7860526e9762d7\""
    }
   ]
  },
@@ -332,35 +489,35 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 2.1,
-   "min": 1.98,
-   "max": 2.58,
+   "median": 2.04,
+   "min": 1.85,
+   "max": 2.93,
    "lines": [
-    "Sprint completed with 388 ticks per second, or 2.58 ms per tick",
-    "Sprint completed with 505 ticks per second, or 1.98 ms per tick",
-    "Sprint completed with 476 ticks per second, or 2.10 ms per tick"
+    "Sprint completed with 341 ticks per second, or 2.93 ms per tick",
+    "Sprint completed with 489 ticks per second, or 2.04 ms per tick",
+    "Sprint completed with 541 ticks per second, or 1.85 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 3.15,
-   "min": 2.62,
-   "max": 3.37,
+   "median": 2.13,
+   "min": 1.98,
+   "max": 2.74,
    "lines": [
-    "Sprint completed with 296 ticks per second, or 3.37 ms per tick",
-    "Sprint completed with 317 ticks per second, or 3.15 ms per tick",
-    "Sprint completed with 381 ticks per second, or 2.62 ms per tick"
+    "Sprint completed with 365 ticks per second, or 2.74 ms per tick",
+    "Sprint completed with 468 ticks per second, or 2.13 ms per tick",
+    "Sprint completed with 506 ticks per second, or 1.98 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 71.2,
-  "base2": 72.5,
-  "mcfc": 72.4,
-  "perfbase": 69.1,
-  "attempt2-base1": 75.1,
-  "attempt2-base2": 75.1,
-  "attempt2-mcfc": 55.5
+  "base1": 77.3,
+  "base2": 79.1,
+  "mcfc": 69.9,
+  "perfbase": 66.1,
+  "attempt2-base1": 72.8,
+  "attempt2-base2": 72.8,
+  "attempt2-mcfc": 55.8
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

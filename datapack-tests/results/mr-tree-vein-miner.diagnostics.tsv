@@ -1,9 +1,0 @@
-kind	id	function	message	command
-PARSE_ERROR	command.error.macro.unsupported	stm:detection/create_target	Macros are not supported in this location	tag @s add tvm.owner.$(owner)
-PARSE_ERROR	command.error.macro.unsupported	stm:queue/load_next	Macros are not supported in this location	execute unless data entity @s data.frontier[$(head)] run return run function stm:operation/complete
-PARSE_ERROR	command.error.macro.unsupported	stm:queue/visit	Macros are not supported in this location	execute positioned $(x) $(y) $(z) run function stm:operation/dispatch
-PARSE_ERROR	command.error.macro.unsupported	stm:detection/upsert_target	Macros are not supported in this location	execute as @e[type=minecraft:marker,tag=tvm.target,tag=tvm.owner.$(owner),limit=1] run data merge entity @s {data:{source:"stm",owner:$(owner),family:$(family),match:"$(match)",block:$(block),baseline:$(baseline),seen:$(seen)}}
-PARSE_ERROR	command.error.macro.unsupported	stm:detection/create_target	Macros are not supported in this location	data merge entity @s {data:{source:"stm",owner:$(owner),family:$(family),match:"$(match)",block:$(block),baseline:$(baseline),seen:$(seen)}}
-PARSE_ERROR	command.error.macro.unsupported	stm:queue/load_next	Macros are not supported in this location	data modify entity @s data.cursor set from entity @s data.frontier[$(head)]
-COMPILE_ERROR	command.compile.result_context.not_implemented	stm:queue/load_next	`return` inside an unparsed command would be swallowed; falling back the whole function	
-COMPILE_ERROR	command.compile.result_context.not_implemented	stm:queue/visit	`return` inside an unparsed command would be swallowed; falling back the whole function	

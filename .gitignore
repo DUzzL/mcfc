@@ -121,3 +121,4 @@ run/
 datapack-tests/cache/
 datapack-tests/runs/
 datapack-tests/**/__pycache__/
+datapack-tests/results/*.diagnostics.tsv

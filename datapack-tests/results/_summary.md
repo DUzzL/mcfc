@@ -32,9 +32,9 @@ columns: found/compiled/partial cmds/compile failures; confirmed/flaky/low-confi
 | vt-tpa | function | DIFF | 19/19/0/0 | 4/0/0 | 0.15 -> 0.17 | READY_ON |
 | bacap-vt4 | combo | OK | 5537/5537/119/0 | 0/0/122 | 19.75 -> 20.43 | READY_ON |
 | vt-all | combo | FALLBACK-ISSUE | 467/464/73/3 | 0/1/0 | 0.57 -> 0.58 | READY_ON |
-| guns-terralith | combo | DIFF | 54/53/84/1 | 3/9/6 | 3.15 -> 2.1 | READY_ON |
-| mr-functions-all | combo | FALLBACK-ISSUE | 5839/5829/262/10 | 0/0/366 | 17.46 -> 19.17 | READY_ON |
-| worldgen-stack | combo | DIFF | 2327/2324/273/3 | 6/32/4 | 1.87 -> 1.55 | READY_ON |
+| guns-terralith | combo | DIFF | 54/53/84/1 | 33/6/5 | 2.13 -> 2.04 | READY_ON |
+| mr-functions-all | combo | FALLBACK-ISSUE | 5839/5829/262/10 | 0/0/12 | 17.91 -> 20.33 | READY_ON |
+| worldgen-stack | combo | DIFF | 2327/2324/273/3 | 4/36/3 | 1.73 -> 1.86 | READY_ON |
 | kitchen-sink | combo | DIFF | 6060/6048/297/12 | 2/10/28 | 24.12 -> 23.19 | READY_ON |
 
 skipped: mr-guns_plus_plus (fails vanilla registry loading on 26.3 (recipes/advancements/predicate); mr-vanilla-refresh (fails vanilla registry loading on 26.3 (recipes/advancements/predicate)

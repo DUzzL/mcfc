@@ -1,2 +1,0 @@
-kind	id	function	message	command
-PARSE_ERROR	selector.error.invalid.syntax	orbital_strike_cannon:reset_nuke_sequence	Expected a selector	playsound minecraft:entity.experience_orb.pickup

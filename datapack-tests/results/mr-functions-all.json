@@ -17,9 +17,9 @@
   "mr-orbital-strike-cannon: pack_format patched (manifest): pack_format 108 -> 121; added min_format/max_format [121, 0] (required for formats above 81)"
  ],
  "mcfcJar": {
-  "name": "mcfc-1a611fce.jar",
-  "sha256": "0bb5961ab99af9ed3547bbde1d0ee2cdc6a0e61326a2286f938bc428fc7708d4",
-  "mtime": "2026-10-26 09:56:09"
+  "name": "mcfc-bfaa7efd.jar",
+  "sha256": "fca3ca87409825f94361fa4e189433dcced4f759e339f2b7bc1999eb69d81ed0",
+  "mtime": "2026-10-26 13:45:38"
  },
  "mcfcState": {
   "afterLoad": "READY_ON",
@@ -34,6 +34,7 @@
   "partialFallbackCommands": 262,
   "wholeFallbacks": {},
   "compileFailures": [
+   "armor_stand_arms:app/arms/right_click/change_arms",
    "stm:queue/load_next",
    "stm:queue/visit",
    "timberstrike:main/handle",
@@ -42,8 +43,7 @@
    "veinminer:internal/check/_loopi",
    "veinminer:internal/mine/_loopi",
    "veinminer:tool_add",
-   "veinminer:tool_edit",
-   "armor_stand_arms:app/arms/right_click/change_arms"
+   "veinminer:tool_edit"
   ],
   "compilerErrors": [],
   "runtimeDisables": [],
@@ -76,28 +76,28 @@
    "vanilla": 8,
    "compiled": 5467
   },
-  "totalCalls": 17963,
-  "vanillaCalls": 3115,
-  "compiledCalls": 14848,
-  "compiledCallShare": 0.8266,
+  "totalCalls": 17946,
+  "vanillaCalls": 3106,
+  "compiledCalls": 14840,
+  "compiledCallShare": 0.8269,
   "nonCompiled": [
    {
     "id": "veinminer:internal/check/_loopi/164062945",
     "status": "vanilla",
-    "calls": 2212,
-    "vanillaCalls": 2212
+    "calls": 2205,
+    "vanillaCalls": 2205
    },
    {
     "id": "stm:detection/scan_owned/111972752",
     "status": "vanilla",
-    "calls": 426,
-    "vanillaCalls": 426
+    "calls": 425,
+    "vanillaCalls": 425
    },
    {
     "id": "stm:operation/process_owned/111972752",
     "status": "vanilla",
-    "calls": 426,
-    "vanillaCalls": 426
+    "calls": 425,
+    "vanillaCalls": 425
    },
    {
     "id": "veinminer:block_add/1460620541",
@@ -135,8 +135,8 @@
  "compare": {
   "confirmedFindings": 0,
   "flakyFindings": 0,
-  "lowConfidence": 366,
-  "noise": 2413,
+  "lowConfidence": 12,
+  "noise": 2640,
   "genFindings": null,
   "genNoise": null,
   "confirmation": {
@@ -163,10 +163,10 @@
     "lowConfidence": 0
    },
    "entities": {
-    "paths": 7478,
-    "noise": 2406,
+    "paths": 7438,
+    "noise": 2633,
     "findings": 0,
-    "lowConfidence": 366
+    "lowConfidence": 12
    },
    "functionTags": {
     "paths": 47,
@@ -221,204 +221,64 @@
   "flaky": [],
   "lowConfidenceSample": [
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#177].pos[0]",
-    "base": "0.42",
-    "mcfc": "0.41"
+    "path": "entities.minecraft:overworld.list[minecraft:item#316].pos[0]",
+    "base": "0.47",
+    "mcfc": "0.48"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#194].pos[0]",
-    "base": "0.43",
-    "mcfc": "0.42"
+    "path": "entities.minecraft:overworld.list[minecraft:item#719].pos[0]",
+    "base": "0.57",
+    "mcfc": "0.56"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#195].pos[0]",
-    "base": "0.43",
-    "mcfc": "0.42"
+    "path": "entities.minecraft:overworld.list[minecraft:item#720].pos[0]",
+    "base": "0.57",
+    "mcfc": "0.56"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#196].pos[0]",
-    "base": "0.43",
-    "mcfc": "0.42"
+    "path": "entities.minecraft:overworld.list[minecraft:item#740].pos[0]",
+    "base": "0.58",
+    "mcfc": "0.57"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#197].pos[0]",
-    "base": "0.43",
-    "mcfc": "0.42"
+    "path": "entities.minecraft:overworld.list[minecraft:item#741].pos[0]",
+    "base": "0.58",
+    "mcfc": "0.57"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#198].pos[0]",
-    "base": "0.43",
-    "mcfc": "0.42"
+    "path": "entities.minecraft:overworld.list[minecraft:item#742].pos[0]",
+    "base": "0.58",
+    "mcfc": "0.57"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#212].pos[0]",
-    "base": "0.44",
-    "mcfc": "0.43"
+    "path": "entities.minecraft:overworld.list[minecraft:item#743].pos[0]",
+    "base": "0.58",
+    "mcfc": "0.57"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#213].pos[0]",
-    "base": "0.44",
-    "mcfc": "0.43"
+    "path": "entities.minecraft:overworld.list[minecraft:item#744].pos[0]",
+    "base": "0.58",
+    "mcfc": "0.57"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#214].pos[0]",
-    "base": "0.44",
-    "mcfc": "0.43"
+    "path": "entities.minecraft:overworld.list[minecraft:item#745].pos[0]",
+    "base": "0.58",
+    "mcfc": "0.57"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#215].pos[0]",
-    "base": "0.44",
-    "mcfc": "0.43"
+    "path": "entities.minecraft:overworld.list[minecraft:item#746].pos[0]",
+    "base": "0.58",
+    "mcfc": "0.57"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#216].pos[0]",
-    "base": "0.44",
-    "mcfc": "0.43"
+    "path": "entities.minecraft:overworld.list[minecraft:item#747].pos[0]",
+    "base": "0.58",
+    "mcfc": "0.57"
    },
    {
-    "path": "entities.minecraft:overworld.list[minecraft:item#217].pos[0]",
-    "base": "0.44",
-    "mcfc": "0.43"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#218].pos[0]",
-    "base": "0.44",
-    "mcfc": "0.43"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#219].pos[0]",
-    "base": "0.44",
-    "mcfc": "0.43"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#220].pos[0]",
-    "base": "0.44",
-    "mcfc": "0.43"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#221].pos[0]",
-    "base": "0.44",
-    "mcfc": "0.43"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#222].pos[0]",
-    "base": "0.44",
-    "mcfc": "0.43"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#223].pos[0]",
-    "base": "0.44",
-    "mcfc": "0.43"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#224].pos[0]",
-    "base": "0.44",
-    "mcfc": "0.43"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#225].pos[0]",
-    "base": "0.44",
-    "mcfc": "0.43"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#226].pos[0]",
-    "base": "0.44",
-    "mcfc": "0.43"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#227].pos[0]",
-    "base": "0.44",
-    "mcfc": "0.43"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#237].pos[0]",
-    "base": "0.45",
-    "mcfc": "0.44"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#238].pos[0]",
-    "base": "0.45",
-    "mcfc": "0.44"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#239].pos[0]",
-    "base": "0.45",
-    "mcfc": "0.44"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#240].pos[0]",
-    "base": "0.45",
-    "mcfc": "0.44"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#241].pos[0]",
-    "base": "0.45",
-    "mcfc": "0.44"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#242].pos[0]",
-    "base": "0.45",
-    "mcfc": "0.44"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#243].pos[0]",
-    "base": "0.45",
-    "mcfc": "0.44"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#244].pos[0]",
-    "base": "0.45",
-    "mcfc": "0.44"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#245].pos[0]",
-    "base": "0.45",
-    "mcfc": "0.44"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#246].pos[0]",
-    "base": "0.45",
-    "mcfc": "0.44"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#247].pos[0]",
-    "base": "0.45",
-    "mcfc": "0.44"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#248].pos[0]",
-    "base": "0.45",
-    "mcfc": "0.44"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#249].pos[0]",
-    "base": "0.45",
-    "mcfc": "0.44"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#250].pos[0]",
-    "base": "0.45",
-    "mcfc": "0.44"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#251].pos[0]",
-    "base": "0.45",
-    "mcfc": "0.44"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#252].pos[0]",
-    "base": "0.45",
-    "mcfc": "0.44"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#265].pos[0]",
-    "base": "0.46",
-    "mcfc": "0.45"
-   },
-   {
-    "path": "entities.minecraft:overworld.list[minecraft:item#266].pos[0]",
-    "base": "0.46",
-    "mcfc": "0.45"
+    "path": "entities.minecraft:overworld.list[minecraft:item#748].pos[0]",
+    "base": "0.58",
+    "mcfc": "0.57"
    }
   ]
  },
@@ -455,10 +315,10 @@
    "candidates": 5839,
    "skippedMacro": 50,
    "skippedName": 30,
-   "skippedScenario": 0,
-   "ran": 5759,
+   "skippedScenario": 33,
+   "ran": 5726,
    "replyExecuted": 5452,
-   "replyError": 307,
+   "replyError": 274,
    "hang": false,
    "slow": [],
    "budgetExceeded": false,
@@ -486,10 +346,10 @@
    "candidates": 5839,
    "skippedMacro": 50,
    "skippedName": 30,
-   "skippedScenario": 0,
-   "ran": 5759,
+   "skippedScenario": 33,
+   "ran": 5726,
    "replyExecuted": 5452,
-   "replyError": 307,
+   "replyError": 274,
    "hang": false,
    "slow": [],
    "budgetExceeded": false,
@@ -517,10 +377,10 @@
    "candidates": 5839,
    "skippedMacro": 50,
    "skippedName": 30,
-   "skippedScenario": 0,
-   "ran": 5759,
+   "skippedScenario": 33,
+   "ran": 5726,
    "replyExecuted": 5452,
-   "replyError": 307,
+   "replyError": 274,
    "hang": false,
    "slow": [],
    "budgetExceeded": false,
@@ -532,32 +392,32 @@
  "slowFunctions": {},
  "perf": {
   "mcfc": {
-   "median": 19.17,
-   "min": 18.63,
-   "max": 20.84,
+   "median": 20.33,
+   "min": 19.56,
+   "max": 20.69,
    "lines": [
-    "Sprint completed with 47 ticks per second, or 20.84 ms per tick",
-    "Sprint completed with 52 ticks per second, or 19.17 ms per tick",
-    "Sprint completed with 53 ticks per second, or 18.63 ms per tick"
+    "Sprint completed with 48 ticks per second, or 20.69 ms per tick",
+    "Sprint completed with 49 ticks per second, or 20.33 ms per tick",
+    "Sprint completed with 51 ticks per second, or 19.56 ms per tick"
    ]
   },
   "vanilla": {
-   "median": 17.46,
-   "min": 17.39,
-   "max": 18.16,
+   "median": 17.91,
+   "min": 17.65,
+   "max": 18.18,
    "lines": [
-    "Sprint completed with 55 ticks per second, or 18.16 ms per tick",
-    "Sprint completed with 57 ticks per second, or 17.39 ms per tick",
-    "Sprint completed with 57 ticks per second, or 17.46 ms per tick"
+    "Sprint completed with 55 ticks per second, or 18.18 ms per tick",
+    "Sprint completed with 56 ticks per second, or 17.65 ms per tick",
+    "Sprint completed with 55 ticks per second, or 17.91 ms per tick"
    ]
   },
   "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
  },
  "durationsSeconds": {
-  "base1": 56.7,
-  "base2": 56.7,
-  "mcfc": 131.4,
-  "perfbase": 115.1
+  "base1": 56.2,
+  "base2": 56.2,
+  "mcfc": 138.0,
+  "perfbase": 117.4
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",
