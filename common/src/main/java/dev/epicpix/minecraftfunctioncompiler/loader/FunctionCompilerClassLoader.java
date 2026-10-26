@@ -964,8 +964,31 @@ public abstract class FunctionCompilerClassLoader<TMinecraftServer, TIdentifier,
             totalFunctionCount, parsedFunctionCount, compiled.size(), registered,
             compiledCommandCount, env.preOptInstructions().sum(), env.postOptInstructions().sum(), totalFnFileSize / 1024,
             (int)(parseTime * 1000), (int)(compileTime * 1000), (int)(classLoadTime * 1000), (int)(handleLoadTime * 1000));
+        writeDiagnosticsReport();
 
         finishLoading(autoEnable);
+    }
+
+    /**
+     * Writes every diagnostic of this compilation to {@code generated/diagnostics.tsv} (kind, id, function, message,
+     * command text for parse errors), so the commands that fall back to vanilla can be looked up per function.
+     */
+    private void writeDiagnosticsReport() {
+        try {
+            ensureGeneratedDir();
+            var report = new StringBuilder("kind\tid\tfunction\tmessage\tcommand\n");
+            for(var diagnostic : diagnostics.getDiagnostics()) {
+                report.append(diagnostic.kind()).append('\t').append(diagnostic.diagnosticId()).append('\t').append(diagnostic.source()).append('\t')
+                    .append(tsvField(diagnostic.message())).append('\t').append(diagnostic.extra() == null ? "" : tsvField(diagnostic.extra())).append('\n');
+            }
+            Files.writeString(generatedDir.resolve("diagnostics.tsv"), report);
+        } catch(Exception e) {
+            LOGGER.warn("Failed to write diagnostics.tsv", e);
+        }
+    }
+
+    private static String tsvField(String value) {
+        return value.replace('\t', ' ').replace('\n', ' ').replace('\r', ' ');
     }
 
     /** Records the state to expose once {@link #publish} runs on the server thread. */
