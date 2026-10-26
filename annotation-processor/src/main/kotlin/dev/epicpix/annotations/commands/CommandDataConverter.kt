@@ -387,6 +387,11 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 builder.append("    var a$argumentIndex = reader.readBlockPredicate();\n")
                 newTypedArguments.add(data.argName!! to "java.lang.String")
             }
+            "block_predicate_template" -> {
+                // Like block_predicate, but `$(…)` placeholders are kept for a run-time vanilla parse.
+                builder.append("    var a$argumentIndex = reader.readBlockPredicateTemplate();\n")
+                newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.commands.macros.MacroTemplate<String>")
+            }
             "item_stack" -> {
                 // Returns the raw descriptor string; the per-version compiler
                 // resolves it to an ItemInput via vanilla's ItemParser.

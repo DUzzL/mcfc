@@ -346,6 +346,39 @@ public class StringCommandReader {
         return command.substring(start, index);
     }
 
+    /**
+     * Block predicate of `execute if|unless block` that may contain macro placeholders (`$(block)`): read like
+     * {@link #readBracketBalancedToken} and kept as a template; the substituted text is parsed by vanilla at run time.
+     * A placeholder inside a quoted string is not supported (the quote would hide brackets and spaces).
+     */
+    public MacroTemplate<String> readBlockPredicateTemplate() {
+        if(!allowMacros) return MacroTemplate.fromStringLiteral(readBracketBalancedToken());
+        var parts = new ArrayList<MacroTemplate.MacroPart>();
+        var validators = List.of(MacroValidators.NO_SPACE);
+        int depth = 0;
+        while(canRead()) {
+            if(isMacro()) {
+                parts.add(readMacro(validators));
+                continue;
+            }
+            char c = peek();
+            if(c == ' ' && depth == 0) break;
+            if(depth > 0 && (c == '"' || c == '\'')) {
+                int start = index;
+                skipQuoted(true);
+                var quoted = command.substring(start, index);
+                if(quoted.contains("$(")) throw createError(COMMAND_UNSUPPORTED_MACRO_LOCATION, "Macros are not supported in this location");
+                parts.add(new MacroTemplate.LiteralKind<>(quoted));
+                continue;
+            }
+            if(c == '[' || c == '{') depth++;
+            else if(c == ']' || c == '}') depth--;
+            parts.add(new MacroTemplate.LiteralKind<>(Character.toString(c)));
+            index++;
+        }
+        return new MacroTemplate<>(MacroTemplate.mergeParts(parts), MacroType.STRING_MACRO_TYPE);
+    }
+
     public MacroTemplate<String> readUntilSpaceWithTemplate(List<MacroValidator> validators) {
         if(!allowMacros) return MacroTemplate.fromStringLiteral(readUntilSpace());
         ArrayList<MacroTemplate.MacroPart> parts = new ArrayList<>();

@@ -170,8 +170,8 @@ DATA_GET_PATH/data get <source:nbt_data_location> <path:nbt_path>
 DATA_GET_PATH_SCALE/data get <source:nbt_data_location> <path:nbt_path> <scale:double>
 
 EXECUTE_IN/execute in <dimension:resource_location> <command:command[root=execute]>
-EXECUTE_IF_BLOCK/execute if block <pos:block_pos> <block:block_predicate> <command:command[root=execute]>
-EXECUTE_UNLESS_BLOCK/execute unless block <pos:block_pos> <block:block_predicate> <command:command[root=execute]>
+EXECUTE_IF_BLOCK/execute if block <pos:block_pos> <block:block_predicate_template> <command:command[root=execute]>
+EXECUTE_UNLESS_BLOCK/execute unless block <pos:block_pos> <block:block_predicate_template> <command:command[root=execute]>
 EXECUTE_IF_ITEMS_ENTITY/execute if items entity <targets:entity_selector> <slot:slot_source> <item_predicate:block_predicate> <command:command[root=execute]>
 EXECUTE_UNLESS_ITEMS_ENTITY/execute unless items entity <targets:entity_selector> <slot:slot_source> <item_predicate:block_predicate> <command:command[root=execute]>
 EXECUTE_IF_ITEMS_BLOCK/execute if items block <pos:block_pos> <slot:slot_source> <item_predicate:block_predicate> <command:command[root=execute]>

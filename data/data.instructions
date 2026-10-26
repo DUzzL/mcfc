@@ -1076,6 +1076,10 @@
 @CHECK_BLOCK(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:position], <java.lang.String> [instr:block]) -> int
   = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.checkBlock([ctx:world], [ctx:position], [instr:block]);
 
+// `execute if|unless block` whose predicate text comes from macro arguments
+@CHECK_BLOCK_DYNAMIC(<net.minecraft.server.level.ServerLevel> [ctx:world], <net.minecraft.world.phys.Vec3> [ctx:position], <java.lang.String> [ctx:block]) -> int
+  = <dev.epicpix.minecraftfunctioncompiler.mod.ExtensionFunctions>.checkBlock([ctx:world], [ctx:position], [ctx:block]);
+
 // execute on leasher / attacker / controller / owner / passengers (removed entities dropped, like vanilla)
 ##PURE
 @GET_ENTITY_LEASH_HOLDER(<net.minecraft.world.entity.Entity> [ctx:entity]) -> <net.minecraft.world.entity.Entity>

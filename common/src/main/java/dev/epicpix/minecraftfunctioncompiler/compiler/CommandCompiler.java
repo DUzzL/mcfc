@@ -1307,7 +1307,7 @@ public final class CommandCompiler {
             }
 
             // execute if/unless block
-            case CommandExecuteIfBlock(WorldCoordinates pos, String block, CommandParams command) -> {
+            case CommandExecuteIfBlock(WorldCoordinates pos, MacroTemplate<String> block, CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     var current = context.current();
                     var worldLocal = current.currentWorld();
@@ -1318,14 +1318,14 @@ public final class CommandCompiler {
                     }
                     try(var posData = context.applyPosition(pos)) {
                         var cond = context.<Integer>createLocal();
-                        posData.writeInstruction(Instructions.checkBlock(cond, worldLocal, posData.content(), block));
+                        posData.writeInstruction(block.isStatic() ? Instructions.checkBlock(cond, worldLocal, posData.content(), block.getStaticValue()) : Instructions.checkBlockDynamic(cond, worldLocal, posData.content(), context.getResolvedStringMacro(block)));
                         // 1 = match; 0 = no match and -1 = vanilla error both fail `if`
                         posData.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, cond, LocationData.ofInteger(1), posData.data().contextEndLabel()));
                         compile(context, fContext.content(), command, result);
                     }
                 }
             }
-            case CommandExecuteUnlessBlock(WorldCoordinates pos, String block, CommandParams command) -> {
+            case CommandExecuteUnlessBlock(WorldCoordinates pos, MacroTemplate<String> block, CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     var current = context.current();
                     var worldLocal = current.currentWorld();
@@ -1336,7 +1336,7 @@ public final class CommandCompiler {
                     }
                     try(var posData = context.applyPosition(pos)) {
                         var cond = context.<Integer>createLocal();
-                        posData.writeInstruction(Instructions.checkBlock(cond, worldLocal, posData.content(), block));
+                        posData.writeInstruction(block.isStatic() ? Instructions.checkBlock(cond, worldLocal, posData.content(), block.getStaticValue()) : Instructions.checkBlockDynamic(cond, worldLocal, posData.content(), context.getResolvedStringMacro(block)));
                         // 0 = no match; 1 = match and -1 = vanilla error both fail `unless`
                         posData.writeInstruction(Instructions.ifNumberCompareJump(NumberComparisonType.NOT_EQUAL, cond, LocationData.ofInteger(0), posData.data().contextEndLabel()));
                         compile(context, fContext.content(), command, result);

@@ -1,0 +1,26 @@
+; `$execute if|unless block <pos> $(block) …` (Vein Miner, Timber Strike) rejected the placeholder ("Macros are not
+; supported in this location"); with `run return` the whole function fell back to vanilla. The predicate text is now
+; substituted and parsed by vanilla at run time.
+@setup
+objective create t dummy
+
+@function check
+$execute if block ~ 100 ~ $(b) run return 5
+$execute unless block ~ 100 ~ $(b) run scoreboard players add miss t 1
+return 1
+
+@function run
+setblock ~ 100 ~ minecraft:oak_log[axis=y]
+execute store result score log t run function mcfc-test:check {b:"minecraft:oak_log"}
+execute store result score axis t run function mcfc-test:check {b:"minecraft:oak_log[axis=y]"}
+execute store result score tag t run function mcfc-test:check {b:"#minecraft:logs"}
+execute store result score dirt t run function mcfc-test:check {b:"minecraft:dirt"}
+setblock ~ 100 ~ minecraft:air
+
+@validate
+score log t is 5
+score axis t is 5
+score tag t is 5
+score dirt t is 1
+score miss t is 1
+no_fallback
