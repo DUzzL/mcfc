@@ -310,6 +310,11 @@ private fun generateArgumentReader(name: String, data: ParsedCommandArgument, bu
                 builder.append("    var a$argumentIndex = reader.readDataLocation();\n")
                 newTypedArguments.add(data.argName!! to "dev.epicpix.minecraftfunctioncompiler.data.DataLocation")
             }
+            "loot_predicate" -> {
+                // A predicate id or an inline predicate `{…}`, kept as text for vanilla's ResourceOrIdArgument.
+                builder.append("    var a$argumentIndex = reader.readLootPredicate();\n")
+                newTypedArguments.add(data.argName!! to "java.lang.String")
+            }
             "particle_options" -> {
                 // Particle name with optional inline `{NBT}` — e.g. `dust{color:[1,0,0],scale:1}`.
                 // Kept as a single String so vanilla's ParticleArgument can re-parse it unchanged.

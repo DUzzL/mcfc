@@ -971,6 +971,16 @@ public class StringCommandReader {
         }
     }
 
+    /** `execute if|unless predicate`: an id, or an inline predicate (an SNBT compound) returned as its text. */
+    public String readLootPredicate() {
+        if(canRead() && peek() == '{') {
+            int start = index;
+            NbtParser.readNbtCompound(this);
+            return command.substring(start, index);
+        }
+        return readDataLocation().toString();
+    }
+
     public ScoreAccessorArgument readScoreAccessor(boolean allowMultiple) {
         ScoreHolderArgument scoreHolder = SelectorParser.parseScoreHolder(this, allowMultiple);
         if(!skipArgumentWhitespace()) throw createError(COMMAND_INVALID_SCORE_ACCESSOR, "Invalid score accessor, expected space for next argument");

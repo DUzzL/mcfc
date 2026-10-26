@@ -1,0 +1,19 @@
+; `execute if|unless predicate {…}` with an inline predicate (Dungeons and Taverns `check_structure`) was not parsed
+; ("Missing space after argument") and ran through vanilla.
+@setup
+objective create t dummy
+
+@function run
+execute if predicate {type:"minecraft:random_chance",chance:1.0f} run scoreboard players set in t 1
+execute unless predicate {type:"minecraft:random_chance",chance:1.0f} run scoreboard players set out t 1
+execute if predicate {type:"minecraft:inverted",term:{type:"minecraft:random_chance",chance:0.0f}} run scoreboard players set inv t 1
+execute if predicate {type:"minecraft:entity_properties",entity:"this",predicate:{}} run scoreboard players set console t 1
+summon marker ~ ~ ~ {Tags:["mcfc_pred"]}
+execute as @e[type=marker,tag=mcfc_pred] if predicate {type:"minecraft:entity_properties",entity:"this",predicate:{}} run scoreboard players set ent t 1
+kill @e[type=marker,tag=mcfc_pred]
+
+@validate
+score in t is 1
+score inv t is 1
+score ent t is 1
+no_fallback

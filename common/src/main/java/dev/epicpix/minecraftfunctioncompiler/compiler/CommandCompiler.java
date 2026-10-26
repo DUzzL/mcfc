@@ -987,24 +987,24 @@ public final class CommandCompiler {
             case CommandDatapackDisable(String name) -> context.writeInstruction(Instructions.disableDatapack(name));
 
             // execute if/unless predicate
-            case CommandExecuteIfPredicate(DataLocation predicate, CommandParams command) -> {
+            case CommandExecuteIfPredicate(String predicate, CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var currentEntity = context.getCurrentNullableEntity()) {
                         try(var world = context.getWorld()) {
                             try(var position = context.getPosition()) {
-                                position.writeInstruction(Instructions.checkCommandPredicate(currentEntity.content(), world.content(), position.content(), predicate.toString(), true, position.endLabel()));
+                                position.writeInstruction(Instructions.checkCommandPredicate(currentEntity.content(), world.content(), position.content(), predicate, true, position.endLabel()));
                                 compile(context, fContext.content(), command, result);
                             }
                         }
                     }
                 }
             }
-            case CommandExecuteUnlessPredicate(DataLocation predicate, CommandParams command) -> {
+            case CommandExecuteUnlessPredicate(String predicate, CommandParams command) -> {
                 try(var fContext = context.withForkingContext(forkingContext, inputCommand)) {
                     try(var currentEntity = context.getCurrentNullableEntity()) {
                         try(var world = context.getWorld()) {
                             try(var position = context.getPosition()) {
-                                position.writeInstruction(Instructions.checkCommandPredicate(currentEntity.content(), world.content(), position.content(), predicate.toString(), false, position.endLabel()));
+                                position.writeInstruction(Instructions.checkCommandPredicate(currentEntity.content(), world.content(), position.content(), predicate, false, position.endLabel()));
                                 compile(context, fContext.content(), command, result);
                             }
                         }

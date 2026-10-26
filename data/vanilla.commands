@@ -284,8 +284,8 @@ LOOT_GIVE_MINE_MAINHAND/loot give <players:entity_selector[players]> mine <pos:b
 LOOT_GIVE_MINE_OFFHAND/loot give <players:entity_selector[players]> mine <pos:block_pos> offhand
 
 # execute if дополнительные subcommands
-EXECUTE_IF_PREDICATE/execute if predicate <predicate:resource_location> <command:command[root=execute]>
-EXECUTE_UNLESS_PREDICATE/execute unless predicate <predicate:resource_location> <command:command[root=execute]>
+EXECUTE_IF_PREDICATE/execute if predicate <predicate:loot_predicate> <command:command[root=execute]>
+EXECUTE_UNLESS_PREDICATE/execute unless predicate <predicate:loot_predicate> <command:command[root=execute]>
 EXECUTE_IF_BLOCKS/execute if blocks <start:block_pos> <end:block_pos> <destination:block_pos> all <command:command[root=execute]>
 EXECUTE_IF_BLOCKS_MASKED/execute if blocks <start:block_pos> <end:block_pos> <destination:block_pos> masked <command:command[root=execute]>
 EXECUTE_UNLESS_BLOCKS/execute unless blocks <start:block_pos> <end:block_pos> <destination:block_pos> all <command:command[root=execute]>

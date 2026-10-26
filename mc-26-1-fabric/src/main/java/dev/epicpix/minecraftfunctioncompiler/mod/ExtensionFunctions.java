@@ -798,8 +798,17 @@ public class ExtensionFunctions {
         }
         Object cached = PREDICATE_CACHE.get(predicateId);
         if (cached == null) {
-            cached = lookup.get(ResourceKey.create(Registries.PREDICATE, cachedId(predicateId)))
-                    .<Object>map(Holder::value).orElse(PARSE_FAILED);
+            if (predicateId.startsWith("{")) {
+                // Inline predicate (`execute if predicate {…}`): decoded with the registries like vanilla's ResourceOrIdArgument.
+                cached = parseWhole("predicate", predicateId, reader -> {
+                    var tag = net.minecraft.nbt.TagParser.parseCompoundAsArgument(reader);
+                    var ops = net.minecraft.resources.RegistryOps.create(net.minecraft.nbt.NbtOps.INSTANCE, server.registryAccess());
+                    return LootItemCondition.DIRECT_CODEC.parse(ops, tag).getOrThrow(IllegalArgumentException::new);
+                });
+            } else {
+                cached = lookup.get(ResourceKey.create(Registries.PREDICATE, cachedId(predicateId)))
+                        .<Object>map(Holder::value).orElse(PARSE_FAILED);
+            }
             PREDICATE_CACHE.put(predicateId, cached);
         }
         return cached == PARSE_FAILED ? null : (LootItemCondition) cached;
