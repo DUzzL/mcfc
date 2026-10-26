@@ -36,7 +36,8 @@ from run_variant import free_port
 def launch(args, spec, label: str, root: Path, port: int, rport: int, perf: bool) -> subprocess.Popen:
     cmd = [sys.executable, str(c.HARNESS_DIR / "run_variant.py"), args.id, "--label", label,
            "--run-dir", str(root / label), "--port", str(port), "--rcon-port", str(rport),
-           "--ticks", str(args.ticks), "--reps", str(args.reps), "--seed", str(args.seed),
+           "--ticks", str(args.ticks), "--start-ticks", str(args.start_ticks), "--reps", str(args.reps),
+           "--seed", str(args.seed),
            "--kind", spec["kind"], "--cmd-timeout", str(args.cmd_timeout),
            "--exercise-budget", str(args.exercise_budget)]
     if args.mcfc_jar:
@@ -432,6 +433,7 @@ def main() -> int:
     ap.add_argument("--confirm", action=argparse.BooleanOptionalAction, default=True,
                     help="re-run once when there are findings (default on; --no-confirm to disable)")
     ap.add_argument("--ticks", type=int, default=200)
+    ap.add_argument("--start-ticks", type=int, default=20, help="common game time after the early freeze (0: off)")
     ap.add_argument("--reps", type=int, default=3)
     ap.add_argument("--seed", default="20261026")
     ap.add_argument("--max-functions", type=int, default=0)

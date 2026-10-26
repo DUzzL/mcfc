@@ -50,8 +50,10 @@ first decisive mcfc error (log line plus exception class and message).
    `/reload`. Kinds `worldgen`/`mixed`: normal world, packs are in `world/datapacks` before the first start. Packs
    with an outdated pack format (manifest `needsPackFormatPatch` or detected) get `pack.mcmeta` rewritten (format
    fields only; all other zip entries are copied unchanged); the change is logged in the notes.
-2. `tick freeze` (sent over RCON as soon as the port opens, before the first tick; 1-5 ticks still run before it),
-   game rules (names are looked up, see below), force-load of the dump boxes, throwaway dump `warm` (generates
+2. `tick freeze` (sent over RCON as soon as the port opens, before the first tick; 1-10 ticks still run before it,
+   more on slower startups), game rules (names are looked up, see below), `tick step` up to game time
+   `--start-ticks` (20; the same in every variant, a note is written when startup already ran past it), force-load
+   of the dump boxes, throwaway dump `warm` (generates
    chunks). Worldgen kinds: dump `gen` right after it (still untouched). Then `NoAI` on all existing non-player
    entities.
 3. Carpet fake players `DPTester1`/`DPTester2` at x=0/x=3 on the surface.
@@ -98,7 +100,9 @@ boxes, no real-time dependence (gametime only advances by stepping).
 
 ## Known limitations
 
-- 1-5 ticks still run before the early `tick freeze`; gametime differs and is classified as noise.
+- 1-10 ticks still run before the early `tick freeze`. The harness then steps every variant to the same game time
+  (`--start-ticks`), so tick functions have run equally often; what happened during the unfrozen ticks can still
+  depend on real time (e.g. which chunks were loaded).
 - Vanilla world generation of the same seed is not fully deterministic in this setup (identical vanilla runs differ
   in individual block columns, e.g. around structures). These columns are noise, but a column that is stable in all
   vanilla runs and differs in mcfc runs can still appear as a finding by chance; judge such findings by whether
@@ -126,4 +130,8 @@ boxes, no real-time dependence (gametime only advances by stepping).
   `WORK/diag/<id>.tsv` (2 servers at a time). `unsupported_report.py` aggregates them into
   `results/_unsupported.{md,json}`.
 - `perf_ab.py`: solo perf A/B of vanilla and two mcfc jars on one pack (default bacap, order A B C C B A),
-  writes `results/_perf_ab.{md,json}`.
+  writes `results/_perf_ab.{md,json}`. `--jar NAME=PATH` adds a configuration, `--exercise` runs the exerciser
+  before measuring (like `run_pack`), `--jfr` records a JDK Flight Recorder profile of the measured sprints per run,
+  `--out NAME` changes the run dir and result file names.
+- `run_variant.py --perf --jfr FILE`: JFR profile (`settings=profile`, via `jcmd`) of the measured sprints only.
+  `jfr_split.py FILE...` splits its server-thread samples into functions, entities, chunks, advancements, other.

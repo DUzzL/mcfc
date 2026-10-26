@@ -13,6 +13,7 @@ import re
 import shutil
 import socket
 import statistics
+import subprocess
 import sys
 import time
 import traceback
@@ -163,8 +164,26 @@ class Runner:
                 self.note(f"gamerule for {logical} not found (tried {cands})")
         self.info["gamerules"] = used
         s.cmd("tick freeze")
+        self.pad_start_ticks()
         self.info["tickQueryAfterFreeze"] = s.cmd("tick query").strip().splitlines()[0]
         self.phase("configure")
+
+    def pad_start_ticks(self) -> None:
+        """Step to the same game time in every variant. 1-10 ticks run before the early freeze, depending on
+        startup speed; tick functions that alternate or count (e.g. Incendium's `$toggle`) would otherwise
+        differ between variants."""
+        s = self.server
+        target = self.args.start_ticks
+        now = s.gametime()
+        self.info["startTicksTarget"] = target
+        if target <= 0:
+            return
+        if now > target:
+            self.note(f"start ticks {now} already exceed the target {target}; game time differs between variants")
+            return
+        if now < target:
+            s.tick_step(target - now)
+        self.info["gameTimeAfterPad"] = s.gametime()
 
     def load_area(self) -> None:
         """Force-load the dump boxes (entities are only dumped from loaded chunks) and wait for them."""
@@ -388,12 +407,21 @@ class Runner:
             s.cmd(f"gamerule {rts} 3")  # restore the default for realistic load
         s.cmd("tick unfreeze")
         s.sprint(200)
+        if self.args.jfr:
+            # Profile only the measured sprints (JDK Flight Recorder, sampling profile settings).
+            jfr = Path(self.args.jfr).resolve()
+            jfr.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run(["jcmd", str(s.proc.pid), "JFR.start", "name=perf", "settings=profile",
+                            f"filename={jfr}"], check=True, capture_output=True)
         res = []
         lines = []
         for _ in range(self.args.reps):
             tps, mspt, line = s.sprint(1200)
             res.append({"tps": tps, "mspt": mspt})
             lines.append(line.split("System chat: ")[-1])
+        if self.args.jfr:
+            subprocess.run(["jcmd", str(s.proc.pid), "JFR.stop", "name=perf"], check=True, capture_output=True)
+            self.info["jfr"] = str(Path(self.args.jfr).resolve())
         self.info["perf"] = {
             "runs": res, "lines": lines,
             "medianMspt": statistics.median(r["mspt"] for r in res),
@@ -485,7 +513,10 @@ def main() -> int:
     ap.add_argument("--kind", choices=["function", "worldgen", "mixed"])
     ap.add_argument("--seed", default="20261026")
     ap.add_argument("--ticks", type=int, default=200)
+    ap.add_argument("--start-ticks", type=int, default=20,
+                    help="step to this game time right after the early freeze (0: off)")
     ap.add_argument("--perf", action="store_true")
+    ap.add_argument("--jfr", help="with --perf: record a JFR profile of the measured sprints to this file")
     ap.add_argument("--reps", type=int, default=3)
     ap.add_argument("--port", type=int)
     ap.add_argument("--rcon-port", type=int)

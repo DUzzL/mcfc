@@ -5,6 +5,9 @@ machine drift hits every configuration equally. Every run: same seed and scenari
 then N sprints of 1200 ticks. Writes results/_perf_ab.md and results/_perf_ab.json.
 
 Usage: python perf_ab.py [--pack bacap] [--sprints 5] [--order vanilla,pre,shard,shard,pre,vanilla]
+                         [--jar NAME=PATH ...] [--exercise] [--jfr] [--out _perf_ab]
+--jar adds a configuration NAME with that mcfc jar, --exercise runs the exerciser before the measurement (like
+run_pack), --jfr records a JFR profile of the measured sprints per run (WORK/runs/<out>/<n>-<config>.jfr).
 """
 from __future__ import annotations
 
@@ -27,14 +30,19 @@ CONFIGS = {
 ALIASES = {"vanilla": "vanilla", "pre": "pre-shard", "pre-shard": "pre-shard", "shard": "shard"}
 
 
-def run_config(pack: str, name: str, idx: int, sprints: int, root: Path, extra: list[str]) -> dict:
+def run_config(pack: str, name: str, idx: int, sprints: int, root: Path, extra: list[str], exercise: bool,
+               jfr: bool) -> dict:
     cfg = CONFIGS[name]
     run_dir = root / f"{idx}-{name}"
     port = free_port(25700)
     rport = free_port(port + 1)
     cmd = [sys.executable, str(c.HARNESS_DIR / "run_variant.py"), pack, "--label", cfg["label"],
            "--run-dir", str(run_dir), "--port", str(port), "--rcon-port", str(rport),
-           "--no-exercise", "--perf", "--reps", str(sprints)] + extra
+           "--perf", "--reps", str(sprints)] + extra
+    if not exercise:
+        cmd.append("--no-exercise")
+    if jfr:
+        cmd += ["--jfr", str(root / f"{idx}-{name}.jfr")]
     if cfg["jar"]:
         cmd += ["--mcfc-jar", str(cfg["jar"])]
     t0 = time.time()
@@ -56,7 +64,7 @@ def r3(x: float) -> float:
     return round(x, 3)
 
 
-def write_report(pack: str, sprints: int, results: list[dict], dest: Path) -> dict:
+def write_report(pack: str, sprints: int, results: list[dict], dest: Path, exercise: bool = False) -> dict:
     by: dict[str, list[dict]] = {}
     for r in results:
         by.setdefault(r["config"], []).append(r)
@@ -75,7 +83,7 @@ def write_report(pack: str, sprints: int, results: list[dict], dest: Path) -> di
                          "runs": len(rs), "jarSha256": next((r["jarSha256"] for r in rs if r["jarSha256"]), None)}
     L = [f"# perf A/B: {pack}", "",
          f"Solo runs (one server at a time), same seed and scenario, warm-up `tick sprint 200`, then {sprints} x "
-         f"`tick sprint 1200`; ms per tick as reported by the server. Exerciser off. Order: "
+         f"`tick sprint 1200`; ms per tick as reported by the server. Exerciser {'on' if exercise else 'off'}. Order: "
          + " ".join(r["config"] for r in results) + ".", "",
          "## per run", "", "| # | config | median | min | max | sprints (ms/tick) |", "|---|---|---|---|---|---|"]
     for r in results:
@@ -91,12 +99,14 @@ def write_report(pack: str, sprints: int, results: list[dict], dest: Path) -> di
                  f"{(s['jarSha256'] or '-')[:16]} |")
     v = summary.get("vanilla", {}).get("medianFirstSprints") or summary.get("vanilla", {}).get("medianOfRunMedians")
     if v:
-        L += ["", "ratio to vanilla (median of sprints 1-4):"] + [
+        basis = "median of sprints 1-4" if sprints >= 5 else "median of run medians"
+        L += ["", f"ratio to vanilla ({basis}):"] + [
             f"- {n}: {(s['medianFirstSprints'] or s['medianOfRunMedians']) / v:.3f}x"
             for n, s in summary.items() if n != "vanilla"]
-    L += ["", "Notes: the last sprint of every run is about 2.5x cheaper than the first four (same in vanilla, so "
-          "not an mcfc effect). The first vanilla run is slower than the second one (cold start), which an A B C C B A "
-          "order only partly cancels."]
+    if pack == "bacap":
+        L += ["", "Notes: the last sprint of every run is about 2.5x cheaper than the first four (same in vanilla, so "
+              "not an mcfc effect). The first vanilla run is slower than the second one (cold start), which an A B C C B "
+              "A order only partly cancels."]
     bad = [r for r in results if r["error"] or r["rc"] != 0]
     if bad:
         L += ["", "failed runs: " + ", ".join(f"{r['index']}-{r['config']} ({r['error']})" for r in bad)]
@@ -109,17 +119,25 @@ def main() -> int:
     ap.add_argument("--pack", default="bacap")
     ap.add_argument("--sprints", type=int, default=5)
     ap.add_argument("--order", default="vanilla,pre,shard,shard,pre,vanilla")
+    ap.add_argument("--jar", action="append", default=[], help="NAME=PATH: configuration NAME with this mcfc jar")
+    ap.add_argument("--exercise", action="store_true", help="run the exerciser before the measurement")
+    ap.add_argument("--jfr", action="store_true", help="record a JFR profile of the measured sprints")
+    ap.add_argument("--out", default="_perf_ab", help="name of the run dir and results/<out>.md|json")
     args, extra = ap.parse_known_args()
+    for spec in args.jar:
+        name, path = spec.split("=", 1)
+        CONFIGS[name] = {"label": "mcfc", "jar": Path(path)}
+        ALIASES[name] = name
     order = [ALIASES[x] for x in args.order.split(",")]
-    root = c.RUNS / "_perf_ab"
+    root = c.RUNS / args.out
     root.mkdir(parents=True, exist_ok=True)
+    out_json = c.RESULTS_DIR / f"{args.out}.json"
     results = []
     for i, name in enumerate(order, 1):
-        results.append(run_config(args.pack, name, i, args.sprints, root, extra))
-        (c.RESULTS_DIR / "_perf_ab.json").write_text(json.dumps(results, indent=1), encoding="utf-8")
-    summary = write_report(args.pack, args.sprints, results, c.RESULTS_DIR / "_perf_ab.md")
-    (c.RESULTS_DIR / "_perf_ab.json").write_text(json.dumps({"runs": results, "summary": summary}, indent=1),
-                                                 encoding="utf-8")
+        results.append(run_config(args.pack, name, i, args.sprints, root, extra, args.exercise, args.jfr))
+        out_json.write_text(json.dumps(results, indent=1), encoding="utf-8")
+    summary = write_report(args.pack, args.sprints, results, c.RESULTS_DIR / f"{args.out}.md", args.exercise)
+    out_json.write_text(json.dumps({"runs": results, "summary": summary}, indent=1), encoding="utf-8")
     return 0
 
 
