@@ -26,3 +26,4 @@ accessible field net/minecraft/world/level/entity/EntitySectionStorage sectionId
 accessible field net/minecraft/world/level/entity/EntitySection storage Lnet/minecraft/util/ClassInstanceMultiMap;
 accessible field net/minecraft/util/ClassInstanceMultiMap allInstances Ljava/util/List;
 accessible field net/minecraft/world/level/entity/PersistentEntitySectionManager visibleEntityStorage Lnet/minecraft/world/level/entity/EntityLookup;
+accessible field net/minecraft/commands/execution/ExecutionContext commandQuota I

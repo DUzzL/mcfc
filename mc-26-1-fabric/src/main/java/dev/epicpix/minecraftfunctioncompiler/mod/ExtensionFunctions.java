@@ -1587,8 +1587,15 @@ public class ExtensionFunctions {
         var ctxField = Commands.CURRENT_EXECUTION_CONTEXT;
         var saved = ctxField.get();
         if (saved != null) ctxField.set(null);
+        @SuppressWarnings("unchecked")
+        ExecutionContext<CommandSourceStack>[] used = new ExecutionContext[1];
         try {
-            Commands.executeCommandInContext(stack, context -> ExecutionContext.queueInitialCommandExecution(context, command, chain, stack, CommandResultCallback.EMPTY));
+            Commands.executeCommandInContext(stack, context -> {
+                used[0] = context;
+                ExecutionContext.queueInitialCommandExecution(context, command, chain, stack, CommandResultCallback.EMPTY);
+            });
+        } catch (CommandLimitAbort e) {
+            throw e;
         } catch (Exception e) {
             // Same handling as Commands.performCommand.
             logFallbackFailure("MCFC: vanilla fallback `{}` threw: {}", command, e.toString());
@@ -1596,6 +1603,7 @@ public class ExtensionFunctions {
         } finally {
             if (saved != null) ctxField.set(saved);
         }
+        CommandLimitAbort.checkStopped(used[0]);
     }
 
     // ScoreText с именованным score holder

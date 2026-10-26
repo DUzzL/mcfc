@@ -198,6 +198,11 @@ public class FunctionClassLoader extends FunctionCompilerClassLoader<MinecraftSe
         if(savedContext != null) Commands.CURRENT_EXECUTION_CONTEXT.set(null);
         try {
             return function.run(stack, arguments);
+        } catch(CommandLimitAbort e) {
+            // A nested vanilla context hit its command limit: vanilla drops the rest of the chain, so stop the
+            // context around this call as well. Not a compiler failure.
+            CommandLimitAbort.stop(savedContext);
+            return VanillaFunctionCall.NO_RETURN;
         } catch(Throwable e) {
             return onRuntimeFailure(entry, e);
         } finally {

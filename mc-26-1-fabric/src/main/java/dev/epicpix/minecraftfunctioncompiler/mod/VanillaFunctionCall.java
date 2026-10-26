@@ -55,20 +55,28 @@ public final class VanillaFunctionCall {
         // ServerFunctionManager.execute, so it runs to completion before compiled code continues.
         var outerContext = Commands.CURRENT_EXECUTION_CONTEXT.get();
         Commands.CURRENT_EXECUTION_CONTEXT.set(null);
+        @SuppressWarnings("unchecked")
+        net.minecraft.commands.execution.ExecutionContext<CommandSourceStack>[] used = new net.minecraft.commands.execution.ExecutionContext[1];
         try {
             InstantiatedFunction<CommandSourceStack> instantiated = function.instantiate(arguments, manager.getDispatcher());
             var source = stack.clearCallbacks();
-            Commands.executeCommandInContext(source, context -> context.queueNext(new CommandQueueEntry<>(
-                new Frame(0, CommandResultCallback.EMPTY, context.frameControlForDepth(0)),
-                new CallFunction<>(instantiated, collector, false).bind(source))));
+            Commands.executeCommandInContext(source, context -> {
+                used[0] = context;
+                context.queueNext(new CommandQueueEntry<>(
+                    new Frame(0, CommandResultCallback.EMPTY, context.frameControlForDepth(0)),
+                    new CallFunction<>(instantiated, collector, false).bind(source)));
+            });
         } catch(net.minecraft.commands.FunctionInstantiationException e) {
             return FAILURE;
+        } catch(CommandLimitAbort e) {
+            throw e;
         } catch(Exception e) {
             LOGGER.warn("Failed to execute function {}", function.id(), e);
         } finally {
             Commands.CURRENT_EXECUTION_CONTEXT.set(outerContext);
             profiler.pop();
         }
+        CommandLimitAbort.checkStopped(used[0]);
         return collector.result;
     }
 }

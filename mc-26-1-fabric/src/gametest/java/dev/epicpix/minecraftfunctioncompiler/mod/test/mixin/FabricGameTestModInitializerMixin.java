@@ -28,6 +28,7 @@ public class FabricGameTestModInitializerMixin {
         dev.epicpix.minecraftfunctioncompiler.mod.test.PlayerNameSelectorTests.registerInstance(testInstances, testEnvironments);
         dev.epicpix.minecraftfunctioncompiler.mod.test.ScoreSyncTests.registerInstance(testInstances, testEnvironments);
         dev.epicpix.minecraftfunctioncompiler.mod.test.RewardOrderTests.registerInstance(testInstances, testEnvironments);
+        dev.epicpix.minecraftfunctioncompiler.mod.test.ChainLimitTests.registerInstance(testInstances, testEnvironments);
     }
 
 }

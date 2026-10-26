@@ -18,6 +18,7 @@ public class FunctionCompilerTestMain implements ModInitializer {
         PlayerNameSelectorTests.registerFunction();
         ScoreSyncTests.registerFunction();
         RewardOrderTests.registerFunction();
+        ChainLimitTests.registerFunction();
 
     }
 }
