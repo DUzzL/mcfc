@@ -1,0 +1,195 @@
+{
+ "runs": [
+  {
+   "index": 1,
+   "config": "vanilla",
+   "rc": 0,
+   "seconds": 106.3,
+   "mspt": [
+    8.49,
+    7.98,
+    9.56,
+    8.52,
+    3.33
+   ],
+   "median": 8.49,
+   "min": 3.33,
+   "max": 9.56,
+   "lines": [
+    "Sprint completed with 117 ticks per second, or 8.49 ms per tick",
+    "Sprint completed with 125 ticks per second, or 7.98 ms per tick",
+    "Sprint completed with 104 ticks per second, or 9.56 ms per tick",
+    "Sprint completed with 117 ticks per second, or 8.52 ms per tick",
+    "Sprint completed with 300 ticks per second, or 3.33 ms per tick"
+   ],
+   "error": null,
+   "mcfcState": null,
+   "jarSha256": null
+  },
+  {
+   "index": 2,
+   "config": "pre-shard",
+   "rc": 0,
+   "seconds": 106.7,
+   "mspt": [
+    6.35,
+    6.44,
+    6.3,
+    6.36,
+    2.33
+   ],
+   "median": 6.35,
+   "min": 2.33,
+   "max": 6.44,
+   "lines": [
+    "Sprint completed with 157 ticks per second, or 6.35 ms per tick",
+    "Sprint completed with 155 ticks per second, or 6.44 ms per tick",
+    "Sprint completed with 158 ticks per second, or 6.30 ms per tick",
+    "Sprint completed with 157 ticks per second, or 6.36 ms per tick",
+    "Sprint completed with 428 ticks per second, or 2.33 ms per tick"
+   ],
+   "error": null,
+   "mcfcState": "READY_ON",
+   "jarSha256": "279c02180056ae0e06cba272faa2cc6835c817a17de55219b7d0dc37d746cd5b"
+  },
+  {
+   "index": 3,
+   "config": "shard",
+   "rc": 0,
+   "seconds": 101.2,
+   "mspt": [
+    6.24,
+    5.96,
+    5.89,
+    5.99,
+    2.45
+   ],
+   "median": 5.96,
+   "min": 2.45,
+   "max": 6.24,
+   "lines": [
+    "Sprint completed with 160 ticks per second, or 6.24 ms per tick",
+    "Sprint completed with 167 ticks per second, or 5.96 ms per tick",
+    "Sprint completed with 169 ticks per second, or 5.89 ms per tick",
+    "Sprint completed with 166 ticks per second, or 5.99 ms per tick",
+    "Sprint completed with 408 ticks per second, or 2.45 ms per tick"
+   ],
+   "error": null,
+   "mcfcState": "READY_ON",
+   "jarSha256": "a722b3bad7e3e86393698125c767fc7215a7034ec97de96a230e98e25f570be6"
+  },
+  {
+   "index": 4,
+   "config": "shard",
+   "rc": 0,
+   "seconds": 100.2,
+   "mspt": [
+    6.11,
+    5.99,
+    6.01,
+    6.14,
+    2.53
+   ],
+   "median": 6.01,
+   "min": 2.53,
+   "max": 6.14,
+   "lines": [
+    "Sprint completed with 163 ticks per second, or 6.11 ms per tick",
+    "Sprint completed with 166 ticks per second, or 5.99 ms per tick",
+    "Sprint completed with 166 ticks per second, or 6.01 ms per tick",
+    "Sprint completed with 162 ticks per second, or 6.14 ms per tick",
+    "Sprint completed with 395 ticks per second, or 2.53 ms per tick"
+   ],
+   "error": null,
+   "mcfcState": "READY_ON",
+   "jarSha256": "a722b3bad7e3e86393698125c767fc7215a7034ec97de96a230e98e25f570be6"
+  },
+  {
+   "index": 5,
+   "config": "pre-shard",
+   "rc": 0,
+   "seconds": 99.3,
+   "mspt": [
+    6.19,
+    6.11,
+    6.13,
+    6.03,
+    2.51
+   ],
+   "median": 6.11,
+   "min": 2.51,
+   "max": 6.19,
+   "lines": [
+    "Sprint completed with 161 ticks per second, or 6.19 ms per tick",
+    "Sprint completed with 163 ticks per second, or 6.11 ms per tick",
+    "Sprint completed with 163 ticks per second, or 6.13 ms per tick",
+    "Sprint completed with 165 ticks per second, or 6.03 ms per tick",
+    "Sprint completed with 397 ticks per second, or 2.51 ms per tick"
+   ],
+   "error": null,
+   "mcfcState": "READY_ON",
+   "jarSha256": "279c02180056ae0e06cba272faa2cc6835c817a17de55219b7d0dc37d746cd5b"
+  },
+  {
+   "index": 6,
+   "config": "vanilla",
+   "rc": 0,
+   "seconds": 92.5,
+   "mspt": [
+    6.2,
+    6.05,
+    6.08,
+    6.15,
+    2.72
+   ],
+   "median": 6.08,
+   "min": 2.72,
+   "max": 6.2,
+   "lines": [
+    "Sprint completed with 161 ticks per second, or 6.20 ms per tick",
+    "Sprint completed with 165 ticks per second, or 6.05 ms per tick",
+    "Sprint completed with 164 ticks per second, or 6.08 ms per tick",
+    "Sprint completed with 162 ticks per second, or 6.15 ms per tick",
+    "Sprint completed with 367 ticks per second, or 2.72 ms per tick"
+   ],
+   "error": null,
+   "mcfcState": null,
+   "jarSha256": null
+  }
+ ],
+ "summary": {
+  "vanilla": {
+   "medianOfRunMedians": 7.285,
+   "medianAllSprints": 6.175,
+   "min": 2.72,
+   "max": 9.56,
+   "medianFirstSprints": 7.09,
+   "minFirstSprints": 6.05,
+   "maxFirstSprints": 9.56,
+   "runs": 2,
+   "jarSha256": null
+  },
+  "pre-shard": {
+   "medianOfRunMedians": 6.23,
+   "medianAllSprints": 6.16,
+   "min": 2.33,
+   "max": 6.44,
+   "medianFirstSprints": 6.245,
+   "minFirstSprints": 6.03,
+   "maxFirstSprints": 6.44,
+   "runs": 2,
+   "jarSha256": "279c02180056ae0e06cba272faa2cc6835c817a17de55219b7d0dc37d746cd5b"
+  },
+  "shard": {
+   "medianOfRunMedians": 5.985,
+   "medianAllSprints": 5.99,
+   "min": 2.45,
+   "max": 6.24,
+   "medianFirstSprints": 6.0,
+   "minFirstSprints": 5.89,
+   "maxFirstSprints": 6.24,
+   "runs": 2,
+   "jarSha256": "a722b3bad7e3e86393698125c767fc7215a7034ec97de96a230e98e25f570be6"
+  }
+ }
+}

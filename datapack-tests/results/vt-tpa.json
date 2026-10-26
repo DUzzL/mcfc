@@ -7,6 +7,11 @@
  ],
  "problems": [],
  "notes": [],
+ "mcfcJar": {
+  "name": "mcfc-cd77d43f.jar",
+  "sha256": "b2a4923b93f4217a26c275c3c03f8f52795cc15b052ef828ec3841ad5690161b",
+  "mtime": "2026-10-26 09:06:07"
+ },
  "mcfcState": {
   "afterLoad": "READY_ON",
   "final": "READY_ON",
@@ -129,15 +134,22 @@
  },
  "exceptions": {
   "base1": {},
-  "base2": {},
-  "mcfc": {},
-  "perfbase": {}
+  "base2": {
+   "com.mojang.authlib.exceptions.MinecraftClientException": {
+    "count": 1,
+    "first": "Failed to read from https://sessionserver.mojang.com/session/minecraft/profile/c8b0ccc87cd3306481b83317aa73ed1a?unsigned=false due to Read timed out"
+   },
+   "java.net.SocketTimeoutException": {
+    "count": 1,
+    "first": "Read timed out"
+   }
+  },
+  "mcfc": {}
  },
  "exceptionTotals": {
   "base1": 0,
-  "base2": 0,
-  "mcfc": 0,
-  "perfbase": 0
+  "base2": 2,
+  "mcfc": 0
  },
  "exercise": {
   "base1": {
@@ -199,37 +211,14 @@
   }
  },
  "slowFunctions": {},
- "perf": {
-  "mcfc": {
-   "median": 0.16,
-   "min": 0.15,
-   "max": 0.19,
-   "lines": [
-    "Sprint completed with 6097 ticks per second, or 0.16 ms per tick",
-    "Sprint completed with 5213 ticks per second, or 0.19 ms per tick",
-    "Sprint completed with 6553 ticks per second, or 0.15 ms per tick"
-   ]
-  },
-  "vanilla": {
-   "median": 0.15,
-   "min": 0.14,
-   "max": 0.18,
-   "lines": [
-    "Sprint completed with 5494 ticks per second, or 0.18 ms per tick",
-    "Sprint completed with 6455 ticks per second, or 0.15 ms per tick",
-    "Sprint completed with 6972 ticks per second, or 0.14 ms per tick"
-   ]
-  },
-  "note": "solo runs, warmup sprint 200 then sprint 1200 x reps"
- },
+ "perf": null,
  "durationsSeconds": {
-  "base1": 349.1,
-  "base2": 349.1,
-  "mcfc": 344.0,
-  "perfbase": 342.2,
-  "attempt2-base1": 348.7,
-  "attempt2-base2": 348.7,
-  "attempt2-mcfc": 342.2
+  "base1": 342.8,
+  "base2": 347.8,
+  "mcfc": 341.7,
+  "attempt2-base1": 344.9,
+  "attempt2-base2": 345.2,
+  "attempt2-mcfc": 346.7
  },
  "gamerules": {
   "command_chain_limit": "max_command_sequence_length",

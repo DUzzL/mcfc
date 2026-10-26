@@ -39,6 +39,8 @@ def launch(args, spec, label: str, root: Path, port: int, rport: int, perf: bool
            "--ticks", str(args.ticks), "--reps", str(args.reps), "--seed", str(args.seed),
            "--kind", spec["kind"], "--cmd-timeout", str(args.cmd_timeout),
            "--exercise-budget", str(args.exercise_budget)]
+    if args.mcfc_jar:
+        cmd += ["--mcfc-jar", args.mcfc_jar]
     for z in args.zip or []:
         cmd += ["--zip", z]
     if perf:
@@ -224,6 +226,7 @@ def build_report(args, spec, a1: dict, a2: dict | None, durations: dict) -> dict
     return {
         "id": args.id, "status": status, "kind": spec["kind"], "packs": [p["id"] for p in spec["packs"]],
         "problems": problems, "notes": notes,
+        "mcfcJar": {"name": mcrun.get("mcfcJar"), "sha256": mcrun.get("mcfcJarSha256"), "mtime": mcrun.get("mcfcJarMtime")},
         "mcfcState": {"afterLoad": state_load, "final": state_final, "decisiveError": decisive,
                       "text": mcrun.get("mcfcStateFinal") or mcrun.get("mcfcState")},
         "compile": {"found": found, "compiled": compiled,
@@ -265,12 +268,9 @@ def fmt_perf(p: dict | None) -> str:
     return f"median {p['median']} ms (min {p['min']}, max {p['max']})"
 
 
-def _jar_note(pack_id: str) -> str:
-    try:
-        info = json.loads((c.RUNS / pack_id / "mcfc" / "run.json").read_text(encoding="utf-8"))
-        return f"{info.get('mcfcJar')} (file mtime {info.get('mcfcJarMtime', 'not recorded')})"
-    except Exception:  # noqa: BLE001
-        return "unknown"
+def _jar_note(rep: dict) -> str:
+    j = rep.get("mcfcJar") or {}
+    return f"{j.get('name')} sha256={j.get('sha256')} (file mtime {j.get('mtime', 'not recorded')})"
 
 
 def write_md_report(rep: dict, dest: Path) -> None:
@@ -278,7 +278,7 @@ def write_md_report(rep: dict, dest: Path) -> None:
     L = [f"# {rep['id']}: {rep['status']}", "",
          f"- kind: {rep['kind']}, packs: {', '.join(rep['packs'])}",
          f"- mcfc final state: {st['final']} (after load: {st['afterLoad']})",
-         f"- mcfc jar: {_jar_note(rep['id'])}",
+         f"- mcfc jar: {_jar_note(rep)}",
          f"- compile: {cp['compiled']}/{cp['found']} functions compiled"
          + (f" ({cp['rate'] * 100:.1f}%)" if cp["rate"] is not None else "")
          + f", partial fallback commands: {cp['partialFallbackCommands']}",
@@ -335,24 +335,9 @@ def write_md_report(rep: dict, dest: Path) -> None:
     dest.write_text("\n".join(L) + "\n", encoding="utf-8")
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("id")
-    ap.add_argument("--zip", action="append")
-    ap.add_argument("--kind", choices=["function", "worldgen", "mixed"])
-    ap.add_argument("--no-perf", action="store_true", help="skip the solo mcfc/vanilla perf measurement")
-    ap.add_argument("--confirm", action=argparse.BooleanOptionalAction, default=True,
-                    help="re-run once when there are findings (default on; --no-confirm to disable)")
-    ap.add_argument("--ticks", type=int, default=200)
-    ap.add_argument("--reps", type=int, default=3)
-    ap.add_argument("--seed", default="20261026")
-    ap.add_argument("--max-functions", type=int, default=0)
-    ap.add_argument("--no-exercise", action="store_true")
-    ap.add_argument("--cmd-timeout", type=float, default=60.0)
-    ap.add_argument("--exercise-budget", type=float, default=300.0)
-    args = ap.parse_args()
-    c.ensure_dirs()
-    spec = pk.resolve_spec(args.id, args.zip, args.kind)
+def run_one(args) -> dict:
+    """Run one pack/combination end to end and write results/<id>.{md,json,diagnostics.tsv}."""
+    spec = pk.resolve_spec(args.id, args.zip, args.kind, allow_skipped=args.force)
     root = c.RUNS / args.id
     if root.exists():
         shutil.rmtree(root)
@@ -371,11 +356,112 @@ def main() -> int:
         a1 = analyze(spec, root, [root / "perfbase", root2 / "base1", root2 / "base2"])
         a2 = analyze(spec, root2, [root / "base1", root / "base2", root / "perfbase"])
     rep = build_report(args, spec, a1, a2, durations)
+    diag = root / "mcfc" / "diagnostics.tsv"
+    if diag.exists():
+        shutil.copy2(diag, c.RESULTS_DIR / f"{args.id}.diagnostics.tsv")
     (c.RESULTS_DIR / f"{args.id}.json").write_text(json.dumps(rep, indent=1), encoding="utf-8")
     write_md_report(rep, c.RESULTS_DIR / f"{args.id}.md")
     cm = rep["compare"]
     c.log(f"result: {rep['status']} (confirmed={cm['confirmedFindings']}, flaky={cm['flakyFindings']}, "
           f"lowconf={cm['lowConfidence']}, noise={cm['noise']}) -> {c.RESULTS_DIR / (args.id + '.md')}")
+    return rep
+
+
+def all_ids(include_combos: bool, pattern: str | None) -> list[str]:
+    m = c.load_manifest() or {}
+    ids = [p["id"] for p in m.get("packs", []) if not p.get("skip")]
+    if include_combos:
+        skipped = {p["id"] for p in m.get("packs", []) if p.get("skip")}
+        ids += [x["id"] for x in m.get("combinations", []) if not x.get("skip") and not (set(x["packs"]) & skipped)]
+    if pattern:
+        ids = [i for i in ids if re.search(pattern, i)]
+    return ids
+
+
+def _cell(rep: dict | None) -> list[str]:
+    if rep is None:
+        return ["not run", "-", "-", "-", "-"]
+    cp, cm = rep["compile"], rep["compare"]
+    pf = rep.get("perf") or {}
+    v = (pf.get("vanilla") or {}).get("median")
+    m = (pf.get("mcfc") or {}).get("median")
+    return [rep["status"],
+            f"{cp['found']}/{cp['compiled']}/{cp['partialFallbackCommands']}/"
+            f"{len(cp['compileFailures']) + len(cp['wholeFallbacks'])}",
+            f"{cm['confirmedFindings']}/{cm['flakyFindings']}/{cm['lowConfidence']}",
+            f"{v} -> {m}" if v is not None or m is not None else "n/a",
+            str((rep.get("mcfcState") or {}).get("final"))]
+
+
+def write_summary(ids: list[str]) -> None:
+    m = c.load_manifest() or {}
+    kinds = {p["id"]: p.get("kind") for p in m.get("packs", [])}
+    kinds.update({x["id"]: "combo" for x in m.get("combinations", [])})
+    rows, data = [], {}
+    for i in ids:
+        f = c.RESULTS_DIR / f"{i}.json"
+        rep = json.loads(f.read_text(encoding="utf-8")) if f.exists() else None
+        data[i] = rep
+        rows.append([i, str(kinds.get(i, "?"))] + _cell(rep))
+    (c.RESULTS_DIR / "_summary.json").write_text(json.dumps(data, indent=1), encoding="utf-8")
+    L = ["# summary", "",
+         "columns: found/compiled/partial cmds/compile failures; confirmed/flaky/low-confidence findings; "
+         "MSPT vanilla -> mcfc (median ms, solo runs)", "",
+         "| id | kind | status | found/compiled/partial/failures | confirmed/flaky/lowconf | MSPT vanilla -> mcfc | mcfc state |",
+         "|---|---|---|---|---|---|---|"]
+    L += ["| " + " | ".join(r) + " |" for r in rows]
+    skipped = [(p["id"], p.get("skipReason", "")) for p in m.get("packs", []) if p.get("skip")]
+    if skipped:
+        L += ["", "skipped: " + "; ".join(f"{i} ({r[:70]})" for i, r in skipped)]
+    (c.RESULTS_DIR / "_summary.md").write_text("\n".join(L) + "\n", encoding="utf-8")
+    c.log(f"summary written for {len(ids)} entries")
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("id", nargs="?")
+    ap.add_argument("--all", action="store_true", help="run every non-skipped manifest pack sequentially")
+    ap.add_argument("--include-combos", action="store_true", help="with --all: also run the combinations")
+    ap.add_argument("--filter", help="with --all/--summary-only: regex on the ids")
+    ap.add_argument("--summary-only", action="store_true", help="only rebuild results/_summary.* from existing results")
+    ap.add_argument("--force", action="store_true", help="also run packs marked skip in the manifest")
+    ap.add_argument("--zip", action="append")
+    ap.add_argument("--kind", choices=["function", "worldgen", "mixed"])
+    ap.add_argument("--mcfc-jar", help="mcfc jar (default: newest frozen WORK/cache/mods/mcfc-<sha>.jar)")
+    ap.add_argument("--no-perf", action="store_true", help="skip the solo mcfc/vanilla perf measurement")
+    ap.add_argument("--confirm", action=argparse.BooleanOptionalAction, default=True,
+                    help="re-run once when there are findings (default on; --no-confirm to disable)")
+    ap.add_argument("--ticks", type=int, default=200)
+    ap.add_argument("--reps", type=int, default=3)
+    ap.add_argument("--seed", default="20261026")
+    ap.add_argument("--max-functions", type=int, default=0)
+    ap.add_argument("--no-exercise", action="store_true")
+    ap.add_argument("--cmd-timeout", type=float, default=60.0)
+    ap.add_argument("--exercise-budget", type=float, default=300.0)
+    args = ap.parse_args()
+    c.ensure_dirs()
+    if args.summary_only:
+        write_summary(all_ids(args.include_combos, args.filter))
+        return 0
+    args.mcfc_jar = str(c.resolve_mcfc_jar(args.mcfc_jar))  # pin one jar for the whole invocation
+    if args.all:
+        ids = all_ids(args.include_combos, args.filter)
+        c.log(f"running {len(ids)} entries: {', '.join(ids)}")
+        for i in ids:
+            args.id = i
+            try:
+                run_one(args)
+            except Exception as e:  # noqa: BLE001
+                c.log(f"{i}: FAILED {type(e).__name__}: {e}")
+        write_summary(all_ids(args.include_combos, None))  # whole table, not just the filtered ids
+        return 0
+    if not args.id:
+        ap.error("id or --all required")
+    try:
+        rep = run_one(args)
+    except pk.SkippedPack as e:
+        c.log(f"skipped: {e}")
+        return 0
     return 0 if rep["status"] in ("OK", "FALLBACK-ISSUE", "DIFF") else 1
 
 

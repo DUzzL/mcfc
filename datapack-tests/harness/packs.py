@@ -117,7 +117,12 @@ def patch_pack_format(src: Path, dst: Path, fmt: tuple[int, int]) -> list[str]:
 # Spec resolution
 # ---------------------------------------------------------------------------
 
-def resolve_spec(target: str, zips: list[str] | None = None, kind: str | None = None) -> dict:
+class SkippedPack(Exception):
+    """Raised for manifest entries marked "skip": true."""
+
+
+def resolve_spec(target: str, zips: list[str] | None = None, kind: str | None = None,
+                 allow_skipped: bool = False) -> dict:
     """Build a run spec: {id, kind, packs:[{id, zip, patch}], format:[maj,min]}.
 
     target is a manifest pack id or combination id; with zips, target is just a label and
@@ -143,6 +148,8 @@ def resolve_spec(target: str, zips: list[str] | None = None, kind: str | None = 
         kinds = []
         for pid in ids:
             e = by_id[pid]
+            if e.get("skip") and not allow_skipped:
+                raise SkippedPack(f"{pid} is skipped: {e.get('skipReason', 'no reason given')}")
             zp = c.CACHE_PACKS / f"{pid}.zip"
             if not zp.exists():
                 raise SystemExit(f"missing pack zip: {zp}")

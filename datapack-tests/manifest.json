@@ -179,7 +179,9 @@
           "max_format": 121
         }
       },
-      "notes": "Guns datapack; very function-heavy, many macros; likely raycasts. File: guns26-3v0.zip."
+      "notes": "Guns datapack; very function-heavy, many macros; likely raycasts. File: guns26-3v0.zip.",
+      "skip": true,
+      "skipReason": "fails vanilla registry loading on 26.3 (recipes/advancements/predicates reference missing registry entries); only pack_format patches allowed, content edits are not"
     },
     {
       "id": "mr-gardeners-dream",
@@ -257,7 +259,9 @@
         },
         "overlayFunctions": 2
       },
-      "notes": "30+ QOL features; newest version declares 26.2 only. Newest datapack version declaring a 26.x game version is 26.2. 2 more .mcfunction files live in overlay directories. File: vanilla-refresh-1.4.31.zip."
+      "notes": "30+ QOL features; newest version declares 26.2 only. Newest datapack version declaring a 26.x game version is 26.2. 2 more .mcfunction files live in overlay directories. File: vanilla-refresh-1.4.31.zip.",
+      "skip": true,
+      "skipReason": "fails vanilla registry loading on 26.3 (recipes/advancements/predicates reference missing registry entries); only pack_format patches allowed, content edits are not"
     },
     {
       "id": "mr-spawn-animations",
@@ -1408,10 +1412,10 @@
     {
       "id": "guns-terralith",
       "packs": [
-        "mr-guns_plus_plus",
+        "mr-timber-strike",
         "mr-terralith"
       ],
-      "notes": "Most macro-heavy Modrinth function pack plus a worldgen overhaul."
+      "notes": "Most macro-heavy Modrinth function pack plus a worldgen overhaul. [mr-guns_plus_plus replaced by mr-timber-strike (pack skipped, see its skipReason)]"
     },
     {
       "id": "mr-functions-all",
@@ -1420,14 +1424,12 @@
         "mr-veinminer",
         "mr-tree-vein-miner",
         "mr-timber-strike",
-        "mr-guns_plus_plus",
         "mr-gardeners-dream",
-        "mr-vanilla-refresh",
         "mr-spawn-animations",
         "mr-orbital-strike-cannon",
         "mr-armor-stand-arms"
       ],
-      "notes": "Every Modrinth function pack including BACAP; maximum function count and tag overlap. Packs may conflict gameplay-wise; only loading matters."
+      "notes": "Every Modrinth function pack including BACAP; maximum function count and tag overlap. Packs may conflict gameplay-wise; only loading matters. [mr-guns_plus_plus removed (pack skipped, see its skipReason); mr-timber-strike already present; mr-vanilla-refresh removed (pack skipped, see its skipReason)]"
     },
     {
       "id": "worldgen-stack",
@@ -1455,12 +1457,12 @@
         "vt-graves",
         "vt-homes",
         "vt-tpa",
-        "mr-guns_plus_plus",
+        "mr-timber-strike",
         "mr-veinminer",
         "mr-tree-vein-miner",
         "mr-terralith"
       ],
-      "notes": "BACAP, all Vanilla Tweaks packs, two vein-miner packs, guns and Terralith in one world; load-order and tag stress test."
+      "notes": "BACAP, all Vanilla Tweaks packs, two vein-miner packs, guns and Terralith in one world; load-order and tag stress test. [mr-guns_plus_plus replaced by mr-timber-strike (pack skipped, see its skipReason)]"
     }
   ]
 }

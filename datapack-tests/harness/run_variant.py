@@ -106,11 +106,11 @@ class Runner:
         self.server = Server(self.run_dir, self.label, port, rport, xmx=a.xmx, seed=str(a.seed), level_type=level_type)
         mods = [c.CACHE_MODS / "carpet.jar", c.CACHE_MODS / "dpdump.jar"]
         if self.is_mcfc:
-            jar = c.newest_mcfc_jar()
-            if jar is None:
-                raise SystemExit("mcfc jar not found")
+            jar = c.resolve_mcfc_jar(a.mcfc_jar)
             mods.append(jar)
             self.info["mcfcJar"] = jar.name
+            self.info["mcfcJarSha256"] = c.file_hash(jar, "sha256")
+            self.info["mcfcJarPath"] = str(jar)
             self.info["mcfcJarMtime"] = datetime.datetime.fromtimestamp(jar.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
         for m in mods:
             if not m.exists():
@@ -398,6 +398,16 @@ class Runner:
         self.info["exitCode"] = code
         self.phase("stop")
 
+    def copy_diagnostics(self) -> None:
+        """mcfc writes generated/diagnostics.tsv after compilation; keep a copy in the run dir root."""
+        src = self.run_dir / "generated" / "diagnostics.tsv"
+        if self.is_mcfc and src.exists():
+            shutil.copy2(src, self.run_dir / "diagnostics.tsv")
+            self.info["diagnosticsLines"] = sum(1 for _ in open(src, "rb"))
+            if self.args.diag_out:
+                Path(self.args.diag_out).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, self.args.diag_out)
+
     def check_crash(self) -> None:
         cr = self.run_dir / "crash-reports"
         if cr.exists() and any(cr.iterdir()):
@@ -414,6 +424,11 @@ class Runner:
             self.phase("setup")
             self.start()
             self.configure()
+            if self.args.diag_only:
+                # compile diagnostics only: install packs like the mcfc variant, wait for READY_ON, stop
+                self.load_packs()
+                self.shutdown()
+                return rc
             self.load_area()
             self.spawn_players()
             self.load_packs()
@@ -438,6 +453,10 @@ class Runner:
                 if self.server.alive():
                     self.server.kill()
                 self.check_crash()
+                try:
+                    self.copy_diagnostics()
+                except Exception as e:  # noqa: BLE001
+                    self.info["diagnosticsError"] = str(e)
             self.info["totalSeconds"] = round(time.time() - t_start, 1)
             if self.info["crash"]:
                 rc = rc or 3
@@ -466,6 +485,9 @@ def main() -> int:
     ap.add_argument("--cmd-timeout", type=float, default=60.0, help="RCON timeout per exerciser command")
     ap.add_argument("--exercise-budget", type=float, default=300.0, help="total seconds for the exerciser")
     ap.add_argument("--mcfc-timeout", type=float, default=600.0)
+    ap.add_argument("--mcfc-jar", help="mcfc jar (default: newest frozen WORK/cache/mods/mcfc-<sha>.jar)")
+    ap.add_argument("--diag-only", action="store_true", help="install packs, wait for mcfc, copy diagnostics, stop")
+    ap.add_argument("--diag-out", help="also copy diagnostics.tsv to this path")
     args = ap.parse_args()
     c.ensure_dirs()
     return Runner(args).run()

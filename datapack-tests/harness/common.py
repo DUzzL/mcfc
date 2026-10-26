@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import sys
 import urllib.request
@@ -83,12 +84,22 @@ def download(url: str, dest: Path, algo: str | None = None, expected: str | None
     os.replace(tmp, dest)
 
 
+FROZEN_JAR_RX = re.compile(r"^mcfc-[0-9a-f]{6,40}\.jar$")
+
+
 def newest_mcfc_jar() -> Path | None:
-    jars = [p for p in MCFC_LIBS.glob("mcfc-*+26.3-fabric.jar")
-            if not p.name.endswith(("-sources.jar", "-dev.jar"))]
+    """Newest frozen jar WORK/cache/mods/mcfc-<sha>.jar by mtime (never build/libs)."""
+    jars = [p for p in CACHE_MODS.glob("mcfc-*.jar") if FROZEN_JAR_RX.match(p.name)]
     if not jars:
         return None
     return max(jars, key=lambda p: p.stat().st_mtime)
+
+
+def resolve_mcfc_jar(path: str | None) -> Path:
+    jar = Path(path).resolve() if path else newest_mcfc_jar()
+    if jar is None or not jar.exists():
+        raise SystemExit(f"mcfc jar not found ({path or 'no mcfc-<sha>.jar in ' + str(CACHE_MODS)})")
+    return jar
 
 
 def load_manifest() -> dict | None:

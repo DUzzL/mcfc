@@ -109,3 +109,21 @@ boxes, no real-time dependence (gametime only advances by stepping).
 - A tick step that takes very long (e.g. nuke functions, minutes) blocks all RCON commands; tick steps wait up to
   600 s.
 - Only the boxes given in `dpdump.json` are dumped (overworld, plus nether/end for worldgen kinds).
+
+## Additions (jar pinning, diagnostics, batch runs)
+
+- `--mcfc-jar PATH` (run_pack, run_variant): default is the newest frozen `WORK/cache/mods/mcfc-<sha>.jar` by mtime
+  (never `build/libs`). File name and sha256 go to `run.json` and the `mcfc jar` line of the report.
+- After the mcfc variant stops, `generated/diagnostics.tsv` (kind, id, function, message, command) is copied to
+  the run dir root and to `results/<id>.diagnostics.tsv`.
+- Findings under `minecraft:item`, `minecraft:experience_orb` and `minecraft:falling_block` are low confidence for
+  every pack kind and never count towards DIFF.
+- `manifest.json` entries with `"skip": true` (and a `skipReason`) are not run (`--force` overrides). Combinations no
+  longer contain skipped packs.
+- `run_pack.py --all [--include-combos] [--filter REGEX]` runs every non-skipped pack sequentially and writes
+  `results/_summary.{md,json}`; `--summary-only` rebuilds the summary from existing results.
+- `diag_pass.py`: one mcfc server per pack/combination without exerciser or compare, collects
+  `WORK/diag/<id>.tsv` (2 servers at a time). `unsupported_report.py` aggregates them into
+  `results/_unsupported.{md,json}`.
+- `perf_ab.py`: solo perf A/B of vanilla and two mcfc jars on one pack (default bacap, order A B C C B A),
+  writes `results/_perf_ab.{md,json}`.

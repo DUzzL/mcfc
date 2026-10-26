@@ -225,6 +225,10 @@ def compare_runs(root: Path, dump: str = "final", gen_only: bool = False, lowcon
     findings = sorted(p for p in paths if p not in noise and mc.get(p, MISSING) != b1.get(p, MISSING))
 
     low: set[str] = set()
+    # unstable entity types are low confidence for every pack kind
+    for p in findings:
+        if LOWCONF_ENTITY_RX.search(p):
+            low.add(p)
     if lowconf and not gen_only:
         unstable_cols: set[str] = set()
         try:

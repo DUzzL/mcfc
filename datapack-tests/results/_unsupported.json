@@ -1,0 +1,1333 @@
+{
+ "packs": [
+  "bacap",
+  "mr-armor-stand-arms",
+  "mr-dungeons-and-taverns",
+  "mr-gardeners-dream",
+  "mr-incendium",
+  "mr-nullscape",
+  "mr-orbital-strike-cannon",
+  "mr-spawn-animations",
+  "mr-structory",
+  "mr-terralith",
+  "mr-timber-strike",
+  "mr-tree-vein-miner",
+  "mr-veinminer",
+  "vt-afk-display",
+  "vt-armor-statues",
+  "vt-cauldron-concrete",
+  "vt-coordinates-hud",
+  "vt-durability-ping",
+  "vt-fast-leaf-decay",
+  "vt-graves",
+  "vt-homes",
+  "vt-multiplayer-sleep",
+  "vt-tpa",
+  "vt-track-raw-statistics",
+  "vt-track-statistics"
+ ],
+ "totalDiagnostics": 895,
+ "reasons": [
+  {
+   "reason": "PARSE_ERROR: Missing space after argument @ execute if predicate <predicate:resource_location>",
+   "commands": 232,
+   "packs": {
+    "mr-orbital-strike-cannon": 6,
+    "mr-dungeons-and-taverns": 226
+   },
+   "ids": {
+    "command.error.parse.execute.if.predicate.predicate": 232
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Macros are not supported in this location",
+   "commands": 156,
+   "packs": {
+    "mr-veinminer": 28,
+    "mr-tree-vein-miner": 9,
+    "mr-timber-strike": 79,
+    "mr-armor-stand-arms": 5,
+    "mr-incendium": 4,
+    "mr-nullscape": 1,
+    "vt-graves": 30
+   },
+   "ids": {
+    "command.error.macro.unsupported": 156
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Failed to parse any options @ execute",
+   "commands": 91,
+   "packs": {
+    "mr-incendium": 89,
+    "mr-nullscape": 1,
+    "vt-homes": 1
+   },
+   "ids": {
+    "command.error.parse.execute": 91
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Missing space after argument @ function <functions:function>",
+   "commands": 73,
+   "packs": {
+    "bacap": 73
+   },
+   "ids": {
+    "command.error.parse.function.functions": 73
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Unknown command: attribute",
+   "commands": 63,
+   "packs": {
+    "mr-spawn-animations": 2,
+    "mr-incendium": 56,
+    "mr-dungeons-and-taverns": 5
+   },
+   "ids": {
+    "command.error.parse": 63
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Unknown command: rotate",
+   "commands": 61,
+   "packs": {
+    "mr-incendium": 50,
+    "vt-graves": 11
+   },
+   "ids": {
+    "command.error.parse": 61
+   }
+  },
+  {
+   "reason": "COMPILE_ERROR: `return` inside an unparsed command would be swallowed; falling back the whole function",
+   "commands": 25,
+   "packs": {
+    "mr-veinminer": 7,
+    "mr-tree-vein-miner": 5,
+    "mr-timber-strike": 5,
+    "mr-armor-stand-arms": 1,
+    "mr-incendium": 2,
+    "mr-nullscape": 2,
+    "vt-graves": 3
+   },
+   "ids": {
+    "command.compile.result_context.not_implemented": 25
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Unknown command: bossbar",
+   "commands": 23,
+   "packs": {
+    "mr-incendium": 8,
+    "vt-multiplayer-sleep": 15
+   },
+   "ids": {
+    "command.error.parse": 23
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>",
+   "commands": 20,
+   "packs": {
+    "mr-gardeners-dream": 20
+   },
+   "ids": {
+    "command.error.parse.setblock.pos.block": 20
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Missing space after argument @ advancement grant <targets:entity_selector[players]> only <advancement:resource_location>",
+   "commands": 17,
+   "packs": {
+    "bacap": 17
+   },
+   "ids": {
+    "command.error.parse.advancement.grant.targets.only.advancement": 17
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Expected a selector",
+   "commands": 17,
+   "packs": {
+    "mr-timber-strike": 15,
+    "mr-gardeners-dream": 1,
+    "mr-orbital-strike-cannon": 1
+   },
+   "ids": {
+    "selector.error.invalid.syntax": 17
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Invalid integer",
+   "commands": 17,
+   "packs": {
+    "mr-incendium": 15,
+    "vt-graves": 2
+   },
+   "ids": {
+    "command.error.invalid.integer": 17
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Unknown command: place",
+   "commands": 13,
+   "packs": {
+    "mr-incendium": 1,
+    "mr-nullscape": 12
+   },
+   "ids": {
+    "command.error.parse": 13
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Unknown command: forceload",
+   "commands": 12,
+   "packs": {
+    "mr-incendium": 5,
+    "mr-nullscape": 2,
+    "vt-graves": 2,
+    "vt-homes": 3
+   },
+   "ids": {
+    "command.error.parse": 12
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Unknown command: damage",
+   "commands": 12,
+   "packs": {
+    "mr-incendium": 11,
+    "mr-dungeons-and-taverns": 1
+   },
+   "ids": {
+    "command.error.parse": 12
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Failed to parse any options @ scoreboard objectives",
+   "commands": 8,
+   "packs": {
+    "bacap": 8
+   },
+   "ids": {
+    "command.error.parse.scoreboard.objectives": 8
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Missing space after argument @ stopsound <targets:entity_selector[players]> <source:word>",
+   "commands": 7,
+   "packs": {
+    "mr-incendium": 7
+   },
+   "ids": {
+    "command.error.parse.stopsound.targets.source": 7
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Too many arguments for @ scoreboard players reset <targets:score_holder>",
+   "commands": 5,
+   "packs": {
+    "mr-veinminer": 4,
+    "mr-timber-strike": 1
+   },
+   "ids": {
+    "command.error.parse.scoreboard.players.reset.targets": 5
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Macro commands are not supported for json arguments",
+   "commands": 5,
+   "packs": {
+    "mr-veinminer": 4,
+    "vt-graves": 1
+   },
+   "ids": {
+    "command.error.macro.unsupported": 5
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Missing space after argument @ execute unless predicate <predicate:resource_location>",
+   "commands": 5,
+   "packs": {
+    "mr-nullscape": 2,
+    "mr-dungeons-and-taverns": 3
+   },
+   "ids": {
+    "command.error.parse.execute.unless.predicate.predicate": 5
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Unknown command: say",
+   "commands": 4,
+   "packs": {
+    "mr-veinminer": 1,
+    "mr-spawn-animations": 2,
+    "mr-armor-stand-arms": 1
+   },
+   "ids": {
+    "command.error.parse": 4
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Unknown command: clone",
+   "commands": 4,
+   "packs": {
+    "mr-spawn-animations": 4
+   },
+   "ids": {
+    "command.error.parse": 4
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Unknown command: spreadplayers",
+   "commands": 4,
+   "packs": {
+    "mr-terralith": 1,
+    "mr-incendium": 3
+   },
+   "ids": {
+    "command.error.parse": 4
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Failed to parse any options @ execute store <store_location:result_store_location_type>",
+   "commands": 4,
+   "packs": {
+    "mr-incendium": 2,
+    "vt-multiplayer-sleep": 2
+   },
+   "ids": {
+    "command.error.parse.execute.store.store_location": 4
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Unknown command: ride",
+   "commands": 4,
+   "packs": {
+    "mr-dungeons-and-taverns": 2,
+    "vt-graves": 2
+   },
+   "ids": {
+    "command.error.parse": 4
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Unknown command: msg",
+   "commands": 2,
+   "packs": {
+    "mr-gardeners-dream": 2
+   },
+   "ids": {
+    "command.error.parse": 2
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Only one entity is allowed, but the provided selector allows more than one",
+   "commands": 2,
+   "packs": {
+    "mr-incendium": 1,
+    "vt-armor-statues": 1
+   },
+   "ids": {
+    "selector.error.expected.singular_target": 2
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Too many arguments for @ loot spawn <pos:vec3> loot <loot_table:resource_location>",
+   "commands": 2,
+   "packs": {
+    "vt-graves": 2
+   },
+   "ids": {
+    "command.error.parse.loot.spawn.pos.loot.loot_table": 2
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Unknown command: dialog",
+   "commands": 1,
+   "packs": {
+    "mr-armor-stand-arms": 1
+   },
+   "ids": {
+    "command.error.parse": 1
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Missing space after argument @ summon <entity:resource_location>",
+   "commands": 1,
+   "packs": {
+    "mr-incendium": 1
+   },
+   "ids": {
+    "command.error.parse.summon.entity": 1
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Combined type options are resolved by vanilla",
+   "commands": 1,
+   "packs": {
+    "mr-incendium": 1
+   },
+   "ids": {
+    "selector.error.option.invalid": 1
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Mixed positive and negated type options are resolved by vanilla",
+   "commands": 1,
+   "packs": {
+    "mr-incendium": 1
+   },
+   "ids": {
+    "selector.error.option.invalid": 1
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Too many arguments for @ fill <from:block_pos> <to:block_pos> <block:block_predicate> replace <filter:block_predicate>",
+   "commands": 1,
+   "packs": {
+    "mr-nullscape": 1
+   },
+   "ids": {
+    "command.error.parse.fill.from.to.block.replace.filter": 1
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Cannot turn <str>atlas<str><id><str>sprite<str><id><str> into Text",
+   "commands": 1,
+   "packs": {
+    "mr-dungeons-and-taverns": 1
+   },
+   "ids": {
+    "text.invalid": 1
+   }
+  },
+  {
+   "reason": "PARSE_ERROR: Expected <str> while reading nbt compound, but got <str>",
+   "commands": 1,
+   "packs": {
+    "vt-graves": 1
+   },
+   "ids": {
+    "nbt.error.invalid.syntax": 1
+   }
+  }
+ ],
+ "commandWords": [
+  {
+   "command": "execute if predicate",
+   "count": 235,
+   "reasons": {
+    "PARSE_ERROR: Missing space after argument @ execute if predicate <predicate:resource_location>": 232,
+    "PARSE_ERROR: Failed to parse any options @ execute": 3
+   },
+   "packs": {
+    "mr-orbital-strike-cannon": 6,
+    "mr-incendium": 3,
+    "mr-dungeons-and-taverns": 226
+   }
+  },
+  {
+   "command": "execute if block",
+   "count": 75,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 75
+   },
+   "packs": {
+    "mr-veinminer": 1,
+    "mr-tree-vein-miner": 3,
+    "mr-timber-strike": 71
+   }
+  },
+  {
+   "command": "execute run function",
+   "count": 74,
+   "reasons": {
+    "PARSE_ERROR: Missing space after argument @ function <functions:function>": 72,
+    "PARSE_ERROR: Macros are not supported in this location": 2
+   },
+   "packs": {
+    "bacap": 72,
+    "mr-timber-strike": 2
+   }
+  },
+  {
+   "command": "attribute",
+   "count": 63,
+   "reasons": {
+    "PARSE_ERROR: Unknown command: attribute": 63
+   },
+   "packs": {
+    "mr-spawn-animations": 2,
+    "mr-incendium": 56,
+    "mr-dungeons-and-taverns": 5
+   }
+  },
+  {
+   "command": "rotate",
+   "count": 61,
+   "reasons": {
+    "PARSE_ERROR: Unknown command: rotate": 61
+   },
+   "packs": {
+    "mr-incendium": 50,
+    "vt-graves": 11
+   }
+  },
+  {
+   "command": "execute if entity",
+   "count": 31,
+   "reasons": {
+    "PARSE_ERROR: Failed to parse any options @ execute": 29,
+    "PARSE_ERROR: Macros are not supported in this location": 1,
+    "PARSE_ERROR: Expected a selector": 1
+   },
+   "packs": {
+    "mr-veinminer": 1,
+    "mr-gardeners-dream": 1,
+    "mr-incendium": 29
+   }
+  },
+  {
+   "command": "data modify storage",
+   "count": 26,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 25,
+    "PARSE_ERROR: Invalid integer": 1
+   },
+   "packs": {
+    "mr-veinminer": 7,
+    "mr-armor-stand-arms": 1,
+    "vt-graves": 18
+   }
+  },
+  {
+   "command": "(whole function)",
+   "count": 25,
+   "reasons": {
+    "COMPILE_ERROR: `return` inside an unparsed command would be swallowed; falling back the whole function": 25
+   },
+   "packs": {
+    "mr-veinminer": 7,
+    "mr-tree-vein-miner": 5,
+    "mr-timber-strike": 5,
+    "mr-armor-stand-arms": 1,
+    "mr-incendium": 2,
+    "mr-nullscape": 2,
+    "vt-graves": 3
+   }
+  },
+  {
+   "command": "bossbar",
+   "count": 23,
+   "reasons": {
+    "PARSE_ERROR: Unknown command: bossbar": 23
+   },
+   "packs": {
+    "mr-incendium": 8,
+    "vt-multiplayer-sleep": 15
+   }
+  },
+  {
+   "command": "execute at",
+   "count": 21,
+   "reasons": {
+    "PARSE_ERROR: Expected a selector": 15,
+    "PARSE_ERROR: Failed to parse any options @ execute": 5,
+    "PARSE_ERROR: Macros are not supported in this location": 1
+   },
+   "packs": {
+    "mr-timber-strike": 16,
+    "mr-incendium": 5
+   }
+  },
+  {
+   "command": "execute run advancement grant",
+   "count": 17,
+   "reasons": {
+    "PARSE_ERROR: Missing space after argument @ advancement grant <targets:entity_selector[players]> only <advancement:resource_location>": 17
+   },
+   "packs": {
+    "bacap": 17
+   }
+  },
+  {
+   "command": "setblock",
+   "count": 17,
+   "reasons": {
+    "PARSE_ERROR: Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>": 16,
+    "PARSE_ERROR: Macros are not supported in this location": 1
+   },
+   "packs": {
+    "mr-veinminer": 1,
+    "mr-gardeners-dream": 16
+   }
+  },
+  {
+   "command": "effect",
+   "count": 17,
+   "reasons": {
+    "PARSE_ERROR: Invalid integer": 15,
+    "PARSE_ERROR: Combined type options are resolved by vanilla": 1,
+    "PARSE_ERROR: Mixed positive and negated type options are resolved by vanilla": 1
+   },
+   "packs": {
+    "mr-incendium": 17
+   }
+  },
+  {
+   "command": "execute facing",
+   "count": 14,
+   "reasons": {
+    "PARSE_ERROR: Failed to parse any options @ execute": 14
+   },
+   "packs": {
+    "mr-incendium": 14
+   }
+  },
+  {
+   "command": "execute as",
+   "count": 13,
+   "reasons": {
+    "PARSE_ERROR: Failed to parse any options @ execute": 9,
+    "PARSE_ERROR: Macros are not supported in this location": 4
+   },
+   "packs": {
+    "mr-veinminer": 1,
+    "mr-tree-vein-miner": 1,
+    "mr-armor-stand-arms": 2,
+    "mr-incendium": 9
+   }
+  },
+  {
+   "command": "place",
+   "count": 13,
+   "reasons": {
+    "PARSE_ERROR: Unknown command: place": 13
+   },
+   "packs": {
+    "mr-incendium": 1,
+    "mr-nullscape": 12
+   }
+  },
+  {
+   "command": "forceload",
+   "count": 12,
+   "reasons": {
+    "PARSE_ERROR: Unknown command: forceload": 12
+   },
+   "packs": {
+    "mr-incendium": 5,
+    "mr-nullscape": 2,
+    "vt-graves": 2,
+    "vt-homes": 3
+   }
+  },
+  {
+   "command": "damage",
+   "count": 12,
+   "reasons": {
+    "PARSE_ERROR: Unknown command: damage": 12
+   },
+   "packs": {
+    "mr-incendium": 11,
+    "mr-dungeons-and-taverns": 1
+   }
+  },
+  {
+   "command": "execute if score",
+   "count": 10,
+   "reasons": {
+    "PARSE_ERROR: Failed to parse any options @ execute": 10
+   },
+   "packs": {
+    "mr-incendium": 10
+   }
+  },
+  {
+   "command": "scoreboard objectives modify",
+   "count": 8,
+   "reasons": {
+    "PARSE_ERROR: Failed to parse any options @ scoreboard objectives": 8
+   },
+   "packs": {
+    "bacap": 8
+   }
+  },
+  {
+   "command": "function",
+   "count": 8,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 7,
+    "PARSE_ERROR: Missing space after argument @ function <functions:function>": 1
+   },
+   "packs": {
+    "bacap": 1,
+    "mr-veinminer": 4,
+    "mr-timber-strike": 3
+   }
+  },
+  {
+   "command": "execute positioned",
+   "count": 8,
+   "reasons": {
+    "PARSE_ERROR: Failed to parse any options @ execute": 5,
+    "PARSE_ERROR: Macros are not supported in this location": 3
+   },
+   "packs": {
+    "mr-tree-vein-miner": 1,
+    "mr-incendium": 5,
+    "mr-nullscape": 1,
+    "vt-graves": 1
+   }
+  },
+  {
+   "command": "execute unless data",
+   "count": 7,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 7
+   },
+   "packs": {
+    "mr-veinminer": 4,
+    "mr-tree-vein-miner": 1,
+    "vt-graves": 2
+   }
+  },
+  {
+   "command": "execute store success",
+   "count": 7,
+   "reasons": {
+    "PARSE_ERROR: Failed to parse any options @ execute": 7
+   },
+   "packs": {
+    "mr-incendium": 5,
+    "mr-nullscape": 1,
+    "vt-homes": 1
+   }
+  },
+  {
+   "command": "data remove storage",
+   "count": 5,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 5
+   },
+   "packs": {
+    "mr-veinminer": 2,
+    "vt-graves": 3
+   }
+  },
+  {
+   "command": "scoreboard players reset",
+   "count": 5,
+   "reasons": {
+    "PARSE_ERROR: Too many arguments for @ scoreboard players reset <targets:score_holder>": 5
+   },
+   "packs": {
+    "mr-veinminer": 4,
+    "mr-timber-strike": 1
+   }
+  },
+  {
+   "command": "tellraw",
+   "count": 5,
+   "reasons": {
+    "PARSE_ERROR: Macro commands are not supported for json arguments": 5
+   },
+   "packs": {
+    "mr-veinminer": 4,
+    "vt-graves": 1
+   }
+  },
+  {
+   "command": "stopsound",
+   "count": 5,
+   "reasons": {
+    "PARSE_ERROR: Missing space after argument @ stopsound <targets:entity_selector[players]> <source:word>": 5
+   },
+   "packs": {
+    "mr-incendium": 5
+   }
+  },
+  {
+   "command": "execute unless predicate",
+   "count": 5,
+   "reasons": {
+    "PARSE_ERROR: Missing space after argument @ execute unless predicate <predicate:resource_location>": 5
+   },
+   "packs": {
+    "mr-nullscape": 2,
+    "mr-dungeons-and-taverns": 3
+   }
+  },
+  {
+   "command": "summon",
+   "count": 4,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 2,
+    "PARSE_ERROR: Missing space after argument @ summon <entity:resource_location>": 1,
+    "PARSE_ERROR: Expected <str> while reading nbt compound, but got <str>": 1
+   },
+   "packs": {
+    "mr-veinminer": 1,
+    "mr-armor-stand-arms": 1,
+    "mr-incendium": 1,
+    "vt-graves": 1
+   }
+  },
+  {
+   "command": "say",
+   "count": 4,
+   "reasons": {
+    "PARSE_ERROR: Unknown command: say": 4
+   },
+   "packs": {
+    "mr-veinminer": 1,
+    "mr-spawn-animations": 2,
+    "mr-armor-stand-arms": 1
+   }
+  },
+  {
+   "command": "execute run setblock",
+   "count": 4,
+   "reasons": {
+    "PARSE_ERROR: Failed to parse any options @ setblock <pos:block_pos> <block:block_predicate>": 4
+   },
+   "packs": {
+    "mr-gardeners-dream": 4
+   }
+  },
+  {
+   "command": "clone",
+   "count": 4,
+   "reasons": {
+    "PARSE_ERROR: Unknown command: clone": 4
+   },
+   "packs": {
+    "mr-spawn-animations": 4
+   }
+  },
+  {
+   "command": "spreadplayers",
+   "count": 4,
+   "reasons": {
+    "PARSE_ERROR: Unknown command: spreadplayers": 4
+   },
+   "packs": {
+    "mr-terralith": 1,
+    "mr-incendium": 3
+   }
+  },
+  {
+   "command": "execute store result",
+   "count": 4,
+   "reasons": {
+    "PARSE_ERROR: Failed to parse any options @ execute": 4
+   },
+   "packs": {
+    "mr-incendium": 4
+   }
+  },
+  {
+   "command": "execute anchored",
+   "count": 4,
+   "reasons": {
+    "PARSE_ERROR: Failed to parse any options @ execute": 4
+   },
+   "packs": {
+    "mr-incendium": 4
+   }
+  },
+  {
+   "command": "execute store",
+   "count": 4,
+   "reasons": {
+    "PARSE_ERROR: Failed to parse any options @ execute store <store_location:result_store_location_type>": 4
+   },
+   "packs": {
+    "mr-incendium": 2,
+    "vt-multiplayer-sleep": 2
+   }
+  },
+  {
+   "command": "ride",
+   "count": 4,
+   "reasons": {
+    "PARSE_ERROR: Unknown command: ride": 4
+   },
+   "packs": {
+    "mr-dungeons-and-taverns": 2,
+    "vt-graves": 2
+   }
+  },
+  {
+   "command": "execute run data modify storage",
+   "count": 4,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 4
+   },
+   "packs": {
+    "vt-graves": 4
+   }
+  },
+  {
+   "command": "scoreboard objectives remove",
+   "count": 2,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 2
+   },
+   "packs": {
+    "mr-veinminer": 2
+   }
+  },
+  {
+   "command": "scoreboard objectives add",
+   "count": 2,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 2
+   },
+   "packs": {
+    "mr-veinminer": 2
+   }
+  },
+  {
+   "command": "execute run return",
+   "count": 2,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 2
+   },
+   "packs": {
+    "mr-timber-strike": 2
+   }
+  },
+  {
+   "command": "msg",
+   "count": 2,
+   "reasons": {
+    "PARSE_ERROR: Unknown command: msg": 2
+   },
+   "packs": {
+    "mr-gardeners-dream": 2
+   }
+  },
+  {
+   "command": "playsound",
+   "count": 2,
+   "reasons": {
+    "PARSE_ERROR: Expected a selector": 1,
+    "PARSE_ERROR: Macros are not supported in this location": 1
+   },
+   "packs": {
+    "mr-orbital-strike-cannon": 1,
+    "vt-graves": 1
+   }
+  },
+  {
+   "command": "execute run stopsound",
+   "count": 2,
+   "reasons": {
+    "PARSE_ERROR: Missing space after argument @ stopsound <targets:entity_selector[players]> <source:word>": 2
+   },
+   "packs": {
+    "mr-incendium": 2
+   }
+  },
+  {
+   "command": "execute run data merge entity",
+   "count": 2,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 2
+   },
+   "packs": {
+    "mr-incendium": 2
+   }
+  },
+  {
+   "command": "execute rotated",
+   "count": 2,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 2
+   },
+   "packs": {
+    "mr-incendium": 2
+   }
+  },
+  {
+   "command": "loot",
+   "count": 2,
+   "reasons": {
+    "PARSE_ERROR: Only one entity is allowed, but the provided selector allows more than one": 2
+   },
+   "packs": {
+    "mr-incendium": 1,
+    "vt-armor-statues": 1
+   }
+  },
+  {
+   "command": "loot spawn",
+   "count": 2,
+   "reasons": {
+    "PARSE_ERROR: Too many arguments for @ loot spawn <pos:vec3> loot <loot_table:resource_location>": 2
+   },
+   "packs": {
+    "vt-graves": 2
+   }
+  },
+  {
+   "command": "data merge storage",
+   "count": 1,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 1
+   },
+   "packs": {
+    "mr-veinminer": 1
+   }
+  },
+  {
+   "command": "execute run data get storage",
+   "count": 1,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 1
+   },
+   "packs": {
+    "mr-veinminer": 1
+   }
+  },
+  {
+   "command": "data modify entity",
+   "count": 1,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 1
+   },
+   "packs": {
+    "mr-tree-vein-miner": 1
+   }
+  },
+  {
+   "command": "tag",
+   "count": 1,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 1
+   },
+   "packs": {
+    "mr-tree-vein-miner": 1
+   }
+  },
+  {
+   "command": "data merge entity",
+   "count": 1,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 1
+   },
+   "packs": {
+    "mr-tree-vein-miner": 1
+   }
+  },
+  {
+   "command": "kill",
+   "count": 1,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 1
+   },
+   "packs": {
+    "mr-armor-stand-arms": 1
+   }
+  },
+  {
+   "command": "dialog",
+   "count": 1,
+   "reasons": {
+    "PARSE_ERROR: Unknown command: dialog": 1
+   },
+   "packs": {
+    "mr-armor-stand-arms": 1
+   }
+  },
+  {
+   "command": "execute on",
+   "count": 1,
+   "reasons": {
+    "PARSE_ERROR: Failed to parse any options @ execute": 1
+   },
+   "packs": {
+    "mr-incendium": 1
+   }
+  },
+  {
+   "command": "fill",
+   "count": 1,
+   "reasons": {
+    "PARSE_ERROR: Too many arguments for @ fill <from:block_pos> <to:block_pos> <block:block_predicate> replace <filter:block_predicate>": 1
+   },
+   "packs": {
+    "mr-nullscape": 1
+   }
+  },
+  {
+   "command": "title",
+   "count": 1,
+   "reasons": {
+    "PARSE_ERROR: Cannot turn <str>atlas<str><id><str>sprite<str><id><str> into Text": 1
+   },
+   "packs": {
+    "mr-dungeons-and-taverns": 1
+   }
+  },
+  {
+   "command": "execute if data",
+   "count": 1,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 1
+   },
+   "packs": {
+    "vt-graves": 1
+   }
+  },
+  {
+   "command": "location.time_since_death_texts[]",
+   "count": 1,
+   "reasons": {
+    "PARSE_ERROR: Invalid integer": 1
+   },
+   "packs": {
+    "vt-graves": 1
+   }
+  },
+  {
+   "command": "execute run loot",
+   "count": 1,
+   "reasons": {
+    "PARSE_ERROR: Macros are not supported in this location": 1
+   },
+   "packs": {
+    "vt-graves": 1
+   }
+  }
+ ],
+ "macros": [
+  {
+   "command": "execute if block",
+   "position": "arg 4",
+   "count": 75
+  },
+  {
+   "command": "data modify storage",
+   "position": "arg 9",
+   "count": 14
+  },
+  {
+   "command": "function",
+   "position": "arg 2 (inside {...})",
+   "count": 7
+  },
+  {
+   "command": "execute unless data",
+   "position": "arg 3",
+   "count": 6
+  },
+  {
+   "command": "execute as",
+   "position": "arg 1 (inside {...})",
+   "count": 3
+  },
+  {
+   "command": "data modify storage",
+   "position": "arg 7",
+   "count": 3
+  },
+  {
+   "command": "execute positioned",
+   "position": "arg 1",
+   "count": 3
+  },
+  {
+   "command": "data modify storage",
+   "position": "arg 5 (inside {...})",
+   "count": 3
+  },
+  {
+   "command": "data modify storage",
+   "position": "arg 10 (inside {...})",
+   "count": 3
+  },
+  {
+   "command": "data remove storage",
+   "position": "arg 5 (inside {...})",
+   "count": 3
+  },
+  {
+   "command": "data remove storage",
+   "position": "arg 4",
+   "count": 2
+  },
+  {
+   "command": "scoreboard objectives remove",
+   "position": "arg 3",
+   "count": 2
+  },
+  {
+   "command": "data modify storage",
+   "position": "arg 4",
+   "count": 2
+  },
+  {
+   "command": "scoreboard objectives add",
+   "position": "arg 3",
+   "count": 2
+  },
+  {
+   "command": "summon",
+   "position": "arg 5 (inside {...})",
+   "count": 2
+  },
+  {
+   "command": "execute run function",
+   "position": "arg 2 (inside {...})",
+   "count": 2
+  },
+  {
+   "command": "execute run return",
+   "position": "arg 4 (inside {...})",
+   "count": 2
+  },
+  {
+   "command": "execute run data merge entity",
+   "position": "arg 4 (inside {...})",
+   "count": 2
+  },
+  {
+   "command": "execute rotated",
+   "position": "arg 1",
+   "count": 2
+  },
+  {
+   "command": "execute run data modify storage",
+   "position": "arg 16 (inside {...})",
+   "count": 2
+  },
+  {
+   "command": "execute if entity",
+   "position": "arg 1 (inside {...})",
+   "count": 1
+  },
+  {
+   "command": "setblock",
+   "position": "arg 4",
+   "count": 1
+  },
+  {
+   "command": "data merge storage",
+   "position": "arg 4 (inside {...})",
+   "count": 1
+  },
+  {
+   "command": "execute run data get storage",
+   "position": "arg 4",
+   "count": 1
+  },
+  {
+   "command": "execute as",
+   "position": "arg 1",
+   "count": 1
+  },
+  {
+   "command": "data modify entity",
+   "position": "arg 9",
+   "count": 1
+  },
+  {
+   "command": "tag",
+   "position": "arg 3",
+   "count": 1
+  },
+  {
+   "command": "data merge entity",
+   "position": "arg 4 (inside {...})",
+   "count": 1
+  },
+  {
+   "command": "execute at",
+   "position": "arg 1 (inside {...})",
+   "count": 1
+  },
+  {
+   "command": "kill",
+   "position": "arg 1 (inside {...})",
+   "count": 1
+  },
+  {
+   "command": "execute unless data",
+   "position": "arg 4 (inside {...})",
+   "count": 1
+  },
+  {
+   "command": "execute if data",
+   "position": "arg 3",
+   "count": 1
+  },
+  {
+   "command": "execute run data modify storage",
+   "position": "arg 18 (inside {...})",
+   "count": 1
+  },
+  {
+   "command": "execute run data modify storage",
+   "position": "arg 17 (inside {...})",
+   "count": 1
+  },
+  {
+   "command": "playsound",
+   "position": "arg 8",
+   "count": 1
+  },
+  {
+   "command": "execute run loot",
+   "position": "arg 4",
+   "count": 1
+  }
+ ],
+ "compileFailures": [
+  {
+   "kind": "COMPILE_ERROR",
+   "message": "`return` inside an unparsed command would be swallowed; falling back the whole function",
+   "count": 25,
+   "functions": {
+    "veinminer:block_add": 1,
+    "veinminer:block_edit": 1,
+    "veinminer:internal/check/_loopi": 1,
+    "veinminer:internal/mine/_loopi": 1,
+    "veinminer:internal/mine/try": 1,
+    "veinminer:tool_add": 1,
+    "veinminer:tool_edit": 1,
+    "stm:operation/dispatch_match": 1,
+    "stm:queue/enqueue_match": 1,
+    "stm:queue/load_next": 1,
+    "stm:queue/visit": 1,
+    "stm:detection/check_present": 1,
+    "timberstrike:main/handle": 1,
+    "timberstrike:tree/visit": 1,
+    "timberstrike:tree/blob_expand": 1,
+    "timberstrike:tree/candidate": 1,
+    "timberstrike:tree/expand": 1,
+    "armor_stand_arms:app/arms/right_click/change_arms": 1,
+    "incendium:item/multiplex_crossbow/arrow/arrow_init": 1,
+    "incendium:item/scouts_battle_helm/helper": 1,
+    "nullscape:broke_sculk": 1,
+    "nullscape:link_rift/position_other_side": 1,
+    "graves:creation/create_loading_grave_listing": 1,
+    "graves:creation/items/pick_up_items_at_inventory_pos": 1,
+    "graves:creation/update_grave_listing": 1
+   },
+   "packs": {
+    "mr-veinminer": 7,
+    "mr-tree-vein-miner": 5,
+    "mr-timber-strike": 5,
+    "mr-armor-stand-arms": 1,
+    "mr-incendium": 2,
+    "mr-nullscape": 2,
+    "vt-graves": 3
+   }
+  }
+ ]
+}
